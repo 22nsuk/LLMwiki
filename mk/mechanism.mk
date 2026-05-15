@@ -19,6 +19,12 @@ GOAL_CHECKPOINT_REASON ?= checkpoint
 GOAL_HEARTBEAT_INTERVAL ?= 5
 GOAL_CHECKPOINT_INTERVAL ?= 30
 GOAL_EXECUTOR ?= codex_exec
+GOAL_LADDER_PROFILES ?= 30-minute-trial 6-hour-ramp 2-day-candidate 5-day-sustained
+GOAL_LADDER_RUN_EXTRA_ARGS ?= --sustain-until-budget
+GOAL_RUN_LOG_DIR ?= build/goal-runs
+GOAL_LADDER_RUN_ID ?= goal-ladder-$(shell date -u +%Y%m%dT%H%M%SZ)
+GOAL_LADDER_LOG ?= $(GOAL_RUN_LOG_DIR)/$(GOAL_LADDER_RUN_ID).log
+GOAL_LADDER_PID ?= $(GOAL_RUN_LOG_DIR)/$(GOAL_LADDER_RUN_ID).pid
 GOAL_SESSION_ID ?=
 GOAL_RESUME_SESSION ?=
 GOAL_RESUME_FROM_CHECKPOINT ?=
@@ -30,7 +36,7 @@ GOAL_SESSION_ARG = $(if $(GOAL_SESSION_ID),--session-id "$(GOAL_SESSION_ID)",)
 GOAL_RESUME_SESSION_ARG = $(if $(GOAL_RESUME_SESSION),--resume-session "$(GOAL_RESUME_SESSION)",)
 GOAL_RESUME_CHECKPOINT_ARG = $(if $(GOAL_RESUME_FROM_CHECKPOINT),--resume-from-checkpoint "$(GOAL_RESUME_FROM_CHECKPOINT)",)
 
-.PHONY: auto-improve-goal-finalize auto-improve-goal-preflight auto-improve-goal-resume auto-improve-goal-run auto-improve-goal-status auto-improve-readiness auto-improve-readiness-report auto-improve-readiness-report-body codex-goal-contract goal-prompt goal-run-status-checkpoint goal-run-status-heartbeat goal-run-status-init goal-worktree-guard mechanism-review mutation-proposal remediation-backlog run-mechanism-experiment-linux-tmp outcome-metrics routing-provenance-aggregate outcome-provenance-gate-policy self-improvement-negative-lessons
+.PHONY: auto-improve-goal-finalize auto-improve-goal-ladder-run auto-improve-goal-ladder-start auto-improve-goal-preflight auto-improve-goal-resume auto-improve-goal-run auto-improve-goal-status auto-improve-readiness auto-improve-readiness-report auto-improve-readiness-report-body codex-goal-contract goal-prompt goal-run-status-checkpoint goal-run-status-heartbeat goal-run-status-init goal-worktree-guard mechanism-review mutation-proposal remediation-backlog run-mechanism-experiment-linux-tmp outcome-metrics routing-provenance-aggregate outcome-provenance-gate-policy self-improvement-negative-lessons
 
 auto-improve-readiness: refresh-generated-core
 	@status=0; $(PYTHON) -m ops.scripts.auto_improve_readiness --vault "$(VAULT)" --out "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" --out "$(AUTO_IMPROVE_READINESS_OUT)" --schema ops/schemas/auto-improve-readiness-report.schema.json --expected-artifact-kind auto_improve_readiness_report --expected-producer ops.scripts.auto_improve_readiness_runtime; exit $$status
@@ -63,6 +69,17 @@ auto-improve-goal-run: auto-improve-goal-preflight
 
 auto-improve-goal-resume: auto-improve-goal-preflight
 	$(PYTHON) -m ops.scripts.auto_improve_loop --vault "$(VAULT)" --policy "$(POLICY)" --goal-contract "$(GOAL_CONTRACT)" --goal-profile "$(GOAL_ACTIVE_PROFILE)" --status-out "$(GOAL_STATUS_OUT)" --audit-jsonl "$(GOAL_AUDIT_JSONL)" --heartbeat-interval "$(GOAL_HEARTBEAT_INTERVAL)" --checkpoint-interval "$(GOAL_CHECKPOINT_INTERVAL)" --executor "$(GOAL_EXECUTOR)" $(GOAL_RESUME_CHECKPOINT_ARG) $(GOAL_RESUME_SESSION_ARG) $(GOAL_RUN_EXTRA_ARGS)
+
+auto-improve-goal-ladder-run: auto-improve-goal-preflight
+	@set -e; for profile in $(GOAL_LADDER_PROFILES); do \
+		echo "Starting goal auto-improve profile: $$profile"; \
+		$(PYTHON) -m ops.scripts.auto_improve_loop --vault "$(VAULT)" --policy "$(POLICY)" --goal-contract "$(GOAL_CONTRACT)" --goal-profile "$$profile" --status-out "$(GOAL_STATUS_OUT)" --audit-jsonl "$(GOAL_AUDIT_JSONL)" --heartbeat-interval "$(GOAL_HEARTBEAT_INTERVAL)" --checkpoint-interval "$(GOAL_CHECKPOINT_INTERVAL)" --executor "$(GOAL_EXECUTOR)" $(GOAL_RUN_EXTRA_ARGS); \
+	done
+
+auto-improve-goal-ladder-start: auto-improve-goal-preflight
+	@mkdir -p "$(GOAL_RUN_LOG_DIR)"
+	@nohup make auto-improve-goal-ladder-run PYTHON=$(PYTHON) VAULT="$(VAULT)" POLICY="$(POLICY)" GOAL_CONTRACT="$(GOAL_CONTRACT)" GOAL_STATUS_OUT="$(GOAL_STATUS_OUT)" GOAL_AUDIT_JSONL="$(GOAL_AUDIT_JSONL)" GOAL_HEARTBEAT_INTERVAL="$(GOAL_HEARTBEAT_INTERVAL)" GOAL_CHECKPOINT_INTERVAL="$(GOAL_CHECKPOINT_INTERVAL)" GOAL_EXECUTOR="$(GOAL_EXECUTOR)" GOAL_RUN_EXTRA_ARGS="$(GOAL_RUN_EXTRA_ARGS) $(GOAL_LADDER_RUN_EXTRA_ARGS)" > "$(GOAL_LADDER_LOG)" 2>&1 & echo $$! > "$(GOAL_LADDER_PID)"
+	@printf 'started goal ladder pid=%s log=%s\n' "$$(cat "$(GOAL_LADDER_PID)")" "$(GOAL_LADDER_LOG)"
 
 auto-improve-goal-finalize:
 	$(PYTHON) -m ops.scripts.goal_run_status checkpoint --vault "$(VAULT)" --reason "profile closeout checkpoint; goal remains active until sustained profile completion is verified"

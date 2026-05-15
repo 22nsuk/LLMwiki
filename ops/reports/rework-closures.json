@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/rework-closures.schema.json",
   "artifact_kind": "rework_closures",
-  "generated_at": "2026-05-15T10:18:43Z",
+  "generated_at": "2026-05-15T11:39:10Z",
   "producer": "ops.scripts.closure_registry_envelope",
   "source_command": "python -m ops.scripts.closure_registry_envelope --vault . --registry rework",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "17b2ceadf48e508e81cef28ba9c60bd259419e9214727bbea22971e41d986dae",
+  "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "555220579294f3402f4eb7e6749b2c4f887020cf20cea7e3394840589acd223d",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T10:18:43Z"
+    "checked_at": "2026-05-15T11:39:10Z"
   },
   "summary": {
     "closure_count": 2,

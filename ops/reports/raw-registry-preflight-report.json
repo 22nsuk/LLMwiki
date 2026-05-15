@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/raw-registry-preflight-report.schema.json",
   "artifact_kind": "raw_registry_preflight_report",
-  "generated_at": "2026-05-15T10:10:21Z",
+  "generated_at": "2026-05-15T11:30:45Z",
   "producer": "ops.scripts.raw_registry_preflight",
   "source_command": "python -m ops.scripts.raw_registry_preflight --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "17b2ceadf48e508e81cef28ba9c60bd259419e9214727bbea22971e41d986dae",
+  "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "27a2dbc3dbb66d6dc0ec6fead8aad5a81f79e21bc9cff2c9eabb7af84541c082",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T10:10:21Z"
+    "checked_at": "2026-05-15T11:30:45Z"
   },
   "vault": ".",
   "policy": {

@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-confirmed-legacy-reconstruction.schema.json",
   "artifact_kind": "learning_confirmed_legacy_reconstruction",
-  "generated_at": "2026-05-15T10:18:26Z",
+  "generated_at": "2026-05-15T11:38:52Z",
   "producer": "ops.scripts.learning_confirmed_legacy_reconstruction",
   "source_command": "python -m ops.scripts.learning_confirmed_legacy_reconstruction --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "17b2ceadf48e508e81cef28ba9c60bd259419e9214727bbea22971e41d986dae",
+  "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "45cc51f7ddecbdabfa861b5bcea8d3b4427120a3a0b72c35d75ca4f3cdcad319",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "4d2b50ddf187539d8dc58686bc1f5c48c2d825071d40129b1ed231b4262fe7f5",
-    "legacy_reconstruction_inputs": "a419988bce9f070ee0614e4ffc819381e3d61b19fe2426e0c66e40cb5af8c985"
+    "legacy_reconstruction_inputs": "79bef6e57cbf444783911147b94ffd5075c9cd46c61a7fb62eaa5cc69131fc93"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T10:18:26Z"
+    "checked_at": "2026-05-15T11:38:52Z"
   },
   "vault": ".",
   "policy": {

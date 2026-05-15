@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-15T10:18:31Z",
+  "generated_at": "2026-05-15T11:38:57Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "17b2ceadf48e508e81cef28ba9c60bd259419e9214727bbea22971e41d986dae",
+  "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "0b78062aa1e1d5397e3e6a796019bf61428ea78599033f9a278327a93e887134",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "3250b1bd42b6f1307d7b6116b5365f34d13933c71ff24eb9b607b1c68272a525",
-    "auto_improve_readiness": "69203fd7a8f979f65d350cc2e1e7d126c12c4bea436ef655cc04dad2e68d6a7c",
-    "learning_claim_activation": "fdb17ad2bcb73a39629f425e463d5e60f123627f4e3fc95f8e5871f17321deb6",
-    "learning_delta_scoreboard": "63b5eb75c4402549330b213a08c10a70615ea784f2bbda27d3e5418ba786e163",
-    "source_package_clean_extract": "4b144b3f2e45cddbeaf978845ec7a964df6ef291f645d1058828444166cebbc8",
+    "auto_improve_readiness": "0dc179c1d1890898f41041cb4f0d602bedfc59d1e39fafcdaa1e89b9594335db",
+    "learning_claim_activation": "5235088f38ceed1428ebf9e0f99367beb964da1c8131c3e98b9f2cda2e747484",
+    "learning_delta_scoreboard": "2b72c452f1f09eb2b254708f62117b345cd33f00a4e9407aaf8e97e844f26c25",
+    "source_package_clean_extract": "77a2483d1654c2d865822ed512a73e461a957947307495090e1f5321f485c263",
     "task_observations": "de50b3e9d034fac6257d8f0dd900c1fbf54d71a429a79d82833ccc12f5e75d09"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T10:18:31Z"
+    "checked_at": "2026-05-15T11:38:57Z"
   },
   "vault": ".",
   "policy": {

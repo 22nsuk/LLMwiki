@@ -294,6 +294,143 @@ def test_goal_bound_auto_improve_keeps_periodic_checkpoints_from_running_profile
     assert (vault / status["resume"]["last_checkpoint"]).is_file()
 
 
+def test_goal_bound_auto_improve_sustains_heartbeat_until_budget_elapsed(
+    tmp_path: Path,
+) -> None:
+    vault = _seed_repo_with_worktree(tmp_path)
+    _copy_goal_runtime_inputs(vault)
+    _initialize_goal(vault)
+
+    def fast_fake_runner(vault_path: Path, **_: Any) -> dict[str, Any]:
+        rel_path = "ops/reports/auto-improve-sessions/goal-sustain.json"
+        session_path = vault_path / rel_path
+        session_path.parent.mkdir(parents=True, exist_ok=True)
+        session_path.write_text(
+            json.dumps(
+                {
+                    "iterations": [],
+                    "attempted_proposal_ids": [],
+                    "loop_state": {"consecutive_failures": 0},
+                }
+            ),
+            encoding="utf-8",
+        )
+        return {
+            "session_id": "goal-sustain",
+            "session_report": rel_path,
+            "iterations": 0,
+            "stop_reason": "queue_exhausted",
+            "run_ids": [],
+        }
+
+    result = run_goal_bound_auto_improve(
+        GoalAutoImproveRequest(
+            vault=vault,
+            policy_path="ops/policies/wiki-maintainer-policy.yaml",
+            goal_profile="5-day-sustained",
+            heartbeat_interval_seconds=0.02,
+            checkpoint_interval_seconds=0.02,
+            readiness_interval_seconds=0,
+            session_synopsis_interval_seconds=0,
+            sustain_until_budget=True,
+            sustain_budget_seconds=0.08,
+            context=_context(4),
+        ),
+        runner=fast_fake_runner,
+    )
+
+    status = json.loads((vault / "ops" / "reports" / "goal-run-status.json").read_text())
+
+    assert result["status"] == "running"
+    assert "sustained_budget_elapsed" in status["last_event"]["reason"]
+    assert any(
+        item["reason"] == "periodic checkpoint for goal profile: 5-day-sustained"
+        for item in status["checkpoints"]
+    )
+
+
+def test_goal_bound_auto_improve_blocks_when_periodic_readiness_regresses(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    vault = _seed_repo_with_worktree(tmp_path)
+    _copy_goal_runtime_inputs(vault)
+    _initialize_goal(vault)
+
+    def fake_refresh(vault_path: Path, target: str) -> None:
+        assert target == "auto-improve-readiness-report-body"
+        readiness_path = vault_path / "ops" / "reports" / "auto-improve-readiness.json"
+        readiness_path.parent.mkdir(parents=True, exist_ok=True)
+        readiness_path.write_text(
+            json.dumps(
+                {
+                    "can_execute_trial": True,
+                    "can_promote_result": False,
+                    "blockers": None,
+                    "diagnostics": {
+                        "release_authority_preflight_summary": {
+                            "status": "blocked",
+                            "preflight_status": "expected_blocked_preflight",
+                            "clean_required_preflight": False,
+                            "expected_blocked_preflight": True,
+                        }
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def fast_fake_runner(vault_path: Path, **_: Any) -> dict[str, Any]:
+        rel_path = "ops/reports/auto-improve-sessions/goal-regression.json"
+        session_path = vault_path / rel_path
+        session_path.parent.mkdir(parents=True, exist_ok=True)
+        session_path.write_text(
+            json.dumps(
+                {
+                    "iterations": [],
+                    "attempted_proposal_ids": [],
+                    "loop_state": {"consecutive_failures": 0},
+                }
+            ),
+            encoding="utf-8",
+        )
+        return {
+            "session_id": "goal-regression",
+            "session_report": rel_path,
+            "iterations": 0,
+            "stop_reason": "queue_exhausted",
+            "run_ids": [],
+        }
+
+    monkeypatch.setattr(
+        "ops.scripts.mechanism.auto_improve_goal_runtime._run_periodic_refresh_command",
+        fake_refresh,
+    )
+
+    result = run_goal_bound_auto_improve(
+        GoalAutoImproveRequest(
+            vault=vault,
+            policy_path="ops/policies/wiki-maintainer-policy.yaml",
+            goal_profile="5-day-sustained",
+            heartbeat_interval_seconds=0,
+            checkpoint_interval_seconds=0,
+            readiness_interval_seconds=0.02,
+            session_synopsis_interval_seconds=0,
+            sustain_until_budget=True,
+            sustain_budget_seconds=0.2,
+            context=_context(5),
+        ),
+        runner=fast_fake_runner,
+    )
+
+    status = json.loads((vault / "ops" / "reports" / "goal-run-status.json").read_text())
+
+    assert result["status"] == "blocked"
+    assert status["last_event"]["event"] == "goal_run_complete"
+    assert "periodic maintenance failure" in status["last_event"]["reason"]
+    assert "can_promote_result=false" in status["last_event"]["reason"]
+
+
 def test_periodic_refresh_command_uses_current_python_for_worktree_make(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -1,23 +1,23 @@
 {
   "$schema": "ops/schemas/operator-release-summary.schema.json",
   "artifact_kind": "operator_release_summary",
-  "generated_at": "2026-05-15T10:19:10Z",
+  "generated_at": "2026-05-15T11:39:36Z",
   "producer": "ops.scripts.operator_release_summary",
   "source_command": "python -m ops.scripts.operator_release_summary --vault . --out ops/operator/operator-release-summary.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "17b2ceadf48e508e81cef28ba9c60bd259419e9214727bbea22971e41d986dae",
+  "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "1162baa2c95574cfa3e9f1f29ed14e34f2df775a2bd8acd3b6e0301827537805",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "6d79652d2ad35694dd11eaaa9c85cd5ededf5b750c2c9975712d69f72efa2471",
-    "batch_manifest": "17fc82e9becc9f3765fcd20129f50bcbe64939cacef08e74c9b866e68b49e479",
-    "closeout": "eeb422a7e6eeba070c52120482ef0631f5af3b68a6a9ac8665a16409e986fa57",
-    "full_test_summary": "bd913a881144085cc6e7a067720fc22d16c20ee59de24edfcf7db4cad2f409a0",
-    "learning_delta_scoreboard": "63b5eb75c4402549330b213a08c10a70615ea784f2bbda27d3e5418ba786e163",
-    "learning_revalidation": "9164c3dbf4bc8bec4be5bb5fe0116ce99f2fbd4fd62a34d8b7723755ce03c73a",
-    "self_check": "0d17d5dd37cb5e7accf722e185ace455ce5aeee995f187604d2c9dce85b81c7a",
-    "test_summary": "4bf13f56e76afc819e14cd7b51d8ba78463b60b5fa8352a78f100135a0bd02dd"
+    "batch_manifest": "6f32babd14054c62b395f8a5e7bb550db46a6d7dc7b86120e533f4be902b7bd9",
+    "closeout": "b56a223e3adda1f3d1d4452a38f99d2ad8c8bd7a5d07dbe74b04e99cfeb28cfe",
+    "full_test_summary": "f09c3000adf9c2a39bcbe1e9bdf8aa6c9a4d0953e3ae4134d9c00b42836030b9",
+    "learning_delta_scoreboard": "2b72c452f1f09eb2b254708f62117b345cd33f00a4e9407aaf8e97e844f26c25",
+    "learning_revalidation": "382dec4231cd651f248ea71b62dad9944a32ad089f63f89f49566ea4e1ffb3a5",
+    "self_check": "1f8b7f955c37b0ddfcc0b1ebf3646610a8d65cddccdebad1612e9d15e1a05af8",
+    "test_summary": "00554675222221f5664a63fcfa4386e7fac02eeb2f663ad330e3719dace13b05"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T10:19:10Z"
+    "checked_at": "2026-05-15T11:39:36Z"
   },
   "vault": ".",
   "policy": {
@@ -42,8 +42,8 @@
     "distribution_status": "materialized",
     "archive_profile": "source_content_package",
     "path": "build/release/LLMwiki-source.zip",
-    "sha256": "8e3757ff3c3b0f2d514d9141d35abc6d98a90db8221081fc9a3c8e661672f372",
-    "actual_sha256": "8e3757ff3c3b0f2d514d9141d35abc6d98a90db8221081fc9a3c8e661672f372",
+    "sha256": "a78f33108c1819b69c16f6203f717ff8cb1a718599b35cf4645bfd421a1ce6e8",
+    "actual_sha256": "a78f33108c1819b69c16f6203f717ff8cb1a718599b35cf4645bfd421a1ce6e8",
     "file_exists": true,
     "file_digest_matches_batch": true,
     "entry_count": 1573,
@@ -82,7 +82,7 @@
     "primary_suite_scope": "report_contract_summary",
     "primary_represents_full_suite": false,
     "primary_status": "pass",
-    "primary_passed_count": 171,
+    "primary_passed_count": 172,
     "full_suite_status": "pass",
     "full_suite_summary_load_status": "ok",
     "full_suite_reason": "this execution has no pytest selectors and is treated as full-suite evidence"
@@ -284,9 +284,9 @@
       }
     ],
     "learning_claim_evidence_bundle_status": "active",
-    "learning_claim_evidence_bundle_sha256": "396f29203d44e375065dc9c06be777afae641acb4a0a285d404ce344b7dcda11",
+    "learning_claim_evidence_bundle_sha256": "5180535e12d7c6de43452126e38c0b3488fe2efcc3d25ebfd90b21982e0f45be",
     "learning_confirmed_evidence_cohort_status": "active",
-    "learning_confirmed_evidence_cohort_sha256": "bde358def214d8e0441696a9e2b147374ccc0aba6f236fa3623451c889389531",
+    "learning_confirmed_evidence_cohort_sha256": "63882cb3bffb72b8eb9110466fe3d40a83a50adf8a192b13a670f71d92916e59",
     "claim_wording_allowed": true,
     "claim_wording_policy_status": "pre_seal_ready",
     "confirmed_wording_allowed": true,

@@ -53,6 +53,8 @@ class GoalAutoImproveRequest:
     checkpoint_interval_seconds: float | None = None
     readiness_interval_seconds: float | None = None
     session_synopsis_interval_seconds: float | None = None
+    sustain_until_budget: bool = False
+    sustain_budget_seconds: float | None = None
     dry_run: bool = False
     context: RuntimeContext | None = None
 
@@ -121,6 +123,10 @@ def _auto_improve_command(request: GoalAutoImproveRequest, profile: dict[str, in
         command.extend(["--resume-session", request.resume_session])
     if request.allow_learning_uncertain:
         command.append("--allow-learning-uncertain")
+    if request.sustain_until_budget:
+        command.append("--sustain-until-budget")
+    if request.sustain_budget_seconds is not None:
+        command.extend(["--sustain-budget-seconds", str(request.sustain_budget_seconds)])
     return command
 
 
@@ -284,6 +290,46 @@ def _run_periodic_refresh_command(vault: Path, target: str) -> None:
         raise RuntimeError(f"{target} failed with exit code {completed.returncode}{suffix}")
 
 
+def _readiness_continuation_blocker(vault: Path) -> str | None:
+    readiness_path = vault / "ops/reports/auto-improve-readiness.json"
+    if not readiness_path.is_file():
+        return "auto-improve readiness report is missing"
+    readiness = read_json_object(readiness_path)
+    for blocker_field in (
+        "blockers",
+        "release_blockers",
+        "promotion_blockers",
+        "learning_blockers",
+    ):
+        blockers = readiness.get(blocker_field)
+        if blockers:
+            return f"auto-improve readiness blockers are present: {blocker_field}"
+    if not bool(readiness.get("can_execute_trial", False)):
+        return "auto-improve readiness regression: can_execute_trial=false"
+    if not bool(readiness.get("can_promote_result", False)):
+        return "sealed authority/readiness regression: can_promote_result=false"
+    diagnostics = readiness.get("diagnostics")
+    if not isinstance(diagnostics, dict):
+        return "sealed authority/readiness regression: missing diagnostics"
+    preflight = diagnostics.get("release_authority_preflight_summary")
+    if not isinstance(preflight, dict):
+        return "sealed authority/readiness regression: missing release authority preflight summary"
+    if (
+        preflight.get("status") != "pass"
+        or preflight.get("preflight_status") != "sealed_clean_pass"
+        or bool(preflight.get("clean_required_preflight")) is not True
+        or bool(preflight.get("expected_blocked_preflight")) is not False
+    ):
+        return "sealed authority/readiness regression: clean-required sealed pass is not current"
+    return None
+
+
+def _assert_readiness_allows_continuation(vault: Path) -> None:
+    blocker = _readiness_continuation_blocker(vault)
+    if blocker is not None:
+        raise RuntimeError(blocker)
+
+
 def _read_status_for_periodic_update(
     vault: Path,
     status_path: str,
@@ -334,6 +380,7 @@ def _maintenance_loop(
             now = time.monotonic()
             if next_readiness is not None and now >= next_readiness:
                 _run_periodic_refresh_command(vault, "auto-improve-readiness-report-body")
+                _assert_readiness_allows_continuation(vault)
                 status = _read_status_for_periodic_update(vault, status_path, context)
                 status["last_event"] = {
                     "at": context.isoformat_z(),
@@ -443,6 +490,70 @@ def _final_status_for_stop_reason(stop_reason: str) -> str:
     return "running"
 
 
+def _blocking_stop_reason(stop_reason: str) -> bool:
+    return stop_reason in {"failure_budget_exhausted", "learning_review_required"}
+
+
+def _sustain_budget_seconds(
+    request: GoalAutoImproveRequest,
+    profile: dict[str, int | str],
+) -> float:
+    if request.sustain_budget_seconds is not None:
+        resolved = float(request.sustain_budget_seconds)
+        if resolved < 0:
+            raise ValueError("sustain_budget_seconds must be >= 0")
+        return resolved
+    return float(int(profile["max_minutes"]) * 60)
+
+
+def _write_sustain_wait_status(
+    vault: Path,
+    status: dict[str, Any],
+    *,
+    result: dict[str, Any],
+    started: float,
+    profile_name: str,
+    context: RuntimeContext,
+) -> None:
+    status["generated_at"] = context.isoformat_z()
+    progress = _read_session_progress(vault, result)
+    progress["elapsed_minutes"] = round((time.monotonic() - started) / 60, 4)
+    status["progress"] = progress
+    status["last_event"] = {
+        "at": context.isoformat_z(),
+        "event": "goal_run_sustain_wait",
+        "reason": f"profile={profile_name}; auto-improve loop ended before time budget; sustaining heartbeat/checkpoint until budget elapses",
+    }
+    write_goal_status(
+        vault,
+        status,
+        event="goal_run_sustain_wait",
+        reason=f"profile={profile_name}; sustaining heartbeat/checkpoint until budget elapses",
+    )
+
+
+def _sustain_until_budget_elapsed(
+    *,
+    request: GoalAutoImproveRequest,
+    profile: dict[str, int | str],
+    started: float,
+    stop_event: Event,
+    maintenance_errors: list[str],
+) -> str:
+    budget_seconds = _sustain_budget_seconds(request, profile)
+    while True:
+        if maintenance_errors:
+            return "periodic_maintenance_failure"
+        elapsed = time.monotonic() - started
+        remaining = budget_seconds - elapsed
+        if remaining <= 0:
+            return "sustained_budget_elapsed"
+        if stop_event.wait(min(60.0, remaining)):
+            if maintenance_errors:
+                return "periodic_maintenance_failure"
+            return "sustain_wait_interrupted"
+
+
 def _merge_periodic_status_updates(
     vault: Path,
     status: dict[str, Any],
@@ -462,6 +573,52 @@ def _merge_periodic_status_updates(
     merged["resume"] = persisted.get("resume", status.get("resume", {}))
     merged["heartbeat"] = persisted.get("heartbeat", status.get("heartbeat", {}))
     return merged
+
+
+def _run_auto_improve_with_optional_sustain(
+    *,
+    request: GoalAutoImproveRequest,
+    profile: dict[str, int | str],
+    runner: AutoImproveRunner,
+    started: float,
+    status: dict[str, Any],
+    profile_name: str,
+    stop_event: Event,
+    maintenance_errors: list[str],
+    context: RuntimeContext,
+) -> tuple[dict[str, Any], str]:
+    vault = request.vault.resolve()
+    result = runner(
+        vault,
+        policy_path=request.policy_path,
+        session_id=request.session_id,
+        resume_session=request.resume_session,
+        max_proposals=int(profile["max_proposals"]),
+        max_minutes=int(profile["max_minutes"]),
+        max_consecutive_failures=int(profile["max_consecutive_failures"]),
+        executor_name=request.executor_name,
+        artifact_class=request.artifact_class,
+        allow_learning_uncertain=request.allow_learning_uncertain,
+    )
+    stop_reason = str(result.get("stop_reason", "")).strip()
+    if not request.sustain_until_budget or _blocking_stop_reason(stop_reason):
+        return result, stop_reason
+    status = _merge_periodic_status_updates(vault, status, status_path=request.status_out)
+    _write_sustain_wait_status(
+        vault,
+        status,
+        result=result,
+        started=started,
+        profile_name=profile_name,
+        context=context,
+    )
+    return result, _sustain_until_budget_elapsed(
+        request=request,
+        profile=profile,
+        started=started,
+        stop_event=stop_event,
+        maintenance_errors=maintenance_errors,
+    )
 
 
 def run_goal_bound_auto_improve(
@@ -536,17 +693,16 @@ def run_goal_bound_auto_improve(
     )
     started = time.monotonic()
     try:
-        result = active_runner(
-            vault,
-            policy_path=request.policy_path,
-            session_id=request.session_id,
-            resume_session=request.resume_session,
-            max_proposals=int(profile["max_proposals"]),
-            max_minutes=int(profile["max_minutes"]),
-            max_consecutive_failures=int(profile["max_consecutive_failures"]),
-            executor_name=request.executor_name,
-            artifact_class=request.artifact_class,
-            allow_learning_uncertain=request.allow_learning_uncertain,
+        result, stop_reason = _run_auto_improve_with_optional_sustain(
+            request=request,
+            profile=profile,
+            runner=active_runner,
+            started=started,
+            status=status,
+            profile_name=profile_name,
+            stop_event=stop_event,
+            maintenance_errors=maintenance_errors,
+            context=context,
         )
     finally:
         stop_event.set()
@@ -558,7 +714,8 @@ def run_goal_bound_auto_improve(
     progress["elapsed_minutes"] = round((time.monotonic() - started) / 60, 4)
     status["generated_at"] = context.isoformat_z()
     status["progress"] = progress
-    stop_reason = str(result.get("stop_reason", "")).strip()
+    if not request.sustain_until_budget or _blocking_stop_reason(stop_reason):
+        stop_reason = str(result.get("stop_reason", "")).strip()
     if maintenance_errors:
         status["status"] = "blocked"
         stop_reason = "periodic_maintenance_failure"

@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/function-budget-refactor-proposals.schema.json",
   "artifact_kind": "function_budget_refactor_proposals",
-  "generated_at": "2026-05-15T10:17:19Z",
+  "generated_at": "2026-05-15T11:37:47Z",
   "producer": "ops.scripts.function_budget_refactor_proposals",
   "source_command": "python -m ops.scripts.function_budget_refactor_proposals --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "17b2ceadf48e508e81cef28ba9c60bd259419e9214727bbea22971e41d986dae",
+  "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "95f193f4886d760375b6e0528a8a9a9bc005c88934387a357d181e03af358634",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "f8d4e95f882683279884cd3cc7572d530e48f8799d3b4efb2a6a002615396ac7",
-    "classification_report": "68c9d59187ef285b7a7ea6b5797011cd7f91e925a07eca3c3954978ec70a7282",
+    "classification_report": "81cae47ae42c10e78164f04a9dab161f582101882b4c85fe9090442f1da68fd6",
     "classification_source": "5c51928076384d942097653b9d11de2ef107182b49249dc95a3e8286da6ec0d8",
     "small_adapter_limits": "b4256e8722ca1ad5a2f69f3f096619290caaf9b7e494ddbe85e1ad6282af66fe"
   },
@@ -21,7 +21,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T10:17:19Z"
+    "checked_at": "2026-05-15T11:37:47Z"
   },
   "vault": ".",
   "status": "pass",
@@ -145,7 +145,7 @@
     {
       "page": "ops/scripts/mechanism/auto_improve_goal_runtime.py",
       "symbol": "run_goal_bound_auto_improve",
-      "line": 467,
+      "line": 624,
       "profile": "runtime",
       "owner_surface": "ops/scripts",
       "scope_class": "shared_runtime_helper",
@@ -156,7 +156,7 @@
       "metrics": {
         "function_lines": 121,
         "parameter_count": 2,
-        "branch_node_count": 6
+        "branch_node_count": 7
       },
       "thresholds": {
         "function_lines": 120,
@@ -191,10 +191,10 @@
       "why_small": "single budget axis within adapter overage limits"
     },
     {
-      "proposal_id": "function-budget-ops-scripts-mechanism-auto-improve-goal-runtime-py-run-goal-bound-auto-improve-467",
+      "proposal_id": "function-budget-ops-scripts-mechanism-auto-improve-goal-runtime-py-run-goal-bound-auto-improve-624",
       "page": "ops/scripts/mechanism/auto_improve_goal_runtime.py",
       "symbol": "run_goal_bound_auto_improve",
-      "line": 467,
+      "line": 624,
       "owner_surface": "ops/scripts",
       "scope_class": "shared_runtime_helper",
       "recommended_action": "extract_private_runtime_helper",

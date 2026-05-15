@@ -34,6 +34,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--resume-from-checkpoint")
     ap.add_argument("--heartbeat-interval", type=int)
     ap.add_argument("--checkpoint-interval", type=int)
+    ap.add_argument("--sustain-until-budget", action="store_true")
+    ap.add_argument("--sustain-budget-seconds", type=float)
     ap.add_argument("--goal-dry-run", action="store_true")
     return ap.parse_args(argv)
 
@@ -58,6 +60,8 @@ def main(argv: list[str] | None = None) -> None:
                     allow_learning_uncertain=args.allow_learning_uncertain,
                     heartbeat_interval_minutes=args.heartbeat_interval,
                     checkpoint_interval_minutes=args.checkpoint_interval,
+                    sustain_until_budget=args.sustain_until_budget,
+                    sustain_budget_seconds=args.sustain_budget_seconds,
                     dry_run=args.goal_dry_run,
                 )
             )

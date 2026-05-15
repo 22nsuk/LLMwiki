@@ -2177,7 +2177,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT ?= tmp/test-execution-summary-full.candidate.json",
             text,
         )
-        self.assertIn("TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT ?= 1250", text)
+        self.assertIn("TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT ?= 1253", text)
         self.assertIn(
             "RELEASE_AUDIT_PAYLOAD_STAGING_DIR ?= build/release-payloads", text
         )
@@ -2449,6 +2449,25 @@ class MakefileStaticGateTests(unittest.TestCase):
             _target_block(text, "auto-improve-readiness"),
         )
         self.assertIn("auto-improve-readiness-report: refresh-generated-core", text)
+
+    def test_goal_auto_improve_ladder_targets_run_profiles_detached(self) -> None:
+        text = _makefile_text()
+
+        self.assertIn(
+            "GOAL_LADDER_PROFILES ?= 30-minute-trial 6-hour-ramp 2-day-candidate 5-day-sustained",
+            text,
+        )
+        self.assertIn("GOAL_LADDER_RUN_EXTRA_ARGS ?= --sustain-until-budget", text)
+        self.assertIn("auto-improve-goal-ladder-run", _target_block(text, ".PHONY"))
+        self.assertIn("auto-improve-goal-ladder-start", _target_block(text, ".PHONY"))
+        run_block = _target_block(text, "auto-improve-goal-ladder-run")
+        self.assertIn("for profile in $(GOAL_LADDER_PROFILES)", run_block)
+        self.assertIn("ops.scripts.auto_improve_loop", run_block)
+        self.assertIn('--goal-profile "$$profile"', run_block)
+        start_block = _target_block(text, "auto-improve-goal-ladder-start")
+        self.assertIn("nohup make auto-improve-goal-ladder-run", start_block)
+        self.assertIn('GOAL_RUN_EXTRA_ARGS="$(GOAL_RUN_EXTRA_ARGS) $(GOAL_LADDER_RUN_EXTRA_ARGS)"', start_block)
+        self.assertIn('echo $$! > "$(GOAL_LADDER_PID)"', start_block)
 
     def test_mechanism_run_linux_tmp_target_pins_native_temp_environment(self) -> None:
         text = _makefile_text()

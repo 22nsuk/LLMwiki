@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/routing-provenance-aggregate.schema.json",
   "artifact_kind": "routing_provenance_aggregate",
-  "generated_at": "2026-05-15T10:17:20Z",
+  "generated_at": "2026-05-15T11:37:48Z",
   "producer": "ops.scripts.observability_routing_provenance_runtime",
   "source_command": "python -m ops.scripts.observability_routing_provenance_runtime --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "17b2ceadf48e508e81cef28ba9c60bd259419e9214727bbea22971e41d986dae",
+  "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "d1020425815581b2e5ba63d8e577aa169eeb759773d42063844263ef84a3e78f",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T10:17:20Z"
+    "checked_at": "2026-05-15T11:37:48Z"
   },
   "session_id": "auto-improve-2026-05-02t03-27-31z",
   "policy": {
