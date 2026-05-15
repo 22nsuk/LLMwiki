@@ -107,7 +107,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "db046c801499e7d40dce91bbda3d14bf5b567b14952019a9a03e53eff426d602",
+      "sha256": "56cc697dfa84dadf581c70c45011eaae0f361e05b849931faf1833e60083a648",
       "size_bytes": 73480
     },
     {
@@ -167,12 +167,12 @@
     },
     {
       "path": "mk/test.mk",
-      "sha256": "ac0f4ebcf462a6f951c72ffbaa4d32bd4b36412b361aab8ba3e530d024ff054d",
+      "sha256": "df74572308b424322ae9238313e2545d2914bc96c681250089824e4560bed58f",
       "size_bytes": 19707
     },
     {
       "path": "ops/README.md",
-      "sha256": "d210f146d755fe240f5a2ef1271b56e716951ad6b02e1d84a327b947a5d54e7b",
+      "sha256": "3d26871a68c265e66a06b03d6211e7eaf026212f01a4291a30deed4c25639dea",
       "size_bytes": 102728
     },
     {
@@ -387,8 +387,8 @@
     },
     {
       "path": "ops/schemas/goal-run-status.schema.json",
-      "sha256": "d9cb44e37d5e1a86d39dd494ccf904d4549687239fd88f3fe2fa68116978a956",
-      "size_bytes": 7684
+      "sha256": "6230d1892f00ee92440d811562923b9733994b435cd3fd8f3bc4130519510903",
+      "size_bytes": 8407
     },
     {
       "path": "ops/schemas/improvement-observations.schema.json",
@@ -1417,8 +1417,8 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_goal_runtime.py",
-      "sha256": "051a2f97ffa177762bc501fd6580913a39833cb3d29992de946067766567ff05",
-      "size_bytes": 27738
+      "sha256": "d8de61c40d914c418b861a6af1b72c6a94a609b0124d16a195146a3ac0f047cb",
+      "size_bytes": 38882
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
@@ -1547,8 +1547,8 @@
     },
     {
       "path": "ops/scripts/mechanism/goal_run_status.py",
-      "sha256": "89fcdc8ba0b5c7365f9006905a2751f562ca7b93b16e807d0ddf93f75e4dc4ab",
-      "size_bytes": 24859
+      "sha256": "ceeeba1963d5cee07f47c998ab326c1af4cb214494be4063b3daea050ec22b66",
+      "size_bytes": 25128
     },
     {
       "path": "ops/scripts/mechanism/goal_worktree_guard.py",
@@ -4822,7 +4822,7 @@
     },
     {
       "path": "tests/fixtures/report_schema_samples.json",
-      "sha256": "a2a7e6b2cc43f6554b4e7923043452aa437512d56ab1429e3f960f1c99ee561b",
+      "sha256": "c1c6ad9cb850ee1907366af48bfde7d94d0220017e8aecc894059a0721222022",
       "size_bytes": 132963
     },
     {
@@ -5062,8 +5062,8 @@
     },
     {
       "path": "tests/test_goal_auto_improve_runtime.py",
-      "sha256": "f6a298957a1e1f6b4713cc80a32acb657f5287783a0010727d8848e910f880bb",
-      "size_bytes": 17612
+      "sha256": "881821be783790e28a9b4844807b34cce409f8f881c27eae34938ff599e3043e",
+      "size_bytes": 20843
     },
     {
       "path": "tests/test_goal_prompt.py",
@@ -5142,7 +5142,7 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "f042e238a12df9f4b0aa2dccd2455829b32013fcc3245368eac18e05f7defae0",
+      "sha256": "43ac6fa00122bea55324e73d486b698147d8d61855ddcaf7c847420b38ac8b5b",
       "size_bytes": 129746
     },
     {

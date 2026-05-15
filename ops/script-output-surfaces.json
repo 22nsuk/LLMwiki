@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/script-output-surfaces.schema.json",
   "artifact_kind": "script_output_surfaces",
-  "generated_at": "2026-05-15T18:17:39Z",
+  "generated_at": "2026-05-15T19:07:17Z",
   "producer": "ops.scripts.script_output_surfaces",
   "source_command": "python -m ops.scripts.script_output_surfaces --vault . --out ops/script-output-surfaces.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "8738de459b08914767d6eee4ba408c76f231618655908b00c6d1bfe694146463",
+  "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "02cee320f449f8666c341a0a389855f3ef5ac34bddcdf4c2767b5d4b384a9722",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T18:17:39Z"
+    "checked_at": "2026-05-15T19:07:17Z"
   },
   "version": 1,
   "description": "Generated inventory for ops/scripts output path surfaces. Tests compare this registry with the live AST-derived inventory.",
