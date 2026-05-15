@@ -83,6 +83,23 @@ def resolve_focus_tests(
     return dedupe_preserve_order(resolved)
 
 
+def _proposal_declared_focus_tests(vault: Path, proposal: dict) -> list[str]:
+    resolved: list[str] = []
+    for field in ("must_change_tests", "test_files"):
+        values = proposal.get(field, [])
+        if not isinstance(values, list):
+            continue
+        for value in values:
+            if not isinstance(value, str):
+                continue
+            normalized = normalize_repo_path_text(value)
+            if normalized is None or not normalized.startswith("tests/"):
+                continue
+            if (vault / normalized).is_file():
+                resolved.append(normalized)
+    return dedupe_preserve_order(resolved)
+
+
 def _resolve_manual_risk_flags(policy: dict, targets: list[str]) -> list[str]:
     overrides = policy["auto_improve_policy"]["scope_resolution"]["risk_flag_overrides"]
     flags: list[str] = []
@@ -121,7 +138,12 @@ def build_scope_freeze(
 ) -> dict:
     primary_targets = list(proposal["primary_targets"])
     supporting_targets = list(proposal["supporting_targets"])
-    focus_tests = resolve_focus_tests(vault, policy, primary_targets, supporting_targets)
+    focus_tests = dedupe_preserve_order(
+        [
+            *resolve_focus_tests(vault, policy, primary_targets, supporting_targets),
+            *_proposal_declared_focus_tests(vault, proposal),
+        ]
+    )
 
     state = MechanismAssessmentState()
     target_pairs = normalize_targets(vault, dedupe_preserve_order([*primary_targets, *supporting_targets]))

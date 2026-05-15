@@ -107,7 +107,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "fec7c0ee75cf2f69d93138de8c2663dae6d3eed7e9db2b0bb280eadaf7d0f6c5",
+      "sha256": "048cd83f767c53c71e0f059b727bb964c4913fb8b4df740cc31602afecadfccf",
       "size_bytes": 73480
     },
     {
@@ -167,12 +167,12 @@
     },
     {
       "path": "mk/test.mk",
-      "sha256": "55d18cdbdd38888ca7984d26b24251bfca717324172a534e1862fb89b880ed7c",
+      "sha256": "2e92d89b3a03a125a6a33dfab9fb2217d313d1410f97782fa925ba517d552278",
       "size_bytes": 19707
     },
     {
       "path": "ops/README.md",
-      "sha256": "1b8d7d89345ae2814695fee960cd369e2988eca6bd226d5a064f3c0cc98c4d88",
+      "sha256": "ce77b8cbad7f8486b66d341e807d92a177313733c7e1e443fd5cb91eb3e1879e",
       "size_bytes": 102728
     },
     {
@@ -1082,8 +1082,8 @@
     },
     {
       "path": "ops/scripts/core/proposal_scope_runtime.py",
-      "sha256": "4f7b640bf72ccd85f48bc3601f536413cf08066f436d4cf1cf8dc9fc4b313327",
-      "size_bytes": 6552
+      "sha256": "efc389e895e44406f59f204f0f05e54017ea60e2d0f8075d1010ec4623b6331c",
+      "size_bytes": 7330
     },
     {
       "path": "ops/scripts/core/python_function_budget_runtime.py",
@@ -5142,7 +5142,7 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "f8f4f5bf0fc0a4622e44172fd51009bca725a4f8a313fa0bf499a89bdd420cc5",
+      "sha256": "7a72e8a2923e939c42d4214c0344875c31c171c9124d24da5a35ee273e0d02c5",
       "size_bytes": 129545
     },
     {
@@ -5287,8 +5287,8 @@
     },
     {
       "path": "tests/test_proposal_scope_runtime.py",
-      "sha256": "156270722c04fa2b6ac8f2cb1d87157c08ad4f2b20340a9db7c691ee5fc697cd",
-      "size_bytes": 7230
+      "sha256": "af9a734a985bd1d0c49501331a1a5a20a8d8a6135355eeb0e09005f9ec7dbd40",
+      "size_bytes": 8867
     },
     {
       "path": "tests/test_public_check_summary.py",

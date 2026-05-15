@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/mechanism-review-candidates.schema.json",
   "artifact_kind": "mechanism_review_candidates_report",
-  "generated_at": "2026-05-15T12:36:06Z",
+  "generated_at": "2026-05-15T13:20:26Z",
   "producer": "ops.scripts.mechanism_review_runtime",
   "source_command": "python -m ops.scripts.mechanism_review",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
+  "source_tree_fingerprint": "08f6d759d04bf1355de3e8f534bb1f9b46152cb7fb92a153f2f7a86bf9143aac",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "c730a4570492eaf5cb038d51227064a8c9404069f62cb3920049a985951e876a",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T12:36:06Z"
+    "checked_at": "2026-05-15T13:20:26Z"
   },
   "vault": ".",
   "policy": {

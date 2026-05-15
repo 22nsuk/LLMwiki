@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/test-execution-summary.schema.json",
   "artifact_kind": "test_execution_summary",
-  "generated_at": "2026-05-15T12:42:32Z",
+  "generated_at": "2026-05-15T13:26:51Z",
   "producer": "ops.scripts.test_execution_summary",
   "source_command": "python -m ops.scripts.test_execution_summary --vault . --suite full --aggregate-from ops/reports/test-execution-summary-full-shards/full-suite-shard-1.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
+  "source_tree_fingerprint": "08f6d759d04bf1355de3e8f534bb1f9b46152cb7fb92a153f2f7a86bf9143aac",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "8e541e00811969ffb63fb334e04f8206073277c8bd422e88e0df898fd6f20328",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "a02d1a42b2eeccd6fad3b3fc0f542f67ebef3ca13b2b54cdbcbd50c6124e37ee",
-    "shard_1": "c1379a2972b620156b60b6ba255d7b2e406a4fb0c3d8f1ced8551676b209c7b9",
-    "deselection_lifecycle": "3c2fc7975630394eea6aa5a86a0bf086b034a4ff948c9ab3e3b34af804e3a097",
+    "shard_1": "b308d34fcabf194133727c67680c11b3e4ef05e5c5513ab8db41b6981e7900c5",
+    "deselection_lifecycle": "f8e9b6b4f7e655ab837f112d6c13b988df3daaeb25da8432452c473c75a8df2f",
     "shard_statuses": "9e315c02fcaa4699f86633b57d509a77d575150ce2ff062d2fbb4d06d48c14c5",
     "suite": "a18b869b2e81c0c529552a3c4fa5c92ed08b98a4e146aed778d71d27517f83ac",
     "suite_coverage": "3bb5e7571f5a9efa71bb9fff3b6da343e7d855b4a6a2af4f9c9eb7fe5c449cf1",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T12:42:32Z"
+    "checked_at": "2026-05-15T13:26:51Z"
   },
   "vault": ".",
   "policy": {
@@ -47,9 +47,9 @@
   "timed_out": false,
   "timeout_seconds": 5400,
   "termination_reason": "completed",
-  "duration_ms": 340981,
+  "duration_ms": 340669,
   "counts": {
-    "passed": 1256,
+    "passed": 1257,
     "failed": 0,
     "errors": 0,
     "skipped": 0,
@@ -86,7 +86,7 @@
   "deselected_tests": [],
   "deselection_lifecycle": {
     "status": "pass",
-    "checked_at": "2026-05-15T12:42:32Z",
+    "checked_at": "2026-05-15T13:26:51Z",
     "actual_deselected_count": 0,
     "max_allowed_deselected_count": 0,
     "over_budget": false,
@@ -105,16 +105,16 @@
   "pytest_collect_nodeid_digest": {
     "status": "collected",
     "command": "'<home>/code/LLMwiki/.venv/bin/python' -m pytest -o addopts= --collect-only -q --capture=no",
-    "nodeid_count": 1256,
-    "sha256": "92e2d2a99735850b0506abc2e86b1259908a292a0010945423959254346416d1",
+    "nodeid_count": 1257,
+    "sha256": "e82630885b5af663086d47cb5a91aff80b0475dc52040087cf3cb1c061d23c4b",
     "reason": "aggregate report reuses shard nodeid digests"
   },
   "nodeid_outcome_consistency": {
     "status": "pass",
-    "nodeid_count": 1256,
-    "outcome_count": 1256,
+    "nodeid_count": 1257,
+    "outcome_count": 1257,
     "counted_outcomes": {
-      "passed": 1256,
+      "passed": 1257,
       "skipped": 0,
       "xfailed": 0,
       "xpassed": 0
@@ -128,15 +128,15 @@
       "path": "build/release-payloads/test-execution-summary-full.log",
       "exists": true,
       "size_bytes": 1653,
-      "sha256": "28c34b7a9526df763eefaadf8e5f376b6fb8cba2c16924678985f7f4b823ccc1",
+      "sha256": "1c036c809e78d2072081bdf270c6354654ec3fc9249603517ba25032c2828378",
       "source": "captured_pytest_stdout_stderr"
     },
     {
       "kind": "junit_xml",
       "path": "build/release-payloads/test-execution-summary-full.junit.xml",
       "exists": true,
-      "size_bytes": 212226,
-      "sha256": "c840da785404f779f158be7fc97a0ba8d8d5662fc3d7215d1f4ad1d79e86ff9f",
+      "size_bytes": 212401,
+      "sha256": "9e1c6923f12e9eb954506a131d412437c455100d86f82ccfda819cbe800364d6",
       "source": "pytest_junit_xml"
     },
     {
@@ -148,7 +148,7 @@
       "source": "pytest_failure_nodeids"
     }
   ],
-  "stdout_tail": "[{\"counts\": {\"errors\": 0, \"failed\": 0, \"passed\": 1256, \"skipped\": 0, \"warnings\": 0, \"xfailed\": 0, \"xpassed\": 0}, \"duration_ms\": 340981, \"generated_at\": \"2026-05-15T12:42:31Z\", \"path\": \"ops/reports/test-execution-summary-full-shards/full-suite-shard-1.json\", \"represents_full_suite\": true, \"status\": \"pass\", \"suite\": \"full-shard-1\"}]",
+  "stdout_tail": "[{\"counts\": {\"errors\": 0, \"failed\": 0, \"passed\": 1257, \"skipped\": 0, \"warnings\": 0, \"xfailed\": 0, \"xpassed\": 0}, \"duration_ms\": 340669, \"generated_at\": \"2026-05-15T13:26:50Z\", \"path\": \"ops/reports/test-execution-summary-full-shards/full-suite-shard-1.json\", \"represents_full_suite\": true, \"status\": \"pass\", \"suite\": \"full-shard-1\"}]",
   "stderr_tail": "",
   "summary_mode": "aggregate",
   "shards": [
@@ -156,10 +156,10 @@
       "path": "ops/reports/test-execution-summary-full-shards/full-suite-shard-1.json",
       "suite": "full-shard-1",
       "status": "pass",
-      "generated_at": "2026-05-15T12:42:31Z",
-      "duration_ms": 340981,
+      "generated_at": "2026-05-15T13:26:50Z",
+      "duration_ms": 340669,
       "counts": {
-        "passed": 1256,
+        "passed": 1257,
         "failed": 0,
         "errors": 0,
         "skipped": 0,

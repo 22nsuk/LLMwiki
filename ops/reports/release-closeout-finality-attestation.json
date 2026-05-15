@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/release-closeout-finality-attestation.schema.json",
   "artifact_kind": "release_closeout_finality_attestation",
-  "generated_at": "2026-05-15T12:44:52Z",
+  "generated_at": "2026-05-15T13:29:12Z",
   "producer": "ops.scripts.release_closeout_finality_attestation",
   "source_command": "python -m ops.scripts.release_closeout_finality_attestation --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "2663cf1b8abfcb6ac107a9378d78901a35e65a3bb0e9fa01d36a446206705273",
+  "source_tree_fingerprint": "3adecc4543ee2e69df0666dfcb7725563382ab35866c1fcdf9d2ef0eec3db3f2",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "3b0829c893221cb8a58649b978e590c9469863de36646aea5470be416c949e72",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "da1d608fdefa40a4c036f92646e7eb296b58f79f3a6299968d2cd05dd50e5ab6",
-    "batch_manifest": "0214667a339ac8c457624a90ff1f353d53555b258178f561e26824a11a341004",
-    "external_report_manifest": "7715cff333acdfd5bdbeb3c9d4ada877f67e4a746daaa487fe8db56532eebbb2",
-    "fixed_point_report": "15fbe580e8b4a49fd29a48b0678a7dfbae71972f3def1e907439c20f6eea8d5b",
-    "self_check": "3d67822ff5cbc97ed077f4a7006708fe1e221b0ba31537b1353a0cf83ca119d1",
-    "tracked_artifacts": "1fde7e355bfdc5a5d36b609ad062d2dae7d327c19e5e1e5085ffd3ca3d1f75f0",
+    "batch_manifest": "f6f48fd92ddfd624b66a1ebb6a6f05afa8733aa5d36be576b3a2cfeef9fed6e6",
+    "external_report_manifest": "d6da3dda07b2edaa1d9699a9392f255db4f13ae13e8f705e3b7e80717cadf203",
+    "fixed_point_report": "e3d185bcfb2373d6f9bcf52132694d90487403f93fe876af58590f0182060218",
+    "self_check": "455b06f238b0283df6385fc3b51fbdcb5b40351e7256737c8bcf5b607de053ef",
+    "tracked_artifacts": "07dfdec036711073aae1d0ff71da926d7c63d96a90ada8a7f33a40bd45bfac65",
     "finality_status": "d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1",
     "matches_fixed_point_digest_map": "3cbc87c7681f34db4617feaa2c8801931bc5e42d8d0f560e756dd4cd92885f18"
   },
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T12:44:52Z"
+    "checked_at": "2026-05-15T13:29:12Z"
   },
   "vault": ".",
   "policy": {
@@ -34,26 +34,26 @@
   },
   "fixed_point_report": {
     "path": "ops/reports/release-closeout-fixed-point.json",
-    "digest": "15fbe580e8b4a49fd29a48b0678a7dfbae71972f3def1e907439c20f6eea8d5b",
+    "digest": "e3d185bcfb2373d6f9bcf52132694d90487403f93fe876af58590f0182060218",
     "load_status": "ok",
     "status": "pass",
     "converged": true,
     "converged_iteration": 4,
     "final_digest_map": {
-      "ops/reports/generated-artifact-index.json": "7c84115c49e36db3e77b67fcac417169a169b7e2c075b2112127f177d2d0de80",
-      "ops/reports/artifact-freshness-report.json": "7929db6b4952da0c5b310481c73ab450e9e8ca20a02c94802141181e69f151a1",
-      "ops/reports/release-closeout-summary.json": "5b6770973501507bad54e8970f89c2714d14f7504cda5ecae0ffa29e923a93bc",
-      "ops/reports/learning-readiness-signoff-revalidation.json": "1adbe1c9f61a9da05ee809334aab051d7849a1501d38c4fca112deb08eb558ce",
-      "ops/reports/release-evidence-dashboard.json": "36b879c2a36192994d3939fed3f3b2c7bba95d7ffc491aa50b2df5adc87f18c6",
-      "ops/reports/release-lane-summary.json": "9601fa8b3122ddd0473108f1b21212119d627816aadd7d5cbb03cb0a634e0d58",
-      "ops/reports/release-clean-blocker-ledger.json": "9a92b5e086f702e4de6f5e062368452703226fc25f804b8aacef83c5d370c852",
-      "ops/reports/release-closeout-batch-manifest.json": "0214667a339ac8c457624a90ff1f353d53555b258178f561e26824a11a341004",
-      "ops/reports/release-evidence-closeout-self-check.json": "3d67822ff5cbc97ed077f4a7006708fe1e221b0ba31537b1353a0cf83ca119d1"
+      "ops/reports/generated-artifact-index.json": "9157ebe7851d76da125e09685d3db0634177735485add76fc5b29c1065ea4f55",
+      "ops/reports/artifact-freshness-report.json": "7200f89f4d7278150e9638df5ba6e64f41fa67ddf1f4120e4353da6909640c65",
+      "ops/reports/release-closeout-summary.json": "65ee753b8118b3cca9b6f53b6c853c366e10572613ae4d799ee56a54c5430be5",
+      "ops/reports/learning-readiness-signoff-revalidation.json": "6807365bda0a39fb4e7ef85884401f74f09629f388cbe421f50c1e16e1d23d2a",
+      "ops/reports/release-evidence-dashboard.json": "fba0a80dc496e87ccebb63ad5c1625c921b40cd17c11469a53c64dd712588994",
+      "ops/reports/release-lane-summary.json": "8a76be5036a6276d4c609cad1f3f69f9f907cbbcb83d60ad2461fc93ca8351d6",
+      "ops/reports/release-clean-blocker-ledger.json": "e66b20a5022af3ec0872b22948e5c49f90e84825ea470b94e8d4b4b8e0327ecc",
+      "ops/reports/release-closeout-batch-manifest.json": "f6f48fd92ddfd624b66a1ebb6a6f05afa8733aa5d36be576b3a2cfeef9fed6e6",
+      "ops/reports/release-evidence-closeout-self-check.json": "455b06f238b0283df6385fc3b51fbdcb5b40351e7256737c8bcf5b607de053ef"
     }
   },
   "batch_manifest": {
     "path": "ops/reports/release-closeout-batch-manifest.json",
-    "digest": "0214667a339ac8c457624a90ff1f353d53555b258178f561e26824a11a341004",
+    "digest": "f6f48fd92ddfd624b66a1ebb6a6f05afa8733aa5d36be576b3a2cfeef9fed6e6",
     "load_status": "ok",
     "status": "pass",
     "release_authority_status": "clean_pass",
@@ -64,29 +64,29 @@
   },
   "self_check": {
     "path": "ops/reports/release-evidence-closeout-self-check.json",
-    "digest": "3d67822ff5cbc97ed077f4a7006708fe1e221b0ba31537b1353a0cf83ca119d1",
+    "digest": "455b06f238b0283df6385fc3b51fbdcb5b40351e7256737c8bcf5b607de053ef",
     "load_status": "ok",
     "result": "pass",
-    "batch_manifest_fingerprint": "0214667a339ac8c457624a90ff1f353d53555b258178f561e26824a11a341004",
+    "batch_manifest_fingerprint": "f6f48fd92ddfd624b66a1ebb6a6f05afa8733aa5d36be576b3a2cfeef9fed6e6",
     "batch_manifest_fingerprint_matches_current": true
   },
   "external_report_manifest": {
     "path": "external-reports/report-reference-manifest.json",
-    "digest": "7715cff333acdfd5bdbeb3c9d4ada877f67e4a746daaa487fe8db56532eebbb2",
+    "digest": "d6da3dda07b2edaa1d9699a9392f255db4f13ae13e8f705e3b7e80717cadf203",
     "load_status": "ok",
     "mode": "strict_review_release",
     "distribution_provenance_status": "basis_current_match"
   },
   "tracked_digest_map": {
-    "ops/reports/artifact-freshness-report.json": "7929db6b4952da0c5b310481c73ab450e9e8ca20a02c94802141181e69f151a1",
-    "ops/reports/generated-artifact-index.json": "7c84115c49e36db3e77b67fcac417169a169b7e2c075b2112127f177d2d0de80",
-    "ops/reports/learning-readiness-signoff-revalidation.json": "1adbe1c9f61a9da05ee809334aab051d7849a1501d38c4fca112deb08eb558ce",
-    "ops/reports/release-clean-blocker-ledger.json": "9a92b5e086f702e4de6f5e062368452703226fc25f804b8aacef83c5d370c852",
-    "ops/reports/release-closeout-batch-manifest.json": "0214667a339ac8c457624a90ff1f353d53555b258178f561e26824a11a341004",
-    "ops/reports/release-closeout-summary.json": "5b6770973501507bad54e8970f89c2714d14f7504cda5ecae0ffa29e923a93bc",
-    "ops/reports/release-evidence-closeout-self-check.json": "3d67822ff5cbc97ed077f4a7006708fe1e221b0ba31537b1353a0cf83ca119d1",
-    "ops/reports/release-evidence-dashboard.json": "36b879c2a36192994d3939fed3f3b2c7bba95d7ffc491aa50b2df5adc87f18c6",
-    "ops/reports/release-lane-summary.json": "9601fa8b3122ddd0473108f1b21212119d627816aadd7d5cbb03cb0a634e0d58"
+    "ops/reports/artifact-freshness-report.json": "7200f89f4d7278150e9638df5ba6e64f41fa67ddf1f4120e4353da6909640c65",
+    "ops/reports/generated-artifact-index.json": "9157ebe7851d76da125e09685d3db0634177735485add76fc5b29c1065ea4f55",
+    "ops/reports/learning-readiness-signoff-revalidation.json": "6807365bda0a39fb4e7ef85884401f74f09629f388cbe421f50c1e16e1d23d2a",
+    "ops/reports/release-clean-blocker-ledger.json": "e66b20a5022af3ec0872b22948e5c49f90e84825ea470b94e8d4b4b8e0327ecc",
+    "ops/reports/release-closeout-batch-manifest.json": "f6f48fd92ddfd624b66a1ebb6a6f05afa8733aa5d36be576b3a2cfeef9fed6e6",
+    "ops/reports/release-closeout-summary.json": "65ee753b8118b3cca9b6f53b6c853c366e10572613ae4d799ee56a54c5430be5",
+    "ops/reports/release-evidence-closeout-self-check.json": "455b06f238b0283df6385fc3b51fbdcb5b40351e7256737c8bcf5b607de053ef",
+    "ops/reports/release-evidence-dashboard.json": "fba0a80dc496e87ccebb63ad5c1625c921b40cd17c11469a53c64dd712588994",
+    "ops/reports/release-lane-summary.json": "8a76be5036a6276d4c609cad1f3f69f9f907cbbcb83d60ad2461fc93ca8351d6"
   },
   "matches_fixed_point_digest_map": true,
   "digest_mismatches": [],

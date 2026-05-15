@@ -77,6 +77,38 @@ class ProposalScopeRuntimeTests(unittest.TestCase):
             self.assertIn("missing_focused_tests", report["resolution"]["blocked_by"])
             self.assertEqual(report["dispatch"]["reviewer"], True)
 
+    def test_proposal_declared_tests_unblock_scope_when_pattern_does_not_match(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            policy, policy_path = load_policy(vault)
+            context = RuntimeContext.from_policy(policy)
+            target = vault / "ops" / "scripts" / "mechanism" / "mutation_proposal_runtime.py"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("def build_report() -> None:\n    return None\n", encoding="utf-8")
+            test_path = vault / "tests" / "test_mutation_proposal.py"
+            test_path.write_text("def test_existing_focus() -> None:\n    assert True\n", encoding="utf-8")
+
+            report = build_scope_freeze(
+                vault,
+                policy,
+                policy_path,
+                run_id="run-declared-tests",
+                proposal={
+                    "proposal_id": "proposal-declared-tests",
+                    "primary_targets": ["ops/scripts/mechanism/mutation_proposal_runtime.py"],
+                    "supporting_targets": [],
+                    "must_change_tests": ["tests/test_mutation_proposal.py"],
+                },
+                context=context,
+            )
+
+            self.assertEqual(report["status"], "runnable")
+            self.assertEqual(report["resolution"]["test_files"], ["tests/test_mutation_proposal.py"])
+            self.assertEqual(report["resolution"]["blocked_by"], [])
+            self.assertEqual(report["dispatch"]["validator"], True)
+
     def test_system_log_target_sets_log_risk_flag(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

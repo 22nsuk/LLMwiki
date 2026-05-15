@@ -1,28 +1,28 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-15T12:45:28Z",
+  "generated_at": "2026-05-15T13:28:35Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
+  "source_tree_fingerprint": "08f6d759d04bf1355de3e8f534bb1f9b46152cb7fb92a153f2f7a86bf9143aac",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "e4bbee62a954a9f8b869630b9b6ce9cd27c5dbe7faeadc7e8af48b1d35474533",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "559d97ccf4254557da60555ec99fddde7a726b098edc3f0e069218516d110cdc",
-    "artifact_freshness_report": "7929db6b4952da0c5b310481c73ab450e9e8ca20a02c94802141181e69f151a1",
-    "mechanism_review_report": "2e8f468247aad6ec0e544d92cabeb77371574cf00200944260fc1838d4a3bc17",
-    "mutation_proposal_report": "b44e022ef9098b27aad017603d15daea8bc0f68df96586d0bdabb79227e24cdd",
-    "outcome_metrics_report": "674d3e306c701adf785102d1b4c541f4fd26508e3148134c9510880d883f4956",
+    "artifact_freshness_report": "0cea418c08835074614ad6dc39c13ae81e6a19e5e5cc5be3a2530d23ac1d2cf0",
+    "mechanism_review_report": "3e90601f7e39d587f758db1ade8bab599b5ebd4bd8ac17fd8649b590ec119583",
+    "mutation_proposal_report": "a955490c662efa4e772b37522f070f6ffa3c5579de0f4af2f65ec7073f8b674f",
+    "outcome_metrics_report": "4e1f21d754f1f79ef8b9521335d6d7c124189a6c72b8546bcb25b26f3ffd5c19",
     "release_authority_preflight_report": "6ecd2599e023d8ee0ee6dd90cdf7f7b83b7a00a3f96163878af944cf3c7ca148",
     "release_closeout_batch_manifest_report": "0214667a339ac8c457624a90ff1f353d53555b258178f561e26824a11a341004",
     "release_closeout_finality_attestation_report": "b8d612b45639f2382028788c749dc10343a514461098bb0d56f08ba7a733d05f",
     "release_closeout_post_check_finalizer_report": "missing",
-    "release_closeout_summary_report": "5b6770973501507bad54e8970f89c2714d14f7504cda5ecae0ffa29e923a93bc",
-    "release_evidence_cohort_report": "15d068b5f5066df7a6844e70332f35dbbda1748e80df7d274c6c7e9350551a85",
-    "selected_contract_summary_report": "9552ab1aa3fd1d9f5136e5f678ef4dc461456321374ee3591d6cd26b5b51ee9b",
-    "source_package_clean_extract_report": "10b8dc96f75b848be8240be27e7b32f12632a455850366c94e0def755f86aa7f",
+    "release_closeout_summary_report": "c5154b5a24b1f6b74446f98244dd6effbb00f269d1102cc718e17bb6e7d0012a",
+    "release_evidence_cohort_report": "d1140716ec58fc3521ede62dffc8ae3774124e2cbefcbb943978b72d5abe301c",
+    "selected_contract_summary_report": "06bdbd2d4b57817a1be980751f2bef455966e4d85d218992419374b785d809a7",
+    "source_package_clean_extract_report": "9c6d62855e118c25ad76c42edb76b65586caa9f5a04b1750a405448f4f8c1967",
     "release_authority_preflight_report_candidates": "5edfccf0c4f6b91fbb2529bc4b2ff92af21a18c4e35de4038183e545af89e750"
   },
   "schema_version": 1,
@@ -31,7 +31,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T12:45:28Z"
+    "checked_at": "2026-05-15T13:28:35Z"
   },
   "vault": ".",
   "policy": {
