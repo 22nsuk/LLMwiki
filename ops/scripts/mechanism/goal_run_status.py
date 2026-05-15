@@ -426,24 +426,29 @@ def _write_status_markdown(vault: Path, status: dict[str, Any]) -> None:
     path = vault / status["artifacts"]["status_markdown"]
     repo = status["repo"]
     progress = status["progress"]
-    text = "\n".join(
-        [
-            f"# {status['goal_id']}",
-            "",
-            f"- status: `{status['status']}`",
-            f"- active_profile: `{status['active_profile']}`",
-            f"- repo: `{repo['repo_url']}`",
-            f"- visibility: `{repo['visibility']}`",
-            f"- branch: `{repo['branch']}`",
-            f"- baseline_commit: `{repo['baseline_commit']}`",
-            f"- worktree_path: `{repo['worktree_path']}`",
-            f"- worktree_guard: `{repo['worktree_guard']['status']}` / `{repo['worktree_guard']['mode']}`",
-            f"- proposals_attempted: `{progress['proposals_attempted']}`",
-            f"- consecutive_failures: `{progress['consecutive_failures']}`",
-            f"- promotion_ban_active: `{status['promotion_policy']['promotion_ban_active']}`",
-            "",
-        ]
-    )
+    lines = [
+        f"# {status['goal_id']}",
+        "",
+        f"- status: `{status['status']}`",
+        f"- active_profile: `{status['active_profile']}`",
+        f"- repo: `{repo['repo_url']}`",
+        f"- visibility: `{repo['visibility']}`",
+        f"- branch: `{repo['branch']}`",
+        f"- baseline_commit: `{repo['baseline_commit']}`",
+        f"- worktree_path: `{repo['worktree_path']}`",
+        f"- worktree_guard: `{repo['worktree_guard']['status']}` / `{repo['worktree_guard']['mode']}`",
+        f"- proposals_attempted: `{progress['proposals_attempted']}`",
+        f"- consecutive_failures: `{progress['consecutive_failures']}`",
+        f"- promotion_ban_active: `{status['promotion_policy']['promotion_ban_active']}`",
+    ]
+    backoff = status.get("executor_backoff")
+    if isinstance(backoff, dict) and bool(backoff.get("active", False)):
+        retry_after = backoff.get("retry_after_utc") or backoff.get("retry_after")
+        lines.append(
+            f"- executor_backoff: `{backoff.get('reason')}` until `{retry_after}`"
+        )
+    lines.append("")
+    text = "\n".join(lines)
     write_output_text(path, text)
 
 

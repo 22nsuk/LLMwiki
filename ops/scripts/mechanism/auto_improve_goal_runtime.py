@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import datetime as dt
+import re
 import subprocess
 import sys
 import time
@@ -31,6 +32,8 @@ from .goal_run_status import (
 
 
 AutoImproveRunner = Callable[..., dict[str, Any]]
+_RETRY_AFTER_RE = re.compile(r"retry_after=([^\n\r;]+)", re.IGNORECASE)
+_ORDINAL_DAY_SUFFIX_RE = re.compile(r"\b(\d{1,2})(st|nd|rd|th)\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -61,6 +64,51 @@ class GoalAutoImproveRequest:
 
 def _context(request: GoalAutoImproveRequest) -> RuntimeContext:
     return request.context or RuntimeContext(display_timezone=dt.timezone.utc)
+
+
+def _isoformat_z(value: dt.datetime) -> str:
+    return value.astimezone(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _parse_isoformat_z(value: str) -> dt.datetime | None:
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        parsed = dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt.timezone.utc)
+    return parsed.astimezone(dt.timezone.utc)
+
+
+def _parse_retry_after_utc(value: str, context: RuntimeContext) -> dt.datetime | None:
+    parsed = _parse_isoformat_z(value)
+    if parsed is not None:
+        return parsed
+    normalized = _ORDINAL_DAY_SUFFIX_RE.sub(r"\1", value.strip())
+    for fmt in ("%B %d, %Y %I:%M %p", "%b %d, %Y %I:%M %p"):
+        try:
+            parsed = dt.datetime.strptime(normalized, fmt)
+        except ValueError:
+            continue
+        return parsed.replace(tzinfo=context.display_timezone).astimezone(dt.timezone.utc)
+    return None
+
+
+def _retry_after_text_from_text(text: str) -> str:
+    match = _RETRY_AFTER_RE.search(text)
+    if not match:
+        return ""
+    return match.group(1).strip()
+
+
+def _rel_to_vault(vault: Path, path: Path) -> str:
+    try:
+        return path.relative_to(vault).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 def _load_goal_contract(vault: Path, rel_path: str) -> dict[str, Any]:
@@ -187,6 +235,9 @@ def _new_or_resumed_status(
         "max_proposals": int(profile["max_proposals"]),
         "max_consecutive_failures": int(profile["max_consecutive_failures"]),
     }
+    active_backoff = _active_executor_backoff_from_status(vault, request.status_out, context)
+    if active_backoff is not None:
+        status["executor_backoff"] = active_backoff
     return status
 
 
@@ -213,6 +264,108 @@ def _read_session_progress(vault: Path, result: dict[str, Any]) -> dict[str, Any
     if isinstance(loop_state, dict):
         progress["consecutive_failures"] = int(loop_state.get("consecutive_failures", 0) or 0)
     return progress
+
+
+def _executor_report_paths(vault: Path, result: dict[str, Any]) -> list[Path]:
+    paths: list[Path] = []
+    run_ids = result.get("run_ids", [])
+    if not isinstance(run_ids, list):
+        return paths
+    for item in run_ids:
+        run_id = str(item).strip()
+        if not run_id:
+            continue
+        run_dir = vault / "runs" / run_id
+        if run_dir.is_dir():
+            paths.extend(sorted(run_dir.glob("*-executor-report.json")))
+    return paths
+
+
+def _retry_after_from_executor_report(vault: Path, report_path: Path) -> str:
+    try:
+        report = read_json_object(report_path)
+    except (OSError, ValueError, TypeError):
+        return ""
+    texts: list[str] = []
+    diagnostics = report.get("diagnostics")
+    if isinstance(diagnostics, dict):
+        notes = diagnostics.get("notes")
+        if isinstance(notes, list):
+            texts.extend(str(item) for item in notes)
+    artifacts = report.get("artifacts")
+    if isinstance(artifacts, dict):
+        stderr_rel = str(artifacts.get("stderr", "")).strip()
+        if stderr_rel:
+            stderr_artifact = Path(stderr_rel)
+            stderr_path = vault / stderr_artifact
+            if not stderr_artifact.is_absolute() and stderr_path.is_file():
+                texts.append(stderr_path.read_text(encoding="utf-8", errors="replace"))
+    for text in texts:
+        retry_after = _retry_after_text_from_text(text)
+        if retry_after:
+            return retry_after
+    return ""
+
+
+def _usage_limit_backoff_from_result(
+    vault: Path,
+    result: dict[str, Any],
+    context: RuntimeContext,
+) -> dict[str, Any] | None:
+    if str(result.get("stop_reason", "")).strip() != "executor_usage_limited":
+        return None
+    for report_path in _executor_report_paths(vault, result):
+        retry_after = _retry_after_from_executor_report(vault, report_path)
+        if not retry_after:
+            continue
+        parsed = _parse_retry_after_utc(retry_after, context)
+        return {
+            "active": True,
+            "reason": "executor_usage_limited",
+            "retry_after": retry_after,
+            "retry_after_utc": _isoformat_z(parsed) if parsed is not None else "",
+            "source": _rel_to_vault(vault, report_path),
+            "last_observed_at": context.isoformat_z(),
+        }
+    return None
+
+
+def _executor_backoff_wait_seconds(
+    backoff: dict[str, Any],
+    context: RuntimeContext,
+) -> float | None:
+    retry_after_utc = str(backoff.get("retry_after_utc", "")).strip()
+    if not retry_after_utc:
+        retry_after = str(backoff.get("retry_after", "")).strip()
+        parsed = _parse_retry_after_utc(retry_after, context) if retry_after else None
+    else:
+        parsed = _parse_isoformat_z(retry_after_utc)
+    if parsed is None:
+        return None
+    return max(0.0, (parsed - context.utcnow()).total_seconds())
+
+
+def _active_executor_backoff_from_status(
+    vault: Path,
+    status_path: str,
+    context: RuntimeContext,
+) -> dict[str, Any] | None:
+    path = vault / status_path
+    if not path.is_file():
+        return None
+    try:
+        status = read_json_object(path)
+    except (OSError, ValueError, TypeError):
+        return None
+    backoff = status.get("executor_backoff")
+    if not isinstance(backoff, dict) or not bool(backoff.get("active", False)):
+        return None
+    if str(backoff.get("reason", "")) != "executor_usage_limited":
+        return None
+    wait_seconds = _executor_backoff_wait_seconds(backoff, context)
+    if wait_seconds is None or wait_seconds <= 0:
+        return None
+    return dict(backoff)
 
 
 @dataclass(frozen=True)
@@ -536,6 +689,102 @@ def _write_sustain_wait_status(
     )
 
 
+def _write_executor_backoff_status(
+    vault: Path,
+    status: dict[str, Any],
+    *,
+    result: dict[str, Any],
+    started: float,
+    profile_name: str,
+    context: RuntimeContext,
+    backoff: dict[str, Any],
+) -> None:
+    status["generated_at"] = context.isoformat_z()
+    progress = _read_session_progress(vault, result)
+    progress["elapsed_minutes"] = round((time.monotonic() - started) / 60, 4)
+    status["progress"] = progress
+    status["executor_backoff"] = backoff
+    retry_after = str(backoff.get("retry_after", "")).strip() or "unknown"
+    retry_after_utc = str(backoff.get("retry_after_utc", "")).strip() or "unknown"
+    reason = (
+        f"profile={profile_name}; executor_usage_limited_backoff; "
+        f"retry_after={retry_after}; retry_after_utc={retry_after_utc}"
+    )
+    status["last_event"] = {
+        "at": context.isoformat_z(),
+        "event": "goal_run_executor_backoff",
+        "reason": reason,
+    }
+    write_goal_status(vault, status, event="goal_run_executor_backoff", reason=reason)
+
+
+def _clear_executor_backoff_status(
+    vault: Path,
+    status: dict[str, Any],
+    *,
+    profile_name: str,
+    context: RuntimeContext,
+) -> None:
+    status.pop("executor_backoff", None)
+    status["generated_at"] = context.isoformat_z()
+    reason = f"profile={profile_name}; executor_usage_limited_backoff retry_after reached"
+    status["last_event"] = {
+        "at": context.isoformat_z(),
+        "event": "goal_run_executor_backoff_retry_due",
+        "reason": reason,
+    }
+    write_goal_status(vault, status, event="goal_run_executor_backoff_retry_due", reason=reason)
+
+
+def _empty_executor_backoff_result() -> dict[str, Any]:
+    return {
+        "session_id": "",
+        "session_report": "",
+        "iterations": 0,
+        "stop_reason": "executor_usage_limited",
+        "run_ids": [],
+    }
+
+
+def _wait_for_executor_backoff(
+    *,
+    request: GoalAutoImproveRequest,
+    profile: dict[str, int | str],
+    started: float,
+    stop_event: Event,
+    maintenance_errors: list[str],
+    backoff: dict[str, Any],
+    context: RuntimeContext,
+) -> str:
+    wait_seconds = _executor_backoff_wait_seconds(backoff, context)
+    if wait_seconds is None:
+        return _sustain_until_budget_elapsed(
+            request=request,
+            profile=profile,
+            started=started,
+            stop_event=stop_event,
+            maintenance_errors=maintenance_errors,
+        )
+    if wait_seconds <= 0:
+        return "executor_backoff_retry_due"
+    budget_seconds = _sustain_budget_seconds(request, profile)
+    retry_due_at = time.monotonic() + wait_seconds
+    budget_due_at = started + budget_seconds
+    while True:
+        if maintenance_errors:
+            return "periodic_maintenance_failure"
+        now = time.monotonic()
+        if now >= retry_due_at:
+            return "executor_backoff_retry_due"
+        if now >= budget_due_at:
+            return "sustained_budget_elapsed"
+        remaining = min(60.0, retry_due_at - now, budget_due_at - now)
+        if stop_event.wait(max(0.0, remaining)):
+            if maintenance_errors:
+                return "periodic_maintenance_failure"
+            return "sustain_wait_interrupted"
+
+
 def _sustain_until_budget_elapsed(
     *,
     request: GoalAutoImproveRequest,
@@ -576,6 +825,8 @@ def _merge_periodic_status_updates(
     merged["checkpoints"] = persisted.get("checkpoints", status.get("checkpoints", []))
     merged["resume"] = persisted.get("resume", status.get("resume", {}))
     merged["heartbeat"] = persisted.get("heartbeat", status.get("heartbeat", {}))
+    if isinstance(persisted.get("executor_backoff"), dict):
+        merged["executor_backoff"] = persisted["executor_backoff"]
     return merged
 
 
@@ -592,37 +843,101 @@ def _run_auto_improve_with_optional_sustain(
     context: RuntimeContext,
 ) -> tuple[dict[str, Any], str]:
     vault = request.vault.resolve()
-    result = runner(
-        vault,
-        policy_path=request.policy_path,
-        session_id=request.session_id,
-        resume_session=request.resume_session,
-        max_proposals=int(profile["max_proposals"]),
-        max_minutes=int(profile["max_minutes"]),
-        max_consecutive_failures=int(profile["max_consecutive_failures"]),
-        executor_name=request.executor_name,
-        artifact_class=request.artifact_class,
-        allow_learning_uncertain=request.allow_learning_uncertain,
-    )
-    stop_reason = str(result.get("stop_reason", "")).strip()
-    if not request.sustain_until_budget or _blocking_stop_reason(stop_reason):
-        return result, stop_reason
-    status = _merge_periodic_status_updates(vault, status, status_path=request.status_out)
-    _write_sustain_wait_status(
-        vault,
-        status,
-        result=result,
-        started=started,
-        profile_name=profile_name,
-        context=context,
-    )
-    return result, _sustain_until_budget_elapsed(
-        request=request,
-        profile=profile,
-        started=started,
-        stop_event=stop_event,
-        maintenance_errors=maintenance_errors,
-    )
+    result = _empty_executor_backoff_result()
+    while True:
+        status.update(_merge_periodic_status_updates(vault, status, status_path=request.status_out))
+        active_backoff = status.get("executor_backoff")
+        if request.sustain_until_budget and isinstance(active_backoff, dict):
+            _write_executor_backoff_status(
+                vault,
+                status,
+                result=result,
+                started=started,
+                profile_name=profile_name,
+                context=context,
+                backoff=active_backoff,
+            )
+            backoff_stop = _wait_for_executor_backoff(
+                request=request,
+                profile=profile,
+                started=started,
+                stop_event=stop_event,
+                maintenance_errors=maintenance_errors,
+                backoff=active_backoff,
+                context=context,
+            )
+            if backoff_stop != "executor_backoff_retry_due":
+                return result, backoff_stop
+            _clear_executor_backoff_status(
+                vault,
+                status,
+                profile_name=profile_name,
+                context=context,
+            )
+
+        result = runner(
+            vault,
+            policy_path=request.policy_path,
+            session_id=request.session_id,
+            resume_session=request.resume_session,
+            max_proposals=int(profile["max_proposals"]),
+            max_minutes=int(profile["max_minutes"]),
+            max_consecutive_failures=int(profile["max_consecutive_failures"]),
+            executor_name=request.executor_name,
+            artifact_class=request.artifact_class,
+            allow_learning_uncertain=request.allow_learning_uncertain,
+        )
+        stop_reason = str(result.get("stop_reason", "")).strip()
+        if not request.sustain_until_budget or _blocking_stop_reason(stop_reason):
+            return result, stop_reason
+
+        backoff = _usage_limit_backoff_from_result(vault, result, context)
+        if backoff is not None:
+            status.update(_merge_periodic_status_updates(vault, status, status_path=request.status_out))
+            _write_executor_backoff_status(
+                vault,
+                status,
+                result=result,
+                started=started,
+                profile_name=profile_name,
+                context=context,
+                backoff=backoff,
+            )
+            backoff_stop = _wait_for_executor_backoff(
+                request=request,
+                profile=profile,
+                started=started,
+                stop_event=stop_event,
+                maintenance_errors=maintenance_errors,
+                backoff=backoff,
+                context=context,
+            )
+            if backoff_stop == "executor_backoff_retry_due":
+                _clear_executor_backoff_status(
+                    vault,
+                    status,
+                    profile_name=profile_name,
+                    context=context,
+                )
+                continue
+            return result, backoff_stop
+
+        status.update(_merge_periodic_status_updates(vault, status, status_path=request.status_out))
+        _write_sustain_wait_status(
+            vault,
+            status,
+            result=result,
+            started=started,
+            profile_name=profile_name,
+            context=context,
+        )
+        return result, _sustain_until_budget_elapsed(
+            request=request,
+            profile=profile,
+            started=started,
+            stop_event=stop_event,
+            maintenance_errors=maintenance_errors,
+        )
 
 
 def run_goal_bound_auto_improve(

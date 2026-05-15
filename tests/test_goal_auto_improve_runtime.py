@@ -91,6 +91,36 @@ def _initialize_goal(vault: Path) -> None:
     )
 
 
+def _write_usage_limited_executor_report(
+    vault: Path,
+    run_id: str,
+    *,
+    retry_after: str,
+) -> None:
+    run_dir = vault / "runs" / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    stderr_rel = f"runs/{run_id}/worker.stderr.txt"
+    (vault / stderr_rel).write_text(
+        f"OpenAI usage limit reached. try again at {retry_after}\n",
+        encoding="utf-8",
+    )
+    (run_dir / "worker-executor-report.json").write_text(
+        json.dumps(
+            {
+                "status": "fail",
+                "artifacts": {"stderr": stderr_rel},
+                "diagnostics": {
+                    "notes": [
+                        "codex exec exited with 1",
+                        f"codex exec blocked by usage limit; retry_after={retry_after}",
+                    ]
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def test_goal_bound_auto_improve_dry_run_maps_trial_budget_and_checkpoint(
     tmp_path: Path,
 ) -> None:
@@ -357,6 +387,12 @@ def test_goal_bound_auto_improve_sustains_retryable_executor_usage_limit(
     _initialize_goal(vault)
 
     def usage_limited_runner(vault_path: Path, **_: Any) -> dict[str, Any]:
+        run_id = "goal-usage-limited-run"
+        _write_usage_limited_executor_report(
+            vault_path,
+            run_id,
+            retry_after="May 15th, 2026 12:10 AM",
+        )
         rel_path = "ops/reports/auto-improve-sessions/goal-usage-limited.json"
         session_path = vault_path / rel_path
         session_path.parent.mkdir(parents=True, exist_ok=True)
@@ -375,7 +411,7 @@ def test_goal_bound_auto_improve_sustains_retryable_executor_usage_limit(
             "session_report": rel_path,
             "iterations": 1,
             "stop_reason": "executor_usage_limited",
-            "run_ids": [],
+            "run_ids": [run_id],
         }
 
     result = run_goal_bound_auto_improve(
@@ -398,6 +434,58 @@ def test_goal_bound_auto_improve_sustains_retryable_executor_usage_limit(
     assert "sustained_budget_elapsed" in status["last_event"]["reason"]
     assert status["progress"]["iterations_completed"] == 1
     assert status["progress"]["consecutive_failures"] == 0
+    assert status["executor_backoff"] == {
+        "active": True,
+        "reason": "executor_usage_limited",
+        "retry_after": "May 15th, 2026 12:10 AM",
+        "retry_after_utc": "2026-05-15T00:10:00Z",
+        "source": "runs/goal-usage-limited-run/worker-executor-report.json",
+        "last_observed_at": "2026-05-15T00:05:00Z",
+    }
+
+
+def test_goal_bound_auto_improve_defers_profile_when_usage_limit_backoff_is_active(
+    tmp_path: Path,
+) -> None:
+    vault = _seed_repo_with_worktree(tmp_path)
+    _copy_goal_runtime_inputs(vault)
+    _initialize_goal(vault)
+    status_path = vault / "ops" / "reports" / "goal-run-status.json"
+    seeded_status = json.loads(status_path.read_text(encoding="utf-8"))
+    seeded_status["executor_backoff"] = {
+        "active": True,
+        "reason": "executor_usage_limited",
+        "retry_after": "May 15th, 2026 12:10 AM",
+        "retry_after_utc": "2026-05-15T00:10:00Z",
+        "source": "runs/previous/worker-executor-report.json",
+        "last_observed_at": "2026-05-15T00:05:00Z",
+    }
+    status_path.write_text(json.dumps(seeded_status), encoding="utf-8")
+
+    def runner_should_not_fire(vault_path: Path, **_: Any) -> dict[str, Any]:
+        raise AssertionError(f"executor should wait for backoff before running in {vault_path}")
+
+    result = run_goal_bound_auto_improve(
+        GoalAutoImproveRequest(
+            vault=vault,
+            policy_path="ops/policies/wiki-maintainer-policy.yaml",
+            goal_profile="6-hour-ramp",
+            heartbeat_interval_seconds=0,
+            checkpoint_interval_seconds=0,
+            sustain_until_budget=True,
+            sustain_budget_seconds=0.04,
+            context=_context(6),
+        ),
+        runner=runner_should_not_fire,
+    )
+
+    status = json.loads(status_path.read_text(encoding="utf-8"))
+
+    assert result["status"] == "running"
+    assert result["auto_improve"]["stop_reason"] == "executor_usage_limited"
+    assert "sustained_budget_elapsed" in status["last_event"]["reason"]
+    assert status["executor_backoff"]["retry_after_utc"] == "2026-05-15T00:10:00Z"
+    assert status["progress"]["proposals_attempted"] == 0
 
 
 def test_goal_bound_auto_improve_blocks_when_periodic_readiness_regresses(
