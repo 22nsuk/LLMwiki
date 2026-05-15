@@ -137,8 +137,8 @@
     },
     {
       "path": "mk/mechanism.mk",
-      "sha256": "86a63b318051380a48eaa100ee03aafe0386ff8bd37c4c17409e940aa85ec8c0",
-      "size_bytes": 8612
+      "sha256": "06251050c874b30226b7b7207b4d5e41cfde99afb15dcb45e24c6911c7234510",
+      "size_bytes": 8675
     },
     {
       "path": "mk/public.mk",
@@ -5142,8 +5142,8 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "7a72e8a2923e939c42d4214c0344875c31c171c9124d24da5a35ee273e0d02c5",
-      "size_bytes": 129545
+      "sha256": "e507935248fab2b58dd4530a8a2d8adb816aae0043bc2689e536ba524eb75b08",
+      "size_bytes": 129684
     },
     {
       "path": "tests/test_manifest_export_symlink_safety.py",

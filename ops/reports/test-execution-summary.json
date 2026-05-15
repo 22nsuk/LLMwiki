@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/test-execution-summary.schema.json",
   "artifact_kind": "test_execution_summary",
-  "generated_at": "2026-05-15T13:49:56Z",
+  "generated_at": "2026-05-15T14:11:28Z",
   "producer": "ops.scripts.test_execution_summary",
   "source_command": "python -m ops.scripts.test_execution_summary --vault . --suite report-contract-summary --collect-nodeids --deselection-policy ops/policies/report-contract-deselections.json -- '<home>/code/LLMwiki/.venv/bin/python' -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "f3fa8d7f0e06f7535455480bc64f42b10d53a8162397e50e28ee6d531ba33024",
+  "source_tree_fingerprint": "c6c3e2f474191ee907fe91d311a2ed0f1d7135df0f556d1da4430b5687eb402e",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "8e541e00811969ffb63fb334e04f8206073277c8bd422e88e0df898fd6f20328",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "a02d1a42b2eeccd6fad3b3fc0f542f67ebef3ca13b2b54cdbcbd50c6124e37ee",
     "deselection_policy": "304ab09b5d5d34ab1992a9b2ce54aa5a5f4e0b73f928db808de6e6df372fba91",
-    "test_targets": "c03d460cd93478a5ce74c97ff485ea247c75c27843c7cc7eb80f1e52c2a6f1b3",
+    "test_targets": "e42bcc28ce2f560c4284c9ebbede8544bbae1681ab17c000745c8409d46ca62c",
     "deselected_tests": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-    "deselection_lifecycle": "a3543dcf73fbb8e1c308efdf4105d126090df48ff78c55d4acbd84ffbfc85707",
+    "deselection_lifecycle": "9226b91bf1bc4de876a0c209258f1fa59e06f5aa89df5d094748e7f9b276e3f5",
     "evidence_artifacts": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
     "nodeid_outcome_consistency": "675203cb86b45fccd02e0adba58f12945d5d55f1c21efa3ec73d68ae29c8b424",
     "suite": "e8806087007f73940192067c46554732289adb000251e116b8eda2437a0ff078",
@@ -27,7 +27,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T13:49:56Z"
+    "checked_at": "2026-05-15T14:11:28Z"
   },
   "vault": ".",
   "policy": {
@@ -50,7 +50,7 @@
   "timed_out": false,
   "timeout_seconds": 5400,
   "termination_reason": "completed",
-  "duration_ms": 21752,
+  "duration_ms": 21955,
   "counts": {
     "passed": 172,
     "failed": 0,
@@ -100,7 +100,7 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "7a72e8a2923e939c42d4214c0344875c31c171c9124d24da5a35ee273e0d02c5"
+      "sha256": "e507935248fab2b58dd4530a8a2d8adb816aae0043bc2689e536ba524eb75b08"
     },
     {
       "path": "tests/test_pytest_entrypoint_guidance.py",
@@ -130,7 +130,7 @@
   "deselected_tests": [],
   "deselection_lifecycle": {
     "status": "pass",
-    "checked_at": "2026-05-15T13:49:56Z",
+    "checked_at": "2026-05-15T14:11:28Z",
     "actual_deselected_count": 0,
     "max_allowed_deselected_count": 0,
     "over_budget": false,
@@ -169,7 +169,7 @@
     "reason": "collected nodeid count matches passed + skipped + xfailed/xpassed outcomes"
   },
   "evidence_artifacts": [],
-  "stdout_tail": "........................................................................ [ 41%]\n........................................................................ [ 83%]\n............................                                             [100%]\n172 passed, 7 deselected in 21.55s\n",
+  "stdout_tail": "........................................................................ [ 41%]\n........................................................................ [ 83%]\n............................                                             [100%]\n172 passed, 7 deselected in 21.71s\n",
   "stderr_tail": "",
   "release_contract_diagnosis": [
     {
@@ -177,8 +177,8 @@
       "status": "clean_pass",
       "lane": "clean",
       "command": "'<home>/code/LLMwiki/.venv/bin/python' -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py",
-      "duration_seconds": 21.75,
-      "checked_at": "2026-05-15T13:49:56Z",
+      "duration_seconds": 21.95,
+      "checked_at": "2026-05-15T14:11:28Z",
       "blocker_conditions": [],
       "accepted_risk_family": null,
       "risk_acceptance_ref": null,

@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/auto-improve-session.schema.json",
   "session_id": "standalone-run-telemetry",
-  "generated_at": "2026-05-15T13:50:00Z",
+  "generated_at": "2026-05-15T14:11:32Z",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
@@ -302,7 +302,7 @@
     "last_decision": "HOLD",
     "last_run_id": "run-20260422-auto-improve-decision-record-fallback",
     "last_blocking_reason": "",
-    "updated_at": "2026-05-15T13:50:00Z"
+    "updated_at": "2026-05-15T14:11:32Z"
   },
   "queue_snapshot": [],
   "stop_reason": "reconstructed_from_standalone_run_artifacts",
@@ -313,7 +313,7 @@
     "properties": [
       {
         "name": "urn:openai:artifact-envelope",
-        "value": "{\"$schema\": \"ops/schemas/auto-improve-session.schema.json\", \"artifact_kind\": \"auto_improve_session\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-15T13:50:00Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-15T13:50:00Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"policy\": \"ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f\", \"run_ids\": \"956d3bef96e8109cfe80b84ef95e977f83567fe6d1aa941d9984082ee7717340\", \"schema\": \"e68e068696ae88cd027480826e255953102504028c35127b83268624025f35d5\", \"session_id\": \"c98afbb0c3af0cb19b560ec0ddbae775b2620f3a3d454f15bf98250eceddb958\", \"source_paths\": \"00631f336e8feeb28dc470bf5ca60a7a5e4e7411c46060fa753f44213a9e572c\"}, \"producer\": \"ops.scripts.observability_routing_provenance_runtime\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.observability_routing_provenance_runtime --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"f3fa8d7f0e06f7535455480bc64f42b10d53a8162397e50e28ee6d531ba33024\"}"
+        "value": "{\"$schema\": \"ops/schemas/auto-improve-session.schema.json\", \"artifact_kind\": \"auto_improve_session\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-15T14:11:32Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-15T14:11:32Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"policy\": \"ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f\", \"run_ids\": \"956d3bef96e8109cfe80b84ef95e977f83567fe6d1aa941d9984082ee7717340\", \"schema\": \"e68e068696ae88cd027480826e255953102504028c35127b83268624025f35d5\", \"session_id\": \"c98afbb0c3af0cb19b560ec0ddbae775b2620f3a3d454f15bf98250eceddb958\", \"source_paths\": \"00631f336e8feeb28dc470bf5ca60a7a5e4e7411c46060fa753f44213a9e572c\"}, \"producer\": \"ops.scripts.observability_routing_provenance_runtime\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.observability_routing_provenance_runtime --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"c6c3e2f474191ee907fe91d311a2ed0f1d7135df0f556d1da4430b5687eb402e\"}"
       }
     ]
   },

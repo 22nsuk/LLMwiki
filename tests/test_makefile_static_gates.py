@@ -2465,8 +2465,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("ops.scripts.auto_improve_loop", run_block)
         self.assertIn('--goal-profile "$$profile"', run_block)
         start_block = _target_block(text, "auto-improve-goal-ladder-start")
-        self.assertIn("nohup make auto-improve-goal-ladder-run", start_block)
+        self.assertIn("setsid $(MAKE) auto-improve-goal-ladder-run", start_block)
+        self.assertIn('GOAL_LADDER_PROFILES="$(GOAL_LADDER_PROFILES)"', start_block)
         self.assertIn('GOAL_RUN_EXTRA_ARGS="$(GOAL_RUN_EXTRA_ARGS) $(GOAL_LADDER_RUN_EXTRA_ARGS)"', start_block)
+        self.assertIn("< /dev/null", start_block)
         self.assertIn('echo $$! > "$(GOAL_LADDER_PID)"', start_block)
 
     def test_mechanism_run_linux_tmp_target_pins_native_temp_environment(self) -> None:

@@ -1,23 +1,23 @@
 {
   "$schema": "ops/schemas/release-evidence-dashboard.schema.json",
   "artifact_kind": "release_evidence_dashboard",
-  "generated_at": "2026-05-15T13:51:22Z",
+  "generated_at": "2026-05-15T14:12:53Z",
   "producer": "ops.scripts.release_evidence_dashboard",
   "source_command": "python -m ops.scripts.release_evidence_dashboard --vault . --out ops/reports/release-evidence-dashboard.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "f3fa8d7f0e06f7535455480bc64f42b10d53a8162397e50e28ee6d531ba33024",
+  "source_tree_fingerprint": "c6c3e2f474191ee907fe91d311a2ed0f1d7135df0f556d1da4430b5687eb402e",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "3d201c44c8525de4f9e7af11e9bcba6a5572a46b2f246bc43324bf377c45ab56",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "c72c0699389f8e00a016aecaaa0152fd9ecd80e949e1d17993a2b2436a6874f1",
-    "artifact_freshness": "ae88c2e2f7c21a3be9fc6417f8184012d6d589e572940e4877a9175b20e1897c",
-    "learning_delta_scoreboard": "c4483cfff5e66b24ecf74598c949edbdf21d844c67c90d61f75996c34982d092",
-    "learning_readiness_signoff_revalidation": "162259b6bf0fb23da006149b640efecce1e91e64df375161e700a17f16469860",
-    "release_closeout_fixed_point": "e3d185bcfb2373d6f9bcf52132694d90487403f93fe876af58590f0182060218",
+    "artifact_freshness": "09c285e85bb05ac00d7a9c0775fe48acce39c09c300a13f540ad1d13e5aa6b87",
+    "learning_delta_scoreboard": "8918c54900103f24bf99f5ef4fcb5ec7483d558f85bb7d60f5bd282ce1fb5ac4",
+    "learning_readiness_signoff_revalidation": "729bb4c5644d35cf30e60f9ac9f1ea850940b9b9be2701ea5e63d5bfaea0e83b",
+    "release_closeout_fixed_point": "65d273c92790cb1688e0459033290ea46cccc29441004c2da76fcc1bcc44c31c",
     "release_closeout_fixed_point_cost_trend": "4ad9945123b2cb8856267681013cf7200acf64fef40079a738488071907344ef",
-    "release_closeout_summary": "bedce15e6bc572ff376791af02258e37cbdd272445c2b23b721919430b60a66d",
-    "current_source_tree_fingerprint": "2e984106ff7f7cda8267a96b4a3cb245187251b4fc8160674409b914821525b3"
+    "release_closeout_summary": "476ef711bb31312ddfa002c25b1a0393d9c7d1ecac83d4e331fdcae2fe96c24a",
+    "current_source_tree_fingerprint": "514bfaf0808507fcd2b96fc90ffd6a6f92ff3938bc729e2f7bb3ba304347e8c2"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T13:51:22Z"
+    "checked_at": "2026-05-15T14:12:53Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
     "version": 4
   },
   "status": "pass",
-  "source_tree_fingerprint_current": "f3fa8d7f0e06f7535455480bc64f42b10d53a8162397e50e28ee6d531ba33024",
+  "source_tree_fingerprint_current": "c6c3e2f474191ee907fe91d311a2ed0f1d7135df0f556d1da4430b5687eb402e",
   "inputs": {
     "release_closeout_summary": {
       "path": "ops/reports/release-closeout-summary.json",
@@ -392,16 +392,16 @@
       "converged": true,
       "iteration_count": 4,
       "command_run_count": 33,
-      "total_duration_ms": 26046,
+      "total_duration_ms": 26017,
       "writer_costs": [
         {
           "name": "generated-artifact-index",
           "target": "generated-artifact-index-body",
           "run_count": 1,
           "selected_iteration_count": 1,
-          "total_duration_ms": 867,
-          "average_duration_ms": 867,
-          "max_duration_ms": 867,
+          "total_duration_ms": 863,
+          "average_duration_ms": 863,
+          "max_duration_ms": 863,
           "skipped_after_first_iteration_count": 3
         },
         {
@@ -409,8 +409,8 @@
           "target": "artifact-freshness",
           "run_count": 2,
           "selected_iteration_count": 2,
-          "total_duration_ms": 7573,
-          "average_duration_ms": 3786,
+          "total_duration_ms": 7545,
+          "average_duration_ms": 3772,
           "max_duration_ms": 3814,
           "skipped_after_first_iteration_count": 2
         },
@@ -419,9 +419,9 @@
           "target": "release-closeout-summary-report",
           "run_count": 3,
           "selected_iteration_count": 3,
-          "total_duration_ms": 1672,
-          "average_duration_ms": 557,
-          "max_duration_ms": 560,
+          "total_duration_ms": 1661,
+          "average_duration_ms": 554,
+          "max_duration_ms": 561,
           "skipped_after_first_iteration_count": 1
         },
         {
@@ -429,8 +429,8 @@
           "target": "learning-readiness-signoff-revalidation",
           "run_count": 4,
           "selected_iteration_count": 4,
-          "total_duration_ms": 1528,
-          "average_duration_ms": 382,
+          "total_duration_ms": 1515,
+          "average_duration_ms": 379,
           "max_duration_ms": 383,
           "skipped_after_first_iteration_count": 0
         },
@@ -439,9 +439,9 @@
           "target": "release-evidence-dashboard-report",
           "run_count": 4,
           "selected_iteration_count": 4,
-          "total_duration_ms": 2152,
+          "total_duration_ms": 2153,
           "average_duration_ms": 538,
-          "max_duration_ms": 544,
+          "max_duration_ms": 543,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -449,9 +449,9 @@
           "target": "release-lane-summary",
           "run_count": 4,
           "selected_iteration_count": 4,
-          "total_duration_ms": 1771,
-          "average_duration_ms": 443,
-          "max_duration_ms": 452,
+          "total_duration_ms": 1799,
+          "average_duration_ms": 450,
+          "max_duration_ms": 456,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -459,9 +459,9 @@
           "target": "release-clean-blocker-ledger",
           "run_count": 4,
           "selected_iteration_count": 4,
-          "total_duration_ms": 1879,
-          "average_duration_ms": 470,
-          "max_duration_ms": 476,
+          "total_duration_ms": 1885,
+          "average_duration_ms": 471,
+          "max_duration_ms": 481,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -469,9 +469,9 @@
           "target": "release-closeout-batch-manifest-promote",
           "run_count": 4,
           "selected_iteration_count": 4,
-          "total_duration_ms": 5846,
-          "average_duration_ms": 1462,
-          "max_duration_ms": 1470,
+          "total_duration_ms": 5856,
+          "average_duration_ms": 1464,
+          "max_duration_ms": 1471,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -479,9 +479,9 @@
           "target": "release-evidence-closeout-self-check",
           "run_count": 4,
           "selected_iteration_count": 4,
-          "total_duration_ms": 1459,
-          "average_duration_ms": 365,
-          "max_duration_ms": 371,
+          "total_duration_ms": 1458,
+          "average_duration_ms": 364,
+          "max_duration_ms": 372,
           "skipped_after_first_iteration_count": 0
         }
       ],
@@ -497,7 +497,7 @@
         "post_first_iteration_selected_count": 0,
         "post_first_iteration_run_count": 0,
         "skipped_post_first_iteration_selection_count": 9,
-        "total_duration_ms": 1299,
+        "total_duration_ms": 1282,
         "skip_policy_effective": true,
         "summary": "expensive prerequisites were selected only in iteration 1"
       },
@@ -509,9 +509,9 @@
       },
       "evidence_basis": {
         "fixed_point_report_path": "ops/reports/release-closeout-fixed-point.json",
-        "fixed_point_report_digest": "e3d185bcfb2373d6f9bcf52132694d90487403f93fe876af58590f0182060218",
-        "current_fixed_point_report_digest": "e3d185bcfb2373d6f9bcf52132694d90487403f93fe876af58590f0182060218",
-        "fixed_point_generated_at": "2026-05-15T13:28:46Z",
+        "fixed_point_report_digest": "65d273c92790cb1688e0459033290ea46cccc29441004c2da76fcc1bcc44c31c",
+        "current_fixed_point_report_digest": "65d273c92790cb1688e0459033290ea46cccc29441004c2da76fcc1bcc44c31c",
+        "fixed_point_generated_at": "2026-05-15T13:51:22Z",
         "cost_trend_path": "ops/reports/release-closeout-fixed-point-cost-trend.json",
         "cost_trend_load_status": "ok",
         "cost_trend_digest": "4ad9945123b2cb8856267681013cf7200acf64fef40079a738488071907344ef",
@@ -520,7 +520,7 @@
         "sampled_fixed_point_report_digest": "4b9a7cd57062b69f1eaedd9002bdf6d487a3c73d11c103bd7bf9b7c5d8a61b00",
         "basis_relation_to_current_fixed_point": "sampled_different_fixed_point"
       },
-      "summary": "9 writers ran 33 commands across 4 iterations; total_duration_ms=26046; expensive_prerequisite_skip_effective=True"
+      "summary": "9 writers ran 33 commands across 4 iterations; total_duration_ms=26017; expensive_prerequisite_skip_effective=True"
     }
   },
   "confirmed_evidence_summary": {
@@ -651,7 +651,7 @@
   },
   "accepted_risk_delta": {
     "status": "unchanged",
-    "previous_report_generated_at": "2026-05-15T13:51:22Z",
+    "previous_report_generated_at": "2026-05-15T14:12:53Z",
     "added_count": 0,
     "removed_count": 0,
     "unchanged_count": 0,
