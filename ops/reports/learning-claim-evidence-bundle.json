@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-claim-evidence-bundle.schema.json",
   "artifact_kind": "learning_claim_evidence_bundle",
-  "generated_at": "2026-05-15T14:58:28Z",
+  "generated_at": "2026-05-15T17:09:47Z",
   "producer": "ops.scripts.learning_claim_evidence_bundle",
   "source_command": "python -m ops.scripts.learning_claim_evidence_bundle --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "c03cee95c6d8d7783b9155ae1448e881c205cbf15df93139d5808f05eeada2ad",
+  "source_tree_fingerprint": "d17ebc7dc9aa48f70472ceef3cc662e8acb8a144ce1bca343f8618d867c63a99",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "5d96654b43ee21ca9e073bff4bfa78778f690771c9df676370d5d5ab2c88c14e",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "f77ecb540d9826e20850d89d0c41d8cc23d8004cd8d6e329887db26e231d3884",
-    "learning_claim_evidence_bundle_inputs": "d67baed92d33a545132ecff10371187cdcc60ce26d403557eda2bedbb58754fa"
+    "learning_claim_evidence_bundle_inputs": "a2ac1838a5878210d5e418b6843a4db7255f5c4655f2ed0bad8fc1c4aa2c03a2"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T14:58:28Z"
+    "checked_at": "2026-05-15T17:09:47Z"
   },
   "vault": ".",
   "policy": {
@@ -28,7 +28,7 @@
   },
   "status": "pass",
   "summary": {
-    "bundle_sha256": "65ed06079d988b1c7a0f9ddd43c605f15fb04ab9e9bab9e8fa38d3e789df50e1",
+    "bundle_sha256": "63ce1a1ab770bb269ada39293fb1c8f8563cf7f335927d7f181018e10a3ef637",
     "revocation_status": "active",
     "bundle_item_count": 7,
     "missing_required_count": 0,
@@ -46,7 +46,7 @@
     "behavior_delta_artifact_missing_count": 0,
     "behavior_delta_artifact_mismatch_count": 0,
     "behavior_delta_artifact_readback_status": "pass",
-    "legacy_reconstruction_sha256": "1ebd33ce6bb8e7c0079d953b75869a989263919f7b932d972ff1644b23cc23a4",
+    "legacy_reconstruction_sha256": "f749ccf07319c4ca94e316df3eccee29a23374fdc02524d6a05e28ebbc3aba3b",
     "legacy_reconstruction_status": "pass",
     "legacy_reconstruction_blocked_run_count": 0,
     "legacy_reconstruction_operator_summary": [
@@ -184,13 +184,13 @@
         }
       }
     ],
-    "external_manifest_sha256": "7403c296f25d6126d4deb9ee97441ec87bee3ecc0b46707f392d7ecc4db1da4c",
+    "external_manifest_sha256": "2315b64a77a59d827e3f821b8f38f40f63ad685a2e58eea3e34f72964ef595bd",
     "run_set_digest": "0d4d301514832166276660d9623a2dcf36345a066ace35c8480978d2cd38b13f"
   },
   "bundle_identity": {
     "digest_algorithm": "sha256",
     "bundle_payload_version": 1,
-    "evidence_bundle_digest": "65ed06079d988b1c7a0f9ddd43c605f15fb04ab9e9bab9e8fa38d3e789df50e1"
+    "evidence_bundle_digest": "63ce1a1ab770bb269ada39293fb1c8f8563cf7f335927d7f181018e10a3ef637"
   },
   "evidence_items": [
     {
@@ -199,7 +199,7 @@
       "role": "blocking",
       "required": true,
       "exists": true,
-      "sha256": "ae2447123e506e8ac7d9a1fc54a88ac835fb249c0e9d68a09cad6860302fcf3d",
+      "sha256": "50478012dba472def5981f3cb1d2d277f49b9d49ba2b0d6394948207d54e7663",
       "status": "present",
       "revocation_effect": "none"
     },
@@ -209,7 +209,7 @@
       "role": "blocking",
       "required": true,
       "exists": true,
-      "sha256": "07f64a6044ac3778c1fc4c7154bae8245473c6968a932a947582c37534f7ebba",
+      "sha256": "fbeb040a9aaca223df8672003943fe279b93e7db171789f7ba60293a477b7b6b",
       "status": "present",
       "revocation_effect": "none"
     },
@@ -219,7 +219,7 @@
       "role": "blocking",
       "required": true,
       "exists": true,
-      "sha256": "626d059000d1fe56d28ea101ff09605e1cc99c240899f993804e89900a52bf5b",
+      "sha256": "6eb3aa9805813939999e810450bd6d7efcf1ac71da6835b01a309b18dafd7487",
       "status": "present",
       "revocation_effect": "none"
     },
@@ -229,7 +229,7 @@
       "role": "blocking",
       "required": true,
       "exists": true,
-      "sha256": "4506c9985a4b1daa7f8314f7ef6580d1b98ed4db38f5a395c1457bd7da305079",
+      "sha256": "7d4122209e5da72498a412213e1edabc6b29b2d102b90f1a8cc9e8e6773a371b",
       "status": "present",
       "revocation_effect": "none"
     },
@@ -239,7 +239,7 @@
       "role": "blocking",
       "required": true,
       "exists": true,
-      "sha256": "0d739427f3da2b0c2db4882fc2aa391594752b843e5766f127148eeb7115317e",
+      "sha256": "8384be9c74fcd1c6d0c0dc9fed12a241eb00b988134395f7314f5b0014d280b8",
       "status": "present",
       "revocation_effect": "none"
     },
@@ -249,7 +249,7 @@
       "role": "blocking",
       "required": true,
       "exists": true,
-      "sha256": "1ebd33ce6bb8e7c0079d953b75869a989263919f7b932d972ff1644b23cc23a4",
+      "sha256": "f749ccf07319c4ca94e316df3eccee29a23374fdc02524d6a05e28ebbc3aba3b",
       "status": "present",
       "revocation_effect": "none"
     },
@@ -259,7 +259,7 @@
       "role": "blocking",
       "required": true,
       "exists": true,
-      "sha256": "7403c296f25d6126d4deb9ee97441ec87bee3ecc0b46707f392d7ecc4db1da4c",
+      "sha256": "2315b64a77a59d827e3f821b8f38f40f63ad685a2e58eea3e34f72964ef595bd",
       "status": "present",
       "revocation_effect": "none"
     }

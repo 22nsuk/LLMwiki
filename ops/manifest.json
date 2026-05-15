@@ -167,12 +167,12 @@
     },
     {
       "path": "mk/test.mk",
-      "sha256": "ef032069b002acef187131939c0d04044a621e39c896a414c48dafed7cc0c85a",
+      "sha256": "ac0f4ebcf462a6f951c72ffbaa4d32bd4b36412b361aab8ba3e530d024ff054d",
       "size_bytes": 19707
     },
     {
       "path": "ops/README.md",
-      "sha256": "951e5fced8088a8c96c85747e2637a064860409e8a5ce772c1ad14567a57d3e0",
+      "sha256": "d210f146d755fe240f5a2ef1271b56e716951ad6b02e1d84a327b947a5d54e7b",
       "size_bytes": 102728
     },
     {
@@ -357,8 +357,8 @@
     },
     {
       "path": "ops/schemas/executor-report.schema.json",
-      "sha256": "e23cb6e41adfd0a860ff4f74fb510d5d467da94d35d1dc68500630a0ba8489ae",
-      "size_bytes": 4373
+      "sha256": "c55037fed7faa05682f172a2f189cce1f6d25342787ce84678e107f3424ef46f",
+      "size_bytes": 4560
     },
     {
       "path": "ops/schemas/external-report-action-matrix.schema.json",
@@ -962,8 +962,8 @@
     },
     {
       "path": "ops/scripts/core/codex_exec_executor.py",
-      "sha256": "cda21f06bad642fd3a94c032f0bff940d70fe616d1881027bded79ebea4e179e",
-      "size_bytes": 29391
+      "sha256": "d62fcc7d71f35a330f33a08f1dbd1215177cc41256eb886f7612f96117e62624",
+      "size_bytes": 29446
     },
     {
       "path": "ops/scripts/core/codex_goal_client.py",
@@ -4822,7 +4822,7 @@
     },
     {
       "path": "tests/fixtures/report_schema_samples.json",
-      "sha256": "7d76dc7623650489485f37f3dd553160cb46dffbb5574ccde74c4d606eced209",
+      "sha256": "a2a7e6b2cc43f6554b4e7923043452aa437512d56ab1429e3f960f1c99ee561b",
       "size_bytes": 132963
     },
     {
@@ -5002,8 +5002,8 @@
     },
     {
       "path": "tests/test_executor_runtime.py",
-      "sha256": "4addea29d656184c48435146843479eddee934c1cc428d9c397d23a7004aab02",
-      "size_bytes": 31443
+      "sha256": "12215fd07adcb44ac24709510dc8ba70cc7587cb1eb6f2e389bcef748ae9dec5",
+      "size_bytes": 33323
     },
     {
       "path": "tests/test_experiment_telemetry_runtime.py",
@@ -5142,7 +5142,7 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "a605469efcdf1557913b86f9939348346f249ffc0394d38f080a5ca22174f9a8",
+      "sha256": "f042e238a12df9f4b0aa2dccd2455829b32013fcc3245368eac18e05f7defae0",
       "size_bytes": 129746
     },
     {

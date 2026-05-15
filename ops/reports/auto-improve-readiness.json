@@ -1,29 +1,29 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-15T14:58:34Z",
+  "generated_at": "2026-05-15T17:13:35Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "c03cee95c6d8d7783b9155ae1448e881c205cbf15df93139d5808f05eeada2ad",
+  "source_tree_fingerprint": "d17ebc7dc9aa48f70472ceef3cc662e8acb8a144ce1bca343f8618d867c63a99",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "e4bbee62a954a9f8b869630b9b6ce9cd27c5dbe7faeadc7e8af48b1d35474533",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "559d97ccf4254557da60555ec99fddde7a726b098edc3f0e069218516d110cdc",
-    "artifact_freshness_report": "dbc44c22f60dd1110756b1be599d810068a36e74c704dd035fcb8fd77e179829",
-    "mechanism_review_report": "07f64a6044ac3778c1fc4c7154bae8245473c6968a932a947582c37534f7ebba",
-    "mutation_proposal_report": "626d059000d1fe56d28ea101ff09605e1cc99c240899f993804e89900a52bf5b",
-    "outcome_metrics_report": "4506c9985a4b1daa7f8314f7ef6580d1b98ed4db38f5a395c1457bd7da305079",
-    "release_authority_preflight_report": "0201ef719a4cd2563a71e9cd75f88e3372cb7e504c255f75d97e06c2d8699604",
-    "release_closeout_batch_manifest_report": "73b94eae76efdcf087db7a47b19a9f508db6b32337f18f022dc28c6d586f2b0b",
-    "release_closeout_finality_attestation_report": "8cc27425192ccce3be8d855afcbc078175563c557850cae2aa280380052492a9",
+    "artifact_freshness_report": "f11f5010bf1288f4ac43d6783734bc122f182e4f68c4e7a0586ffdc647824866",
+    "mechanism_review_report": "fbeb040a9aaca223df8672003943fe279b93e7db171789f7ba60293a477b7b6b",
+    "mutation_proposal_report": "6eb3aa9805813939999e810450bd6d7efcf1ac71da6835b01a309b18dafd7487",
+    "outcome_metrics_report": "7d4122209e5da72498a412213e1edabc6b29b2d102b90f1a8cc9e8e6773a371b",
+    "release_authority_preflight_report": "5edd017bc03b52910fba10b3745fac5abdf1e3ccd143bce21793821da100b432",
+    "release_closeout_batch_manifest_report": "57542083e286f93304adc6036c577d893d30e0ad9b5c601e661a099e2da5d5ee",
+    "release_closeout_finality_attestation_report": "d1a7870f4303d5c2dd6e5caf15d881025baf9c63fa5de10bfdd97d69ac935961",
     "release_closeout_post_check_finalizer_report": "missing",
-    "release_closeout_summary_report": "2a9959804a572ded880bbf49363f25413dd3ce431fa643e121657a0ef0f8f7d5",
-    "release_evidence_cohort_report": "f2a96bcbc66509a0f92d6de8b922dda0210fa51357fd2db9d0f037a7cac4d9cc",
-    "selected_contract_summary_report": "566c0151dbf2e596e6ead2db3ed0198b9dddfd57ea86548b3100ff4157a907e4",
-    "source_package_clean_extract_report": "b984c947eb79a2bc7a67478365b920b580ef726ae28417aca4621e4af88aaacb",
-    "release_authority_preflight_report_candidates": "8484764210419db3bd7a9fa841c9f1fae66a40e2f63280333c432a3ad0dfcee5"
+    "release_closeout_summary_report": "a31d11194c5b5499e548e676bac1185dffd5c5b71c21eca15cd9f0268b22aac6",
+    "release_evidence_cohort_report": "6ab0a30659eacfef14764fbe681430ed1cd79fa69a1e219335d97a01a48f245e",
+    "selected_contract_summary_report": "be156327e609cfe3226b2bdc711ab934a7ab6027f20982e5c4b3f587f8d8ea73",
+    "source_package_clean_extract_report": "c9e2546e2ca7f44a1233f9535a84fd7078c30f571e2d503ef23be7b13957b182",
+    "release_authority_preflight_report_candidates": "ac74047191748583f5c8803284d99e8d36cd568adbbdf482b4b3097323f154cb"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -31,7 +31,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T14:58:34Z"
+    "checked_at": "2026-05-15T17:13:35Z"
   },
   "vault": ".",
   "policy": {

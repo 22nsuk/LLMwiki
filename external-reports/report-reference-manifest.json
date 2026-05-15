@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/external-report-reference-manifest.schema.json",
   "artifact_kind": "external_report_reference_manifest",
-  "generated_at": "2026-05-15T14:43:08Z",
+  "generated_at": "2026-05-15T16:54:01Z",
   "producer": "ops.scripts.external_report_reference_manifest",
   "source_command": "python -m ops.scripts.external_report_reference_manifest --vault . --out external-reports/report-reference-manifest.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "c03cee95c6d8d7783b9155ae1448e881c205cbf15df93139d5808f05eeada2ad",
+  "source_tree_fingerprint": "d17ebc7dc9aa48f70472ceef3cc662e8acb8a144ce1bca343f8618d867c63a99",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "1d6f04ca255e308a81818f56c8abffc20fb6bd6b56145cbde9dbed29b1637437",
@@ -15,10 +15,10 @@
     "active_reference_set_status": "97b0560280ed60a5a1eaa1bc45492543c8a986ad5a25b468c427eb83c3e88191",
     "basis_zip_entry_count": "ef4cf73add6b6f476ece3477b6235878bc8a0de65fe7f561200ebac7f18db18a",
     "basis_zip_name": "5b5c12fc181e5a7ce0dd6f3aabd4683cd649631a3e6ef47db68e8b39245d31af",
-    "basis_zip_sha256": "abc5b3d9a012a3a065cca6ba05c8815c5eddf47e992979124efe4d3a7bd311fd",
+    "basis_zip_sha256": "ff77b1fb4c8c40d762c5f128d01a11632d473aa8156bd8acfeb3f2ec648b728a",
     "current_distribution_zip_entry_count": "ef4cf73add6b6f476ece3477b6235878bc8a0de65fe7f561200ebac7f18db18a",
     "current_distribution_zip_name": "5b5c12fc181e5a7ce0dd6f3aabd4683cd649631a3e6ef47db68e8b39245d31af",
-    "current_distribution_zip_sha256": "abc5b3d9a012a3a065cca6ba05c8815c5eddf47e992979124efe4d3a7bd311fd",
+    "current_distribution_zip_sha256": "ff77b1fb4c8c40d762c5f128d01a11632d473aa8156bd8acfeb3f2ec648b728a",
     "mode": "b4160612cecc93c04c0380f95a60ea52c539aae77cd44640c4693273c720fa63",
     "zip_provenance_status": "9300236f7f4a32c6c4dedd8ea8950c3e59bf3fe13e381c969a63c43b6e1abacf"
   },
@@ -28,7 +28,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T14:43:08Z"
+    "checked_at": "2026-05-15T16:54:01Z"
   },
   "vault": ".",
   "policy": {
@@ -37,19 +37,19 @@
   },
   "review_basis_zip": {
     "name": "LLMwiki-source.zip",
-    "sha256": "6eaea43c915f4d1bb602f0706b97c2ad4ebbbeed6bc190bce30d901b2a387108",
+    "sha256": "adeb3c40b65851bf95a0da9a6946478bba62474d60f72207d0b54c1836034cb7",
     "entry_count": 1574,
     "source": "computed"
   },
   "current_distribution_zip": {
     "name": "LLMwiki-source.zip",
-    "sha256": "6eaea43c915f4d1bb602f0706b97c2ad4ebbbeed6bc190bce30d901b2a387108",
+    "sha256": "adeb3c40b65851bf95a0da9a6946478bba62474d60f72207d0b54c1836034cb7",
     "entry_count": 1574,
     "source": "computed"
   },
   "basis_zip": {
     "name": "LLMwiki-source.zip",
-    "sha256": "6eaea43c915f4d1bb602f0706b97c2ad4ebbbeed6bc190bce30d901b2a387108",
+    "sha256": "adeb3c40b65851bf95a0da9a6946478bba62474d60f72207d0b54c1836034cb7",
     "entry_count": 1574,
     "source": "computed"
   },

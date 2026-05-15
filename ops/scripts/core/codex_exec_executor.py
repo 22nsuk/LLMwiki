@@ -54,12 +54,12 @@ class ExecutorCommandPayload(TypedDict):
     argv: list[str]
 
 
-class ExecutorArtifactsPayload(TypedDict, total=False):
+class ExecutorArtifactsPayload(TypedDict):
     prompt: str
     output_last_message: str
     stdout: str
     stderr: str
-    timeout_failure: str
+    timeout_failure: str | None
 
 
 class ExecutorResultPayload(TypedDict):
@@ -75,7 +75,7 @@ class ExecutorResultPayload(TypedDict):
     heartbeat: dict[str, Any]
 
 
-class ExecutorDiagnosticsPayload(TypedDict, total=False):
+class ExecutorDiagnosticsPayload(TypedDict):
     routing_report: str
     scope_freeze: str
     notes: list[str]
@@ -337,6 +337,7 @@ def _materialize_prompt(request: PromptMaterializationRequest) -> Path:
             "output_last_message": request.artifacts.output_last_message_rel,
             "stdout": request.artifacts.stdout_rel,
             "stderr": request.artifacts.stderr_rel,
+            "timeout_failure": None,
         },
         "result": {
             "returncode": 0,
@@ -575,6 +576,7 @@ def _build_executor_report(
             "output_last_message": artifacts.output_last_message_rel,
             "stdout": artifacts.stdout_rel,
             "stderr": artifacts.stderr_rel,
+            "timeout_failure": None,
         },
         "result": {
             "returncode": _completed_returncode(completed),

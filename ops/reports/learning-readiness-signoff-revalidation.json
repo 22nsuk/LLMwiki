@@ -1,19 +1,19 @@
 {
   "$schema": "ops/schemas/learning-readiness-signoff-revalidation.schema.json",
   "artifact_kind": "learning_readiness_signoff_revalidation",
-  "generated_at": "2026-05-15T14:58:45Z",
+  "generated_at": "2026-05-15T17:10:04Z",
   "producer": "ops.scripts.learning_readiness_signoff_revalidation",
   "source_command": "python -m ops.scripts.learning_readiness_signoff_revalidation --vault . --window-days 7",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "c03cee95c6d8d7783b9155ae1448e881c205cbf15df93139d5808f05eeada2ad",
+  "source_tree_fingerprint": "d17ebc7dc9aa48f70472ceef3cc662e8acb8a144ce1bca343f8618d867c63a99",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "8c536891a172cbe9ad11fa91c7851a82490e204151bd3076dc7ca35e9ad25720",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "77a99c5b496880aaa81b020b1697a75023716dd9ff5dde17b79097c9c84b7621",
-    "auto_improve_readiness": "fd17a6d31a3c348da2c7c243592bd09655092a1ad22a9548305d1520ace873ec",
+    "auto_improve_readiness": "24d3d75c24dbf1ef7ed2f10d34bbfa5464da4998d1cb848a1f08ea6eb69e9fb0",
     "learning_readiness_signoff": "180910b295f2f050481a9f364dd100a28da735521ae45b3914c6e4d10ef7c83c",
-    "release_closeout_summary": "cc229ebb55f08be09cdaf18837d3742bc29419294556547a12fc231f06266ec9",
+    "release_closeout_summary": "a31d11194c5b5499e548e676bac1185dffd5c5b71c21eca15cd9f0268b22aac6",
     "required_command": "7f735507693fb0fd3c8f5860971f1f24c41d88981f989ef479e1839cafa325bd",
     "required_environment": "1de70756b4dc6ba51342a117ebf94ebc3114606c630cb2f0525a1b333d697bf0",
     "window_days": "7902699be42c8a8e46fbbb4501726517e86b22c56a189f7625a6da49081b2451"
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T14:58:45Z"
+    "checked_at": "2026-05-15T17:10:04Z"
   },
   "vault": ".",
   "policy": {
@@ -41,8 +41,8 @@
     "accepted_by": "operator-requested-via-codex-20260503",
     "accepted_at": "2026-05-03T03:00:01Z",
     "expires_at": "2026-05-10T03:00:01Z",
-    "seconds_until_expiry": -475124,
-    "days_until_expiry": -5.4991,
+    "seconds_until_expiry": -483003,
+    "days_until_expiry": -5.5903,
     "risk_owner": "runtime-maintainer",
     "revalidation_condition": "Rerun make release-evidence-closeout and inspect learning readiness metrics before release.",
     "rollback_trigger": "Treat learning_blocked_by_review_required as active again if release evidence changes, learning telemetry regresses, or this signoff expires.",
@@ -51,7 +51,7 @@
   "closeout": {
     "path": "ops/reports/release-closeout-summary.json",
     "load_status": "ok",
-    "generated_at": "2026-05-15T14:58:45Z",
+    "generated_at": "2026-05-15T17:10:04Z",
     "checked_in_release_ready": true,
     "release_readiness_state": "clean_pass",
     "release_authority_status": "clean_pass",
@@ -68,8 +68,8 @@
     "status": "pass",
     "accepted_learning_risk": false,
     "learning_blocker_active": false,
-    "source_tree_fingerprint": "c03cee95c6d8d7783b9155ae1448e881c205cbf15df93139d5808f05eeada2ad",
-    "producer_input_fingerprint": "d98d1e5f9774fa9d646be4076bc1e35f161d1d715547bc1e95d8bcf000d5cc99",
+    "source_tree_fingerprint": "d17ebc7dc9aa48f70472ceef3cc662e8acb8a144ce1bca343f8618d867c63a99",
+    "producer_input_fingerprint": "b2ae41bb4bba17a86ed22e48fcb354cbc5b7d87573d778412c00deaa02859794",
     "currentness_status": "current",
     "summary": "release_authority_status=clean_pass; release_readiness_state=clean_pass; machine_release_allowed=True; operator_release_allowed=True; requires_accepted_risk_review=False"
   },
@@ -104,7 +104,7 @@
   "revalidation": {
     "status": "metrics_close_candidate",
     "window_days": 7,
-    "window_ends_at": "2026-05-22T14:58:45Z",
+    "window_ends_at": "2026-05-22T17:10:04Z",
     "clean_closeout_required": false,
     "status_reason": "learning readiness metrics are sufficient to close the blocker without renewing signoff"
   },

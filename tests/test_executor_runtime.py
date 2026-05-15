@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 from unittest import mock
 
 from ops.scripts.codex_exec_executor import ExecutorContractError, execute_codex_exec_role
@@ -234,7 +235,50 @@ def _write_routing_report(
     return rel_path
 
 
+def _object_schema_paths_with_optional_properties(schema: Any, path: str = "$") -> list[str]:
+    if not isinstance(schema, dict):
+        return []
+    findings: list[str] = []
+    properties = schema.get("properties")
+    if isinstance(properties, dict):
+        required = schema.get("required", [])
+        required_keys = set(required) if isinstance(required, list) else set()
+        missing = sorted(set(properties) - required_keys)
+        if missing:
+            findings.append(f"{path}: {', '.join(missing)}")
+        for name, subschema in properties.items():
+            findings.extend(
+                _object_schema_paths_with_optional_properties(
+                    subschema,
+                    f"{path}.properties.{name}",
+                )
+            )
+    items = schema.get("items")
+    if items is not None:
+        findings.extend(_object_schema_paths_with_optional_properties(items, f"{path}.items"))
+    for keyword in ("anyOf", "oneOf", "allOf"):
+        variants = schema.get(keyword)
+        if isinstance(variants, list):
+            for index, variant in enumerate(variants):
+                findings.extend(
+                    _object_schema_paths_with_optional_properties(
+                        variant,
+                        f"{path}.{keyword}[{index}]",
+                    )
+                )
+    return findings
+
+
 class ExecutorRuntimeTests(unittest.TestCase):
+    def test_executor_report_schema_is_codex_output_schema_strict(self) -> None:
+        schema = json.loads((REPO_ROOT / "ops" / "schemas" / "executor-report.schema.json").read_text())
+
+        self.assertEqual(_object_schema_paths_with_optional_properties(schema), [])
+        self.assertEqual(
+            schema["properties"]["artifacts"]["properties"]["timeout_failure"]["type"],
+            ["string", "null"],
+        )
+
     def test_worker_role_uses_full_auto_and_writes_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -273,6 +317,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertEqual(report["status"], "pass")
             self.assertIn("--full-auto", report["command"]["argv"])
             self.assertIn("--skip-git-repo-check", report["command"]["argv"])
+            self.assertIsNone(report["artifacts"]["timeout_failure"])
             self.assertTrue((vault / "runs" / "run-executor" / "worker-executor-report.json").exists())
             prompt = (vault / "runs" / "run-executor" / "worker-prompt.md").read_text(encoding="utf-8")
             self.assertIn("Return JSON only.", prompt)

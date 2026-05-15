@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-delta-scoreboard.schema.json",
   "artifact_kind": "learning_delta_scoreboard",
-  "generated_at": "2026-05-15T14:58:31Z",
+  "generated_at": "2026-05-15T17:09:51Z",
   "producer": "ops.scripts.learning_delta_scoreboard",
   "source_command": "python -m ops.scripts.learning_delta_scoreboard --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "c03cee95c6d8d7783b9155ae1448e881c205cbf15df93139d5808f05eeada2ad",
+  "source_tree_fingerprint": "d17ebc7dc9aa48f70472ceef3cc662e8acb8a144ce1bca343f8618d867c63a99",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "27d4da175fb390b9e8aa35ec13404af61fb32cfef4fcefee316d1e9557b89ae2",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "f4549dd5b13ac715af49224e9ee0822e13f9e0feac17df335f0df02abbf01b11",
-    "learning_delta_inputs": "f8ac5bb07efaaaaed1c3913e2524743e2f030eb73abcd90600144df43cd4a723"
+    "learning_delta_inputs": "23406794b1f8101ebc0a13b7f4c85511a382444a4619f48efc5dcbed05aca636"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T14:58:31Z"
+    "checked_at": "2026-05-15T17:09:51Z"
   },
   "vault": ".",
   "policy": {
@@ -240,8 +240,8 @@
     "learning_claim_unlock_review_approved": true,
     "learning_claim_unlock_review_revocation_status": "active",
     "learning_claim_evidence_bundle_status": "active",
-    "learning_claim_evidence_bundle_sha256": "65ed06079d988b1c7a0f9ddd43c605f15fb04ab9e9bab9e8fa38d3e789df50e1",
-    "learning_confirmed_evidence_cohort_sha256": "18ed2043c86c675d10ad46676faea44b5b0caa69287882e50a2e71261925fb4f",
+    "learning_claim_evidence_bundle_sha256": "63ce1a1ab770bb269ada39293fb1c8f8563cf7f335927d7f181018e10a3ef637",
+    "learning_confirmed_evidence_cohort_sha256": "778bf1b74a8670528d3684757fcb554e20fdf33247fdbb9baccd4c55d0ae84ac",
     "learning_confirmed_evidence_cohort_status": "active",
     "telemetry_coverage_ratio": 1.0,
     "telemetry_coverage_status": "full",
@@ -483,12 +483,12 @@
       }
     ],
     "bundle_status": "active",
-    "bundle_sha256": "65ed06079d988b1c7a0f9ddd43c605f15fb04ab9e9bab9e8fa38d3e789df50e1",
-    "current_bundle_sha256": "65ed06079d988b1c7a0f9ddd43c605f15fb04ab9e9bab9e8fa38d3e789df50e1",
+    "bundle_sha256": "63ce1a1ab770bb269ada39293fb1c8f8563cf7f335927d7f181018e10a3ef637",
+    "current_bundle_sha256": "63ce1a1ab770bb269ada39293fb1c8f8563cf7f335927d7f181018e10a3ef637",
     "revocation_status": "active",
     "confirmed_evidence_cohort_path": "ops/reports/learning-confirmed-evidence-cohort.json",
-    "confirmed_evidence_cohort_sha256": "18ed2043c86c675d10ad46676faea44b5b0caa69287882e50a2e71261925fb4f",
-    "current_confirmed_evidence_cohort_sha256": "18ed2043c86c675d10ad46676faea44b5b0caa69287882e50a2e71261925fb4f",
+    "confirmed_evidence_cohort_sha256": "778bf1b74a8670528d3684757fcb554e20fdf33247fdbb9baccd4c55d0ae84ac",
+    "current_confirmed_evidence_cohort_sha256": "778bf1b74a8670528d3684757fcb554e20fdf33247fdbb9baccd4c55d0ae84ac",
     "confirmed_evidence_cohort_status": "active",
     "confirmed_evidence_cohort_fingerprint_match_status": "match",
     "source_path": "ops/reports/learning-claim-unlock-review.json",

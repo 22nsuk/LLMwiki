@@ -11,7 +11,8 @@
     "status",
     "command",
     "artifacts",
-    "result"
+    "result",
+    "diagnostics"
   ],
   "properties": {
     "$schema": {
@@ -85,7 +86,8 @@
         "prompt",
         "output_last_message",
         "stdout",
-        "stderr"
+        "stderr",
+        "timeout_failure"
       ],
       "properties": {
         "prompt": {
@@ -101,7 +103,10 @@
           "type": "string"
         },
         "timeout_failure": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -190,6 +195,11 @@
     },
     "diagnostics": {
       "type": "object",
+      "required": [
+        "routing_report",
+        "scope_freeze",
+        "notes"
+      ],
       "properties": {
         "routing_report": {
           "type": "string"
