@@ -1,22 +1,22 @@
 {
   "$schema": "ops/schemas/release-clean-blocker-ledger.schema.json",
   "artifact_kind": "release_clean_blocker_ledger",
-  "generated_at": "2026-05-15T13:28:46Z",
+  "generated_at": "2026-05-15T13:51:22Z",
   "producer": "ops.scripts.release_clean_blocker_ledger",
   "source_command": "python -m ops.scripts.release_clean_blocker_ledger --vault . --out ops/reports/release-clean-blocker-ledger.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "08f6d759d04bf1355de3e8f534bb1f9b46152cb7fb92a153f2f7a86bf9143aac",
+  "source_tree_fingerprint": "f3fa8d7f0e06f7535455480bc64f42b10d53a8162397e50e28ee6d531ba33024",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "f6aa73699b331c2043768aebbdd1a91ef5399c245b427d3c0bc1358b10789332",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "05d9ca92b669481899a02e5a557550b51eabdd6e3d3c4d5cb6757659f40de64c",
-    "learning_delta_scoreboard": "47febc0da6ad6a81411e1893a58fa7acc0d631e0fe7880d174d0aefd1e7ce687",
-    "release_closeout_summary": "65ee753b8118b3cca9b6f53b6c853c366e10572613ae4d799ee56a54c5430be5",
-    "release_evidence_cohort": "d1140716ec58fc3521ede62dffc8ae3774124e2cbefcbb943978b72d5abe301c",
-    "release_lane_summary": "8a76be5036a6276d4c609cad1f3f69f9f907cbbcb83d60ad2461fc93ca8351d6",
+    "learning_delta_scoreboard": "c4483cfff5e66b24ecf74598c949edbdf21d844c67c90d61f75996c34982d092",
+    "release_closeout_summary": "bedce15e6bc572ff376791af02258e37cbdd272445c2b23b721919430b60a66d",
+    "release_evidence_cohort": "c1af0d917743298d1c2a8791a695a06d6f93fd2e12dd47f2547952a730c9827d",
+    "release_lane_summary": "eec2ef0615157dd3ab42244fd2f42b2b3322e22da5d4879c795e797733f3e227",
     "release_risk_taxonomy": "1e2d9ff8c9b88ff11d2850a6293b444ab8eff5e79dac1404cb3fe8fe5f68d093",
-    "current_source_tree_fingerprint": "9bace9bab409ce9d5a4fe88b31ab13fc5527e7793fbb5d33198a53eb1adf3e16"
+    "current_source_tree_fingerprint": "2e984106ff7f7cda8267a96b4a3cb245187251b4fc8160674409b914821525b3"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T13:28:46Z"
+    "checked_at": "2026-05-15T13:51:22Z"
   },
   "vault": ".",
   "policy": {

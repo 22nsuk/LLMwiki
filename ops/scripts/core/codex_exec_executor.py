@@ -430,6 +430,7 @@ def _codex_exec_argv(
     argv = [
         "codex",
         "exec",
+        "--skip-git-repo-check",
         "--cd",
         str(workspace_root),
         "-m",

@@ -962,8 +962,8 @@
     },
     {
       "path": "ops/scripts/core/codex_exec_executor.py",
-      "sha256": "0f13116d0e9adbd471f17f7c96f702d6ea9e5fef2eadd411b3bd10c049a61b56",
-      "size_bytes": 28643
+      "sha256": "e01798901d53680b753441010181367f677e7bcc58b0e4676a7a7a5a6a6c04ab",
+      "size_bytes": 28676
     },
     {
       "path": "ops/scripts/core/codex_goal_client.py",
@@ -5002,8 +5002,8 @@
     },
     {
       "path": "tests/test_executor_runtime.py",
-      "sha256": "9b056e29fffabcae0496b3ca0f9fc8cf09031633758552f5a61f12866d8852f5",
-      "size_bytes": 29087
+      "sha256": "0134aedc88c8d1c9d51c022bc54191275653d365c944de2621694135ea4d63bb",
+      "size_bytes": 29373
     },
     {
       "path": "tests/test_experiment_telemetry_runtime.py",

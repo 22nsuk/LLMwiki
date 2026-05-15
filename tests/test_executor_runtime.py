@@ -272,6 +272,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             self.assertEqual(report["status"], "pass")
             self.assertIn("--full-auto", report["command"]["argv"])
+            self.assertIn("--skip-git-repo-check", report["command"]["argv"])
             self.assertTrue((vault / "runs" / "run-executor" / "worker-executor-report.json").exists())
             prompt = (vault / "runs" / "run-executor" / "worker-prompt.md").read_text(encoding="utf-8")
             self.assertIn("Return JSON only.", prompt)
@@ -322,6 +323,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             self.assertEqual(report["status"], "pass")
             self.assertEqual(report["command"]["argv"][2:4], ["-s", "read-only"])
+            self.assertIn("--skip-git-repo-check", report["command"]["argv"])
 
     def test_execute_codex_exec_role_raises_domain_error_for_malformed_routing_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -434,8 +436,10 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 executed_roles.append(role)
                 if role == "worker":
                     self.assertIn("--full-auto", argv)
+                    self.assertIn("--skip-git-repo-check", argv)
                 if role == "validator":
                     self.assertEqual(argv[2:4], ["-s", "read-only"])
+                    self.assertIn("--skip-git-repo-check", argv)
                 output_path.write_text(
                     json.dumps({"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}}, ensure_ascii=False),
                     encoding="utf-8",

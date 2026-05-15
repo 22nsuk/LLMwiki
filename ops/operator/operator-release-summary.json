@@ -1,23 +1,23 @@
 {
   "$schema": "ops/schemas/operator-release-summary.schema.json",
   "artifact_kind": "operator_release_summary",
-  "generated_at": "2026-05-15T13:29:13Z",
+  "generated_at": "2026-05-15T13:51:50Z",
   "producer": "ops.scripts.operator_release_summary",
   "source_command": "python -m ops.scripts.operator_release_summary --vault . --out ops/operator/operator-release-summary.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "08f6d759d04bf1355de3e8f534bb1f9b46152cb7fb92a153f2f7a86bf9143aac",
+  "source_tree_fingerprint": "f3fa8d7f0e06f7535455480bc64f42b10d53a8162397e50e28ee6d531ba33024",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "1162baa2c95574cfa3e9f1f29ed14e34f2df775a2bd8acd3b6e0301827537805",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "6d79652d2ad35694dd11eaaa9c85cd5ededf5b750c2c9975712d69f72efa2471",
-    "batch_manifest": "f6f48fd92ddfd624b66a1ebb6a6f05afa8733aa5d36be576b3a2cfeef9fed6e6",
-    "closeout": "65ee753b8118b3cca9b6f53b6c853c366e10572613ae4d799ee56a54c5430be5",
-    "full_test_summary": "cd2b4e6f5cccf598462cd75b41b5ea0e897dc0b5edff3645777addf685c57fab",
-    "learning_delta_scoreboard": "47febc0da6ad6a81411e1893a58fa7acc0d631e0fe7880d174d0aefd1e7ce687",
-    "learning_revalidation": "6807365bda0a39fb4e7ef85884401f74f09629f388cbe421f50c1e16e1d23d2a",
-    "self_check": "455b06f238b0283df6385fc3b51fbdcb5b40351e7256737c8bcf5b607de053ef",
-    "test_summary": "06bdbd2d4b57817a1be980751f2bef455966e4d85d218992419374b785d809a7"
+    "batch_manifest": "8f9fd3fa48cc7e6014f8b9976e29e9452ac915f3147a9676abbbb15962497a7a",
+    "closeout": "bedce15e6bc572ff376791af02258e37cbdd272445c2b23b721919430b60a66d",
+    "full_test_summary": "1acc25a8de2044fcc56b633c9204257fd01a4a27018ac411d5cb02d53c592e55",
+    "learning_delta_scoreboard": "c4483cfff5e66b24ecf74598c949edbdf21d844c67c90d61f75996c34982d092",
+    "learning_revalidation": "162259b6bf0fb23da006149b640efecce1e91e64df375161e700a17f16469860",
+    "self_check": "1670c7c31c9977481755ecce60243f45ba0213df4d8537f30523b7493927368c",
+    "test_summary": "223ed435a1cc96f265e2568a47bd9da83d5e9a2f6a2670e8cd0505e5ede68dd3"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T13:29:13Z"
+    "checked_at": "2026-05-15T13:51:50Z"
   },
   "vault": ".",
   "policy": {
@@ -42,8 +42,8 @@
     "distribution_status": "materialized",
     "archive_profile": "source_content_package",
     "path": "build/release/LLMwiki-source.zip",
-    "sha256": "fe4874e0ba584c37d7f478632d74716250771b3781e85834c27d29ae48a95eb6",
-    "actual_sha256": "fe4874e0ba584c37d7f478632d74716250771b3781e85834c27d29ae48a95eb6",
+    "sha256": "1ecd4593a2e67bf87b90161dc8658d4df017d8211173f8f7d110a4b5d21c38a4",
+    "actual_sha256": "1ecd4593a2e67bf87b90161dc8658d4df017d8211173f8f7d110a4b5d21c38a4",
     "file_exists": true,
     "file_digest_matches_batch": true,
     "entry_count": 1574,
@@ -284,9 +284,9 @@
       }
     ],
     "learning_claim_evidence_bundle_status": "active",
-    "learning_claim_evidence_bundle_sha256": "b23865d718bc15f588b97ca4e6c0facaac0093a31160f4f26d19ecc73e10e28b",
+    "learning_claim_evidence_bundle_sha256": "074eb0bcb16fb53232f6bfb96d54e444e211eb769fe47f2396b25cedaf28f26c",
     "learning_confirmed_evidence_cohort_status": "active",
-    "learning_confirmed_evidence_cohort_sha256": "9fc02b2425e8f676d6ac321c7613bf1ddd8dc7381308396a0214046d57ad9d4a",
+    "learning_confirmed_evidence_cohort_sha256": "a3673b5f5ff2b683ff4fc6cf30833bcb6264835199ca3fc789db682fc9886d77",
     "claim_wording_allowed": true,
     "claim_wording_policy_status": "pre_seal_ready",
     "confirmed_wording_allowed": true,
