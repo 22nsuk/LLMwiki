@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Defect Escape Closures",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "summary",
+    "closures"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/defect-escape-closures.schema.json"
+      ]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": [
+        "defect_escape_closures"
+      ]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_revision": {
+      "type": "string"
+    },
+    "source_tree_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_status": {
+      "type": "string",
+      "enum": ["current", "archived"]
+    },
+    "retention_policy": {
+      "type": "string",
+      "minLength": 1
+    },
+    "encoding": {
+      "type": "string",
+      "minLength": 1
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["current", "stale", "unknown"]
+        },
+        "checked_at": {
+          "type": "string"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "closure_count"
+      ],
+      "properties": {
+        "closure_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "closures": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/closure"
+      }
+    }
+  },
+  "$defs": {
+    "closure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "promoted_run_id",
+        "escaped_run_id",
+        "closure_status",
+        "closure_reason",
+        "superseding_run_id",
+        "closed_at",
+        "evidence_refs"
+      ],
+      "properties": {
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "promoted_run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "escaped_run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "closure_status": {
+          "type": "string",
+          "enum": [
+            "closed",
+            "superseded",
+            "open"
+          ]
+        },
+        "closure_reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "superseding_run_id": {
+          "type": "string"
+        },
+        "closed_at": {
+          "type": "string"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,2655 @@
+{
+  "$schema": "ops/schemas/raw-intake-final-tree-validation-report.schema.json",
+  "vault": ".",
+  "generated_at": "2026-04-22T04:38:48Z",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "pass",
+  "max_score": 110,
+  "total_score": 110,
+  "pages": [
+    {
+      "page": "wiki/source--ai-chatbot-legal-evidence-and-privilege-gap-2026-04-17.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--ai-news-source-concentration-and-media-gatekeeping-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "query--news-snapshot-roundup-2026-04-12",
+              "source--ai-search-ecosystem-expansion-2026-04-17",
+              "source--bbc-cost-cutting-and-public-media-financial-strain-2026-04-18",
+              "source--bbc-youtube-partnership-and-big-tech-media-governance-2026-04-16",
+              "source--google-ai-search-traffic-defense-2026-04-14"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--anthropic-benefit-trust-board-governance-2026-04-15.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "query--news-snapshot-roundup-2026-04-12",
+              "source--project-glasswing-defensive-ai-cybersecurity-2026-04-15"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--bbc-cost-cutting-and-public-media-financial-strain-2026-04-18.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--bbc-youtube-partnership-and-big-tech-media-governance-2026-04-16.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "query--news-snapshot-roundup-2026-04-12",
+              "source--ai-search-ecosystem-expansion-2026-04-17",
+              "source--bbc-cost-cutting-and-public-media-financial-strain-2026-04-18",
+              "system-log"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--bitcoin-institutional-retail-divergence-and-crypto-policy-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "query--news-snapshot-roundup-2026-04-12",
+              "source--bank-of-korea-bank-led-stablecoin-governance-2026-04-13"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--cgfs-foreign-currency-funding-risk-and-cross-border-liquidity-2026-04-14.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "central_research_source_has_anchor_layer",
+          "pass": true,
+          "detail": {
+            "inbound_links": 6,
+            "threshold": 5,
+            "missing_sections": [],
+            "supporting_pages": [
+              "wiki/concept--korea-fiscal-and-public-debt-risk.md",
+              "wiki/concept--korea-fx-liquidity-and-spot-dollar-pressure.md",
+              "wiki/index.md",
+              "wiki/source--bok-dollar-funding-abundance-and-won-weakness-2026-04-14.md",
+              "wiki/synthesis--korea-fiscal-and-public-debt-risk-2026-04-22.md",
+              "wiki/synthesis--korea-fx-liquidity-and-spot-dollar-pressure-2026-04-14.md"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--coffee-bed-extraction-uniformity-modeling-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "central_research_source_has_anchor_layer",
+          "pass": true,
+          "detail": {
+            "inbound_links": 7,
+            "threshold": 5,
+            "missing_sections": [],
+            "supporting_pages": [
+              "wiki/concept--coffee-extraction-and-brew-control.md",
+              "wiki/index.md",
+              "wiki/source--coffee-extraction-kinetics-in-well-mixed-system-2026-04-13.md",
+              "wiki/source--espresso-extraction-kinetics-flow-rate-particle-size-temperature-2026-04-13.md",
+              "wiki/source--espresso-modeling-and-extraction-variation-2026-04-13.md",
+              "wiki/source--uneven-extraction-in-coffee-brewing-2026-04-13.md",
+              "wiki/synthesis--coffee-extraction-models-and-brew-control-2026-04-13.md"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--coffee-flavor-wheel-poster-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "central_research_source_has_anchor_layer",
+          "pass": true,
+          "detail": {
+            "inbound_links": 5,
+            "threshold": 5,
+            "missing_sections": [],
+            "supporting_pages": [
+              "wiki/concept--coffee-sensory-lexicon.md",
+              "wiki/index.md",
+              "wiki/source--coffee-character-wheel-beyond-flavor-2026-04-13.md",
+              "wiki/source--coffee-tasters-flavor-wheel-redesign-2026-04-13.md",
+              "wiki/synthesis--coffee-sensory-language-and-flavor-mapping-2026-04-13.md"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--coffee-volatile-compounds-by-roast-and-brew-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "central_research_source_has_anchor_layer",
+          "pass": true,
+          "detail": {
+            "inbound_links": 5,
+            "threshold": 5,
+            "missing_sections": [],
+            "supporting_pages": [
+              "wiki/concept--coffee-brew-chemistry.md",
+              "wiki/concept--coffee-fermentation-processing.md",
+              "wiki/index.md",
+              "wiki/source--science-behind-good-cup-of-coffee-2026-04-13.md",
+              "wiki/synthesis--coffee-brew-chemistry-and-processing-2026-04-13.md"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--cu-logistics-strike-legality-dispute-2026-04-21.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "query--raw-intake-roundup-2026-04-21"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--cuba-post-iran-intervention-warning-2026-04-17.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "source--us-politics-election-and-justice-pressure-2026-04-18"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--dissolved-cations-and-coffee-extraction-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "central_research_source_has_anchor_layer",
+          "pass": true,
+          "detail": {
+            "inbound_links": 6,
+            "threshold": 5,
+            "missing_sections": [],
+            "supporting_pages": [
+              "wiki/concept--coffee-brew-chemistry.md",
+              "wiki/concept--coffee-water-chemistry.md",
+              "wiki/index.md",
+              "wiki/source--science-behind-good-cup-of-coffee-2026-04-13.md",
+              "wiki/source--water-acidity-and-brew-method-recipes-2026-04-13.md",
+              "wiki/synthesis--coffee-brew-chemistry-and-processing-2026-04-13.md"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--energy-and-ai-demand-and-data-center-power-2026-04-14.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "central_research_source_has_anchor_layer",
+          "pass": true,
+          "detail": {
+            "inbound_links": 11,
+            "threshold": 5,
+            "missing_sections": [],
+            "supporting_pages": [
+              "wiki/concept--energy-transition-policy-under-shock.md",
+              "wiki/index.md",
+              "wiki/query--news-snapshot-roundup-2026-04-12.md",
+              "wiki/source--gpu-rental-inflation-and-ai-compute-scarcity-2026-04-14.md",
+              "wiki/source--korea-aidc-special-act-and-power-permitting-2026-04-15.md",
+              "wiki/source--large-load-electricity-rate-designs-and-data-center-tariffs-2026-04-15.md",
+              "wiki/source--oracle-ai-data-center-boom-through-2027-2026-04-13.md",
+              "wiki/source--power-plant-interconnection-queues-and-grid-backlog-2026-04-15.md",
+              "wiki/source--virginia-data-center-policy-and-local-grid-impacts-2026-04-15.md",
+              "wiki/synthesis--ai-physical-buildout-bottlenecks-and-supplier-leverage-2026-04-18.md",
+              "wiki/synthesis--energy-transition-policy-under-shock-2026-04-22.md"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--escaped-wolf-survival-instinct-explainer-2026-04-21.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "query--raw-intake-roundup-2026-04-21"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--espresso-modeling-and-extraction-variation-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "central_research_source_has_anchor_layer",
+          "pass": true,
+          "detail": {
+            "inbound_links": 6,
+            "threshold": 5,
+            "missing_sections": [],
+            "supporting_pages": [
+              "wiki/concept--coffee-extraction-and-brew-control.md",
+              "wiki/index.md",
+              "wiki/source--coffee-bed-extraction-uniformity-modeling-2026-04-13.md",
+              "wiki/source--espresso-extraction-kinetics-flow-rate-particle-size-temperature-2026-04-13.md",
+              "wiki/source--uneven-extraction-in-coffee-brewing-2026-04-13.md",
+              "wiki/synthesis--coffee-extraction-models-and-brew-control-2026-04-13.md"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--eu-digital-sovereignty-framework-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "central_research_source_has_anchor_layer",
+          "pass": true,
+          "detail": {
+            "inbound_links": 5,
+            "threshold": 5,
+            "missing_sections": [],
+            "supporting_pages": [
+              "wiki/concept--digital-sovereignty-in-public-it.md",
+              "wiki/index.md",
+              "wiki/query--news-snapshot-roundup-2026-04-12.md",
+              "wiki/source--hungary-post-orban-eu-realignment-2026-04-14.md",
+              "wiki/synthesis--european-tech-regulation-and-digital-sovereignty-2026-04-12.md"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--franchise-sales-trends-2026-04-12.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "source--incheon-airport-duty-free-price-discipline-and-retail-shift-2026-04-15",
+              "source--jeju-air-and-ak-holdings-liquidity-stress-2026-04-13",
+              "source--korea-long-term-care-insurance-finance-strain-2026-04-13"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--full-immersion-coffee-desorption-model-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "central_research_source_has_anchor_layer",
+          "pass": true,
+          "detail": {
+            "inbound_links": 5,
+            "threshold": 5,
+            "missing_sections": [],
+            "supporting_pages": [
+              "wiki/concept--coffee-extraction-and-brew-control.md",
+              "wiki/index.md",
+              "wiki/source--coffee-extraction-kinetics-in-well-mixed-system-2026-04-13.md",
+              "wiki/source--full-immersion-brew-temperature-and-flavor-over-time-2026-04-13.md",
+              "wiki/synthesis--coffee-extraction-models-and-brew-control-2026-04-13.md"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--global-markets-structural-pressure-seeds-2026-04-17.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--google-ai-search-traffic-defense-2026-04-14.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "query--news-snapshot-roundup-2026-04-12",
+              "source--ai-news-source-concentration-and-media-gatekeeping-2026-04-13",
+              "source--ai-search-ecosystem-expansion-2026-04-17",
+              "source--bbc-youtube-partnership-and-big-tech-media-governance-2026-04-16"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--google-precision-map-export-stalemate-2026-04-21.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "query--raw-intake-roundup-2026-04-21"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--hanmi-hanwha-tech-theft-lawsuit-clash-2026-04-21.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "query--raw-intake-roundup-2026-04-21"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--hanwha-shifts-from-burgers-to-fine-dining-2026-04-21.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "query--raw-intake-roundup-2026-04-21"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--harim-homeplus-express-preferred-bidder-2026-04-21.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "query--raw-intake-roundup-2026-04-21"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--hormuz-coalition-naval-response-2026-04-17.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "source--china-hormuz-diplomacy-and-radar-support-signals-2026-04-17"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--hormuz-reopening-market-relief-and-oil-trading-anomalies-2026-04-18.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--hot-and-cold-brew-coffee-chemistry-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "central_research_source_has_anchor_layer",
+          "pass": true,
+          "detail": {
+            "inbound_links": 6,
+            "threshold": 5,
+            "missing_sections": [],
+            "supporting_pages": [
+              "wiki/concept--coffee-brew-chemistry.md",
+              "wiki/index.md",
+              "wiki/source--cold-brew-grinding-time-and-flavor-characteristics-2026-04-13.md",
+              "wiki/source--dissolved-cations-and-coffee-extraction-2026-04-13.md",
+              "wiki/source--science-behind-good-cup-of-coffee-2026-04-13.md",
+              "wiki/synthesis--coffee-brew-chemistry-and-processing-2026-04-13.md"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--iran-war-medical-supply-risk-2026-04-17.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--iran-war-russia-ukraine-linkage-and-belarus-risk-2026-04-18.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--jeju-air-and-ak-holdings-liquidity-stress-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "query--news-snapshot-roundup-2026-04-12",
+              "source--incheon-airport-duty-free-price-discipline-and-retail-shift-2026-04-15"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--korea-long-term-care-insurance-finance-strain-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "query--news-snapshot-roundup-2026-04-12",
+              "source--jeju-air-and-ak-holdings-liquidity-stress-2026-04-13"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--korea-us-ai-equity-allocation-and-war-risk-balance-2026-04-16.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "query--news-snapshot-roundup-2026-04-12",
+              "source--global-markets-structural-pressure-seeds-2026-04-17",
+              "source--korea-growth-fund-tax-policy-and-domestic-capital-reallocation-2026-04-18",
+              "source--taiwan-market-cap-semiconductor-rerating-2026-04-16",
+              "system-log"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--korean-ai-sovereignty-and-startup-capital-2026-04-17.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--lampard-promotion-revival-story-2026-04-21.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "query--raw-intake-roundup-2026-04-21"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--large-load-electricity-rate-designs-and-data-center-tariffs-2026-04-15.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "central_research_source_has_anchor_layer",
+          "pass": true,
+          "detail": {
+            "inbound_links": 6,
+            "threshold": 5,
+            "missing_sections": [],
+            "supporting_pages": [
+              "wiki/index.md",
+              "wiki/query--news-snapshot-roundup-2026-04-12.md",
+              "wiki/source--power-equipment-slot-reservation-and-lead-time-lockup-2026-04-16.md",
+              "wiki/source--power-plant-interconnection-queues-and-grid-backlog-2026-04-15.md",
+              "wiki/source--virginia-data-center-policy-and-local-grid-impacts-2026-04-15.md",
+              "wiki/synthesis--ai-physical-buildout-bottlenecks-and-supplier-leverage-2026-04-18.md"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--lebanon-direct-talks-with-israel-without-hezbollah-disarmament-2026-04-21.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "query--raw-intake-roundup-2026-04-21"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--longevity-genetics-twin-study-and-heritability-2026-04-16.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "query--news-snapshot-roundup-2026-04-12",
+              "source--sex-biased-brain-gene-expression-and-neuropsychiatric-risk-2026-04-18"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--mandated-best-mobile-plan-disclosure-2026-04-21.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "query--raw-intake-roundup-2026-04-21"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--memory-caching-rnns-with-growing-memory-2026-04-14.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "central_research_source_has_anchor_layer",
+          "pass": true,
+          "detail": {
+            "inbound_links": 5,
+            "threshold": 5,
+            "missing_sections": [],
+            "supporting_pages": [
+              "wiki/index.md",
+              "wiki/query--news-snapshot-roundup-2026-04-12.md",
+              "wiki/source--batched-contextual-reinforcement-efficient-reasoning-2026-04-17.md",
+              "wiki/source--google-turboquant-kv-cache-compression-2026-04-13.md",
+              "wiki/synthesis--ai-execution-surface-and-runtime-efficiency-2026-04-13.md"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--meta-ai-clone-and-executive-automation-2026-04-14.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "query--news-snapshot-roundup-2026-04-12",
+              "source--ai-chatbot-legal-evidence-and-privilege-gap-2026-04-17",
+              "source--meta-ai-investment-and-workforce-restructuring-2026-04-18"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--meta-ai-investment-and-workforce-restructuring-2026-04-18.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--miraeasset-spacex-ipo-subscription-push-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "query--news-snapshot-roundup-2026-04-12",
+              "source--korea-us-ai-equity-allocation-and-war-risk-balance-2026-04-16",
+              "source--vietnam-ftse-emerging-upgrade-and-passive-flows-2026-04-13"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--mossad-gofman-appointment-and-tech-security-state-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "query--news-snapshot-roundup-2026-04-12",
+              "source--middle-east-arms-import-dependence-and-iran-war-2026-04-14",
+              "source--north-korea-missile-testing-and-allied-command-targeting-2026-04-13"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--openai-cyber-trusted-access-rollout-2026-04-15.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "query--news-snapshot-roundup-2026-04-12",
+              "source--ai-security-and-mythos-policy-response-2026-04-17",
+              "source--anthropic-mythos-security-claims-critique-2026-04-12",
+              "system-log"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--papal-moral-authority-and-nuclear-diplomacy-2026-04-21.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "query--raw-intake-roundup-2026-04-21"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--power-plant-interconnection-queues-and-grid-backlog-2026-04-15.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "central_research_source_has_anchor_layer",
+          "pass": true,
+          "detail": {
+            "inbound_links": 8,
+            "threshold": 5,
+            "missing_sections": [],
+            "supporting_pages": [
+              "wiki/concept--energy-transition-policy-under-shock.md",
+              "wiki/index.md",
+              "wiki/query--news-snapshot-roundup-2026-04-12.md",
+              "wiki/source--large-load-electricity-rate-designs-and-data-center-tariffs-2026-04-15.md",
+              "wiki/source--power-equipment-slot-reservation-and-lead-time-lockup-2026-04-16.md",
+              "wiki/source--virginia-data-center-policy-and-local-grid-impacts-2026-04-15.md",
+              "wiki/synthesis--ai-physical-buildout-bottlenecks-and-supplier-leverage-2026-04-18.md",
+              "wiki/synthesis--energy-transition-policy-under-shock-2026-04-22.md"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--retail-ai-partnership-reversal-and-enterprise-fit-2026-04-17.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "source--meta-ai-investment-and-workforce-restructuring-2026-04-18",
+              "source--palantir-ontology-and-enterprise-ai-operating-model-2026-04-17"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--samchundang-pharma-regulatory-misdiagnosis-debate-2026-04-21.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "query--raw-intake-roundup-2026-04-21"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--saudi-neom-and-gulf-investment-risk-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "source--gulf-air-defense-diversification-and-korean-interceptor-demand-2026-04-13",
+              "source--unifil-pressure-and-lebanon-front-escalation-2026-04-13"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--sex-biased-brain-gene-expression-and-neuropsychiatric-risk-2026-04-18.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--unifil-pressure-and-lebanon-front-escalation-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "query--news-snapshot-roundup-2026-04-12",
+              "source--israel-lebanon-ceasefire-and-iran-talks-relief-2026-04-16",
+              "source--middle-east-arms-import-dependence-and-iran-war-2026-04-14",
+              "source--mossad-gofman-appointment-and-tech-security-state-2026-04-13",
+              "source--north-korea-missile-testing-and-allied-command-targeting-2026-04-13"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--us-politics-election-and-justice-pressure-2026-04-18.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--us-tariff-refund-system-rollout-2026-04-15.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "query--news-snapshot-roundup-2026-04-12",
+              "source--global-markets-structural-pressure-seeds-2026-04-17"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--vietnam-ftse-emerging-upgrade-and-passive-flows-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "seed_source_has_absorption_hint",
+          "pass": true,
+          "detail": {
+            "stable_inbound_linkers": [],
+            "all_inbound_linkers": [
+              "index",
+              "query--news-snapshot-roundup-2026-04-12",
+              "source--emerging-market-outflows-after-iran-war-2026-04-13",
+              "source--global-markets-structural-pressure-seeds-2026-04-17",
+              "source--korea-us-ai-equity-allocation-and-war-risk-balance-2026-04-16"
+            ],
+            "missing_sections": []
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--virginia-data-center-policy-and-local-grid-impacts-2026-04-15.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "central_research_source_has_anchor_layer",
+          "pass": true,
+          "detail": {
+            "inbound_links": 7,
+            "threshold": 5,
+            "missing_sections": [],
+            "supporting_pages": [
+              "wiki/concept--energy-transition-policy-under-shock.md",
+              "wiki/index.md",
+              "wiki/query--news-snapshot-roundup-2026-04-12.md",
+              "wiki/source--large-load-electricity-rate-designs-and-data-center-tariffs-2026-04-15.md",
+              "wiki/source--power-plant-interconnection-queues-and-grid-backlog-2026-04-15.md",
+              "wiki/synthesis--ai-physical-buildout-bottlenecks-and-supplier-leverage-2026-04-18.md",
+              "wiki/synthesis--energy-transition-policy-under-shock-2026-04-22.md"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--world-coffee-research-sensory-lexicon-v2-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "central_research_source_has_anchor_layer",
+          "pass": true,
+          "detail": {
+            "inbound_links": 6,
+            "threshold": 5,
+            "missing_sections": [],
+            "supporting_pages": [
+              "wiki/concept--coffee-sensory-lexicon.md",
+              "wiki/index.md",
+              "wiki/source--coffee-character-wheel-beyond-flavor-2026-04-13.md",
+              "wiki/source--coffee-flavor-wheel-poster-2026-04-13.md",
+              "wiki/source--coffee-tasters-flavor-wheel-redesign-2026-04-13.md",
+              "wiki/synthesis--coffee-sensory-language-and-flavor-mapping-2026-04-13.md"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--ai-adoption-labor-and-public-sector-deployment-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 6,
+            "evidence_source_count": 6,
+            "evidence_source_links": [
+              "source--anthropic-enterprise-adoption-surge-2026-04-13",
+              "source--lg-agentic-ai-cancer-design-acceleration-2026-04-21",
+              "source--palantir-ontology-and-enterprise-ai-operating-model-2026-04-17",
+              "source--public-health-it-ai-saas-overhaul-2026-04-21",
+              "source--skt-anthropic-rebellions-ai-rerating-2026-04-21",
+              "source--translator-labor-resistance-to-clickwork-ai-2026-04-21"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--ai-capability-claims-and-validation-gap-2026-04-12.md",
+      "score": 2,
+      "max_score": 2,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 21,
+            "evidence_source_count": 21,
+            "evidence_source_links": [
+              "source--ai-engineering-harness-systems-over-models-2026-04-21",
+              "source--ai-kelly-bench-and-long-horizon-failure-2026-04-13",
+              "source--anthropic-advisor-strategy-2026-04-13",
+              "source--anthropic-automated-weak-to-strong-researcher-2026-04-15",
+              "source--anthropic-claude-shrinkflation-controversy-2026-04-21",
+              "source--anthropic-mythos-security-claims-critique-2026-04-12",
+              "source--apple-siri-ai-bootcamp-and-integration-debt-2026-04-16",
+              "source--china-ai-research-output-and-patent-lead-2026-04-16",
+              "source--claude-opus-regression-and-b2b-focus-2026-04-21",
+              "source--claude-verification-bypass-in-china-2026-04-21",
+              "source--deepmind-roots-over-leaves-research-philosophy-2026-04-21",
+              "source--glasswing-government-mythos-cyber-response-2026-04-21",
+              "source--google-ai-adoption-20-60-20-gap-2026-04-21",
+              "source--government-anthropic-mythos-security-consultation-2026-04-21",
+              "source--grok-4-3-agentic-vision-update-2026-04-21",
+              "source--openai-research-intern-and-continual-learning-2026-04-12",
+              "source--openai-science-leadership-exits-2026-04-21",
+              "source--project-glasswing-defensive-ai-cybersecurity-2026-04-15",
+              "source--self-learning-ai-startup-funding-surge-2026-04-21",
+              "source--tesla-fsd-paid-upgrade-breakdown-2026-04-21",
+              "source--white-house-anthropic-mythos-response-2026-04-21"
+            ]
+          }
+        },
+        {
+          "eval": "broad_synthesis_has_boundary_sections",
+          "pass": true,
+          "detail": {
+            "value": {
+              "source_links": 21,
+              "analysis_subsections": 5,
+              "line_count": 140
+            },
+            "threshold": {
+              "source_links": 5,
+              "analysis_subsections": 5,
+              "line_count": 55
+            },
+            "missing_sections": [],
+            "evidence_source_links": [
+              "source--ai-engineering-harness-systems-over-models-2026-04-21",
+              "source--ai-kelly-bench-and-long-horizon-failure-2026-04-13",
+              "source--anthropic-advisor-strategy-2026-04-13",
+              "source--anthropic-automated-weak-to-strong-researcher-2026-04-15",
+              "source--anthropic-claude-shrinkflation-controversy-2026-04-21",
+              "source--anthropic-mythos-security-claims-critique-2026-04-12",
+              "source--apple-siri-ai-bootcamp-and-integration-debt-2026-04-16",
+              "source--china-ai-research-output-and-patent-lead-2026-04-16",
+              "source--claude-opus-regression-and-b2b-focus-2026-04-21",
+              "source--claude-verification-bypass-in-china-2026-04-21",
+              "source--deepmind-roots-over-leaves-research-philosophy-2026-04-21",
+              "source--glasswing-government-mythos-cyber-response-2026-04-21",
+              "source--google-ai-adoption-20-60-20-gap-2026-04-21",
+              "source--government-anthropic-mythos-security-consultation-2026-04-21",
+              "source--grok-4-3-agentic-vision-update-2026-04-21",
+              "source--openai-research-intern-and-continual-learning-2026-04-12",
+              "source--openai-science-leadership-exits-2026-04-21",
+              "source--project-glasswing-defensive-ai-cybersecurity-2026-04-15",
+              "source--self-learning-ai-startup-funding-surge-2026-04-21",
+              "source--tesla-fsd-paid-upgrade-breakdown-2026-04-21",
+              "source--white-house-anthropic-mythos-response-2026-04-21"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--ai-compute-control-and-sovereign-procurement-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 10,
+            "evidence_source_count": 10,
+            "evidence_source_links": [
+              "source--ai-compute-supply-and-chip-design-cycle-compression-2026-04-17",
+              "source--broadcom-google-custom-ai-chip-alliance-2026-04-13",
+              "source--chinese-ai-chipmakers-local-share-gains-under-export-controls-2026-04-14",
+              "source--gpu-rental-inflation-and-ai-compute-scarcity-2026-04-14",
+              "source--korea-aidc-special-act-and-power-permitting-2026-04-15",
+              "source--korea-public-ai-gpu-tender-and-cloud-sovereignty-2026-04-13",
+              "source--samsung-foundry-rebound-and-ai-nonmemory-demand-2026-04-13",
+              "source--us-ai-diffusion-rule-rescission-and-chip-export-reset-2026-04-13",
+              "source--us-chip-export-controls-prc-background-2026-04-13",
+              "source--us-h200-license-review-policy-for-china-2026-04-13"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--ai-compute-control-us-china-geopolitical-choke-2026-04-18.md",
+      "score": 2,
+      "max_score": 2,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 10,
+            "evidence_source_count": 10,
+            "evidence_source_links": [
+              "source--asml-ai-chip-demand-and-semiconductor-capex-resilience-2026-04-16",
+              "source--china-ai-research-output-and-patent-lead-2026-04-16",
+              "source--chinese-ai-chipmakers-local-share-gains-under-export-controls-2026-04-14",
+              "source--google-marvell-dual-ai-chip-plans-2026-04-21",
+              "source--google-marvell-inference-tpu-collaboration-2026-04-21",
+              "source--sk-hynix-us-adr-and-ai-memory-capital-access-2026-04-16",
+              "source--taiwan-market-cap-semiconductor-rerating-2026-04-16",
+              "source--us-ai-diffusion-rule-rescission-and-chip-export-reset-2026-04-13",
+              "source--us-chip-export-controls-prc-background-2026-04-13",
+              "source--us-h200-license-review-policy-for-china-2026-04-13"
+            ]
+          }
+        },
+        {
+          "eval": "broad_synthesis_has_boundary_sections",
+          "pass": true,
+          "detail": {
+            "value": {
+              "source_links": 10,
+              "analysis_subsections": 5,
+              "line_count": 107
+            },
+            "threshold": {
+              "source_links": 5,
+              "analysis_subsections": 5,
+              "line_count": 55
+            },
+            "missing_sections": [],
+            "evidence_source_links": [
+              "source--asml-ai-chip-demand-and-semiconductor-capex-resilience-2026-04-16",
+              "source--china-ai-research-output-and-patent-lead-2026-04-16",
+              "source--chinese-ai-chipmakers-local-share-gains-under-export-controls-2026-04-14",
+              "source--google-marvell-dual-ai-chip-plans-2026-04-21",
+              "source--google-marvell-inference-tpu-collaboration-2026-04-21",
+              "source--sk-hynix-us-adr-and-ai-memory-capital-access-2026-04-16",
+              "source--taiwan-market-cap-semiconductor-rerating-2026-04-16",
+              "source--us-ai-diffusion-rule-rescission-and-chip-export-reset-2026-04-13",
+              "source--us-chip-export-controls-prc-background-2026-04-13",
+              "source--us-h200-license-review-policy-for-china-2026-04-13"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--ai-execution-surface-and-runtime-efficiency-2026-04-13.md",
+      "score": 2,
+      "max_score": 2,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 9,
+            "evidence_source_count": 9,
+            "evidence_source_links": [
+              "source--google-turboquant-kv-cache-compression-2026-04-13",
+              "source--google-turboquant-validation-and-memory-stock-watch-2026-04-21",
+              "source--hbm-challengers-and-ai-memory-architecture-race-2026-04-13",
+              "source--kv-cache-ssd-for-inference-expansion-2026-04-21",
+              "source--memory-caching-rnns-with-growing-memory-2026-04-14",
+              "source--mit-attention-matching-kv-cache-compression-2026-04-13",
+              "source--nvidia-marvell-ai-ran-strategy-2026-04-12",
+              "source--nvidia-triattention-kv-cache-efficiency-2026-04-13",
+              "source--turboquant-memory-savings-claim-calibration-2026-04-13"
+            ]
+          }
+        },
+        {
+          "eval": "broad_synthesis_has_boundary_sections",
+          "pass": true,
+          "detail": {
+            "value": {
+              "source_links": 9,
+              "analysis_subsections": 8,
+              "line_count": 121
+            },
+            "threshold": {
+              "source_links": 5,
+              "analysis_subsections": 5,
+              "line_count": 55
+            },
+            "missing_sections": [],
+            "evidence_source_links": [
+              "source--google-turboquant-kv-cache-compression-2026-04-13",
+              "source--google-turboquant-validation-and-memory-stock-watch-2026-04-21",
+              "source--hbm-challengers-and-ai-memory-architecture-race-2026-04-13",
+              "source--kv-cache-ssd-for-inference-expansion-2026-04-21",
+              "source--memory-caching-rnns-with-growing-memory-2026-04-14",
+              "source--mit-attention-matching-kv-cache-compression-2026-04-13",
+              "source--nvidia-marvell-ai-ran-strategy-2026-04-12",
+              "source--nvidia-triattention-kv-cache-efficiency-2026-04-13",
+              "source--turboquant-memory-savings-claim-calibration-2026-04-13"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--ai-inference-economics-and-pricing-2026-04-18.md",
+      "score": 2,
+      "max_score": 2,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 8,
+            "evidence_source_count": 8,
+            "evidence_source_links": [
+              "source--batched-contextual-reinforcement-efficient-reasoning-2026-04-17",
+              "source--github-copilot-usage-limits-and-anthropic-tiering-2026-04-21",
+              "source--google-turboquant-kv-cache-compression-2026-04-13",
+              "source--gpu-rental-inflation-and-ai-compute-scarcity-2026-04-14",
+              "source--nvidia-triattention-kv-cache-efficiency-2026-04-13",
+              "source--turboquant-memory-savings-claim-calibration-2026-04-13",
+              "source--unlimited-ai-subscription-model-breakdown-2026-04-14",
+              "source--usage-based-ai-subscription-pricing-shift-2026-04-21"
+            ]
+          }
+        },
+        {
+          "eval": "broad_synthesis_has_boundary_sections",
+          "pass": true,
+          "detail": {
+            "value": {
+              "source_links": 8,
+              "analysis_subsections": 5,
+              "line_count": 98
+            },
+            "threshold": {
+              "source_links": 5,
+              "analysis_subsections": 5,
+              "line_count": 55
+            },
+            "missing_sections": [],
+            "evidence_source_links": [
+              "source--batched-contextual-reinforcement-efficient-reasoning-2026-04-17",
+              "source--github-copilot-usage-limits-and-anthropic-tiering-2026-04-21",
+              "source--google-turboquant-kv-cache-compression-2026-04-13",
+              "source--gpu-rental-inflation-and-ai-compute-scarcity-2026-04-14",
+              "source--nvidia-triattention-kv-cache-efficiency-2026-04-13",
+              "source--turboquant-memory-savings-claim-calibration-2026-04-13",
+              "source--unlimited-ai-subscription-model-breakdown-2026-04-14",
+              "source--usage-based-ai-subscription-pricing-shift-2026-04-21"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--ai-infrastructure-rerating-power-bottlenecks-and-transition-risk-2026-04-14.md",
+      "score": 2,
+      "max_score": 2,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 14,
+            "evidence_source_count": 14,
+            "evidence_source_links": [
+              "source--amazon-anthropic-investment-and-infrastructure-alliance-2026-04-21",
+              "source--cerebras-ipo-and-ai-chip-capital-market-reopening-2026-04-18",
+              "source--foreign-buyers-fill-samsung-sk-hynix-selloff-2026-04-21",
+              "source--google-ai-data-center-off-balance-sheet-financing-2026-04-16",
+              "source--hansol-semiconductor-financing-pivot-2026-04-21",
+              "source--iren-microsoft-contract-and-ai-cloud-rerating-case-2026-04-14",
+              "source--iren-mining-revenue-dip-and-ai-cloud-transition-risk-2026-04-14",
+              "source--oracle-ai-data-center-boom-through-2027-2026-04-13",
+              "source--sandisk-nand-supercycle-outlook-2026-04-21",
+              "source--sandisk-rally-on-agentic-ai-storage-demand-2026-04-21",
+              "source--sk-ai-data-center-private-capital-and-strategic-asset-control-2026-04-18",
+              "source--sk-hynix-us-adr-and-ai-memory-capital-access-2026-04-16",
+              "source--stargate-norway-microsoft-takeover-and-openai-capex-retrenchment-2026-04-16",
+              "source--taiwan-market-cap-semiconductor-rerating-2026-04-16"
+            ]
+          }
+        },
+        {
+          "eval": "broad_synthesis_has_boundary_sections",
+          "pass": true,
+          "detail": {
+            "value": {
+              "source_links": 14,
+              "analysis_subsections": 5,
+              "line_count": 126
+            },
+            "threshold": {
+              "source_links": 5,
+              "analysis_subsections": 5,
+              "line_count": 55
+            },
+            "missing_sections": [],
+            "evidence_source_links": [
+              "source--amazon-anthropic-investment-and-infrastructure-alliance-2026-04-21",
+              "source--cerebras-ipo-and-ai-chip-capital-market-reopening-2026-04-18",
+              "source--foreign-buyers-fill-samsung-sk-hynix-selloff-2026-04-21",
+              "source--google-ai-data-center-off-balance-sheet-financing-2026-04-16",
+              "source--hansol-semiconductor-financing-pivot-2026-04-21",
+              "source--iren-microsoft-contract-and-ai-cloud-rerating-case-2026-04-14",
+              "source--iren-mining-revenue-dip-and-ai-cloud-transition-risk-2026-04-14",
+              "source--oracle-ai-data-center-boom-through-2027-2026-04-13",
+              "source--sandisk-nand-supercycle-outlook-2026-04-21",
+              "source--sandisk-rally-on-agentic-ai-storage-demand-2026-04-21",
+              "source--sk-ai-data-center-private-capital-and-strategic-asset-control-2026-04-18",
+              "source--sk-hynix-us-adr-and-ai-memory-capital-access-2026-04-16",
+              "source--stargate-norway-microsoft-takeover-and-openai-capex-retrenchment-2026-04-16",
+              "source--taiwan-market-cap-semiconductor-rerating-2026-04-16"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--ai-physical-buildout-bottlenecks-and-supplier-leverage-2026-04-18.md",
+      "score": 2,
+      "max_score": 2,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 17,
+            "evidence_source_count": 17,
+            "evidence_source_links": [
+              "source--ai-memory-boom-and-supply-constraints-2026-04-13",
+              "source--asml-ai-chip-demand-and-semiconductor-capex-resilience-2026-04-16",
+              "source--energy-and-ai-demand-and-data-center-power-2026-04-14",
+              "source--korea-power-equipment-backlog-and-balance-sheet-risk-2026-04-21",
+              "source--korean-materials-suppliers-for-ai-chips-2026-04-21",
+              "source--large-load-electricity-rate-designs-and-data-center-tariffs-2026-04-15",
+              "source--lg-electronics-data-center-cooling-solution-2026-04-21",
+              "source--ls-electric-aws-switchgear-data-center-supply-2026-04-14",
+              "source--memory-supply-gap-and-chip-shortage-through-2027-2026-04-21",
+              "source--nuclear-power-alliances-and-korea-ai-energy-gap-2026-04-21",
+              "source--openai-microsoft-data-center-delay-2026-04-21",
+              "source--power-equipment-slot-reservation-and-lead-time-lockup-2026-04-16",
+              "source--power-plant-interconnection-queues-and-grid-backlog-2026-04-15",
+              "source--samsung-electro-mechanics-ai-server-components-upcycle-2026-04-13",
+              "source--samsung-texas-austin-taylor-dual-fab-operations-2026-04-21",
+              "source--us-data-center-water-and-power-regulation-2026-04-21",
+              "source--virginia-data-center-policy-and-local-grid-impacts-2026-04-15"
+            ]
+          }
+        },
+        {
+          "eval": "broad_synthesis_has_boundary_sections",
+          "pass": true,
+          "detail": {
+            "value": {
+              "source_links": 17,
+              "analysis_subsections": 5,
+              "line_count": 133
+            },
+            "threshold": {
+              "source_links": 5,
+              "analysis_subsections": 5,
+              "line_count": 55
+            },
+            "missing_sections": [],
+            "evidence_source_links": [
+              "source--ai-memory-boom-and-supply-constraints-2026-04-13",
+              "source--asml-ai-chip-demand-and-semiconductor-capex-resilience-2026-04-16",
+              "source--energy-and-ai-demand-and-data-center-power-2026-04-14",
+              "source--korea-power-equipment-backlog-and-balance-sheet-risk-2026-04-21",
+              "source--korean-materials-suppliers-for-ai-chips-2026-04-21",
+              "source--large-load-electricity-rate-designs-and-data-center-tariffs-2026-04-15",
+              "source--lg-electronics-data-center-cooling-solution-2026-04-21",
+              "source--ls-electric-aws-switchgear-data-center-supply-2026-04-14",
+              "source--memory-supply-gap-and-chip-shortage-through-2027-2026-04-21",
+              "source--nuclear-power-alliances-and-korea-ai-energy-gap-2026-04-21",
+              "source--openai-microsoft-data-center-delay-2026-04-21",
+              "source--power-equipment-slot-reservation-and-lead-time-lockup-2026-04-16",
+              "source--power-plant-interconnection-queues-and-grid-backlog-2026-04-15",
+              "source--samsung-electro-mechanics-ai-server-components-upcycle-2026-04-13",
+              "source--samsung-texas-austin-taylor-dual-fab-operations-2026-04-21",
+              "source--us-data-center-water-and-power-regulation-2026-04-21",
+              "source--virginia-data-center-policy-and-local-grid-impacts-2026-04-15"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--ai-product-platform-and-agentic-ui-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 9,
+            "evidence_source_count": 9,
+            "evidence_source_links": [
+              "source--adobe-agentic-photoshop-multi-model-integration-2026-04-21",
+              "source--ai-call-center-hangup-monetization-2026-04-21",
+              "source--ai-search-ecosystem-expansion-2026-04-17",
+              "source--apple-engineer-ceo-succession-after-cook-2026-04-21",
+              "source--apple-john-ternus-ai-device-transition-2026-04-21",
+              "source--apple-siri-ai-bootcamp-and-integration-debt-2026-04-16",
+              "source--galaxy-s24-call-screening-rollout-2026-04-21",
+              "source--gemini-in-chrome-korea-launch-2026-04-21",
+              "source--google-flow-music-generation-platform-2026-04-21"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--biomedicine-platform-and-disease-evidence-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 5,
+            "evidence_source_count": 5,
+            "evidence_source_links": [
+              "source--alzheimers-40hz-stimulation-and-digital-therapeutics-2026-04-16",
+              "source--alzheimers-drug-efficacy-debate-reignites-2026-04-21",
+              "source--lilly-in-vivo-cart-investment-wave-2026-04-21",
+              "source--pancreatic-cancer-mrna-vaccine-lasting-response-2026-04-21",
+              "source--pharmaresearch-shareholder-return-and-growth-durability-2026-04-15"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--coffee-brew-chemistry-and-processing-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 7,
+            "evidence_source_count": 7,
+            "evidence_source_links": [
+              "source--coffee-fermentation-conditions-and-sensory-quality-2026-04-13",
+              "source--coffee-volatile-compounds-by-roast-and-brew-2026-04-13",
+              "source--cold-brew-grinding-time-and-flavor-characteristics-2026-04-13",
+              "source--dissolved-cations-and-coffee-extraction-2026-04-13",
+              "source--hot-and-cold-brew-coffee-chemistry-2026-04-13",
+              "source--science-behind-good-cup-of-coffee-2026-04-13",
+              "source--water-acidity-and-brew-method-recipes-2026-04-13"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--coffee-extraction-models-and-brew-control-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 9,
+            "evidence_source_count": 9,
+            "evidence_source_links": [
+              "source--coffee-bed-extraction-uniformity-modeling-2026-04-13",
+              "source--coffee-brewing-control-chart-sensory-and-liking-2026-04-13",
+              "source--coffee-extraction-kinetics-in-well-mixed-system-2026-04-13",
+              "source--drip-brew-temperature-and-sensory-profile-2026-04-13",
+              "source--espresso-extraction-kinetics-flow-rate-particle-size-temperature-2026-04-13",
+              "source--espresso-modeling-and-extraction-variation-2026-04-13",
+              "source--full-immersion-brew-temperature-and-flavor-over-time-2026-04-13",
+              "source--full-immersion-coffee-desorption-model-2026-04-13",
+              "source--uneven-extraction-in-coffee-brewing-2026-04-13"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--coffee-grinding-static-and-clumping-control-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 2,
+            "evidence_source_count": 2,
+            "evidence_source_links": [
+              "source--coffee-grinding-moisture-and-triboelectrification-2026-04-13",
+              "source--rdt-versus-autocomb-and-espresso-extraction-2026-04-13"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--coffee-sensory-language-and-flavor-mapping-2026-04-13.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 4,
+            "evidence_source_count": 4,
+            "evidence_source_links": [
+              "source--coffee-character-wheel-beyond-flavor-2026-04-13",
+              "source--coffee-flavor-wheel-poster-2026-04-13",
+              "source--coffee-tasters-flavor-wheel-redesign-2026-04-13",
+              "source--world-coffee-research-sensory-lexicon-v2-2026-04-13"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--commodity-supply-and-price-transmission-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 7,
+            "evidence_source_count": 7,
+            "evidence_source_links": [
+              "source--canada-crude-zero-tariff-route-2026-04-21",
+              "source--china-bond-safe-haven-rally-2026-04-21",
+              "source--korea-oil-price-cap-sales-volume-and-policy-distortion-2026-04-16",
+              "source--korea-oil-supply-outlook-2026-04-12",
+              "source--refiners-fear-backlash-despite-profit-windfall-2026-04-21",
+              "source--tire-industry-squeezed-by-rubber-and-freight-2026-04-21",
+              "source--us-consumer-inflation-gasoline-shock-2026-04-13"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--cyber-statecraft-and-ai-security-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 6,
+            "evidence_source_count": 6,
+            "evidence_source_links": [
+              "source--ai-security-and-mythos-policy-response-2026-04-17",
+              "source--anthropic-mythos-security-claims-critique-2026-04-12",
+              "source--chrome-extension-breach-hits-telegram-and-google-accounts-2026-04-21",
+              "source--cyber-coercion-against-korea-by-china-russia-and-north-korea-2026-04-21",
+              "source--mythos-as-cyber-weapon-and-china-catchup-2026-04-21",
+              "source--project-glasswing-defensive-ai-cybersecurity-2026-04-15"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--energy-transition-policy-under-shock-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 4,
+            "evidence_source_count": 4,
+            "evidence_source_links": [
+              "source--energy-and-ai-demand-and-data-center-power-2026-04-14",
+              "source--europe-wind-permitting-push-after-energy-shock-2026-04-21",
+              "source--power-plant-interconnection-queues-and-grid-backlog-2026-04-15",
+              "source--virginia-data-center-policy-and-local-grid-impacts-2026-04-15"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--european-tech-regulation-and-digital-sovereignty-2026-04-12.md",
+      "score": 2,
+      "max_score": 2,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 5,
+            "evidence_source_count": 5,
+            "evidence_source_links": [
+              "source--eu-digital-sovereignty-framework-2026-04-13",
+              "source--france-linux-digital-sovereignty-shift-2026-04-12",
+              "source--hungary-post-orban-eu-realignment-2026-04-14",
+              "source--interoperable-europe-act-and-public-sector-digital-sovereignty-2026-04-13",
+              "source--tesla-fsd-netherlands-approval-2026-04-12"
+            ]
+          }
+        },
+        {
+          "eval": "broad_synthesis_has_boundary_sections",
+          "pass": true,
+          "detail": {
+            "value": {
+              "source_links": 5,
+              "analysis_subsections": 7,
+              "line_count": 96
+            },
+            "threshold": {
+              "source_links": 5,
+              "analysis_subsections": 5,
+              "line_count": 55
+            },
+            "missing_sections": [],
+            "evidence_source_links": [
+              "source--eu-digital-sovereignty-framework-2026-04-13",
+              "source--france-linux-digital-sovereignty-shift-2026-04-12",
+              "source--hungary-post-orban-eu-realignment-2026-04-14",
+              "source--interoperable-europe-act-and-public-sector-digital-sovereignty-2026-04-13",
+              "source--tesla-fsd-netherlands-approval-2026-04-12"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--global-political-economy-and-institutional-realignment-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 11,
+            "evidence_source_count": 11,
+            "evidence_source_links": [
+              "source--canada-reduce-us-economic-dependence-2026-04-21",
+              "source--fed-war-risk-minutes-and-inflation-scenarios-2026-04-13",
+              "source--ha-joon-chang-on-structural-global-order-reset-2026-04-21",
+              "source--hungary-post-orban-eu-realignment-2026-04-14",
+              "source--koo-yoon-cheol-asks-imf-to-design-cooperation-2026-04-21",
+              "source--uk-eu-rejoin-majority-shift-2026-04-21",
+              "source--uk-pm-pressure-over-mandelson-security-case-2026-04-21",
+              "source--us-vice-president-pakistan-return-and-no-deal-risk-2026-04-21",
+              "source--venezuela-purge-led-by-rodriguez-2026-04-21",
+              "source--warsh-defends-fed-independence-2026-04-21",
+              "source--warsh-fed-chair-hearing-and-trump-distance-2026-04-21"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--industrial-policy-space-and-ev-competition-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 6,
+            "evidence_source_count": 6,
+            "evidence_source_links": [
+              "source--blue-origin-booster-recovery-with-orbit-failure-2026-04-21",
+              "source--hyundai-ioniq-3-europe-debut-2026-04-21",
+              "source--hyundai-rotem-defense-vertical-integration-and-physical-ai-capital-shift-2026-04-16",
+              "source--tesla-korea-price-hike-and-ev-subsidy-dynamics-2026-04-13",
+              "source--us-defense-industrial-mobilization-and-civilian-manufacturing-2026-04-16",
+              "source--us-manufacturing-boom-on-ai-and-aerospace-2026-04-21"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "system/synthesis--karpathy-gist-to-runtime.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 4,
+            "evidence_source_count": 4,
+            "evidence_source_links": [
+              "source--autoresearch-skill-repo",
+              "source--karpathy-autoresearch-repo",
+              "source--kevinrgu-autoagent-repo",
+              "source--stage1-planning-harness-mvp"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--korea-corporate-governance-value-up-and-market-structure-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 13,
+            "evidence_source_count": 13,
+            "evidence_source_links": [
+              "source--ats-volatility-halt-confusion-2026-04-21",
+              "source--bank-of-korea-bank-led-stablecoin-governance-2026-04-13",
+              "source--card-loan-cutbacks-under-regulatory-pressure-2026-04-21",
+              "source--corporate-law-revision-and-yeongchang-restructuring-shock-2026-04-21",
+              "source--db-insurance-megabid-amid-fx-and-capital-strain-2026-04-21",
+              "source--goldman-and-jpm-kospi-target-upgrade-2026-04-21",
+              "source--kospi-breakout-after-war-fears-2026-04-21",
+              "source--layoff-driven-stock-pop-and-shareholder-primacy-2026-04-21",
+              "source--leveraged-samsung-sk-hynix-etf-launch-2026-04-21",
+              "source--pharmaresearch-shareholder-return-and-growth-durability-2026-04-15",
+              "source--qualified-opinion-delisting-pressure-on-cash-rich-firm-2026-04-21",
+              "source--treasury-stock-cancellation-and-eb-ban-funding-gap-2026-04-21",
+              "source--wgbi-inclusion-and-korea-bond-inflows-fx-stability-2026-04-14"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--korea-defense-export-and-physical-ai-2026-04-18.md",
+      "score": 2,
+      "max_score": 2,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 20,
+            "evidence_source_count": 20,
+            "evidence_source_links": [
+              "source--aging-k5-sidearm-readiness-gap-2026-04-21",
+              "source--canada-submarine-bid-industrial-offset-pressure-2026-04-21",
+              "source--defense-export-and-missile-quality-signals-2026-04-17",
+              "source--gulf-air-defense-diversification-and-korean-interceptor-demand-2026-04-13",
+              "source--hanwha-aerospace-liquidity-for-future-investment-2026-04-21",
+              "source--hanwha-aerospace-profit-boost-from-cost-cuts-2026-04-21",
+              "source--hanwha-defense-shipbuilding-cash-flow-strain-2026-04-18",
+              "source--hyundai-rotem-defense-vertical-integration-and-physical-ai-capital-shift-2026-04-16",
+              "source--hyundai-rotem-poland-k2-cash-build-2026-04-21",
+              "source--japan-lethal-arms-export-shift-2026-04-21",
+              "source--kf21-networked-warfare-case-against-f35-dependence-2026-04-21",
+              "source--korea-defense-tech-investment-control-tower-2026-04-21",
+              "source--korea-manufacturing-us-ai-naval-warfare-synergy-2026-04-21",
+              "source--korean-unmanned-defense-capability-and-k9-automation-2026-04-18",
+              "source--middle-east-arms-import-dependence-and-iran-war-2026-04-14",
+              "source--middle-east-windfall-for-korean-defense-makers-2026-04-21",
+              "source--north-korea-drone-war-preparation-2026-04-21",
+              "source--north-korea-missile-testing-and-allied-command-targeting-2026-04-13",
+              "source--north-korea-nuclear-expansion-and-deterrence-pressure-2026-04-18",
+              "source--us-defense-industrial-mobilization-and-civilian-manufacturing-2026-04-16"
+            ]
+          }
+        },
+        {
+          "eval": "broad_synthesis_has_boundary_sections",
+          "pass": true,
+          "detail": {
+            "value": {
+              "source_links": 20,
+              "analysis_subsections": 5,
+              "line_count": 135
+            },
+            "threshold": {
+              "source_links": 5,
+              "analysis_subsections": 5,
+              "line_count": 55
+            },
+            "missing_sections": [],
+            "evidence_source_links": [
+              "source--aging-k5-sidearm-readiness-gap-2026-04-21",
+              "source--canada-submarine-bid-industrial-offset-pressure-2026-04-21",
+              "source--defense-export-and-missile-quality-signals-2026-04-17",
+              "source--gulf-air-defense-diversification-and-korean-interceptor-demand-2026-04-13",
+              "source--hanwha-aerospace-liquidity-for-future-investment-2026-04-21",
+              "source--hanwha-aerospace-profit-boost-from-cost-cuts-2026-04-21",
+              "source--hanwha-defense-shipbuilding-cash-flow-strain-2026-04-18",
+              "source--hyundai-rotem-defense-vertical-integration-and-physical-ai-capital-shift-2026-04-16",
+              "source--hyundai-rotem-poland-k2-cash-build-2026-04-21",
+              "source--japan-lethal-arms-export-shift-2026-04-21",
+              "source--kf21-networked-warfare-case-against-f35-dependence-2026-04-21",
+              "source--korea-defense-tech-investment-control-tower-2026-04-21",
+              "source--korea-manufacturing-us-ai-naval-warfare-synergy-2026-04-21",
+              "source--korean-unmanned-defense-capability-and-k9-automation-2026-04-18",
+              "source--middle-east-arms-import-dependence-and-iran-war-2026-04-14",
+              "source--middle-east-windfall-for-korean-defense-makers-2026-04-21",
+              "source--north-korea-drone-war-preparation-2026-04-21",
+              "source--north-korea-missile-testing-and-allied-command-targeting-2026-04-13",
+              "source--north-korea-nuclear-expansion-and-deterrence-pressure-2026-04-18",
+              "source--us-defense-industrial-mobilization-and-civilian-manufacturing-2026-04-16"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--korea-financial-regulation-corporate-governance-and-consumer-redress-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 10,
+            "evidence_source_count": 10,
+            "evidence_source_links": [
+              "source--bank-of-korea-bank-led-stablecoin-governance-2026-04-13",
+              "source--card-issuer-refunds-after-tmon-wemakeprice-travel-failure-2026-04-21",
+              "source--chaebol-treasury-share-burn-acceleration-2026-04-21",
+              "source--coupang-chairman-designation-and-ftc-lawsuit-risk-2026-04-21",
+              "source--cross-shareholding-vote-rights-meeting-day-rule-2026-04-21",
+              "source--insurance-cancellation-clock-starts-on-violation-discovery-2026-04-21",
+              "source--pharmaresearch-shareholder-return-and-growth-durability-2026-04-15",
+              "source--private-equity-law-review-divide-2026-04-21",
+              "source--regulator-crackdown-on-delisting-evasion-2026-04-21",
+              "source--woori-financial-nonbank-earnings-gap-2026-04-21"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--korea-fiscal-and-public-debt-risk-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 4,
+            "evidence_source_count": 4,
+            "evidence_source_links": [
+              "source--bank-of-korea-april-economic-assessment-2026-04-13",
+              "source--cgfs-foreign-currency-funding-risk-and-cross-border-liquidity-2026-04-14",
+              "source--korea-public-debt-ratio-above-peer-median-2026-04-21",
+              "source--wgbi-inclusion-and-korea-bond-inflows-fx-stability-2026-04-14"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--korea-fx-liquidity-and-spot-dollar-pressure-2026-04-14.md",
+      "score": 2,
+      "max_score": 2,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 16,
+            "evidence_source_count": 16,
+            "evidence_source_links": [
+              "source--bank-of-korea-february-balance-of-payments-2026-04-14",
+              "source--bank-of-korea-march-foreign-reserves-2026-04-14",
+              "source--bank-of-korea-march-international-finance-and-fx-market-trends-2026-04-14",
+              "source--bank-of-korea-rate-hold-and-middle-east-risk-2026-04-13",
+              "source--bok-dollar-funding-abundance-and-won-weakness-2026-04-14",
+              "source--cgfs-foreign-currency-funding-risk-and-cross-border-liquidity-2026-04-14",
+              "source--korean-corporate-dollar-hoarding-on-fx-fears-2026-04-21",
+              "source--lee-changyong-exit-after-crisis-era-tenure-2026-04-21",
+              "source--national-pension-fx-hedging-and-won-support-2026-04-14",
+              "source--reserve-liquidity-limit-and-crisis-warning-2026-04-21",
+              "source--shin-hyunsong-cautious-flexible-monetary-policy-2026-04-21",
+              "source--shin-hyunsong-faces-inflation-and-fx-crisis-2026-04-21",
+              "source--shin-hyunsong-inflation-risk-and-fx-pressure-2026-04-13",
+              "source--wgbi-inclusion-and-korea-bond-inflows-fx-stability-2026-04-14",
+              "source--wgbi-inflows-boost-korean-bond-demand-2026-04-21",
+              "source--won-dollar-near-1500-and-middle-east-fx-pressure-2026-04-13"
+            ]
+          }
+        },
+        {
+          "eval": "broad_synthesis_has_boundary_sections",
+          "pass": true,
+          "detail": {
+            "value": {
+              "source_links": 16,
+              "analysis_subsections": 8,
+              "line_count": 137
+            },
+            "threshold": {
+              "source_links": 5,
+              "analysis_subsections": 5,
+              "line_count": 55
+            },
+            "missing_sections": [],
+            "evidence_source_links": [
+              "source--bank-of-korea-february-balance-of-payments-2026-04-14",
+              "source--bank-of-korea-march-foreign-reserves-2026-04-14",
+              "source--bank-of-korea-march-international-finance-and-fx-market-trends-2026-04-14",
+              "source--bank-of-korea-rate-hold-and-middle-east-risk-2026-04-13",
+              "source--bok-dollar-funding-abundance-and-won-weakness-2026-04-14",
+              "source--cgfs-foreign-currency-funding-risk-and-cross-border-liquidity-2026-04-14",
+              "source--korean-corporate-dollar-hoarding-on-fx-fears-2026-04-21",
+              "source--lee-changyong-exit-after-crisis-era-tenure-2026-04-21",
+              "source--national-pension-fx-hedging-and-won-support-2026-04-14",
+              "source--reserve-liquidity-limit-and-crisis-warning-2026-04-21",
+              "source--shin-hyunsong-cautious-flexible-monetary-policy-2026-04-21",
+              "source--shin-hyunsong-faces-inflation-and-fx-crisis-2026-04-21",
+              "source--shin-hyunsong-inflation-risk-and-fx-pressure-2026-04-13",
+              "source--wgbi-inclusion-and-korea-bond-inflows-fx-stability-2026-04-14",
+              "source--wgbi-inflows-boost-korean-bond-demand-2026-04-21",
+              "source--won-dollar-near-1500-and-middle-east-fx-pressure-2026-04-13"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--korea-india-industrial-and-energy-cooperation-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 6,
+            "evidence_source_count": 6,
+            "evidence_source_links": [
+              "source--india-naphtha-opportunity-with-energy-risk-2026-04-21",
+              "source--korea-india-cepa-restart-and-industrial-mous-2026-04-21",
+              "source--korea-india-economic-cooperation-desk-2026-04-21",
+              "source--korea-india-trip-corporate-investment-delegation-2026-04-21",
+              "source--korea-oil-supply-outlook-2026-04-12",
+              "source--us-defense-industrial-mobilization-and-civilian-manufacturing-2026-04-16"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--korea-labor-tax-and-domestic-policy-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 6,
+            "evidence_source_count": 6,
+            "evidence_source_links": [
+              "source--housing-capital-gains-deduction-repeal-tax-shock-2026-04-21",
+              "source--korea-growth-fund-tax-policy-and-domestic-capital-reallocation-2026-04-18",
+              "source--korea-minimum-wage-committee-new-chair-2026-04-21",
+              "source--minimum-wage-contract-worker-coverage-dispute-2026-04-21",
+              "source--ruling-party-oh-se-hoon-election-bet-2026-04-21",
+              "source--samsung-labor-bonus-dispute-and-semiconductor-workforce-risk-2026-04-17"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--korea-political-economy-and-policy-coordination-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 10,
+            "evidence_source_count": 10,
+            "evidence_source_links": [
+              "source--bank-of-korea-april-economic-assessment-2026-04-13",
+              "source--budget-execution-before-second-supplementary-bill-2026-04-21",
+              "source--housing-tax-deduction-repeal-political-clash-2026-04-21",
+              "source--jang-donghyuk-bypassed-by-gyeonggi-campaign-2026-04-21",
+              "source--jang-donghyuk-us-trip-party-backlash-2026-04-21",
+              "source--korea-fiscal-and-monetary-chiefs-policy-huddle-2026-04-21",
+              "source--korea-growth-fund-tax-policy-and-domestic-capital-reallocation-2026-04-18",
+              "source--reform-party-preps-cho-eungcheon-gyeonggi-run-2026-04-21",
+              "source--wartime-supplementary-budget-speed-priority-2026-04-21",
+              "source--wgbi-inclusion-and-korea-bond-inflows-fx-stability-2026-04-14"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--korea-public-science-health-and-social-policy-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 9,
+            "evidence_source_count": 9,
+            "evidence_source_links": [
+              "source--alzheimers-40hz-stimulation-and-digital-therapeutics-2026-04-16",
+              "source--government-research-institute-merger-push-2026-04-21",
+              "source--korea-pregnancy-count-rebound-2026-04-21",
+              "source--liquid-e-cigarette-reclassified-under-tobacco-rules-2026-04-21",
+              "source--military-service-promotion-credit-ruling-reversed-2026-04-21",
+              "source--samsung-medical-center-tops-first-hospital-ranking-2026-04-21",
+              "source--schoolyard-soccer-ban-for-safety-and-inclusion-2026-04-21",
+              "source--syringe-output-expansion-and-medical-fee-uplift-2026-04-21",
+              "source--us-science-politics-and-cdc-vaccine-pivot-2026-04-17"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--korea-real-estate-infrastructure-and-consumption-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 7,
+            "evidence_source_count": 7,
+            "evidence_source_links": [
+              "source--incheon-airport-duty-free-price-discipline-and-retail-shift-2026-04-15",
+              "source--incheon-airport-toll-risk-from-private-road-rules-2026-04-21",
+              "source--luxury-goods-import-markup-controversy-2026-04-21",
+              "source--moa-town-project-start-delay-2026-04-21",
+              "source--premium-bed-market-expands-under-housing-stress-2026-04-21",
+              "source--school-building-to-fix-neighborhood-education-2026-04-21",
+              "source--shinbanpo-redevelopment-height-versus-assessment-fees-2026-04-21"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--korean-peninsula-deterrence-and-nuclear-intelligence-claims-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 7,
+            "evidence_source_count": 7,
+            "evidence_source_links": [
+              "source--csis-disputes-korean-claim-on-north-korea-facility-2026-04-21",
+              "source--gulf-air-defense-diversification-and-korean-interceptor-demand-2026-04-13",
+              "source--north-korea-cluster-warhead-missile-test-2026-04-21",
+              "source--north-korea-missile-testing-and-allied-command-targeting-2026-04-13",
+              "source--north-korea-nuclear-expansion-and-deterrence-pressure-2026-04-18",
+              "source--south-korea-row-over-north-korea-facility-claim-2026-04-21",
+              "source--us-limits-some-north-korea-tech-intel-sharing-2026-04-21"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "system/synthesis--llm-wiki-self-improvement-architecture.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 5,
+            "evidence_source_count": 5,
+            "evidence_source_links": [
+              "source--bilevel-autoresearch",
+              "source--llm-wiki-review-report",
+              "source--meta-harness",
+              "source--ouroboros-repo",
+              "source--stage1-planning-harness-mvp"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "system/synthesis--meta-harness-vs-bilevel-autoresearch.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 4,
+            "evidence_source_count": 4,
+            "evidence_source_links": [
+              "source--bilevel-autoresearch",
+              "source--karpathy-autoresearch-repo",
+              "source--meta-harness",
+              "source--multi-agent-collaboration-for-automated-research"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--middle-east-negotiation-and-iran-regime-friction-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 14,
+            "evidence_source_count": 14,
+            "evidence_source_links": [
+              "source--china-hormuz-diplomacy-and-radar-support-signals-2026-04-17",
+              "source--iran-denies-second-round-talks-report-2026-04-21",
+              "source--iran-hardliner-moderate-rift-before-ceasefire-talks-2026-04-21",
+              "source--iran-military-claims-hormuz-reopening-amid-foreign-ministry-rift-2026-04-21",
+              "source--iran-positively-considers-second-round-us-talks-2026-04-21",
+              "source--iran-power-struggle-clouds-us-negotiation-channel-2026-04-21",
+              "source--iran-president-warns-pakistan-of-us-betrayal-2026-04-21",
+              "source--iran-suspects-trump-of-fresh-escalation-before-ceasefire-talks-2026-04-21",
+              "source--iran-to-send-delegation-to-pakistan-for-second-round-talks-2026-04-21",
+              "source--israel-lebanon-ceasefire-and-iran-talks-relief-2026-04-16",
+              "source--trump-approval-drops-on-iran-war-and-economy-2026-04-21",
+              "source--trump-fear-and-missing-us-officer-2026-04-21",
+              "source--trump-threatens-pakistan-talks-and-strike-escalation-2026-04-21",
+              "source--us-war-powers-iran-resolution-failure-2026-04-17"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--middle-east-shipping-and-energy-risk-2026-04-12.md",
+      "score": 2,
+      "max_score": 2,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 21,
+            "evidence_source_count": 21,
+            "evidence_source_links": [
+              "source--eia-short-term-energy-outlook-april-2026-2026-04-14",
+              "source--hormuz-blockade-enforcement-and-isr-attrition-2026-04-15",
+              "source--hormuz-blockade-oil-over-100-and-global-macro-shock-2026-04-13",
+              "source--hormuz-chokepoint-flows-and-bypass-capacity-2026-04-13",
+              "source--hormuz-shipping-risk-outlook-2026-04-12",
+              "source--iran-hormuz-control-law-and-inalienable-right-claim-2026-04-21",
+              "source--korea-hormuz-defense-mission-preparation-2026-04-21",
+              "source--korea-india-naphtha-and-petrochemical-supply-coordination-2026-04-21",
+              "source--korea-oil-supply-outlook-2026-04-12",
+              "source--korea-pushes-us-crude-diversification-after-war-2026-04-21",
+              "source--korean-tankers-reroute-via-red-sea-2026-04-21",
+              "source--kuwait-force-majeure-on-oil-exports-after-hormuz-blockade-2026-04-21",
+              "source--ships-hit-after-hormuz-reopening-2026-04-21",
+              "source--stranded-korean-ships-move-near-uae-after-hormuz-closure-2026-04-21",
+              "source--trump-hormuz-blockade-order-2026-04-12",
+              "source--trump-invokes-korean-war-law-for-energy-support-2026-04-21",
+              "source--trump-oil-price-warning-and-iran-retaliation-2026-04-13",
+              "source--us-iran-talks-pakistan-pullout-2026-04-12",
+              "source--us-navy-drone-minesweeping-in-hormuz-2026-04-21",
+              "source--us-seizes-iranian-cargo-vessel-after-truce-2026-04-21",
+              "source--white-house-situation-room-on-renewed-hormuz-risk-2026-04-21"
+            ]
+          }
+        },
+        {
+          "eval": "broad_synthesis_has_boundary_sections",
+          "pass": true,
+          "detail": {
+            "value": {
+              "source_links": 21,
+              "analysis_subsections": 7,
+              "line_count": 153
+            },
+            "threshold": {
+              "source_links": 5,
+              "analysis_subsections": 5,
+              "line_count": 55
+            },
+            "missing_sections": [],
+            "evidence_source_links": [
+              "source--eia-short-term-energy-outlook-april-2026-2026-04-14",
+              "source--hormuz-blockade-enforcement-and-isr-attrition-2026-04-15",
+              "source--hormuz-blockade-oil-over-100-and-global-macro-shock-2026-04-13",
+              "source--hormuz-chokepoint-flows-and-bypass-capacity-2026-04-13",
+              "source--hormuz-shipping-risk-outlook-2026-04-12",
+              "source--iran-hormuz-control-law-and-inalienable-right-claim-2026-04-21",
+              "source--korea-hormuz-defense-mission-preparation-2026-04-21",
+              "source--korea-india-naphtha-and-petrochemical-supply-coordination-2026-04-21",
+              "source--korea-oil-supply-outlook-2026-04-12",
+              "source--korea-pushes-us-crude-diversification-after-war-2026-04-21",
+              "source--korean-tankers-reroute-via-red-sea-2026-04-21",
+              "source--kuwait-force-majeure-on-oil-exports-after-hormuz-blockade-2026-04-21",
+              "source--ships-hit-after-hormuz-reopening-2026-04-21",
+              "source--stranded-korean-ships-move-near-uae-after-hormuz-closure-2026-04-21",
+              "source--trump-hormuz-blockade-order-2026-04-12",
+              "source--trump-invokes-korean-war-law-for-energy-support-2026-04-21",
+              "source--trump-oil-price-warning-and-iran-retaliation-2026-04-13",
+              "source--us-iran-talks-pakistan-pullout-2026-04-12",
+              "source--us-navy-drone-minesweeping-in-hormuz-2026-04-21",
+              "source--us-seizes-iranian-cargo-vessel-after-truce-2026-04-21",
+              "source--white-house-situation-room-on-renewed-hormuz-risk-2026-04-21"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--middle-east-war-macro-and-market-repricing-2026-04-13.md",
+      "score": 2,
+      "max_score": 2,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 16,
+            "evidence_source_count": 16,
+            "evidence_source_links": [
+              "source--bank-of-korea-april-economic-assessment-2026-04-13",
+              "source--bank-of-korea-rate-hold-and-middle-east-risk-2026-04-13",
+              "source--bok-governor-warns-middle-east-inflation-growth-risk-2026-04-21",
+              "source--china-central-bank-gold-buying-streak-2026-04-13",
+              "source--china-q1-growth-rebound-and-war-dimmed-2026-outlook-2026-04-14",
+              "source--dollar-safe-haven-bid-after-failed-us-iran-talks-2026-04-13",
+              "source--emerging-market-outflows-after-iran-war-2026-04-13",
+              "source--fed-war-risk-minutes-and-inflation-scenarios-2026-04-13",
+              "source--fx-market-bets-on-us-iran-deal-2026-04-21",
+              "source--gold-rebound-after-ceasefire-and-safe-haven-rotation-2026-04-13",
+              "source--israel-lebanon-ceasefire-and-iran-talks-relief-2026-04-16",
+              "source--premature-optimism-on-middle-east-war-2026-04-21",
+              "source--us-consumer-inflation-gasoline-shock-2026-04-13",
+              "source--us-consumer-sentiment-record-low-amid-iran-war-2026-04-13",
+              "source--wall-street-relief-rally-on-us-iran-deal-hopes-2026-04-14",
+              "source--won-dollar-near-1500-and-middle-east-fx-pressure-2026-04-13"
+            ]
+          }
+        },
+        {
+          "eval": "broad_synthesis_has_boundary_sections",
+          "pass": true,
+          "detail": {
+            "value": {
+              "source_links": 16,
+              "analysis_subsections": 8,
+              "line_count": 140
+            },
+            "threshold": {
+              "source_links": 5,
+              "analysis_subsections": 5,
+              "line_count": 55
+            },
+            "missing_sections": [],
+            "evidence_source_links": [
+              "source--bank-of-korea-april-economic-assessment-2026-04-13",
+              "source--bank-of-korea-rate-hold-and-middle-east-risk-2026-04-13",
+              "source--bok-governor-warns-middle-east-inflation-growth-risk-2026-04-21",
+              "source--china-central-bank-gold-buying-streak-2026-04-13",
+              "source--china-q1-growth-rebound-and-war-dimmed-2026-outlook-2026-04-14",
+              "source--dollar-safe-haven-bid-after-failed-us-iran-talks-2026-04-13",
+              "source--emerging-market-outflows-after-iran-war-2026-04-13",
+              "source--fed-war-risk-minutes-and-inflation-scenarios-2026-04-13",
+              "source--fx-market-bets-on-us-iran-deal-2026-04-21",
+              "source--gold-rebound-after-ceasefire-and-safe-haven-rotation-2026-04-13",
+              "source--israel-lebanon-ceasefire-and-iran-talks-relief-2026-04-16",
+              "source--premature-optimism-on-middle-east-war-2026-04-21",
+              "source--us-consumer-inflation-gasoline-shock-2026-04-13",
+              "source--us-consumer-sentiment-record-low-amid-iran-war-2026-04-13",
+              "source--wall-street-relief-rally-on-us-iran-deal-hopes-2026-04-14",
+              "source--won-dollar-near-1500-and-middle-east-fx-pressure-2026-04-13"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "system/synthesis--prompt-robustness-and-contract-design-2026-04-16.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 2,
+            "evidence_source_count": 2,
+            "evidence_source_links": [
+              "source--prompt-guidance-official-docs-2026-04-16",
+              "source--prompt-robustness-perturbation-and-format-papers-2026-04-16"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--public-health-behavior-and-risk-prevention-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 6,
+            "evidence_source_count": 6,
+            "evidence_source_links": [
+              "source--adolescent-drug-exposure-overtakes-smoking-2026-04-21",
+              "source--early-rising-and-autonomic-stability-2026-04-13",
+              "source--excessive-intake-linked-to-permanent-memory-loss-in-men-2026-04-21",
+              "source--high-pillow-glaucoma-sleep-risk-2026-04-21",
+              "source--turmeric-reduces-carcinogens-in-grilled-meat-2026-04-21",
+              "source--us-science-politics-and-cdc-vaccine-pivot-2026-04-17"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "system/synthesis--research-insights-to-practical-wiki-rules.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 9,
+            "evidence_source_count": 9,
+            "evidence_source_links": [
+              "source--autoresearch-skill-repo",
+              "source--bilevel-autoresearch",
+              "source--jangpm-meta-skills-repo",
+              "source--karpathy-autoresearch-repo",
+              "source--meta-harness",
+              "source--ouroboros-repo",
+              "source--semantic-checks-and-execution-feedback-for-llm-assistants",
+              "source--slopcodebench",
+              "source--stage1-planning-harness-mvp"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--semiconductor-memory-supply-and-labor-risk-2026-04-22.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 7,
+            "evidence_source_count": 7,
+            "evidence_source_links": [
+              "source--ai-memory-boom-and-supply-constraints-2026-04-13",
+              "source--asml-ai-chip-demand-and-semiconductor-capex-resilience-2026-04-16",
+              "source--memory-product-mix-upside-for-samsung-and-sk-hynix-2026-04-21",
+              "source--samsung-labor-bonus-dispute-and-semiconductor-workforce-risk-2026-04-17",
+              "source--samsung-process-blueprint-trade-secret-case-2026-04-21",
+              "source--samsung-strategic-output-increase-and-preorders-2026-04-21",
+              "source--sk-hynix-socamm2-ai-memory-scaleup-2026-04-21"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "page": "system/synthesis--stage1-planning-harness-bridge.md",
+      "score": 1,
+      "max_score": 1,
+      "results": [
+        {
+          "eval": "declared_source_count_matches_evidence",
+          "pass": true,
+          "detail": {
+            "declared_source_count": 2,
+            "evidence_source_count": 2,
+            "evidence_source_links": [
+              "source--ouroboros-repo",
+              "source--stage1-planning-harness-mvp"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-04-22T04:38:48Z\", \"generated_at_source\": \"payload.generated_at\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-04-30T18:41:53Z\", \"source_artifact\": \"runs/run-20260422-raw-intake-registration-and-promotion/validation/wiki-stage2-final-tree-2026-04-22.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/raw-intake-final-tree-validation-report.schema.json\", \"artifact_kind\": \"raw_intake_final_tree_validation_report\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-04-30T18:41:53Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-04-22T04:38:48Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"9d9f2925dd2878aabb0089e6019941bebe0fa5f886ca05c06ee15919de670a75\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"fc0340f868a19c5980eebfb4b9eb41620ff6571ed9de83a030bf0a59b3d20be6\", \"policy\": \"7d45acc617992bca127ce0b7defb6715caac5b774dcc489acf984502cea3a402\", \"schema\": \"1c838c68a763a6d492d5a9372a3fdf266297390caad43bf9f128032843c2951f\", \"target_rel_path\": \"156b0a999731ce739a1f9046e9a0a778e5e4de8f38c439d6accff9106fcee83a\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/run-20260422-raw-intake-registration-and-promotion/validation/wiki-stage2-final-tree-2026-04-22.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"18815cda100eadecd14e6e2e7d1fbeb0b92bc1c3fc1633aec2fbe1e5131d2081\"}"
+      }
+    ]
+  }
+}

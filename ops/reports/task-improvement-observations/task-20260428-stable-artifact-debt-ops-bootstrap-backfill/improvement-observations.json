@@ -1,0 +1,42 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-07T02:38:29Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "020399c9d2ef990917394771d8d148cc005c6c68725d730863edae8834a92fe7",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "7834fa09f75c5e0df6dc1ea66a3e7ea6cb5c8ee12e29002843a303540427fcd7",
+    "record_id": "eca0290c1a13a0861407ba1efb427d0db9ad5ef59c9632d3e47687691577b45b",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "4808db81f1477fd2fbc2d0a813b0dcca1abb761c3891ffc795a588bdd1d4cb41"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:38:29Z"
+  },
+  "record_id": "task-20260428-stable-artifact-debt-ops-bootstrap-backfill",
+  "captured_at": "2026-04-28T05:26:00Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Historical bootstrap ops reports now normalize to archived, schema-backed artifacts, and archive retention semantics stop those snapshots from resurfacing as current mtime debt.",
+  "observations": [
+    {
+      "observation_id": "historical_bootstrap_archive_backfill_guard",
+      "surface": "ops/scripts/backfill_historical_bootstrap_reports.py, ops/scripts/artifact_freshness_runtime.py, ops/reports/eval-initial-2026-04-12.json, ops/reports/lint-initial-2026-04-12.json, ops/reports/manifest-2026-04-12.json, tests/test_backfill_historical_bootstrap_reports.py, tests/test_generated_report_contracts.py",
+      "problem": "Three safe historical bootstrap reports kept showing up as missing envelope/schema/currentness debt even though they are preserved snapshots rather than current operational evidence.",
+      "why_it_matters": "As long as archived bootstrap snapshots look like live debt, artifact-freshness counts stay noisier than necessary and maintainers cannot distinguish current producer gaps from already-preserved history.",
+      "automation_candidate": "Backfill the historical bootstrap reports in place with archived schema-backed envelopes, normalize portable paths and metadata, and teach artifact freshness that archived plus archive artifacts do not accumulate mtime drift debt.",
+      "suggested_followup": "Automated on 2026-04-28: the three 2026-04-12 bootstrap reports are now archived schema-backed artifacts and generated-contract tests pin both the archive payload semantics and the reduced debt counts.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260428-stable-artifact-debt-ops-bootstrap-backfill"
+}

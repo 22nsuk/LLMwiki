@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "status_contract": {
+    "active_status_field": "status_v2",
+    "compatibility_alias_field": "status_v2_preview",
+    "legacy_top_level_status_field": "status",
+    "legacy_top_level_status_semantics": "strict clean plus sealed compatibility alias",
+    "legacy_alias_retention": "one_to_two_releases",
+    "required_v2_axes": [
+      "release_authority_status",
+      "semantic_release_status",
+      "sealed_release_status"
+    ],
+    "required_reason_fields": [
+      "authority_reason_ids",
+      "sealed_reason_ids",
+      "blocker_reason_ids"
+    ],
+    "recommended_consumer_fields": [
+      "status_v2.status_axes.release_authority_status",
+      "status_v2.status_axes.sealed_release_status",
+      "status_v2.blocker_reason_ids"
+    ]
+  },
+  "consumers": [
+    {
+      "path": "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
+      "consumer_role": "machine readiness gate",
+      "migration_status": "v2_primary_with_legacy_fallback",
+      "status_v2_helper": "release_status_v2_view_with_readiness_fallback",
+      "required_fields": [
+        "status_v2.status_axes.release_authority_status",
+        "status_v2.status_axes.sealed_release_status",
+        "status_v2.blocker_reason_ids"
+      ],
+      "legacy_status_allowed": "fallback_only"
+    },
+    {
+      "path": "ops/scripts/release/external_report_lifecycle_runtime.py",
+      "consumer_role": "external report release-run verification",
+      "migration_status": "v2_primary_with_legacy_fallback",
+      "status_v2_helper": "release_status_v2_view_with_readiness_fallback",
+      "required_fields": [
+        "status_v2.status_axes.release_authority_status",
+        "status_v2.blocker_reason_ids"
+      ],
+      "legacy_status_allowed": "release_readiness_state_fallback_only"
+    },
+    {
+      "path": "ops/scripts/release/operator_release_summary.py",
+      "consumer_role": "operator release summary",
+      "migration_status": "v2_primary_with_legacy_fallback",
+      "status_v2_helper": "release_status_v2_view_with_readiness_fallback",
+      "required_fields": [
+        "status_v2.status_axes.release_authority_status",
+        "status_v2.status_axes.semantic_release_status",
+        "status_v2.status_axes.sealed_release_status",
+        "status_v2.blocker_reason_ids"
+      ],
+      "legacy_status_allowed": "release_readiness_state_fallback_only"
+    },
+    {
+      "path": "ops/scripts/learning/learning_readiness_signoff_revalidation.py",
+      "consumer_role": "learning readiness release-effect revalidation",
+      "migration_status": "v2_primary_with_legacy_fallback",
+      "status_v2_helper": "release_status_v2_view_with_readiness_fallback",
+      "required_fields": [
+        "status_v2.status_axes.release_authority_status",
+        "status_v2.status_axes.semantic_release_status",
+        "status_v2.status_axes.sealed_release_status",
+        "status_v2.blocker_reason_ids"
+      ],
+      "legacy_status_allowed": "release_readiness_state_fallback_only"
+    },
+    {
+      "path": "ops/scripts/release/release_evidence_dashboard.py",
+      "consumer_role": "release evidence dashboard closeout decision",
+      "migration_status": "v2_primary_with_legacy_fallback",
+      "status_v2_helper": "release_status_v2_view_with_readiness_fallback",
+      "required_fields": [
+        "status_v2.status_axes.release_authority_status",
+        "status_v2.status_axes.semantic_release_status",
+        "status_v2.status_axes.sealed_release_status",
+        "status_v2.blocker_reason_ids"
+      ],
+      "legacy_status_allowed": "release_readiness_state_fallback_only"
+    },
+    {
+      "path": "ops/scripts/release/release_closeout_batch_manifest.py",
+      "consumer_role": "release closeout batch manifest authority and seal decision",
+      "migration_status": "v2_primary_with_legacy_fallback",
+      "status_v2_helper": "release_status_v2_view_with_readiness_fallback",
+      "required_fields": [
+        "status_v2.status_axes.release_authority_status",
+        "status_v2.status_axes.semantic_release_status",
+        "status_v2.status_axes.sealed_release_status",
+        "status_v2.blocker_reason_ids"
+      ],
+      "legacy_status_allowed": "release_readiness_state_fallback_only"
+    },
+    {
+      "path": "ops/scripts/release/release_post_seal_attestation.py",
+      "consumer_role": "post-seal attestation",
+      "migration_status": "v2_primary_with_legacy_fallback",
+      "status_v2_helper": "release_status_v2_view",
+      "required_fields": [
+        "status_v2.status_axes.release_authority_status",
+        "status_v2.status_axes.semantic_release_status",
+        "status_v2.status_axes.sealed_release_status",
+        "status_v2.blocker_reason_ids"
+      ],
+      "legacy_status_allowed": "compatibility_snapshot_only"
+    },
+    {
+      "path": "ops/scripts/release/release_closeout_sealed_rehearsal_check.py",
+      "consumer_role": "sealed rehearsal checker",
+      "migration_status": "v2_primary_with_legacy_fallback",
+      "status_v2_helper": "release_status_v2_view",
+      "required_fields": [
+        "status_v2.status_axes.release_authority_status",
+        "status_v2.status_axes.sealed_release_status",
+        "status_v2.blocker_reason_ids"
+      ],
+      "legacy_status_allowed": "not_required"
+    },
+    {
+      "path": "ops/scripts/release/release_closeout_finality_attestation.py",
+      "consumer_role": "finality attestation batch summary",
+      "migration_status": "v2_primary_with_legacy_fallback",
+      "status_v2_helper": "release_status_v2_view",
+      "required_fields": [
+        "status_v2.status_axes.release_authority_status",
+        "status_v2.status_axes.semantic_release_status",
+        "status_v2.status_axes.sealed_release_status"
+      ],
+      "legacy_status_allowed": "fallback_only"
+    },
+    {
+      "path": "ops/scripts/release/release_live_artifact_attestation.py",
+      "consumer_role": "live artifact attestation",
+      "migration_status": "v2_primary_with_legacy_fallback",
+      "status_v2_helper": "release_status_v2_view",
+      "required_fields": [
+        "status_v2.status_axes.release_authority_status",
+        "status_v2.status_axes.semantic_release_status",
+        "status_v2.status_axes.sealed_release_status"
+      ],
+      "legacy_status_allowed": "summary_only"
+    },
+    {
+      "path": "ops/scripts/release/release_lane_summary.py",
+      "consumer_role": "release lane authority summary",
+      "migration_status": "v2_primary_with_legacy_fallback",
+      "status_v2_helper": "release_status_v2_view_with_readiness_fallback",
+      "required_fields": [
+        "status_v2.status_axes.release_authority_status",
+        "status_v2.status_axes.semantic_release_status",
+        "status_v2.status_axes.sealed_release_status",
+        "status_v2.blocker_reason_ids"
+      ],
+      "legacy_status_allowed": "release_readiness_state_fallback_only"
+    },
+    {
+      "path": "ops/scripts/release/release_clean_blocker_ledger.py",
+      "consumer_role": "clean-lane blocker ledger",
+      "migration_status": "v2_primary_with_legacy_fallback",
+      "status_v2_helper": "release_status_v2_view_with_readiness_fallback",
+      "required_fields": [
+        "status_v2.status_axes.release_authority_status",
+        "status_v2.status_axes.sealed_release_status"
+      ],
+      "legacy_status_allowed": "release_readiness_state_fallback_only"
+    },
+    {
+      "path": "ops/scripts/release/release_evidence_closeout_self_check.py",
+      "consumer_role": "release closeout self-check drift watch",
+      "migration_status": "axis_fields_primary",
+      "required_fields": [
+        "release_authority_status",
+        "sealed_release_status"
+      ],
+      "legacy_status_allowed": "not_required"
+    }
+  ],
+  "summary": "status_v2 is the active machine contract; top-level status remains a strict clean plus sealed compatibility alias for old readers only."
+}

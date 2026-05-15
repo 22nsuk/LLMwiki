@@ -1,0 +1,1 @@
+{"artifact_path": "runs/run-20260422-auto-improve-decision-record-fallback-retry", "component": "planning_gate_validate", "decision": "fail", "duration_ms": 283, "phase": "mechanism_in_progress", "policy_version": 4, "run_id": "run-20260422-auto-improve-decision-record-fallback-retry", "session_id": "", "ts": "2026-04-22T14:02:28Z"}

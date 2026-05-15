@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Warning Budget Report",
+  "type": "object",
+  "required": [
+    "$schema",
+    "vault",
+    "generated_at",
+    "policy",
+    "profile",
+    "status",
+    "sources",
+    "checks",
+    "summary"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "const": "ops/schemas/warning-budget-report.schema.json"
+    },
+    "vault": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "policy": {
+      "type": "object",
+      "required": [
+        "path",
+        "version"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      }
+    },
+    "profile": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "sources": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/sourceSummary"
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/budgetCheck"
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "source_count",
+        "source_fail_count",
+        "check_count",
+        "failed_check_count"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "source_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_fail_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "check_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed_check_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sourceSummary": {
+      "type": "object",
+      "required": [
+        "status",
+        "warning_count",
+        "warning_type_counts"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "warning_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warning_type_counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "budgetCheck": {
+      "type": "object",
+      "required": [
+        "id",
+        "source",
+        "metric",
+        "actual",
+        "budget",
+        "status"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "metric": {
+          "enum": [
+            "total_warnings",
+            "warning_type"
+          ]
+        },
+        "warning_type": {
+          "type": "string"
+        },
+        "actual": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "budget": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        }
+      }
+    }
+  }
+}

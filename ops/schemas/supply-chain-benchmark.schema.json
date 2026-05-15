@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Supply Chain Benchmark",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "vault",
+    "generated_at",
+    "policy",
+    "strict_path",
+    "cached_path",
+    "comparison"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/supply-chain-benchmark.schema.json"
+      ]
+    },
+    "vault": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "policy": {
+      "$ref": "#/$defs/policy"
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "strict_path": {
+      "$ref": "#/$defs/pathBenchmark"
+    },
+    "cached_path": {
+      "$ref": "#/$defs/pathBenchmark"
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "strict_over_cached_ratio",
+        "cached_faster_or_equal"
+      ],
+      "properties": {
+        "strict_over_cached_ratio": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cached_faster_or_equal": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "properties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metadataProperty"
+          }
+        }
+      }
+    },
+    "metadataProperty": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "name",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "pathBenchmark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "elapsed_seconds",
+        "intermediate_reuse"
+      ],
+      "properties": {
+        "elapsed_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "intermediate_reuse": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

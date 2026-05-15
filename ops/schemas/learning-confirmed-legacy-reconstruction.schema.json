@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Learning Confirmed Legacy Reconstruction",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "status",
+    "summary",
+    "reconstruction_identity",
+    "run_reconstructions"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": ["ops/schemas/learning-confirmed-legacy-reconstruction.schema.json"]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": ["learning_confirmed_legacy_reconstruction"]
+    },
+    "generated_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" },
+    "producer": { "type": "string", "enum": ["ops.scripts.learning_confirmed_legacy_reconstruction"] },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": { "type": "string", "enum": ["current", "archived", "stale", "unknown"] },
+    "retention_policy": { "type": "string", "enum": ["canonical_report"] },
+    "encoding": { "type": "string", "enum": ["utf-8"] },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown", "invalid"] },
+        "checked_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" }
+      }
+    },
+    "vault": { "type": "string" },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string" },
+        "version": { "type": ["integer", "string", "null"] }
+      }
+    },
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reconstruction_sha256",
+        "run_count",
+        "reconstruction_needed_count",
+        "reconstructed_run_count",
+        "not_needed_run_count",
+        "blocked_run_count",
+        "historical_telemetry_mutation",
+        "operator_reconstruction_diagnostics",
+        "operator_summary"
+      ],
+      "properties": {
+        "reconstruction_sha256": { "$ref": "#/$defs/sha256" },
+        "run_count": { "type": "integer", "minimum": 0 },
+        "reconstruction_needed_count": { "type": "integer", "minimum": 0 },
+        "reconstructed_run_count": { "type": "integer", "minimum": 0 },
+        "not_needed_run_count": { "type": "integer", "minimum": 0 },
+        "blocked_run_count": { "type": "integer", "minimum": 0 },
+        "historical_telemetry_mutation": { "type": "boolean", "const": false },
+        "operator_reconstruction_diagnostics": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/operator_reconstruction_diagnostic" }
+        },
+        "operator_summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "reconstruction_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["digest_algorithm", "payload_version", "reconstruction_digest"],
+      "properties": {
+        "digest_algorithm": { "type": "string", "enum": ["sha256"] },
+        "payload_version": { "type": "integer", "minimum": 1 },
+        "reconstruction_digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "run_reconstructions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/run_reconstruction" }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "sha256_or_empty": { "type": "string", "pattern": "^(|[a-f0-9]{64})$" },
+    "run_reconstruction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "families",
+        "telemetry_path",
+        "telemetry_sha256",
+        "promotion_report_path",
+        "promotion_report_sha256",
+        "behavior_delta_path",
+        "behavior_delta_artifact_exists",
+        "behavior_delta_artifact_sha256",
+        "telemetry_behavior_delta_digest",
+        "telemetry_behavior_delta_digest_valid",
+        "digest_reconstruction_needed",
+        "secondary_reconstruction_needed",
+        "selection_reason",
+        "parsed_strict_secondary_improvement_present",
+        "parsed_secondary_axes",
+        "parsed_secondary_axis_evidence",
+        "reconstruction_status",
+        "reasons"
+      ],
+      "properties": {
+        "run_id": { "type": "string", "minLength": 1 },
+        "families": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "telemetry_path": { "type": "string" },
+        "telemetry_sha256": { "$ref": "#/$defs/sha256_or_empty" },
+        "promotion_report_path": { "type": "string" },
+        "promotion_report_sha256": { "$ref": "#/$defs/sha256_or_empty" },
+        "behavior_delta_path": { "type": "string" },
+        "behavior_delta_artifact_exists": { "type": "boolean" },
+        "behavior_delta_artifact_sha256": { "$ref": "#/$defs/sha256_or_empty" },
+        "telemetry_behavior_delta_digest": { "type": "string" },
+        "telemetry_behavior_delta_digest_valid": { "type": "boolean" },
+        "digest_reconstruction_needed": { "type": "boolean" },
+        "secondary_reconstruction_needed": { "type": "boolean" },
+        "selection_reason": { "type": "string", "minLength": 1 },
+        "parsed_strict_secondary_improvement_present": { "type": "boolean" },
+        "parsed_secondary_axes": { "type": "array", "items": { "type": "string" } },
+        "parsed_secondary_axis_evidence": { "$ref": "#/$defs/secondary_axis_evidence" },
+        "reconstruction_status": {
+          "type": "string",
+          "enum": ["not_needed", "reconstructed", "blocked"]
+        },
+        "reasons": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "secondary_axis_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "check_id", "detail", "strict_signal", "axes"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": ["missing", "promotion_report_fields", "promotion_report_check_detail"]
+        },
+        "check_id": { "type": "string" },
+        "detail": { "type": "string" },
+        "strict_signal": { "type": "boolean" },
+        "axes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "operator_reconstruction_diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "families",
+        "reconstruction_status",
+        "reconstruction_needed",
+        "selection_reason",
+        "reconstruction_reasons",
+        "parsed_secondary_axes",
+        "parsed_secondary_axis_evidence"
+      ],
+      "properties": {
+        "run_id": { "type": "string", "minLength": 1 },
+        "families": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "reconstruction_status": {
+          "type": "string",
+          "enum": ["not_needed", "reconstructed", "blocked"]
+        },
+        "reconstruction_needed": { "type": "boolean" },
+        "selection_reason": { "type": "string", "minLength": 1 },
+        "reconstruction_reasons": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "parsed_secondary_axes": { "type": "array", "items": { "type": "string" } },
+        "parsed_secondary_axis_evidence": { "$ref": "#/$defs/secondary_axis_evidence" }
+      }
+    }
+  }
+}

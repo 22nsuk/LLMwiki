@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/raw-intake-route-proposal-report.schema.json",
+  "title": "Raw Intake Route Proposal Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "mode",
+    "status",
+    "matrix",
+    "policy",
+    "allowed_actions",
+    "reviewed_route_statuses",
+    "summary",
+    "blocking_issues",
+    "proposals"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "ops/schemas/raw-intake-route-proposal-report.schema.json"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "const": "raw_intake_route_proposal_report"
+    },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": {
+      "type": "string",
+      "const": "ops.scripts.raw_intake_route_proposal"
+    },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string" },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": { "type": "string", "enum": ["current", "stale"] },
+    "retention_policy": { "type": "string", "minLength": 1 },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown"] },
+        "checked_at": { "type": "string", "minLength": 1 }
+      }
+    },
+    "vault": { "type": "string", "minLength": 1 },
+    "mode": { "type": "string", "enum": ["route_proposal", "absorption_closeout"] },
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "matrix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "scope", "declared_source_count", "entry_count"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "scope": { "type": "string" },
+        "declared_source_count": { "type": "integer", "minimum": 0 },
+        "entry_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "allowed_actions": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1
+    },
+    "reviewed_route_statuses": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entry_count",
+        "blocking_issue_count",
+        "review_required_count",
+        "review_satisfied_count",
+        "closeout_pass_count",
+        "closeout_fail_count"
+      ],
+      "properties": {
+        "entry_count": { "type": "integer", "minimum": 0 },
+        "blocking_issue_count": { "type": "integer", "minimum": 0 },
+        "review_required_count": { "type": "integer", "minimum": 0 },
+        "review_satisfied_count": { "type": "integer", "minimum": 0 },
+        "closeout_pass_count": { "type": "integer", "minimum": 0 },
+        "closeout_fail_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "blocking_issues": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/blockingIssue" }
+    },
+    "proposals": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/proposal" }
+    }
+  },
+  "$defs": {
+    "stringMap": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "blockingIssue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["registry_id", "source_page", "issues"],
+      "properties": {
+        "registry_id": { "type": "string" },
+        "source_page": { "type": "string" },
+        "issues": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "proposal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registry_id",
+        "source_page",
+        "raw_path",
+        "route_key",
+        "route_basis",
+        "proposed_action",
+        "target",
+        "confidence",
+        "review_status",
+        "review_gate",
+        "closeout_status",
+        "issues",
+        "review_reasons"
+      ],
+      "properties": {
+        "registry_id": { "type": "string" },
+        "source_page": { "type": "string" },
+        "raw_path": { "type": "string" },
+        "route_key": { "type": "string", "pattern": "^[0-9a-f]{16}$" },
+        "route_basis": { "$ref": "#/$defs/stringMap" },
+        "proposed_action": { "type": "string" },
+        "target": { "type": "string" },
+        "confidence": { "type": "string" },
+        "review_status": { "type": "string" },
+        "review_gate": { "type": "string", "enum": ["satisfied", "required"] },
+        "closeout_status": { "type": "string", "enum": ["pass", "fail"] },
+        "issues": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "review_reasons": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

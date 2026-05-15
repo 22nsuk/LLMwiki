@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test Deselection Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "policy_kind",
+    "deselection_budget",
+    "deselected_tests"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/test-deselection-policy.schema.json"
+      ]
+    },
+    "policy_kind": {
+      "type": "string",
+      "enum": [
+        "test_deselection_policy"
+      ]
+    },
+    "deselection_budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_count",
+        "risk_owner",
+        "expires_at",
+        "count_increase_gate_effect",
+        "expiry_gate_effect"
+      ],
+      "properties": {
+        "max_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "risk_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expires_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        },
+        "count_increase_gate_effect": {
+          "type": "string",
+          "enum": [
+            "fail",
+            "warn"
+          ]
+        },
+        "expiry_gate_effect": {
+          "type": "string",
+          "enum": [
+            "fail",
+            "warn"
+          ]
+        }
+      }
+    },
+    "deselected_tests": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/deselected_test"
+      }
+    }
+  },
+  "$defs": {
+    "deselected_test": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nodeid",
+        "reason",
+        "policy_ref",
+        "risk_owner",
+        "expires_at",
+        "release_blocking",
+        "expected_to_pass_after_refresh"
+      ],
+      "properties": {
+        "nodeid": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "risk_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expires_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        },
+        "release_blocking": {
+          "type": "boolean"
+        },
+        "expected_to_pass_after_refresh": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

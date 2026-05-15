@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Distribution Profile Matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "artifact_kind", "schema_version", "profiles"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": ["ops/schemas/distribution-profile-matrix.schema.json"]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": ["distribution_profile_matrix"]
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "profiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/profile" }
+    }
+  },
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_id",
+        "purpose",
+        "release_authority_role",
+        "included_surfaces",
+        "excluded_surfaces",
+        "generated_artifact_policy",
+        "tmp_policy",
+        "attestation_role"
+      ],
+      "properties": {
+        "profile_id": {
+          "type": "string",
+          "enum": [
+            "source_content_package",
+            "release_evidence_bundle",
+            "public_code_mirror",
+            "review_full_snapshot",
+            "local_workspace"
+          ]
+        },
+        "purpose": { "type": "string", "minLength": 1 },
+        "release_authority_role": {
+          "type": "string",
+          "enum": ["source_payload", "evidence_payload", "public_mirror", "review_only", "not_distributable"]
+        },
+        "included_surfaces": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "excluded_surfaces": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "generated_artifact_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source_package", "evidence_bundle", "attestation"],
+          "properties": {
+            "source_package": { "type": "string", "enum": ["include", "exclude", "reference_only", "not_applicable"] },
+            "evidence_bundle": { "type": "string", "enum": ["include", "exclude", "reference_only", "not_applicable"] },
+            "attestation": { "type": "string", "enum": ["include", "exclude", "reference_only", "not_applicable"] }
+          }
+        },
+        "tmp_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tmp_recursive_allowed", "allowed_tmp_prefixes"],
+          "properties": {
+            "tmp_recursive_allowed": { "type": "boolean" },
+            "allowed_tmp_prefixes": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "attestation_role": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

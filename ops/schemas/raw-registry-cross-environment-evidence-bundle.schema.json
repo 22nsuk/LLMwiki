@@ -1,0 +1,336 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Raw Registry Cross-Environment Evidence Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "status",
+    "reports_dir",
+    "expected_profiles",
+    "summary",
+    "evidence",
+    "diagnostics"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/raw-registry-cross-environment-evidence-bundle.schema.json"
+      ]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": [
+        "raw_registry_cross_environment_evidence_bundle"
+      ]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_tree_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_status": {
+      "type": "string",
+      "enum": [
+        "current",
+        "archived",
+        "stale",
+        "unknown"
+      ]
+    },
+    "retention_policy": {
+      "type": "string",
+      "enum": [
+        "ephemeral",
+        "canonical_report",
+        "archive"
+      ]
+    },
+    "encoding": {
+      "type": "string",
+      "enum": [
+        "utf-8"
+      ]
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "checked_at"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown",
+            "invalid"
+          ]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "vault": {
+      "type": "string"
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "warn",
+        "fail"
+      ]
+    },
+    "reports_dir": {
+      "type": "string"
+    },
+    "expected_profiles": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expected_profile_count",
+        "report_count",
+        "valid_report_count",
+        "missing_report_count",
+        "invalid_report_count",
+        "failed_report_count",
+        "diagnostic_count"
+      ],
+      "properties": {
+        "expected_profile_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "report_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "valid_report_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_report_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "invalid_report_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed_report_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "diagnostic_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence_item"
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/diagnostic"
+      }
+    }
+  },
+  "$defs": {
+    "evidence_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile",
+        "runner_os",
+        "generated_at",
+        "status",
+        "report_path",
+        "exists",
+        "size_bytes",
+        "sha256",
+        "load_status",
+        "semantic_compare_status",
+        "uploaded_artifact_name",
+        "diagnostics"
+      ],
+      "properties": {
+        "profile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runner_os": {
+          "type": "string"
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "warn",
+            "fail",
+            "missing",
+            "invalid",
+            "unknown"
+          ]
+        },
+        "report_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "exists": {
+          "type": "boolean"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^$|^[a-f0-9]{64}$"
+        },
+        "load_status": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "missing",
+            "decode_error",
+            "type_error",
+            "read_error",
+            "schema_error",
+            "unknown"
+          ]
+        },
+        "semantic_compare_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "skipped",
+            "missing",
+            "unknown"
+          ]
+        },
+        "uploaded_artifact_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/diagnostic"
+          }
+        }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "severity",
+        "code",
+        "path",
+        "message"
+      ],
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": [
+            "error",
+            "warning",
+            "info"
+          ]
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

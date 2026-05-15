@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/source-package-clean-extract.schema.json",
+  "title": "Source package clean extract report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "status",
+    "source_zip",
+    "extract",
+    "commands",
+    "ruff_status",
+    "mypy_status",
+    "test_source_package_status",
+    "test_source_package_summary",
+    "deselection_budget_status",
+    "source_package_reproducibility_status",
+    "zip_smoke_report"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "const": "ops/schemas/source-package-clean-extract.schema.json" },
+    "artifact_kind": { "type": "string", "const": "source_package_clean_extract" },
+    "generated_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" },
+    "producer": { "type": "string", "const": "ops.scripts.source_package_clean_extract" },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": { "type": "string", "enum": ["current", "stale"] },
+    "retention_policy": { "type": "string", "minLength": 1 },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown"] },
+        "checked_at": { "type": "string", "minLength": 1 }
+      }
+    },
+    "vault": { "type": "string", "minLength": 1 },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "version": { "type": ["integer", "string", "null"] }
+      }
+    },
+    "status": { "$ref": "#/$defs/status" },
+    "source_zip": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "exists", "sha256"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "exists": { "type": "boolean" },
+        "sha256": { "type": "string", "pattern": "^(|[0-9a-f]{64})$" }
+      }
+    },
+    "extract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parent",
+        "root",
+        "archive_root_name",
+        "archive_root_source",
+        "status",
+        "summary"
+      ],
+      "properties": {
+        "parent": { "type": "string", "minLength": 1 },
+        "root": { "type": "string", "minLength": 1 },
+        "archive_root_name": { "type": "string", "minLength": 1 },
+        "archive_root_source": {
+          "type": "string",
+          "enum": [
+            "archive_self_description",
+            "zip_root_prefix",
+            "policy_fallback",
+            "explicit_extract_root"
+          ]
+        },
+        "status": { "$ref": "#/$defs/status" },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/command_result" }
+    },
+    "ruff_status": { "$ref": "#/$defs/check_status" },
+    "mypy_status": { "$ref": "#/$defs/check_status" },
+    "test_source_package_status": { "$ref": "#/$defs/check_status" },
+    "test_source_package_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "load_status", "status"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "load_status": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "minLength": 1 }
+      }
+    },
+    "deselection_budget_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "load_status",
+        "actual_deselected_count",
+        "max_allowed_deselected_count",
+        "over_budget",
+        "expires_at",
+        "next_action"
+      ],
+      "properties": {
+        "status": { "type": "string", "minLength": 1 },
+        "load_status": { "type": "string", "minLength": 1 },
+        "actual_deselected_count": { "type": "integer", "minimum": 0 },
+        "max_allowed_deselected_count": { "type": "integer", "minimum": 0 },
+        "over_budget": { "type": "boolean" },
+        "expires_at": { "type": "string" },
+        "next_action": { "type": "string", "minLength": 1 }
+      }
+    },
+    "source_package_reproducibility_status": { "$ref": "#/$defs/status" },
+    "zip_smoke_report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "load_status",
+        "status",
+        "manifest_comparison_pass",
+        "archive_budget_pass"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "load_status": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "minLength": 1 },
+        "manifest_comparison_pass": { "type": "boolean" },
+        "archive_budget_pass": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "check_status": { "type": "string", "enum": ["pass", "fail", "not_run"] },
+    "command_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "command",
+        "returncode",
+        "timed_out",
+        "timeout_seconds",
+        "termination_reason",
+        "duration_ms",
+        "stdout_tail",
+        "stderr_tail",
+        "status"
+      ],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "command": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "returncode": { "type": "integer" },
+        "timed_out": { "type": "boolean" },
+        "timeout_seconds": { "type": "integer", "minimum": 1 },
+        "termination_reason": { "type": "string" },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "stdout_tail": { "type": "string" },
+        "stderr_tail": { "type": "string" },
+        "status": { "$ref": "#/$defs/status" }
+      }
+    }
+  }
+}

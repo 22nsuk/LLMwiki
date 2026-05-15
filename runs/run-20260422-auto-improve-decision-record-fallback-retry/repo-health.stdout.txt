@@ -1,0 +1,63 @@
+......F                                                                  [100%]
+=================================== FAILURES ===================================
+_ AutoImproveIterationRuntimeTests.test_write_iteration_telemetry_recovers_decision_record_from_promotion_report_path _
+
+self = <test_auto_improve_iteration_runtime.AutoImproveIterationRuntimeTests testMethod=test_write_iteration_telemetry_recovers_decision_record_from_promotion_report_path>
+
+    def test_write_iteration_telemetry_recovers_decision_record_from_promotion_report_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-promotion-record"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            contract = reduce_decision_proposals(
+                [],
+                subject_id=run_id,
+                subject_kind="system_mechanism",
+                policy_version=1,
+                source_pass="system_mechanism",
+                signoff={"required": False, "status": "not_required"},
+            )
+            (run_dir / "promotion-report.json").write_text(
+                json.dumps(
+                    {
+                        "decision": contract["decision"],
+                        "decision_record": contract["decision_record"],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+    
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[f"runs/{run_id}/subagent-routing.worker.json"],
+                    roles=["worker"],
+                    phase_durations={"routing": 0.1, "experiment": 0.2},
+                    outcome="promoted",
+                    result={
+                        "decision": contract["decision"],
+                        "promotion_report": f"runs/{run_id}/promotion-report.json",
+                        "finalized": True,
+                        "finalize_result": {"run_id": run_id},
+                    },
+                    context=_context(),
+                )
+            )
+    
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+>           self.assertEqual(payload["decision_record"], contract["decision_record"])
+E           AssertionError: {'dec[16 chars]sion:unknown:c610898a41649ae6', 'subject_id': [675 chars]: ''} != {'dec[16 chars]sion:auto-session-run-promotion-record:91638e7[784 chars]ord'}
+E           Diff is 1512 characters long. Set self.maxDiff to None to see it.
+
+tests/test_auto_improve_iteration_runtime.py:295: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_write_iteration_telemetry_recovers_decision_record_from_promotion_report_path

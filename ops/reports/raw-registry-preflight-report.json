@@ -1,0 +1,111 @@
+{
+  "$schema": "ops/schemas/raw-registry-preflight-report.schema.json",
+  "artifact_kind": "raw_registry_preflight_report",
+  "generated_at": "2026-05-15T04:15:43Z",
+  "producer": "ops.scripts.raw_registry_preflight",
+  "source_command": "python -m ops.scripts.raw_registry_preflight --vault .",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "27a2dbc3dbb66d6dc0ec6fead8aad5a81f79e21bc9cff2c9eabb7af84541c082",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "c86d9f8f701739da8e48160d9fb27a80a430b26179b22f8fe93ebccac1fea69c",
+    "raw_inventory": "bcf9ddfc2a40ebe13eb8d47c937648e5d06e7e47020399ff1181439e1933f4c8",
+    "raw_registry_entry_pages": "0e5b2312b5e78f3850f1a0860d4e5c7230d89457ae2e182cb3ab384bee3b9e60",
+    "alias_policy_version": "f84a1152c3b12acd19d7baba4f383e0635d5a55e717f350f830f8b68bc1fd5cf",
+    "environment_fingerprint": "9b3f0cf3aa3c8c6ce255d926d8a710da0e619ac305beeaec7b7b27ce2a1f2cbe",
+    "metric_semantics": "0cdae93d083db401de4b476d0f212d1551c5620ac6d9b76e4a60809311db60c0",
+    "path_alias_resolution_mode": "0c0672a78f9a4cea3c7f3323a7e8b508c6072d8e56bf7ebab0fa8586b644bb7e"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-15T04:15:43Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "summary_page": "system/system-raw-registry.md",
+  "entry_pages": [
+    "system/system-raw-registry/wiki.md",
+    "system/system-raw-registry/wiki/ai-capability.md",
+    "system/system-raw-registry/wiki/ai-capability-governance-intake-2026-04-21.md",
+    "system/system-raw-registry/wiki/ai-compute-control.md",
+    "system/system-raw-registry/wiki/ai-infra-compute-intake-2026-04-21.md",
+    "system/system-raw-registry/wiki/ai-execution.md",
+    "system/system-raw-registry/wiki/coffee.md",
+    "system/system-raw-registry/wiki/defense-statecraft-intake-2026-04-21.md",
+    "system/system-raw-registry/wiki/europe-tech-sovereignty.md",
+    "system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-1.md",
+    "system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-2.md",
+    "system/system-raw-registry/wiki/global-policy-and-market-seeds.md",
+    "system/system-raw-registry/wiki/health-and-science-intake-2026-04-21.md",
+    "system/system-raw-registry/wiki/korea-fx.md",
+    "system/system-raw-registry/wiki/korea-macro-domestic-intake-2026-04-21.md",
+    "system/system-raw-registry/wiki/middle-east.md",
+    "system/system-raw-registry/wiki/middle-east-energy-intake-2026-04-21.md",
+    "system/system-raw-registry/wiki/middle-east-followups.md",
+    "system/system-raw-registry/system.md"
+  ],
+  "status": "pass",
+  "extraction_tool": "python_zipfile_with_infozip_c_locale_path_budget",
+  "locale": "C.UTF-8",
+  "path_alias_resolution_mode": "canonical_storage_path_then_manual_exported_environment_aliases_then_unique_content_sha256",
+  "alias_policy_version": "raw_registry_alias_resolution_v1",
+  "environment_fingerprint": {
+    "algorithm": "sha256-json-v1",
+    "value": "7c6fa1b195093da32c57c74585201c5114d18b05695c77bddfd91c3f15d7a2ac",
+    "inputs": {
+      "alias_policy_version": "raw_registry_alias_resolution_v1",
+      "extraction_tool": "python_zipfile_with_infozip_c_locale_path_budget",
+      "filesystem_encoding": "utf-8",
+      "filesystem_errors": "surrogateescape",
+      "locale": "C.UTF-8",
+      "os_name": "posix",
+      "path_alias_resolution_mode": "canonical_storage_path_then_manual_exported_environment_aliases_then_unique_content_sha256",
+      "path_list_separator": ":",
+      "path_separator": "/",
+      "platform_system": "Linux",
+      "posix_escape_expanded_component_byte_limit": "255",
+      "preferred_encoding": "UTF-8"
+    }
+  },
+  "metric_semantics": {
+    "entry_count": {
+      "scope": "registry_entries",
+      "description": "Parsed raw registry entries after inventory enrichment."
+    },
+    "error_count": {
+      "scope": "diagnostics",
+      "description": "Number of preflight diagnostics emitted with fail severity."
+    },
+    "warning_count": {
+      "scope": "diagnostics",
+      "description": "Number of preflight diagnostics emitted with warn severity."
+    },
+    "path_alias_match_count": {
+      "scope": "entries_with_missing_canonical_storage_path",
+      "description": "Entries whose canonical storage_path was absent but a manual, exported, or deterministic environment alias existed on disk."
+    },
+    "content_hash_fallback_count": {
+      "scope": "entries_with_missing_canonical_storage_path_and_aliases",
+      "description": "Entries whose path locators were absent but exactly one raw inventory file matched the entry content_sha256."
+    }
+  },
+  "unsupported_environment": false,
+  "errors": [],
+  "warnings": [],
+  "stats": {
+    "entry_count": 446,
+    "error_count": 0,
+    "warning_count": 0,
+    "path_alias_match_count": 0,
+    "content_hash_fallback_count": 0
+  }
+}

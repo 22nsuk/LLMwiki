@@ -1,0 +1,322 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Release Lane Summary",
+  "description": "Separate canonical evidence showing distinct lane statuses (cohort, clean, conditional, machine, operator) and accepted risk counts. This artifact aggregates release authority state from closeout, cohort, and dashboard into a single lane-level view.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "status",
+    "lane_summary",
+    "provenance"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/release-lane-summary.schema.json"
+      ]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": [
+        "release_lane_summary"
+      ]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "producer": {
+      "type": "string",
+      "enum": [
+        "ops.scripts.release_lane_summary"
+      ]
+    },
+    "source_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_tree_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_status": {
+      "type": "string",
+      "enum": [
+        "current",
+        "archived",
+        "stale",
+        "unknown"
+      ]
+    },
+    "retention_policy": {
+      "type": "string",
+      "enum": [
+        "canonical_report"
+      ]
+    },
+    "encoding": {
+      "type": "string",
+      "enum": [
+        "utf-8"
+      ]
+    },
+    "currentness": {
+      "$ref": "#/$defs/currentness"
+    },
+    "vault": {
+      "type": "string"
+    },
+    "policy": {
+      "$ref": "#/$defs/policy_identity"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "attention",
+        "fail"
+      ]
+    },
+    "lane_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cohort_status",
+        "clean_lane_status",
+        "conditional_lane_status",
+        "auto_improve_lane_status",
+        "learning_lane_status",
+        "machine_release_status",
+        "operator_release_status",
+        "release_authority_status",
+        "sealed_release_status",
+        "learning_claim_guard_status",
+        "learning_claim_allowed",
+        "claims_learning_improved",
+        "accepted_risk_family_count",
+        "accepted_risk_instance_count",
+        "accepted_risk_count",
+        "gate_attention_count",
+        "clean_lane_blocking_family_count",
+        "learning_claim_blocking_family_count",
+        "advisory_lifecycle_family_count"
+      ],
+      "properties": {
+        "cohort_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "attention",
+            "fail"
+          ]
+        },
+        "clean_lane_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "conditional_lane_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "auto_improve_lane_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "learning_lane_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "machine_release_status": {
+          "type": "string",
+          "enum": [
+            "allowed",
+            "blocked"
+          ]
+        },
+        "operator_release_status": {
+          "type": "string",
+          "enum": [
+            "allowed",
+            "blocked"
+          ]
+        },
+        "release_authority_status": {
+          "type": "string",
+          "enum": [
+            "clean_pass",
+            "conditional_pass",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "sealed_release_status": {
+          "type": "string",
+          "enum": [
+            "sealed_clean_pass",
+            "sealed_conditional_pass",
+            "unsealed_artifact_incomplete",
+            "unsealed_distribution_not_provided",
+            "unsealed_distribution_invalid",
+            "unsealed_distribution_drift",
+            "unsealed_release_blocked",
+            "unknown"
+          ]
+        },
+        "learning_claim_guard_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "learning_claim_allowed": {
+          "type": "boolean"
+        },
+        "claims_learning_improved": {
+          "type": "boolean"
+        },
+        "accepted_risk_family_count": {
+          "$ref": "https://llmwiki/schemas/accepted-risk-vocabulary#/$defs/accepted_risk_family_count"
+        },
+        "accepted_risk_instance_count": {
+          "$ref": "https://llmwiki/schemas/accepted-risk-vocabulary#/$defs/accepted_risk_instance_count"
+        },
+        "accepted_risk_count": {
+          "$ref": "https://llmwiki/schemas/accepted-risk-vocabulary#/$defs/accepted_risk_count"
+        },
+        "gate_attention_count": {
+          "$ref": "https://llmwiki/schemas/accepted-risk-vocabulary#/$defs/gate_attention_count"
+        },
+        "clean_lane_blocking_family_count": {
+          "$ref": "https://llmwiki/schemas/accepted-risk-vocabulary#/$defs/clean_lane_blocking_family_count"
+        },
+        "learning_claim_blocking_family_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "advisory_lifecycle_family_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cohort_source",
+        "closeout_source",
+        "dashboard_source",
+        "learning_delta_scoreboard_source"
+      ],
+      "properties": {
+        "cohort_source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "closeout_source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dashboard_source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "learning_delta_scoreboard_source": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "$defs": {
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "checked_at"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown",
+            "invalid"
+          ]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "policy_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        }
+      }
+    }
+  }
+}

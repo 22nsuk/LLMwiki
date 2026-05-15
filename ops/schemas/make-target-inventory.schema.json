@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Make Target Inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "status",
+    "makefile_path",
+    "summary",
+    "phony_targets",
+    "targets",
+    "missing_phony_definitions",
+    "non_phony_targets"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": ["ops/schemas/make-target-inventory.schema.json"]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": ["make_target_inventory"]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "producer": {
+      "type": "string",
+      "enum": ["ops.scripts.make_target_inventory"]
+    },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": {
+      "type": "string",
+      "enum": ["current", "archived", "stale", "unknown"]
+    },
+    "retention_policy": {
+      "type": "string",
+      "enum": ["canonical_report"]
+    },
+    "encoding": {
+      "type": "string",
+      "enum": ["utf-8"]
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["current", "stale", "unknown", "invalid"]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "vault": { "type": "string" },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string" },
+        "version": { "type": ["integer", "string"] }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pass", "attention", "fail"]
+    },
+    "makefile_path": { "type": "string", "minLength": 1 },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_count",
+        "phony_count",
+        "missing_phony_definition_count",
+        "non_phony_target_count"
+      ],
+      "properties": {
+        "target_count": { "type": "integer", "minimum": 0 },
+        "phony_count": { "type": "integer", "minimum": 0 },
+        "missing_phony_definition_count": { "type": "integer", "minimum": 0 },
+        "non_phony_target_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "phony_targets": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "line", "phony"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "line": { "type": "integer", "minimum": 1 },
+          "phony": { "type": "boolean" }
+        }
+      }
+    },
+    "missing_phony_definitions": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "non_phony_targets": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

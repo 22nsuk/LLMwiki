@@ -1,0 +1,511 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Promotion Report",
+  "type": "object",
+  "required": [
+    "$schema",
+    "run_id",
+    "mode",
+    "artifact_class",
+    "decision",
+    "summary",
+    "primary_targets",
+    "supporting_targets",
+    "checks",
+    "signoff",
+    "log",
+    "history",
+    "next_action"
+  ],
+  "$defs": {
+    "metadata_property": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "properties"
+      ],
+      "properties": {
+        "properties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metadata_property"
+          }
+        }
+      }
+    },
+    "promotion_decision": {
+      "type": "string",
+      "enum": [
+        "PROMOTE",
+        "HOLD",
+        "DISCARD"
+      ]
+    },
+    "decision_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision_id",
+        "subject_id",
+        "subject_kind",
+        "decision",
+        "decision_stage",
+        "is_terminal",
+        "policy_version",
+        "source_rule",
+        "source_pass",
+        "actor",
+        "reason_code",
+        "reason_detail",
+        "evidence_refs",
+        "decided_at",
+        "effective_at",
+        "supersedes",
+        "reducer_key",
+        "precedence_key",
+        "dedupe_key",
+        "finalizable",
+        "finalize_blockers",
+        "ledger_event_type",
+        "ledger_partition_key"
+      ],
+      "properties": {
+        "decision_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subject_id": {
+          "type": "string"
+        },
+        "subject_kind": {
+          "type": "string"
+        },
+        "decision": {
+          "$ref": "#/$defs/promotion_decision"
+        },
+        "decision_stage": {
+          "type": "string",
+          "enum": [
+            "promotion_gate"
+          ]
+        },
+        "is_terminal": {
+          "type": "boolean"
+        },
+        "policy_version": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_rule": {
+          "type": "string"
+        },
+        "source_pass": {
+          "type": "string"
+        },
+        "actor": {
+          "type": "string"
+        },
+        "reason_code": {
+          "type": "string"
+        },
+        "reason_detail": {
+          "type": "string"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "decided_at": {
+          "type": "string"
+        },
+        "effective_at": {
+          "type": "string"
+        },
+        "supersedes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reducer_key": {
+          "type": "string",
+          "enum": [
+            "promotion_decision_registry_v1"
+          ]
+        },
+        "precedence_key": {
+          "type": "string"
+        },
+        "dedupe_key": {
+          "type": "string"
+        },
+        "finalizable": {
+          "type": "boolean"
+        },
+        "finalize_blockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ledger_event_type": {
+          "type": "string"
+        },
+        "ledger_partition_key": {
+          "type": "string"
+        }
+      }
+    },
+    "decision_reduction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reducer_key",
+        "selected_decision_id",
+        "proposal_count",
+        "proposals"
+      ],
+      "properties": {
+        "reducer_key": {
+          "type": "string",
+          "enum": [
+            "promotion_decision_registry_v1"
+          ]
+        },
+        "selected_decision_id": {
+          "type": "string"
+        },
+        "proposal_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "proposals": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/decision_record"
+          }
+        }
+      }
+    }
+  },
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/promotion-report.schema.json"
+      ]
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "proposal_id": {
+      "type": "string"
+    },
+    "source_candidate_id": {
+      "type": "string"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "report_only"
+      ]
+    },
+    "artifact_class": {
+      "type": "string",
+      "enum": [
+        "wiki_source",
+        "wiki_concept",
+        "wiki_synthesis",
+        "wiki_query",
+        "system_page",
+        "system_mechanism"
+      ]
+    },
+    "decision": {
+      "$ref": "#/$defs/promotion_decision"
+    },
+    "decision_record": {
+      "$ref": "#/$defs/decision_record"
+    },
+    "decision_reduction": {
+      "$ref": "#/$defs/decision_reduction"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "primary_targets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "supporting_targets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "detail"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PASS",
+              "WARN",
+              "FAIL"
+            ]
+          },
+          "detail": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "signoff": {
+      "type": "object",
+      "required": [
+        "required",
+        "status",
+        "by",
+        "ts"
+      ],
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "approved",
+            "rejected",
+            "not_required"
+          ]
+        },
+        "by": {
+          "type": "string"
+        },
+        "ts": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "log": {
+      "type": "object",
+      "required": [
+        "required",
+        "page",
+        "summary",
+        "status",
+        "entry_ref"
+      ],
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "page": {
+          "type": "string",
+          "enum": [
+            "system/system-log.md"
+          ]
+        },
+        "summary": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "recorded",
+            "not_required"
+          ]
+        },
+        "entry_ref": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "history": {
+      "type": "object",
+      "required": [
+        "status",
+        "reason",
+        "by",
+        "ts"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "archived",
+            "quarantined"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "by": {
+          "type": "string"
+        },
+        "ts": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "next_action": {
+      "type": "string"
+    },
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "current_lint": {
+          "type": "object",
+          "required": [
+            "status",
+            "error_count",
+            "warning_count",
+            "review_candidate_count"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "pass",
+                "warn",
+                "fail"
+              ]
+            },
+            "error_count": {
+              "type": "integer"
+            },
+            "warning_count": {
+              "type": "integer"
+            },
+            "review_candidate_count": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "current_eval": {
+          "type": "object",
+          "required": [
+            "status",
+            "total_score",
+            "max_score"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "pass",
+                "fail"
+              ]
+            },
+            "total_score": {
+              "type": "integer"
+            },
+            "max_score": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "current_stage2": {
+          "type": "object",
+          "required": [
+            "status",
+            "total_score",
+            "max_score"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "pass",
+                "fail"
+              ]
+            },
+            "total_score": {
+              "type": "integer"
+            },
+            "max_score": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "baseline_eval_report": {
+          "type": "string"
+        },
+        "candidate_eval_report": {
+          "type": "string"
+        },
+        "baseline_lint_report": {
+          "type": "string"
+        },
+        "candidate_lint_report": {
+          "type": "string"
+        },
+        "baseline_mechanism_report": {
+          "type": "string"
+        },
+        "candidate_mechanism_report": {
+          "type": "string"
+        },
+        "changed_files_manifest": {
+          "type": "string"
+        },
+        "behavior_delta": {
+          "type": "string"
+        },
+        "run_ledger": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,82 @@
+# This file intentionally mirrors the public surface policy used by
+# ops.scripts.export_public_repo so the repo root can be published directly.
+# >>> public-surface-policy >>>
+# Generated from ops.scripts.public_surface_policy.
+# Root public repos should track only this allowlisted surface.
+*
+!/.gitattributes
+!/.gitignore
+!/.codex/
+!/.codex/agents/
+!/.codex/agents/**
+!/.github/
+!/.github/workflows/
+!/.github/workflows/**
+!/mk/
+!/mk/**
+!/AGENTS.md
+!/ARCHITECTURE.md
+!/CONTRIBUTING.md
+!/LICENSE
+!/Makefile
+!/pyproject.toml
+!/README.md
+!/SECURITY.md
+!/THIRD_PARTY_NOTICES.md
+!/ops/
+!/ops/**
+!/pytest.ini
+!/requirements-dev.txt
+!/requirements.txt
+!/tests/
+!/tests/**
+!/tools/
+!/tools/**
+!/uv.lock
+AGENTS.local.md
+ops/manifest.json
+ops/raw-registry.json
+ops/reports/
+# <<< public-surface-policy <<<
+
+# Local Python environments and caches inside public directories
+.venv/
+.pytest_cache/
+__pycache__/
+*.pyc
+
+# Temporary local work artifacts
+tmp/
+tmp_*.txt
+
+# Ephemeral test run artifacts: keep pytest outputs under tmp/test-runs/<run-id>/.
+pytest_target.log
+pytest_target.xml
+pytest_requested_output.txt
+pytest_*.log
+pytest_*.xml
+pytest_*_output.txt
+pytest_*_requested*.txt
+tmp/test-runs/
+
+# Obsidian local state
+.obsidian/
+
+# Editor and OS noise
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Extra local tool caches
+.mypy_cache/
+.ruff_cache/
+.cache/
+.coverage
+.coverage.*
+build/
+dist/
+*.egg-info/

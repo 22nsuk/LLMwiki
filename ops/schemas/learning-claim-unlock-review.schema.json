@@ -1,0 +1,439 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Learning Claim Unlock Review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "review_status",
+    "approved",
+    "approval_mode",
+    "reviewed_by",
+    "reviewed_at",
+    "decision_reason",
+    "source_paths",
+    "blocking_signal_ids",
+    "blocking_blocker_ids",
+    "improvement_claim_status",
+    "evidence_cohort_status",
+    "learning_claim_blocker_status",
+    "claim_wording_allowed",
+    "claim_wording_policy_status",
+    "machine_policy_decision",
+    "review_items",
+    "required_followup"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": ["ops/schemas/learning-claim-unlock-review.schema.json"]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": ["learning_claim_unlock_review"]
+    },
+    "generated_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" },
+    "producer": { "type": "string", "enum": ["ops.scripts.learning_claim_unlock_review"] },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": { "type": "string", "enum": ["current", "archived", "stale", "unknown"] },
+    "retention_policy": { "type": "string", "enum": ["canonical_report"] },
+    "encoding": { "type": "string", "enum": ["utf-8"] },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown", "invalid"] },
+        "checked_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" }
+      }
+    },
+    "vault": { "type": "string" },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string" },
+        "version": { "type": ["integer", "string", "null"] }
+      }
+    },
+    "review_status": {
+      "type": "string",
+      "enum": ["not_ready", "required", "approved", "auto_approved", "rejected"]
+    },
+    "approved": { "type": "boolean" },
+    "approval_mode": {
+      "type": "string",
+      "enum": ["none", "human_operator", "machine_policy", "hybrid"]
+    },
+    "reviewed_by": { "type": "string" },
+    "reviewed_at": {
+      "type": "string",
+      "pattern": "^(|\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z)$"
+    },
+    "decision_reason": { "type": "string", "minLength": 1 },
+    "source_paths": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 4,
+      "uniqueItems": true
+    },
+    "blocking_signal_ids": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "blocking_blocker_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "https://llmwiki/schemas/learning-readiness-vocabulary#/$defs/learning_blocker_id"
+      },
+      "uniqueItems": true
+    },
+    "improvement_claim_status": {
+      "type": "string",
+      "enum": ["not_ready", "eligible", "auto_confirmed", "revoked"]
+    },
+    "evidence_cohort_status": {
+      "type": "string",
+      "enum": ["not_ready", "auto_confirmed", "revoked"]
+    },
+    "learning_claim_blocker_status": {
+      "type": "string",
+      "enum": ["clear", "blocked", "not_evaluated"]
+    },
+    "claim_wording_allowed": { "type": "boolean" },
+    "claim_wording_policy_status": {
+      "type": "string",
+      "enum": ["pre_seal_ready", "blocked"]
+    },
+    "machine_policy_decision": {
+      "$ref": "#/$defs/machine_policy_decision"
+    },
+    "review_items": {
+      "type": "array",
+      "minItems": 4,
+      "items": { "$ref": "#/$defs/review_item" }
+    },
+    "required_followup": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "$defs": {
+    "machine_policy_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "policy_path",
+        "policy_version",
+        "decision",
+        "evidence_bundle_digest",
+        "bundle_path",
+        "bundle_sha256",
+        "current_bundle_sha256",
+        "bundle_status",
+        "bundle_fingerprint_match_status",
+        "revocation_status",
+        "claim_level",
+        "claim_scope",
+        "bounded_learning_claim_allowed",
+        "confirmed_learning_improvement_allowed",
+        "improvement_claim_status",
+        "confirmed_learning_improvement_status",
+        "evidence_cohort_status",
+        "learning_claim_blocker_status",
+        "claim_wording_allowed",
+        "claim_wording_policy_status",
+        "confirmed_policy_path",
+        "confirmed_policy_version",
+        "confirmed_evidence_cohort_path",
+        "confirmed_evidence_cohort_sha256",
+        "current_confirmed_evidence_cohort_sha256",
+        "confirmed_evidence_cohort_status",
+        "confirmed_evidence_cohort_fingerprint_match_status",
+        "confirmed_evidence_summary",
+        "confirmed_predicate_results",
+        "predicate_results"
+      ],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "policy_path": { "type": "string" },
+        "policy_version": { "type": ["integer", "string", "null"] },
+        "decision": {
+          "type": "string",
+          "enum": ["disabled", "auto_approved", "requires_human", "rejected"]
+        },
+        "evidence_bundle_digest": {
+          "type": "string",
+          "pattern": "^(|[a-f0-9]{64})$"
+        },
+        "bundle_path": { "type": "string" },
+        "bundle_sha256": {
+          "type": "string",
+          "pattern": "^(|[a-f0-9]{64})$"
+        },
+        "current_bundle_sha256": {
+          "type": "string",
+          "pattern": "^(|[a-f0-9]{64})$"
+        },
+        "bundle_status": {
+          "type": "string",
+          "enum": ["active", "stale", "revoked", "missing", "not_evaluated"]
+        },
+        "bundle_fingerprint_match_status": {
+          "type": "string",
+          "enum": ["match", "mismatch", "missing", "not_evaluated"]
+        },
+        "revocation_status": {
+          "type": "string",
+          "enum": ["active", "stale", "revoked", "not_evaluated"]
+        },
+        "claim_level": {
+          "type": "string",
+          "enum": ["none", "bounded_learning_likely", "confirmed_learning_improvement"]
+        },
+        "claim_scope": { "type": "string" },
+        "bounded_learning_claim_allowed": { "type": "boolean" },
+        "confirmed_learning_improvement_allowed": { "type": "boolean" },
+        "improvement_claim_status": {
+          "type": "string",
+          "enum": ["not_ready", "eligible", "auto_confirmed", "revoked"]
+        },
+        "confirmed_learning_improvement_status": {
+          "type": "string",
+          "enum": ["not_ready", "eligible", "auto_confirmed", "revoked"]
+        },
+        "evidence_cohort_status": {
+          "type": "string",
+          "enum": ["not_ready", "auto_confirmed", "revoked"]
+        },
+        "learning_claim_blocker_status": {
+          "type": "string",
+          "enum": ["clear", "blocked", "not_evaluated"]
+        },
+        "claim_wording_allowed": { "type": "boolean" },
+        "claim_wording_policy_status": {
+          "type": "string",
+          "enum": ["pre_seal_ready", "blocked"]
+        },
+        "confirmed_policy_path": { "type": "string" },
+        "confirmed_policy_version": { "type": ["integer", "string", "null"] },
+        "confirmed_evidence_cohort_path": { "type": "string" },
+        "confirmed_evidence_cohort_sha256": {
+          "type": "string",
+          "pattern": "^(|[a-f0-9]{64})$"
+        },
+        "current_confirmed_evidence_cohort_sha256": {
+          "type": "string",
+          "pattern": "^(|[a-f0-9]{64})$"
+        },
+        "confirmed_evidence_cohort_status": {
+          "type": "string",
+          "enum": ["active", "stale", "revoked", "missing", "not_evaluated"]
+        },
+        "confirmed_evidence_cohort_fingerprint_match_status": {
+          "type": "string",
+          "enum": ["match", "mismatch", "missing", "not_evaluated"]
+        },
+        "confirmed_evidence_summary": { "$ref": "#/$defs/confirmed_evidence_summary" },
+        "confirmed_predicate_results": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/machine_policy_predicate" }
+        },
+        "predicate_results": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/machine_policy_predicate" }
+        }
+      }
+    },
+    "confirmed_evidence_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_cohort_status",
+        "confirmed_evidence_status",
+        "valid_run_count",
+        "min_required_run_count",
+        "eligible_family_count",
+        "selected_valid_run_ids",
+        "blocking_predicate_ids",
+        "rejected_run_count",
+        "rejected_run_diagnostics",
+        "legacy_reconstruction_summary"
+      ],
+      "properties": {
+        "evidence_cohort_status": {
+          "type": "string",
+          "enum": ["not_ready", "auto_confirmed", "revoked"]
+        },
+        "confirmed_evidence_status": {
+          "type": "string",
+          "enum": ["not_ready", "auto_confirmed", "revoked"]
+        },
+        "valid_run_count": { "type": "integer", "minimum": 0 },
+        "min_required_run_count": { "type": "integer", "minimum": 0 },
+        "eligible_family_count": { "type": "integer", "minimum": 0 },
+        "selected_valid_run_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "blocking_predicate_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "rejected_run_count": { "type": "integer", "minimum": 0 },
+        "rejected_run_diagnostics": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/rejected_run_diagnostic" }
+        },
+        "legacy_reconstruction_summary": { "$ref": "#/$defs/legacy_reconstruction_summary" }
+      }
+    },
+    "legacy_reconstruction_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "reconstruction_needed_count",
+        "reconstructed_run_count",
+        "blocked_run_count",
+        "run_diagnostics"
+      ],
+      "properties": {
+        "status": { "type": "string", "enum": ["not_used", "pass", "fail"] },
+        "reconstruction_needed_count": { "type": "integer", "minimum": 0 },
+        "reconstructed_run_count": { "type": "integer", "minimum": 0 },
+        "blocked_run_count": { "type": "integer", "minimum": 0 },
+        "run_diagnostics": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/legacy_reconstruction_run_diagnostic" }
+        }
+      }
+    },
+    "legacy_reconstruction_run_diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "families",
+        "reconstruction_status",
+        "selection_reason",
+        "reconstruction_reasons",
+        "secondary_axis_evidence_source",
+        "secondary_axis_evidence_detail",
+        "parsed_secondary_axes"
+      ],
+      "properties": {
+        "run_id": { "type": "string", "minLength": 1 },
+        "families": { "type": "array", "items": { "type": "string" } },
+        "reconstruction_status": {
+          "type": "string",
+          "enum": ["not_applicable", "not_needed", "reconstructed", "blocked"]
+        },
+        "selection_reason": { "type": "string" },
+        "reconstruction_reasons": { "type": "array", "items": { "type": "string" } },
+        "secondary_axis_evidence_source": {
+          "type": "string",
+          "enum": ["telemetry_field", "legacy_reconstruction_artifact", "missing"]
+        },
+        "secondary_axis_evidence_detail": { "type": "string" },
+        "parsed_secondary_axes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "rejected_run_diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_id", "decision", "families", "status", "reasons", "missing_artifacts"],
+      "properties": {
+        "run_id": { "type": "string" },
+        "decision": { "type": "string" },
+        "families": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["fail", "pass"] },
+        "reasons": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "missing_artifacts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["baseline_mechanism_assessment", "candidate_mechanism_assessment", "promotion_report"]
+          }
+        }
+      }
+    },
+    "machine_policy_predicate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "status",
+        "source_path",
+        "required_condition",
+        "observed_value",
+        "summary"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["pass", "fail", "not_applicable"] },
+        "source_path": { "type": "string", "minLength": 1 },
+        "required_condition": { "type": "string", "minLength": 1 },
+        "observed_value": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "review_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "status",
+        "source_path",
+        "required_condition",
+        "observed_value",
+        "requires_human_review",
+        "summary"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": [
+            "release_evidence_dashboard",
+            "auto_improve_readiness",
+            "strict_secondary_axes",
+            "behavior_delta_provenance"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "pass", "fail"]
+        },
+        "source_path": { "type": "string", "minLength": 1 },
+        "required_condition": { "type": "string", "minLength": 1 },
+        "observed_value": { "type": "string", "minLength": 1 },
+        "requires_human_review": { "type": "boolean" },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

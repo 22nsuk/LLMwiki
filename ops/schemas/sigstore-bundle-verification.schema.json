@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Sigstore Bundle Verification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "vault",
+    "generated_at",
+    "policy",
+    "artifact_context",
+    "status",
+    "subjects",
+    "verification_checks"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/sigstore-bundle-verification.schema.json"
+      ]
+    },
+    "vault": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "policy": {
+      "$ref": "#/$defs/policy"
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "artifact_context": {
+      "$ref": "#/$defs/artifactContext"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "local-integrity-only",
+        "verified-external-bundle"
+      ]
+    },
+    "bundle_ref": {
+      "type": "string"
+    },
+    "subjects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/subject"
+      },
+      "minItems": 1
+    },
+    "verification_checks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/check"
+      },
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "properties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metadataProperty"
+          }
+        }
+      }
+    },
+    "metadataProperty": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "name",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "artifactContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_set_id",
+        "in_toto_statement_ref",
+        "spdx_ref",
+        "openvex_ref"
+      ],
+      "properties": {
+        "artifact_set_id": {
+          "type": "string"
+        },
+        "in_toto_statement_ref": {
+          "type": "string"
+        },
+        "spdx_ref": {
+          "type": "string"
+        },
+        "openvex_ref": {
+          "type": "string"
+        }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "size_bytes"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule",
+        "pass",
+        "details"
+      ],
+      "properties": {
+        "rule": {
+          "type": "string"
+        },
+        "pass": {
+          "type": "boolean"
+        },
+        "details": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

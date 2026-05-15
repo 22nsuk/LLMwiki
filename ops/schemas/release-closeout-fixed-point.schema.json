@@ -1,0 +1,438 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/release-closeout-fixed-point.schema.json",
+  "title": "Release closeout fixed-point report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "status",
+    "max_iterations",
+    "iteration_count",
+    "converged",
+    "converged_iteration",
+    "tracked_artifacts",
+    "command_sequence",
+    "iterations",
+    "final_digest_map",
+    "duration_summary",
+    "convergence_summary"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "ops/schemas/release-closeout-fixed-point.schema.json"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "const": "release_closeout_fixed_point_report"
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer": {
+      "type": "string",
+      "const": "ops.scripts.release_closeout_fixed_point"
+    },
+    "source_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_revision": {
+      "type": "string"
+    },
+    "source_tree_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_status": {
+      "type": "string",
+      "enum": [
+        "current",
+        "stale"
+      ]
+    },
+    "retention_policy": {
+      "type": "string",
+      "minLength": 1
+    },
+    "encoding": {
+      "type": "string",
+      "const": "utf-8"
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "status",
+        "checked_at"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown"
+          ]
+        },
+        "checked_at": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "vault": {
+      "type": "string",
+      "minLength": 1
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "const": "ops/policies/release-closeout-fixed-point.json"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "non_converged",
+        "fail"
+      ]
+    },
+    "max_iterations": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "iteration_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "converged": {
+      "type": "boolean"
+    },
+    "converged_iteration": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "tracked_artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "path"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "command_sequence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "iterations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "iteration_index",
+          "status",
+          "selected_targets",
+          "command_results",
+          "digest_map",
+          "digest_changed",
+          "changed_paths"
+        ],
+        "properties": {
+          "iteration_index": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "fail"
+            ]
+          },
+          "selected_targets": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "command_results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "target",
+                "command",
+                "returncode",
+                "timed_out",
+                "timeout_seconds",
+                "termination_reason",
+                "duration_ms",
+                "stdout_tail",
+                "stderr_tail",
+                "status"
+              ],
+              "properties": {
+                "target": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "command": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "returncode": {
+                  "type": "integer"
+                },
+                "timed_out": {
+                  "type": "boolean"
+                },
+                "timeout_seconds": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "termination_reason": {
+                  "type": "string"
+                },
+                "duration_ms": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "stdout_tail": {
+                  "type": "string"
+                },
+                "stderr_tail": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pass",
+                    "fail"
+                  ]
+                }
+              }
+            }
+          },
+          "digest_map": {
+            "$ref": "#/$defs/digestMap"
+          },
+          "digest_changed": {
+            "type": "boolean"
+          },
+          "changed_paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "final_digest_map": {
+      "$ref": "#/$defs/digestMap"
+    },
+    "duration_summary": {
+      "$ref": "#/$defs/durationSummary"
+    },
+    "convergence_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reason",
+        "changed_path_count",
+        "changed_paths",
+        "previous_iteration",
+        "current_iteration"
+      ],
+      "properties": {
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "changed_path_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "changed_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "previous_iteration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "current_iteration": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "$defs": {
+    "digestMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^(missing|[0-9a-f]{64})$"
+      }
+    },
+    "durationSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "iteration_count",
+        "command_run_count",
+        "total_duration_ms",
+        "writer_costs",
+        "expensive_prerequisites_once",
+        "summary"
+      ],
+      "properties": {
+        "iteration_count": { "type": "integer", "minimum": 0 },
+        "command_run_count": { "type": "integer", "minimum": 0 },
+        "total_duration_ms": { "type": "integer", "minimum": 0 },
+        "writer_costs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/writerCost" }
+        },
+        "expensive_prerequisites_once": {
+          "$ref": "#/$defs/expensivePrerequisitesOnce"
+        },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "writerCost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "target",
+        "produces",
+        "run_count",
+        "selected_iteration_count",
+        "total_duration_ms",
+        "average_duration_ms",
+        "max_duration_ms",
+        "first_iteration",
+        "last_iteration",
+        "skipped_iteration_count",
+        "skipped_after_first_iteration_count"
+      ],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "target": { "type": "string", "minLength": 1 },
+        "produces": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "run_count": { "type": "integer", "minimum": 0 },
+        "selected_iteration_count": { "type": "integer", "minimum": 0 },
+        "total_duration_ms": { "type": "integer", "minimum": 0 },
+        "average_duration_ms": { "type": "integer", "minimum": 0 },
+        "max_duration_ms": { "type": "integer", "minimum": 0 },
+        "first_iteration": { "type": "integer", "minimum": 0 },
+        "last_iteration": { "type": "integer", "minimum": 0 },
+        "skipped_iteration_count": { "type": "integer", "minimum": 0 },
+        "skipped_after_first_iteration_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "expensivePrerequisitesOnce": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targets",
+        "configured_target_count",
+        "observed_target_count",
+        "first_iteration_run_count",
+        "post_first_iteration_selected_count",
+        "post_first_iteration_run_count",
+        "skipped_post_first_iteration_selection_count",
+        "total_duration_ms",
+        "skip_policy_effective",
+        "summary"
+      ],
+      "properties": {
+        "targets": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "configured_target_count": { "type": "integer", "minimum": 0 },
+        "observed_target_count": { "type": "integer", "minimum": 0 },
+        "first_iteration_run_count": { "type": "integer", "minimum": 0 },
+        "post_first_iteration_selected_count": { "type": "integer", "minimum": 0 },
+        "post_first_iteration_run_count": { "type": "integer", "minimum": 0 },
+        "skipped_post_first_iteration_selection_count": { "type": "integer", "minimum": 0 },
+        "total_duration_ms": { "type": "integer", "minimum": 0 },
+        "skip_policy_effective": { "type": "boolean" },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

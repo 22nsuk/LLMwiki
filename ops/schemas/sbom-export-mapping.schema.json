@@ -1,0 +1,383 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki SBOM Export Mapping",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "vault",
+    "generated_at",
+    "policy",
+    "status",
+    "provenance_summary",
+    "surface_summary",
+    "sbom_readiness",
+    "dependency_input_mapping",
+    "export_mapping",
+    "gaps"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/sbom-export-mapping.schema.json"
+      ]
+    },
+    "vault": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "policy": {
+      "$ref": "#/$defs/policy"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "warn",
+        "fail"
+      ]
+    },
+    "provenance_summary": {
+      "$ref": "#/$defs/provenance_summary"
+    },
+    "surface_summary": {
+      "$ref": "#/$defs/surface_summary"
+    },
+    "sbom_readiness": {
+      "$ref": "#/$defs/sbom_readiness"
+    },
+    "dependency_input_mapping": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dependency_input_mapping"
+      }
+    },
+    "export_mapping": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/export_mapping"
+      }
+    },
+    "gaps": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/gap"
+      }
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      }
+    },
+    "provenance_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "input_count",
+        "declared_dependency_count",
+        "dev_dependency_count",
+        "requirements_entry_count",
+        "dev_requirements_entry_count",
+        "locked_package_count",
+        "locked_dependency_edge_count",
+        "ci_workflow_exists",
+        "ci_install_command_count",
+        "source_package_evidence_status",
+        "source_package_reproducibility_status",
+        "source_zip_sha256"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        },
+        "input_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "declared_dependency_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "dev_dependency_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "requirements_entry_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "dev_requirements_entry_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "locked_package_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "locked_dependency_edge_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ci_workflow_exists": {
+          "type": "boolean"
+        },
+        "ci_install_command_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_package_evidence_status": {
+          "type": "string"
+        },
+        "source_package_reproducibility_status": {
+          "type": "string"
+        },
+        "source_zip_sha256": {
+          "type": "string",
+          "pattern": "^(|[0-9a-f]{64})$"
+        }
+      }
+    },
+    "surface_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_manifest_file_count",
+        "public_export_file_count",
+        "private_release_file_count",
+        "public_only_file_count",
+        "release_excluded_public_file_count",
+        "blocking_public_only_file_count",
+        "public_subset_of_release"
+      ],
+      "properties": {
+        "release_manifest_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "public_export_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "private_release_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "public_only_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "release_excluded_public_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocking_public_only_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "public_subset_of_release": {
+          "type": "boolean"
+        }
+      }
+    },
+    "sbom_readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "declared_dependencies_present",
+        "locked_packages_present",
+        "ci_install_proof_present",
+        "source_package_evidence_present",
+        "source_package_reproducible",
+        "release_dependency_inputs_complete",
+        "public_dependency_inputs_complete",
+        "full_mapping_ready"
+      ],
+      "properties": {
+        "declared_dependencies_present": {
+          "type": "boolean"
+        },
+        "locked_packages_present": {
+          "type": "boolean"
+        },
+        "ci_install_proof_present": {
+          "type": "boolean"
+        },
+        "source_package_evidence_present": {
+          "type": "boolean"
+        },
+        "source_package_reproducible": {
+          "type": "boolean"
+        },
+        "release_dependency_inputs_complete": {
+          "type": "boolean"
+        },
+        "public_dependency_inputs_complete": {
+          "type": "boolean"
+        },
+        "full_mapping_ready": {
+          "type": "boolean"
+        }
+      }
+    },
+    "parser_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parser",
+        "status",
+        "message"
+      ],
+      "properties": {
+        "parser": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "missing",
+            "error"
+          ]
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "dependency_input_mapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "exists",
+        "size_bytes",
+        "sha256",
+        "parser_status",
+        "in_release_manifest",
+        "in_public_export"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "exists": {
+          "type": "boolean"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "parser_status": {
+          "$ref": "#/$defs/parser_status"
+        },
+        "in_release_manifest": {
+          "type": "boolean"
+        },
+        "in_public_export": {
+          "type": "boolean"
+        }
+      }
+    },
+    "export_mapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "category",
+        "in_release_manifest",
+        "in_public_export",
+        "release_manifest_exclusion",
+        "visibility"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "agent-config",
+            "ci-workflow",
+            "dependency-input",
+            "ops",
+            "root-metadata",
+            "tests",
+            "tools"
+          ]
+        },
+        "in_release_manifest": {
+          "type": "boolean"
+        },
+        "in_public_export": {
+          "type": "boolean"
+        },
+        "release_manifest_exclusion": {
+          "type": "boolean"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": [
+            "public",
+            "private"
+          ]
+        }
+      }
+    },
+    "gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "severity",
+        "code",
+        "details"
+      ],
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": [
+            "warn",
+            "fail"
+          ]
+        },
+        "code": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "details": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

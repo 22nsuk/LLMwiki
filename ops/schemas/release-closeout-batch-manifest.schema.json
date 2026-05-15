@@ -1,0 +1,1339 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Release Closeout Batch Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "batch_id",
+    "distribution_package",
+    "external_source_zip_bound",
+    "audit_materialization",
+    "artifacts",
+    "dependency_order",
+    "status",
+    "status_semantics",
+    "status_v2",
+    "status_v2_preview",
+    "summary",
+    "batch_integrity_status",
+    "release_authority_status",
+    "semantic_release_status",
+    "sealed_release_status",
+    "release_authority_vocabulary",
+    "artifact_generation_status",
+    "artifact_digest_sealing_status",
+    "source_tree_rebuild_status",
+    "clean_lane_status",
+    "auto_improve_lane_status",
+    "learning_lane_status",
+    "machine_release_status",
+    "operator_release_status",
+    "finality",
+    "coherence",
+    "integrity_layers",
+    "downstream_input_digest_mismatch",
+    "source_evidence_freshness",
+    "release_decision_snapshot"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/release-closeout-batch-manifest.schema.json"
+      ]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": [
+        "release_closeout_batch_manifest"
+      ]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "producer": {
+      "type": "string",
+      "enum": [
+        "ops.scripts.release_closeout_batch_manifest"
+      ]
+    },
+    "source_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_tree_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_status": {
+      "type": "string",
+      "enum": [
+        "current",
+        "archived",
+        "stale",
+        "unknown"
+      ]
+    },
+    "retention_policy": {
+      "type": "string",
+      "enum": [
+        "canonical_report"
+      ]
+    },
+    "encoding": {
+      "type": "string",
+      "enum": [
+        "utf-8"
+      ]
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "checked_at"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown",
+            "invalid"
+          ]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "batch_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "distribution_package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "archive_profile",
+        "path",
+        "sha256",
+        "entry_count",
+        "file_count",
+        "directory_entry_count",
+        "uncompressed_size_bytes",
+        "root_prefix",
+        "timestamp_semantics",
+        "timestamp_unique_count",
+        "timestamp_min",
+        "timestamp_max",
+        "source_manifest_file_count",
+        "source_manifest_digest",
+        "archive_manifest_digest",
+        "path_set_matches_release_manifest",
+        "content_digest_matches_release_manifest",
+        "zip_only_path_count",
+        "allowed_virtual_zip_path_count",
+        "manifest_only_path_count",
+        "zip_only_paths",
+        "allowed_virtual_zip_paths",
+        "manifest_only_paths",
+        "summary"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["materialized", "not_provided", "invalid", "drift"]
+        },
+        "archive_profile": {
+          "type": "string",
+          "enum": ["source_content_package", "local_workspace", "unknown"]
+        },
+        "path": { "type": "string" },
+        "sha256": {
+          "type": "string",
+          "pattern": "^(|[a-f0-9]{64})$"
+        },
+        "entry_count": { "type": "integer", "minimum": 0 },
+        "file_count": { "type": "integer", "minimum": 0 },
+        "directory_entry_count": { "type": "integer", "minimum": 0 },
+        "uncompressed_size_bytes": { "type": "integer", "minimum": 0 },
+        "root_prefix": { "type": "string" },
+        "timestamp_semantics": {
+          "type": "string",
+          "enum": [
+            "archive_member_timestamp",
+            "filesystem_timestamp",
+            "normalized_archive_timestamp",
+            "not_applicable"
+          ]
+        },
+        "timestamp_unique_count": { "type": "integer", "minimum": 0 },
+        "timestamp_min": { "type": "string" },
+        "timestamp_max": { "type": "string" },
+        "source_manifest_file_count": { "type": "integer", "minimum": 0 },
+        "source_manifest_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "archive_manifest_digest": {
+          "type": "string",
+          "pattern": "^(|[a-f0-9]{64})$"
+        },
+        "path_set_matches_release_manifest": { "type": "boolean" },
+        "content_digest_matches_release_manifest": { "type": "boolean" },
+        "zip_only_path_count": { "type": "integer", "minimum": 0 },
+        "allowed_virtual_zip_path_count": { "type": "integer", "minimum": 0 },
+        "manifest_only_path_count": { "type": "integer", "minimum": 0 },
+        "zip_only_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "allowed_virtual_zip_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "manifest_only_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "audit_materialization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "bundle_required",
+        "optional_bundle_target",
+        "bundle_source_of_truth",
+        "artifact_count",
+        "evidence_set_digest",
+        "optional_payload_policy",
+        "optional_payloads",
+        "summary"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["referenced_checked_in_artifacts"]
+        },
+        "bundle_required": { "type": "boolean" },
+        "optional_bundle_target": { "type": "string", "minLength": 1 },
+        "bundle_source_of_truth": { "type": "string", "minLength": 1 },
+        "artifact_count": { "type": "integer", "minimum": 0 },
+        "evidence_set_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "optional_payload_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "include_by_default",
+            "source_report",
+            "payload_count",
+            "available_payload_count",
+            "payload_kinds",
+            "summary"
+          ],
+          "properties": {
+            "status": { "type": "string", "enum": ["available", "not_available", "listed_unavailable"] },
+            "include_by_default": { "type": "boolean" },
+            "source_report": { "type": "string", "minLength": 1 },
+            "payload_count": { "type": "integer", "minimum": 0 },
+            "available_payload_count": { "type": "integer", "minimum": 0 },
+            "payload_kinds": { "type": "array", "items": { "type": "string" } },
+            "summary": { "type": "string", "minLength": 1 }
+          }
+        },
+        "optional_payloads": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/optional_payload" }
+        },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "external_source_zip_bound": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "source",
+        "path",
+        "sha256",
+        "path_set_matches_release_manifest",
+        "content_digest_matches_release_manifest",
+        "release_authority_status",
+        "sealed_release_status",
+        "summary"
+      ],
+      "properties": {
+        "status": { "type": "string", "enum": ["bound", "not_bound", "invalid", "drift"] },
+        "source": { "type": "string", "enum": ["distribution_package", "not_provided"] },
+        "path": { "type": "string" },
+        "sha256": { "type": "string", "pattern": "^(|[a-f0-9]{64})$" },
+        "path_set_matches_release_manifest": { "type": "boolean" },
+        "content_digest_matches_release_manifest": { "type": "boolean" },
+        "release_authority_status": {
+          "type": "string",
+          "enum": ["clean_pass", "conditional_pass", "blocked", "unknown"]
+        },
+        "sealed_release_status": {
+          "type": "string",
+          "enum": [
+            "sealed_clean_pass",
+            "sealed_conditional_pass",
+            "unsealed_artifact_incomplete",
+            "unsealed_distribution_not_provided",
+            "unsealed_distribution_invalid",
+            "unsealed_distribution_drift",
+            "unsealed_release_blocked"
+          ]
+        },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "artifact_kind",
+          "digest",
+          "generated_at",
+          "producer",
+          "source_tree_fingerprint",
+          "currentness_status",
+          "role",
+          "required"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "artifact_kind": {
+            "type": "string"
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "generated_at": {
+            "type": "string"
+          },
+          "producer": {
+            "type": "string"
+          },
+          "source_tree_fingerprint": {
+            "type": "string"
+          },
+          "currentness_status": {
+            "type": "string",
+            "enum": [
+              "current",
+              "stale",
+              "unknown",
+              "invalid"
+            ]
+          },
+          "role": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "dependency_order": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "description": "Legacy strict clean+sealed claim for old consumers. New consumers should inspect release_authority_status and sealed_release_status separately.",
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "status_semantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "top_level_status_meaning",
+        "release_authority_status_meaning",
+        "sealed_release_status_meaning",
+        "next_migration_candidate",
+        "summary"
+      ],
+      "properties": {
+        "top_level_status_meaning": {
+          "type": "string",
+          "const": "legacy_strict_clean_sealed_claim"
+        },
+        "release_authority_status_meaning": {
+          "type": "string",
+          "const": "semantic_release_authority_from_closeout"
+        },
+        "sealed_release_status_meaning": {
+          "type": "string",
+          "const": "artifact_distribution_seal_state"
+        },
+        "next_migration_candidate": {
+          "type": "string",
+          "const": "rename_or_replace_top_level_status_with_sealed_status"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "status_v2": {
+      "$ref": "#/$defs/status_v2"
+    },
+    "status_v2_preview": {
+      "$ref": "#/$defs/status_v2"
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_count",
+        "present_count",
+        "current_count",
+        "required_count",
+        "required_present_count",
+        "required_current_count"
+      ],
+      "properties": {
+        "artifact_count": { "type": "integer", "minimum": 0 },
+        "present_count": { "type": "integer", "minimum": 0 },
+        "current_count": { "type": "integer", "minimum": 0 },
+        "required_count": { "type": "integer", "minimum": 0 },
+        "required_present_count": { "type": "integer", "minimum": 0 },
+        "required_current_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "batch_integrity_status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "release_authority_status": {
+      "type": "string",
+      "description": "Semantic release authority derived from release-closeout-summary status_v2 axes, with release_readiness_state accepted only as a transitional fallback. This is not a distribution/package seal.",
+      "enum": [
+        "clean_pass",
+        "conditional_pass",
+        "blocked",
+        "unknown"
+      ]
+    },
+    "semantic_release_status": {
+      "type": "string",
+      "description": "Risk/lane semantics copied from the closeout state. This does not prove artifact sealing by itself.",
+      "enum": [
+        "clean_pass",
+        "conditional_pass",
+        "blocked",
+        "unknown"
+      ]
+    },
+    "sealed_release_status": {
+      "type": "string",
+      "description": "Artifact inventory/content sealing status for the batch snapshot, kept separate from semantic release authority.",
+      "enum": [
+        "sealed_clean_pass",
+        "sealed_conditional_pass",
+        "unsealed_artifact_incomplete",
+        "unsealed_distribution_not_provided",
+        "unsealed_distribution_invalid",
+        "unsealed_distribution_drift",
+        "unsealed_release_blocked"
+      ]
+    },
+    "release_authority_vocabulary": {
+      "$ref": "#/$defs/release_authority_vocabulary"
+    },
+    "artifact_generation_status": {
+      "type": "string",
+      "enum": ["pass", "fail"]
+    },
+    "artifact_digest_sealing_status": {
+      "type": "string",
+      "enum": ["pass", "fail"]
+    },
+    "source_tree_rebuild_status": {
+      "type": "string",
+      "enum": ["pass", "fail", "unknown"]
+    },
+    "clean_lane_status": {
+      "type": "string",
+      "enum": ["pass", "fail"]
+    },
+    "auto_improve_lane_status": {
+      "type": "string",
+      "enum": ["pass", "fail", "unknown"]
+    },
+    "learning_lane_status": {
+      "type": "string",
+      "enum": ["pass", "fail", "unknown"]
+    },
+    "machine_release_status": {
+      "type": "string",
+      "enum": ["allowed", "blocked"]
+    },
+    "operator_release_status": {
+      "type": "string",
+      "enum": ["allowed", "blocked"]
+    },
+    "finality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "finality_required",
+        "finality_attestation_path",
+        "binding_authority",
+        "summary"
+      ],
+      "properties": {
+        "finality_required": {
+          "type": "boolean"
+        },
+        "finality_attestation_path": {
+          "type": "string",
+          "const": "ops/reports/release-closeout-finality-attestation.json"
+        },
+        "binding_authority": {
+          "type": "string",
+          "const": "release-closeout-finality-attestation"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "coherence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "all_required_present",
+        "all_required_current"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "all_required_present": {
+          "type": "boolean"
+        },
+        "all_required_current": {
+          "type": "boolean"
+        }
+      }
+    },
+    "integrity_layers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_inventory_integrity",
+        "artifact_content_integrity",
+        "source_tree_coherence_integrity",
+        "source_tree_coherence_status"
+      ],
+      "properties": {
+        "artifact_inventory_integrity": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "artifact_content_integrity": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "source_tree_coherence_integrity": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "source_tree_coherence_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "attention",
+            "fail",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "downstream_input_digest_mismatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "compared_input_count",
+        "mismatch_count",
+        "mismatches",
+        "summary"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "match",
+            "mismatch",
+            "no_closeout_snapshot"
+          ]
+        },
+        "compared_input_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mismatch_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mismatches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "component_name",
+              "source_path",
+              "expected_digest",
+              "actual_digest"
+            ],
+            "properties": {
+              "component_name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_digest": {
+                "type": "string",
+                "minLength": 1
+              },
+              "actual_digest": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "source_evidence_freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "basis",
+        "timestamp_semantics",
+        "source_freshness_temporal_authority",
+        "source_freshness_content_authority",
+        "generated_at",
+        "zip_metadata_path",
+        "archive_timestamp_has_timezone",
+        "timestamp_timezone_assumption",
+        "source_file_count",
+        "latest_source_mtime",
+        "latest_source_path",
+        "changed_after_generated_at_count",
+        "changed_after_generated_at_path_limit",
+        "changed_after_generated_at",
+        "missing_zip_member_count",
+        "missing_zip_member_path_limit",
+        "missing_zip_members",
+        "summary"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "unknown"
+          ]
+        },
+        "basis": {
+          "type": "string",
+          "enum": [
+            "filesystem_mtime",
+            "zip_member_timestamp"
+          ]
+        },
+        "timestamp_semantics": {
+          "type": "string",
+          "enum": [
+            "archive_member_timestamp",
+            "filesystem_timestamp",
+            "normalized_archive_timestamp",
+            "not_applicable"
+          ]
+        },
+        "source_freshness_temporal_authority": {
+          "type": "string",
+          "enum": [
+            "archive_member_timestamp",
+            "filesystem_mtime",
+            "not_claimed"
+          ]
+        },
+        "source_freshness_content_authority": {
+          "type": "string",
+          "enum": [
+            "source_tree_fingerprint"
+          ]
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "zip_metadata_path": {
+          "type": "string"
+        },
+        "archive_timestamp_has_timezone": {
+          "type": "boolean"
+        },
+        "timestamp_timezone_assumption": {
+          "type": "string"
+        },
+        "source_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "latest_source_mtime": {
+          "type": "string"
+        },
+        "latest_source_path": {
+          "type": "string"
+        },
+        "changed_after_generated_at_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "changed_after_generated_at_path_limit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "changed_after_generated_at": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "mtime"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "mtime": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "missing_zip_member_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_zip_member_path_limit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "missing_zip_members": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "batch_integrity_status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "release_authority_status": {
+      "type": "string",
+      "description": "Semantic release authority derived from release-closeout-summary status_v2 axes, with release_readiness_state accepted only as a transitional fallback. This is not a distribution/package seal.",
+      "enum": [
+        "clean_pass",
+        "conditional_pass",
+        "blocked",
+        "unknown"
+      ]
+    },
+    "semantic_release_status": {
+      "type": "string",
+      "description": "Risk/lane semantics copied from the closeout state. This does not prove artifact sealing by itself.",
+      "enum": [
+        "clean_pass",
+        "conditional_pass",
+        "blocked",
+        "unknown"
+      ]
+    },
+    "sealed_release_status": {
+      "type": "string",
+      "description": "Artifact inventory/content sealing status for the batch snapshot, kept separate from semantic release authority.",
+      "enum": [
+        "sealed_clean_pass",
+        "sealed_conditional_pass",
+        "unsealed_artifact_incomplete",
+        "unsealed_distribution_not_provided",
+        "unsealed_distribution_invalid",
+        "unsealed_distribution_drift",
+        "unsealed_release_blocked"
+      ]
+    },
+    "release_authority_vocabulary": {
+      "$ref": "#/$defs/release_authority_vocabulary"
+    },
+    "artifact_generation_status": {
+      "type": "string",
+      "enum": ["pass", "fail"]
+    },
+    "artifact_digest_sealing_status": {
+      "type": "string",
+      "enum": ["pass", "fail"]
+    },
+    "source_tree_rebuild_status": {
+      "type": "string",
+      "enum": ["pass", "attention", "fail", "unknown"]
+    },
+    "clean_lane_status": {
+      "type": "string",
+      "enum": ["pass", "fail"]
+    },
+    "auto_improve_lane_status": {
+      "type": "string",
+      "enum": ["pass", "blocked", "unknown"]
+    },
+    "learning_lane_status": {
+      "type": "string",
+      "enum": ["pass", "blocked", "unknown"]
+    },
+    "machine_release_status": {
+      "type": "string",
+      "enum": ["allowed", "blocked"]
+    },
+    "operator_release_status": {
+      "type": "string",
+      "enum": ["allowed", "blocked"]
+    },
+    "release_decision_snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "clean_release_ready",
+        "machine_release_allowed",
+        "release_readiness_state",
+        "release_authority_status",
+        "semantic_release_status",
+        "closeout_sealed_release_status",
+        "status_v2_blocker_reason_ids",
+        "status_v2_used_legacy_fallback_fields",
+        "artifact_freshness_status",
+        "artifact_freshness_schema_invalid_artifact_count",
+        "auto_improve_lane_status",
+        "learning_lane_status",
+        "learning_claim_guard_status",
+        "learning_claim_allowed",
+        "claims_learning_improved",
+        "learning_claim_blocking_family_count",
+        "advisory_lifecycle_family_count",
+        "accepted_risk_count",
+        "gate_attention_count",
+        "accepted_risk_family_count",
+        "accepted_risks"
+      ],
+      "properties": {
+        "clean_release_ready": {
+          "type": "boolean"
+        },
+        "machine_release_allowed": {
+          "type": "boolean"
+        },
+        "release_readiness_state": {
+          "type": "string",
+          "enum": [
+            "clean_pass",
+            "conditional_pass",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "release_authority_status": {
+          "type": "string",
+          "enum": [
+            "clean_pass",
+            "conditional_pass",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "semantic_release_status": {
+          "type": "string",
+          "enum": [
+            "clean_pass",
+            "conditional_pass",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "closeout_sealed_release_status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status_v2_blocker_reason_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "status_v2_used_legacy_fallback_fields": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "artifact_freshness_status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_freshness_schema_invalid_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "auto_improve_lane_status": {
+          "type": "string",
+          "enum": ["pass", "blocked", "unknown"]
+        },
+        "learning_lane_status": {
+          "type": "string",
+          "enum": ["pass", "blocked", "unknown"]
+        },
+        "learning_claim_guard_status": {
+          "type": "string",
+          "enum": ["pass", "blocked", "unknown"]
+        },
+        "learning_claim_allowed": {
+          "type": "boolean"
+        },
+        "claims_learning_improved": {
+          "type": "boolean"
+        },
+        "learning_claim_blocking_family_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "advisory_lifecycle_family_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "accepted_risk_count": {
+          "$ref": "https://llmwiki/schemas/accepted-risk-vocabulary#/$defs/accepted_risk_count"
+        },
+        "gate_attention_count": {
+          "$ref": "https://llmwiki/schemas/accepted-risk-vocabulary#/$defs/gate_attention_count"
+        },
+        "accepted_risk_family_count": {
+          "$ref": "https://llmwiki/schemas/accepted-risk-vocabulary#/$defs/accepted_risk_family_count"
+        },
+        "accepted_risks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "release_authority_reason_id": {
+      "$ref": "https://llmwiki/schemas/release-authority-vocabulary#/$defs/release_authority_reason_id"
+    },
+    "status_v2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "migration_readiness_status",
+        "compatibility_status_field",
+        "compatibility_status_value",
+        "compatibility_status_deprecated",
+        "compatibility_alias_retention",
+        "status_axes",
+        "release_authority_status_field",
+        "release_authority_status_value",
+        "semantic_release_status_field",
+        "semantic_release_status_value",
+        "sealed_status_field",
+        "sealed_status_value",
+        "proposed_top_level_status_replacement",
+        "status_classification",
+        "authority_reason_ids",
+        "sealed_reason_ids",
+        "blocker_reason_ids",
+        "recommended_consumer_fields",
+        "summary"
+      ],
+      "properties": {
+        "schema_version": { "type": "integer", "const": 2 },
+        "migration_readiness_status": {
+          "type": "string",
+          "const": "active"
+        },
+        "compatibility_status_field": {
+          "type": "string",
+          "const": "status"
+        },
+        "compatibility_status_value": {
+          "type": "string",
+          "enum": ["pass", "fail"]
+        },
+        "compatibility_status_deprecated": { "type": "boolean", "const": true },
+        "compatibility_alias_retention": {
+          "type": "string",
+          "const": "one_to_two_releases"
+        },
+        "status_axes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "release_authority_status",
+            "semantic_release_status",
+            "sealed_release_status"
+          ],
+          "properties": {
+            "release_authority_status": { "type": "string", "minLength": 1 },
+            "semantic_release_status": { "type": "string", "minLength": 1 },
+            "sealed_release_status": { "type": "string", "minLength": 1 }
+          }
+        },
+        "release_authority_status_field": {
+          "type": "string",
+          "const": "release_authority_status"
+        },
+        "release_authority_status_value": { "type": "string", "minLength": 1 },
+        "semantic_release_status_field": {
+          "type": "string",
+          "const": "semantic_release_status"
+        },
+        "semantic_release_status_value": { "type": "string", "minLength": 1 },
+        "sealed_status_field": {
+          "type": "string",
+          "const": "sealed_release_status"
+        },
+        "sealed_status_value": { "type": "string", "minLength": 1 },
+        "proposed_top_level_status_replacement": {
+          "type": "string",
+          "const": "sealed_release_status"
+        },
+        "status_classification": {
+          "type": "string",
+          "enum": [
+            "strict_clean_and_sealed",
+            "semantic_clean_unsealed",
+            "conditional_release",
+            "blocked_or_unknown"
+          ]
+        },
+        "authority_reason_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/release_authority_reason_id" }
+        },
+        "sealed_reason_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/release_authority_reason_id" }
+        },
+        "blocker_reason_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/release_authority_reason_id" }
+        },
+        "recommended_consumer_fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": [
+              "release_authority_status",
+              "sealed_release_status",
+              "release_authority_vocabulary.blocker_reason_ids"
+            ]
+          }
+        },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "release_authority_vocabulary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "release_authority_status",
+        "semantic_release_status",
+        "sealed_release_status",
+        "machine_release_allowed",
+        "clean_release_ready",
+        "batch_integrity_status",
+        "distribution_package_status",
+        "authority_reason_ids",
+        "sealed_reason_ids",
+        "blocker_reason_ids",
+        "operator_summary",
+        "operator_summary_round_trip",
+        "summary"
+      ],
+      "properties": {
+        "schema_version": { "type": "integer", "minimum": 1 },
+        "release_authority_status": {
+          "type": "string",
+          "enum": ["clean_pass", "conditional_pass", "blocked", "unknown"]
+        },
+        "semantic_release_status": {
+          "type": "string",
+          "enum": ["clean_pass", "conditional_pass", "blocked", "unknown"]
+        },
+        "sealed_release_status": {
+          "type": "string",
+          "enum": [
+            "sealed_clean_pass",
+            "sealed_conditional_pass",
+            "unsealed_artifact_incomplete",
+            "unsealed_distribution_not_provided",
+            "unsealed_distribution_invalid",
+            "unsealed_distribution_drift",
+            "unsealed_release_blocked"
+          ]
+        },
+        "machine_release_allowed": { "type": "boolean" },
+        "clean_release_ready": { "type": "boolean" },
+        "batch_integrity_status": { "type": "string", "enum": ["pass", "fail"] },
+        "distribution_package_status": { "type": "string", "minLength": 1 },
+        "authority_reason_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/release_authority_reason_id" }
+        },
+        "sealed_reason_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/release_authority_reason_id" }
+        },
+        "blocker_reason_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/release_authority_reason_id" }
+        },
+        "operator_summary": { "type": "string", "minLength": 1 },
+        "operator_summary_round_trip": {
+          "$ref": "#/$defs/release_authority_operator_summary_round_trip"
+        },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "release_authority_operator_summary_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_authority_status",
+        "semantic_release_status",
+        "sealed_release_status",
+        "machine_release_allowed",
+        "clean_release_ready",
+        "batch_integrity_status",
+        "distribution_package_status",
+        "authority_reason_ids",
+        "sealed_reason_ids",
+        "blocker_reason_ids"
+      ],
+      "properties": {
+        "release_authority_status": {
+          "type": "string",
+          "enum": ["clean_pass", "conditional_pass", "blocked", "unknown"]
+        },
+        "semantic_release_status": {
+          "type": "string",
+          "enum": ["clean_pass", "conditional_pass", "blocked", "unknown"]
+        },
+        "sealed_release_status": {
+          "type": "string",
+          "enum": [
+            "sealed_clean_pass",
+            "sealed_conditional_pass",
+            "unsealed_artifact_incomplete",
+            "unsealed_distribution_not_provided",
+            "unsealed_distribution_invalid",
+            "unsealed_distribution_drift",
+            "unsealed_release_blocked"
+          ]
+        },
+        "machine_release_allowed": { "type": "boolean" },
+        "clean_release_ready": { "type": "boolean" },
+        "batch_integrity_status": { "type": "string", "enum": ["pass", "fail"] },
+        "distribution_package_status": { "type": "string", "minLength": 1 },
+        "authority_reason_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/release_authority_reason_id" }
+        },
+        "sealed_reason_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/release_authority_reason_id" }
+        },
+        "blocker_reason_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/release_authority_reason_id" }
+        }
+      }
+    },
+    "release_authority_operator_summary_round_trip": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "parser",
+        "expected",
+        "parsed",
+        "mismatch_count",
+        "mismatches"
+      ],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "fail"] },
+        "parser": {
+          "type": "string",
+          "const": "release_authority_operator_summary_v1"
+        },
+        "expected": {
+          "$ref": "#/$defs/release_authority_operator_summary_decision"
+        },
+        "parsed": {
+          "$ref": "#/$defs/release_authority_operator_summary_decision"
+        },
+        "mismatch_count": { "type": "integer", "minimum": 0 },
+        "mismatches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["field", "expected", "actual"],
+            "properties": {
+              "field": {
+                "type": "string",
+                "enum": [
+                  "release_authority_status",
+                  "semantic_release_status",
+                  "sealed_release_status",
+                  "machine_release_allowed",
+                  "clean_release_ready",
+                  "batch_integrity_status",
+                  "distribution_package_status",
+                  "authority_reason_ids",
+                  "sealed_reason_ids",
+                  "blocker_reason_ids"
+                ]
+              },
+              "expected": { "type": "string" },
+              "actual": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "optional_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "path",
+        "sha256",
+        "size_bytes",
+        "required",
+        "include_in_default_pack",
+        "source",
+        "status"
+      ],
+      "properties": {
+        "kind": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^(|[a-f0-9]{64})$" },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "required": { "type": "boolean" },
+        "include_in_default_pack": { "type": "boolean" },
+        "source": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["available", "missing_or_mismatch"] }
+      }
+    }
+  }
+}

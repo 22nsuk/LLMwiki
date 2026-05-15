@@ -1,0 +1,89 @@
+{
+  "$schema": "ops/schemas/planning-validation.schema.json",
+  "run_id": "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
+  "status": "WARN",
+  "summary": "Mechanism run run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement is scaffolded around ops/scripts/auto_improve_iteration_persistence_runtime.py, but baseline/candidate capture and promotion evaluation have not run yet.",
+  "checks": [
+    {
+      "id": "single_mechanism_scope",
+      "status": "PASS",
+      "detail": "Primary target is frozen to ops/scripts/auto_improve_iteration_persistence_runtime.py and supporting targets stay explicit.",
+      "required_artifacts": [
+        "seed.yaml"
+      ]
+    },
+    {
+      "id": "baseline_artifacts_planned",
+      "status": "PASS",
+      "detail": "Baseline eval, lint, and mechanism assessment paths are fixed under this run directory.",
+      "required_artifacts": [
+        "seed.yaml",
+        "run-ledger.json"
+      ]
+    },
+    {
+      "id": "candidate_artifacts_planned",
+      "status": "PASS",
+      "detail": "Candidate eval, lint, mechanism assessment, changed-files manifest, and promotion-report paths are fixed under the same run id.",
+      "required_artifacts": [
+        "run-ledger.json",
+        "promotion-report.json",
+        "changed-files-manifest.json"
+      ]
+    },
+    {
+      "id": "target_tests_declared",
+      "status": "PASS",
+      "detail": "Focused test files are frozen before mutation starts.",
+      "required_artifacts": [
+        "seed.yaml"
+      ]
+    },
+    {
+      "id": "improvement_observations_ready",
+      "status": "PASS",
+      "detail": "A run-local observation file is ready for automation follow-ups discovered during execution.",
+      "required_artifacts": [
+        "improvement-observations.json"
+      ]
+    },
+    {
+      "id": "signoff_or_log_plan_present",
+      "status": "PASS",
+      "detail": "Promotion report and run-ledger already point to signoff and append-only log surfaces.",
+      "required_artifacts": [
+        "run-ledger.json",
+        "promotion-report.json"
+      ]
+    },
+    {
+      "id": "proposal_snapshot_captured",
+      "status": "PASS",
+      "detail": "Selected proposal repeated_same_eval_or_discard__auto-improve-iteration-persistence-runtime is frozen under this run directory for stable provenance.",
+      "required_artifacts": [
+        "proposal-snapshot.json",
+        "seed.yaml"
+      ]
+    }
+  ],
+  "open_questions": [],
+  "signoff": {
+    "required": true,
+    "status": "pending",
+    "by": "",
+    "ts": ""
+  },
+  "next_action": "Capture baseline lint/eval/mechanism artifacts, run the mutation command, then evaluate promotion.",
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-05-06T19:49:44Z\", \"generated_at_source\": \"promotion-report.run-ledger.events[6].ts\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-05-06T19:58:37Z\", \"source_artifact\": \"runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/planning-validation.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/planning-validation.schema.json\", \"artifact_kind\": \"planning_validation\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-05-06T19:58:37Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-06T19:49:44Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"2e5c35701db8b199af0c7b9dbf7ac1fb0386934b089b0d0e095dd876f51a8f78\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"6fc24f8e51f7d7c4590631e7b27868876141bb451b3cd8471d960c6e7eff54d7\", \"policy\": \"606ba1235550f640f7365d46d76aa52b84ef8f831502790010a6c776a7b721d1\", \"schema\": \"1fac4d1bf35458a32e3ae173a3ec94d432fd28ad499aa83276cdf1cc78ee82c9\", \"target_rel_path\": \"3576b9abf500334f355b28a32db328caf4a72767a515fa28b842aa3545b5db26\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/planning-validation.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"1c4078849302f6b54e4eb36b8d169b09ac7d3e7592d883a1170caf453b2b4219\"}"
+      }
+    ]
+  }
+}

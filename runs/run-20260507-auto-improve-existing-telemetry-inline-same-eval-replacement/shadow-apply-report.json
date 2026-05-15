@@ -1,0 +1,59 @@
+{
+  "$schema": "ops/schemas/shadow-apply-report.schema.json",
+  "mode": "shadow",
+  "status": "ready_for_live_apply",
+  "generated_at": "2026-05-06T19:49:44Z",
+  "source_manifest": {
+    "schema": "ops/schemas/changed-files-manifest.schema.json",
+    "run_id": "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement"
+  },
+  "guard": {
+    "allowed_apply_roots": [
+      "ops/",
+      "tests/",
+      "system/system-log.md"
+    ],
+    "changed_paths": [
+      "ops/scripts/auto_improve_iteration_persistence_runtime.py",
+      "tests/test_auto_improve_iteration_runtime.py"
+    ],
+    "invalid_paths": [],
+    "disallowed_paths": []
+  },
+  "summary": {
+    "total_changed_files": 2,
+    "added": 0,
+    "modified": 2,
+    "deleted": 0
+  },
+  "files": [
+    {
+      "path": "ops/scripts/auto_improve_iteration_persistence_runtime.py",
+      "change_type": "modified",
+      "live_exists": true,
+      "workspace_exists": true,
+      "would_write": true,
+      "would_delete": false
+    },
+    {
+      "path": "tests/test_auto_improve_iteration_runtime.py",
+      "change_type": "modified",
+      "live_exists": true,
+      "workspace_exists": true,
+      "would_write": true,
+      "would_delete": false
+    }
+  ],
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-05-06T19:49:44Z\", \"generated_at_source\": \"payload.generated_at\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-05-06T19:58:37Z\", \"source_artifact\": \"runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/shadow-apply-report.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/shadow-apply-report.schema.json\", \"artifact_kind\": \"shadow_apply_report\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-05-06T19:58:37Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-06T19:49:44Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"6106956a9798a1066ae0822015819ebf6765d9cfc15747011c9ff2c7884b4bcc\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"fc0340f868a19c5980eebfb4b9eb41620ff6571ed9de83a030bf0a59b3d20be6\", \"policy\": \"606ba1235550f640f7365d46d76aa52b84ef8f831502790010a6c776a7b721d1\", \"schema\": \"03d6cfbd3c05552cf04b4ce334fcf36d0c72b2e19458e3f5672a1d9beefd7ef7\", \"target_rel_path\": \"ac34e70c3a8767f3c14f0fa72cb53df5306ca4e282303bac92fdf7178ae6c91d\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/shadow-apply-report.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"1c4078849302f6b54e4eb36b8d169b09ac7d3e7592d883a1170caf453b2b4219\"}"
+      }
+    ]
+  }
+}

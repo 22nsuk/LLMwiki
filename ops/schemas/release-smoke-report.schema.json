@@ -1,0 +1,875 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Release Smoke Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "vault",
+    "generated_at",
+    "artifact_kind",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "policy",
+    "profile",
+    "status",
+    "archive_path",
+    "archive_file",
+    "archive_class",
+    "archive_budget",
+    "archive_reproducibility",
+    "extracted_vault",
+    "packed_file_count",
+    "manifest_comparison",
+    "commands"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/release-smoke-report.schema.json"
+      ]
+    },
+    "vault": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_tree_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_status": {
+      "type": "string",
+      "enum": [
+        "current",
+        "archived",
+        "stale",
+        "unknown"
+      ]
+    },
+    "retention_policy": {
+      "type": "string",
+      "enum": [
+        "ephemeral",
+        "canonical_report",
+        "archive"
+      ]
+    },
+    "encoding": {
+      "type": "string",
+      "enum": [
+        "utf-8"
+      ]
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "checked_at"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown",
+            "invalid"
+          ]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        }
+      }
+    },
+    "profile": {
+      "type": "string",
+      "enum": [
+        "fast",
+        "full"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "archive_path": {
+      "type": "string"
+    },
+    "archive_file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "exists",
+        "size_bytes",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "exists": {
+          "type": "boolean"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "type": "string"
+        }
+      }
+    },
+    "archive_class": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "format",
+        "compression",
+        "root_prefix",
+        "member_path_template",
+        "path_encoding",
+        "zip_create_system",
+        "manifest_exclusion_policy"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "zip"
+          ]
+        },
+        "compression": {
+          "type": "string",
+          "minLength": 1
+        },
+        "root_prefix": {
+          "type": "string",
+          "minLength": 1
+        },
+        "member_path_template": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path_encoding": {
+          "type": "string",
+          "enum": [
+            "utf-8"
+          ]
+        },
+        "zip_create_system": {
+          "type": "integer"
+        },
+        "manifest_exclusion_policy": {
+          "$ref": "#/$defs/manifest_exclusion_policy"
+        }
+      }
+    },
+    "archive_budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pass",
+        "zip_path_byte_budget",
+        "zip_component_byte_budget",
+        "posix_escape_expanded_filename_budget",
+        "blocking_budget_fail_count",
+        "platform_warning_count",
+        "platform_path_diagnostics",
+        "top_offenders"
+      ],
+      "properties": {
+        "pass": {
+          "type": "boolean"
+        },
+        "zip_path_byte_budget": {
+          "$ref": "#/$defs/byte_budget"
+        },
+        "zip_component_byte_budget": {
+          "$ref": "#/$defs/byte_budget"
+        },
+        "posix_escape_expanded_filename_budget": {
+          "$ref": "#/$defs/byte_budget"
+        },
+        "blocking_budget_fail_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "platform_warning_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "platform_path_diagnostics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "blocker_count",
+            "warning_count",
+            "diagnostics"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "pass",
+                "warn"
+              ]
+            },
+            "blocker_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "warning_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "diagnostics": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "status",
+                  "severity"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pass",
+                      "fail"
+                    ]
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": [
+                      "blocker",
+                      "warn"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "top_offenders": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/archive_budget_offender"
+          }
+        }
+      }
+    },
+    "archive_reproducibility": {
+      "$ref": "#/$defs/archive_reproducibility"
+    },
+    "archive_self_description": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "archive_root_name",
+        "archive_member_path",
+        "sha256",
+        "size_bytes",
+        "profile",
+        "source_manifest_digest",
+        "source_manifest_file_count",
+        "tmp_included",
+        "external_reports_included",
+        "evidence_linkage_phase",
+        "post_seal_authority",
+        "evidence_linked_artifact_count"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "const": "release-archive-self-description.json"
+        },
+        "archive_root_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "archive_member_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "profile": {
+          "type": "string",
+          "enum": [
+            "fast",
+            "full"
+          ]
+        },
+        "source_manifest_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "source_manifest_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tmp_included": {
+          "type": "boolean"
+        },
+        "external_reports_included": {
+          "type": "boolean"
+        },
+        "evidence_linkage_phase": {
+          "type": "string",
+          "const": "pre_seal_package_build_snapshot"
+        },
+        "post_seal_authority": {
+          "type": "string",
+          "const": "ops/reports/release-closeout-batch-manifest.json"
+        },
+        "evidence_linked_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "extracted_vault": {
+      "type": "string"
+    },
+    "packed_file_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "manifest_comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pass",
+        "expected_file_count",
+        "extracted_file_count",
+        "missing_paths",
+        "unexpected_paths",
+        "sha_mismatches",
+        "size_mismatches"
+      ],
+      "properties": {
+        "pass": {
+          "type": "boolean"
+        },
+        "expected_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "extracted_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unexpected_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sha_mismatches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "expected_sha256",
+              "actual_sha256"
+            ],
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "expected_sha256": {
+                "type": "string"
+              },
+              "actual_sha256": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "size_mismatches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "expected_size_bytes",
+              "actual_size_bytes"
+            ],
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "expected_size_bytes": {
+                "type": "integer"
+              },
+              "actual_size_bytes": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "command",
+          "pass",
+          "returncode",
+          "timed_out",
+          "timeout_seconds",
+          "termination_reason",
+          "duration_ms",
+          "stdout_tail",
+          "stderr_tail"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "pass": {
+            "type": "boolean"
+          },
+          "returncode": {
+            "type": "integer"
+          },
+          "timed_out": {
+            "type": "boolean"
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "termination_reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "duration_ms": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "stdout_tail": {
+            "type": "string"
+          },
+          "stderr_tail": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "output_parent_preflight": {
+      "$ref": "#/$defs/output_parent_preflight"
+    },
+    "partial_report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "is_partial",
+        "phase",
+        "elapsed_ms",
+        "completed_command_count",
+        "message",
+        "error"
+      ],
+      "properties": {
+        "is_partial": {
+          "type": "boolean",
+          "const": true
+        },
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "elapsed_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "completed_command_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "message": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "archive_write": {
+          "$ref": "#/$defs/archive_write"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256_or_empty": {
+      "type": "string",
+      "pattern": "^(|[a-f0-9]{64})$"
+    },
+    "archive_reproducibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "run_count",
+        "first_archive_sha256",
+        "second_archive_sha256",
+        "same_archive_sha256",
+        "first_source_manifest_digest",
+        "second_source_manifest_digest",
+        "same_source_manifest_digest",
+        "summary"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail", "not_run"]
+        },
+        "run_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "first_archive_sha256": {
+          "$ref": "#/$defs/sha256_or_empty"
+        },
+        "second_archive_sha256": {
+          "$ref": "#/$defs/sha256_or_empty"
+        },
+        "same_archive_sha256": {
+          "type": "boolean"
+        },
+        "first_source_manifest_digest": {
+          "$ref": "#/$defs/sha256_or_empty"
+        },
+        "second_source_manifest_digest": {
+          "$ref": "#/$defs/sha256_or_empty"
+        },
+        "same_source_manifest_digest": {
+          "type": "boolean"
+        },
+        "summary": {
+          "type": "string"
+        }
+      }
+    },
+    "archive_write": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "phase",
+        "archive_path",
+        "temp_path",
+        "quarantine_path",
+        "archive_replaced",
+        "error"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "archive_path": {
+          "type": "string"
+        },
+        "temp_path": {
+          "type": "string"
+        },
+        "quarantine_path": {
+          "type": "string"
+        },
+        "archive_replaced": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "output_parent_preflight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "checks"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "path",
+              "parent",
+              "status",
+              "reason"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "path": {
+                "type": "string"
+              },
+              "parent": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pass",
+                  "fail"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "byte_budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "limit_bytes",
+        "max_bytes",
+        "status"
+      ],
+      "properties": {
+        "limit_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        }
+      }
+    },
+    "archive_budget_offender": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "archive_path",
+        "size_bytes",
+        "zip_path_bytes",
+        "zip_component_bytes",
+        "posix_escape_expanded_filename_bytes",
+        "max_budget_ratio"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "archive_path": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "zip_path_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "zip_component_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "python_unicode_escape_filename_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "posix_escape_expanded_filename_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "infozip_c_locale_escape_filename_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_budget_ratio": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "manifest_exclusion_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "excluded_prefixes",
+        "excluded_files",
+        "excluded_cache_dirs",
+        "excluded_dev_hidden_dirs",
+        "excluded_suffixes",
+        "excluded_egg_info_dirs"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "excluded_prefixes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_cache_dirs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_dev_hidden_dirs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_suffixes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_egg_info_dirs": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

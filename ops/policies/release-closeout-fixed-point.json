@@ -1,0 +1,113 @@
+{
+  "version": 3,
+  "max_iterations": 5,
+  "cost_trend": {
+    "retained_run_count": 10,
+    "thresholds": {
+      "default": {
+        "min_previous_samples": 1,
+        "total_duration_ms_attention": 120000,
+        "max_duration_ms_attention": 90000,
+        "relative_total_duration_attention_multiplier": 3.0,
+        "minimum_relative_delta_ms": 5000
+      },
+      "writers": {}
+    }
+  },
+  "writers": [
+    {
+      "name": "generated-artifact-index",
+      "target": "generated-artifact-index-body",
+      "produces": ["ops/reports/generated-artifact-index.json"],
+      "depends_on": [],
+      "expensive_prerequisites_once": [
+        "closure-registry-envelope",
+        "manual-mutate-defect-registry",
+        "release-risk-taxonomy-matrix"
+      ]
+    },
+    {
+      "name": "artifact-freshness",
+      "target": "artifact-freshness",
+      "produces": ["ops/reports/artifact-freshness-report.json"],
+      "depends_on": ["generated-artifact-index-body"],
+      "expensive_prerequisites_once": []
+    },
+    {
+      "name": "release-closeout-summary",
+      "target": "release-closeout-summary-report",
+      "produces": ["ops/reports/release-closeout-summary.json"],
+      "depends_on": ["generated-artifact-index-body", "artifact-freshness"],
+      "expensive_prerequisites_once": []
+    },
+    {
+      "name": "learning-readiness-signoff-revalidation",
+      "target": "learning-readiness-signoff-revalidation",
+      "produces": ["ops/reports/learning-readiness-signoff-revalidation.json"],
+      "depends_on": ["release-closeout-summary-report", "artifact-freshness"],
+      "expensive_prerequisites_once": []
+    },
+    {
+      "name": "release-evidence-dashboard",
+      "target": "release-evidence-dashboard-report",
+      "produces": ["ops/reports/release-evidence-dashboard.json"],
+      "depends_on": [
+        "release-closeout-summary-report",
+        "learning-readiness-signoff-revalidation",
+        "artifact-freshness"
+      ],
+      "expensive_prerequisites_once": []
+    },
+    {
+      "name": "release-lane-summary",
+      "target": "release-lane-summary",
+      "produces": ["ops/reports/release-lane-summary.json"],
+      "depends_on": ["release-closeout-summary-report", "release-evidence-dashboard-report"],
+      "expensive_prerequisites_once": []
+    },
+    {
+      "name": "release-clean-blocker-ledger",
+      "target": "release-clean-blocker-ledger",
+      "produces": ["ops/reports/release-clean-blocker-ledger.json"],
+      "depends_on": [
+        "release-closeout-summary-report",
+        "release-evidence-dashboard-report",
+        "release-lane-summary"
+      ],
+      "expensive_prerequisites_once": []
+    },
+    {
+      "name": "release-closeout-batch-manifest",
+      "target": "release-closeout-batch-manifest-promote",
+      "produces": ["ops/reports/release-closeout-batch-manifest.json"],
+      "depends_on": [
+        "generated-artifact-index-body",
+        "artifact-freshness",
+        "release-closeout-summary-report",
+        "learning-readiness-signoff-revalidation",
+        "release-evidence-dashboard-report",
+        "release-lane-summary",
+        "release-clean-blocker-ledger"
+      ],
+      "expensive_prerequisites_once": []
+    },
+    {
+      "name": "release-evidence-closeout-self-check",
+      "target": "release-evidence-closeout-self-check",
+      "produces": ["ops/reports/release-evidence-closeout-self-check.json"],
+      "depends_on": ["release-closeout-batch-manifest-promote"],
+      "expensive_prerequisites_once": []
+    }
+  ],
+  "tracked_artifacts": [
+    "ops/reports/generated-artifact-index.json",
+    "ops/reports/artifact-freshness-report.json",
+    "ops/reports/release-closeout-summary.json",
+    "ops/reports/learning-readiness-signoff-revalidation.json",
+    "ops/reports/release-evidence-dashboard.json",
+    "ops/reports/release-lane-summary.json",
+    "ops/reports/release-clean-blocker-ledger.json",
+    "ops/reports/release-closeout-batch-manifest.json",
+    "ops/reports/release-evidence-closeout-self-check.json"
+  ]
+}

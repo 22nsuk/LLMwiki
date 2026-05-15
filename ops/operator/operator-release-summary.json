@@ -1,0 +1,411 @@
+{
+  "$schema": "ops/schemas/operator-release-summary.schema.json",
+  "artifact_kind": "operator_release_summary",
+  "generated_at": "2026-05-15T04:24:14Z",
+  "producer": "ops.scripts.operator_release_summary",
+  "source_command": "python -m ops.scripts.operator_release_summary --vault . --out ops/operator/operator-release-summary.json",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "1162baa2c95574cfa3e9f1f29ed14e34f2df775a2bd8acd3b6e0301827537805",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "6d79652d2ad35694dd11eaaa9c85cd5ededf5b750c2c9975712d69f72efa2471",
+    "batch_manifest": "5da3d39d6ef5fde4a1b927e255864b32b1dba0063f5ba7b6eac0706d287835da",
+    "closeout": "6d4979643e89700f4bb94dca49af631b4fd1890352af22b5e045994722ad7870",
+    "full_test_summary": "e7d8573cd4355aadc5a3730d4038cbe1ecb3a4ccd2848223554a5251c0cfcfc3",
+    "learning_delta_scoreboard": "a1cfd405d20cc8d1375a9bb0dae02300af21f628c18ac382b5b2f3207d0d0323",
+    "learning_revalidation": "8d1a908ab02ede5289f2386d5e3651ed2491a1086dd173601e59afc85d395d8d",
+    "self_check": "1a17db8a5e5d199040c538e6aad8aa34c24b28aa8307cb89a06ba8cf28fea39b",
+    "test_summary": "5fdda649d6323ffb8b3b3254d742763083899ee93a1ae3bae3851dfae0d36053"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-15T04:24:14Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "pass",
+  "semantic_release_status": "clean_pass",
+  "sealed_release_status": "sealed_clean_pass",
+  "release_package_mode": "source_content_package",
+  "source_zip_policy_status": "match",
+  "source_zip": {
+    "status": "match",
+    "distribution_status": "materialized",
+    "archive_profile": "source_content_package",
+    "path": "build/release/LLMwiki-source.zip",
+    "sha256": "2025ee3a0ec56e13a77bf31df0f6009fa0b2a2d0cdcbe4ceaf17bc5f4d16c811",
+    "actual_sha256": "2025ee3a0ec56e13a77bf31df0f6009fa0b2a2d0cdcbe4ceaf17bc5f4d16c811",
+    "file_exists": true,
+    "file_digest_matches_batch": true,
+    "entry_count": 1552,
+    "path_set_matches_release_manifest": true,
+    "content_digest_matches_release_manifest": true,
+    "summary": "source_zip=match; distribution_status=materialized; path_matches=True; content_matches=True; file_digest_matches_batch=True"
+  },
+  "tmp_json_policy_status": "clean",
+  "tmp_json_count": 0,
+  "artifact_digest_policy_status": "match",
+  "artifact_digest_mismatch_count": 0,
+  "artifact_digest_missing_count": 0,
+  "check_mode_write_policy": "check targets must write only tmp diagnostics; canonical writes are promote/build targets",
+  "source_load_status": {
+    "closeout": "ok",
+    "batch_manifest": "ok",
+    "self_check": "ok",
+    "test_summary": "ok",
+    "full_test_summary": "ok",
+    "learning_revalidation": "ok",
+    "learning_delta_scoreboard": "ok"
+  },
+  "batch_verify": {
+    "status": "pass",
+    "manifest_load_status": "ok",
+    "artifact_count": 14,
+    "mismatch_count": 0,
+    "missing_artifact_count": 0,
+    "tmp_json_count": 0,
+    "tmp_json_paths": [],
+    "mismatches": [],
+    "summary": "batch verify status=pass; artifact_count=14; mismatch_count=0; tmp_json_count=0"
+  },
+  "test_evidence": {
+    "primary_suite": "report-contract-summary",
+    "primary_suite_scope": "report_contract_summary",
+    "primary_represents_full_suite": false,
+    "primary_status": "pass",
+    "primary_passed_count": 171,
+    "full_suite_status": "pass",
+    "full_suite_summary_load_status": "ok",
+    "full_suite_reason": "this execution has no pytest selectors and is treated as full-suite evidence"
+  },
+  "learning_readiness": {
+    "load_status": "ok",
+    "status": "pass",
+    "revalidation_status": "metrics_close_candidate",
+    "accepted_learning_risk": false,
+    "release_effect": {
+      "clean_release_effect": "clean_allowed",
+      "operator_summary": "learning revalidation=metrics_close_candidate; release_authority_status=clean_pass; release_readiness_state=clean_pass; machine_release_allowed=True; operator_release_allowed=True"
+    }
+  },
+  "learning_claim": {
+    "load_status": "ok",
+    "claim_level": "none",
+    "bounded_learning_claim_allowed": false,
+    "confirmed_learning_improvement_allowed": false,
+    "improvement_claim_status": "not_ready",
+    "confirmed_learning_improvement_status": "not_ready",
+    "evidence_cohort_status": "auto_confirmed",
+    "learning_claim_blocker_status": "blocked",
+    "confirmed_blocking_predicate_ids": [
+      "learning_claim_blocker_absence"
+    ],
+    "confirmed_evidence_summary": {
+      "evidence_cohort_status": "auto_confirmed",
+      "confirmed_evidence_status": "auto_confirmed",
+      "valid_run_count": 3,
+      "min_required_run_count": 3,
+      "eligible_family_count": 1,
+      "selected_valid_run_ids": [
+        "run-20260422-auto-improve-timeout-telemetry-fallback",
+        "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
+        "run-20260507-auto-improve-iteration-persistence-discard-path"
+      ],
+      "blocking_predicate_ids": [],
+      "rejected_run_count": 2,
+      "rejected_run_diagnostics": [
+        {
+          "run_id": "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+          "decision": "DISCARD",
+          "families": [
+            "contract_regression_signals"
+          ],
+          "status": "fail",
+          "reasons": [
+            "decision=DISCARD"
+          ],
+          "missing_artifacts": []
+        },
+        {
+          "run_id": "run-20260507-auto-improve-iteration-persistence-typed-same-eval",
+          "decision": "DISCARD",
+          "families": [
+            "contract_regression_signals"
+          ],
+          "status": "fail",
+          "reasons": [
+            "decision=DISCARD",
+            "behavior delta before/after evidence missing"
+          ],
+          "missing_artifacts": []
+        }
+      ],
+      "legacy_reconstruction_summary": {
+        "status": "pass",
+        "reconstruction_needed_count": 1,
+        "reconstructed_run_count": 1,
+        "blocked_run_count": 0,
+        "run_diagnostics": [
+          {
+            "run_id": "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+            "families": [
+              "contract_regression_signals"
+            ],
+            "reconstruction_status": "not_needed",
+            "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+            "reconstruction_reasons": [],
+            "secondary_axis_evidence_source": "telemetry_field",
+            "secondary_axis_evidence_detail": "",
+            "parsed_secondary_axes": [
+              "tests"
+            ]
+          },
+          {
+            "run_id": "run-20260422-auto-improve-timeout-telemetry-fallback",
+            "families": [
+              "contract_regression_signals"
+            ],
+            "reconstruction_status": "not_needed",
+            "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+            "reconstruction_reasons": [],
+            "secondary_axis_evidence_source": "telemetry_field",
+            "secondary_axis_evidence_detail": "",
+            "parsed_secondary_axes": [
+              "complexity",
+              "tests"
+            ]
+          },
+          {
+            "run_id": "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
+            "families": [
+              "contract_regression_signals"
+            ],
+            "reconstruction_status": "not_needed",
+            "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+            "reconstruction_reasons": [],
+            "secondary_axis_evidence_source": "telemetry_field",
+            "secondary_axis_evidence_detail": "",
+            "parsed_secondary_axes": [
+              "complexity"
+            ]
+          },
+          {
+            "run_id": "run-20260507-auto-improve-iteration-persistence-discard-path",
+            "families": [
+              "contract_regression_signals"
+            ],
+            "reconstruction_status": "reconstructed",
+            "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+            "reconstruction_reasons": [
+              "telemetry behavior_delta_digest missing or invalid",
+              "telemetry strict secondary improvement fields missing or incomplete"
+            ],
+            "secondary_axis_evidence_source": "legacy_reconstruction_artifact",
+            "secondary_axis_evidence_detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=true, selected_any_improvement=true",
+            "parsed_secondary_axes": [
+              "lint",
+              "complexity",
+              "tests"
+            ]
+          },
+          {
+            "run_id": "run-20260507-auto-improve-iteration-persistence-typed-same-eval",
+            "families": [
+              "contract_regression_signals"
+            ],
+            "reconstruction_status": "not_needed",
+            "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+            "reconstruction_reasons": [],
+            "secondary_axis_evidence_source": "telemetry_field",
+            "secondary_axis_evidence_detail": "",
+            "parsed_secondary_axes": [
+              "typed_same_eval_contract",
+              "behavior_delta_digest"
+            ]
+          }
+        ]
+      }
+    },
+    "confirmed_predicate_results": [
+      {
+        "id": "evidence_bundle_active",
+        "status": "pass",
+        "source_path": "ops/reports/learning-claim-evidence-bundle.json",
+        "observed_value": "revocation_status=active"
+      },
+      {
+        "id": "confirmed_evidence_bundle_active",
+        "status": "pass",
+        "source_path": "ops/reports/learning-claim-evidence-bundle.json",
+        "observed_value": "revocation_status=active"
+      },
+      {
+        "id": "repeated_same_family_evidence",
+        "status": "pass",
+        "source_path": "ops/reports/learning-confirmed-evidence-cohort.json",
+        "observed_value": "eligible_family_count=1; family_count=1; max_valid_run_count=3"
+      },
+      {
+        "id": "behavior_delta_artifact_digest_readback",
+        "status": "pass",
+        "source_path": "ops/reports/learning-claim-evidence-bundle.json",
+        "observed_value": "status=pass"
+      },
+      {
+        "id": "full_suite_pass",
+        "status": "pass",
+        "source_path": "ops/reports/test-execution-summary-full.json",
+        "observed_value": "status=pass"
+      },
+      {
+        "id": "public_check_pass",
+        "status": "pass",
+        "source_path": "ops/reports/public-check-summary.json",
+        "observed_value": "status=pass"
+      },
+      {
+        "id": "rollback_revalidation_clean",
+        "status": "pass",
+        "source_path": "ops/reports/learning-readiness-signoff-revalidation.json",
+        "observed_value": "status=pass"
+      },
+      {
+        "id": "learning_claim_blocker_absence",
+        "status": "fail",
+        "source_path": "ops/reports/release-clean-blocker-ledger.json",
+        "observed_value": "learning_claim_blocker_count=1"
+      }
+    ],
+    "learning_claim_evidence_bundle_status": "not_evaluated",
+    "learning_claim_evidence_bundle_sha256": "4e6118c540721a799ba27accd51368eb9a9807017450d1dbc411af97d293e35a",
+    "learning_confirmed_evidence_cohort_status": "active",
+    "learning_confirmed_evidence_cohort_sha256": "c9ae755c4d856a03e399821b569c3ee956e1392a402547618c74789b3dc47f35",
+    "claim_wording_allowed": false,
+    "claim_wording_policy_status": "blocked",
+    "confirmed_wording_allowed": false,
+    "confirmed_wording_policy_status": "blocked",
+    "confirmed_wording_policy_reason": "confirmed wording blocked: claim_level=none; confirmed_status=not_ready; bundle=not_evaluated; cohort=active; blockers=learning_claim_blocker_absence",
+    "summary": "claim_level=none; bounded=False; confirmed_learning=auto_confirmed; valid_runs=3/3; eligible_families=1; rejected_runs=2; legacy_reconstruction=pass; legacy_reconstructed_runs=1/1; confirmed_blockers=learning_claim_blocker_absence"
+  },
+  "accepted_risk": {
+    "operator_accepted_risk_family_count": 0,
+    "clean_lane_blocking_accepted_risk_family_count": 0,
+    "accepted_risk_count": 0,
+    "release_accepted_risk_count": 0,
+    "accepted_learning_risk_count": 0,
+    "gate_attention_count": 1,
+    "learning_claim_blocking_family_count": 1,
+    "advisory_lifecycle_family_count": 0,
+    "count_sources": {
+      "operator_accepted_risk_family_count": {
+        "source_artifact": "release_closeout_summary",
+        "source_path": "ops/reports/release-closeout-summary.json",
+        "field_path": "$.summary.accepted_risk_family_count",
+        "aggregation_rule": "distinct accepted risk families across all accepted-risk scopes",
+        "included_scopes": [
+          "policy",
+          "test_deselection_policy",
+          "operator_signoff",
+          "upstream_report"
+        ],
+        "excluded_scopes": []
+      },
+      "clean_lane_blocking_accepted_risk_family_count": {
+        "source_artifact": "release_closeout_summary",
+        "source_path": "ops/reports/release-closeout-summary.json",
+        "field_path": "$.clean_lane_blocking_risk_family_count",
+        "aggregation_rule": "accepted risk families that still block the clean release lane",
+        "included_scopes": [
+          "policy",
+          "test_deselection_policy"
+        ],
+        "excluded_scopes": [
+          "operator_signoff",
+          "upstream_report"
+        ]
+      },
+      "accepted_risk_count": {
+        "source_artifact": "release_closeout_batch_manifest",
+        "source_path": "ops/reports/release-closeout-batch-manifest.json",
+        "field_path": "$.release_decision_snapshot.accepted_risk_count",
+        "aggregation_rule": "accepted risk instances copied from release closeout; excludes non-risk gate attention",
+        "included_scopes": [
+          "accepted_risks"
+        ],
+        "excluded_scopes": [
+          "release_dashboard_gate_attention"
+        ]
+      },
+      "release_accepted_risk_count": {
+        "source_artifact": "release_closeout_batch_manifest",
+        "source_path": "ops/reports/release-closeout-batch-manifest.json",
+        "field_path": "$.release_decision_snapshot.accepted_risk_count",
+        "aggregation_rule": "release accepted risk instances only; excludes learning-readiness accepted risk state",
+        "included_scopes": [
+          "release_accepted_risks"
+        ],
+        "excluded_scopes": [
+          "learning_readiness_accepted_risk"
+        ]
+      },
+      "accepted_learning_risk_count": {
+        "source_artifact": "learning_readiness_signoff_revalidation",
+        "source_path": "ops/reports/learning-readiness-signoff-revalidation.json",
+        "field_path": "$.closeout.accepted_learning_risk",
+        "aggregation_rule": "boolean learning-readiness accepted risk converted to a 0/1 learning-only count",
+        "included_scopes": [
+          "learning_readiness_accepted_risk"
+        ],
+        "excluded_scopes": [
+          "release_accepted_risks"
+        ]
+      },
+      "gate_attention_count": {
+        "source_artifact": "release_closeout_batch_manifest",
+        "source_path": "ops/reports/release-closeout-batch-manifest.json",
+        "field_path": "$.release_decision_snapshot.gate_attention_count",
+        "aggregation_rule": "dashboard gates in attention state; not an accepted-risk count",
+        "included_scopes": [
+          "release_dashboard_gate_attention"
+        ],
+        "excluded_scopes": [
+          "accepted_risks"
+        ]
+      },
+      "learning_claim_blocking_family_count": {
+        "source_artifact": "release_closeout_batch_manifest",
+        "source_path": "ops/reports/release-closeout-batch-manifest.json",
+        "field_path": "$.release_decision_snapshot.learning_claim_blocking_family_count",
+        "aggregation_rule": "accepted risk families that block learning-improvement claims",
+        "included_scopes": [
+          "learning_lane_effect=blocks_learning_claim"
+        ],
+        "excluded_scopes": [
+          "clean_lane_effect=blocks_clean_lane"
+        ]
+      },
+      "advisory_lifecycle_family_count": {
+        "source_artifact": "release_closeout_batch_manifest",
+        "source_path": "ops/reports/release-closeout-batch-manifest.json",
+        "field_path": "$.release_decision_snapshot.advisory_lifecycle_family_count",
+        "aggregation_rule": "accepted risk families that represent advisory review backlog",
+        "included_scopes": [
+          "advisory_lifecycle_effect=review_backlog"
+        ],
+        "excluded_scopes": [
+          "clean_lane_effect=blocks_clean_lane"
+        ]
+      }
+    }
+  },
+  "operator_summary": "semantic=clean_pass; sealed=sealed_clean_pass; source_zip=match; artifact_digest=match; artifact_mismatches=0; tmp_json=0; full_suite=pass; auto_improve_lane=blocked; learning_revalidation=metrics_close_candidate; confirmed_learning=auto_confirmed; valid_runs=3/3; eligible_families=1; rejected_runs=2; legacy_reconstruction=pass; legacy_reconstructed_runs=1/1; confirmed_blockers=learning_claim_blocker_absence; release_risk_acceptances=0; learning_risk_acceptances=0; gate_attention=1; learning_claim_blocking=1; advisory_lifecycle=0"
+}

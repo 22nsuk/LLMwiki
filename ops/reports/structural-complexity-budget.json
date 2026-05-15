@@ -1,0 +1,924 @@
+{
+  "$schema": "ops/schemas/structural-complexity-budget-report.schema.json",
+  "artifact_kind": "structural_complexity_budget_report",
+  "generated_at": "2026-05-14T09:47:26Z",
+  "producer": "ops.scripts.structural_complexity_budget_runtime",
+  "source_command": "python -m ops.scripts.structural_complexity_budget --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "50614995bab429b20418a93068b96fc9e9027d041e2a4489a79e2ea34e0427fa",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "a16ea666cbf10f3cc601c219a5d883f1153b4177821e5fc21ca1a63b40814d51",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "01285be116625782f10af9c11e5ce169bf25ce7befd2858731db9f14f1877ba4",
+    "monitored_targets": "89c9a783c829ccb3ac3730cc81225b6da80c7eb276a6252403e28f7378436426",
+    "profile_names": "da049bf3011720d674a36b9eae960e2d500f01e7b42a02aa9cf1237f621c58d9"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-14T09:47:26Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "attention",
+  "profiles": {
+    "critical_runtime_orchestrators": {
+      "target_count": 10,
+      "budgets": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 45,
+        "python_branch_node_count": 110
+      },
+      "notes": [
+        "Deterministic preview budget for the largest orchestration runtimes.",
+        "Use this report as a tracked preview artifact before promoting any hard gate into make check-strict."
+      ]
+    },
+    "high_complexity_helpers": {
+      "target_count": 10,
+      "budgets": {
+        "nonempty_line_count_total": 650,
+        "python_function_count": 24,
+        "python_branch_node_count": 70
+      },
+      "notes": [
+        "Preview-only profile for helper-heavy runtime modules repeatedly flagged by code review.",
+        "Existing inherited attention should be reduced deliberately before making this profile a hard gate.",
+        "Function-level hot spots are summarized separately in diagnostics.function_budget_top_n."
+      ]
+    },
+    "runtime_closeout_orchestrators": {
+      "target_count": 2,
+      "budgets": {
+        "nonempty_line_count_total": 260,
+        "python_function_count": 18,
+        "python_branch_node_count": 40
+      },
+      "notes": [
+        "Preview budget for the owner modules that now carry closeout and planning state-transition assembly."
+      ]
+    },
+    "release_report_builders": {
+      "target_count": 4,
+      "budgets": {
+        "nonempty_line_count_total": 1200,
+        "python_function_count": 50,
+        "python_branch_node_count": 90
+      },
+      "notes": [
+        "Preview budget for large release and test report builders slated for load-normalize-classify-decide-render-seal decomposition.",
+        "Use attention here to prioritize pure decision extraction before tightening hard gates."
+      ]
+    },
+    "learning_claim_report_builders": {
+      "target_count": 6,
+      "budgets": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 36,
+        "python_branch_node_count": 60
+      },
+      "notes": [
+        "Preview budget for self-improvement claim model builders and compatibility reconstruction surfaces.",
+        "Keep regression-safe evidence, same-eval gain, cross-eval gain, persistence, and production learning decisions separated as these modules shrink."
+      ]
+    }
+  },
+  "targets": [
+    {
+      "path": "ops/scripts/mechanism/auto_improve_runtime.py",
+      "profile": "critical_runtime_orchestrators",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 759,
+        "python_function_count": 29,
+        "python_branch_node_count": 34,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 45,
+        "python_branch_node_count": 110
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -141,
+        "python_function_count": -16,
+        "python_branch_node_count": -76
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/mechanism/auto_improve_readiness_runtime.py",
+      "profile": "critical_runtime_orchestrators",
+      "status": "warn",
+      "metrics": {
+        "nonempty_line_count_total": 2493,
+        "python_function_count": 77,
+        "python_branch_node_count": 146,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 45,
+        "python_branch_node_count": 110
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": 1593,
+        "python_function_count": 32,
+        "python_branch_node_count": 36
+      },
+      "over_budget_metrics": [
+        "nonempty_line_count_total",
+        "python_function_count",
+        "python_branch_node_count"
+      ],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/mechanism/promotion_gate_mechanism_runtime.py",
+      "profile": "critical_runtime_orchestrators",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 182,
+        "python_function_count": 6,
+        "python_branch_node_count": 5,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 45,
+        "python_branch_node_count": 110
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -718,
+        "python_function_count": -39,
+        "python_branch_node_count": -105
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/mechanism/mechanism_run_workspace_runtime.py",
+      "profile": "critical_runtime_orchestrators",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 665,
+        "python_function_count": 21,
+        "python_branch_node_count": 44,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 45,
+        "python_branch_node_count": 110
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -235,
+        "python_function_count": -24,
+        "python_branch_node_count": -66
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/mechanism/mutation_proposal_runtime.py",
+      "profile": "critical_runtime_orchestrators",
+      "status": "warn",
+      "metrics": {
+        "nonempty_line_count_total": 1566,
+        "python_function_count": 62,
+        "python_branch_node_count": 142,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 45,
+        "python_branch_node_count": 110
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": 666,
+        "python_function_count": 17,
+        "python_branch_node_count": 32
+      },
+      "over_budget_metrics": [
+        "nonempty_line_count_total",
+        "python_function_count",
+        "python_branch_node_count"
+      ],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/mechanism/mechanism_review_candidate_runtime.py",
+      "profile": "critical_runtime_orchestrators",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 618,
+        "python_function_count": 22,
+        "python_branch_node_count": 42,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 45,
+        "python_branch_node_count": 110
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -282,
+        "python_function_count": -23,
+        "python_branch_node_count": -68
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/mechanism/mechanism_review_outcome_metrics_calibration_runtime.py",
+      "profile": "critical_runtime_orchestrators",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 692,
+        "python_function_count": 27,
+        "python_branch_node_count": 61,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 45,
+        "python_branch_node_count": 110
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -208,
+        "python_function_count": -18,
+        "python_branch_node_count": -49
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/core/codex_exec_executor.py",
+      "profile": "critical_runtime_orchestrators",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 743,
+        "python_function_count": 33,
+        "python_branch_node_count": 31,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 45,
+        "python_branch_node_count": 110
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -157,
+        "python_function_count": -12,
+        "python_branch_node_count": -79
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/core/filesystem_runtime.py",
+      "profile": "critical_runtime_orchestrators",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 771,
+        "python_function_count": 39,
+        "python_branch_node_count": 100,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 45,
+        "python_branch_node_count": 110
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -129,
+        "python_function_count": -6,
+        "python_branch_node_count": -10
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/core/policy_runtime.py",
+      "profile": "critical_runtime_orchestrators",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 76,
+        "python_function_count": 8,
+        "python_branch_node_count": 3,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 45,
+        "python_branch_node_count": 110
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -824,
+        "python_function_count": -37,
+        "python_branch_node_count": -107
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/eval/wiki_doc_audit_runtime.py",
+      "profile": "high_complexity_helpers",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 331,
+        "python_function_count": 17,
+        "python_branch_node_count": 47,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 650,
+        "python_function_count": 24,
+        "python_branch_node_count": 70
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -319,
+        "python_function_count": -7,
+        "python_branch_node_count": -23
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/registry/raw_intake_promotion_runtime.py",
+      "profile": "high_complexity_helpers",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 194,
+        "python_function_count": 4,
+        "python_branch_node_count": 22,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 650,
+        "python_function_count": 24,
+        "python_branch_node_count": 70
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -456,
+        "python_function_count": -20,
+        "python_branch_node_count": -48
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/core/registry_review_candidate_passes_runtime.py",
+      "profile": "high_complexity_helpers",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 491,
+        "python_function_count": 18,
+        "python_branch_node_count": 26,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 650,
+        "python_function_count": 24,
+        "python_branch_node_count": 70
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -159,
+        "python_function_count": -6,
+        "python_branch_node_count": -44
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/eval/wiki_lint_review_runtime.py",
+      "profile": "high_complexity_helpers",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 587,
+        "python_function_count": 13,
+        "python_branch_node_count": 48,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 650,
+        "python_function_count": 24,
+        "python_branch_node_count": 70
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -63,
+        "python_function_count": -11,
+        "python_branch_node_count": -22
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/eval/wiki_eval.py",
+      "profile": "high_complexity_helpers",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 335,
+        "python_function_count": 18,
+        "python_branch_node_count": 12,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 650,
+        "python_function_count": 24,
+        "python_branch_node_count": 70
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -315,
+        "python_function_count": -6,
+        "python_branch_node_count": -58
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/core/observability_artifacts_runtime.py",
+      "profile": "high_complexity_helpers",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 25,
+        "python_function_count": 0,
+        "python_branch_node_count": 0,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 650,
+        "python_function_count": 24,
+        "python_branch_node_count": 70
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -625,
+        "python_function_count": -24,
+        "python_branch_node_count": -70
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/core/policy_validation_runtime.py",
+      "profile": "high_complexity_helpers",
+      "status": "warn",
+      "metrics": {
+        "nonempty_line_count_total": 664,
+        "python_function_count": 25,
+        "python_branch_node_count": 66,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 650,
+        "python_function_count": 24,
+        "python_branch_node_count": 70
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": 14,
+        "python_function_count": 1,
+        "python_branch_node_count": -4
+      },
+      "over_budget_metrics": [
+        "nonempty_line_count_total",
+        "python_function_count"
+      ],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/eval/structural_complexity_budget_runtime.py",
+      "profile": "high_complexity_helpers",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 574,
+        "python_function_count": 24,
+        "python_branch_node_count": 19,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 650,
+        "python_function_count": 24,
+        "python_branch_node_count": 70
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -76,
+        "python_function_count": 0,
+        "python_branch_node_count": -51
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "tests/minimal_vault_seed_core.py",
+      "profile": "high_complexity_helpers",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 424,
+        "python_function_count": 17,
+        "python_branch_node_count": 6,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 650,
+        "python_function_count": 24,
+        "python_branch_node_count": 70
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -226,
+        "python_function_count": -7,
+        "python_branch_node_count": -64
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "tests/minimal_vault_seed_smoke.py",
+      "profile": "high_complexity_helpers",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 373,
+        "python_function_count": 17,
+        "python_branch_node_count": 3,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 650,
+        "python_function_count": 24,
+        "python_branch_node_count": 70
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -277,
+        "python_function_count": -7,
+        "python_branch_node_count": -67
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/mechanism/finalize_run_state_runtime.py",
+      "profile": "runtime_closeout_orchestrators",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 205,
+        "python_function_count": 3,
+        "python_branch_node_count": 7,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 260,
+        "python_function_count": 18,
+        "python_branch_node_count": 40
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -55,
+        "python_function_count": -15,
+        "python_branch_node_count": -33
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/mechanism/planning_gate_report_runtime.py",
+      "profile": "runtime_closeout_orchestrators",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 229,
+        "python_function_count": 7,
+        "python_branch_node_count": 11,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 260,
+        "python_function_count": 18,
+        "python_branch_node_count": 40
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -31,
+        "python_function_count": -11,
+        "python_branch_node_count": -29
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/release/release_closeout_batch_manifest.py",
+      "profile": "release_report_builders",
+      "status": "warn",
+      "metrics": {
+        "nonempty_line_count_total": 1451,
+        "python_function_count": 59,
+        "python_branch_node_count": 81,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 1200,
+        "python_function_count": 50,
+        "python_branch_node_count": 90
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": 251,
+        "python_function_count": 9,
+        "python_branch_node_count": -9
+      },
+      "over_budget_metrics": [
+        "nonempty_line_count_total",
+        "python_function_count"
+      ],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/release/release_evidence_dashboard.py",
+      "profile": "release_report_builders",
+      "status": "warn",
+      "metrics": {
+        "nonempty_line_count_total": 1947,
+        "python_function_count": 68,
+        "python_branch_node_count": 72,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 1200,
+        "python_function_count": 50,
+        "python_branch_node_count": 90
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": 747,
+        "python_function_count": 18,
+        "python_branch_node_count": -18
+      },
+      "over_budget_metrics": [
+        "nonempty_line_count_total",
+        "python_function_count"
+      ],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/release/release_closeout_summary.py",
+      "profile": "release_report_builders",
+      "status": "warn",
+      "metrics": {
+        "nonempty_line_count_total": 2195,
+        "python_function_count": 69,
+        "python_branch_node_count": 111,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 1200,
+        "python_function_count": 50,
+        "python_branch_node_count": 90
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": 995,
+        "python_function_count": 19,
+        "python_branch_node_count": 21
+      },
+      "over_budget_metrics": [
+        "nonempty_line_count_total",
+        "python_function_count",
+        "python_branch_node_count"
+      ],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/test/test_execution_summary.py",
+      "profile": "release_report_builders",
+      "status": "warn",
+      "metrics": {
+        "nonempty_line_count_total": 1642,
+        "python_function_count": 74,
+        "python_branch_node_count": 144,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 1200,
+        "python_function_count": 50,
+        "python_branch_node_count": 90
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": 442,
+        "python_function_count": 24,
+        "python_branch_node_count": 54
+      },
+      "over_budget_metrics": [
+        "nonempty_line_count_total",
+        "python_function_count",
+        "python_branch_node_count"
+      ],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/learning/learning_delta_scoreboard.py",
+      "profile": "learning_claim_report_builders",
+      "status": "warn",
+      "metrics": {
+        "nonempty_line_count_total": 1156,
+        "python_function_count": 49,
+        "python_branch_node_count": 48,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 36,
+        "python_branch_node_count": 60
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": 256,
+        "python_function_count": 13,
+        "python_branch_node_count": -12
+      },
+      "over_budget_metrics": [
+        "nonempty_line_count_total",
+        "python_function_count"
+      ],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/learning/learning_claim_evidence_bundle.py",
+      "profile": "learning_claim_report_builders",
+      "status": "warn",
+      "metrics": {
+        "nonempty_line_count_total": 811,
+        "python_function_count": 38,
+        "python_branch_node_count": 61,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 36,
+        "python_branch_node_count": 60
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -89,
+        "python_function_count": 2,
+        "python_branch_node_count": 1
+      },
+      "over_budget_metrics": [
+        "python_function_count",
+        "python_branch_node_count"
+      ],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/learning/learning_claim_model.py",
+      "profile": "learning_claim_report_builders",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 192,
+        "python_function_count": 4,
+        "python_branch_node_count": 3,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 36,
+        "python_branch_node_count": 60
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -708,
+        "python_function_count": -32,
+        "python_branch_node_count": -57
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/learning/learning_claim_unlock_review.py",
+      "profile": "learning_claim_report_builders",
+      "status": "warn",
+      "metrics": {
+        "nonempty_line_count_total": 1000,
+        "python_function_count": 34,
+        "python_branch_node_count": 28,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 36,
+        "python_branch_node_count": 60
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": 100,
+        "python_function_count": -2,
+        "python_branch_node_count": -32
+      },
+      "over_budget_metrics": [
+        "nonempty_line_count_total"
+      ],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/learning/learning_confirmed_evidence_cohort.py",
+      "profile": "learning_claim_report_builders",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 731,
+        "python_function_count": 27,
+        "python_branch_node_count": 37,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 36,
+        "python_branch_node_count": 60
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -169,
+        "python_function_count": -9,
+        "python_branch_node_count": -23
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    },
+    {
+      "path": "ops/scripts/learning/learning_confirmed_legacy_reconstruction.py",
+      "profile": "learning_claim_report_builders",
+      "status": "pass",
+      "metrics": {
+        "nonempty_line_count_total": 367,
+        "python_function_count": 19,
+        "python_branch_node_count": 38,
+        "markdown_heading_count": 0,
+        "test_case_count": 0
+      },
+      "budget": {
+        "nonempty_line_count_total": 900,
+        "python_function_count": 36,
+        "python_branch_node_count": 60
+      },
+      "budget_deltas": {
+        "nonempty_line_count_total": -533,
+        "python_function_count": -17,
+        "python_branch_node_count": -22
+      },
+      "over_budget_metrics": [],
+      "function_budget_candidate_count": 0
+    }
+  ],
+  "function_budget_candidates": [],
+  "diagnostics": {
+    "unreadable_targets": [],
+    "python_parse_failures": [],
+    "function_budget_top_n": {
+      "top_n": 10,
+      "total_candidate_count": 0,
+      "monitored_candidate_count": 0,
+      "unmonitored_candidate_count": 0,
+      "candidates": []
+    },
+    "function_budget_monitoring": {
+      "status": "pass",
+      "gate_effect": "preview",
+      "total_candidate_count": 0,
+      "monitored_candidate_count": 0,
+      "unmonitored_candidate_count": 0,
+      "monitored_target_count": 32,
+      "summary": "function budget candidates are covered by monitored target profiles"
+    }
+  },
+  "summary": {
+    "profile_count": 5,
+    "target_count": 32,
+    "targets_with_attention_count": 10,
+    "targets_with_failure_count": 0,
+    "function_budget_candidate_count": 0
+  }
+}

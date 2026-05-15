@@ -1,0 +1,34 @@
+* text=auto eol=lf
+
+# Canonical text sources
+*.py text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+*.sh text eol=lf
+
+# Binary assets
+*.pdf binary
+*.docx binary
+*.zip binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+
+# Raw source surfaces are data, not code.
+raw/** linguist-generated=true
+raw/web-snapshots/** text eol=lf linguist-generated=true
+raw/**/*.pdf binary linguist-generated=true
+
+# Run artifacts stay local by default.
+runs/** export-ignore linguist-generated=true
+
+# Local review bundles should not ship in archive exports.
+external-reports/** export-ignore linguist-generated=true
+AGENTS.local.md export-ignore

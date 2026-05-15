@@ -1,0 +1,402 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Run Telemetry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "run_id",
+    "generated_at",
+    "proposal_snapshot",
+    "scope_freeze",
+    "routing_reports",
+    "executor_reports",
+    "decision",
+    "finalized",
+    "finalize_result"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/run-telemetry.schema.json"
+      ]
+    },
+    "session_id": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "observed_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "proposal_id": {
+      "type": "string"
+    },
+    "source_candidate_id": {
+      "type": "string"
+    },
+    "proposal_snapshot": {
+      "type": "string"
+    },
+    "scope_freeze": {
+      "type": "string"
+    },
+    "routing_reports": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "executor_reports": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "primary_targets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "supporting_targets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "test_files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "phase_durations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0
+      }
+    },
+    "workspace_preparation": {
+      "$ref": "#/$defs/workspace_preparation"
+    },
+    "failure_taxonomy": {
+      "type": "string"
+    },
+    "command_timeouts": {
+      "type": "object",
+      "properties": {
+        "mutation_command": {
+          "$ref": "#/$defs/timeout_result"
+        },
+        "repo_health": {
+          "$ref": "#/$defs/timeout_result"
+        }
+      },
+      "additionalProperties": false
+    },
+    "timeout_failure_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "behavior_delta": {
+      "type": "string"
+    },
+    "behavior_delta_digest": {
+      "type": "string"
+    },
+    "same_eval_reason": {
+      "type": "string"
+    },
+    "same_eval_reason_code": {
+      "type": "string",
+      "enum": [
+        "candidate_eval_improved",
+        "telemetry_discoverability_improved",
+        "behavior_delta_digest_added",
+        "same_eval_no_secondary_improvement",
+        "noop_mutation",
+        "insufficient_benchmark_resolution",
+        "unknown"
+      ]
+    },
+    "strict_secondary_improvement_present": {
+      "type": "boolean"
+    },
+    "secondary_improvement_axes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "apply_mode": {
+      "type": "string",
+      "enum": [
+        "canary_only",
+        "live"
+      ]
+    },
+    "apply_status": {
+      "type": "string",
+      "enum": [
+        "not_applicable",
+        "canary_ready",
+        "live_applied"
+      ]
+    },
+    "live_applied": {
+      "type": "boolean"
+    },
+    "shadow_apply_report": {
+      "type": "string"
+    },
+    "rollback_rehearsal_report": {
+      "type": "string"
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "",
+        "PROMOTE",
+        "HOLD",
+        "DISCARD",
+        "SKIPPED"
+      ]
+    },
+    "decision_record": {
+      "$ref": "#/$defs/decision_record"
+    },
+    "finalized": {
+      "type": "boolean"
+    },
+    "finalize_result": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "workspace_preparation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "baseline_file_count",
+        "copied_file_count",
+        "phase_durations"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "full_copy",
+            "sparse_manifest"
+          ]
+        },
+        "diff_model": {
+          "type": "string",
+          "enum": [
+            "full_workspace",
+            "copied_universe"
+          ]
+        },
+        "baseline_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "copied_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "diff_universe_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "copy_entry_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "phase_durations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "timeout_result": {
+      "type": "object",
+      "required": [
+        "timed_out",
+        "timeout_seconds",
+        "termination_reason",
+        "launch_succeeded",
+        "signal_sent",
+        "final_state_observed",
+        "stdout_received",
+        "stderr_received"
+      ],
+      "properties": {
+        "timed_out": {
+          "type": "boolean"
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "termination_reason": {
+          "type": "string"
+        },
+        "launch_succeeded": {
+          "type": "boolean"
+        },
+        "signal_sent": {
+          "type": "string"
+        },
+        "final_state_observed": {
+          "type": "string"
+        },
+        "stdout_received": {
+          "type": "boolean"
+        },
+        "stderr_received": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "decision_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision_id",
+        "subject_id",
+        "subject_kind",
+        "decision",
+        "decision_stage",
+        "is_terminal",
+        "policy_version",
+        "source_rule",
+        "source_pass",
+        "actor",
+        "reason_code",
+        "reason_detail",
+        "evidence_refs",
+        "decided_at",
+        "effective_at",
+        "supersedes",
+        "reducer_key",
+        "precedence_key",
+        "dedupe_key",
+        "finalizable",
+        "finalize_blockers",
+        "ledger_event_type",
+        "ledger_partition_key"
+      ],
+      "properties": {
+        "decision_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subject_id": {
+          "type": "string"
+        },
+        "subject_kind": {
+          "type": "string"
+        },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "PROMOTE",
+            "HOLD",
+            "DISCARD"
+          ]
+        },
+        "decision_stage": {
+          "type": "string",
+          "enum": [
+            "promotion_gate"
+          ]
+        },
+        "is_terminal": {
+          "type": "boolean"
+        },
+        "policy_version": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_rule": {
+          "type": "string"
+        },
+        "source_pass": {
+          "type": "string"
+        },
+        "actor": {
+          "type": "string"
+        },
+        "reason_code": {
+          "type": "string"
+        },
+        "reason_detail": {
+          "type": "string"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "decided_at": {
+          "type": "string"
+        },
+        "effective_at": {
+          "type": "string"
+        },
+        "supersedes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reducer_key": {
+          "type": "string"
+        },
+        "precedence_key": {
+          "type": "string"
+        },
+        "dedupe_key": {
+          "type": "string"
+        },
+        "finalizable": {
+          "type": "boolean"
+        },
+        "finalize_blockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ledger_event_type": {
+          "type": "string"
+        },
+        "ledger_partition_key": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

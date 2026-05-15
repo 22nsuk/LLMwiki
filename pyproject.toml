@@ -1,0 +1,126 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-wiki-vnext"
+version = "0.1.0"
+description = "Persistent LLM wiki maintainer runtime and ops package."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+dependencies = [
+  "PyYAML>=6.0,<7",
+  "jsonschema>=4.23,<5",
+]
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.3,<2",
+  "pytest>=8.3,<9",
+  "pytest-xdist>=3.6,<4",
+  "ruff>=0.15,<1",
+  "mypy>=1.20,<2",
+  "types-PyYAML>=6.0,<7",
+]
+
+[project.scripts]
+llm-wiki-auto-improve-readiness = "ops.scripts.mechanism.auto_improve_readiness:main"
+llm-wiki-auto-improve-loop = "ops.scripts.mechanism.auto_improve_loop:main"
+llm-wiki-archive-execution-manifest = "ops.scripts.core.archive_execution_manifest:main"
+llm-wiki-artifact-relocation-audit = "ops.scripts.core.artifact_relocation_audit:main"
+llm-wiki-backfill-archived-run-artifacts = "ops.scripts.core.backfill_archived_run_artifacts:main"
+llm-wiki-backfill-historical-bootstrap-reports = "ops.scripts.core.backfill_historical_bootstrap_reports:main"
+llm-wiki-bootstrap-preflight = "ops.scripts.core.bootstrap_preflight:main"
+llm-wiki-cyclonedx-sbom = "ops.scripts.supply_chain.cyclonedx_sbom:main"
+llm-wiki-executor = "ops.scripts.core.executor:main"
+llm-wiki-export-public-repo = "ops.scripts.public.export_public_repo:main"
+llm-wiki-external-report-action-matrix = "ops.scripts.release.external_report_action_matrix:main"
+llm-wiki-finalize-run = "ops.scripts.mechanism.finalize_run:main"
+llm-wiki-function-budget-refactor-proposals = "ops.scripts.eval.function_budget_refactor_proposals:main"
+llm-wiki-generated-artifact-index = "ops.scripts.core.generated_artifact_index:main"
+llm-wiki-improvement-observations = "ops.scripts.mechanism.improvement_observations:main"
+llm-wiki-in-toto-statement = "ops.scripts.supply_chain.in_toto_statement:main"
+llm-wiki-make-target-inventory = "ops.scripts.core.make_target_inventory:main"
+llm-wiki-manual-mutate-defect-registry = "ops.scripts.core.manual_mutate_defect_registry:main"
+llm-wiki-mechanism-assess = "ops.scripts.mechanism.mechanism_assess:main"
+llm-wiki-mechanism-review = "ops.scripts.mechanism.mechanism_review:main"
+llm-wiki-mutation-proposal = "ops.scripts.mechanism.mutation_proposal:main"
+llm-wiki-openvex-draft = "ops.scripts.supply_chain.openvex_draft:main"
+llm-wiki-outcome-metrics = "ops.scripts.mechanism.outcome_metrics:main"
+llm-wiki-outcome-provenance-gate-policy = "ops.scripts.release.outcome_provenance_gate_policy:main"
+llm-wiki-planning-gate-validate = "ops.scripts.mechanism.planning_gate_validate:main"
+llm-wiki-promotion-gate = "ops.scripts.mechanism.promotion_gate:main"
+llm-wiki-public-check-summary = "ops.scripts.public.public_check_summary:main"
+llm-wiki-raw-intake-promotion = "ops.scripts.registry.raw_intake_promotion:main"
+llm-wiki-raw-intake-route-proposal = "ops.scripts.registry.raw_intake_route_proposal:main"
+llm-wiki-raw-intake-source-quality = "ops.scripts.registry.raw_intake_source_quality:main"
+llm-wiki-raw-markdown-normalize = "ops.scripts.registry.raw_markdown_normalize:main"
+llm-wiki-raw-registry-cross-environment-matrix = "ops.scripts.registry.raw_registry_cross_environment_matrix:main"
+llm-wiki-raw-registry-export = "ops.scripts.registry.raw_registry_export:main"
+llm-wiki-raw-registry-preflight = "ops.scripts.registry.raw_registry_preflight:main"
+llm-wiki-release-clean-lane-evidence-review = "ops.scripts.release.release_clean_lane_evidence_review:main"
+llm-wiki-release-evidence-dashboard = "ops.scripts.release.release_evidence_dashboard:main"
+llm-wiki-release-lane-summary = "ops.scripts.release.release_lane_summary:main"
+llm-wiki-release-risk-taxonomy-matrix = "ops.scripts.release.release_risk_taxonomy_matrix:main"
+llm-wiki-release-smoke = "ops.scripts.release.release_smoke:main"
+llm-wiki-release-workflow-order-guard = "ops.scripts.release.release_workflow_order_guard:main"
+llm-wiki-review-archive = "ops.scripts.release.review_archive:main"
+llm-wiki-run-mechanism-experiment = "ops.scripts.mechanism.run_mechanism_experiment:main"
+llm-wiki-sanitize-run-artifacts = "ops.scripts.core.sanitize_run_artifacts:main"
+llm-wiki-sbom-export-mapping = "ops.scripts.supply_chain.sbom_export_mapping:main"
+llm-wiki-security-advisories = "ops.scripts.supply_chain.security_advisories:main"
+llm-wiki-sigstore-bundle = "ops.scripts.supply_chain.sigstore_bundle:main"
+llm-wiki-spdx-sbom = "ops.scripts.supply_chain.spdx_sbom:main"
+llm-wiki-sbom-readiness-gate = "ops.scripts.supply_chain.sbom_readiness_gate_runtime:main"
+llm-wiki-select-subagent-rung = "ops.scripts.core.select_subagent_rung:main"
+llm-wiki-set-mechanism-run-history = "ops.scripts.mechanism.set_mechanism_run_history:main"
+llm-wiki-source-slug-curation = "ops.scripts.core.source_slug_curation:main"
+llm-wiki-supply-chain-artifact-model = "ops.scripts.supply_chain.supply_chain_artifact_model:main"
+llm-wiki-supply-chain-artifacts = "ops.scripts.supply_chain.supply_chain_artifacts:main"
+llm-wiki-supply-chain-benchmark = "ops.scripts.supply_chain.supply_chain_benchmark:main"
+llm-wiki-supply-chain-provenance = "ops.scripts.supply_chain.supply_chain_provenance:main"
+llm-wiki-structural-complexity-budget = "ops.scripts.eval.structural_complexity_budget:main"
+llm-wiki-sync-public-surface-gitignore = "ops.scripts.public.sync_public_surface_gitignore:main"
+llm-wiki-test-execution-summary = "ops.scripts.test.test_execution_summary:main"
+llm-wiki-warning-budget = "ops.scripts.eval.warning_budget:main"
+llm-wiki-workflow-dependency-planner = "ops.scripts.core.workflow_dependency_planner:main"
+llm-wiki-wiki-eval = "ops.scripts.eval.wiki_eval:main"
+llm-wiki-wiki-lint = "ops.scripts.eval.wiki_lint:main"
+llm-wiki-wiki-lint-review-classification = "ops.scripts.eval.wiki_lint_review_classification:main"
+llm-wiki-wiki-manifest = "ops.scripts.eval.wiki_manifest:main"
+llm-wiki-wiki-stage2-eval = "ops.scripts.eval.wiki_stage2_eval:main"
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.mypy]
+python_version = "3.12"
+follow_imports = "skip"
+ignore_missing_imports = true
+show_error_codes = true
+warn_unused_ignores = true
+
+[tool.setuptools.packages.find]
+include = ["ops*"]
+
+[tool.setuptools.package-data]
+ops = [
+  "script-module-surfaces.json",
+  "script-output-surfaces.json",
+  "evals/*.md",
+  "mypy-allowlist.txt",
+  "policies/*.json",
+  "policies/*.yaml",
+  "schemas/*.json",
+  "templates/*.json",
+  "templates/*.md",
+  "templates/*.yaml",
+  "templates/mechanism-run/*.json",
+  "templates/mechanism-run/*.md",
+  "templates/mechanism-run/*.yaml",
+]

@@ -1,0 +1,61 @@
+{
+  "$schema": "ops/schemas/planning-validation.schema.json",
+  "run_id": "run-20260414-mechanism-planning-gate",
+  "status": "PASS",
+  "summary": "Mechanism run run-20260414-mechanism-planning-gate is finalized with decision PROMOTE; baseline/candidate artifacts, promotion report, and run-ledger are now aligned.",
+  "checks": [
+    {
+      "id": "mechanism_artifacts_complete",
+      "status": "PASS",
+      "detail": "baseline/candidate eval, lint, and mechanism assessment artifacts are present under the same run directory.",
+      "required_artifacts": [
+        "run-ledger.json",
+        "promotion-report.json",
+        "baseline-eval.json",
+        "candidate-eval.json",
+        "baseline-lint.json",
+        "candidate-lint.json",
+        "baseline-mechanism-assessment.json",
+        "candidate-mechanism-assessment.json"
+      ]
+    },
+    {
+      "id": "promotion_decision_finalized",
+      "status": "PASS",
+      "detail": "promotion gate decision is finalized as `PROMOTE` and persisted in `promotion-report.json`.",
+      "required_artifacts": [
+        "promotion-report.json",
+        "run-ledger.json"
+      ]
+    },
+    {
+      "id": "system_log_finalization",
+      "status": "PASS",
+      "detail": "append-only log entry was recorded at `system/system-log.md#2026-04-14-0121-improve-promote-first-mechanism-run-for-planning_gate_validate-hardening`.",
+      "required_artifacts": [
+        "promotion-report.json",
+        "run-ledger.json"
+      ]
+    }
+  ],
+  "open_questions": [],
+  "signoff": {
+    "required": true,
+    "status": "approved",
+    "by": "human",
+    "ts": "2026-04-13T16:17:16Z"
+  },
+  "next_action": "Use this finalized run as future history input for mechanism_review and mutation_proposal.",
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-04-13T16:21:30Z\", \"generated_at_source\": \"run-ledger.events[7].ts\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-04-28T16:30:35Z\", \"source_artifact\": \"runs/run-20260414-mechanism-planning-gate/planning-validation.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/planning-validation.schema.json\", \"artifact_kind\": \"planning_validation\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-04-28T16:30:35Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-04-13T16:21:30Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"addbe3d41088656769c633f6a92ea3540a93c200f7335e5d34d8afa7db951fd7\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"09869c6f20c2e832ad77c27242faf2f12219a8a79448a90dc0b9bebfd77bc764\", \"policy\": \"7d45acc617992bca127ce0b7defb6715caac5b774dcc489acf984502cea3a402\", \"schema\": \"1fac4d1bf35458a32e3ae173a3ec94d432fd28ad499aa83276cdf1cc78ee82c9\", \"target_rel_path\": \"9dc4e9b9c7c2ee172fffa7fae237f753db4f15957e4eaf51e2b690eee934f0fd\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/run-20260414-mechanism-planning-gate/planning-validation.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"681b3ba2120e13085c8a88f804d0800aca92518eca575b48555a14983433005a\"}"
+      }
+    ]
+  }
+}

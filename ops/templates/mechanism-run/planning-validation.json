@@ -1,0 +1,61 @@
+{
+  "$schema": "ops/schemas/planning-validation.schema.json",
+  "run_id": "run-YYYYMMDD-mechanism-slug",
+  "status": "WARN",
+  "summary": "Replace with mechanism-run validation outcome before mutation starts.",
+  "checks": [
+    {
+      "id": "single_mechanism_scope",
+      "status": "WARN",
+      "detail": "Confirm exactly one primary mechanism target is in scope and supporting targets stay minimal.",
+      "required_artifacts": [
+        "seed.yaml"
+      ]
+    },
+    {
+      "id": "baseline_artifacts_planned",
+      "status": "FAIL",
+      "detail": "Declare baseline eval, lint, and mechanism assessment artifact paths in the run plan.",
+      "required_artifacts": [
+        "seed.yaml",
+        "run-ledger.json"
+      ]
+    },
+    {
+      "id": "candidate_artifacts_planned",
+      "status": "FAIL",
+      "detail": "Declare candidate eval, lint, mechanism assessment, changed-files manifest, behavior-delta, and promotion report paths before mutation.",
+      "required_artifacts": [
+        "run-ledger.json",
+        "promotion-report.json",
+        "changed-files-manifest.json",
+        "behavior-delta.json"
+      ]
+    },
+    {
+      "id": "target_tests_declared",
+      "status": "WARN",
+      "detail": "Freeze the focused test files or test command that will justify non-regression claims.",
+      "required_artifacts": [
+        "seed.yaml"
+      ]
+    },
+    {
+      "id": "signoff_or_log_plan_present",
+      "status": "FAIL",
+      "detail": "Record how signoff and append-only system-log recording will happen after promotion evaluation.",
+      "required_artifacts": [
+        "run-ledger.json",
+        "promotion-report.json"
+      ]
+    }
+  ],
+  "open_questions": [],
+  "signoff": {
+    "required": true,
+    "status": "pending",
+    "by": "",
+    "ts": ""
+  },
+  "next_action": "Freeze scope, declare focused test files, and map baseline/candidate artifact paths before mutation."
+}

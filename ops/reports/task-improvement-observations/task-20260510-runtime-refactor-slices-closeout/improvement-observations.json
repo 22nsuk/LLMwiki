@@ -1,0 +1,42 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-13T02:52:57Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "3e6564b2a220f683a70af5cfbb467b33c0853b36ffa88f0c5f6c82700f0ab194",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "51f63783db3e14599046e6931cb0f53645bc81de4a6cdc694a28e82c4f99f890",
+    "record_id": "d594d490d616cd2d0c586366189e18199a416b871ed7d912fd21b42c35c519a5",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "988034f6243eb3de984380931a53d566d4656e293e7a512fc3e4b8ce5d246a24"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-13T02:52:57Z"
+  },
+  "record_id": "task-20260510-runtime-refactor-slices-closeout",
+  "captured_at": "2026-05-13T02:52:57Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Closeout observations for the 2026-05-10 runtime refactor slices, integrated review plan, function-budget candidate resolution, release dry-run artifactization, and sealed authority preflight promotion gating.",
+  "observations": [
+    {
+      "observation_id": "release_authority_remains_operator_blocked",
+      "surface": "ops/reports/auto-improve-readiness.json, ops/reports/release-closeout-summary.json, ops/reports/release-closeout-batch-manifest.json, tmp/release-closeout-post-check-finalizer.json",
+      "problem": "Readiness now consumes release closeout summary, batch manifest, finality, and post-check finalizer evidence and blocks promotion correctly, but the current canonical evidence still has machine_release_allowed=false, release closeout batch status=fail, and post-check finalizer status=attention. Automated on 2026-05-11: batch manifest now emits `release_authority_vocabulary.blocker_reason_ids`, sealed rehearsal check emits `failure_details[].vocabulary_reason_id`, and readiness release-gate blockers preserve the same reason ids. Follow-up automated on 2026-05-11: sealed dry-run now emits `preflight_status=binding_pass_authority_blocked` when ZIP/distribution binding passes but release authority is blocked; `make release-authority-sealed-preflight` treats that as a successful typed preflight, CI uploads it as `release-authority-blocked-preflight-*`, and readiness diagnostics link `release_authority_preflight_summary` to the sealed rehearsal failure details. The current blocker ids are `machine_release_not_allowed`, `release_authority_not_clean_pass`, `sealed_release_not_clean_pass`, and `distribution_package_not_materialized`.",
+      "why_it_matters": "Auto-improve promotion must stay blocked until release authority and sealed distribution evidence are clean; otherwise a runnable mutation queue could bypass release closeout authority.",
+      "automation_candidate": "Implemented in auto_improve_readiness_runtime release-authority preflight promotion blockers and the learning-readiness vocabulary schema.",
+      "suggested_followup": "Closed as a runtime gate: auto-improve readiness now keeps can_execute_trial true but forces can_promote_result=false when sealed release-authority preflight evidence is missing or not clean. The blocker id is promotion_blocked_by_release_authority_preflight_failure with signal release_authority_preflight_not_clean. Promotion still requires make release-authority-sealed-preflight and make release-evidence-closeout-sealed-dry-run-check or the sealed release lane before rerunning readiness.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260510-runtime-refactor-slices-closeout"
+}

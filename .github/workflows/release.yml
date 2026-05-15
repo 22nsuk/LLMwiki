@@ -1,0 +1,222 @@
+name: Release
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      upload_post_check_finalizer_artifact:
+        description: Upload post-check finalizer recommended target diagnostics
+        required: false
+        type: boolean
+        default: true
+
+env:
+  REVIEW_ARCHIVE_PROFILE: clean
+
+jobs:
+  verify-clean-release:
+    name: verify clean release readiness
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+            pyproject.toml
+            uv.lock
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.10.9"
+
+      - name: Install dependencies from lock
+        run: |
+          python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
+          uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
+          python -m pip install --upgrade pip
+          python -m pip install -r tmp/locked-requirements.ci.txt
+
+      - name: Materialize verified source zip
+        run: make release-distribution-zip RELEASE_DISTRIBUTION_ZIP_OUT=build/release/live-source.zip
+
+      - name: Bind strict external report manifest
+        run: make external-report-reference-manifest-release-check EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH=build/release/live-source.zip
+
+      - name: Run provenance clean gate
+        run: make release-provenance-clean RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/live-source.zip RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/live-source.zip
+
+      - name: Materialize post-check finalizer diagnostics
+        if: always() && (github.event_name != 'workflow_dispatch' || inputs.upload_post_check_finalizer_artifact)
+        run: make release-closeout-post-check-finalizer-ci-artifact
+
+      - name: Upload post-check finalizer diagnostics
+        if: always() && (github.event_name != 'workflow_dispatch' || inputs.upload_post_check_finalizer_artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-check-finalizer-diagnostics
+          path: |
+            tmp/release-closeout-post-check-finalizer.json
+            tmp/release-closeout-post-check-finalizer-recommended-targets.txt
+            tmp/release-closeout-post-check-finalizer-plan.json
+          if-no-files-found: error
+
+      - name: Materialize post-seal release sidecar
+        run: make release-post-seal-attestation RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP=build/release/live-source.zip
+
+      - name: Materialize verified evidence bundle
+        run: make release-audit-pack RELEASE_AUDIT_PACK_OUT=tmp/release-evidence-bundle.zip
+
+      - name: Bind live release artifacts
+        run: |
+          python -m ops.scripts.release.release_live_artifact_attestation build \
+            --vault . \
+            --source-zip-path build/release/live-source.zip \
+            --evidence-bundle-path tmp/release-evidence-bundle.zip \
+            --out tmp/release-live-attestation.json
+
+      - name: Upload verified source zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-source-zip
+          path: |
+            build/release/live-source.zip
+          if-no-files-found: error
+
+      - name: Upload verified evidence bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-evidence-bundle
+          path: |
+            tmp/release-evidence-bundle.zip
+            ops/reports/release-closeout-summary.json
+            ops/reports/release-closeout-batch-manifest.json
+            ops/reports/release-evidence-closeout-self-check.json
+            ops/reports/release-closeout-finality-attestation.json
+            ops/operator/operator-release-summary.json
+            build/release/release-post-seal-attestation.json
+          if-no-files-found: error
+
+      - name: Upload verified release attestation
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-release-attestation
+          path: tmp/release-live-attestation.json
+          if-no-files-found: error
+
+  publish:
+    name: publish / py3.12
+    needs: verify-clean-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+            pyproject.toml
+            uv.lock
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.10.9"
+
+      - name: Install dependencies from lock
+        run: |
+          python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
+          uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
+          python -m pip install --upgrade pip
+          python -m pip install -r tmp/locked-requirements.ci.txt
+
+      - name: Download verified source zip
+        uses: actions/download-artifact@v4
+        with:
+          name: verified-source-zip
+          path: tmp/live-release/source
+
+      - name: Download verified evidence bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: verified-evidence-bundle
+          path: tmp/live-release/evidence
+
+      - name: Download verified release attestation
+        uses: actions/download-artifact@v4
+        with:
+          name: verified-release-attestation
+          path: tmp/live-release/attestation
+
+      - name: Verify live release authority
+        run: |
+          SOURCE_ZIP=$(find tmp/live-release/source -type f -name 'live-source.zip' -print -quit)
+          EVIDENCE_BUNDLE=$(find tmp/live-release/evidence -type f -name 'release-evidence-bundle.zip' -print -quit)
+          CLOSEOUT_SUMMARY=$(find tmp/live-release/evidence -type f -path '*/ops/reports/release-closeout-summary.json' -print -quit)
+          BATCH_MANIFEST=$(find tmp/live-release/evidence -type f -path '*/ops/reports/release-closeout-batch-manifest.json' -print -quit)
+          SELF_CHECK=$(find tmp/live-release/evidence -type f -path '*/ops/reports/release-evidence-closeout-self-check.json' -print -quit)
+          ATTESTATION=$(find tmp/live-release/attestation -type f -name 'release-live-attestation.json' -print -quit)
+          python -m ops.scripts.release.release_live_artifact_attestation verify \
+            --vault . \
+            --attestation "$ATTESTATION" \
+            --source-zip-path "$SOURCE_ZIP" \
+            --evidence-bundle-path "$EVIDENCE_BUNDLE" \
+            --closeout-summary-path "$CLOSEOUT_SUMMARY" \
+            --batch-manifest-path "$BATCH_MANIFEST" \
+            --self-check-path "$SELF_CHECK"
+
+      - name: Build distributions
+        run: python -m build
+
+      - name: Generate supply-chain artifacts
+        run: |
+          make openvex-draft-cached
+          make supply-chain-benchmark
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            dist/*
+            ops/reports/security-advisories.json
+            ops/reports/supply-chain-provenance.json
+            ops/reports/supply-chain-gate-report.json
+            ops/reports/sbom-export-mapping.json
+            ops/reports/sbom-readiness-gate-report.json
+            ops/reports/supply-chain-artifact-model.json
+            ops/reports/cyclonedx-bom.json
+            ops/reports/spdx-sbom.json
+            ops/reports/openvex-draft.json
+            ops/reports/in-toto-statement.json
+            ops/reports/sigstore-bundle-verification.json
+            ops/reports/supply-chain-benchmark.json
+          if-no-files-found: error
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/

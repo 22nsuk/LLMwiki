@@ -1,0 +1,135 @@
+{
+  "$schema": "ops/schemas/mechanism-assessment-report.schema.json",
+  "vault": ".",
+  "generated_at": "2026-05-07T03:07:17Z",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "primary_targets": [
+    "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+  ],
+  "supporting_targets": [
+    "ops/schemas/run-telemetry.schema.json"
+  ],
+  "test_files": [
+    "tests/test_auto_improve_iteration_runtime.py"
+  ],
+  "structural_metrics": {
+    "nonempty_line_count_total": 393,
+    "python_function_count": 12,
+    "python_branch_node_count": 42,
+    "markdown_heading_count": 0,
+    "test_file_count": 1,
+    "test_case_count": 8
+  },
+  "total_structural_metrics": {
+    "nonempty_line_count_total": 795,
+    "python_function_count": 12,
+    "python_branch_node_count": 42,
+    "markdown_heading_count": 0,
+    "test_file_count": 1,
+    "test_case_count": 8
+  },
+  "diagnostics": {
+    "unreadable_targets": [],
+    "python_parse_failures": []
+  },
+  "complexity_profile": {
+    "dimensions": {
+      "change_surface": 4,
+      "dependency_impact": 4,
+      "verification_cost": 5,
+      "artifact_heterogeneity": 1,
+      "environment_risk": 2
+    },
+    "complexity_score": 65,
+    "risk_flags": [
+      "schema_change"
+    ],
+    "risk_flag_evidence": [
+      {
+        "flag": "schema_change",
+        "path": "ops/schemas/run-telemetry.schema.json",
+        "reason": "schema_path"
+      },
+      {
+        "flag": "schema_change",
+        "path": "ops/schemas/run-telemetry.schema.json",
+        "reason": "schema_content_marker"
+      }
+    ],
+    "target_profiles": [
+      {
+        "path": "ops/scripts/auto_improve_iteration_persistence_runtime.py",
+        "kind": "python",
+        "nonempty_line_count": 393,
+        "python_function_count": 12,
+        "python_branch_node_count": 42,
+        "markdown_heading_count": 0,
+        "python_semantic_complexity_points": 537,
+        "whole_file_volume": 633,
+        "coarse_target": false
+      },
+      {
+        "path": "ops/schemas/run-telemetry.schema.json",
+        "kind": "json",
+        "nonempty_line_count": 402,
+        "python_function_count": 0,
+        "python_branch_node_count": 0,
+        "markdown_heading_count": 0,
+        "python_semantic_complexity_points": 0,
+        "whole_file_volume": 402,
+        "coarse_target": true
+      }
+    ],
+    "dimension_evidence": {
+      "change_surface": {
+        "target_count": 2,
+        "target_count_score": 1,
+        "whole_file_volume": 981,
+        "whole_file_volume_score": 5,
+        "per_target_capped_volume": 660,
+        "per_target_capped_volume_score": 4,
+        "semantic_volume": 311,
+        "semantic_volume_score": 3,
+        "large_file_target_count": 1,
+        "coarse_target_bias_mitigated": true,
+        "selected_score": 4
+      },
+      "verification_cost": {
+        "target_count": 2,
+        "test_file_count": 1,
+        "test_case_count": 8,
+        "verification_scope": "dense_single_file",
+        "reasons": [
+          "dense_single_file",
+          "contract_surface",
+          "high_risk_flag_requires_full_validation"
+        ],
+        "selected_score": 5
+      }
+    },
+    "primary_targets": [
+      "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+    ],
+    "supporting_targets": [
+      "ops/schemas/run-telemetry.schema.json"
+    ],
+    "test_files": [
+      "tests/test_auto_improve_iteration_runtime.py"
+    ]
+  },
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-05-07T03:07:17Z\", \"generated_at_source\": \"payload.generated_at\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-05-07T17:20:47Z\", \"source_artifact\": \"runs/run-20260507-auto-improve-iteration-persistence-discard-path/candidate-mechanism-assessment.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/mechanism-assessment-report.schema.json\", \"artifact_kind\": \"mechanism_assessment_report\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-05-07T17:20:47Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-07T03:07:17Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"304ca5a8256a97bdb43d2ecdd8c5b5d2ebb98ee535d42af96c18b4cb608f4bfe\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"fc0340f868a19c5980eebfb4b9eb41620ff6571ed9de83a030bf0a59b3d20be6\", \"policy\": \"0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107\", \"schema\": \"c8b912e02280765e964272bcc4bb19040f15f063ec063f50e63bbda10a475d8f\", \"target_rel_path\": \"1d9ec3378da0a13ad36a295be3c6733b4a62af5ba7e9526b967b29b7e059954e\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/run-20260507-auto-improve-iteration-persistence-discard-path/candidate-mechanism-assessment.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"a29a1f5a6ec3e4ac4ac8d79cc69437a5f5e5b6bc55285a780721c53e67d5149d\"}"
+      }
+    ]
+  }
+}

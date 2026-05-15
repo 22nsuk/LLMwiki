@@ -1,0 +1,32 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "run_improvement_observations",
+  "generated_at": "2026-05-07T02:38:31Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "020399c9d2ef990917394771d8d148cc005c6c68725d730863edae8834a92fe7",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "record_id": "9b3fef1ba08c1dd8095000d05acf384ff320eef2d15233f37730d1ba28e2ad2e",
+    "scope": "a1e054261d934e33cdbff51ad1165d00d55fd761751781183a57862b802b4271",
+    "summary": "a4129f2d040df360694b4f853673442c7f34e8ab20ea93dba26322fb1b75a297"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:38:31Z"
+  },
+  "record_id": "run-20260422-auto-improve-timeout-telemetry-fallback",
+  "captured_at": "2026-04-22T12:46:39Z",
+  "scope": "system_mechanism_run",
+  "summary": "Record reusable automation or repo hygiene follow-ups discovered while executing mechanism run run-20260422-auto-improve-timeout-telemetry-fallback.",
+  "observations": [],
+  "run_id": "run-20260422-auto-improve-timeout-telemetry-fallback"
+}

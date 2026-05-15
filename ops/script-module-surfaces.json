@@ -1,0 +1,288 @@
+{
+  "$schema": "ops/schemas/script-module-surfaces.schema.json",
+  "version": 1,
+  "description": "Contract for ops/scripts module roles. Direct-script entrypoints are sourced from ops/script-output-surfaces.json (direct_fallback_eligible=true with direct script fallback marker); stable import surfaces listed here must keep __all__ synchronized with exports.",
+  "stable_import_surfaces": [
+    {
+      "path": "ops/scripts/core/candidate_rule_runtime.py",
+      "role": "internal_facade",
+      "direct_script_entrypoint": false,
+      "exports": [
+        "CandidateRuleSpec",
+        "evaluate_candidate_rules"
+      ]
+    },
+    {
+      "path": "ops/scripts/mechanism/finalize_run.py",
+      "role": "cli_facade",
+      "direct_script_entrypoint": true,
+      "exports": [
+        "FinalizeRunArtifactDecodeError",
+        "FinalizeRunArtifactMissingError",
+        "FinalizeRunArtifactSchemaError",
+        "FinalizeRunError",
+        "FinalizeRunUsageError",
+        "FinalizeRunWriteError",
+        "finalize_run",
+        "main",
+        "parse_args"
+      ]
+    },
+    {
+      "path": "ops/scripts/mechanism/mechanism_review_candidate_runtime.py",
+      "role": "internal_facade",
+      "direct_script_entrypoint": false,
+      "exports": [
+        "JsonLoader",
+        "apply_historical_calibration",
+        "bootstrap_diagnostics",
+        "build_candidate_for_history",
+        "build_candidates",
+        "candidate_requirements_by_type",
+        "candidate_slug",
+        "candidate_template",
+        "clamp_priority",
+        "family_spec",
+        "format_threshold_ratio",
+        "historical_calibration_summary",
+        "non_trigger_detail",
+        "non_trigger_diagnostics",
+        "sorted_run_ids",
+        "trend_candidate_requirements_for_policy"
+      ]
+    },
+    {
+      "path": "ops/scripts/mechanism/mechanism_review_history_runtime.py",
+      "role": "internal_facade",
+      "direct_script_entrypoint": false,
+      "exports": [
+        "EVAL_REPORT_SCHEMA",
+        "MECHANISM_ASSESSMENT_SCHEMA",
+        "PROMOTION_REPORT_SCHEMA",
+        "MechanismRunSnapshot",
+        "group_snapshots_by_targets",
+        "load_artifact",
+        "load_mechanism_run_snapshots",
+        "load_optional_json",
+        "read_json"
+      ]
+    },
+    {
+      "path": "ops/scripts/mechanism/mechanism_review_runtime.py",
+      "role": "internal_facade",
+      "direct_script_entrypoint": false,
+      "exports": [
+        "EVAL_REPORT_SCHEMA",
+        "MECHANISM_ASSESSMENT_SCHEMA",
+        "MECHANISM_REVIEW_SCHEMA",
+        "PROMOTION_REPORT_SCHEMA",
+        "build_candidates",
+        "build_report"
+      ]
+    },
+    {
+      "path": "ops/scripts/mechanism/mechanism_review_session_calibration_runtime.py",
+      "role": "internal_facade",
+      "direct_script_entrypoint": false,
+      "exports": [
+        "JsonLoader",
+        "accumulate_session_calibration_diagnostics",
+        "any_positive_counter_value",
+        "apply_session_calibration",
+        "build_session_calibration_diagnostics",
+        "counter_has_positive_value",
+        "empty_session_calibration_diagnostics_entry",
+        "session_calibration_summary",
+        "session_report_for_run"
+      ]
+    },
+    {
+      "path": "ops/scripts/mechanism/mechanism_run_scaffold_runtime.py",
+      "role": "compatibility_facade",
+      "direct_script_entrypoint": false,
+      "exports": [
+        "DEFAULT_MUTATION_PROPOSAL_REPORT",
+        "PLANNING_VALIDATION_SCHEMA",
+        "PROMOTION_REPORT_SCHEMA",
+        "PROPOSAL_SNAPSHOT_SCHEMA",
+        "RUN_LEDGER_SCHEMA",
+        "RUNTIME_OWNED_STARTER_FILES",
+        "SEED_SCHEMA",
+        "SHELL_CONTROL_TOKENS",
+        "timestamp",
+        "_command_argv",
+        "_default_check_command",
+        "_load_mutation_proposal",
+        "_normalize_target_rel_paths",
+        "_prepare_execution_commands",
+        "_resolve_command_executable",
+        "_resolve_experiment_inputs"
+      ]
+    },
+    {
+      "path": "ops/scripts/core/observability_artifacts_runtime.py",
+      "role": "compatibility_facade",
+      "direct_script_entrypoint": false,
+      "exports": [
+        "build_outcome_metrics_report",
+        "build_promotion_decision_trends",
+        "build_routing_provenance_aggregate",
+        "build_run_artifact_fingerprint",
+        "write_outcome_metrics_report",
+        "write_promotion_decision_trends",
+        "write_routing_provenance_aggregate",
+        "write_run_artifact_fingerprint"
+      ]
+    },
+    {
+      "path": "ops/scripts/mechanism/planning_gate_validate.py",
+      "role": "cli_facade",
+      "direct_script_entrypoint": true,
+      "exports": [
+        "ARTIFACT_SCHEMAS",
+        "ArtifactLoadError",
+        "OPTIONAL_ARTIFACT_SCHEMAS",
+        "PlanningArtifactError",
+        "load_artifact",
+        "main",
+        "validate_artifact",
+        "validate_optional_artifact",
+        "validate_run_dir"
+      ]
+    },
+    {
+      "path": "ops/scripts/mechanism/promotion_gate.py",
+      "role": "cli_facade",
+      "direct_script_entrypoint": true,
+      "exports": [
+        "PromotionGateArtifactDecodeError",
+        "PromotionGateArtifactMissingError",
+        "PromotionGateArtifactSchemaError",
+        "build_log",
+        "build_signoff",
+        "main",
+        "mechanism_class_report",
+        "MechanismClassReportRequest",
+        "page_class_report"
+      ]
+    },
+    {
+      "path": "ops/scripts/registry/raw_intake_promotion_runtime.py",
+      "role": "compatibility_facade",
+      "direct_script_entrypoint": false,
+      "exports": [
+        "render_concept_page",
+        "render_family_pages",
+        "render_refresh_synthesis_page",
+        "render_synthesis_page",
+        "scaffold_profile_bundle",
+        "suggest_bridge_sources_for_family",
+        "validate_profile_bundle"
+      ]
+    },
+    {
+      "path": "ops/scripts/core/registry_alignment_passes_runtime.py",
+      "role": "compatibility_facade",
+      "direct_script_entrypoint": false,
+      "exports": [
+        "_registry_frontmatter_alignment_pass",
+        "_locator_raw_path_corpus_consistency_pass",
+        "registry_frontmatter_alignment_pass",
+        "locator_raw_path_corpus_consistency_pass"
+      ]
+    },
+    {
+      "path": "ops/scripts/core/registry_pass_support_runtime.py",
+      "role": "compatibility_facade",
+      "direct_script_entrypoint": false,
+      "exports": [
+        "registry_review_exempt_paths",
+        "registry_entry_target_report_path",
+        "registry_topic_family",
+        "registry_topic_subfamily",
+        "registry_entry_line_span",
+        "_parse_registry_iso_date",
+        "_backlog_entry_age_days"
+      ]
+    },
+    {
+      "path": "ops/scripts/core/registry_review_candidate_passes_runtime.py",
+      "role": "compatibility_facade",
+      "direct_script_entrypoint": false,
+      "exports": [
+        "_summary_shard_review_candidate_pass",
+        "_backlog_refactor_threshold_pass",
+        "summary_shard_review_candidate_pass",
+        "backlog_refactor_threshold_pass"
+      ]
+    },
+    {
+      "path": "ops/scripts/mechanism/run_mechanism_experiment_runtime.py",
+      "role": "compatibility_facade",
+      "direct_script_entrypoint": false,
+      "exports": [
+        "RunMechanismExperimentArtifactError",
+        "RunMechanismExperimentError",
+        "RunMechanismExperimentMutationError",
+        "RunMechanismExperimentPolicyError",
+        "RunMechanismExperimentRequest",
+        "RunMechanismExperimentUsageError",
+        "RunMechanismExperimentWriteError",
+        "_apply_or_discard_workspace_changes",
+        "_build_promotion_report",
+        "_capture_reports",
+        "_finalize_step",
+        "_repo_health_step",
+        "_resolve_experiment_inputs",
+        "_run_command",
+        "_snapshot_repo_file_digests",
+        "_write_changed_files_manifest",
+        "run_mechanism_experiment"
+      ]
+    },
+    {
+      "path": "ops/scripts/core/validation_check_types_runtime.py",
+      "role": "internal_facade",
+      "direct_script_entrypoint": false,
+      "exports": [
+        "PhaseCheckResult",
+        "ValidationCheckResult",
+        "validation_check",
+        "validation_check_from_mapping"
+      ]
+    },
+    {
+      "path": "ops/scripts/eval/wiki_lint_registry_runtime.py",
+      "role": "compatibility_facade",
+      "direct_script_entrypoint": false,
+      "exports": [
+        "RegistryLintEmitter",
+        "RegistryInventoryContext",
+        "RegistryLintPaths",
+        "_registry_lint_paths",
+        "_registry_inventory_context_pass",
+        "_registry_page_presence_pass",
+        "_registry_summary_consistency_pass",
+        "_shared_registry_inventory_diagnostics_pass",
+        "_raw_inventory_consistency_pass",
+        "_registry_source_target_page_naming_pass",
+        "registry_review_exempt_paths",
+        "registry_entry_target_report_path",
+        "registry_topic_family",
+        "registry_topic_subfamily",
+        "registry_entry_line_span",
+        "_parse_registry_iso_date",
+        "_backlog_entry_age_days",
+        "_summary_shard_review_candidate_pass",
+        "_backlog_refactor_threshold_pass",
+        "summary_shard_review_candidate_pass",
+        "backlog_refactor_threshold_pass",
+        "_registry_frontmatter_alignment_pass",
+        "_locator_raw_path_corpus_consistency_pass",
+        "registry_frontmatter_alignment_pass",
+        "locator_raw_path_corpus_consistency_pass",
+        "lint_registry_contract"
+      ]
+    }
+  ]
+}

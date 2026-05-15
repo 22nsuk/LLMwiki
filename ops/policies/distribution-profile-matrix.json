@@ -1,0 +1,92 @@
+{
+  "$schema": "ops/schemas/distribution-profile-matrix.schema.json",
+  "artifact_kind": "distribution_profile_matrix",
+  "schema_version": 1,
+  "profiles": [
+    {
+      "profile_id": "source_content_package",
+      "purpose": "Distributable source and corpus payload.",
+      "release_authority_role": "source_payload",
+      "included_surfaces": ["raw/", "wiki/", "system/", "ops/", "tests/", "tools/", "root_docs"],
+      "excluded_surfaces": ["runs/", "tmp/", "ops/reports/", "external-reports/", ".venv/", ".pytest_cache/", ".mypy_cache/", ".ruff_cache/", "__pycache__/"],
+      "generated_artifact_policy": {
+        "source_package": "exclude",
+        "evidence_bundle": "reference_only",
+        "attestation": "reference_only"
+      },
+      "tmp_policy": {
+        "tmp_recursive_allowed": false,
+        "allowed_tmp_prefixes": []
+      },
+      "attestation_role": "Must be bound to a release evidence bundle by source package digest and source manifest digest."
+    },
+    {
+      "profile_id": "release_evidence_bundle",
+      "purpose": "Out-of-band release, test, freshness, and learning evidence for a source package.",
+      "release_authority_role": "evidence_payload",
+      "included_surfaces": ["ops/reports/canonical", "external-reports/report-reference-manifest.json", "sanitized run telemetry"],
+      "excluded_surfaces": ["raw/", "wiki/", "system/", "tmp/", ".venv/", ".pytest_cache/", ".mypy_cache/", ".ruff_cache/", "__pycache__/"],
+      "generated_artifact_policy": {
+        "source_package": "reference_only",
+        "evidence_bundle": "include",
+        "attestation": "reference_only"
+      },
+      "tmp_policy": {
+        "tmp_recursive_allowed": false,
+        "allowed_tmp_prefixes": []
+      },
+      "attestation_role": "Provides the evidence digest that an attestation binds to the source package digest."
+    },
+    {
+      "profile_id": "public_code_mirror",
+      "purpose": "Public-safe code and ops mirror that is reproducible without the private corpus.",
+      "release_authority_role": "public_mirror",
+      "included_surfaces": ["ops/", "tests/", "tools/", ".codex/agents/", ".github/", "root_docs"],
+      "excluded_surfaces": ["raw/", "wiki/", "system/", "runs/", "external-reports/", "ops/reports/", "ops/manifest.json", "ops/raw-registry.json"],
+      "generated_artifact_policy": {
+        "source_package": "not_applicable",
+        "evidence_bundle": "exclude",
+        "attestation": "reference_only"
+      },
+      "tmp_policy": {
+        "tmp_recursive_allowed": false,
+        "allowed_tmp_prefixes": []
+      },
+      "attestation_role": "May reference public export policy evidence, but must not imply full-vault release evidence."
+    },
+    {
+      "profile_id": "review_full_snapshot",
+      "purpose": "Reviewer-oriented full snapshot that can include diagnostic context not suitable for release payloads.",
+      "release_authority_role": "review_only",
+      "included_surfaces": ["raw/", "wiki/", "system/", "ops/", "tests/", "tools/", "external-reports/", "selected tmp review diagnostics"],
+      "excluded_surfaces": [".venv/", ".pytest_cache/", ".mypy_cache/", ".ruff_cache/", "__pycache__/"],
+      "generated_artifact_policy": {
+        "source_package": "reference_only",
+        "evidence_bundle": "reference_only",
+        "attestation": "reference_only"
+      },
+      "tmp_policy": {
+        "tmp_recursive_allowed": false,
+        "allowed_tmp_prefixes": ["tmp/codex-plan-review/"]
+      },
+      "attestation_role": "Review snapshots are not release authority and must point to the sealed source/evidence pair when making release claims."
+    },
+    {
+      "profile_id": "local_workspace",
+      "purpose": "Mutable developer workspace state.",
+      "release_authority_role": "not_distributable",
+      "included_surfaces": ["all local surfaces"],
+      "excluded_surfaces": [],
+      "generated_artifact_policy": {
+        "source_package": "not_applicable",
+        "evidence_bundle": "not_applicable",
+        "attestation": "not_applicable"
+      },
+      "tmp_policy": {
+        "tmp_recursive_allowed": true,
+        "allowed_tmp_prefixes": ["tmp/"]
+      },
+      "attestation_role": "Must not be treated as a release archive profile."
+    }
+  ]
+}

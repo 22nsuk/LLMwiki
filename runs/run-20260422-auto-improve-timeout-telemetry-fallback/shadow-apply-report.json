@@ -1,0 +1,59 @@
+{
+  "$schema": "ops/schemas/shadow-apply-report.schema.json",
+  "mode": "shadow",
+  "status": "ready_for_live_apply",
+  "generated_at": "2026-04-22T12:55:31Z",
+  "source_manifest": {
+    "schema": "ops/schemas/changed-files-manifest.schema.json",
+    "run_id": "run-20260422-auto-improve-timeout-telemetry-fallback"
+  },
+  "guard": {
+    "allowed_apply_roots": [
+      "ops/",
+      "tests/",
+      "system/system-log.md"
+    ],
+    "changed_paths": [
+      "ops/scripts/auto_improve_iteration_persistence_runtime.py",
+      "tests/test_auto_improve_iteration_runtime.py"
+    ],
+    "invalid_paths": [],
+    "disallowed_paths": []
+  },
+  "summary": {
+    "total_changed_files": 2,
+    "added": 0,
+    "modified": 2,
+    "deleted": 0
+  },
+  "files": [
+    {
+      "path": "ops/scripts/auto_improve_iteration_persistence_runtime.py",
+      "change_type": "modified",
+      "live_exists": true,
+      "workspace_exists": true,
+      "would_write": true,
+      "would_delete": false
+    },
+    {
+      "path": "tests/test_auto_improve_iteration_runtime.py",
+      "change_type": "modified",
+      "live_exists": true,
+      "workspace_exists": true,
+      "would_write": true,
+      "would_delete": false
+    }
+  ],
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-04-22T12:55:31Z\", \"generated_at_source\": \"payload.generated_at\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-04-30T18:41:53Z\", \"source_artifact\": \"runs/run-20260422-auto-improve-timeout-telemetry-fallback/shadow-apply-report.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/shadow-apply-report.schema.json\", \"artifact_kind\": \"shadow_apply_report\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-04-30T18:41:53Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-04-22T12:55:31Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"05f8fd59cea694427222aa0bbceb87114f6780ffcb4759dd8a6038a87cc892e8\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"fc0340f868a19c5980eebfb4b9eb41620ff6571ed9de83a030bf0a59b3d20be6\", \"policy\": \"7d45acc617992bca127ce0b7defb6715caac5b774dcc489acf984502cea3a402\", \"schema\": \"03d6cfbd3c05552cf04b4ce334fcf36d0c72b2e19458e3f5672a1d9beefd7ef7\", \"target_rel_path\": \"0a176a5326e631dd1c8cd04c46b441917a81230575f9ea4953f5c0e87a2e366d\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/run-20260422-auto-improve-timeout-telemetry-fallback/shadow-apply-report.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"18815cda100eadecd14e6e2e7d1fbeb0b92bc1c3fc1633aec2fbe1e5131d2081\"}"
+      }
+    ]
+  }
+}

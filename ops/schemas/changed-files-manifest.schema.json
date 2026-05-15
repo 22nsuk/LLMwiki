@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Changed Files Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "run_id",
+    "generated_at",
+    "declared_targets",
+    "summary",
+    "files"
+  ],
+  "$defs": {
+    "metadata_property": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "properties"
+      ],
+      "properties": {
+        "properties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metadata_property"
+          }
+        }
+      }
+    }
+  },
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/changed-files-manifest.schema.json"
+      ]
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "declared_targets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_targets",
+        "supporting_targets",
+        "test_files"
+      ],
+      "properties": {
+        "primary_targets": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "supporting_targets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "test_files": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total_changed_files",
+        "added",
+        "modified",
+        "deleted"
+      ],
+      "properties": {
+        "total_changed_files": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "modified": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deleted": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "diff_universe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model",
+        "baseline_file_count",
+        "candidate_file_count"
+      ],
+      "properties": {
+        "model": {
+          "type": "string",
+          "enum": [
+            "full_workspace",
+            "copied_universe"
+          ]
+        },
+        "baseline_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "candidate_file_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "change_type"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "change_type": {
+            "type": "string",
+            "enum": [
+              "added",
+              "modified",
+              "deleted"
+            ]
+          }
+        }
+      }
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    }
+  }
+}

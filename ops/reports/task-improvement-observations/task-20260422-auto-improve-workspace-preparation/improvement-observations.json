@@ -1,0 +1,51 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-07T02:38:27Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "020399c9d2ef990917394771d8d148cc005c6c68725d730863edae8834a92fe7",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "53fcfbeef533e75f3ab95fe7a407e6a0d782bd5d1f79191613febcd33a7c2da5",
+    "record_id": "dd8fd4cea09f374fe8ef08237e79add1f60500358f8da60478220ffc66d33af9",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "6f79d1fe9fc8c2e9c568ab240fe3fb5eed1d3b9bad18be35ed8fc4ec94156d7b"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:38:27Z"
+  },
+  "record_id": "task-20260422-auto-improve-workspace-preparation",
+  "captured_at": "2026-04-22T08:35:58Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Track remaining follow-up work after stabilizing auto-improve telemetry preservation, clarifying workspace copy-count semantics, and reserving workspace_preparation policy mode.",
+  "observations": [
+    {
+      "observation_id": "sparse_workspace_preparation_runtime",
+      "surface": "ops/scripts/mechanism_run_workspace_runtime.py, ops/scripts/run_mechanism_experiment_runtime.py, ops/scripts/policy_validation_runtime.py, ops/policies/wiki-maintainer-policy.yaml, ops/schemas/wiki-maintainer-policy.schema.json, ops/schemas/changed-files-manifest.schema.json, ops/schemas/run-telemetry.schema.json",
+      "problem": "The sparse_manifest workspace mode previously had only a reserved policy/schema field and no deterministic runtime copy or manifest-diff universe.",
+      "why_it_matters": "A sparse workspace is only safe if omitted baseline files cannot appear as false deletions and if existing shadow/rehearsal/live apply guards remain the authority for writes.",
+      "automation_candidate": "Implemented a materialized copied-universe sparse workspace planner that derives copy entries from allowed_apply_roots, primary/supporting/test targets, and declared dependencies, then records the diff universe in changed-files manifest and run telemetry.",
+      "suggested_followup": "Sparse mode is now automated with copied-universe diff semantics. Future optimization should tune declared read dependencies for full-vault candidate capture cost, but should keep manifest diff scoped to the copied universe and apply guards bound to allowed_apply_roots.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "telemetry_preservation_contract",
+      "surface": "ops/scripts/auto_improve_iteration_persistence_runtime.py, ops/schemas/run-telemetry.schema.json",
+      "problem": "Auto-improve iteration telemetry now preserves the current workspace/apply fields, but preservation is still maintained by an explicit allowlist rather than a schema-derived or contract-tested merge policy for future telemetry fields.",
+      "why_it_matters": "Future run-telemetry additions can be silently dropped by later iteration writes if the preservation allowlist is not updated alongside the schema and writer tests.",
+      "automation_candidate": "Implemented a named iteration telemetry contract that separates explicit overwrite fields, merged fields, and preserved carry-over fields, then added a schema parity regression so new run-telemetry properties must be classified instead of being silently dropped.",
+      "suggested_followup": "If run-telemetry grows more phase-local sections, keep extending the overwrite/merge contract intentionally; a fully schema-derived runtime merge can stay deferred until there is a concrete need beyond the current parity guardrail.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260422-auto-improve-workspace-preparation"
+}

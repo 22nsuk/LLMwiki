@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Release Risk Taxonomy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "version",
+    "description",
+    "effect_values",
+    "defaults",
+    "risks"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/release-risk-taxonomy.schema.json"
+      ]
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "effect_values": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "clean_lane_effect",
+        "conditional_lane_effect",
+        "learning_lane_effect",
+        "advisory_lifecycle_effect"
+      ],
+      "properties": {
+        "clean_lane_effect": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/clean_lane_effect" },
+          "uniqueItems": true
+        },
+        "conditional_lane_effect": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/conditional_lane_effect" },
+          "uniqueItems": true
+        },
+        "learning_lane_effect": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/learning_lane_effect" },
+          "uniqueItems": true
+        },
+        "advisory_lifecycle_effect": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/advisory_lifecycle_effect" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unknown_release_risk"
+      ],
+      "properties": {
+        "unknown_release_risk": {
+          "$ref": "#/$defs/risk_effects"
+        }
+      }
+    },
+    "risks": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/risk_taxonomy_entry"
+      },
+      "minProperties": 1
+    }
+  },
+  "$defs": {
+    "clean_lane_effect": {
+      "type": "string",
+      "enum": [
+        "blocks_clean_lane",
+        "does_not_block_clean_lane"
+      ]
+    },
+    "conditional_lane_effect": {
+      "type": "string",
+      "enum": [
+        "operator_review_required",
+        "not_applicable"
+      ]
+    },
+    "learning_lane_effect": {
+      "type": "string",
+      "enum": [
+        "blocks_learning_claim",
+        "not_applicable"
+      ]
+    },
+    "advisory_lifecycle_effect": {
+      "type": "string",
+      "enum": [
+        "review_backlog",
+        "not_applicable"
+      ]
+    },
+    "risk_effects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "clean_lane_effect",
+        "conditional_lane_effect",
+        "learning_lane_effect",
+        "advisory_lifecycle_effect"
+      ],
+      "properties": {
+        "clean_lane_effect": { "$ref": "#/$defs/clean_lane_effect" },
+        "conditional_lane_effect": { "$ref": "#/$defs/conditional_lane_effect" },
+        "learning_lane_effect": { "$ref": "#/$defs/learning_lane_effect" },
+        "advisory_lifecycle_effect": { "$ref": "#/$defs/advisory_lifecycle_effect" }
+      }
+    },
+    "risk_taxonomy_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "description",
+        "surface",
+        "effects"
+      ],
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "effects": {
+          "$ref": "#/$defs/risk_effects"
+        }
+      }
+    }
+  }
+}

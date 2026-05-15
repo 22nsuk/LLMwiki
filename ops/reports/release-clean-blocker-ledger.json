@@ -1,0 +1,146 @@
+{
+  "$schema": "ops/schemas/release-clean-blocker-ledger.schema.json",
+  "artifact_kind": "release_clean_blocker_ledger",
+  "generated_at": "2026-05-15T04:23:48Z",
+  "producer": "ops.scripts.release_clean_blocker_ledger",
+  "source_command": "python -m ops.scripts.release_clean_blocker_ledger --vault . --out ops/reports/release-clean-blocker-ledger.json",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "f6aa73699b331c2043768aebbdd1a91ef5399c245b427d3c0bc1358b10789332",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "05d9ca92b669481899a02e5a557550b51eabdd6e3d3c4d5cb6757659f40de64c",
+    "learning_delta_scoreboard": "a1cfd405d20cc8d1375a9bb0dae02300af21f628c18ac382b5b2f3207d0d0323",
+    "release_closeout_summary": "6d4979643e89700f4bb94dca49af631b4fd1890352af22b5e045994722ad7870",
+    "release_evidence_cohort": "b35a475183662de58b53decbd1390e38d60fd92a472584d15ac77dae6c37b547",
+    "release_lane_summary": "dbfbb38546b5848ec72a91ce14fd74b7a923530963369c37c2124ab844d395bf",
+    "release_risk_taxonomy": "1e2d9ff8c9b88ff11d2850a6293b444ab8eff5e79dac1404cb3fe8fe5f68d093",
+    "current_source_tree_fingerprint": "923a646d82b35ddfa28a4d5397d937b54e7b63c90fee0ebeffe41bb7d23dcd38"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-15T04:23:48Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "attention",
+  "summary": {
+    "advisory_backlog_status": "clear",
+    "advisory_backlog_active_count": 0,
+    "advisory_backlog_expired_count": 0,
+    "advisory_backlog_missing_lifecycle_count": 0,
+    "blocker_count": 0,
+    "source_clean_blocker_count": 0,
+    "auto_improve_blocker_count": 1,
+    "accepted_risk_family_count": 0,
+    "accepted_risk_instance_count": 0,
+    "clean_lane_blocking_family_count": 0,
+    "learning_claim_blocking_family_count": 1,
+    "advisory_lifecycle_family_count": 0,
+    "clean_lane_status": "pass",
+    "conditional_lane_status": "pass",
+    "auto_improve_lane_status": "blocked",
+    "machine_release_status": "allowed",
+    "operator_release_status": "allowed",
+    "release_authority_status": "clean_pass",
+    "sealed_release_status": "unsealed_distribution_not_provided",
+    "learning_claim_guard_status": "pass",
+    "learning_claim_allowed": false,
+    "same_eval_reason_coverage_status": "full",
+    "strict_secondary_improvement_coverage_status": "full",
+    "behavior_delta_digest_coverage_status": "full",
+    "placeholder_audit_status": "pass"
+  },
+  "learning_claim_guard": {
+    "path": "ops/reports/learning-delta-scoreboard.json",
+    "load_status": "ok",
+    "status": "pass",
+    "claims_learning_improved": false,
+    "learning_claim_allowed": false,
+    "same_eval_run_count": 2,
+    "telemetry_coverage_status": "full",
+    "same_eval_reason_coverage_status": "full",
+    "strict_secondary_improvement_coverage_status": "full",
+    "behavior_delta_digest_coverage_status": "full",
+    "placeholder_audit_status": "pass",
+    "placeholder_count": 0,
+    "reason": "bounded learning-likely claims require full same-eval reason/digest coverage, placeholder-free external reports, an active evidence bundle, and explicit unlock review; confirmed learning-improvement claims require the stricter confirmed-improvement lane"
+  },
+  "clean_lane_contract": {
+    "status": "pass",
+    "failed_conditions": []
+  },
+  "blockers": [],
+  "source_clean_blockers": [],
+  "auto_improve_blockers": [
+    {
+      "id": "auto_improve_readiness:promotion_blocked_by_release_authority_preflight_failure",
+      "code": "promotion_blocked_by_release_authority_preflight_failure",
+      "source": "auto_improve_readiness",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "severity": "blocker",
+      "gate_effect": "active",
+      "clean_lane_effect": "does_not_block_clean_lane",
+      "conditional_lane_effect": "operator_review_required",
+      "learning_lane_effect": "blocks_learning_claim",
+      "advisory_lifecycle_effect": "not_applicable",
+      "message": "release authority sealed preflight is not clean: release authority sealed preflight report is missing or unusable",
+      "required_evidence": [
+        "Run make release-authority-sealed-preflight for operator handoff.",
+        "Run make release-evidence-closeout-sealed-dry-run-check or the sealed release lane before promoting.",
+        "can_promote_result must stay false until sealed authority preflight is clean."
+      ],
+      "risk_owner": "",
+      "expires_at": "",
+      "acceptance_source": "",
+      "closure_action": "Run make release-authority-sealed-preflight for operator handoff.",
+      "rollback_trigger": "",
+      "lifecycle_status": "not_applicable",
+      "lifecycle_issues": [],
+      "seconds_until_expiry": null
+    }
+  ],
+  "learning_claim_blockers": [
+    {
+      "id": "auto_improve_readiness:promotion_blocked_by_release_authority_preflight_failure",
+      "code": "promotion_blocked_by_release_authority_preflight_failure",
+      "source": "auto_improve_readiness",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "severity": "blocker",
+      "gate_effect": "active",
+      "clean_lane_effect": "does_not_block_clean_lane",
+      "conditional_lane_effect": "operator_review_required",
+      "learning_lane_effect": "blocks_learning_claim",
+      "advisory_lifecycle_effect": "not_applicable",
+      "message": "release authority sealed preflight is not clean: release authority sealed preflight report is missing or unusable",
+      "required_evidence": [
+        "Run make release-authority-sealed-preflight for operator handoff.",
+        "Run make release-evidence-closeout-sealed-dry-run-check or the sealed release lane before promoting.",
+        "can_promote_result must stay false until sealed authority preflight is clean."
+      ],
+      "risk_owner": "",
+      "expires_at": "",
+      "acceptance_source": "",
+      "closure_action": "Run make release-authority-sealed-preflight for operator handoff.",
+      "rollback_trigger": "",
+      "lifecycle_status": "not_applicable",
+      "lifecycle_issues": [],
+      "seconds_until_expiry": null
+    }
+  ],
+  "advisory_backlog": [],
+  "provenance": {
+    "closeout_source": "ops/reports/release-closeout-summary.json",
+    "cohort_source": "ops/reports/release-evidence-cohort.json",
+    "lane_summary_source": "ops/reports/release-lane-summary.json",
+    "learning_delta_scoreboard_source": "ops/reports/learning-delta-scoreboard.json"
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "$schema": "ops/schemas/sigstore-bundle-verification.schema.json",
+  "vault": ".",
+  "generated_at": "2026-05-14T12:49:24Z",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "artifact_context": {
+    "artifact_set_id": "564bfe0324dd424d",
+    "in_toto_statement_ref": "ops/reports/in-toto-statement.json",
+    "spdx_ref": "ops/reports/spdx-sbom.json",
+    "openvex_ref": "ops/reports/openvex-draft.json"
+  },
+  "status": "local-integrity-only",
+  "bundle_ref": "",
+  "subjects": [
+    {
+      "path": "ops/reports/cyclonedx-bom.json",
+      "sha256": "44856f882bba1a0b96ff5d78132939dfaeb0ac4db6d1d2dafaac8c985713a064",
+      "size_bytes": 46109
+    },
+    {
+      "path": "ops/reports/spdx-sbom.json",
+      "sha256": "26f747ff8e8f3ed048a1a010e7293e5103d6c7269a6142eb75f9d35d3042e723",
+      "size_bytes": 19740
+    },
+    {
+      "path": "ops/reports/openvex-draft.json",
+      "sha256": "ea43ca3e7a771ed7bedc06e1d2d778526ac20dc7002366e6984519cfee63d280",
+      "size_bytes": 2822
+    },
+    {
+      "path": "ops/reports/in-toto-statement.json",
+      "sha256": "36a5037e75e9c9ff8c7314c7e3da85db663127cd5a8ddc567459bb4df99db946",
+      "size_bytes": 4029
+    }
+  ],
+  "verification_checks": [
+    {
+      "rule": "subject_files_exist",
+      "pass": true,
+      "details": "All attestation subjects exist."
+    },
+    {
+      "rule": "in_toto_subject_digests_match",
+      "pass": true,
+      "details": "In-toto subject digests match local files."
+    },
+    {
+      "rule": "external_bundle_observed",
+      "pass": true,
+      "details": "No external Sigstore bundle supplied; local integrity checks only."
+    }
+  ],
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/sigstore-bundle-verification.schema.json\", \"artifact_kind\": \"sigstore_bundle_verification\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-14T12:49:24Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-14T12:49:24Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"artifact_set_id\": \"5254e09bebf3577018a5841362f79afa4278abb32f4ce6f6ce5b4444e631455d\", \"bundle_ref\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\", \"policy\": \"ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f\", \"schema\": \"a45053dccaa322e177d9f0f67db85b96c7805d192f6a386a6fea4ad53a8e8e67\", \"source_paths\": \"15da1e196e5df209856711ff4b87a6905544a152a27352ea37f6bfc285316ec2\", \"status\": \"d7cb25885eab7af5914211c4f52560b2e030fc3412701ca0bbeca09040ed3d14\", \"subject_count\": \"4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a\"}, \"producer\": \"ops.scripts.sigstore_bundle\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.supply_chain.sigstore_bundle\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"c848a4c2fc8919d5a720738ed147aa5f54e5f56b91bd52916b68aac9379dfb2b\"}"
+      }
+    ]
+  }
+}

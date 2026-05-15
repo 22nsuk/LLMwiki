@@ -1,0 +1,69 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-13T13:56:03Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "3207e79b8145421b0a3b7146b2644483c0083cca07438afc3e71666bd583fc48",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "6f06bdef709d66391c6976279d9efea135f766e7dcc9b0a00d41d6948bc9cff2",
+    "record_id": "7fdbd572870849c3f19781a56c9d0be060e5ca26af795d03bb6d5feb857f3211",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "2fcde749c17ebe4797f9fd16c2a62ac0594cd7f35b3457121144e9f5e37f838b"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-13T13:56:03Z"
+  },
+  "record_id": "task-20260513-status-v2-claim-model-reproducibility",
+  "captured_at": "2026-05-13T13:56:03Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Status v2, self-improvement claim model, dependency fingerprint, and report hygiene follow-ups were implemented and validated.",
+  "observations": [
+    {
+      "observation_id": "status_v2_preview_only_contract_closed",
+      "surface": "ops/scripts/release/release_closeout_batch_manifest.py, ops/scripts/release/release_status_v2.py, ops/scripts/mechanism/auto_improve_readiness_runtime.py, ops/scripts/release/release_closeout_sealed_rehearsal_check.py, ops/scripts/release/release_post_seal_attestation.py, ops/scripts/release/release_live_artifact_attestation.py, ops/scripts/release/operator_release_summary.py, ops/policies/release-status-v2-consumers.json",
+      "problem": "Release status used one legacy top-level status plus a preview-only v2 payload, so strict clean, conditional pass, and sealed package state could be conflated by consumers.",
+      "why_it_matters": "Release automation needs to distinguish semantic release authority from sealed artifact finality before a pass value can be trusted as clean release evidence.",
+      "automation_candidate": "Automated by promoting status_v2 to active schema version 2, preserving the legacy status alias for compatibility, adding a consumer inventory, adding a release_status_v2_view helper, and moving readiness, sealed rehearsal, post-seal, live-attestation, and operator summary consumers to v2-primary reads with explicit legacy fallback diagnostics.",
+      "suggested_followup": "Closed for the current release machine consumers covered by release-status-v2-consumers.json. Future consumers should use release_status_v2_view or status_v2.status_axes directly rather than top-level status; remaining ad hoc legacy status reads should be treated as compatibility snapshots or added to the inventory.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "self_improvement_claim_axes_separated",
+      "surface": "ops/scripts/learning/learning_claim_model.py, learning delta scoreboard, release dashboard, operator summary, post-seal attestation",
+      "problem": "Regression-safe evidence and actual self-improvement wording were too easy to mix because confirmed_learning_improvement_status-style names implied stronger learning proof than the evidence stage always supported.",
+      "why_it_matters": "Operator reports must never let no-regression evidence read as production learning proof; the claim level has to remain visible across dashboard and post-seal evidence.",
+      "automation_candidate": "Automated by adding a five-stage improvement claim model, separating improvement_claim_status, evidence_cohort_status, and claim_wording_allowed, and replacing the negative no-learning-claim-blockers predicate with a positive blocker-absence decision field.",
+      "suggested_followup": "Closed for the current report chain. Cross-eval and production-learning stages remain explicit non-passing stages until a dedicated evidence lane is added.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "dependency_replay_fingerprint_bound",
+      "surface": "ops/scripts/release/release_closeout_summary.py, ops/schemas/release-closeout-summary.schema.json, .github/workflows/ci.yml",
+      "problem": "Release summaries captured source tree evidence but did not bind the canonical dependency lock digest, leaving replayability dependent on range installs.",
+      "why_it_matters": "A release evidence replay should require the same source fingerprint and the same dependency fingerprint; otherwise package resolution drift can change behavior while source evidence appears unchanged.",
+      "automation_candidate": "Automated by recording uv.lock as the canonical lockfile, adding dependency_fingerprint to release closeout summary evidence, marking range-latest as advisory-only, and adding uv.lock to CI cache dependency paths.",
+      "suggested_followup": "Closed in this task. Future range-latest lanes should remain advisory unless they emit a distinct dependency fingerprint and are not used as strict release replay evidence.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "function_budget_refactor_slice_measured",
+      "surface": "ops/reports/structural-complexity-budget.json, ops/reports/function-budget-refactor-proposals.json, release status and claim decision helpers",
+      "problem": "Large report builders had decision logic embedded in rendering flow, and the structural complexity artifacts were stale relative to the refactor candidates.",
+      "why_it_matters": "Long-lived release builders should move load-normalize-classify-decide-render-seal decisions into small tested helpers so schema/rendering churn does not rewrite policy decisions.",
+      "automation_candidate": "Automated by extracting status v2 and improvement-claim decision helpers, converting the claim model to an input object to remove a new parameter-count candidate, refreshing structural complexity and function-budget proposal artifacts, and validating the candidate count reduction from 46 to 45 after the final refactor slice.",
+      "suggested_followup": "Closed for this slice. Remaining large-builder candidates are now preserved in the refreshed function-budget proposal artifact for the next bounded decomposition pass.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260513-status-v2-claim-model-reproducibility"
+}

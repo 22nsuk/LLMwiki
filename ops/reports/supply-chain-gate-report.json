@@ -1,0 +1,41 @@
+{
+  "$schema": "ops/schemas/supply-chain-gate-report.schema.json",
+  "artifact_kind": "supply_chain_gate_report",
+  "generated_at": "2026-05-14T12:49:23Z",
+  "producer": "ops.scripts.supply_chain_gate_runtime",
+  "source_command": "python -m ops.scripts.supply_chain_gate_runtime --vault .",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "c848a4c2fc8919d5a720738ed147aa5f54e5f56b91bd52916b68aac9379dfb2b",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "21393ae4af4304fd49d56368457f7d50115678ea272a7a81be8a942e6d64cb08",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "d904207be43b08965d7feed4d8d6c86b7ac3619719d2368baefdc9a3ddcde8b2",
+    "provenance_report": "c1e907b06b9dbbacbc16fca879788223e61f60ed6c98550aca52a223882e4408"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-14T12:49:23Z"
+  },
+  "vault": ".",
+  "provenance_report_ref": "ops/reports/supply-chain-provenance.json",
+  "status": "pass",
+  "checks": [
+    {
+      "rule": "all_required_inputs_exist",
+      "pass": true
+    },
+    {
+      "rule": "no_parser_errors",
+      "pass": true
+    },
+    {
+      "rule": "ci_install_note_drift",
+      "pass": true
+    }
+  ]
+}

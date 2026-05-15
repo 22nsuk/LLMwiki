@@ -1,0 +1,330 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import shlex
+import sys
+import tempfile
+import time
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+if __package__ in (None, ""):  # pragma: no cover - direct script fallback
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
+    from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+    from ops.scripts.command_runtime import TimedProcessResult, run_with_timeout
+    from ops.scripts.export_public_repo import DEFAULT_PUBLIC_OUT, export_public_repo
+    from ops.scripts.output_runtime import display_path, sanitize_report_text
+    from ops.scripts.policy_runtime import load_policy, report_path
+    from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.test_execution_summary import parse_pytest_counts
+else:
+    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
+    from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+    from ops.scripts.command_runtime import TimedProcessResult, run_with_timeout
+    from .export_public_repo import DEFAULT_PUBLIC_OUT, export_public_repo
+    from ops.scripts.output_runtime import display_path, sanitize_report_text
+    from ops.scripts.policy_runtime import load_policy, report_path
+    from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.test_execution_summary import parse_pytest_counts
+
+
+DEFAULT_OUT = "ops/reports/public-check-summary.json"
+PRODUCER = "ops.scripts.public_check_summary"
+SCHEMA_PATH = "ops/schemas/public-check-summary.schema.json"
+SOURCE_COMMAND = "python -m ops.scripts.public_check_summary --vault ."
+DEFAULT_TIMEOUT_SECONDS = 5400
+TAIL_LINE_COUNT = 80
+CommandRunner = Callable[[Sequence[str], Path, int], TimedProcessResult]
+
+
+@dataclass(frozen=True)
+class PublicCheckRequest:
+    public_out: str = DEFAULT_PUBLIC_OUT
+    public_python: str = sys.executable
+    ruff_targets: str = "ops/scripts tests tools"
+    mypy_targets: str = "@ops/mypy-allowlist.txt"
+    pytest_mark_expr: str = "public"
+    pytest_flags: str = ""
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS
+
+
+def _sha256_file(path: Path) -> str:
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return ""
+
+
+def _canonical_sha256(payload: object) -> str:
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _int_value(value: object) -> int:
+    if isinstance(value, int):
+        return value
+    if not isinstance(value, str):
+        return 0
+    try:
+        return int(value)
+    except ValueError:
+        return 0
+
+
+def _tail_text(text: str, max_lines: int = TAIL_LINE_COUNT) -> str:
+    lines = text.splitlines()
+    if len(lines) <= max_lines:
+        return text
+    return "\n".join(lines[-max_lines:])
+
+
+def _display_external_path(path: Path, vault: Path) -> str:
+    resolved = path.resolve()
+    try:
+        resolved.relative_to(vault.resolve())
+    except ValueError:
+        temp_root = Path(tempfile.gettempdir()).resolve()
+        try:
+            rel = resolved.relative_to(temp_root)
+            return str(Path("<tmp>") / rel)
+        except ValueError:
+            return f"<external>/{resolved.name}"
+    return report_path(vault, resolved)
+
+
+def _resolve_out_dir(vault: Path, out_dir: str) -> Path:
+    path = Path(out_dir)
+    if path.is_absolute():
+        return path
+    return (vault / path).resolve()
+
+
+def _resolve_public_python(vault: Path, public_python: str) -> str:
+    expanded = os.path.expandvars(os.path.expanduser(public_python))
+    if "/" not in expanded and "\\" not in expanded:
+        return expanded
+    path = Path(expanded)
+    if path.is_absolute():
+        return str(path)
+    return str((vault / path).absolute())
+
+
+def _export_file_records(public_out: Path, manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    rel_paths = [str(path) for path in manifest.get("files", []) if str(path).strip()]
+    manifest_file = str(manifest.get("manifest_file", "PUBLIC-EXPORT-MANIFEST.json"))
+    records = []
+    for rel_path in [*rel_paths, manifest_file]:
+        path = public_out / rel_path
+        records.append(
+            {
+                "path": rel_path,
+                "exists": path.is_file(),
+                "size_bytes": path.stat().st_size if path.is_file() else 0,
+                "sha256": _sha256_file(path) if path.is_file() else "",
+            }
+        )
+    return records
+
+
+def _default_command_runner(
+    argv: Sequence[str],
+    cwd: Path,
+    timeout_seconds: int,
+) -> TimedProcessResult:
+    env = dict(os.environ)
+    env.setdefault("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    return run_with_timeout(argv, cwd=cwd, timeout_seconds=timeout_seconds, env=env)
+
+
+def _command_record(
+    *,
+    command_id: str,
+    argv: list[str],
+    cwd: Path,
+    display_vault: Path,
+    timeout_seconds: int,
+    command_runner: CommandRunner,
+) -> dict[str, Any]:
+    started = time.perf_counter()
+    result = command_runner(argv, cwd, timeout_seconds)
+    duration_ms = int((time.perf_counter() - started) * 1000)
+    counts = parse_pytest_counts(result.stdout, result.stderr) if command_id == "pytest_public" else {}
+    return {
+        "id": command_id,
+        "command": shlex.join([sanitize_report_text(display_vault, str(arg)) for arg in argv]),
+        "cwd": ".",
+        "status": "pass" if result.returncode == 0 and not result.timed_out else "fail",
+        "returncode": result.returncode,
+        "timed_out": result.timed_out,
+        "timeout_seconds": result.timeout_seconds,
+        "termination_reason": result.termination_reason,
+        "duration_ms": duration_ms,
+        "stdout_tail": sanitize_report_text(display_vault, _tail_text(result.stdout)),
+        "stderr_tail": sanitize_report_text(display_vault, _tail_text(result.stderr)),
+        "pytest_counts": counts,
+    }
+
+
+def _overall_status(commands: list[dict[str, Any]]) -> str:
+    if any(command["timed_out"] for command in commands):
+        return "timeout"
+    if any(command["returncode"] in {130, -2} for command in commands):
+        return "interrupted"
+    return "pass" if all(command["status"] == "pass" for command in commands) else "fail"
+
+
+def build_report(
+    vault: Path,
+    request: PublicCheckRequest | None = None,
+    *,
+    context: RuntimeContext | None = None,
+    command_runner: CommandRunner | None = None,
+) -> dict[str, Any]:
+    request = request or PublicCheckRequest()
+    policy, resolved_policy_path = load_policy(vault, None)
+    runtime_context = context or RuntimeContext.from_policy(policy)
+    public_out_path = _resolve_out_dir(vault, request.public_out)
+    manifest = export_public_repo(vault, public_out_path)
+    export_records = _export_file_records(public_out_path, manifest)
+    export_root_fingerprint = _canonical_sha256(export_records)
+    manifest_path = public_out_path / str(manifest.get("manifest_file", "PUBLIC-EXPORT-MANIFEST.json"))
+    runner = command_runner or _default_command_runner
+    public_python = _resolve_public_python(vault, request.public_python)
+    commands_to_run: list[tuple[str, list[str]]] = [
+        (
+            "ruff",
+            [public_python, "-m", "ruff", "check", *shlex.split(request.ruff_targets)],
+        ),
+        (
+            "mypy",
+            [public_python, "-m", "mypy", *shlex.split(request.mypy_targets)],
+        ),
+    ]
+    pytest_command = [public_python, "-m", "pytest"]
+    if request.pytest_mark_expr.strip():
+        pytest_command.extend(["-m", request.pytest_mark_expr])
+    pytest_command.extend(shlex.split(request.pytest_flags))
+    commands_to_run.append(("pytest_public", pytest_command))
+    commands = [
+        _command_record(
+            command_id=command_id,
+            argv=argv,
+            cwd=public_out_path,
+            display_vault=vault,
+            timeout_seconds=request.timeout_seconds,
+            command_runner=runner,
+        )
+        for command_id, argv in commands_to_run
+    ]
+    status = _overall_status(commands)
+    pytest_counts = commands[-1].get("pytest_counts", {})
+    source_paths = [
+        "Makefile",
+        "ops/scripts/public/public_check_summary.py",
+        "ops/scripts/public/export_public_repo.py",
+        "ops/scripts/public/public_surface_policy.py",
+    ]
+    return {
+        **build_canonical_report_envelope(
+            vault,
+            generated_at=runtime_context.isoformat_z(),
+            artifact_kind="public_check_summary",
+            producer=PRODUCER,
+            source_command=SOURCE_COMMAND,
+            resolved_policy_path=resolved_policy_path,
+            schema_path=SCHEMA_PATH,
+            source_paths=source_paths,
+            path_group_inputs={
+                "public_check_summary_inputs": [
+                    "Makefile",
+                    "ops/scripts/public/export_public_repo.py",
+                    "ops/scripts/public/public_surface_policy.py",
+                ]
+            },
+        ),
+        "vault": report_path(vault, vault),
+        "policy": {"path": report_path(vault, resolved_policy_path), "version": policy.get("version")},
+        "status": status,
+        "summary": {
+            "public_export_status": "pass",
+            "public_check_status": status,
+            "export_file_count": _int_value(manifest.get("file_count", 0)),
+            "export_source_file_count": _int_value(manifest.get("source_file_count", 0)),
+            "export_root_fingerprint": export_root_fingerprint,
+            "public_export_manifest_sha256": _sha256_file(manifest_path),
+            "public_surface_policy_sha256": _sha256_file(vault / "ops/scripts/public/public_surface_policy.py"),
+            "command_count": len(commands),
+            "command_fail_count": sum(1 for command in commands if command["status"] != "pass"),
+            "pytest_passed": int(pytest_counts.get("passed", 0) or 0),
+            "pytest_failed": int(pytest_counts.get("failed", 0) or 0),
+            "pytest_errors": int(pytest_counts.get("errors", 0) or 0),
+            "pytest_skipped": int(pytest_counts.get("skipped", 0) or 0),
+        },
+        "public_export": {
+            "output_dir": _display_external_path(public_out_path, vault),
+            "manifest_file": str(manifest.get("manifest_file", "PUBLIC-EXPORT-MANIFEST.json")),
+            "file_count": _int_value(manifest.get("file_count", 0)),
+            "source_file_count": _int_value(manifest.get("source_file_count", 0)),
+            "export_root_fingerprint": export_root_fingerprint,
+            "manifest_sha256": _sha256_file(manifest_path),
+        },
+        "commands": commands,
+    }
+
+
+def write_report(vault: Path, report: dict[str, Any], out_path: str = DEFAULT_OUT) -> Path:
+    return write_schema_backed_report(
+        SchemaBackedReportWriteRequest(
+            vault=vault,
+            payload=report,
+            schema_path=SCHEMA_PATH,
+            out_path=out_path,
+            default_relative_path=DEFAULT_OUT,
+            context="public check summary schema validation failed",
+        )
+    )
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run public mirror checks and write a canonical summary.")
+    parser.add_argument("--vault", default=".")
+    parser.add_argument("--out", default=DEFAULT_OUT)
+    parser.add_argument("--public-out", default=DEFAULT_PUBLIC_OUT)
+    parser.add_argument("--public-python", default=sys.executable)
+    parser.add_argument("--ruff-targets", default="ops/scripts tests tools")
+    parser.add_argument("--mypy-targets", default="@ops/mypy-allowlist.txt")
+    parser.add_argument("--pytest-mark-expr", default="public")
+    parser.add_argument("--pytest-flags", default="")
+    parser.add_argument("--timeout-seconds", type=int, default=DEFAULT_TIMEOUT_SECONDS)
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    vault = Path(args.vault).resolve()
+    report = build_report(
+        vault,
+        PublicCheckRequest(
+            public_out=args.public_out,
+            public_python=args.public_python,
+            ruff_targets=args.ruff_targets,
+            mypy_targets=args.mypy_targets,
+            pytest_mark_expr=args.pytest_mark_expr,
+            pytest_flags=args.pytest_flags,
+            timeout_seconds=args.timeout_seconds,
+        ),
+    )
+    destination = write_report(vault, report, args.out)
+    print(display_path(vault, destination))
+    return 0 if report["status"] == "pass" else 1
+
+
+if __name__ == "__main__":  # pragma: no cover
+    raise SystemExit(main())

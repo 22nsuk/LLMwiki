@@ -1,0 +1,100 @@
+{
+  "$schema": "ops/schemas/raw-registry-cross-environment-evidence-bundle.schema.json",
+  "artifact_kind": "raw_registry_cross_environment_evidence_bundle",
+  "generated_at": "2026-05-01T23:36:40Z",
+  "producer": "ops.scripts.raw_registry_cross_environment_evidence_bundle",
+  "source_command": "python -m ops.scripts.raw_registry_cross_environment_evidence_bundle --vault . --reports-dir ops/reports --out ops/reports/raw-registry-cross-environment-evidence-bundle.json",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "45684aa37911984829d5764fe1d2aaccd7e548a3a300a54ec7f5467f4d2fb483",
+  "input_fingerprints": {
+    "policy": "7d45acc617992bca127ce0b7defb6715caac5b774dcc489acf984502cea3a402",
+    "schema": "c2249c3a2f3a06710bf62f3c13b206b0893a3933e111ab3b7a6f726e491d732b",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "report_linux-c-utf8": "bae2fc8b42e1cb63307608b2b647cde0788f4cdbeec57cb211b341fb9aeb68b7",
+    "report_macos-utf8": "31393979b7c654e79739e0401f580333c1205e6a2987294b2fb6b1c246f331c1",
+    "report_windows-utf8": "2e7291b49433801cce0f1d4f82dce24930ae50481a3454936613968f873256df",
+    "expected_profiles": "d2414e5d5237735a065fdd96c9e7d9423a4ed8b48085121aafca35d11bf91d56",
+    "report_paths": "c4f946b6fe41ab7cb47439f526493ff9cd1cc274ee0b512184055b252cb88cd6"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-01T23:36:40Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "pass",
+  "reports_dir": "ops/reports",
+  "expected_profiles": [
+    "linux-c-utf8",
+    "windows-utf8",
+    "macos-utf8"
+  ],
+  "summary": {
+    "expected_profile_count": 3,
+    "report_count": 3,
+    "valid_report_count": 3,
+    "missing_report_count": 0,
+    "invalid_report_count": 0,
+    "failed_report_count": 0,
+    "diagnostic_count": 1
+  },
+  "evidence": [
+    {
+      "profile": "linux-c-utf8",
+      "runner_os": "ubuntu-latest",
+      "generated_at": "2026-05-01T23:35:16Z",
+      "status": "pass",
+      "report_path": "ops/reports/raw-registry-cross-environment-matrix-linux-c-utf8.json",
+      "exists": true,
+      "size_bytes": 22403,
+      "sha256": "bae2fc8b42e1cb63307608b2b647cde0788f4cdbeec57cb211b341fb9aeb68b7",
+      "load_status": "ok",
+      "semantic_compare_status": "pass",
+      "uploaded_artifact_name": "raw-registry-cross-environment-linux-c-utf8",
+      "diagnostics": []
+    },
+    {
+      "profile": "macos-utf8",
+      "runner_os": "macos-latest",
+      "generated_at": "2026-05-01T23:36:12Z",
+      "status": "pass",
+      "report_path": "ops/reports/raw-registry-cross-environment-matrix-macos-utf8.json",
+      "exists": true,
+      "size_bytes": 22401,
+      "sha256": "31393979b7c654e79739e0401f580333c1205e6a2987294b2fb6b1c246f331c1",
+      "load_status": "ok",
+      "semantic_compare_status": "pass",
+      "uploaded_artifact_name": "raw-registry-cross-environment-macos-utf8",
+      "diagnostics": []
+    },
+    {
+      "profile": "windows-utf8",
+      "runner_os": "windows-latest",
+      "generated_at": "2026-05-01T23:35:43Z",
+      "status": "pass",
+      "report_path": "ops/reports/raw-registry-cross-environment-matrix-windows-utf8.json",
+      "exists": true,
+      "size_bytes": 22403,
+      "sha256": "2e7291b49433801cce0f1d4f82dce24930ae50481a3454936613968f873256df",
+      "load_status": "ok",
+      "semantic_compare_status": "pass",
+      "uploaded_artifact_name": "raw-registry-cross-environment-windows-utf8",
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "info",
+      "code": "single_matrix_fallback_present",
+      "path": "ops/reports/raw-registry-cross-environment-matrix.json",
+      "message": "legacy single cross-environment matrix exists; collect per-profile raw-registry-cross-environment-matrix-{linux-c-utf8,windows-utf8,macos-utf8}.json reports for portability evidence bundle completeness"
+    }
+  ]
+}

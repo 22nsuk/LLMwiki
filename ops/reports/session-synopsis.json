@@ -1,0 +1,257 @@
+{
+  "$schema": "ops/schemas/session-synopsis.schema.json",
+  "artifact_kind": "session_synopsis",
+  "generated_at": "2026-05-15T04:23:36Z",
+  "producer": "ops.scripts.session_synopsis",
+  "source_command": "python -m ops.scripts.session_synopsis --vault .",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "0b78062aa1e1d5397e3e6a796019bf61428ea78599033f9a278327a93e887134",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "3250b1bd42b6f1307d7b6116b5365f34d13933c71ff24eb9b607b1c68272a525",
+    "auto_improve_readiness": "0a2d4fc090d157ef80bc65b7e472aaeca8828555109a2937c7176b58c9a13b94",
+    "learning_claim_activation": "2cac9330bc434e5d041ee19201651cf1cc704eff8f45024b7beee2de293142c2",
+    "learning_delta_scoreboard": "a1cfd405d20cc8d1375a9bb0dae02300af21f628c18ac382b5b2f3207d0d0323",
+    "source_package_clean_extract": "470c943c3af1c752391f562d8ca8933beae80002be9ccefb6c991ddd717af655",
+    "task_observations": "de50b3e9d034fac6257d8f0dd900c1fbf54d71a429a79d82833ccc12f5e75d09"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-15T04:23:36Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "attention",
+  "summary": {
+    "recent_blocker_count": 4,
+    "last_success_pattern_count": 5,
+    "forbidden_repeat_pattern_count": 5,
+    "recommended_seed_run_count": 2,
+    "evidence_gap_count": 5,
+    "source_package_replay_status": "pass",
+    "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded live auto-improve with `.venv/bin/python -m ops.scripts.mechanism.auto_improve_loop --vault . --policy ops/policies/wiki-maintainer-policy.yaml --max-proposals 1 --max-minutes 30 --max-consecutive-failures 1 --executor codex_exec`. Promotion remains blocked until: Refresh sealed authority preflight evidence, then rerun make auto-improve-readiness."
+  },
+  "recent_blockers": [
+    {
+      "id": "promotion_blocked_by_release_authority_preflight_failure",
+      "source": "auto_improve_readiness.promotion_blockers",
+      "status": "open",
+      "reason": "release authority sealed preflight is not clean: release authority sealed preflight report is missing or unusable",
+      "repair_target": "Refresh sealed authority preflight evidence, then rerun make auto-improve-readiness."
+    },
+    {
+      "id": "auto_improve_can_promote_result",
+      "source": "learning_claim_activation.blocked_predicates",
+      "status": "fail",
+      "reason": "",
+      "repair_target": "Clear release authority, sealed preflight, and promotion blockers before treating auto-improve learning as claimable."
+    },
+    {
+      "id": "learning_claim_blocker_absence",
+      "source": "learning_claim_activation.blocked_predicates",
+      "status": "fail",
+      "reason": "",
+      "repair_target": "Resolve release-clean-blocker-ledger learning claim blockers or keep claim_level=none."
+    },
+    {
+      "id": "learning_claim_unlock_review_not_approved",
+      "source": "learning_claim_activation.blocked_predicates",
+      "status": "required",
+      "reason": "",
+      "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean."
+    }
+  ],
+  "last_success_patterns": [
+    {
+      "id": "auto_improve_readiness_orchestrator_decomposition",
+      "source": "task_improvement_observations",
+      "summary": "Automated in Day 3. auto_improve_readiness_runtime.py now holds the orchestration/render surface at 631 nonempty lines, with queue, learning, release-authority, and constants modules tracked in READINESS_SOURCE_PATHS. Focused readiness tests passed 30 cases, and touched complexity passed for all five split files with zero attention targets.",
+      "evidence": [
+        "ops/scripts/mechanism/auto_improve_readiness_runtime.py, ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py, ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py, ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py, ops/scripts/mechanism/auto_improve_readiness_constants_runtime.py, tests/test_auto_improve_readiness_runtime.py"
+      ]
+    },
+    {
+      "id": "learning_delta_scoreboard_claim_unlock_decomposition",
+      "source": "task_improvement_observations",
+      "summary": "Automated in Day 3. learning_delta_scoreboard.py is now 696 nonempty lines under the touched budget, helper modules are tracked in SCOREBOARD_SOURCE_PATHS, focused scoreboard tests passed 20 cases, and touched complexity passed for all four split files with zero attention targets.",
+      "evidence": [
+        "ops/scripts/learning/learning_delta_scoreboard.py, ops/scripts/learning/learning_delta_scoreboard_constants.py, ops/scripts/learning/learning_delta_scoreboard_unlock_runtime.py, ops/scripts/learning/learning_delta_scoreboard_anti_slop_runtime.py, tests/test_learning_delta_scoreboard.py"
+      ]
+    },
+    {
+      "id": "canonical_session_synopsis_entrypoint",
+      "source": "task_improvement_observations",
+      "summary": "Automated in Day 4+. make session-synopsis now promotes ops/reports/session-synopsis.json through a candidate path, release phase 2 refreshes it after learning-claim activation, and the current synopsis records promotion_allowed=false, claim_wording_allowed=false, five recent blockers, five forbidden repeat patterns, source-package replay status=pass, and first commands for the next session.",
+      "evidence": [
+        "ops/scripts/learning/session_synopsis.py, ops/schemas/session-synopsis.schema.json, mk/release.mk, tests/test_session_synopsis.py, ops/reports/session-synopsis.json"
+      ]
+    },
+    {
+      "id": "source_package_schema_sample_replay_guard",
+      "source": "task_improvement_observations",
+      "summary": "Automated during final closeout by regenerating tests/fixtures/report_schema_samples.json with tools/regenerate_report_schema_samples.py, passing tests/test_report_schema_sample_regeneration.py, and rerunning make release-source-package-check to a pass with ruff, mypy, and test-source-package all clean.",
+      "evidence": [
+        "tests/fixtures/report_schema_samples.json, tools/regenerate_report_schema_samples.py, tests/test_report_schema_sample_regeneration.py, ops/reports/source-package-clean-extract.json"
+      ]
+    },
+    {
+      "id": "reconciled_plan_final_closeout_verification_matrix",
+      "source": "task_improvement_observations",
+      "summary": "Completed in final closeout: make static ruff-strict-preview mypy-strict-preview passed; make test-public passed 333 tests; make public-check passed with command_fail_count=0; make release-source-package-check passed with ruff, mypy, and test-source-package clean; make check passed 666 tests; artifact freshness is pass/current with 305 records and zero attention/fail records; focused generated-report/session/report-sample contracts passed 42 tests.",
+      "evidence": [
+        "ops/reports/artifact-freshness-report.json, ops/reports/public-check-summary.json, ops/reports/source-package-clean-extract.json, ops/reports/test-execution-summary.json, ops/reports/release-smoke-report.json"
+      ]
+    }
+  ],
+  "forbidden_repeat_patterns": [
+    {
+      "id": "blocked_queue_recent_log_overlap",
+      "decisions": [
+        "BLOCKED"
+      ],
+      "run_ids": [],
+      "occurrence_count": 1,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane."
+    },
+    {
+      "id": "discard_behavior_delta_digest_added",
+      "decisions": [
+        "DISCARD"
+      ],
+      "run_ids": [
+        "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+      ],
+      "occurrence_count": 1,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=behavior_delta_digest_added."
+    },
+    {
+      "id": "discard_decision_discard",
+      "decisions": [
+        "DISCARD"
+      ],
+      "run_ids": [
+        "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+        "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+      ],
+      "occurrence_count": 2,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Repair the rejected confirmed-evidence run before using it as learning proof."
+    },
+    {
+      "id": "discard_telemetry_discoverability_improved",
+      "decisions": [
+        "DISCARD"
+      ],
+      "run_ids": [
+        "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp"
+      ],
+      "occurrence_count": 1,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=telemetry_discoverability_improved."
+    },
+    {
+      "id": "hold_unspecified",
+      "decisions": [
+        "HOLD"
+      ],
+      "run_ids": [
+        "run-20260422-auto-improve-decision-record-fallback-retry2"
+      ],
+      "occurrence_count": 1,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Change the mechanism or evidence predicate before rerunning another HOLD attempt with same_eval_reason_code=unspecified."
+    }
+  ],
+  "recommended_seed_runs": [
+    {
+      "run_id": "run-20260422-auto-improve-timeout-telemetry-fallback",
+      "source": "auto_improve_readiness.fallback.seed_runs",
+      "reason": "Reusable bounded evidence candidate for the next narrow run."
+    },
+    {
+      "run_id": "run-20260507-auto-improve-iteration-persistence-discard-path",
+      "source": "auto_improve_readiness.fallback.seed_runs",
+      "reason": "Reusable bounded evidence candidate for the next narrow run."
+    }
+  ],
+  "evidence_gaps": [
+    {
+      "id": "context_efficiency",
+      "source": "learning_claim_activation.anti_slop_preview_ledger",
+      "current": "no dedicated context-efficiency telemetry is bound to the learning claim lane",
+      "required": "Claim activation should expose context budget or synopsis reuse pressure before promotion authority uses it.",
+      "repair_target": "Add context budget telemetry or a session synopsis digest before making this axis gating."
+    },
+    {
+      "id": "operator_override_pressure",
+      "source": "learning_claim_activation.anti_slop_preview_ledger",
+      "current": "unlock_review_status=required; approved=False",
+      "required": "Manual override pressure should stay explicit and should not silently unlock claim wording.",
+      "repair_target": "Keep review_status required until machine policy and operator signoff are clean."
+    },
+    {
+      "id": "auto_improve_can_promote_result",
+      "source": "learning_claim_activation.blocked_predicates",
+      "current": "",
+      "required": "",
+      "repair_target": "Clear release authority, sealed preflight, and promotion blockers before treating auto-improve learning as claimable."
+    },
+    {
+      "id": "learning_claim_blocker_absence",
+      "source": "learning_claim_activation.blocked_predicates",
+      "current": "",
+      "required": "",
+      "repair_target": "Resolve release-clean-blocker-ledger learning claim blockers or keep claim_level=none."
+    },
+    {
+      "id": "learning_claim_unlock_review_not_approved",
+      "source": "learning_claim_activation.blocked_predicates",
+      "current": "",
+      "required": "",
+      "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean."
+    }
+  ],
+  "source_package_replay": {
+    "status": "pass",
+    "report_path": "ops/reports/source-package-clean-extract.json",
+    "profile": "source-package/release-archive",
+    "replay_command": "make release-source-package-check",
+    "summary": "Use the profile-aware source package check before treating distribution evidence as replayable."
+  },
+  "next_session_entrypoint": {
+    "promotion_allowed": false,
+    "claim_wording_allowed": false,
+    "recommended_next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded live auto-improve with `.venv/bin/python -m ops.scripts.mechanism.auto_improve_loop --vault . --policy ops/policies/wiki-maintainer-policy.yaml --max-proposals 1 --max-minutes 30 --max-consecutive-failures 1 --executor codex_exec`. Promotion remains blocked until: Refresh sealed authority preflight evidence, then rerun make auto-improve-readiness.",
+    "first_commands": [
+      "make session-synopsis",
+      "make static",
+      "make test-public"
+    ],
+    "stop_conditions": [
+      "Do not promote while promotion_allowed is false.",
+      "Do not claim learning improvement while claim_wording_allowed is false.",
+      "Do not repeat forbidden patterns until their repair_target is closed."
+    ],
+    "open_blocker_count": 4,
+    "forbidden_pattern_count": 5,
+    "evidence_gap_count": 5
+  },
+  "inputs": {
+    "auto_improve_readiness": "ops/reports/auto-improve-readiness.json",
+    "learning_delta_scoreboard": "ops/reports/learning-delta-scoreboard.json",
+    "learning_claim_activation": "ops/reports/learning_claim_activation_report.json",
+    "source_package_clean_extract": "ops/reports/source-package-clean-extract.json",
+    "task_observations": "ops/reports/task-improvement-observations/task-20260515-reconciled-improvement-plan/improvement-observations.json"
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "$schema": "ops/schemas/run-artifact-fingerprint.schema.json",
+  "scope": "run",
+  "run_id": "auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime",
+  "generated_at": "2026-05-02T03:27:34Z",
+  "repo_provenance_snapshot": {
+    "report_path": "ops/reports/supply-chain-provenance.json",
+    "report_sha256": "9d6eb6edf215310a15ab1f4bc17c20acfdd12924782a9463ca42c161234ccdf4",
+    "report_generated_at": "2026-04-30T18:43:53Z",
+    "report_status": "pass",
+    "exists_at_run_start": true
+  },
+  "summary": {
+    "artifact_count": 14,
+    "schema_backed_count": 11,
+    "total_size_bytes": 37853
+  },
+  "artifacts": [
+    {
+      "path": "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/improvement-observations.json",
+      "artifact_role": "improvement_observations",
+      "schema": "ops/schemas/improvement-observations.schema.json",
+      "size_bytes": 1757,
+      "sha256": "d883020b8b12b1351ad3ecc0002e1c56313c41424d30ab0457fd0d6d5b059a52"
+    },
+    {
+      "path": "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/open-questions.md",
+      "artifact_role": "open_questions",
+      "schema": "",
+      "size_bytes": 553,
+      "sha256": "44e571d0b3e6ee5b1e9adc9e66affe25e27c60135cc6d52b5d356a1ae9c870b6"
+    },
+    {
+      "path": "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/plan.md",
+      "artifact_role": "plan",
+      "schema": "",
+      "size_bytes": 1558,
+      "sha256": "bd9766e9b9866be6957cfa4b576aac6927200f038c2f9c4210d15fb1607fdc5d"
+    },
+    {
+      "path": "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/planning-validation.json",
+      "artifact_role": "planning_validation",
+      "schema": "ops/schemas/planning-validation.schema.json",
+      "size_bytes": 2707,
+      "sha256": "0445ae2ce510941bc25a88a1cf85d536c0ff2e7e78905c87f77198c3cee661b0"
+    },
+    {
+      "path": "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json",
+      "artifact_role": "promotion_report",
+      "schema": "ops/schemas/promotion-report.schema.json",
+      "size_bytes": 2517,
+      "sha256": "4c45054ca3e817abaf550f14cf42f295e2da4644eaa9d08b014aef789f3b40d3"
+    },
+    {
+      "path": "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/proposal-snapshot.json",
+      "artifact_role": "proposal_snapshot",
+      "schema": "ops/schemas/proposal-snapshot.schema.json",
+      "size_bytes": 2807,
+      "sha256": "26134195c53470a6acde12215c22c69ae60a53d4ff832d7730dcf7904ddac5c7"
+    },
+    {
+      "path": "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/run-ledger.json",
+      "artifact_role": "run_ledger",
+      "schema": "ops/schemas/run-ledger.schema.json",
+      "size_bytes": 1853,
+      "sha256": "3a341d7d38df688134bb7cd1b6580ced1cedab7cabbe8ead11bb4a1fcdd9e2cb"
+    },
+    {
+      "path": "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+      "artifact_role": "run_telemetry",
+      "schema": "ops/schemas/run-telemetry.schema.json",
+      "size_bytes": 3817,
+      "sha256": "a6ac0e149aff97e502cca0f3fbf55c932d43dc5d4bad639fa13420f95f50f33d"
+    },
+    {
+      "path": "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/runtime-events.jsonl",
+      "artifact_role": "runtime_events.jsonl",
+      "schema": "",
+      "size_bytes": 1292,
+      "sha256": "ce9493430a23a19d80abeecb0bd627096031c60fce9f79153cae59258a9f3892"
+    },
+    {
+      "path": "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/scope-freeze.json",
+      "artifact_role": "scope_freeze",
+      "schema": "ops/schemas/proposal-scope.schema.json",
+      "size_bytes": 1123,
+      "sha256": "5c3230f4a4594a5de78f650cde8a324104aa30dd7ef1a760de62bc205a7725bc"
+    },
+    {
+      "path": "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/seed.yaml",
+      "artifact_role": "seed",
+      "schema": "ops/schemas/seed.schema.json",
+      "size_bytes": 3659,
+      "sha256": "e60c5cc1ad2e8c37b90aff6a9d4b64ad61946e10b3cc28d245d1bd8775722403"
+    },
+    {
+      "path": "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.provenance-auditor.json",
+      "artifact_role": "subagent_routing_report",
+      "schema": "ops/schemas/subagent-routing-report.schema.json",
+      "size_bytes": 4130,
+      "sha256": "9ca9af4c56cdf195943a28dba46e987da944bb5a43a10ee8c44e3386b5364c8f"
+    },
+    {
+      "path": "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.reviewer.json",
+      "artifact_role": "subagent_routing_report",
+      "schema": "ops/schemas/subagent-routing-report.schema.json",
+      "size_bytes": 4922,
+      "sha256": "5cab786c59c037da759abd5221e07173a830ec1cac5908767fe7fce03ee4f150"
+    },
+    {
+      "path": "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.worker.json",
+      "artifact_role": "subagent_routing_report",
+      "schema": "ops/schemas/subagent-routing-report.schema.json",
+      "size_bytes": 5158,
+      "sha256": "dadc50a1a4ebeebfc67609381080ba64a99e2a441561452ca498c5b1feeacaa9"
+    }
+  ],
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-05-02T03:27:34Z\", \"generated_at_source\": \"payload.generated_at\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-05-02T05:48:12Z\", \"source_artifact\": \"runs/archive/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/run-artifact-fingerprint.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/run-artifact-fingerprint.schema.json\", \"artifact_kind\": \"run_artifact_fingerprint\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-05-02T05:48:12Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-02T03:27:34Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"b49ee52c0bffd374d44e6ed295baed542da733c442d969f5e2c3db18a20b5d5e\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"fc0340f868a19c5980eebfb4b9eb41620ff6571ed9de83a030bf0a59b3d20be6\", \"policy\": \"7d45acc617992bca127ce0b7defb6715caac5b774dcc489acf984502cea3a402\", \"schema\": \"c3fa463ce25ed927ecb12bd0f4d9010e0b5a7dc2478778d417a2fe28e3fedfac\", \"target_rel_path\": \"d7c02f1c4dd4ef1cfea27c5044077626a6b112e672b63c7eb203b9cc5cfefeb4\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/archive/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/run-artifact-fingerprint.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"41b1839ac149b5f321b5037bbd5caf4b174d61ce791ec1182e0daa57534d5c06\"}"
+      }
+    ]
+  }
+}

@@ -1,0 +1,598 @@
+{
+  "$schema": "ops/schemas/spdx-sbom-draft.schema.json",
+  "artifact_kind": "spdx_sbom",
+  "generated_at": "2026-05-14T12:49:24Z",
+  "producer": "ops.scripts.spdx_sbom",
+  "source_command": "python -m ops.scripts.supply_chain.spdx_sbom",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "c848a4c2fc8919d5a720738ed147aa5f54e5f56b91bd52916b68aac9379dfb2b",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "2303901be97ad3edd942196b98b88616160f0711fcef5c68336062457eeac59b",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "2821024daaa008fab63486d51c45334c1fd91c6ae389e911d4531c2fb611f40c",
+    "artifact_model_generated_at": "f5897e60f0fabf02369e813a9acf194c350b48b4183bc42fa620671d83dcb10a",
+    "artifact_set_id": "5254e09bebf3577018a5841362f79afa4278abb32f4ce6f6ce5b4444e631455d"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-14T12:49:24Z"
+  },
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "llm-wiki-vnext-supply-chain-sbom",
+  "documentNamespace": "https://llm-wiki-vnext.invalid/spdx/564bfe0324dd424d",
+  "creationInfo": {
+    "created": "2026-05-14T12:49:24Z",
+    "creators": [
+      "Tool: ops.scripts.spdx_sbom"
+    ]
+  },
+  "documentDescribes": [
+    "SPDXRef-Package-5d5ab867564d"
+  ],
+  "artifact_context": {
+    "artifact_set_id": "564bfe0324dd424d",
+    "model_ref": "ops/reports/supply-chain-artifact-model.json",
+    "cyclonedx_ref": "ops/reports/cyclonedx-bom.json",
+    "openvex_ref": "ops/reports/openvex-draft.json"
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-5d5ab867564d",
+      "name": "llm-wiki-vnext",
+      "versionInfo": "0.1.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "APPLICATION",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:generic/llm-wiki-vnext@0.1.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-13e50ab260aa",
+      "name": "build",
+      "versionInfo": "1.5.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/build@1.5.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-3712c69c81a7",
+      "name": "colorama",
+      "versionInfo": "0.4.6",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/colorama@0.4.6"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-7f6f22710584",
+      "name": "execnet",
+      "versionInfo": "2.1.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/execnet@2.1.2"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-d6610d68a0e8",
+      "name": "iniconfig",
+      "versionInfo": "2.3.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/iniconfig@2.3.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-280115f4e52e",
+      "name": "librt",
+      "versionInfo": "0.9.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/librt@0.9.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-9722ba5e1b50",
+      "name": "mypy",
+      "versionInfo": "1.20.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/mypy@1.20.1"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-9a19788eca16",
+      "name": "mypy-extensions",
+      "versionInfo": "1.1.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/mypy-extensions@1.1.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-9c4641ee28c2",
+      "name": "packaging",
+      "versionInfo": "26.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/packaging@26.1"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-00b3a3a6855a",
+      "name": "pathspec",
+      "versionInfo": "1.0.4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/pathspec@1.0.4"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-c674c43e1631",
+      "name": "pluggy",
+      "versionInfo": "1.6.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/pluggy@1.6.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-bbeed54d48dc",
+      "name": "pygments",
+      "versionInfo": "2.20.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/pygments@2.20.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-cf5fa5284fae",
+      "name": "pyproject-hooks",
+      "versionInfo": "1.2.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/pyproject-hooks@1.2.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-104ecc433542",
+      "name": "pytest",
+      "versionInfo": "8.4.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/pytest@8.4.2"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-94df11983dff",
+      "name": "pytest-xdist",
+      "versionInfo": "3.8.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/pytest-xdist@3.8.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-a19dd29322f5",
+      "name": "ruff",
+      "versionInfo": "0.15.11",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/ruff@0.15.11"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-5603cf20a8ad",
+      "name": "types-pyyaml",
+      "versionInfo": "6.0.12.20260408",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/types-pyyaml@6.0.12.20260408"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-0171d0cf40b8",
+      "name": "attrs",
+      "versionInfo": "26.1.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/attrs@26.1.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-34a839d01119",
+      "name": "jsonschema",
+      "versionInfo": "4.26.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/jsonschema@4.26.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-337e2a27da01",
+      "name": "jsonschema-specifications",
+      "versionInfo": "2025.9.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/jsonschema-specifications@2025.9.1"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-022c4f8abc67",
+      "name": "pyyaml",
+      "versionInfo": "6.0.3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/pyyaml@6.0.3"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-f9217ad3a0a6",
+      "name": "referencing",
+      "versionInfo": "0.37.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/referencing@0.37.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-07954787cfe4",
+      "name": "rpds-py",
+      "versionInfo": "0.30.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/rpds-py@0.30.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-c4f97ea359ab",
+      "name": "typing-extensions",
+      "versionInfo": "4.15.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/typing-extensions@4.15.0"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-5d5ab867564d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-5d5ab867564d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-34a839d01119"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-5d5ab867564d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-022c4f8abc67"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-13e50ab260aa",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3712c69c81a7"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-13e50ab260aa",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-9c4641ee28c2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-13e50ab260aa",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-cf5fa5284fae"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-34a839d01119",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-0171d0cf40b8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-34a839d01119",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-337e2a27da01"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-34a839d01119",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-f9217ad3a0a6"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-34a839d01119",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-07954787cfe4"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-337e2a27da01",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-f9217ad3a0a6"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-9722ba5e1b50",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-280115f4e52e"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-9722ba5e1b50",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-9a19788eca16"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-9722ba5e1b50",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-00b3a3a6855a"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-9722ba5e1b50",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c4f97ea359ab"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-104ecc433542",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3712c69c81a7"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-104ecc433542",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-d6610d68a0e8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-104ecc433542",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-9c4641ee28c2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-104ecc433542",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c674c43e1631"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-104ecc433542",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-bbeed54d48dc"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-94df11983dff",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-7f6f22710584"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-94df11983dff",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-104ecc433542"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f9217ad3a0a6",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-0171d0cf40b8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f9217ad3a0a6",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-07954787cfe4"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f9217ad3a0a6",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c4f97ea359ab"
+    }
+  ],
+  "annotations": [
+    {
+      "annotationType": "OTHER",
+      "annotator": "Tool: ops.scripts.spdx_sbom",
+      "annotationDate": "2026-05-14T12:49:24Z",
+      "comment": "artifact_set_id=564bfe0324dd424d"
+    }
+  ],
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/spdx-sbom-draft.schema.json\", \"artifact_kind\": \"spdx_sbom\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-14T12:49:24Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-14T12:49:24Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"artifact_model_generated_at\": \"f5897e60f0fabf02369e813a9acf194c350b48b4183bc42fa620671d83dcb10a\", \"artifact_set_id\": \"5254e09bebf3577018a5841362f79afa4278abb32f4ce6f6ce5b4444e631455d\", \"policy\": \"ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f\", \"schema\": \"2303901be97ad3edd942196b98b88616160f0711fcef5c68336062457eeac59b\", \"source_paths\": \"2821024daaa008fab63486d51c45334c1fd91c6ae389e911d4531c2fb611f40c\"}, \"producer\": \"ops.scripts.spdx_sbom\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.supply_chain.spdx_sbom\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"c848a4c2fc8919d5a720738ed147aa5f54e5f56b91bd52916b68aac9379dfb2b\"}"
+      }
+    ]
+  }
+}

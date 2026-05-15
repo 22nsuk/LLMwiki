@@ -1,0 +1,248 @@
+{
+  "$schema": "ops/schemas/routing-provenance-aggregate.schema.json",
+  "artifact_kind": "routing_provenance_aggregate",
+  "generated_at": "2026-05-02T03:03:47Z",
+  "producer": "ops.scripts.observability_routing_provenance_runtime",
+  "source_command": "python -m ops.scripts.observability_routing_provenance_runtime --vault .",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "f3dc81c29eb9d0d0a153b44ee5b0c15bcf611a2297aa27db91c9e00e1f683831",
+  "input_fingerprints": {
+    "policy": "7d45acc617992bca127ce0b7defb6715caac5b774dcc489acf984502cea3a402",
+    "schema": "d1020425815581b2e5ba63d8e577aa169eeb759773d42063844263ef84a3e78f",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_session_report": "70746a638eb0887f6232e64ce05eacaddec6a38264810889394c7f48b7e94577",
+    "run_ids": "2ec459d44f092ec3b681008674eb5c78785d5908693b3167de31050177631df6"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-02T03:03:47Z"
+  },
+  "session_id": "standalone-run-telemetry",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "source_session_report": "ops/reports/auto-improve-sessions/standalone-run-telemetry.json",
+  "summary": {
+    "run_count": 6,
+    "routing_report_count": 0,
+    "executor_report_count": 0,
+    "telemetry_report_count": 3,
+    "promotion_report_count": 6,
+    "artifact_fingerprint_count": 3
+  },
+  "audit_rollup": {
+    "routing": {
+      "report_count": 0,
+      "role_counts": {},
+      "selected_rung_counts": {},
+      "score_band_counts": {},
+      "sandbox_mode_counts": {},
+      "model_counts": {},
+      "reasoning_effort_counts": {},
+      "risk_flag_counts": {}
+    },
+    "executor": {
+      "report_count": 0,
+      "role_counts": {},
+      "status_counts": {},
+      "blocking_role_counts": {},
+      "returncode_counts": {}
+    },
+    "telemetry": {
+      "report_count": 3,
+      "failure_taxonomy_counts": {},
+      "phase_totals_seconds": {},
+      "phase_max_seconds": {}
+    },
+    "coverage": {
+      "run_count": 6,
+      "runs_with_routing": 0,
+      "runs_with_executor": 0,
+      "runs_with_telemetry": 3,
+      "runs_with_promotion_report": 6,
+      "runs_with_artifact_fingerprint": 3
+    },
+    "loop_health": {
+      "attempt_count": 6,
+      "rework_count": 2,
+      "rollback_signal_count": 0,
+      "rollback_rehearsal_coverage_count": 1,
+      "defect_escape_count": 1,
+      "finalized_run_count": 3,
+      "executor_failure_count": 0,
+      "routing_report_parse_gap_count": 0,
+      "executor_report_parse_gap_count": 0,
+      "moving_averages": {
+        "hold": 0.1667,
+        "discard": 0.1667,
+        "rollback_signal": 0.0
+      },
+      "coverage_ratios": {
+        "routing": 0.0,
+        "executor": 0.0,
+        "telemetry": 0.5,
+        "promotion_report": 1.0,
+        "artifact_fingerprint": 0.5
+      },
+      "health_flags": [
+        "partial_telemetry_coverage",
+        "rework_detected",
+        "defect_escape_signals_present",
+        "unfinalized_runs_present",
+        "recent_hold_present",
+        "recent_discard_present"
+      ]
+    }
+  },
+  "runs": [
+    {
+      "run_id": "run-20260414-mechanism-planning-gate",
+      "proposal_id": "",
+      "source_candidate_id": "",
+      "decision": "PROMOTE",
+      "outcome": "promoted",
+      "primary_targets": [],
+      "supporting_targets": [],
+      "test_files": [],
+      "risk_flags": [],
+      "roles": [],
+      "artifacts": {
+        "proposal_snapshot": "",
+        "scope_freeze": "",
+        "routing_reports": [],
+        "executor_reports": [],
+        "run_telemetry": "",
+        "promotion_report": "runs/run-20260414-mechanism-planning-gate/promotion-report.json",
+        "run_artifact_fingerprint": ""
+      }
+    },
+    {
+      "run_id": "run-20260415-mechanism-planning-gate-second-clean",
+      "proposal_id": "",
+      "source_candidate_id": "",
+      "decision": "PROMOTE",
+      "outcome": "promoted",
+      "primary_targets": [],
+      "supporting_targets": [],
+      "test_files": [],
+      "risk_flags": [],
+      "roles": [],
+      "artifacts": {
+        "proposal_snapshot": "",
+        "scope_freeze": "",
+        "routing_reports": [],
+        "executor_reports": [],
+        "run_telemetry": "",
+        "promotion_report": "runs/run-20260415-mechanism-planning-gate-second-clean/promotion-report.json",
+        "run_artifact_fingerprint": ""
+      }
+    },
+    {
+      "run_id": "run-20260422-auto-improve-decision-record-fallback-retry",
+      "proposal_id": "",
+      "source_candidate_id": "",
+      "decision": "SKIPPED",
+      "outcome": "",
+      "primary_targets": [
+        "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/schemas/run-telemetry.schema.json"
+      ],
+      "test_files": [
+        "tests/test_auto_improve_iteration_runtime.py"
+      ],
+      "risk_flags": [],
+      "roles": [],
+      "artifacts": {
+        "proposal_snapshot": "",
+        "scope_freeze": "",
+        "routing_reports": [],
+        "executor_reports": [],
+        "run_telemetry": "runs/run-20260422-auto-improve-decision-record-fallback-retry/run-telemetry.json",
+        "promotion_report": "runs/run-20260422-auto-improve-decision-record-fallback-retry/promotion-report.json",
+        "run_artifact_fingerprint": "runs/run-20260422-auto-improve-decision-record-fallback-retry/run-artifact-fingerprint.json"
+      }
+    },
+    {
+      "run_id": "run-20260422-auto-improve-decision-record-fallback-retry2",
+      "proposal_id": "",
+      "source_candidate_id": "",
+      "decision": "HOLD",
+      "outcome": "hold",
+      "primary_targets": [],
+      "supporting_targets": [],
+      "test_files": [],
+      "risk_flags": [],
+      "roles": [],
+      "artifacts": {
+        "proposal_snapshot": "",
+        "scope_freeze": "",
+        "routing_reports": [],
+        "executor_reports": [],
+        "run_telemetry": "",
+        "promotion_report": "runs/run-20260422-auto-improve-decision-record-fallback-retry2/promotion-report.json",
+        "run_artifact_fingerprint": ""
+      }
+    },
+    {
+      "run_id": "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+      "proposal_id": "",
+      "source_candidate_id": "",
+      "decision": "DISCARD",
+      "outcome": "discarded",
+      "primary_targets": [
+        "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/schemas/run-telemetry.schema.json"
+      ],
+      "test_files": [
+        "tests/test_auto_improve_iteration_runtime.py"
+      ],
+      "risk_flags": [],
+      "roles": [],
+      "artifacts": {
+        "proposal_snapshot": "",
+        "scope_freeze": "",
+        "routing_reports": [],
+        "executor_reports": [],
+        "run_telemetry": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/run-telemetry.json",
+        "promotion_report": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/promotion-report.json",
+        "run_artifact_fingerprint": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/run-artifact-fingerprint.json"
+      }
+    },
+    {
+      "run_id": "run-20260422-auto-improve-timeout-telemetry-fallback",
+      "proposal_id": "",
+      "source_candidate_id": "",
+      "decision": "PROMOTE",
+      "outcome": "promoted",
+      "primary_targets": [
+        "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/schemas/run-telemetry.schema.json"
+      ],
+      "test_files": [
+        "tests/test_auto_improve_iteration_runtime.py"
+      ],
+      "risk_flags": [],
+      "roles": [],
+      "artifacts": {
+        "proposal_snapshot": "",
+        "scope_freeze": "",
+        "routing_reports": [],
+        "executor_reports": [],
+        "run_telemetry": "runs/run-20260422-auto-improve-timeout-telemetry-fallback/run-telemetry.json",
+        "promotion_report": "runs/run-20260422-auto-improve-timeout-telemetry-fallback/promotion-report.json",
+        "run_artifact_fingerprint": "runs/run-20260422-auto-improve-timeout-telemetry-fallback/run-artifact-fingerprint.json"
+      }
+    }
+  ]
+}

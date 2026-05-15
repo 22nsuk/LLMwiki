@@ -1,0 +1,222 @@
+{
+  "$schema": "ops/schemas/mutation-proposals.schema.json",
+  "artifact_kind": "mutation_proposals_report",
+  "generated_at": "2026-05-15T04:15:49Z",
+  "producer": "ops.scripts.mutation_proposal_runtime",
+  "source_command": "python -m ops.scripts.mutation_proposal --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "fc7cc7e80ffe093b2bcd94ebbd5ff151c46631ade8a953a5b92611a0b0a99c46",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "77bb3f5d19b69eec076301a0b578c245629cd978b39114039d79e5dea634b170",
+    "mechanism_review_report": "84d1ca2aafbdf4a2a683d3523af35ffe751c73a94eebb034d84574a007c61f47",
+    "system_log": "32f22f36c00471c3b757974cccf8bbb74c26ebb27089845a2ec63003c7c8fc50",
+    "mutation_dedupe_window": "ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d",
+    "mutation_max_proposals": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-15T04:15:49Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "pass",
+  "summary": {
+    "source_candidates_read": 1,
+    "log_entries_scanned": 5,
+    "proposals_emitted": 2,
+    "blocked_proposals": 1,
+    "candidate_blocker_count": 0,
+    "proposal_blocker_count": 0,
+    "queue_pressure_summary": "contract_regression_signals 1 proposal, 1 blocked; queue_unblock 1 proposal"
+  },
+  "diagnostics": {
+    "source_mechanism_review_report": "ops/reports/mechanism-review-candidates.json",
+    "skipped_candidates": [],
+    "evidence_gaps": [],
+    "empty_queue_blockers": [],
+    "family_session_calibration": {
+      "enabled": true,
+      "status": "active",
+      "proposal_count": 2,
+      "blocked_proposal_count": 1,
+      "by_family": [
+        {
+          "family": "contract_regression_signals",
+          "proposal_count": 1,
+          "blocked_proposal_count": 1,
+          "session_priority_delta": 0,
+          "boosted_candidates": 0,
+          "lowered_candidates": 0,
+          "unchanged_candidates": 1,
+          "validation_blocked_sessions": 0,
+          "review_blocked_sessions": 0,
+          "mutation_failed_sessions": 0,
+          "validator_dispatch_sessions": 0,
+          "reviewer_dispatch_sessions": 0,
+          "high_risk_routing_sessions": 0
+        },
+        {
+          "family": "queue_unblock",
+          "proposal_count": 1,
+          "blocked_proposal_count": 0,
+          "session_priority_delta": 0,
+          "boosted_candidates": 0,
+          "lowered_candidates": 0,
+          "unchanged_candidates": 0,
+          "validation_blocked_sessions": 0,
+          "review_blocked_sessions": 0,
+          "mutation_failed_sessions": 0,
+          "validator_dispatch_sessions": 0,
+          "reviewer_dispatch_sessions": 0,
+          "high_risk_routing_sessions": 0
+        }
+      ]
+    },
+    "queue_selection": {
+      "available_proposal_count": 2,
+      "selected_proposal_count": 2,
+      "runnable_available_count": 1,
+      "blocked_available_count": 1,
+      "selected_runnable_count": 1,
+      "selected_blocked_count": 1,
+      "blocked_reason_counts": [
+        {
+          "reason": "recent_log_overlap",
+          "count": 1
+        }
+      ]
+    },
+    "recent_log_overlap": {
+      "dedupe_window": 5,
+      "section_ordering": "timestamp",
+      "scanned_log_headings": [
+        "[2026-05-03 13:10 KST] schema-update | accepted_risk_gate_attention_count added to batch manifest schema",
+        "[2026-05-03 13:15 KST] decision | Makefile diagnostic quarantine precondition for batch manifest verify",
+        "[2026-05-03 13:20 KST] decision | Operational DoD items deferred with plan",
+        "[2026-05-07 12:07 KST] improve | Finalize mechanism run run-20260507-auto-improve-iteration-persistence-discard-path (PROMOTE)",
+        "[2026-05-07 12:48 KST] improve | Finalize mechanism run run-20260507-schema-drift-manifest-followup-pressure (PROMOTE)"
+      ],
+      "matches": [
+        {
+          "proposal_id": "repeated_discard_runs__auto-improve-iteration-persistence-runtime",
+          "source_candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
+          "matched_marker": "auto_improve_iteration_persistence_runtime.py",
+          "matched_log_heading": "[2026-05-07 12:07 KST] improve | Finalize mechanism run run-20260507-auto-improve-iteration-persistence-discard-path (PROMOTE)",
+          "unblock_condition": "advance chronology beyond the configured dedupe window or rotate to a non-overlapping target set"
+        }
+      ]
+    }
+  },
+  "proposals": [
+    {
+      "proposal_id": "recent_log_overlap_queue_blocked__mutation-proposal-runtime",
+      "source_candidate_id": "recent_log_overlap_queue_unblock__mutation-proposal-runtime",
+      "source_candidate_type": "mechanism_recent_log_overlap_queue_unblock_candidate",
+      "family": "queue_unblock",
+      "tier": "supporting",
+      "priority": 91,
+      "primary_targets": [
+        "ops/scripts/mutation_proposal_runtime.py"
+      ],
+      "supporting_targets": [],
+      "metrics_triggered": [
+        "recent_log_overlap_queue_blocked"
+      ],
+      "run_ids": [
+        "recent-log-overlap-queue-blocked"
+      ],
+      "failure_mode": "recent_log_overlap_queue_blocked",
+      "single_mechanism_scope": "keep the unblock experiment scoped to `ops/scripts/mutation_proposal_runtime.py` and `tests/test_mutation_proposal.py` so all existing recent-log-overlap-blocked proposals remain diagnostic evidence while one runnable rotation target reopens the queue",
+      "change_hypothesis": "If mutation proposal runtime emits a narrow fallback when every candidate is blocked only by recent_log_overlap, auto-improve readiness can keep a runnable queue without weakening the chronology overlap guardrail.",
+      "expected_binary_signal": "mutation proposal diagnostics retain recent_log_overlap blocked candidates and queue_selection.runnable_available_count becomes greater than zero",
+      "blast_radius_score": 17,
+      "must_change_tests": [
+        "tests/test_mutation_proposal.py",
+        "tests/test_report_generation_smoke.py"
+      ],
+      "must_change_budget_signal": {
+        "signal": "mutation_proposal.queue_selection.runnable_available_count",
+        "expected_change": "greater_than_zero"
+      },
+      "must_not_expand_apply_roots": true,
+      "must_not_increase_untyped_surface": true,
+      "required_artifacts": [
+        "runs/<run-id>/promotion-report.json",
+        "runs/<run-id>/baseline-mechanism-assessment.json",
+        "runs/<run-id>/candidate-mechanism-assessment.json"
+      ],
+      "blocked_by": [],
+      "why_now": "현재 후보들이 모두 recent_log_overlap 하나로만 막히면 live queue가 비어 readiness와 learning execution gate까지 연쇄적으로 닫힌다. guardrail은 보존하고 target rotation proposal만 별도로 열어둔다.",
+      "priority_breakdown": {
+        "base_priority": 91,
+        "historical_calibration_delta": 0,
+        "session_calibration_delta": 0,
+        "review_candidate_priority": 91,
+        "recent_log_overlap_penalty": 0,
+        "final_priority": 91
+      }
+    },
+    {
+      "proposal_id": "repeated_discard_runs__auto-improve-iteration-persistence-runtime",
+      "source_candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
+      "source_candidate_type": "mechanism_eval_stagnation_candidate",
+      "family": "contract_regression_signals",
+      "tier": "supporting",
+      "priority": 85,
+      "primary_targets": [
+        "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/schemas/run-telemetry.schema.json"
+      ],
+      "metrics_triggered": [
+        "repeated_discard_runs"
+      ],
+      "run_ids": [
+        "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+        "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+      ],
+      "failure_mode": "repeated_discard_runs",
+      "single_mechanism_scope": "narrow the next mechanism experiment on ops/scripts/auto_improve_iteration_persistence_runtime.py to the DISCARD outcome path only",
+      "change_hypothesis": "If the next experiment around ops/scripts/auto_improve_iteration_persistence_runtime.py changes only one DISCARD-producing path and records explicit non-regression evidence, recent discard/rework pressure should drop without expanding the mechanism surface.",
+      "expected_binary_signal": "next finalized attempt for this target avoids DISCARD while candidate_eval non-regresses and promotion artifacts explain the terminal decision",
+      "blast_radius_score": 30,
+      "must_change_tests": [
+        "tests/test_auto_improve_iteration_runtime.py"
+      ],
+      "must_change_budget_signal": {
+        "signal": "outcome_metrics.moving_averages.discard",
+        "expected_change": "decrease_after_finalized_attempt"
+      },
+      "must_not_expand_apply_roots": true,
+      "must_not_increase_untyped_surface": true,
+      "required_artifacts": [
+        "runs/<run-id>/promotion-report.json",
+        "runs/<run-id>/baseline-mechanism-assessment.json",
+        "runs/<run-id>/candidate-mechanism-assessment.json"
+      ],
+      "blocked_by": [
+        "recent_log_overlap"
+      ],
+      "why_now": "contract_regression_signals family에서 `repeated_discard_runs` 신호가 최근 2개 run 기준으로 누적돼 지금 한 번의 단일 mechanism 실험으로 국소화할 가치가 있다. 다만 최근 chronology와 target overlap이 보여 우선순위는 한 단계 낮춘다.",
+      "priority_breakdown": {
+        "base_priority": 80,
+        "historical_calibration_delta": 20,
+        "session_calibration_delta": 0,
+        "review_candidate_priority": 100,
+        "recent_log_overlap_penalty": -15,
+        "final_priority": 85
+      }
+    }
+  ]
+}

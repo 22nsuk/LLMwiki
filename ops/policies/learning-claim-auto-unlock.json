@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "enabled": true,
+  "claim_scope": "bounded_learning_likely_auto_improve_readiness",
+  "min_runnable_proposal_count": 1,
+  "min_same_eval_run_count": 2,
+  "min_coverage_ratio": 1.0,
+  "max_rework_count": 0,
+  "max_defect_escape_pair_count": 0,
+  "revocation_triggers": [
+    "auto_improve_readiness_input_fingerprint_changes",
+    "auto_improve_readiness_source_tree_fingerprint_changes",
+    "learning_readiness_signals_become_non_empty",
+    "learning_release_blockers_become_non_empty",
+    "same_eval_or_behavior_delta_coverage_regresses",
+    "runnable_proposal_queue_becomes_empty"
+  ]
+}

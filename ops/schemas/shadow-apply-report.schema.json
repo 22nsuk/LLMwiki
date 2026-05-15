@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Shadow Apply Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "mode",
+    "status",
+    "generated_at",
+    "source_manifest",
+    "guard",
+    "summary",
+    "files"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/shadow-apply-report.schema.json"
+      ]
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "shadow"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ready_for_live_apply"
+      ]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "source_manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "run_id"
+      ],
+      "properties": {
+        "schema": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        }
+      }
+    },
+    "guard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed_apply_roots",
+        "changed_paths",
+        "invalid_paths",
+        "disallowed_paths"
+      ],
+      "properties": {
+        "allowed_apply_roots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "changed_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "invalid_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "disallowed_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total_changed_files",
+        "added",
+        "modified",
+        "deleted"
+      ],
+      "properties": {
+        "total_changed_files": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "added": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "modified": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deleted": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/file"
+      }
+    }
+  },
+  "$defs": {
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "change_type",
+        "live_exists",
+        "workspace_exists",
+        "would_write",
+        "would_delete"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "change_type": {
+          "type": "string",
+          "enum": [
+            "added",
+            "modified",
+            "deleted"
+          ]
+        },
+        "live_exists": {
+          "type": "boolean"
+        },
+        "workspace_exists": {
+          "type": "boolean"
+        },
+        "would_write": {
+          "type": "boolean"
+        },
+        "would_delete": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

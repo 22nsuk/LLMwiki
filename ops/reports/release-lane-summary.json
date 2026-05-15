@@ -1,0 +1,61 @@
+{
+  "$schema": "ops/schemas/release-lane-summary.schema.json",
+  "artifact_kind": "release_lane_summary",
+  "generated_at": "2026-05-15T04:23:48Z",
+  "producer": "ops.scripts.release_lane_summary",
+  "source_command": "python -m ops.scripts.release_lane_summary --vault . --out ops/reports/release-lane-summary.json",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "0d52985f1a335ba2c86dcfcd891717a3c35fc67c6a4f95df49e73822041aa523",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "e61b0bc0bda4784ff61850ac5b3d8f5a63b95209cdd9f1e84e6e4142763be1a0",
+    "learning_delta_scoreboard": "a1cfd405d20cc8d1375a9bb0dae02300af21f628c18ac382b5b2f3207d0d0323",
+    "release_closeout_summary": "6d4979643e89700f4bb94dca49af631b4fd1890352af22b5e045994722ad7870",
+    "release_evidence_cohort": "b35a475183662de58b53decbd1390e38d60fd92a472584d15ac77dae6c37b547",
+    "release_evidence_dashboard": "2cdb8a3ebd96398d21e62efb5862b7154135042dcc71abfb9ba2f7431eb9580c",
+    "current_source_tree_fingerprint": "923a646d82b35ddfa28a4d5397d937b54e7b63c90fee0ebeffe41bb7d23dcd38"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-15T04:23:48Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "attention",
+  "lane_summary": {
+    "cohort_status": "pass",
+    "clean_lane_status": "pass",
+    "conditional_lane_status": "pass",
+    "auto_improve_lane_status": "blocked",
+    "learning_lane_status": "blocked",
+    "machine_release_status": "allowed",
+    "operator_release_status": "allowed",
+    "release_authority_status": "clean_pass",
+    "sealed_release_status": "unsealed_distribution_not_provided",
+    "learning_claim_guard_status": "pass",
+    "learning_claim_allowed": false,
+    "claims_learning_improved": false,
+    "accepted_risk_family_count": 0,
+    "accepted_risk_instance_count": 0,
+    "accepted_risk_count": 0,
+    "gate_attention_count": 1,
+    "clean_lane_blocking_family_count": 0,
+    "learning_claim_blocking_family_count": 1,
+    "advisory_lifecycle_family_count": 0
+  },
+  "provenance": {
+    "cohort_source": "ops/reports/release-evidence-cohort.json",
+    "closeout_source": "ops/reports/release-closeout-summary.json",
+    "dashboard_source": "ops/reports/release-evidence-dashboard.json",
+    "learning_delta_scoreboard_source": "ops/reports/learning-delta-scoreboard.json"
+  }
+}

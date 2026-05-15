@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "description": "Release lane definitions and cross-artifact vocabulary for LLM Wiki vNext",
+  "generated_at": "2026-05-02T15:20:00Z",
+  "producer": "ops.policies.release_lane_definitions",
+  "lanes": {
+    "clean": {
+      "description": "Zero accepted risk, strict cohort pass, machine release allowed",
+      "requirements": {
+        "zero_accepted_risk_family": true,
+        "strict_cohort_pass": true,
+        "release_closeout_clean": true,
+        "expired_risk_present": false
+      },
+      "release_readiness_state": "clean_pass",
+      "machine_release_allowed": true,
+      "operator_release_allowed": true
+    },
+    "conditional": {
+      "description": "Operator-mediated release with explicitly accepted risks",
+      "requirements": {
+        "release_readiness_state": "conditional_pass",
+        "operator_release_allowed": true,
+        "accepted_risk_review_completed": true,
+        "expired_risk_present": false
+      },
+      "machine_release_allowed": false,
+      "operator_release_allowed": true,
+      "requires_accepted_risk_review": true
+    },
+    "blocked": {
+      "description": "Release cannot proceed due to expired risks, failed gates, or unreviewed blockers",
+      "requirements": {
+        "expired_risk_present": true,
+        "release_readiness_state": "blocked",
+        "operator_release_allowed": false,
+        "machine_release_allowed": false
+      }
+    }
+  },
+  "vocabulary": {
+    "status_values": ["clean_pass", "conditional_pass", "blocked", "not_run"],
+    "lane_values": ["clean", "conditional", "blocked"],
+    "risk_acceptance_status": ["valid", "expired", "not_found"],
+    "gate_effect_values": ["pass", "fail", "accepted_risk", "attention", "warn"],
+    "cohort_policy_values": ["strict_same_fingerprint", "allowed_divergence_with_explicit_risk"]
+  },
+  "risk_acceptance_schema": {
+    "required_fields": [
+      "artifact_path",
+      "accepted_by",
+      "accepted_at",
+      "expires_at",
+      "risk_owner",
+      "revalidation_command",
+      "status_at_check"
+    ],
+    "status_at_check_values": ["valid", "expired", "not_found"],
+    "default_ttl_days": 7
+  }
+}

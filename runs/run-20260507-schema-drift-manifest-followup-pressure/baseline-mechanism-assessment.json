@@ -1,0 +1,135 @@
+{
+  "$schema": "ops/schemas/mechanism-assessment-report.schema.json",
+  "vault": ".",
+  "generated_at": "2026-05-07T03:47:58Z",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "primary_targets": [
+    "ops/scripts/mechanism_candidate_registry_runtime.py"
+  ],
+  "supporting_targets": [
+    "ops/scripts/mechanism_review_history_runtime.py",
+    "ops/scripts/mechanism_review_candidate_runtime.py"
+  ],
+  "test_files": [
+    "tests/test_mechanism_review_candidate_runtime.py",
+    "tests/test_mechanism_review_history_runtime.py"
+  ],
+  "structural_metrics": {
+    "nonempty_line_count_total": 612,
+    "python_function_count": 24,
+    "python_branch_node_count": 52,
+    "markdown_heading_count": 0,
+    "test_file_count": 2,
+    "test_case_count": 8
+  },
+  "total_structural_metrics": {
+    "nonempty_line_count_total": 1484,
+    "python_function_count": 54,
+    "python_branch_node_count": 118,
+    "markdown_heading_count": 0,
+    "test_file_count": 2,
+    "test_case_count": 8
+  },
+  "diagnostics": {
+    "unreadable_targets": [],
+    "python_parse_failures": []
+  },
+  "complexity_profile": {
+    "dimensions": {
+      "change_surface": 5,
+      "dependency_impact": 2,
+      "verification_cost": 3,
+      "artifact_heterogeneity": 0,
+      "environment_risk": 0
+    },
+    "complexity_score": 40,
+    "risk_flags": [],
+    "risk_flag_evidence": [],
+    "target_profiles": [
+      {
+        "path": "ops/scripts/mechanism_candidate_registry_runtime.py",
+        "kind": "python",
+        "nonempty_line_count": 612,
+        "python_function_count": 24,
+        "python_branch_node_count": 52,
+        "markdown_heading_count": 0,
+        "python_semantic_complexity_points": 657,
+        "whole_file_volume": 954,
+        "coarse_target": true
+      },
+      {
+        "path": "ops/scripts/mechanism_review_history_runtime.py",
+        "kind": "python",
+        "nonempty_line_count": 254,
+        "python_function_count": 8,
+        "python_branch_node_count": 24,
+        "markdown_heading_count": 0,
+        "python_semantic_complexity_points": 281,
+        "whole_file_volume": 394,
+        "coarse_target": false
+      },
+      {
+        "path": "ops/scripts/mechanism_review_candidate_runtime.py",
+        "kind": "python",
+        "nonempty_line_count": 618,
+        "python_function_count": 22,
+        "python_branch_node_count": 42,
+        "markdown_heading_count": 0,
+        "python_semantic_complexity_points": 519,
+        "whole_file_volume": 906,
+        "coarse_target": true
+      }
+    ],
+    "dimension_evidence": {
+      "change_surface": {
+        "target_count": 3,
+        "target_count_score": 2,
+        "whole_file_volume": 2108,
+        "whole_file_volume_score": 5,
+        "per_target_capped_volume": 1490,
+        "per_target_capped_volume_score": 5,
+        "semantic_volume": 925,
+        "semantic_volume_score": 5,
+        "large_file_target_count": 2,
+        "coarse_target_bias_mitigated": false,
+        "selected_score": 5
+      },
+      "verification_cost": {
+        "target_count": 3,
+        "test_file_count": 2,
+        "test_case_count": 8,
+        "verification_scope": "focused_multi_file",
+        "reasons": [
+          "focused_multi_file"
+        ],
+        "selected_score": 3
+      }
+    },
+    "primary_targets": [
+      "ops/scripts/mechanism_candidate_registry_runtime.py"
+    ],
+    "supporting_targets": [
+      "ops/scripts/mechanism_review_history_runtime.py",
+      "ops/scripts/mechanism_review_candidate_runtime.py"
+    ],
+    "test_files": [
+      "tests/test_mechanism_review_candidate_runtime.py",
+      "tests/test_mechanism_review_history_runtime.py"
+    ]
+  },
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-05-07T03:47:58Z\", \"generated_at_source\": \"payload.generated_at\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-05-07T17:20:47Z\", \"source_artifact\": \"runs/run-20260507-schema-drift-manifest-followup-pressure/baseline-mechanism-assessment.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/mechanism-assessment-report.schema.json\", \"artifact_kind\": \"mechanism_assessment_report\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-05-07T17:20:47Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-07T03:47:58Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"e7a56d584a0a30a9db2d6681988bc66ed73687b63320d11a02c66d3c88559085\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"fc0340f868a19c5980eebfb4b9eb41620ff6571ed9de83a030bf0a59b3d20be6\", \"policy\": \"0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107\", \"schema\": \"c8b912e02280765e964272bcc4bb19040f15f063ec063f50e63bbda10a475d8f\", \"target_rel_path\": \"ce7bba699db916c45ff6aba85390b9c46efd9fe244d2d44d1db02995ca30a918\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/run-20260507-schema-drift-manifest-followup-pressure/baseline-mechanism-assessment.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"a29a1f5a6ec3e4ac4ac8d79cc69437a5f5e5b6bc55285a780721c53e67d5149d\"}"
+      }
+    ]
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-10T04:02:15Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "fac40af382250bb1b65974fdc225488494af8130efc88d1456ed126b73e88863",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "03a8442cc88f5b6d49706ccaa6fd2a14df1cc9732d5415ae7b7d9f73f2d1029e",
+    "record_id": "a3a50e3da11d8117240eaa2c56f9a8679ade08541ecba1dba56e51440b50aaf3",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "73c75af4a7e76928daaae35a57a0218fff349461ecc5eb744d86783b86713c21"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-10T04:02:15Z"
+  },
+  "record_id": "task-20260425-p0-artifact-contract-hardening",
+  "captured_at": "2026-04-25T07:22:08Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Follow-up noted while hardening shared artifact contracts, timeout-aware release smoke execution, and Windows-safe validation coverage for this standalone maintenance slice.",
+  "observations": [
+    {
+      "observation_id": "release_smoke_fast_profile",
+      "surface": "ops/scripts/release_smoke.py, ops/scripts/command_runtime.py, ops/schemas/release-smoke-report.schema.json",
+      "problem": "The hardened release smoke path now records canonical envelope metadata and per-command timeout telemetry, but it still always executes the full smoke suite even for narrow maintenance validations where only artifact contract integrity changed.",
+      "why_it_matters": "Full-suite release validation is correct for final confidence, but it is slower and more failure-prone than necessary during contract rollout work, which makes small maintenance slices harder to iterate on safely.",
+      "automation_candidate": "Add a policy-backed fast-smoke profile or command selection switch that preserves the same report contract while allowing a narrower validation set for low-risk maintenance tasks.",
+      "suggested_followup": "Automated by keeping full release smoke as the default release gate while adding the `release-smoke-fast` Make target and fast/full profile split in release_smoke.py. The fast profile writes separate evidence and is pinned by release smoke and Makefile static tests.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "windows_path_canonicalization_in_tests",
+      "surface": "tests/test_writer_output_paths.py, ops/scripts/planning_gate_validate.py, ops/scripts/policy_runtime.py",
+      "problem": "Windows validation exposed a path canonicalization mismatch where logically identical temp paths can appear with short-name versus long-name segments, causing strict Path.relative_to assertions to fail even though runtime behavior is otherwise correct.",
+      "why_it_matters": "Cross-platform maintenance confidence drops when path-shape differences in the environment create false negatives, because contributors can spend time chasing harness noise instead of real regressions.",
+      "automation_candidate": "Introduce a shared path-normalization or path-equivalence helper for tests and path-reporting assertions that need to tolerate Windows short-path expansion differences.",
+      "suggested_followup": "Automated on 2026-05-10 KST: raw registry alias parity is covered, writer-output relative paths now normalize Windows separators through `output_runtime`, planning artifact-dir report paths use stable repo-relative normalization, and release ZIP member paths normalize backslashes before archive budget checks. Focused tests cover writer-output paths, planning temp paths, ZIP member paths, and Info-ZIP warning versus blocker separation.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "artifact_contract_rollout_parity_guard",
+      "surface": "ops/scripts/release_smoke.py, ops/scripts/generated_artifact_index.py, ops/reports/generated-artifact-index.json, checked-in schema-backed report fixtures",
+      "problem": "Shared contract rollouts now touch envelopes, diagnostics, and verification blocks across multiple schema-backed artifacts, but there is still no narrow parity guard ensuring checked-in generated artifacts or fixtures are refreshed whenever the contract shape changes.",
+      "why_it_matters": "Without a parity check, future reviewers can encounter stale fixtures or generated reports that lag behind runtime semantics, reopening already-fixed issues or masking real incompatibilities until late validation.",
+      "automation_candidate": "Add a targeted regeneration-or-parity check for the small set of checked-in canonical reports and fixtures that are expected to track artifact contract changes.",
+      "suggested_followup": "Automated on 2026-05-10 KST: `make canonical-parity-guard` scopes the regeneration/parity check to contract-sensitive canonical artifacts and finalizer outputs, and `release-closeout-post-check-finalizer-dry-run --fail-on-refresh-required` fails with recommended refresh targets if the chain has not converged.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260425-p0-artifact-contract-hardening"
+}

@@ -1,0 +1,335 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki OpenVEX Draft Applicability Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "generated_at",
+    "artifact_kind",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "@context",
+    "@id",
+    "author",
+    "timestamp",
+    "version",
+    "tooling",
+    "artifact_context",
+    "metadata",
+    "statements",
+    "notes"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/openvex-draft.schema.json"
+      ]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_tree_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_status": {
+      "type": "string",
+      "enum": ["current", "archived", "stale", "unknown"]
+    },
+    "retention_policy": {
+      "type": "string",
+      "enum": ["ephemeral", "canonical_report", "archive"]
+    },
+    "encoding": {
+      "type": "string",
+      "enum": ["utf-8"]
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["current", "stale", "unknown", "invalid"]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "@context": {
+      "type": "string",
+      "enum": [
+        "https://openvex.dev/ns/v0.2.0"
+      ]
+    },
+    "@id": {
+      "type": "string",
+      "pattern": "^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "author": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "tooling": {
+      "$ref": "#/$defs/tooling"
+    },
+    "artifact_context": {
+      "$ref": "#/$defs/artifact_context"
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "statements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/statement"
+      }
+    },
+    "notes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "tooling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generator",
+        "cyclonedx_bom_ref",
+        "security_advisories_ref",
+        "spdx_ref",
+        "spdx_emitter_decision",
+        "vulnerability_source"
+      ],
+      "properties": {
+        "generator": {
+          "type": "string"
+        },
+        "cyclonedx_bom_ref": {
+          "type": "string"
+        },
+        "security_advisories_ref": {
+          "type": "string"
+        },
+        "spdx_ref": {
+          "type": "string"
+        },
+        "spdx_emitter_decision": {
+          "type": "string",
+          "enum": [
+            "shared-artifact-model-spdx-enabled"
+          ]
+        },
+        "vulnerability_source": {
+          "type": "string",
+          "enum": [
+            "not_scanned",
+            "repo-native-advisory-input"
+          ]
+        }
+      }
+    },
+    "artifact_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_set_id",
+        "security_advisories_ref",
+        "spdx_ref"
+      ],
+      "properties": {
+        "artifact_set_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{16,64}$"
+        },
+        "security_advisories_ref": {
+          "type": "string"
+        },
+        "spdx_ref": {
+          "type": "string"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "component_count",
+        "statement_count",
+        "dependency_edge_count",
+        "advisory_count",
+        "artifact_set_id"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft"
+          ]
+        },
+        "component_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "statement_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "dependency_edge_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "advisory_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "artifact_set_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{16,64}$"
+        }
+      }
+    },
+    "statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "vulnerability",
+        "products",
+        "status",
+        "timestamp"
+      ],
+      "properties": {
+        "vulnerability": {
+          "$ref": "#/$defs/vulnerability"
+        },
+        "products": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/product_ref"
+          },
+          "minItems": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "affected",
+            "not_affected",
+            "fixed",
+            "under_investigation"
+          ]
+        },
+        "timestamp": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        },
+        "justification": {
+          "type": "string"
+        },
+        "action_statement": {
+          "type": "string"
+        },
+        "resolved_version": {
+          "type": "string"
+        },
+        "impact_statement": {
+          "type": "string"
+        }
+      }
+    },
+    "vulnerability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "aliases",
+        "summary",
+        "reference_urls"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "summary": {
+          "type": "string"
+        },
+        "reference_urls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "product_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "@id"
+      ],
+      "properties": {
+        "@id": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

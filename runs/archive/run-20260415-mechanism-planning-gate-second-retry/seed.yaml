@@ -1,0 +1,67 @@
+$schema: "ops/schemas/seed.schema.json"
+run_id: run-20260415-mechanism-planning-gate-second-retry
+mode: improvement
+
+request:
+  summary: "Run one scoped system_mechanism experiment and capture baseline/candidate artifacts."
+  requester: maintainer-agent
+  source_pages:
+    - "ops/reports/mechanism-review-candidates.json"
+    - "ops/reports/mutation-proposals.json"
+
+state:
+  current: SEED_FROZEN
+  allowed_next:
+    - "PLAN_DRAFT"
+    - "BLOCKED"
+
+goals:
+  primary:
+    - "Change one mechanism only and keep repo health green."
+    - "Record baseline/candidate eval, lint, mechanism assessment, and promotion artifacts under one run id."
+  non_goals:
+    - "Do not mix unrelated content edits into the same run."
+    - "Do not broaden the experiment beyond one primary mechanism target."
+
+constraints:
+  hard:
+    - "One mechanism per experiment."
+    - "Never edit raw/."
+    - "Keep run-local artifacts under runs/<run-id>/."
+  soft:
+    - "Prefer one primary target and at most two supporting targets."
+    - "Prefer structural change over prompt-only change."
+
+success_criteria:
+  - id: SC-001
+    text: "Baseline and candidate mechanism assessment artifacts are both captured for the same run."
+    trace:
+      - "runs/run-20260415-mechanism-planning-gate-second-retry/baseline-mechanism-assessment.json"
+      - "runs/run-20260415-mechanism-planning-gate-second-retry/candidate-mechanism-assessment.json"
+  - id: SC-002
+    text: "Repo health check is recorded before promotion evaluation."
+    trace:
+      - "runs/run-20260415-mechanism-planning-gate-second-retry/run-ledger.json"
+  - id: SC-003
+    text: "Promotion decision is written to promotion-report.json with explicit artifact inputs."
+    trace:
+      - "runs/run-20260415-mechanism-planning-gate-second-retry/promotion-report.json"
+
+assumptions:
+  open:
+    - "Mutation command should only touch the frozen primary/supporting target set."
+  frozen:
+    - "Promotion success is read from promotion-report.json decision, not from shell exit code alone."
+
+evidence:
+  wiki_pages:
+    - "system/system-index.md"
+    - "system/system-log.md"
+  raw_sources: []
+
+signoff:
+  status: pending
+  by: ""
+  ts: ""
+
+notes: "Primary target: ops/scripts/planning_gate_validate.py. Supporting targets://n- `ops/scripts/planning_gate_validate_runtime.py`//nFocused tests://n- `tests/test_planning_gate_validate.py`/n- `tests/test_planning_gate_validate_runtime.py`"

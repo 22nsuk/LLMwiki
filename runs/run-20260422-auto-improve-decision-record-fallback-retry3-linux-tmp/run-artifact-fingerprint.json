@@ -1,0 +1,179 @@
+{
+  "$schema": "ops/schemas/run-artifact-fingerprint.schema.json",
+  "scope": "run",
+  "run_id": "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+  "generated_at": "2026-04-22T14:15:21Z",
+  "repo_provenance_snapshot": {
+    "report_path": "ops/reports/supply-chain-provenance.json",
+    "report_sha256": "7358fae69fbf896285d5470901a33509c9564d07686fcb7eae09403e39d36e84",
+    "report_generated_at": "2026-04-20T10:53:45Z",
+    "report_status": "pass",
+    "exists_at_run_start": true
+  },
+  "summary": {
+    "artifact_count": 21,
+    "schema_backed_count": 14,
+    "total_size_bytes": 1170036
+  },
+  "artifacts": [
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/baseline-eval.json",
+      "artifact_role": "baseline_eval",
+      "schema": "ops/schemas/eval-report.schema.json",
+      "size_bytes": 517593,
+      "sha256": "d46e649a5600671a1488f033d1020a302216ddeb40700b9e484916e768d12ccf"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/baseline-lint.json",
+      "artifact_role": "baseline_lint",
+      "schema": "ops/schemas/lint-report.schema.json",
+      "size_bytes": 49552,
+      "sha256": "89e370688d790f413b3593c69e587e11603859a9932d5ac3074878dbf8c309d0"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/baseline-mechanism-assessment.json",
+      "artifact_role": "baseline_mechanism_assessment",
+      "schema": "ops/schemas/mechanism-assessment-report.schema.json",
+      "size_bytes": 1540,
+      "sha256": "1480b690aabad0c6d514f831a07ab49207dc99570f0a1d8bf0cfb8566612a020"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/behavior-delta.json",
+      "artifact_role": "behavior_delta",
+      "schema": "ops/schemas/behavior-delta.schema.json",
+      "size_bytes": 4194,
+      "sha256": "45e0ba0d3ff1610e6bbc11e783c7c3861dbd9b504e46668f3cd4d7868dff1314"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/candidate-eval.json",
+      "artifact_role": "candidate_eval",
+      "schema": "ops/schemas/eval-report.schema.json",
+      "size_bytes": 517593,
+      "sha256": "1f8eee391bc4ab20561336c0c20822225b1610c1d84cad682b9a1c99b7ba83b6"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/candidate-lint.json",
+      "artifact_role": "candidate_lint",
+      "schema": "ops/schemas/lint-report.schema.json",
+      "size_bytes": 49552,
+      "sha256": "ffcebcae7fdb031b33f1d995a7c0c2b74a797979789e35e6199c92a4cf407887"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/candidate-mechanism-assessment.json",
+      "artifact_role": "candidate_mechanism_assessment",
+      "schema": "ops/schemas/mechanism-assessment-report.schema.json",
+      "size_bytes": 1540,
+      "sha256": "df3d504d184138c15718accb80d8dd03ca80d26c56550759eeebb56246a44916"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/changed-files-manifest.json",
+      "artifact_role": "changed_files_manifest",
+      "schema": "ops/schemas/changed-files-manifest.schema.json",
+      "size_bytes": 946,
+      "sha256": "74e5775a26ad0c6b53e127a4901b71a38d5bab1277ed34a0baf90bfb9fc6196e"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/improvement-observations.json",
+      "artifact_role": "improvement_observations",
+      "schema": "ops/schemas/improvement-observations.schema.json",
+      "size_bytes": 514,
+      "sha256": "d0810faf99e23bbb99c307c3a28a4c1fe59d58ea2d3efacaeb4d582108d08a11"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/mutation-command.stderr.txt",
+      "artifact_role": "command_stderr",
+      "schema": "",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/mutation-command.stdout.txt",
+      "artifact_role": "command_stdout",
+      "schema": "",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/open-questions.md",
+      "artifact_role": "open_questions",
+      "schema": "",
+      "size_bytes": 415,
+      "sha256": "abb4107e0a7cd37639b6a3974a22c7357ad1f6b7c0226a5482eaac875caff943"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/plan.md",
+      "artifact_role": "plan",
+      "schema": "",
+      "size_bytes": 1161,
+      "sha256": "e6e4ab67b95234c3e9c3f9a378ff498a76c3edf1fe8e8de083dd30503fd72073"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/planning-validation.json",
+      "artifact_role": "planning_validation",
+      "schema": "ops/schemas/planning-validation.schema.json",
+      "size_bytes": 2343,
+      "sha256": "8b2b532d691e6a916864bebe75a391746aa1d539ac2d75ae68b4263871b9cd19"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/promotion-report.json",
+      "artifact_role": "promotion_report",
+      "schema": "ops/schemas/promotion-report.schema.json",
+      "size_bytes": 10513,
+      "sha256": "147927cca467b5cb528e07a142e8b227e07bbcfebcf7a2f887e2f8a915888e2d"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/repo-health.stderr.txt",
+      "artifact_role": "command_stderr",
+      "schema": "",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/repo-health.stdout.txt",
+      "artifact_role": "command_stdout",
+      "schema": "",
+      "size_bytes": 80,
+      "sha256": "83a1593c5b5783693fe3006d1f6597bcb4f3a5968f23b59481ee09a0477f910a"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/run-ledger.json",
+      "artifact_role": "run_ledger",
+      "schema": "ops/schemas/run-ledger.schema.json",
+      "size_bytes": 6308,
+      "sha256": "75f6f1a645e6b6dfe8a1519183f84cbdacb2b37bbff8c2c9871b53aab9274d98"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/run-telemetry.json",
+      "artifact_role": "run_telemetry",
+      "schema": "ops/schemas/run-telemetry.schema.json",
+      "size_bytes": 2857,
+      "sha256": "887f81f8fbb8058ac6b988ba8f4127771d1e11cd11f7c6cc65789965606382a3"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/runtime-events.jsonl",
+      "artifact_role": "runtime_events.jsonl",
+      "schema": "",
+      "size_bytes": 355,
+      "sha256": "d5caaa29e665919423dd78cc29f3faed7ecc759fd9d3f13c97f6c2a6435518e1"
+    },
+    {
+      "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/seed.yaml",
+      "artifact_role": "seed",
+      "schema": "ops/schemas/seed.schema.json",
+      "size_bytes": 2980,
+      "sha256": "ee40b5b6ff88d6b7a3f104c56b60441b91fe6a190d7068307595e63357e3758f"
+    }
+  ],
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-04-22T14:15:21Z\", \"generated_at_source\": \"payload.generated_at\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-04-29T02:30:39Z\", \"source_artifact\": \"runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/run-artifact-fingerprint.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/run-artifact-fingerprint.schema.json\", \"artifact_kind\": \"run_artifact_fingerprint\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-04-29T02:30:39Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-04-22T14:15:21Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"1bf0f4ba7b5c7f6895007c3a026ebae38a80783473582f3399476e902f1a7f23\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"fc0340f868a19c5980eebfb4b9eb41620ff6571ed9de83a030bf0a59b3d20be6\", \"policy\": \"7d45acc617992bca127ce0b7defb6715caac5b774dcc489acf984502cea3a402\", \"schema\": \"c3fa463ce25ed927ecb12bd0f4d9010e0b5a7dc2478778d417a2fe28e3fedfac\", \"target_rel_path\": \"fd53629e3bfa5f4dae16d2841d1bc094cd05a88f271b4d23dd8e8ca8042aa9e2\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/run-artifact-fingerprint.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"99d9adf7abd9cc1d82a2118fd8f71d4fa6628ecfb6401c4d4b24f38fb169cc80\"}"
+      }
+    ]
+  }
+}

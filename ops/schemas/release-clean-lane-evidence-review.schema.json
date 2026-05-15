@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/release-clean-lane-evidence-review.schema.json",
+  "title": "Release Clean Lane Evidence Review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "status",
+    "policy",
+    "release_closeout_summary",
+    "source_tree_coherence",
+    "summary",
+    "evidence_units"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "ops/schemas/release-clean-lane-evidence-review.schema.json"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "const": "release_clean_lane_evidence_review"
+    },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": {
+      "type": "string",
+      "const": "ops.scripts.release_clean_lane_evidence_review"
+    },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string" },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": { "type": "string", "enum": ["current", "stale"] },
+    "retention_policy": { "type": "string", "minLength": 1 },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown"] },
+        "checked_at": { "type": "string", "minLength": 1 }
+      }
+    },
+    "vault": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["pass", "attention"] },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "release_closeout_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "status", "release_readiness_state", "machine_release_allowed"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "status": { "type": "string" },
+        "release_readiness_state": { "type": "string" },
+        "machine_release_allowed": { "type": "boolean" }
+      }
+    },
+    "source_tree_coherence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "component_count", "fingerprint_group_count", "fingerprint_groups"],
+      "properties": {
+        "status": { "type": "string" },
+        "component_count": { "type": "integer", "minimum": 0 },
+        "fingerprint_group_count": { "type": "integer", "minimum": 0 },
+        "fingerprint_groups": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "accepted_risk_count",
+        "clean_pass_candidate_count",
+        "evidence_required_count",
+        "already_clean_non_blocking_count",
+        "same_chain_refresh_required_count",
+        "policy_review_required_count"
+      ],
+      "properties": {
+        "accepted_risk_count": { "type": "integer", "minimum": 0 },
+        "clean_pass_candidate_count": { "type": "integer", "minimum": 0 },
+        "evidence_required_count": { "type": "integer", "minimum": 0 },
+        "already_clean_non_blocking_count": { "type": "integer", "minimum": 0 },
+        "same_chain_refresh_required_count": { "type": "integer", "minimum": 0 },
+        "policy_review_required_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "evidence_units": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/evidenceUnit" }
+    }
+  },
+  "$defs": {
+    "evidenceUnit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "source",
+        "source_path",
+        "clean_lane_effect",
+        "conditional_lane_effect",
+        "advisory_lifecycle_effect",
+        "demotion_status",
+        "clean_pass_candidate",
+        "required_evidence",
+        "source_tree_status",
+        "source_tree_fingerprint_group_count"
+      ],
+      "properties": {
+        "code": { "type": "string" },
+        "source": { "type": "string" },
+        "source_path": { "type": "string" },
+        "clean_lane_effect": { "type": "string" },
+        "conditional_lane_effect": { "type": "string" },
+        "advisory_lifecycle_effect": { "type": "string" },
+        "demotion_status": {
+          "type": "string",
+          "enum": [
+            "already_clean_non_blocking",
+            "clean_pass_ready",
+            "requires_same_chain_refresh",
+            "requires_policy_review"
+          ]
+        },
+        "clean_pass_candidate": { "type": "boolean" },
+        "required_evidence": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "source_tree_status": { "type": "string" },
+        "source_tree_fingerprint_group_count": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

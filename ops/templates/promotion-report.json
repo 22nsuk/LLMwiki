@@ -1,0 +1,104 @@
+{
+  "$schema": "ops/schemas/promotion-report.schema.json",
+  "run_id": "run-YYYYMMDD-slug",
+  "mode": "report_only",
+  "artifact_class": "wiki_synthesis",
+  "decision": "HOLD",
+  "decision_record": {
+    "decision_id": "decision:run-YYYYMMDD-slug:template",
+    "subject_id": "run-YYYYMMDD-slug",
+    "subject_kind": "wiki_synthesis",
+    "decision": "HOLD",
+    "decision_stage": "promotion_gate",
+    "is_terminal": false,
+    "policy_version": 1,
+    "source_rule": "template_placeholder",
+    "source_pass": "page_class",
+    "actor": "promotion_gate",
+    "reason_code": "template_placeholder",
+    "reason_detail": "Replace with the canonical reducer output from promotion_gate.py.",
+    "evidence_refs": [
+      "primary_target_scope"
+    ],
+    "decided_at": "",
+    "effective_at": "",
+    "supersedes": [],
+    "reducer_key": "promotion_decision_registry_v1",
+    "precedence_key": "0050:HOLD",
+    "dedupe_key": "run-YYYYMMDD-slug:promotion_gate",
+    "finalizable": false,
+    "finalize_blockers": [
+      "decision_not_finalizable"
+    ],
+    "ledger_event_type": "promotion_evaluated",
+    "ledger_partition_key": "run-YYYYMMDD-slug"
+  },
+  "decision_reduction": {
+    "reducer_key": "promotion_decision_registry_v1",
+    "selected_decision_id": "decision:run-YYYYMMDD-slug:template",
+    "proposal_count": 1,
+    "proposals": [
+      {
+        "decision_id": "decision:run-YYYYMMDD-slug:template",
+        "subject_id": "run-YYYYMMDD-slug",
+        "subject_kind": "wiki_synthesis",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 1,
+        "source_rule": "template_placeholder",
+        "source_pass": "page_class",
+        "actor": "promotion_gate",
+        "reason_code": "template_placeholder",
+        "reason_detail": "Replace with the canonical reducer output from promotion_gate.py.",
+        "evidence_refs": [
+          "primary_target_scope"
+        ],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "run-YYYYMMDD-slug:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "run-YYYYMMDD-slug"
+      }
+    ]
+  },
+  "summary": "Replace with concise promotion summary.",
+  "primary_targets": [
+    "wiki/synthesis--example.md"
+  ],
+  "supporting_targets": [],
+  "checks": [
+    {
+      "id": "primary_target_scope",
+      "status": "WARN",
+      "detail": "Replace with actual gate result."
+    }
+  ],
+  "signoff": {
+    "required": false,
+    "status": "not_required",
+    "by": "",
+    "ts": ""
+  },
+  "log": {
+    "required": true,
+    "page": "system/system-log.md",
+    "summary": "Replace with append-only log summary.",
+    "status": "pending",
+    "entry_ref": ""
+  },
+  "history": {
+    "status": "active",
+    "reason": "",
+    "by": "",
+    "ts": ""
+  },
+  "next_action": "Replace with the next operator action."
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "ops/schemas/security-advisories.schema.json",
+  "vault": ".",
+  "generated_at": "2026-05-14T12:49:24Z",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "source_ref": "ops/advisories.json",
+  "status": "empty",
+  "advisory_count": 0,
+  "advisories": [],
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/security-advisories.schema.json\", \"artifact_kind\": \"security_advisories_report\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-14T12:49:24Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-14T12:49:24Z\", \"input_fingerprints\": {\"advisory_count\": \"5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"policy\": \"ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f\", \"schema\": \"565ccd086e4dea68556f07ab96a64835f9e5efd4faa639cd90fe1be294bf5728\", \"source_paths\": \"adda5b0a93761277eee8e3ab3df3fb7a210188e6bf2008799998502c30f0b270\", \"source_ref\": \"b52abcdfb82791dc0957fdf1fda7e6c80ab08e8c00e67c8f466af8b4a7105e88\"}, \"producer\": \"ops.scripts.security_advisories\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.supply_chain.security_advisories\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"c848a4c2fc8919d5a720738ed147aa5f54e5f56b91bd52916b68aac9379dfb2b\"}"
+      }
+    ]
+  }
+}

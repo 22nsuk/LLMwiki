@@ -1,0 +1,202 @@
+{
+  "$schema": "ops/schemas/test-execution-summary.schema.json",
+  "artifact_kind": "test_execution_summary",
+  "generated_at": "2026-05-15T04:22:25Z",
+  "producer": "ops.scripts.test_execution_summary",
+  "source_command": "python -m ops.scripts.test_execution_summary --vault . --suite report-contract-summary --collect-nodeids --deselection-policy ops/policies/report-contract-deselections.json -- .venv/bin/python -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "8e541e00811969ffb63fb334e04f8206073277c8bd422e88e0df898fd6f20328",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "876546bfd46cdefb8124f7f1fe172f497e3e2849d72581d0106bdad990f87e5f",
+    "deselection_policy": "304ab09b5d5d34ab1992a9b2ce54aa5a5f4e0b73f928db808de6e6df372fba91",
+    "test_targets": "7d621e2d6ab3b22637a44c498c2da70e78f3ea4b8a1d53d2ff27470f7b4368fd",
+    "deselected_tests": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "deselection_lifecycle": "a0ff5ebeafed1006c71cbce8470760cd69909cc93d0043ba848190abc7cc5524",
+    "evidence_artifacts": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "nodeid_outcome_consistency": "c2288096f5b2bb26a18afad0574aa834767832c4d4857b89d9341c8f9736adc5",
+    "suite": "e8806087007f73940192067c46554732289adb000251e116b8eda2437a0ff078",
+    "suite_coverage": "b77ace30e3859d15a04208659cffabca258e1fcdfda97192c160769a041b2b7e",
+    "wrapped_command": "e85e3f18039eee8432b2cb9f259da23f3fb3f3cd31e95f42439315a5f7a35853"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-15T04:22:25Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "suite": "report-contract-summary",
+  "suite_scope": "report_contract_summary",
+  "represents_full_suite": false,
+  "not_full_suite_reason": "report-contract-summary is a targeted report-contract subset; use full release-builder evidence before treating this as full-suite proof.",
+  "full_suite_evidence": {
+    "status": "not_represented",
+    "required_command": "python -m pytest",
+    "release_builder_environment": ".venv clean release-builder",
+    "reason": "report-contract-summary is a targeted report-contract subset; use full release-builder evidence before treating this as full-suite proof."
+  },
+  "status": "pass",
+  "command": ".venv/bin/python -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py",
+  "returncode": 0,
+  "timed_out": false,
+  "timeout_seconds": 5400,
+  "termination_reason": "completed",
+  "duration_ms": 21270,
+  "counts": {
+    "passed": 171,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "xfailed": 0,
+    "xpassed": 0,
+    "warnings": 0
+  },
+  "execution_environment": {
+    "python_version": "3.14.3",
+    "pytest_version": "8.4.2",
+    "plugin_autoload_policy": {
+      "env_var": "PYTEST_DISABLE_PLUGIN_AUTOLOAD",
+      "value": "1",
+      "autoload_disabled": true,
+      "policy": "disabled"
+    },
+    "interpreter_path_class": "repo_virtualenv",
+    "toolchain_contract": {
+      "status": "pass",
+      "python_supported": true,
+      "pytest_supported": true,
+      "supported_python_major_minor": [
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "minimum_pytest_major": 8,
+      "release_evidence_effect": "eligible",
+      "reason": "toolchain is eligible for release evidence"
+    }
+  },
+  "test_target_fingerprints": [
+    {
+      "path": "tests/test_auto_improve_iteration_runtime.py",
+      "sha256": "a25a28be869e175cde7425b6b5e46b1f29dc30fe3e62d4d2a26276a0e9ffd2f8"
+    },
+    {
+      "path": "tests/test_ci_workflow_static.py",
+      "sha256": "c44d8a077d9658ee165355f4b356c85751a67234cb26629f44ba614434daa8f7"
+    },
+    {
+      "path": "tests/test_generated_report_contracts.py",
+      "sha256": "df37c84422f3421c9834acbdb56a3168b687cbdea2be386d57b25b25aa02d816"
+    },
+    {
+      "path": "tests/test_makefile_static_gates.py",
+      "sha256": "c5d4b87a062bad572531356f69c904fd1f5ac20ce83a0c1dadb7c72b447769ea"
+    },
+    {
+      "path": "tests/test_pytest_entrypoint_guidance.py",
+      "sha256": "10067c6c5e8364e0ae2c9fba96f7f7ee27251484769a208637bf63c680aa8cc5"
+    },
+    {
+      "path": "tests/test_report_schema_sample_regeneration.py",
+      "sha256": "c42e945c10bfcd4a4f7ffea054aae684ff7573208b82e071ca410e62b3bf9d8c"
+    },
+    {
+      "path": "tests/test_report_schemas.py",
+      "sha256": "3072cc878f6517bf02dd4b59c0f4b05b10df976bdc0572f13479ef7770c1a170"
+    },
+    {
+      "path": "tests/test_run_templates.py",
+      "sha256": "8450bebe2d1c131b6891e94d130764c58593352f89fa4afa3ca7a4253e5566da"
+    },
+    {
+      "path": "tests/test_test_execution_summary.py",
+      "sha256": "98492d94900e090080b02698def4c93ac46fe163f96b97430f93b49b49c46b17"
+    },
+    {
+      "path": "tests/test_workflow_dependency_planner.py",
+      "sha256": "2101cccb95f4416f83c61f305441a26dbb7aadcb0c3d294d3dfb112e62cd0559"
+    }
+  ],
+  "deselected_tests": [],
+  "deselection_lifecycle": {
+    "status": "pass",
+    "checked_at": "2026-05-15T04:22:25Z",
+    "actual_deselected_count": 0,
+    "max_allowed_deselected_count": 0,
+    "over_budget": false,
+    "expired_count": 0,
+    "release_blocking_count": 0,
+    "missing_lifecycle_count": 0,
+    "duplicate_policy_entry_count": 0,
+    "unused_policy_entry_count": 0,
+    "risk_owner": "runtime-maintainer",
+    "expires_at": "2026-06-14T00:00:00Z",
+    "count_increase_gate_effect": "fail",
+    "expiry_gate_effect": "fail",
+    "next_action": "none",
+    "blockers": []
+  },
+  "pytest_marker_deselected_count": 7,
+  "policy_deselected_count": 0,
+  "pytest_collect_nodeid_digest": {
+    "status": "collected",
+    "command": ".venv/bin/python -m pytest -o addopts= --collect-only -q --capture=no tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py -m 'report_contract and not artifact_finalization'",
+    "nodeid_count": 171,
+    "sha256": "ae66089710ace896acb99ab2514fd3877369f9b08355c16c5dc3ac6f72e0cda3",
+    "reason": ""
+  },
+  "nodeid_outcome_consistency": {
+    "status": "pass",
+    "nodeid_count": 171,
+    "outcome_count": 171,
+    "counted_outcomes": {
+      "passed": 171,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0
+    },
+    "delta": 0,
+    "reason": "collected nodeid count matches passed + skipped + xfailed/xpassed outcomes"
+  },
+  "evidence_artifacts": [],
+  "stdout_tail": "........................................................................ [ 42%]\n........................................................................ [ 84%]\n...........................                                              [100%]\n171 passed, 7 deselected in 21.07s\n",
+  "stderr_tail": "",
+  "release_contract_diagnosis": [
+    {
+      "name": "pytest_contract_summary",
+      "status": "clean_pass",
+      "lane": "clean",
+      "command": ".venv/bin/python -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py",
+      "duration_seconds": 21.27,
+      "checked_at": "2026-05-15T04:22:25Z",
+      "blocker_conditions": [],
+      "accepted_risk_family": null,
+      "risk_acceptance_ref": null,
+      "reason": ""
+    },
+    {
+      "name": "static_checks",
+      "status": "not_run",
+      "lane": "blocked",
+      "command": "make static",
+      "duration_seconds": null,
+      "checked_at": null,
+      "blocker_conditions": [
+        "external_static_evidence_not_captured_by_summary"
+      ],
+      "accepted_risk_family": null,
+      "risk_acceptance_ref": null,
+      "reason": "not executed inside this pytest summary; use release-builder evidence before treating static checks as covered"
+    }
+  ]
+}

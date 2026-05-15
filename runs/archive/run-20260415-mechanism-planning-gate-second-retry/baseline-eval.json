@@ -1,0 +1,8122 @@
+{
+  "$schema": "ops/schemas/eval-report.schema.json",
+  "vault": ".",
+  "generated_at": "2026-04-14T15:22:33Z",
+  "artifact_kind": "wiki_eval_report",
+  "producer": "ops.scripts.wiki_eval",
+  "source_command": "python -m ops.scripts.wiki_eval",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "legacy_backfill_run_20260415_mechanism_planning_gate_second_retry_baseline_eval",
+  "input_fingerprints": {
+    "policy": "legacy_backfill",
+    "schema": "legacy_backfill",
+    "artifact_envelope_schema": "legacy_backfill",
+    "legacy_original_sha256": "32ea409a9c696e1aa90c483f65fdf0efa5c41272cfd3e63d3cf9df738e13dc78"
+  },
+  "schema_version": 1,
+  "artifact_status": "archived",
+  "retention_policy": "archive",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-04-14T15:22:33Z"
+  },
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "pass",
+  "max_score": 1716,
+  "total_score": 1716,
+  "pages": [
+    {
+      "page": "system/system-raw-registry/wiki/ai-compute-control.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/system-raw-registry/wiki/ai-execution.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/system-raw-registry/wiki/coffee.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/concept--ai-capability-claims-verification.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/concept--ai-compute-control.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/concept--ai-ran.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/concept--anti-slop-wiki-governance.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/concept--artifact-contracts.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/concept--binary-evals.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/concept--coffee-brew-chemistry.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/concept--coffee-extraction-and-brew-control.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/concept--coffee-grinding-static-control.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/concept--coffee-sensory-lexicon.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/concept--cross-reference-maintenance.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/concept--digital-sovereignty-in-public-it.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/concept--harness-optimization.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/concept--korea-fx-liquidity-and-spot-dollar-pressure.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/concept--llm-wiki.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/concept--middle-east-energy-shock-transmission.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/concept--persistent-wiki-vs-rag.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/concept--planning-gates.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/concept--self-improving-wiki-loop.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/concept--trace-store-and-run-ledger.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/index.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/system-raw-registry/wiki/korea-fx.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/lint--broad-synthesis-watch-review-2026-04-14.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/lint--initial-review-2026-04-12.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/lint--raw-registry-wiki-shard-line-threshold-review-2026-04-14.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/system-raw-registry/wiki/middle-east.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/query--coffee-science-corpus-map-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/query--index-and-raw-registry-separation-design-2026-04-12.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/query--news-snapshot-roundup-2026-04-12.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/query--recommended-next-actions-2026-04-12.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/source--a-mem-agentic-memory.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--ai-kelly-bench-and-long-horizon-failure-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--ai-memory-boom-and-supply-constraints-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--ai-news-source-concentration-and-media-gatekeeping-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--anthropic-advisor-strategy-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--anthropic-enterprise-adoption-surge-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--anthropic-mythos-security-claims-critique-2026-04-12.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/source--autoresearch-skill-repo.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--bank-of-korea-april-economic-assessment-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--bank-of-korea-bank-led-stablecoin-governance-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--bank-of-korea-february-balance-of-payments-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--bank-of-korea-march-foreign-reserves-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--bank-of-korea-march-international-finance-and-fx-market-trends-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--bank-of-korea-rate-hold-and-middle-east-risk-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/source--bilevel-autoresearch.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--bitcoin-institutional-retail-divergence-and-crypto-policy-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--bok-dollar-funding-abundance-and-won-weakness-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--broadcom-google-custom-ai-chip-alliance-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--cgfs-foreign-currency-funding-risk-and-cross-border-liquidity-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--china-central-bank-gold-buying-streak-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--china-q1-growth-rebound-and-war-dimmed-2026-outlook-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--chinese-ai-chipmakers-local-share-gains-under-export-controls-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--coffee-bed-extraction-uniformity-modeling-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--coffee-brewing-control-chart-sensory-and-liking-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--coffee-character-wheel-beyond-flavor-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--coffee-extraction-kinetics-in-well-mixed-system-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--coffee-fermentation-conditions-and-sensory-quality-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--coffee-flavor-wheel-poster-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--coffee-grinding-moisture-and-triboelectrification-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--coffee-tasters-flavor-wheel-redesign-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--coffee-volatile-compounds-by-roast-and-brew-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--cold-brew-grinding-time-and-flavor-characteristics-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--demis-hassabis-on-ai-for-science-and-agent-risk-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--dissolved-cations-and-coffee-extraction-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--dollar-safe-haven-bid-after-failed-us-iran-talks-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--drip-brew-temperature-and-sensory-profile-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/source--dspy-framework.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--early-rising-and-autonomic-stability-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--eia-short-term-energy-outlook-april-2026-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--emerging-market-outflows-after-iran-war-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--energy-and-ai-demand-and-data-center-power-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--espresso-extraction-kinetics-flow-rate-particle-size-temperature-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--espresso-modeling-and-extraction-variation-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--eu-digital-sovereignty-framework-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--fed-war-risk-minutes-and-inflation-scenarios-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--france-linux-digital-sovereignty-shift-2026-04-12.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--franchise-sales-trends-2026-04-12.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--full-immersion-brew-temperature-and-flavor-over-time-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--full-immersion-coffee-desorption-model-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--gold-rebound-after-ceasefire-and-safe-haven-rotation-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--google-ai-search-traffic-defense-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--google-turboquant-kv-cache-compression-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--gpu-rental-inflation-and-ai-compute-scarcity-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--gulf-air-defense-diversification-and-korean-interceptor-demand-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--hbm-challengers-and-ai-memory-architecture-race-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--hormuz-blockade-oil-over-100-and-global-macro-shock-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--hormuz-chokepoint-flows-and-bypass-capacity-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--hormuz-shipping-risk-outlook-2026-04-12.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--hot-and-cold-brew-coffee-chemistry-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--hungary-post-orban-eu-realignment-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--interoperable-europe-act-and-public-sector-digital-sovereignty-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--iren-microsoft-contract-and-ai-cloud-rerating-case-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--iren-mining-revenue-dip-and-ai-cloud-transition-risk-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/source--jangpm-meta-skills-repo.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--jeju-air-and-ak-holdings-liquidity-stress-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/source--karpathy-autoresearch-repo.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/source--kevinrgu-autoagent-repo.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--korea-long-term-care-insurance-finance-strain-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--korea-oil-supply-outlook-2026-04-12.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--korea-public-ai-gpu-tender-and-cloud-sovereignty-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/source--llm-wiki-review-report.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--ls-electric-aws-switchgear-data-center-supply-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--memory-caching-rnns-with-growing-memory-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--meta-ai-clone-and-executive-automation-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/source--meta-harness.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--middle-east-arms-import-dependence-and-iran-war-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--miraeasset-spacex-ipo-subscription-push-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--mit-attention-matching-kv-cache-compression-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--mossad-gofman-appointment-and-tech-security-state-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/source--multi-agent-collaboration-for-automated-research.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--national-pension-fx-hedging-and-won-support-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--north-korea-missile-testing-and-allied-command-targeting-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--nvidia-marvell-ai-ran-strategy-2026-04-12.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--nvidia-triattention-kv-cache-efficiency-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/source--openai-evaluation-best-practices.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--openai-research-intern-and-continual-learning-2026-04-12.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--oracle-ai-data-center-boom-through-2027-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/source--ouroboros-repo.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--rdt-versus-autocomb-and-espresso-extraction-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/source--ro-crate.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--samsung-electro-mechanics-ai-server-components-upcycle-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--samsung-foundry-rebound-and-ai-nonmemory-demand-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--saudi-neom-and-gulf-investment-risk-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--science-behind-good-cup-of-coffee-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/source--semantic-checks-and-execution-feedback-for-llm-assistants.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--shin-hyunsong-inflation-risk-and-fx-pressure-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--shin-hyunsong-neutral-rate-and-fx-outlook-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/source--slopcodebench.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/source--stage1-planning-harness-mvp.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--tesla-fsd-netherlands-approval-2026-04-12.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--tesla-korea-price-hike-and-ev-subsidy-dynamics-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--trump-hormuz-blockade-order-2026-04-12.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--trump-oil-price-warning-and-iran-retaliation-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--turboquant-memory-savings-claim-calibration-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--uneven-extraction-in-coffee-brewing-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--unifil-pressure-and-lebanon-front-escalation-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--unlimited-ai-subscription-model-breakdown-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--us-ai-diffusion-rule-rescission-and-chip-export-reset-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--us-chip-export-controls-prc-background-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--us-consumer-inflation-gasoline-shock-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--us-consumer-sentiment-record-low-amid-iran-war-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--us-h200-license-review-policy-for-china-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--us-iran-talks-pakistan-pullout-2026-04-12.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--vietnam-ftse-emerging-upgrade-and-passive-flows-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/source--voyager-open-ended-embodied-agent.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--wall-street-relief-rally-on-us-iran-deal-hopes-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--water-acidity-and-brew-method-recipes-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--wgbi-inclusion-and-korea-bond-inflows-fx-stability-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--won-dollar-near-1500-and-middle-east-fx-pressure-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/source--world-coffee-research-sensory-lexicon-v2-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "source_page_substance",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--ai-capability-claims-and-validation-gap-2026-04-12.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--ai-compute-control-and-sovereign-procurement-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--ai-execution-surface-and-runtime-efficiency-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--ai-infrastructure-rerating-power-bottlenecks-and-transition-risk-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--coffee-brew-chemistry-and-processing-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--coffee-extraction-models-and-brew-control-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--coffee-grinding-static-and-clumping-control-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--coffee-sensory-language-and-flavor-mapping-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--european-tech-regulation-and-digital-sovereignty-2026-04-12.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/synthesis--karpathy-gist-to-runtime.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--korea-fx-liquidity-and-spot-dollar-pressure-2026-04-14.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/synthesis--llm-wiki-self-improvement-architecture.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/synthesis--meta-harness-vs-bilevel-autoresearch.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--middle-east-shipping-and-energy-risk-2026-04-12.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "wiki/synthesis--middle-east-war-macro-and-market-repricing-2026-04-13.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/synthesis--research-insights-to-practical-wiki-rules.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/synthesis--stage1-planning-harness-bridge.md",
+      "score": 10,
+      "max_score": 10,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        },
+        {
+          "eval": "decisionability",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/system-raw-registry/system.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/system-index.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/system-log.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/system-raw-registry.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "page": "system/system-raw-registry/wiki.md",
+      "score": 9,
+      "max_score": 9,
+      "results": [
+        {
+          "eval": "frontmatter_contract",
+          "pass": true
+        },
+        {
+          "eval": "required_sections_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_present",
+          "pass": true
+        },
+        {
+          "eval": "source_trace_targets_exist",
+          "pass": true
+        },
+        {
+          "eval": "link_integration",
+          "pass": true
+        },
+        {
+          "eval": "high_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "medium_severity_open_questions_within_budget",
+          "pass": true
+        },
+        {
+          "eval": "broken_link_free",
+          "pass": true
+        },
+        {
+          "eval": "placeholder_discipline",
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

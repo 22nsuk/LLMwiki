@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki/schemas/accepted-risk-vocabulary",
+  "title": "Accepted Risk Vocabulary",
+  "description": "Shared vocabulary for accepted risk counts across release authority artifacts. These field names must be used consistently so that family-level, instance-level, gate-level, and lane-blocking counts are not conflated.",
+  "$defs": {
+    "accepted_risk_family_count": {
+      "description": "Canonical count of distinct accepted risk families.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "accepted_risk_instance_count": {
+      "description": "Canonical count of accepted risk instances (may equal family_count when each family has one instance).",
+      "type": "integer",
+      "minimum": 0
+    },
+    "accepted_risk_count": {
+      "description": "Canonical count of accepted risk instances in the release decision snapshot; excludes gate attention that is not an accepted risk.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "gate_attention_count": {
+      "description": "Count of release dashboard gates in attention state, independent of whether the attention came from an accepted risk.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "operator_accepted_risk_family_count": {
+      "description": "Count of distinct accepted risk families that are present only because an operator accepted the risk.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "clean_lane_blocking_accepted_risk_family_count": {
+      "description": "Count of operator-accepted risk families that still block the clean release lane.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "clean_lane_blocking_family_count": {
+      "description": "Count of accepted risk families that block the clean release lane.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "learning_claim_blocking_family_count": {
+      "description": "Count of accepted risk families that block machine learning improvement claims without necessarily blocking source clean release.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "advisory_lifecycle_family_count": {
+      "description": "Count of accepted risk families that represent advisory lifecycle backlog rather than clean-lane release blockers.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "release_blocking_risk_family_count": {
+      "description": "Count of distinct accepted risk families whose clean_lane_effect blocks the clean release lane.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "conditional_operator_review_risk_family_count": {
+      "description": "Count of distinct accepted risk families whose conditional_lane_effect requires operator review.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "learning_claim_blocking_risk_family_count": {
+      "description": "Count of distinct accepted risk families whose learning_lane_effect blocks machine learning improvement claims.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "advisory_lifecycle_risk_family_count": {
+      "description": "Count of distinct accepted risk families whose advisory_lifecycle_effect is review_backlog.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "advisory_risk_family_count": {
+      "description": "Count of distinct accepted risk families that are advisory-only and do not block the clean release lane.",
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

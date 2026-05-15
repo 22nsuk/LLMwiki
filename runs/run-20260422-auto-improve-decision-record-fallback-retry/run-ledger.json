@@ -1,0 +1,106 @@
+{
+  "$schema": "ops/schemas/run-ledger.schema.json",
+  "run_id": "run-20260422-auto-improve-decision-record-fallback-retry",
+  "status": "blocked",
+  "events": [
+    {
+      "ts": "2026-04-22T13:52:40Z",
+      "type": "created",
+      "summary": "Initialized mechanism experiment artifacts from the mechanism-run starter bundle.",
+      "artifacts": [
+        "seed.yaml",
+        "planning-validation.json",
+        "run-ledger.json",
+        "improvement-observations.json",
+        "promotion-report.json",
+        "plan.md",
+        "open-questions.md",
+        "baseline-eval.json",
+        "candidate-eval.json",
+        "baseline-lint.json",
+        "candidate-lint.json",
+        "baseline-mechanism-assessment.json",
+        "candidate-mechanism-assessment.json",
+        "changed-files-manifest.json"
+      ],
+      "decision": ""
+    },
+    {
+      "ts": "2026-04-22T13:52:40Z",
+      "type": "seed_frozen",
+      "summary": "Frozen mechanism scope to primary target ops/scripts/auto_improve_iteration_persistence_runtime.py and prepared wrapper-driven execution.",
+      "artifacts": [
+        "runs/run-20260422-auto-improve-decision-record-fallback-retry/seed.yaml",
+        "runs/run-20260422-auto-improve-decision-record-fallback-retry/plan.md",
+        "runs/run-20260422-auto-improve-decision-record-fallback-retry/improvement-observations.json",
+        "runs/run-20260422-auto-improve-decision-record-fallback-retry/promotion-report.json"
+      ],
+      "decision": "ready_for_baseline_capture"
+    },
+    {
+      "ts": "2026-04-22T13:54:13Z",
+      "type": "baseline_captured",
+      "summary": "Captured baseline lint, eval, and mechanism assessment artifacts.",
+      "artifacts": [
+        "ops/scripts/auto_improve_iteration_persistence_runtime.py",
+        "ops/schemas/run-telemetry.schema.json",
+        "tests/test_auto_improve_iteration_runtime.py",
+        "runs/run-20260422-auto-improve-decision-record-fallback-retry/baseline-lint.json",
+        "runs/run-20260422-auto-improve-decision-record-fallback-retry/baseline-eval.json",
+        "runs/run-20260422-auto-improve-decision-record-fallback-retry/baseline-mechanism-assessment.json"
+      ],
+      "decision": "baseline_ready"
+    },
+    {
+      "ts": "2026-04-22T13:56:14Z",
+      "type": "mutation_applied",
+      "summary": "Applied the wrapper-provided mutation command inside a disposable workspace.",
+      "artifacts": [
+        "ops/scripts/auto_improve_iteration_persistence_runtime.py",
+        "ops/schemas/run-telemetry.schema.json",
+        "tests/test_auto_improve_iteration_runtime.py",
+        "runs/run-20260422-auto-improve-decision-record-fallback-retry/mutation-command.stdout.txt",
+        "runs/run-20260422-auto-improve-decision-record-fallback-retry/mutation-command.stderr.txt"
+      ],
+      "decision": "candidate_ready_for_capture"
+    },
+    {
+      "ts": "2026-04-22T14:01:43Z",
+      "type": "candidate_captured",
+      "summary": "Captured candidate lint, eval, and mechanism assessment artifacts from the disposable workspace.",
+      "artifacts": [
+        "ops/scripts/auto_improve_iteration_persistence_runtime.py",
+        "ops/schemas/run-telemetry.schema.json",
+        "tests/test_auto_improve_iteration_runtime.py",
+        "runs/run-20260422-auto-improve-decision-record-fallback-retry/candidate-lint.json",
+        "runs/run-20260422-auto-improve-decision-record-fallback-retry/candidate-eval.json",
+        "runs/run-20260422-auto-improve-decision-record-fallback-retry/candidate-mechanism-assessment.json"
+      ],
+      "decision": "ready_for_repo_health_gate"
+    },
+    {
+      "ts": "2026-04-22T14:02:28Z",
+      "type": "repo_health_checked",
+      "summary": "Repo health command failed; promotion evaluation was skipped.",
+      "artifacts": [
+        "runs/run-20260422-auto-improve-decision-record-fallback-retry/repo-health.stdout.txt",
+        "runs/run-20260422-auto-improve-decision-record-fallback-retry/repo-health.stderr.txt",
+        "runs/run-20260422-auto-improve-decision-record-fallback-retry/changed-files-manifest.json",
+        "runs/run-20260422-auto-improve-decision-record-fallback-retry/behavior-delta.json"
+      ],
+      "decision": "repo_health_fail"
+    }
+  ],
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-04-22T14:02:28Z\", \"generated_at_source\": \"events[5].ts\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-04-28T16:30:35Z\", \"source_artifact\": \"runs/run-20260422-auto-improve-decision-record-fallback-retry/run-ledger.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/run-ledger.schema.json\", \"artifact_kind\": \"run_ledger\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-04-28T16:30:35Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-04-22T14:02:28Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"f51c6460fc5d3126e0befe4f50675c5596b8830c3d2b36affc777c3acf4d6402\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"07aad9f7baa9bbcb3aeb24081dc9d9faea73aa29949576fabfb311e0e73cf2d4\", \"policy\": \"7d45acc617992bca127ce0b7defb6715caac5b774dcc489acf984502cea3a402\", \"schema\": \"c2cdb143ffa3afc0cc2983aceb7602caf13232ca806c6e02d3adfc4ce951c85a\", \"target_rel_path\": \"c5168c9700dc8a124b497d615a5c5c108e58a9ce14ae1f6b3ade5096880acd7b\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/run-20260422-auto-improve-decision-record-fallback-retry/run-ledger.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"819b8f8fc8c653d5729dbfa7e445e23e571dee869f445d272c5cac58cb1accbf\"}"
+      }
+    ]
+  }
+}

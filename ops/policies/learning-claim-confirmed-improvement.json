@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "enabled": true,
+  "claim_scope": "confirmed_learning_improvement_same_family_strict_evidence",
+  "min_repeated_improvement_run_count": 3,
+  "min_family_consistency_count": 1,
+  "require_behavior_delta_artifact_readback": true,
+  "required_confirmed_run_artifacts": [
+    "baseline-mechanism-assessment.json",
+    "candidate-mechanism-assessment.json",
+    "promotion-report.json"
+  ],
+  "required_evidence_paths": {
+    "confirmed_evidence_cohort": "ops/reports/learning-confirmed-evidence-cohort.json",
+    "mechanism_review_candidates": "ops/reports/mechanism-review-candidates.json",
+    "full_suite_summary": "ops/reports/test-execution-summary-full.json",
+    "public_check_summary": "ops/reports/public-check-summary.json",
+    "rollback_revalidation": "ops/reports/learning-readiness-signoff-revalidation.json",
+    "release_clean_blocker_ledger": "ops/reports/release-clean-blocker-ledger.json"
+  },
+  "required_gates": [
+    "learning_claim_evidence_bundle.revocation_status == active",
+    "learning_confirmed_evidence_cohort.revocation_status == active",
+    "behavior_delta_digest_readback.status == pass",
+    "behavior_delta_artifact_readback.status == pass",
+    "confirmed_run_artifact_binding_status == pass",
+    "same_proposal_family_repeated_evidence_count >= min_repeated_improvement_run_count",
+    "test_execution_summary_full.status == pass",
+    "public_check_summary.status == pass",
+    "learning_readiness_signoff_revalidation.status == pass",
+    "release_clean_blocker_ledger.learning_claim_blockers == []"
+  ],
+  "revocation_triggers": [
+    "evidence_bundle_digest_mismatch",
+    "behavior_delta_digest_missing_or_mismatch",
+    "behavior_delta_artifact_digest_mismatch",
+    "confirmed_run_artifact_digest_drift",
+    "confirmed_run_required_artifact_missing",
+    "full_suite_regresses",
+    "public_check_regresses",
+    "rollback_revalidation_due_or_failed",
+    "accepted_learning_risk_appears"
+  ]
+}

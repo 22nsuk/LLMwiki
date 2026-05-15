@@ -1,0 +1,633 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Release Clean Blocker Ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "status",
+    "summary",
+    "learning_claim_guard",
+    "clean_lane_contract",
+    "blockers",
+    "source_clean_blockers",
+    "auto_improve_blockers",
+    "learning_claim_blockers",
+    "advisory_backlog",
+    "provenance"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/release-clean-blocker-ledger.schema.json"
+      ]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": [
+        "release_clean_blocker_ledger"
+      ]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "producer": {
+      "type": "string",
+      "enum": [
+        "ops.scripts.release_clean_blocker_ledger"
+      ]
+    },
+    "source_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_tree_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_status": {
+      "type": "string",
+      "enum": [
+        "current",
+        "archived",
+        "stale",
+        "unknown"
+      ]
+    },
+    "retention_policy": {
+      "type": "string",
+      "enum": [
+        "canonical_report"
+      ]
+    },
+    "encoding": {
+      "type": "string",
+      "enum": [
+        "utf-8"
+      ]
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "checked_at"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown",
+            "invalid"
+          ]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "vault": {
+      "type": "string",
+      "minLength": 1
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "attention"
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "advisory_backlog_status",
+        "advisory_backlog_active_count",
+        "advisory_backlog_expired_count",
+        "advisory_backlog_missing_lifecycle_count",
+        "blocker_count",
+        "source_clean_blocker_count",
+        "auto_improve_blocker_count",
+        "accepted_risk_family_count",
+        "accepted_risk_instance_count",
+        "clean_lane_blocking_family_count",
+        "learning_claim_blocking_family_count",
+        "advisory_lifecycle_family_count",
+        "clean_lane_status",
+        "conditional_lane_status",
+        "auto_improve_lane_status",
+        "machine_release_status",
+        "operator_release_status",
+        "release_authority_status",
+        "sealed_release_status",
+        "learning_claim_guard_status",
+        "learning_claim_allowed",
+        "same_eval_reason_coverage_status",
+        "strict_secondary_improvement_coverage_status",
+        "behavior_delta_digest_coverage_status",
+        "placeholder_audit_status"
+      ],
+      "properties": {
+        "advisory_backlog_status": {
+          "$ref": "#/$defs/advisory_lifecycle_summary_status"
+        },
+        "advisory_backlog_active_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "advisory_backlog_expired_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "advisory_backlog_missing_lifecycle_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocker_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_clean_blocker_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "auto_improve_blocker_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "accepted_risk_family_count": {
+          "$ref": "https://llmwiki/schemas/accepted-risk-vocabulary#/$defs/accepted_risk_family_count"
+        },
+        "accepted_risk_instance_count": {
+          "$ref": "https://llmwiki/schemas/accepted-risk-vocabulary#/$defs/accepted_risk_instance_count"
+        },
+        "clean_lane_blocking_family_count": {
+          "$ref": "https://llmwiki/schemas/accepted-risk-vocabulary#/$defs/clean_lane_blocking_family_count"
+        },
+        "learning_claim_blocking_family_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "advisory_lifecycle_family_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "clean_lane_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "conditional_lane_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "auto_improve_lane_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "machine_release_status": {
+          "type": "string",
+          "enum": [
+            "allowed",
+            "blocked"
+          ]
+        },
+        "operator_release_status": {
+          "type": "string",
+          "enum": [
+            "allowed",
+            "blocked"
+          ]
+        },
+        "release_authority_status": {
+          "type": "string",
+          "enum": [
+            "clean_pass",
+            "conditional_pass",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "sealed_release_status": {
+          "type": "string",
+          "enum": [
+            "sealed_clean_pass",
+            "sealed_conditional_pass",
+            "unsealed_artifact_incomplete",
+            "unsealed_distribution_not_provided",
+            "unsealed_distribution_invalid",
+            "unsealed_distribution_drift",
+            "unsealed_release_blocked",
+            "unknown"
+          ]
+        },
+        "learning_claim_guard_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "learning_claim_allowed": {
+          "type": "boolean"
+        },
+        "same_eval_reason_coverage_status": {
+          "$ref": "#/$defs/coverage_status"
+        },
+        "strict_secondary_improvement_coverage_status": {
+          "$ref": "#/$defs/coverage_status"
+        },
+        "behavior_delta_digest_coverage_status": {
+          "$ref": "#/$defs/coverage_status"
+        },
+        "placeholder_audit_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "learning_claim_guard": {
+      "$ref": "#/$defs/learning_claim_guard_summary"
+    },
+    "clean_lane_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "failed_conditions"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "failed_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/blocker"
+      }
+    },
+    "source_clean_blockers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/blocker"
+      }
+    },
+    "auto_improve_blockers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/blocker"
+      }
+    },
+    "learning_claim_blockers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/blocker"
+      }
+    },
+    "advisory_backlog": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/blocker"
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "closeout_source",
+        "cohort_source",
+        "lane_summary_source",
+        "learning_delta_scoreboard_source"
+      ],
+      "properties": {
+        "closeout_source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cohort_source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lane_summary_source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "learning_delta_scoreboard_source": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "$defs": {
+    "coverage_status": {
+      "type": "string",
+      "enum": [
+        "full",
+        "partial",
+        "none",
+        "no_evidence",
+        "not_applicable",
+        "unknown"
+      ]
+    },
+    "advisory_lifecycle_summary_status": {
+      "type": "string",
+      "enum": [
+        "clear",
+        "active",
+        "expired",
+        "metadata_missing"
+      ]
+    },
+    "advisory_lifecycle_status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "expired",
+        "metadata_missing",
+        "not_applicable"
+      ]
+    },
+    "learning_claim_guard_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "load_status",
+        "status",
+        "claims_learning_improved",
+        "learning_claim_allowed",
+        "same_eval_run_count",
+        "telemetry_coverage_status",
+        "same_eval_reason_coverage_status",
+        "strict_secondary_improvement_coverage_status",
+        "behavior_delta_digest_coverage_status",
+        "placeholder_audit_status",
+        "placeholder_count",
+        "reason"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "load_status": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "claims_learning_improved": {
+          "type": "boolean"
+        },
+        "learning_claim_allowed": {
+          "type": "boolean"
+        },
+        "same_eval_run_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "telemetry_coverage_status": {
+          "$ref": "#/$defs/coverage_status"
+        },
+        "same_eval_reason_coverage_status": {
+          "$ref": "#/$defs/coverage_status"
+        },
+        "strict_secondary_improvement_coverage_status": {
+          "$ref": "#/$defs/coverage_status"
+        },
+        "behavior_delta_digest_coverage_status": {
+          "$ref": "#/$defs/coverage_status"
+        },
+        "placeholder_audit_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "unknown"
+          ]
+        },
+        "placeholder_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "code",
+        "source",
+        "source_path",
+        "severity",
+        "gate_effect",
+        "clean_lane_effect",
+        "conditional_lane_effect",
+        "learning_lane_effect",
+        "advisory_lifecycle_effect",
+        "message",
+        "required_evidence",
+        "risk_owner",
+        "expires_at",
+        "acceptance_source",
+        "closure_action",
+        "rollback_trigger",
+        "lifecycle_status",
+        "lifecycle_issues",
+        "seconds_until_expiry"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_path": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        },
+        "gate_effect": {
+          "type": "string",
+          "enum": [
+            "active",
+            "accepted_risk",
+            "review_required",
+            "shadow"
+          ]
+        },
+        "clean_lane_effect": {
+          "type": "string",
+          "enum": [
+            "blocks_clean_lane",
+            "does_not_block_clean_lane"
+          ]
+        },
+        "conditional_lane_effect": {
+          "type": "string",
+          "enum": [
+            "operator_review_required",
+            "not_applicable"
+          ]
+        },
+        "learning_lane_effect": {
+          "type": "string",
+          "enum": [
+            "blocks_learning_claim",
+            "not_applicable"
+          ]
+        },
+        "advisory_lifecycle_effect": {
+          "type": "string",
+          "enum": [
+            "review_backlog",
+            "not_applicable"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required_evidence": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "risk_owner": {
+          "type": "string"
+        },
+        "expires_at": {
+          "type": "string"
+        },
+        "acceptance_source": {
+          "type": "string"
+        },
+        "closure_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rollback_trigger": {
+          "type": "string"
+        },
+        "lifecycle_status": {
+          "$ref": "#/$defs/advisory_lifecycle_status"
+        },
+        "lifecycle_issues": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "seconds_until_expiry": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

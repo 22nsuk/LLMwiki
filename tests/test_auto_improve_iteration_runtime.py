@@ -1,0 +1,574 @@
+from __future__ import annotations
+
+import datetime as dt
+import json
+import tempfile
+import unittest
+from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
+
+import pytest
+
+from ops.scripts import auto_improve_iteration_persistence_runtime
+from ops.scripts.auto_improve_execute_runtime import (
+    ExecuteEvaluateDependencies,
+    ExecuteEvaluatePhaseResult,
+    ExecuteEvaluateRequest,
+)
+from ops.scripts.auto_improve_iteration_persistence_runtime import (
+    IterationTelemetryRequest,
+    PersistIterationDependencies,
+    PersistIterationPhaseResult,
+    write_iteration_telemetry,
+)
+from ops.scripts.auto_improve_iteration_runtime import (
+    AutoImproveIterationDependencies,
+    AutoImproveIterationRequest,
+    execute_evaluate_iteration_phase,
+    run_auto_improve_iteration,
+)
+from ops.scripts.auto_improve_outcome_runtime import ExecutionOutcome
+from ops.scripts.promotion_decision_registry_runtime import reduce_decision_proposals
+from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.schema_runtime import load_schema
+from tests.minimal_vault_runtime import seed_minimal_vault
+
+
+pytestmark = pytest.mark.report_contract
+
+
+def _expected_timeout_summary(
+    *,
+    timed_out: bool,
+    timeout_seconds: int,
+    termination_reason: str,
+) -> dict[str, object]:
+    return {
+        "timed_out": timed_out,
+        "timeout_seconds": timeout_seconds,
+        "termination_reason": termination_reason,
+        "launch_succeeded": True,
+        "signal_sent": "none",
+        "final_state_observed": "",
+        "stdout_received": False,
+        "stderr_received": False,
+    }
+
+
+def _context() -> RuntimeContext:
+    return RuntimeContext(display_timezone=dt.timezone.utc)
+
+
+def _execute_dependencies() -> ExecuteEvaluateDependencies:
+    return ExecuteEvaluateDependencies(
+        mutation_command=lambda **_: "",
+        run_mechanism_experiment=lambda *_args, **_kwargs: {},
+        role_report_path=lambda run_id, role: f"runs/{run_id}/{role}-executor-report.json",
+        evaluate_scope_blocked=lambda consecutive_failures: ExecutionOutcome(
+            outcome="scope_blocked",
+            next_consecutive_failures=consecutive_failures + 1,
+            quarantine_proposal=True,
+        ),
+        evaluate_experiment_result=lambda result, consecutive_failures: ExecutionOutcome(
+            outcome="hold",
+            next_consecutive_failures=consecutive_failures + 1,
+            result=result,
+        ),
+        evaluate_mutation_error=lambda **_: ExecutionOutcome(
+            outcome="mutation_failed",
+            next_consecutive_failures=1,
+        ),
+        evaluate_experiment_error=lambda consecutive_failures: ExecutionOutcome(
+            outcome="repo_health_blocked",
+            next_consecutive_failures=consecutive_failures + 1,
+            quarantine_proposal=True,
+        ),
+    )
+
+
+def _persist_dependencies() -> PersistIterationDependencies:
+    return PersistIterationDependencies(
+        apply_execution_outcome=lambda *_args, **_kwargs: 0,
+        write_iteration_telemetry=lambda *_args, **_kwargs: "",
+        write_run_artifact_fingerprint=lambda *_args, **_kwargs: "",
+        write_session_report=lambda *_args, **_kwargs: Path("ops/reports/session.json"),
+    )
+
+
+class AutoImproveIterationRuntimeTests(unittest.TestCase):
+    def test_run_telemetry_preservation_contract_matches_schema_surface(self) -> None:
+        schema = load_schema(
+            Path(__file__).resolve().parents[1] / "ops" / "schemas" / "run-telemetry.schema.json"
+        )
+        schema_fields = set(schema["properties"]) - {"$schema"}
+        written_fields = auto_improve_iteration_persistence_runtime.ITERATION_TELEMETRY_WRITTEN_FIELDS
+        merged_fields = auto_improve_iteration_persistence_runtime.ITERATION_TELEMETRY_MERGED_FIELDS
+        preserved_fields = auto_improve_iteration_persistence_runtime.PRESERVED_RUN_TELEMETRY_FIELDS
+
+        self.assertTrue(written_fields.isdisjoint(merged_fields))
+        self.assertTrue(written_fields.isdisjoint(preserved_fields))
+        self.assertTrue(merged_fields.isdisjoint(preserved_fields))
+        self.assertEqual(
+            preserved_fields,
+            schema_fields - written_fields - merged_fields,
+        )
+        self.assertEqual(
+            schema_fields,
+            written_fields | merged_fields | preserved_fields,
+        )
+
+    def test_write_iteration_telemetry_preserves_existing_workspace_apply_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-01"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            existing_workspace_preparation = {
+                "mode": "full_copy",
+                "baseline_file_count": 10,
+                "copied_file_count": 8,
+                "phase_durations": {"digest": 0.1, "copy": 0.2, "total": 0.3},
+            }
+            existing_metadata = {
+                "properties": [
+                    {
+                        "name": "urn:openai:artifact-envelope",
+                        "value": "{\"artifact_kind\":\"run_telemetry\"}",
+                    }
+                ]
+            }
+            (run_dir / "run-telemetry.json").write_text(
+                json.dumps(
+                    {
+                        "$schema": "ops/schemas/run-telemetry.schema.json",
+                        "run_id": run_id,
+                        "generated_at": "2026-04-15T00:00:00Z",
+                        "metadata": existing_metadata,
+                        "proposal_snapshot": f"runs/{run_id}/proposal-snapshot.json",
+                        "scope_freeze": f"runs/{run_id}/scope-freeze.json",
+                        "routing_reports": [],
+                        "executor_reports": [],
+                        "primary_targets": ["ops/scripts/example.py"],
+                        "supporting_targets": ["tests/test_example.py"],
+                        "test_files": ["tests/test_example.py"],
+                        "workspace_preparation": existing_workspace_preparation,
+                        "behavior_delta": f"runs/{run_id}/behavior-delta.json",
+                        "apply_mode": "live",
+                        "apply_status": "live_applied",
+                        "live_applied": True,
+                        "shadow_apply_report": f"runs/{run_id}/shadow-apply-report.json",
+                        "rollback_rehearsal_report": (
+                            f"runs/{run_id}/rollback-rehearsal-report.json"
+                        ),
+                        "decision": "PROMOTE",
+                        "finalized": True,
+                        "finalize_result": {"run_id": run_id},
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={
+                        "proposal_id": "proposal-1",
+                        "source_candidate_id": "candidate-1",
+                    },
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[f"runs/{run_id}/subagent-routing.worker.json"],
+                    roles=["worker"],
+                    phase_durations={"routing": 0.2, "experiment": 0.5},
+                    outcome="promoted",
+                    result={
+                        "decision": "PROMOTE",
+                        "finalized": True,
+                        "finalize_result": {"run_id": run_id},
+                    },
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertEqual(payload["source_candidate_id"], "candidate-1")
+            self.assertEqual(payload["metadata"], existing_metadata)
+            runtime_source = (
+                Path(__file__).resolve().parents[1]
+                / "ops"
+                / "scripts"
+                / "mechanism"
+                / "auto_improve_iteration_persistence_runtime.py"
+            ).read_text(encoding="utf-8")
+            self.assertNotIn("_existing_run_telemetry", runtime_source)
+            self.assertEqual(payload["workspace_preparation"], existing_workspace_preparation)
+            self.assertEqual(payload["primary_targets"], ["ops/scripts/example.py"])
+            self.assertEqual(payload["supporting_targets"], ["tests/test_example.py"])
+            self.assertEqual(payload["test_files"], ["tests/test_example.py"])
+            self.assertEqual(payload["apply_mode"], "live")
+            self.assertEqual(payload["apply_status"], "live_applied")
+            self.assertTrue(payload["live_applied"])
+            self.assertEqual(payload["shadow_apply_report"], f"runs/{run_id}/shadow-apply-report.json")
+            self.assertEqual(
+                payload["rollback_rehearsal_report"],
+                f"runs/{run_id}/rollback-rehearsal-report.json",
+            )
+            self.assertEqual(payload["behavior_delta"], f"runs/{run_id}/behavior-delta.json")
+            self.assertEqual(payload["phase_durations"], {"routing": 0.2, "experiment": 0.5})
+
+    def test_write_iteration_telemetry_merges_nested_timeout_fields_from_result(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-timeouts"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[f"runs/{run_id}/subagent-routing.worker.json"],
+                    roles=["worker"],
+                    phase_durations={"routing": 0.1, "experiment": 0.2},
+                    outcome="validation_blocked",
+                    result={
+                        "decision": "HOLD",
+                        "finalized": False,
+                        "finalize_result": {},
+                        "mutation_command": {
+                            "timed_out": True,
+                            "timeout_seconds": 1800,
+                            "termination_reason": "timeout",
+                        },
+                        "command_timeouts": {
+                            "repo_health": {
+                                "timed_out": False,
+                                "timeout_seconds": 5400,
+                                "termination_reason": "completed",
+                            }
+                        },
+                        "timeout_failure_artifacts": [
+                            f"runs/{run_id}/worker-executor-timeout-failure.json"
+                        ],
+                    },
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertEqual(
+                payload["command_timeouts"],
+                {
+                    "mutation_command": _expected_timeout_summary(
+                        timed_out=True,
+                        timeout_seconds=1800,
+                        termination_reason="timeout",
+                    ),
+                    "repo_health": _expected_timeout_summary(
+                        timed_out=False,
+                        timeout_seconds=5400,
+                        termination_reason="completed",
+                    ),
+                },
+            )
+            self.assertEqual(
+                payload["timeout_failure_artifacts"],
+                [f"runs/{run_id}/worker-executor-timeout-failure.json"],
+            )
+
+    def test_write_iteration_telemetry_records_behavior_delta_digest_and_same_eval_reason(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-behavior-delta"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            (run_dir / "behavior-delta.json").write_text(
+                '{"summary":"same eval but lint improved"}\n',
+                encoding="utf-8",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[],
+                    roles=[],
+                    phase_durations={},
+                    outcome="promoted",
+                    result={
+                        "decision": "PROMOTE",
+                        "finalized": True,
+                        "finalize_result": {"run_id": run_id},
+                        "behavior_delta": f"runs/{run_id}/behavior-delta.json",
+                        "same_eval_reason": "same eval accepted by lint improvement",
+                        "same_eval": {
+                            "same_eval_reason_code": "telemetry_discoverability_improved",
+                            "strict_secondary_improvement_present": True,
+                            "secondary_improvement_axes": ["lint"],
+                        },
+                    },
+                    context=RuntimeContext(
+                        display_timezone=dt.timezone.utc,
+                        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+                    ),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertEqual(payload["observed_at"], "2026-04-15T03:45:00Z")
+            self.assertEqual(payload["behavior_delta"], f"runs/{run_id}/behavior-delta.json")
+            self.assertEqual(len(payload["behavior_delta_digest"]), 64)
+            self.assertEqual(payload["same_eval_reason"], "same eval accepted by lint improvement")
+            self.assertEqual(payload["same_eval_reason_code"], "telemetry_discoverability_improved")
+            self.assertTrue(payload["strict_secondary_improvement_present"])
+            self.assertEqual(payload["secondary_improvement_axes"], ["lint"])
+
+    def test_write_iteration_telemetry_recovers_decision_record_from_promotion_report_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-promotion-record"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            contract = reduce_decision_proposals(
+                [],
+                subject_id=run_id,
+                subject_kind="system_mechanism",
+                policy_version=1,
+                source_pass="system_mechanism",
+                signoff={"required": False, "status": "not_required"},
+            )
+            (run_dir / "promotion-report.json").write_text(
+                json.dumps(
+                    {
+                        "decision": contract["decision"],
+                        "decision_record": contract["decision_record"],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[f"runs/{run_id}/subagent-routing.worker.json"],
+                    roles=["worker"],
+                    phase_durations={"routing": 0.1, "experiment": 0.2},
+                    outcome="promoted",
+                    result={
+                        "decision": contract["decision"],
+                        "promotion_report": f"runs/{run_id}/promotion-report.json",
+                        "finalized": True,
+                        "finalize_result": {"run_id": run_id},
+                    },
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertEqual(payload["decision_record"], contract["decision_record"])
+
+    def test_execute_evaluate_iteration_phase_builds_request_and_delegates(self) -> None:
+        captured: dict[str, ExecuteEvaluateRequest] = {}
+        expected = ExecuteEvaluatePhaseResult(
+            outcome=ExecutionOutcome(outcome="hold", next_consecutive_failures=3),
+            phase_durations={"experiment": 0.5},
+        )
+
+        def fake_execute(request: ExecuteEvaluateRequest) -> ExecuteEvaluatePhaseResult:
+            captured["request"] = request
+            return expected
+
+        result = execute_evaluate_iteration_phase(
+            Path("/tmp/vault"),
+            Path("ops/policies/wiki-maintainer-policy.yaml"),
+            run_id="auto-session-run-01",
+            proposal={"proposal_id": "proposal-1"},
+            scope_freeze={"status": "ready", "resolution": {"test_files": ["tests/test_example.py"]}},
+            scope_freeze_rel="runs/auto-session-run-01/scope-freeze.json",
+            roles=["worker", "validator"],
+            routing_report_rels=[
+                "runs/auto-session-run-01/subagent-routing.worker.json",
+                "runs/auto-session-run-01/subagent-routing.validator.json",
+            ],
+            consecutive_failures=2,
+            pre_promotion_failure_outcomes={"scope_blocked"},
+            proposal_report_path="ops/reports/mutation-proposals.json",
+            context=_context(),
+            dependencies=_execute_dependencies(),
+            execute_evaluate_phase_fn=fake_execute,
+        )
+
+        self.assertIs(result, expected)
+        request = captured["request"]
+        self.assertEqual(request.run_id, "auto-session-run-01")
+        self.assertEqual(request.proposal["proposal_id"], "proposal-1")
+        self.assertEqual(request.proposal_report_path, "ops/reports/mutation-proposals.json")
+        self.assertEqual(request.roles, ["worker", "validator"])
+        self.assertEqual(
+            request.routing_report_rels,
+            [
+                "runs/auto-session-run-01/subagent-routing.worker.json",
+                "runs/auto-session-run-01/subagent-routing.validator.json",
+            ],
+        )
+
+    def test_run_auto_improve_iteration_stops_when_queue_is_exhausted(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            session = {
+                "budget": {"max_consecutive_failures": 3},
+                "attempted_proposal_ids": [],
+                "run_ids": [],
+                "queue_snapshot": ["stale"],
+            }
+            dependencies = AutoImproveIterationDependencies(
+                refresh_select_phase=mock.Mock(
+                    return_value=SimpleNamespace(
+                        proposal=None,
+                        queue_snapshot=[],
+                        stop_reason="queue_exhausted",
+                    )
+                ),
+                route_scaffold_phase=mock.Mock(),
+                execute_evaluate_dependencies=_execute_dependencies(),
+                execute_evaluate_phase_fn=mock.Mock(),
+                persist_iteration_dependencies=_persist_dependencies(),
+                persist_iteration_phase_fn=mock.Mock(),
+                append_runtime_event=mock.Mock(),
+            )
+
+            result = run_auto_improve_iteration(
+                AutoImproveIterationRequest(
+                    vault=Path(temp_dir),
+                    policy={"version": "2026-04-21"},
+                    resolved_policy_path=Path("ops/policies/wiki-maintainer-policy.yaml"),
+                    session=session,
+                    session_id="auto-session",
+                    proposal_report_path="ops/reports/mutation-proposals.json",
+                    iteration=1,
+                    attempted=set(),
+                    quarantined=set(),
+                    consecutive_failures=1,
+                    pre_promotion_failure_outcomes={"scope_blocked"},
+                    context=_context(),
+                ),
+                dependencies=dependencies,
+                build_run_id=lambda *_args: "unused",
+            )
+
+        self.assertFalse(result.keep_running)
+        self.assertEqual(result.stop_reason, "queue_exhausted")
+        self.assertEqual(result.consecutive_failures, 1)
+        self.assertEqual(session["queue_snapshot"], [])
+        dependencies.route_scaffold_phase.assert_not_called()
+        dependencies.append_runtime_event.assert_not_called()
+
+    def test_run_auto_improve_iteration_records_runtime_event_and_stops_on_failure_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            proposal = {"proposal_id": "proposal-1", "primary_targets": ["ops/scripts/example.py"]}
+            route_scaffold = SimpleNamespace(
+                scope_freeze={"status": "blocked"},
+                scope_freeze_rel="runs/auto-session-run-01/scope-freeze.json",
+                roles=["worker"],
+                routing_report_rels=["runs/auto-session-run-01/subagent-routing.worker.json"],
+                phase_durations={"scope": 0.1, "route": 0.2},
+            )
+            execution = ExecuteEvaluatePhaseResult(
+                outcome=ExecutionOutcome(
+                    outcome="scope_blocked",
+                    next_consecutive_failures=3,
+                    quarantine_proposal=True,
+                ),
+                phase_durations={"experiment": 0.4},
+            )
+            session = {
+                "budget": {"max_consecutive_failures": 3},
+                "attempted_proposal_ids": [],
+                "run_ids": [],
+                "queue_snapshot": [],
+            }
+            dependencies = AutoImproveIterationDependencies(
+                refresh_select_phase=mock.Mock(
+                    return_value=SimpleNamespace(
+                        proposal=proposal,
+                        queue_snapshot=["proposal-1"],
+                        stop_reason=None,
+                    )
+                ),
+                route_scaffold_phase=mock.Mock(return_value=route_scaffold),
+                execute_evaluate_dependencies=_execute_dependencies(),
+                execute_evaluate_phase_fn=mock.Mock(return_value=execution),
+                persist_iteration_dependencies=_persist_dependencies(),
+                persist_iteration_phase_fn=mock.Mock(
+                    return_value=PersistIterationPhaseResult(
+                        consecutive_failures=3,
+                        telemetry_rel="runs/auto-session-run-01/run-telemetry.json",
+                    )
+                ),
+                append_runtime_event=mock.Mock(),
+            )
+
+            result = run_auto_improve_iteration(
+                AutoImproveIterationRequest(
+                    vault=vault,
+                    policy={"version": "2026-04-21"},
+                    resolved_policy_path=Path("ops/policies/wiki-maintainer-policy.yaml"),
+                    session=session,
+                    session_id="auto-session",
+                    proposal_report_path="ops/reports/mutation-proposals.json",
+                    iteration=1,
+                    attempted=set(),
+                    quarantined=set(),
+                    consecutive_failures=2,
+                    pre_promotion_failure_outcomes={"scope_blocked"},
+                    context=_context(),
+                ),
+                dependencies=dependencies,
+                build_run_id=lambda *_args: "auto-session-run-01",
+            )
+
+            self.assertFalse(result.keep_running)
+            self.assertEqual(result.stop_reason, "failure_budget_exhausted")
+            self.assertEqual(result.consecutive_failures, 3)
+            self.assertEqual(session["attempted_proposal_ids"], ["proposal-1"])
+            self.assertEqual(session["run_ids"], ["auto-session-run-01"])
+            self.assertTrue((vault / "runs" / "auto-session-run-01").is_dir())
+            dependencies.append_runtime_event.assert_called_once_with(
+                vault,
+                context=_context(),
+                component="auto_improve_session",
+                phase="route_scaffold",
+                decision="blocked",
+                artifact_path="runs/auto-session-run-01/scope-freeze.json",
+                duration_ms=300,
+                run_id="auto-session-run-01",
+                session_id="auto-session",
+                policy_version="2026-04-21",
+                proposal_id="proposal-1",
+                candidate_id="",
+                decision_reason="scope_freeze_status",
+            )

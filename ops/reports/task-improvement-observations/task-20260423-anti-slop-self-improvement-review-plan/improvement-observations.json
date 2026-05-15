@@ -1,0 +1,87 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-07T02:38:27Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "020399c9d2ef990917394771d8d148cc005c6c68725d730863edae8834a92fe7",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "962e431b393cc9d81b4ad4987fb60c30e1a6afedb71d18baace001c507f2d6af",
+    "record_id": "db0cb234b1f765c85036a6e117088a8b4f9db27b8529cca5a01bfe05014687e2",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "37f447f06d55eefeb3d87a9a8d9bd335e1d22cc6bf418961de4b8d0d77567725"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:38:27Z"
+  },
+  "record_id": "task-20260423-anti-slop-self-improvement-review-plan",
+  "captured_at": "2026-04-23T11:38:01Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Follow-ups discovered while comparing the anti-slop self-improvement review report against the current runtime code.",
+  "observations": [
+    {
+      "observation_id": "decision_record_promotion_report_absorption_gap",
+      "surface": "ops/scripts/auto_improve_iteration_persistence_runtime.py, tests/test_auto_improve_iteration_runtime.py, tools/manual_mutate_auto_improve_decision_record_fallback.py",
+      "problem": "write_iteration_telemetry still preserves decision_record only from request.result or existing run telemetry, so a result that carries only a promotion_report path drops canonical decision provenance even when runs/<run-id>/promotion-report.json contains it.",
+      "why_it_matters": "The self-improvement loop loses the decision record needed for later calibration, trend, retrospective, and audit surfaces.",
+      "automation_candidate": "Promote the manual mutate fallback into the canonical runtime helper and pin it with a regression test that passes only a promotion_report path.",
+      "suggested_followup": "Automated on 2026-04-23 by adding _iteration_decision_record fallback resolution, validating recovered records through promotion_decision_registry_runtime, and pinning the promotion_report path-only case in tests/test_auto_improve_iteration_runtime.py. Keep future telemetry decision provenance changes covered by focused regression tests.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "readiness_pass_stagnation_shadow_gap",
+      "surface": "ops/scripts/auto_improve_readiness_runtime.py, ops/schemas/auto-improve-readiness-report.schema.json, tests/test_auto_improve_readiness_runtime.py",
+      "problem": "auto-improve readiness reports PASS whenever a runnable proposal exists, even when the same report carries no_session_context, low attempts_considered, missing session rollup, rework, HOLD/DISCARD, or defect-escape signals.",
+      "why_it_matters": "Operators can start another live auto-improve run while the evidence says the loop is runnable but unlikely to learn.",
+      "automation_candidate": "Add a read-only stagnation or learnability shadow gate that influences next_action and checks before becoming a hard gate.",
+      "suggested_followup": "Automated on 2026-04-23 by adding learning-oriented shadow signals with can_run, likely_to_learn, outcome/session/rework/HOLD/DISCARD/defect-escape evidence, schema coverage, runtime regressions, fixture validation, and README guidance. Updated on 2026-04-24 by promoting `learning_readiness` as the only canonical learning contract, removing legacy `diagnostics.learnability_shadow_gate` and `combined_state`, switching CLI exit semantics to `execution_readiness.can_run`, and making top-level `next_action` reflect execution/learning together instead of execution-only optimism. Remaining follow-up is policy-level only: decide whether stable learning-uncertain evidence should ever escalate from shadow to active WARN.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "manual_mutate_defect_registry_gap",
+      "surface": "tools/manual_mutate_auto_improve_decision_record_fallback.py, tools/manual_mutate_auto_improve_timeout_telemetry.py, ops/reports/mechanism-review-candidates.json, ops/reports/mutation-proposals.json",
+      "problem": "manual mutate scripts encode important defect knowledge, but unresolved patches are not automatically reflected as a defect registry input with fix and regression status.",
+      "why_it_matters": "The system can learn the same lesson repeatedly without closing the defect-to-runtime-to-test loop.",
+      "automation_candidate": "Create a manual-mutate defect registry or generated report that classifies each patch script by defect class, target, canonical fix status, regression status, and readiness impact.",
+      "suggested_followup": "Automated on 2026-04-23 by adding ops/scripts/manual_mutate_defect_registry.py, ops/schemas/manual-mutate-defect-registry.schema.json, ops/reports/manual-mutate-defect-registry.json, and regression coverage for the two auto-improve manual mutate scripts. Future readiness wiring can consume unresolved_or_uncovered_count as a shadow input before any WARN promotion.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "artifact_json_io_common_layer",
+      "surface": "ops/scripts/artifact_io_runtime.py, schema-backed JSON report writers, tests/test_artifact_io_runtime.py, tests/test_writer_output_paths.py",
+      "problem": "Schema-backed JSON artifact read/write code repeats json.loads/read_text and validate_or_raise/json.dumps/write_output_text across hot runtime writers.",
+      "why_it_matters": "Duplicated artifact I/O makes validation ordering, optional load semantics, parent-directory creation, and future output-path governance drift easier to reintroduce.",
+      "automation_candidate": "Create a shared artifact I/O runtime with read_json_object, load_optional_json_object, and write_schema_validated_json, then migrate hot writers one family at a time.",
+      "suggested_followup": "Automated on 2026-04-23 by adding ops/scripts/artifact_io_runtime.py, focused artifact I/O tests, first-pass migrations for readiness/structural complexity/auto-improve/executor/routing/proposal/behavior/observability writers, and follow-up migration of promotion plus supply-chain/SBOM report writers. Continue by adding stricter static drift checks for any new schema-backed writer.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "generated_artifact_canonical_index_gap",
+      "surface": "ops/reports, external-reports, runs, README.md, ops/README.md",
+      "problem": "Generated reports and external review artifacts are numerous, and the current tree lacks a concise current-vs-archive index that tells humans and agents which generated artifacts are canonical for the present task.",
+      "why_it_matters": "Similar stale reports can pollute code review context and cause LLM or human operators to treat historical artifacts as current source of truth.",
+      "automation_candidate": "Add a generated artifact index that labels operational, audit, and reference artifacts and points to the latest canonical report per family.",
+      "suggested_followup": "Automated on 2026-04-23 by adding ops/scripts/generated_artifact_index.py, ops/schemas/generated-artifact-index.schema.json, ops/reports/generated-artifact-index.json, Makefile targets, and tests that classify current reports plus archive candidates without moving artifacts. Use the report as advisory cleanup input; do not treat physical run moves as canonical lifecycle state.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "artifact_freshness_gate_envelope_migration",
+      "surface": "ops/scripts/artifact_freshness_runtime.py, ops/schemas/artifact-envelope.schema.json, ops/reports/artifact-freshness-report.json, generated JSON report writers",
+      "problem": "The integrated 2026-04-24 anti-slop plan requires root pytest artifact isolation plus generated artifact currentness envelopes. The root artifact gate is now automated, but the current freshness report still records existing generated JSON artifacts without the canonical envelope/currentness fields.",
+      "why_it_matters": "A stale or envelope-less generated report can still be mistaken for current evidence by a maintainer agent, even when root pytest logs are no longer present.",
+      "automation_candidate": "Migrate report writers through a shared generated-artifact envelope builder, drive missing_artifact_envelope_count to zero, then promote artifact-freshness-check from fail-on-fail to fail-on-attention.",
+      "suggested_followup": "Automated on 2026-04-24 by adding artifact_freshness_runtime, artifact-envelope and artifact-freshness schemas, Makefile check wiring, root pytest artifact regression coverage, and the canonical ops/reports/artifact-freshness-report.json. Updated on 2026-04-24 by rolling the full envelope/currentness contract into the Batch 1 canonical reports (eval, lint, eval coverage, stage2 eval, mechanism review), tightening those schemas, and pinning rollout coverage in smoke/schema fixtures. Closed on 2026-05-05: the current freshness report now records zero missing envelopes, zero unknown currentness, zero schema-invalid artifacts, and zero stable contract debt, so this envelope migration follow-up is automated.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260423-anti-slop-self-improvement-review-plan"
+}

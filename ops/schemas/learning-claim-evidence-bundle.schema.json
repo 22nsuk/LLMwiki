@@ -1,0 +1,482 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Learning Claim Evidence Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "status",
+    "summary",
+    "bundle_identity",
+    "evidence_items",
+    "run_set",
+    "telemetry_evidence",
+    "confirmed_run_set",
+    "confirmed_telemetry_evidence",
+    "confirmed_run_artifacts",
+    "behavior_delta_digest_readback",
+    "behavior_delta_artifact_readback",
+    "revocation"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": ["ops/schemas/learning-claim-evidence-bundle.schema.json"]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": ["learning_claim_evidence_bundle"]
+    },
+    "generated_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" },
+    "producer": { "type": "string", "enum": ["ops.scripts.learning_claim_evidence_bundle"] },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": { "type": "string", "enum": ["current", "archived", "stale", "unknown"] },
+    "retention_policy": { "type": "string", "enum": ["canonical_report"] },
+    "encoding": { "type": "string", "enum": ["utf-8"] },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown", "invalid"] },
+        "checked_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" }
+      }
+    },
+    "vault": { "type": "string" },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string" },
+        "version": { "type": ["integer", "string", "null"] }
+      }
+    },
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bundle_sha256",
+        "revocation_status",
+        "bundle_item_count",
+        "missing_required_count",
+        "stale_evidence_count",
+        "revoked_evidence_count",
+        "telemetry_run_count",
+        "telemetry_missing_count",
+        "behavior_delta_digest_missing_count",
+        "behavior_delta_digest_mismatch_count",
+        "confirmed_telemetry_run_count",
+        "confirmed_telemetry_missing_count",
+        "confirmed_behavior_delta_digest_missing_count",
+        "confirmed_behavior_delta_artifact_mismatch_count",
+        "confirmed_run_artifact_missing_count",
+        "behavior_delta_artifact_missing_count",
+        "behavior_delta_artifact_mismatch_count",
+        "behavior_delta_artifact_readback_status",
+        "legacy_reconstruction_sha256",
+        "legacy_reconstruction_status",
+        "legacy_reconstruction_blocked_run_count",
+        "legacy_reconstruction_operator_summary",
+        "external_manifest_sha256",
+        "run_set_digest"
+      ],
+      "properties": {
+        "bundle_sha256": { "$ref": "#/$defs/sha256" },
+        "revocation_status": { "$ref": "#/$defs/revocation_status" },
+        "bundle_item_count": { "type": "integer", "minimum": 0 },
+        "missing_required_count": { "type": "integer", "minimum": 0 },
+        "stale_evidence_count": { "type": "integer", "minimum": 0 },
+        "revoked_evidence_count": { "type": "integer", "minimum": 0 },
+        "telemetry_run_count": { "type": "integer", "minimum": 0 },
+        "telemetry_missing_count": { "type": "integer", "minimum": 0 },
+        "behavior_delta_digest_missing_count": { "type": "integer", "minimum": 0 },
+        "behavior_delta_digest_mismatch_count": { "type": "integer", "minimum": 0 },
+        "confirmed_telemetry_run_count": { "type": "integer", "minimum": 0 },
+        "confirmed_telemetry_missing_count": { "type": "integer", "minimum": 0 },
+        "confirmed_behavior_delta_digest_missing_count": { "type": "integer", "minimum": 0 },
+        "confirmed_behavior_delta_artifact_mismatch_count": { "type": "integer", "minimum": 0 },
+        "confirmed_run_artifact_missing_count": { "type": "integer", "minimum": 0 },
+        "behavior_delta_artifact_missing_count": { "type": "integer", "minimum": 0 },
+        "behavior_delta_artifact_mismatch_count": { "type": "integer", "minimum": 0 },
+        "behavior_delta_artifact_readback_status": {
+          "type": "string",
+          "enum": ["pass", "revoked", "not_available", "not_applicable"]
+        },
+        "legacy_reconstruction_sha256": { "type": "string", "pattern": "^(|[a-f0-9]{64})$" },
+        "legacy_reconstruction_status": { "type": "string", "enum": ["pass", "fail", "missing"] },
+        "legacy_reconstruction_blocked_run_count": { "type": "integer", "minimum": 0 },
+        "legacy_reconstruction_operator_summary": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/legacy_reconstruction_operator_diagnostic" }
+        },
+        "external_manifest_sha256": { "type": "string", "pattern": "^(|[a-f0-9]{64})$" },
+        "run_set_digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "bundle_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["digest_algorithm", "bundle_payload_version", "evidence_bundle_digest"],
+      "properties": {
+        "digest_algorithm": { "type": "string", "enum": ["sha256"] },
+        "bundle_payload_version": { "type": "integer", "minimum": 1 },
+        "evidence_bundle_digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "evidence_items": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/evidence_item" }
+    },
+    "run_set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_path", "run_ids", "run_count", "proposal_families", "run_set_digest"],
+      "properties": {
+        "source_path": { "type": "string" },
+        "run_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "run_count": { "type": "integer", "minimum": 0 },
+        "proposal_families": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "run_set_digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "telemetry_evidence": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/telemetry_item" }
+    },
+    "confirmed_run_set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_path", "run_ids", "run_count", "proposal_families", "run_families", "run_set_digest"],
+      "properties": {
+        "source_path": { "type": "string" },
+        "run_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "run_count": { "type": "integer", "minimum": 0 },
+        "proposal_families": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "run_families": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["run_id", "families"],
+            "properties": {
+              "run_id": { "type": "string", "minLength": 1 },
+              "families": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+            }
+          }
+        },
+        "run_set_digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "confirmed_telemetry_evidence": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/confirmed_telemetry_item" }
+    },
+    "confirmed_run_artifacts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/confirmed_run_artifacts" }
+    },
+    "behavior_delta_digest_readback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "missing_count", "mismatch_count", "source"],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "revoked", "not_applicable"] },
+        "missing_count": { "type": "integer", "minimum": 0 },
+        "mismatch_count": { "type": "integer", "minimum": 0 },
+        "source": { "type": "string", "minLength": 1 }
+      }
+    },
+    "behavior_delta_artifact_readback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "missing_count", "mismatch_count", "source"],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "revoked", "not_available", "not_applicable"] },
+        "missing_count": { "type": "integer", "minimum": 0 },
+        "mismatch_count": { "type": "integer", "minimum": 0 },
+        "source": { "type": "string", "minLength": 1 }
+      }
+    },
+    "revocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reasons", "stale_item_ids", "revoked_item_ids"],
+      "properties": {
+        "status": { "$ref": "#/$defs/revocation_status" },
+        "reasons": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "stale_item_ids": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "revoked_item_ids": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "revocation_status": { "type": "string", "enum": ["active", "stale", "revoked"] },
+    "evidence_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "role", "required", "exists", "sha256", "status", "revocation_effect"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": [
+            "auto_improve_readiness",
+            "mechanism_review_candidates",
+            "mutation_proposals",
+            "outcome_metrics",
+            "public_check_summary",
+            "learning_confirmed_legacy_reconstruction",
+            "external_report_reference_manifest"
+          ]
+        },
+        "path": { "type": "string", "minLength": 1 },
+        "role": { "type": "string", "enum": ["blocking", "diagnostic", "advisory"] },
+        "required": { "type": "boolean" },
+        "exists": { "type": "boolean" },
+        "sha256": { "type": "string", "pattern": "^(|[a-f0-9]{64})$" },
+        "status": { "type": "string", "enum": ["present", "missing"] },
+        "revocation_effect": { "type": "string", "enum": ["none", "stale", "revoked"] }
+      }
+    },
+    "telemetry_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "telemetry_path",
+        "exists",
+        "sha256",
+        "decision",
+        "behavior_delta_path",
+        "behavior_delta_artifact_exists",
+        "behavior_delta_artifact_sha256",
+        "behavior_delta_artifact_digest_match",
+        "behavior_delta_artifact_readback_status",
+        "same_eval_reason_code",
+        "strict_secondary_improvement_present",
+        "secondary_improvement_axes",
+        "behavior_delta_digest",
+        "behavior_delta_digest_present",
+        "behavior_delta_digest_valid",
+        "behavior_delta_digest_source",
+        "legacy_reconstruction_path",
+        "legacy_reconstruction_status",
+        "legacy_reconstruction_selection_reason",
+        "legacy_reconstruction_reasons",
+        "secondary_axis_evidence_source",
+        "secondary_axis_evidence_detail"
+      ],
+      "properties": {
+        "run_id": { "type": "string", "minLength": 1 },
+        "telemetry_path": { "type": "string" },
+        "exists": { "type": "boolean" },
+        "sha256": { "type": "string", "pattern": "^(|[a-f0-9]{64})$" },
+        "decision": { "type": "string" },
+        "behavior_delta_path": { "type": "string" },
+        "behavior_delta_artifact_exists": { "type": "boolean" },
+        "behavior_delta_artifact_sha256": { "type": "string", "pattern": "^(|[a-f0-9]{64})$" },
+        "behavior_delta_artifact_digest_match": { "type": "boolean" },
+        "behavior_delta_artifact_readback_status": {
+          "type": "string",
+          "enum": ["pass", "mismatch", "not_available"]
+        },
+        "same_eval_reason_code": { "type": "string" },
+        "strict_secondary_improvement_present": { "type": "boolean" },
+        "secondary_improvement_axes": { "type": "array", "items": { "type": "string" } },
+        "behavior_delta_digest": { "type": "string" },
+        "behavior_delta_digest_present": { "type": "boolean" },
+        "behavior_delta_digest_valid": { "type": "boolean" },
+        "behavior_delta_digest_source": {
+          "type": "string",
+          "enum": ["telemetry_field", "legacy_reconstruction_artifact", "missing"]
+        },
+        "legacy_reconstruction_path": { "type": "string" },
+        "legacy_reconstruction_status": {
+          "type": "string",
+          "enum": ["not_applicable", "not_needed", "reconstructed", "blocked"]
+        },
+        "legacy_reconstruction_selection_reason": { "type": "string" },
+        "legacy_reconstruction_reasons": { "type": "array", "items": { "type": "string" } },
+        "secondary_axis_evidence_source": {
+          "type": "string",
+          "enum": ["telemetry_field", "legacy_reconstruction_artifact", "missing"]
+        },
+        "secondary_axis_evidence_detail": { "type": "string" }
+      }
+    },
+    "confirmed_telemetry_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "telemetry_path",
+        "exists",
+        "sha256",
+        "decision",
+        "behavior_delta_path",
+        "behavior_delta_artifact_exists",
+        "behavior_delta_artifact_sha256",
+        "behavior_delta_artifact_digest_match",
+        "behavior_delta_artifact_readback_status",
+        "same_eval_reason_code",
+        "strict_secondary_improvement_present",
+        "secondary_improvement_axes",
+        "behavior_delta_digest",
+        "behavior_delta_digest_present",
+        "behavior_delta_digest_valid",
+        "behavior_delta_digest_source",
+        "promotion_report_path",
+        "legacy_reconstruction_path",
+        "legacy_reconstruction_status",
+        "legacy_reconstruction_selection_reason",
+        "legacy_reconstruction_reasons",
+        "secondary_axis_evidence_source",
+        "secondary_axis_evidence_detail",
+        "families"
+      ],
+      "properties": {
+        "run_id": { "type": "string", "minLength": 1 },
+        "telemetry_path": { "type": "string" },
+        "exists": { "type": "boolean" },
+        "sha256": { "type": "string", "pattern": "^(|[a-f0-9]{64})$" },
+        "decision": { "type": "string" },
+        "behavior_delta_path": { "type": "string" },
+        "behavior_delta_artifact_exists": { "type": "boolean" },
+        "behavior_delta_artifact_sha256": { "type": "string", "pattern": "^(|[a-f0-9]{64})$" },
+        "behavior_delta_artifact_digest_match": { "type": "boolean" },
+        "behavior_delta_artifact_readback_status": {
+          "type": "string",
+          "enum": ["pass", "mismatch", "not_available"]
+        },
+        "same_eval_reason_code": { "type": "string" },
+        "strict_secondary_improvement_present": { "type": "boolean" },
+        "secondary_improvement_axes": { "type": "array", "items": { "type": "string" } },
+        "behavior_delta_digest": { "type": "string" },
+        "behavior_delta_digest_present": { "type": "boolean" },
+        "behavior_delta_digest_valid": { "type": "boolean" },
+        "behavior_delta_digest_source": {
+          "type": "string",
+          "enum": ["telemetry_field", "legacy_reconstruction_artifact", "missing"]
+        },
+        "promotion_report_path": { "type": "string" },
+        "legacy_reconstruction_path": { "type": "string" },
+        "legacy_reconstruction_status": {
+          "type": "string",
+          "enum": ["not_applicable", "not_needed", "reconstructed", "blocked"]
+        },
+        "legacy_reconstruction_selection_reason": { "type": "string" },
+        "legacy_reconstruction_reasons": { "type": "array", "items": { "type": "string" } },
+        "secondary_axis_evidence_source": {
+          "type": "string",
+          "enum": ["telemetry_field", "legacy_reconstruction_artifact", "missing"]
+        },
+        "secondary_axis_evidence_detail": { "type": "string" },
+        "families": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+      }
+    },
+    "legacy_reconstruction_operator_diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "families",
+        "reconstruction_status",
+        "reconstruction_needed",
+        "selection_reason",
+        "reconstruction_reasons",
+        "parsed_secondary_axes",
+        "parsed_secondary_axis_evidence"
+      ],
+      "properties": {
+        "run_id": { "type": "string", "minLength": 1 },
+        "families": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "reconstruction_status": {
+          "type": "string",
+          "enum": ["not_needed", "reconstructed", "blocked"]
+        },
+        "reconstruction_needed": { "type": "boolean" },
+        "selection_reason": { "type": "string", "minLength": 1 },
+        "reconstruction_reasons": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "parsed_secondary_axes": { "type": "array", "items": { "type": "string" } },
+        "parsed_secondary_axis_evidence": { "$ref": "#/$defs/secondary_axis_evidence" }
+      }
+    },
+    "secondary_axis_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "check_id", "detail", "strict_signal", "axes"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": ["missing", "promotion_report_fields", "promotion_report_check_detail"]
+        },
+        "check_id": { "type": "string" },
+        "detail": { "type": "string" },
+        "strict_signal": { "type": "boolean" },
+        "axes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "confirmed_run_artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "artifacts",
+        "required_artifact_count",
+        "present_required_artifact_count",
+        "missing_required_artifact_count",
+        "status"
+      ],
+      "properties": {
+        "run_id": { "type": "string", "minLength": 1 },
+        "artifacts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/confirmed_run_artifact" }
+        },
+        "required_artifact_count": { "type": "integer", "minimum": 0 },
+        "present_required_artifact_count": { "type": "integer", "minimum": 0 },
+        "missing_required_artifact_count": { "type": "integer", "minimum": 0 },
+        "status": { "type": "string", "enum": ["pass", "missing_required_artifact"] }
+      }
+    },
+    "confirmed_run_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "exists", "sha256", "required_for_confirmed", "status"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": ["baseline_mechanism_assessment", "candidate_mechanism_assessment", "promotion_report"]
+        },
+        "path": { "type": "string", "minLength": 1 },
+        "exists": { "type": "boolean" },
+        "sha256": { "type": "string", "pattern": "^(|[a-f0-9]{64})$" },
+        "required_for_confirmed": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["present", "missing"] }
+      }
+    }
+  }
+}

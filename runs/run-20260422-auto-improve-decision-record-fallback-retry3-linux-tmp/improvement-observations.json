@@ -1,0 +1,42 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "run_improvement_observations",
+  "generated_at": "2026-05-09T19:28:38Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "a3ce45534f240dfd27983aff38c96cc8ad04bf4c9424ac0e64c54694ea616df3",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "e7faed080fed8a91b5f8d78a137c16ac196285cd691cdc1d48c8cc90356f0760",
+    "record_id": "03db81604b412dd7e917fa7b65db79d28069c200c12854415ffc933de4ff55d1",
+    "scope": "a1e054261d934e33cdbff51ad1165d00d55fd761751781183a57862b802b4271",
+    "summary": "5a6373ae286ee9c52e345fce48e22dd2b6c73e9ff8fe4a308c4a24095b9ce4fd"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-09T19:28:38Z"
+  },
+  "record_id": "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+  "captured_at": "2026-04-22T14:12:55Z",
+  "scope": "system_mechanism_run",
+  "summary": "Record reusable automation or repo hygiene follow-ups discovered while executing mechanism run run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp.",
+  "observations": [
+    {
+      "observation_id": "wsl_linux_tmpdir_for_manual_mechanism_runs",
+      "surface": "manual run_mechanism_experiment invocation on WSL-backed /mnt/c vaults",
+      "problem": "Comparable-run retries launched with the inherited Windows TEMP/TMP environment created disposable workspaces under `/mnt/c/Users/Administrator/AppData/Local/Temp`, and those retries stalled for minutes in `p9_client_rpc` during run capture. Re-running the same experiment with `TMPDIR=/tmp TEMP=/tmp TMP=/tmp` moved the workspace to a Linux-native temp directory and the run completed normally.",
+      "why_it_matters": "Without a documented Linux temp override, operators can misread WSL 9p filesystem stalls as mechanism regressions or flaky promotion logic and waste iterations on the wrong layer.",
+      "automation_candidate": "Add a small WSL-safe helper wrapper or Make target for manual mechanism experiments that exports `TMPDIR=/tmp TEMP=/tmp TMP=/tmp` before invoking the experiment runner.",
+      "suggested_followup": "Automated on 2026-05-10 KST: `make run-mechanism-experiment-linux-tmp MECHANISM_RUN_ARGS='...'` now wraps `ops.scripts.run_mechanism_experiment` with `TMPDIR=/tmp TEMP=/tmp TMP=/tmp`, README documents the WSL-safe manual run path, and `tests/test_makefile_static_gates.py` pins the target contract.",
+      "status": "automated"
+    }
+  ],
+  "run_id": "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp"
+}

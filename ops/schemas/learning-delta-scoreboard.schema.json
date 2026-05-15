@@ -1,0 +1,834 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Learning Delta Scoreboard",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "status",
+    "summary",
+    "learning_claim_guard",
+    "learning_claim_unlock_review",
+    "self_improvement_claim_model",
+    "confirmed_evidence_summary",
+    "same_eval_evidence",
+    "coverage",
+    "aggregate_selector",
+    "evidence_scopes",
+    "external_report_placeholder_audit",
+    "anti_slop_score"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "enum": ["ops/schemas/learning-delta-scoreboard.schema.json"] },
+    "artifact_kind": { "type": "string", "enum": ["learning_delta_scoreboard"] },
+    "generated_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" },
+    "producer": { "type": "string", "enum": ["ops.scripts.learning_delta_scoreboard"] },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": { "type": "string", "enum": ["current", "archived", "stale", "unknown"] },
+    "retention_policy": { "type": "string", "enum": ["canonical_report"] },
+    "encoding": { "type": "string", "enum": ["utf-8"] },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown", "invalid"] },
+        "checked_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" }
+      }
+    },
+    "vault": { "type": "string" },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "version": { "type": ["integer", "string", "null"] }
+      }
+    },
+    "status": { "type": "string", "enum": ["pass", "attention", "fail"] },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claims_learning_improved",
+        "learning_claim_allowed",
+        "learning_likely",
+        "bounded_learning_claim_allowed",
+        "confirmed_learning_improvement_allowed",
+        "improvement_claim_status",
+        "confirmed_learning_improvement_status",
+        "evidence_cohort_status",
+        "learning_claim_blocker_status",
+        "confirmed_blocking_predicate_ids",
+        "confirmed_evidence_summary",
+        "claim_wording_allowed",
+        "claim_wording_policy_status",
+        "self_improvement_claim_model",
+        "claim_vocabulary_version",
+        "claim_level",
+        "claim_scope",
+        "learning_claim_evidence_complete",
+        "learning_claim_unlock_review_status",
+        "learning_claim_unlock_review_approved",
+        "learning_claim_unlock_review_revocation_status",
+        "learning_claim_evidence_bundle_status",
+        "learning_claim_evidence_bundle_sha256",
+        "learning_confirmed_evidence_cohort_sha256",
+        "learning_confirmed_evidence_cohort_status",
+        "telemetry_coverage_ratio",
+        "telemetry_coverage_status",
+        "same_eval_run_count",
+        "same_eval_reason_coverage_ratio",
+        "same_eval_reason_coverage_status",
+        "strict_secondary_improvement_coverage_ratio",
+        "strict_secondary_improvement_coverage_status",
+        "behavior_delta_digest_coverage_ratio",
+        "behavior_delta_digest_coverage_status",
+        "placeholder_count",
+        "anti_slop_status",
+        "anti_slop_score",
+        "anti_slop_deduction_count",
+        "evidence_scope_count"
+      ],
+      "properties": {
+        "claims_learning_improved": { "type": "boolean" },
+        "learning_claim_allowed": { "type": "boolean" },
+        "learning_likely": { "type": "boolean" },
+        "bounded_learning_claim_allowed": { "type": "boolean" },
+        "confirmed_learning_improvement_allowed": { "type": "boolean" },
+        "improvement_claim_status": {
+          "type": "string",
+          "enum": ["not_ready", "eligible", "auto_confirmed", "revoked"]
+        },
+        "confirmed_learning_improvement_status": {
+          "type": "string",
+          "enum": ["not_ready", "eligible", "auto_confirmed", "revoked"]
+        },
+        "evidence_cohort_status": {
+          "type": "string",
+          "enum": ["not_ready", "auto_confirmed", "revoked"]
+        },
+        "learning_claim_blocker_status": {
+          "type": "string",
+          "enum": ["clear", "blocked", "not_evaluated"]
+        },
+        "confirmed_blocking_predicate_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "confirmed_evidence_summary": { "$ref": "#/$defs/confirmed_evidence_summary" },
+        "claim_wording_allowed": { "type": "boolean" },
+        "claim_wording_policy_status": {
+          "type": "string",
+          "enum": ["pre_seal_ready", "blocked"]
+        },
+        "self_improvement_claim_model": { "$ref": "#/$defs/self_improvement_claim_model" },
+        "claim_vocabulary_version": { "type": "integer", "minimum": 1 },
+        "claim_level": {
+          "type": "string",
+          "enum": ["none", "learning_likely", "bounded_learning_likely", "confirmed_learning_improvement"]
+        },
+        "claim_scope": { "type": "string" },
+        "learning_claim_evidence_complete": { "type": "boolean" },
+        "learning_claim_unlock_review_status": {
+          "type": "string",
+          "enum": ["not_ready", "required", "approved", "auto_approved", "stale", "revoked"]
+        },
+        "learning_claim_unlock_review_approved": { "type": "boolean" },
+        "learning_claim_unlock_review_revocation_status": {
+          "type": "string",
+          "enum": ["active", "stale", "revoked", "not_evaluated"]
+        },
+        "learning_claim_evidence_bundle_status": {
+          "type": "string",
+          "enum": ["active", "stale", "revoked", "missing", "not_evaluated"]
+        },
+        "learning_claim_evidence_bundle_sha256": { "type": "string", "pattern": "^(|[a-f0-9]{64})$" },
+        "learning_confirmed_evidence_cohort_sha256": { "type": "string", "pattern": "^(|[a-f0-9]{64})$" },
+        "learning_confirmed_evidence_cohort_status": {
+          "type": "string",
+          "enum": ["active", "stale", "revoked", "missing", "not_evaluated"]
+        },
+        "telemetry_coverage_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "telemetry_coverage_status": { "$ref": "#/$defs/coverage_status" },
+        "same_eval_run_count": { "type": "integer", "minimum": 0 },
+        "same_eval_reason_coverage_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "same_eval_reason_coverage_status": { "$ref": "#/$defs/coverage_status" },
+        "strict_secondary_improvement_coverage_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "strict_secondary_improvement_coverage_status": { "$ref": "#/$defs/coverage_status" },
+        "behavior_delta_digest_coverage_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "behavior_delta_digest_coverage_status": { "$ref": "#/$defs/coverage_status" },
+        "placeholder_count": { "type": "integer", "minimum": 0 },
+        "anti_slop_status": {
+          "type": "string",
+          "enum": ["clean", "attention", "blocked"]
+        },
+        "anti_slop_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "anti_slop_deduction_count": { "type": "integer", "minimum": 0 },
+        "evidence_scope_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "learning_claim_guard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "improvement_claim_status",
+        "evidence_cohort_status",
+        "learning_claim_blocker_status",
+        "claim_wording_allowed",
+        "claim_wording_policy_status",
+        "reason",
+        "required_conditions"
+      ],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "blocked"] },
+        "improvement_claim_status": {
+          "type": "string",
+          "enum": ["not_ready", "eligible", "auto_confirmed", "revoked"]
+        },
+        "evidence_cohort_status": {
+          "type": "string",
+          "enum": ["not_ready", "auto_confirmed", "revoked"]
+        },
+        "learning_claim_blocker_status": {
+          "type": "string",
+          "enum": ["clear", "blocked", "not_evaluated"]
+        },
+        "claim_wording_allowed": { "type": "boolean" },
+        "claim_wording_policy_status": {
+          "type": "string",
+          "enum": ["pre_seal_ready", "blocked"]
+        },
+        "reason": { "type": "string" },
+        "required_conditions": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "learning_claim_unlock_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "approved",
+        "claim_level",
+        "claim_scope",
+        "bounded_learning_claim_allowed",
+        "confirmed_learning_improvement_allowed",
+        "improvement_claim_status",
+        "confirmed_learning_improvement_status",
+        "evidence_cohort_status",
+        "learning_claim_blocker_status",
+        "claim_wording_allowed",
+        "claim_wording_policy_status",
+        "confirmed_blocking_predicate_ids",
+        "confirmed_evidence_summary",
+        "confirmed_predicate_results",
+        "bundle_status",
+        "bundle_sha256",
+        "current_bundle_sha256",
+        "revocation_status",
+        "confirmed_evidence_cohort_path",
+        "confirmed_evidence_cohort_sha256",
+        "current_confirmed_evidence_cohort_sha256",
+        "confirmed_evidence_cohort_status",
+        "confirmed_evidence_cohort_fingerprint_match_status",
+        "source_path",
+        "reason",
+        "required_review_items"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["not_ready", "required", "approved", "auto_approved", "stale", "revoked"]
+        },
+        "approved": { "type": "boolean" },
+        "claim_level": {
+          "type": "string",
+          "enum": [
+            "none",
+            "learning_likely",
+            "bounded_learning_likely",
+            "human_reviewed_learning_claim",
+            "confirmed_learning_improvement"
+          ]
+        },
+        "claim_scope": { "type": "string" },
+        "bounded_learning_claim_allowed": { "type": "boolean" },
+        "confirmed_learning_improvement_allowed": { "type": "boolean" },
+        "improvement_claim_status": {
+          "type": "string",
+          "enum": ["not_ready", "eligible", "auto_confirmed", "revoked"]
+        },
+        "confirmed_learning_improvement_status": {
+          "type": "string",
+          "enum": ["not_ready", "eligible", "auto_confirmed", "revoked"]
+        },
+        "evidence_cohort_status": {
+          "type": "string",
+          "enum": ["not_ready", "auto_confirmed", "revoked"]
+        },
+        "learning_claim_blocker_status": {
+          "type": "string",
+          "enum": ["clear", "blocked", "not_evaluated"]
+        },
+        "claim_wording_allowed": { "type": "boolean" },
+        "claim_wording_policy_status": {
+          "type": "string",
+          "enum": ["pre_seal_ready", "blocked"]
+        },
+        "confirmed_blocking_predicate_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "confirmed_evidence_summary": { "$ref": "#/$defs/confirmed_evidence_summary" },
+        "confirmed_predicate_results": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/predicate_result" }
+        },
+        "bundle_status": {
+          "type": "string",
+          "enum": ["active", "stale", "revoked", "missing", "not_evaluated"]
+        },
+        "bundle_sha256": { "type": "string", "pattern": "^(|[a-f0-9]{64})$" },
+        "current_bundle_sha256": { "type": "string", "pattern": "^(|[a-f0-9]{64})$" },
+        "revocation_status": {
+          "type": "string",
+          "enum": ["active", "stale", "revoked", "not_evaluated"]
+        },
+        "confirmed_evidence_cohort_path": { "type": "string" },
+        "confirmed_evidence_cohort_sha256": { "type": "string", "pattern": "^(|[a-f0-9]{64})$" },
+        "current_confirmed_evidence_cohort_sha256": { "type": "string", "pattern": "^(|[a-f0-9]{64})$" },
+        "confirmed_evidence_cohort_status": {
+          "type": "string",
+          "enum": ["active", "stale", "revoked", "missing", "not_evaluated"]
+        },
+        "confirmed_evidence_cohort_fingerprint_match_status": {
+          "type": "string",
+          "enum": ["match", "mismatch", "missing", "not_evaluated"]
+        },
+        "source_path": { "type": "string" },
+        "reason": { "type": "string" },
+        "required_review_items": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "self_improvement_claim_model": { "$ref": "#/$defs/self_improvement_claim_model" },
+    "confirmed_evidence_summary": { "$ref": "#/$defs/confirmed_evidence_summary" },
+    "same_eval_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proposal_count", "run_count", "runs_with_telemetry", "runs"],
+      "properties": {
+        "proposal_count": { "type": "integer", "minimum": 0 },
+        "run_count": { "type": "integer", "minimum": 0 },
+        "runs_with_telemetry": { "type": "integer", "minimum": 0 },
+        "runs": { "type": "array", "items": { "$ref": "#/$defs/same_eval_run" } }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "telemetry",
+        "same_eval_reason_code",
+        "strict_secondary_improvement",
+        "behavior_delta_digest"
+      ],
+      "properties": {
+        "telemetry": { "$ref": "#/$defs/coverage_detail" },
+        "same_eval_reason_code": { "$ref": "#/$defs/coverage_detail" },
+        "strict_secondary_improvement": { "$ref": "#/$defs/coverage_detail" },
+        "behavior_delta_digest": { "$ref": "#/$defs/coverage_detail" }
+      }
+    },
+    "aggregate_selector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "latest_session_coverage",
+        "proposal_family_coverage",
+        "historical_recoverable_coverage",
+        "effective_learning_coverage"
+      ],
+      "properties": {
+        "latest_session_coverage": { "$ref": "#/$defs/aggregate_coverage" },
+        "proposal_family_coverage": { "$ref": "#/$defs/proposal_family_coverage" },
+        "historical_recoverable_coverage": { "$ref": "#/$defs/historical_recoverable_coverage" },
+        "effective_learning_coverage": { "$ref": "#/$defs/effective_learning_coverage" }
+      }
+    },
+    "evidence_scopes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/evidence_scope" }
+    },
+    "external_report_placeholder_audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "placeholder_count", "placeholders"],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "fail"] },
+        "placeholder_count": { "type": "integer", "minimum": 0 },
+        "placeholders": { "type": "array", "items": { "$ref": "#/$defs/placeholder" } }
+      }
+    },
+    "anti_slop_score": {
+      "$ref": "#/$defs/anti_slop_score"
+    }
+  },
+  "$defs": {
+    "coverage_status": {
+      "type": "string",
+      "enum": ["full", "partial", "none", "no_evidence", "not_applicable"]
+    },
+    "anti_slop_score": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "status",
+        "score",
+        "max_score",
+        "placeholder_penalty",
+        "evidence_coverage_penalty",
+        "unsupported_claim_penalty",
+        "claim_wording_penalty",
+        "deduction_count",
+        "deductions",
+        "inputs",
+        "summary"
+      ],
+      "properties": {
+        "schema_version": { "type": "integer", "minimum": 1 },
+        "status": {
+          "type": "string",
+          "enum": ["clean", "attention", "blocked"]
+        },
+        "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "max_score": { "type": "integer", "const": 100 },
+        "placeholder_penalty": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "evidence_coverage_penalty": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "unsupported_claim_penalty": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "claim_wording_penalty": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "deduction_count": { "type": "integer", "minimum": 0 },
+        "deductions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "points", "reason"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "points": { "type": "integer", "minimum": 0 },
+              "reason": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "claims_learning_improved",
+            "learning_claim_evidence_complete",
+            "claim_wording_allowed",
+            "placeholder_audit_status",
+            "placeholder_count",
+            "telemetry_coverage_status",
+            "same_eval_reason_coverage_status",
+            "strict_secondary_improvement_coverage_status",
+            "behavior_delta_digest_coverage_status"
+          ],
+          "properties": {
+            "claims_learning_improved": { "type": "boolean" },
+            "learning_claim_evidence_complete": { "type": "boolean" },
+            "claim_wording_allowed": { "type": "boolean" },
+            "placeholder_audit_status": {
+              "type": "string",
+              "enum": ["pass", "fail", "unknown"]
+            },
+            "placeholder_count": { "type": "integer", "minimum": 0 },
+            "telemetry_coverage_status": { "$ref": "#/$defs/coverage_status" },
+            "same_eval_reason_coverage_status": { "$ref": "#/$defs/coverage_status" },
+            "strict_secondary_improvement_coverage_status": { "$ref": "#/$defs/coverage_status" },
+            "behavior_delta_digest_coverage_status": { "$ref": "#/$defs/coverage_status" }
+          }
+        },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "self_improvement_claim_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "stage_order",
+        "stages",
+        "highest_supported_stage",
+        "improvement_claim_status",
+        "evidence_cohort_status",
+        "learning_claim_blocker_status",
+        "claim_wording_allowed",
+        "claim_wording_policy_status",
+        "summary"
+      ],
+      "properties": {
+        "schema_version": { "type": "integer", "minimum": 1 },
+        "stage_order": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "regression_safe",
+              "same_eval_gain",
+              "cross_eval_gain",
+              "persistence",
+              "production_learning"
+            ]
+          }
+        },
+        "stages": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/improvement_claim_stage" }
+        },
+        "highest_supported_stage": {
+          "type": "string",
+          "enum": [
+            "none",
+            "regression_safe",
+            "same_eval_gain",
+            "cross_eval_gain",
+            "persistence",
+            "production_learning"
+          ]
+        },
+        "improvement_claim_status": {
+          "type": "string",
+          "enum": ["not_ready", "eligible", "auto_confirmed", "revoked"]
+        },
+        "evidence_cohort_status": {
+          "type": "string",
+          "enum": ["not_ready", "auto_confirmed", "revoked"]
+        },
+        "learning_claim_blocker_status": {
+          "type": "string",
+          "enum": ["clear", "blocked", "not_evaluated"]
+        },
+        "claim_wording_allowed": { "type": "boolean" },
+        "claim_wording_policy_status": {
+          "type": "string",
+          "enum": ["pre_seal_ready", "blocked"]
+        },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "improvement_claim_stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "status", "evidence", "summary"],
+      "properties": {
+        "stage": {
+          "type": "string",
+          "enum": [
+            "regression_safe",
+            "same_eval_gain",
+            "cross_eval_gain",
+            "persistence",
+            "production_learning"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pass", "blocked", "not_claimed", "not_evaluated", "not_ready"]
+        },
+        "evidence": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "coverage_detail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["numerator", "denominator", "ratio", "status"],
+      "properties": {
+        "numerator": { "type": "integer", "minimum": 0 },
+        "denominator": { "type": "integer", "minimum": 0 },
+        "ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "status": { "$ref": "#/$defs/coverage_status" }
+      }
+    },
+    "confirmed_evidence_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_cohort_status",
+        "confirmed_evidence_status",
+        "valid_run_count",
+        "min_required_run_count",
+        "eligible_family_count",
+        "selected_valid_run_ids",
+        "blocking_predicate_ids",
+        "rejected_run_count",
+        "rejected_run_diagnostics",
+        "legacy_reconstruction_summary"
+      ],
+      "properties": {
+        "evidence_cohort_status": {
+          "type": "string",
+          "enum": ["not_ready", "auto_confirmed", "revoked"]
+        },
+        "confirmed_evidence_status": {
+          "type": "string",
+          "enum": ["not_ready", "auto_confirmed", "revoked"]
+        },
+        "valid_run_count": { "type": "integer", "minimum": 0 },
+        "min_required_run_count": { "type": "integer", "minimum": 0 },
+        "eligible_family_count": { "type": "integer", "minimum": 0 },
+        "selected_valid_run_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "blocking_predicate_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "rejected_run_count": { "type": "integer", "minimum": 0 },
+        "rejected_run_diagnostics": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/rejected_run_diagnostic" }
+        },
+        "legacy_reconstruction_summary": { "$ref": "#/$defs/legacy_reconstruction_summary" }
+      }
+    },
+    "legacy_reconstruction_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "reconstruction_needed_count",
+        "reconstructed_run_count",
+        "blocked_run_count",
+        "run_diagnostics"
+      ],
+      "properties": {
+        "status": { "type": "string", "enum": ["not_used", "pass", "fail"] },
+        "reconstruction_needed_count": { "type": "integer", "minimum": 0 },
+        "reconstructed_run_count": { "type": "integer", "minimum": 0 },
+        "blocked_run_count": { "type": "integer", "minimum": 0 },
+        "run_diagnostics": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/legacy_reconstruction_run_diagnostic" }
+        }
+      }
+    },
+    "legacy_reconstruction_run_diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "families",
+        "reconstruction_status",
+        "selection_reason",
+        "reconstruction_reasons",
+        "secondary_axis_evidence_source",
+        "secondary_axis_evidence_detail",
+        "parsed_secondary_axes"
+      ],
+      "properties": {
+        "run_id": { "type": "string", "minLength": 1 },
+        "families": { "type": "array", "items": { "type": "string" } },
+        "reconstruction_status": {
+          "type": "string",
+          "enum": ["not_applicable", "not_needed", "reconstructed", "blocked"]
+        },
+        "selection_reason": { "type": "string" },
+        "reconstruction_reasons": { "type": "array", "items": { "type": "string" } },
+        "secondary_axis_evidence_source": {
+          "type": "string",
+          "enum": ["telemetry_field", "legacy_reconstruction_artifact", "missing"]
+        },
+        "secondary_axis_evidence_detail": { "type": "string" },
+        "parsed_secondary_axes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "rejected_run_diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_id", "decision", "families", "status", "reasons", "missing_artifacts"],
+      "properties": {
+        "run_id": { "type": "string" },
+        "decision": { "type": "string" },
+        "families": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["fail", "pass"] },
+        "reasons": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "missing_artifacts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["baseline_mechanism_assessment", "candidate_mechanism_assessment", "promotion_report"]
+          }
+        }
+      }
+    },
+    "predicate_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "source_path", "required_condition", "observed_value", "summary"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["pass", "fail"] },
+        "source_path": { "type": "string" },
+        "required_condition": { "type": "string" },
+        "observed_value": { "type": "string" },
+        "summary": { "type": "string" }
+      }
+    },
+    "aggregate_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "source_path", "telemetry_coverage_ratio", "session_id", "summary"],
+      "properties": {
+        "status": { "type": "string", "enum": ["available", "no_evidence"] },
+        "source_path": { "type": "string" },
+        "telemetry_coverage_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "session_id": { "type": "string" },
+        "summary": { "type": "string" }
+      }
+    },
+    "proposal_family_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "source_path",
+        "proposal_families",
+        "proposal_count",
+        "run_count",
+        "telemetry_coverage_ratio",
+        "summary"
+      ],
+      "properties": {
+        "status": { "$ref": "#/$defs/coverage_status" },
+        "source_path": { "type": "string" },
+        "proposal_families": { "type": "array", "items": { "type": "string" } },
+        "proposal_count": { "type": "integer", "minimum": 0 },
+        "run_count": { "type": "integer", "minimum": 0 },
+        "telemetry_coverage_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "summary": { "type": "string" }
+      }
+    },
+    "historical_recoverable_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "source_path", "run_count", "runs_with_telemetry", "telemetry_coverage_ratio", "summary"],
+      "properties": {
+        "status": { "$ref": "#/$defs/coverage_status" },
+        "source_path": { "type": "string" },
+        "run_count": { "type": "integer", "minimum": 0 },
+        "runs_with_telemetry": { "type": "integer", "minimum": 0 },
+        "telemetry_coverage_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "summary": { "type": "string" }
+      }
+    },
+    "effective_learning_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "selected_source", "telemetry_coverage_ratio", "summary"],
+      "properties": {
+        "status": { "$ref": "#/$defs/coverage_status" },
+        "selected_source": { "type": "string" },
+        "telemetry_coverage_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "summary": { "type": "string" }
+      }
+    },
+    "same_eval_run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "telemetry_path",
+        "telemetry_present",
+        "decision",
+        "same_eval_reason_present",
+        "same_eval_reason_code",
+        "same_eval_reason_code_present",
+        "strict_secondary_improvement_present",
+        "secondary_improvement_axes",
+        "behavior_delta_digest_present"
+      ],
+      "properties": {
+        "run_id": { "type": "string" },
+        "telemetry_path": { "type": "string" },
+        "telemetry_present": { "type": "boolean" },
+        "decision": { "type": "string" },
+        "same_eval_reason_present": { "type": "boolean" },
+        "same_eval_reason_code": {
+          "type": "string",
+          "enum": [
+            "candidate_eval_improved",
+            "telemetry_discoverability_improved",
+            "behavior_delta_digest_added",
+            "same_eval_no_secondary_improvement",
+            "noop_mutation",
+            "insufficient_benchmark_resolution",
+            "unknown"
+          ]
+        },
+        "same_eval_reason_code_present": { "type": "boolean" },
+        "strict_secondary_improvement_present": { "type": "boolean" },
+        "secondary_improvement_axes": { "type": "array", "items": { "type": "string" } },
+        "behavior_delta_digest_present": { "type": "boolean" }
+      }
+    },
+    "evidence_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "path", "authority"],
+      "properties": {
+        "scope": {
+          "type": "string",
+          "enum": [
+            "report_contract_subset",
+            "full_suite",
+            "learning_loop",
+            "release_provenance",
+            "release_authority"
+          ]
+        },
+        "path": { "type": "string" },
+        "authority": { "type": "string", "enum": ["blocking", "advisory", "diagnostic"] }
+      }
+    },
+    "placeholder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "line", "text"],
+      "properties": {
+        "path": { "type": "string" },
+        "line": { "type": "integer", "minimum": 1 },
+        "text": { "type": "string" }
+      }
+    }
+  }
+}

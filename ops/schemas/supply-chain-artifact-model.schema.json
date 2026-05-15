@@ -1,0 +1,361 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Supply Chain Artifact Model",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "vault",
+    "generated_at",
+    "policy",
+    "tooling",
+    "subject",
+    "provenance_summary",
+    "mapping_summary",
+    "artifact_context",
+    "components",
+    "dependencies",
+    "advisories"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/supply-chain-artifact-model.schema.json"
+      ]
+    },
+    "vault": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "policy": {
+      "$ref": "#/$defs/policy"
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "tooling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generator"
+      ],
+      "properties": {
+        "generator": {
+          "type": "string"
+        }
+      }
+    },
+    "subject": {
+      "$ref": "#/$defs/subject"
+    },
+    "provenance_summary": {
+      "$ref": "#/$defs/provenance_summary"
+    },
+    "mapping_summary": {
+      "$ref": "#/$defs/mapping_summary"
+    },
+    "artifact_context": {
+      "$ref": "#/$defs/artifact_context"
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/component"
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dependency"
+      }
+    },
+    "advisories": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/advisory_summary"
+      }
+    }
+  },
+  "$defs": {
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "properties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metadataProperty"
+          }
+        }
+      }
+    },
+    "metadataProperty": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "name",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "name",
+        "version",
+        "bom_ref",
+        "purl"
+      ],
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "bom_ref": {
+          "type": "string"
+        },
+        "purl": {
+          "type": "string"
+        }
+      }
+    },
+    "provenance_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "locked_package_count",
+        "locked_dependency_edge_count"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        },
+        "locked_package_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "locked_dependency_edge_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "mapping_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "full_mapping_ready",
+        "release_dependency_inputs_complete",
+        "public_dependency_inputs_complete"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        },
+        "full_mapping_ready": {
+          "type": "boolean"
+        },
+        "release_dependency_inputs_complete": {
+          "type": "boolean"
+        },
+        "public_dependency_inputs_complete": {
+          "type": "boolean"
+        }
+      }
+    },
+    "artifact_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_set_id",
+        "security_advisories_ref",
+        "model_ref",
+        "cyclonedx_ref",
+        "spdx_ref",
+        "openvex_ref",
+        "in_toto_statement_ref",
+        "sigstore_bundle_ref"
+      ],
+      "properties": {
+        "artifact_set_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{16,64}$"
+        },
+        "security_advisories_ref": {
+          "type": "string"
+        },
+        "model_ref": {
+          "type": "string"
+        },
+        "cyclonedx_ref": {
+          "type": "string"
+        },
+        "spdx_ref": {
+          "type": "string"
+        },
+        "openvex_ref": {
+          "type": "string"
+        },
+        "in_toto_statement_ref": {
+          "type": "string"
+        },
+        "sigstore_bundle_ref": {
+          "type": "string"
+        }
+      }
+    },
+    "property": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "bom-ref",
+        "name",
+        "purl"
+      ],
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "bom-ref": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "purl": {
+          "type": "string"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "properties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/property"
+          }
+        }
+      }
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref",
+        "dependsOn"
+      ],
+      "properties": {
+        "ref": {
+          "type": "string"
+        },
+        "dependsOn": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "advisory_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "package",
+        "analysis_state",
+        "aliases"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "package": {
+          "type": "string"
+        },
+        "analysis_state": {
+          "type": "string",
+          "enum": [
+            "affected",
+            "not_affected",
+            "fixed",
+            "under_investigation"
+          ]
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

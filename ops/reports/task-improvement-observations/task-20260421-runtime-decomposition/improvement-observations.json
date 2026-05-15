@@ -1,0 +1,60 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-07T02:38:27Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "020399c9d2ef990917394771d8d148cc005c6c68725d730863edae8834a92fe7",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "d51637f5cf194240c9ed9d6b8f4ed97394366bcae7fa8ba9ca5a8d0b682e38ab",
+    "record_id": "71a81d52ad74d1e83aa3e33986bb51acd833a8c0e3098f57f957ed5a508c603e",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "00fe198ce37dcb92a9765096b90b346b167dbef7f64858870b752ef1e1a959b1"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:38:27Z"
+  },
+  "record_id": "task-20260421-runtime-decomposition",
+  "captured_at": "2026-04-20T15:56:16Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Track remaining reusable follow-up work after repairing OpenVEX/BOM contracts, expanding strict Ruff and mypy preview allowlists, adding Windows smoke CI, and landing the main promotion-gate/runtime helper decomposition tranche.",
+  "observations": [
+    {
+      "observation_id": "promotion_gate_state_split",
+      "surface": "ops/scripts/promotion_gate_mechanism_runtime.py",
+      "problem": "The first promotion-gate split is done, but rule-registry wiring and decision-finalize flow still remain in the main orchestration module.",
+      "why_it_matters": "The external review identified large orchestration modules as the main maintainability risk. Extracting state and report assembly reduced the surface, but rule-reduction and finalize logic are still concentrated in the same runtime.",
+      "automation_candidate": "Continue the promotion gate split with dedicated rule-registry and finalize helpers, then add those new helper surfaces to the strict-preview allowlists.",
+      "suggested_followup": "Updated on 2026-04-25 KST: the rule-registry and finalize split already landed via `promotion_gate_mechanism_rule_registry_runtime.py` and `promotion_gate_mechanism_finalize_runtime.py`. Remaining follow-up is maintenance-only: keep the decomposed helper surfaces on strict-preview allowlists as appropriate and trim the facade further only if future complexity reports still flag it.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "structural_complexity_budget",
+      "surface": "ops/scripts and tests static quality gates",
+      "problem": "The repo now has a schema-backed structural complexity budget artifact, but the remaining gate needs to stay narrow because the full preview report still surfaces existing attention targets.",
+      "why_it_matters": "The review report flags complexity accumulation as the main long-term risk, and the current gates do not yet promote that signal to a first-class artifact.",
+      "automation_candidate": "Generate a deterministic complexity-budget report and add a narrow gate that compares file/function metrics for touched runtime surfaces.",
+      "suggested_followup": "Automated on 2026-04-21 KST by removing the no-op target loop, adding explicit --target and --changed-files-manifest inputs, and wiring a no-op-by-default complexity-budget-touched-check into check-strict. Keep the full complexity-budget-check opt-in until existing attention targets are reduced.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "large_test_fixture_split",
+      "surface": "tests/test_mechanism_review.py, tests/minimal_vault_runtime.py, tests/minimal_vault_seed_core.py, tests/minimal_vault_seed_smoke.py, tests/test_run_mechanism_experiment.py, ops/scripts/structural_complexity_budget_runtime.py",
+      "problem": "Large scenario tests and fixture builders still combine public contract assertions, integration scenarios, and seed-vault construction in a few very large files.",
+      "why_it_matters": "The review report calls out test asset size as a maintainability risk; splitting these files is useful but should be isolated from runtime contract changes to avoid accidental coverage drift.",
+      "automation_candidate": "Extract fixture builders and scenario groups into focused modules while preserving marker tiers and existing assertion semantics.",
+      "suggested_followup": "Automated on 2026-04-24 by splitting seed policy/schema and smoke-builder logic out of tests/minimal_vault_runtime.py into tests/minimal_vault_seed_core.py and tests/minimal_vault_seed_smoke.py, keeping seed_minimal_vault() as a thin compatibility wrapper, and adding the new helper modules to the structural complexity watchlist. Future follow-up can still split large mechanism review scenario files, but the shared fixture debt is now isolated behind dedicated helper modules.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260421-runtime-decomposition"
+}

@@ -1,0 +1,135 @@
+{
+  "session_id": "",
+  "run_id": "run-20260507-auto-improve-iteration-persistence-discard-path",
+  "generated_at": "2026-05-07T03:07:19Z",
+  "proposal_id": "",
+  "proposal_snapshot": "runs/run-20260507-auto-improve-iteration-persistence-discard-path/proposal-snapshot.json",
+  "scope_freeze": "",
+  "routing_reports": [],
+  "executor_reports": [],
+  "primary_targets": [
+    "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+  ],
+  "supporting_targets": [
+    "ops/schemas/run-telemetry.schema.json"
+  ],
+  "test_files": [
+    "tests/test_auto_improve_iteration_runtime.py"
+  ],
+  "phase_durations": {},
+  "failure_taxonomy": "",
+  "command_timeouts": {
+    "mutation_command": {
+      "timed_out": false,
+      "timeout_seconds": 5400,
+      "termination_reason": "completed",
+      "launch_succeeded": true,
+      "signal_sent": "none",
+      "final_state_observed": "",
+      "stdout_received": false,
+      "stderr_received": false
+    },
+    "repo_health": {
+      "timed_out": false,
+      "timeout_seconds": 5400,
+      "termination_reason": "completed",
+      "launch_succeeded": true,
+      "signal_sent": "none",
+      "final_state_observed": "",
+      "stdout_received": false,
+      "stderr_received": false
+    }
+  },
+  "decision": "PROMOTE",
+  "finalized": true,
+  "finalize_result": {
+    "run_id": "run-20260507-auto-improve-iteration-persistence-discard-path",
+    "decision": "PROMOTE",
+    "decision_record": {
+      "decision_id": "decision:run-20260507-auto-improve-iteration-persistence-discard-path:1620365759848d6d",
+      "subject_id": "run-20260507-auto-improve-iteration-persistence-discard-path",
+      "subject_kind": "system_mechanism",
+      "decision": "PROMOTE",
+      "decision_stage": "promotion_gate",
+      "is_terminal": true,
+      "policy_version": 4,
+      "source_rule": "default_promote",
+      "source_pass": "system_mechanism",
+      "actor": "promotion_gate",
+      "reason_code": "no_blocking_rule_triggered",
+      "reason_detail": "No blocking promotion rule emitted HOLD or DISCARD.",
+      "evidence_refs": [],
+      "decided_at": "",
+      "effective_at": "",
+      "supersedes": [],
+      "reducer_key": "promotion_decision_registry_v1",
+      "precedence_key": "0010:PROMOTE",
+      "dedupe_key": "run-20260507-auto-improve-iteration-persistence-discard-path:promotion_gate",
+      "finalizable": true,
+      "finalize_blockers": [],
+      "ledger_event_type": "promotion_evaluated",
+      "ledger_partition_key": "run-20260507-auto-improve-iteration-persistence-discard-path"
+    },
+    "promotion_report": "runs/run-20260507-auto-improve-iteration-persistence-discard-path/promotion-report.json",
+    "run_ledger": "runs/run-20260507-auto-improve-iteration-persistence-discard-path/run-ledger.json",
+    "planning_validation": "runs/run-20260507-auto-improve-iteration-persistence-discard-path/planning-validation.json",
+    "log_entry_ref": "system/system-log.md#2026-05-07-1207-kst-improve-finalize-mechanism-run-run-20260507-auto-improve-iteration-persistence-discard-path-promote"
+  },
+  "workspace_preparation": {
+    "mode": "full_copy",
+    "diff_model": "full_workspace",
+    "baseline_file_count": 1816,
+    "copied_file_count": 1816,
+    "diff_universe_file_count": 1816,
+    "copy_entry_count": 1,
+    "phase_durations": {
+      "digest": 0.71,
+      "copy": 0.463,
+      "total": 1.198
+    }
+  },
+  "decision_record": {
+    "decision_id": "decision:run-20260507-auto-improve-iteration-persistence-discard-path:1620365759848d6d",
+    "subject_id": "run-20260507-auto-improve-iteration-persistence-discard-path",
+    "subject_kind": "system_mechanism",
+    "decision": "PROMOTE",
+    "decision_stage": "promotion_gate",
+    "is_terminal": true,
+    "policy_version": 4,
+    "source_rule": "default_promote",
+    "source_pass": "system_mechanism",
+    "actor": "promotion_gate",
+    "reason_code": "no_blocking_rule_triggered",
+    "reason_detail": "No blocking promotion rule emitted HOLD or DISCARD.",
+    "evidence_refs": [],
+    "decided_at": "",
+    "effective_at": "",
+    "supersedes": [],
+    "reducer_key": "promotion_decision_registry_v1",
+    "precedence_key": "0010:PROMOTE",
+    "dedupe_key": "run-20260507-auto-improve-iteration-persistence-discard-path:promotion_gate",
+    "finalizable": true,
+    "finalize_blockers": [],
+    "ledger_event_type": "promotion_evaluated",
+    "ledger_partition_key": "run-20260507-auto-improve-iteration-persistence-discard-path"
+  },
+  "behavior_delta": "runs/run-20260507-auto-improve-iteration-persistence-discard-path/behavior-delta.json",
+  "apply_mode": "live",
+  "apply_status": "live_applied",
+  "live_applied": true,
+  "shadow_apply_report": "runs/run-20260507-auto-improve-iteration-persistence-discard-path/shadow-apply-report.json",
+  "rollback_rehearsal_report": "runs/run-20260507-auto-improve-iteration-persistence-discard-path/rollback-rehearsal-report.json",
+  "$schema": "ops/schemas/run-telemetry.schema.json",
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-05-07T03:07:19Z\", \"generated_at_source\": \"payload.generated_at\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-05-07T17:20:47Z\", \"source_artifact\": \"runs/run-20260507-auto-improve-iteration-persistence-discard-path/run-telemetry.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/run-telemetry.schema.json\", \"artifact_kind\": \"run_telemetry\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-05-07T17:20:47Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-07T03:07:19Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"a3f5ecac954ad9504cdcb35aa9ba5b81f3b624e5dd3f518dfef80a2e44579713\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"fc0340f868a19c5980eebfb4b9eb41620ff6571ed9de83a030bf0a59b3d20be6\", \"policy\": \"0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107\", \"schema\": \"2d7cb185ccb04e4b295b2a41111dc218d05198dc27a3d9dd86492bb9ff2c0a7d\", \"target_rel_path\": \"f8f10b6b86b4f5d3df6c15e6f2998d37eca3f6398a770d6d589a2186de941705\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/run-20260507-auto-improve-iteration-persistence-discard-path/run-telemetry.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"a29a1f5a6ec3e4ac4ac8d79cc69437a5f5e5b6bc55285a780721c53e67d5149d\"}"
+      }
+    ]
+  }
+}

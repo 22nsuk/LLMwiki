@@ -1,0 +1,48 @@
+{
+  "$schema": "ops/schemas/planning-validation.schema.json",
+  "run_id": "run-YYYYMMDD-slug",
+  "status": "WARN",
+  "summary": "Replace with concise validation outcome.",
+  "checks": [
+    {
+      "id": "seed_frozen",
+      "status": "FAIL",
+      "detail": "",
+      "required_artifacts": [
+        "seed.yaml"
+      ]
+    },
+    {
+      "id": "success_criteria_testable",
+      "status": "WARN",
+      "detail": "",
+      "required_artifacts": [
+        "seed.yaml"
+      ]
+    },
+    {
+      "id": "acceptance_traceability",
+      "status": "WARN",
+      "detail": "",
+      "required_artifacts": [
+        "seed.yaml"
+      ]
+    },
+    {
+      "id": "signoff_logged",
+      "status": "FAIL",
+      "detail": "",
+      "required_artifacts": [
+        "run-ledger.json"
+      ]
+    }
+  ],
+  "open_questions": [],
+  "signoff": {
+    "required": true,
+    "status": "pending",
+    "by": "",
+    "ts": ""
+  },
+  "next_action": ""
+}

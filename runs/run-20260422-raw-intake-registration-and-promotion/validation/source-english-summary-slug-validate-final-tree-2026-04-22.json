@@ -1,0 +1,20 @@
+{
+  "$schema": "ops/schemas/source-slug-curation-validation-report.schema.json",
+  "manifest": "runs/run-20260422-raw-intake-registration-and-promotion/registration/source-english-summary-slug-manifest-2026-04-22.json",
+  "status": "pass",
+  "error_count": 0,
+  "errors": [],
+  "source_count": 180,
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-04-21T18:16:09Z\", \"generated_at_source\": \"manifest.generated_at\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-04-29T02:30:39Z\", \"source_artifact\": \"runs/run-20260422-raw-intake-registration-and-promotion/validation/source-english-summary-slug-validate-final-tree-2026-04-22.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/source-slug-curation-validation-report.schema.json\", \"artifact_kind\": \"source_slug_curation_validation_report\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-04-29T02:30:39Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-04-21T18:16:09Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"6df2de6c91fd6229a254c2b2f9369a2ed48845c0fdf29b8c32103cc7e525e2f0\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"1c17de33892314d9312ff074c0cddabf9e9add67824b9a77fdc5d350314b8676\", \"policy\": \"7d45acc617992bca127ce0b7defb6715caac5b774dcc489acf984502cea3a402\", \"schema\": \"373c5a7984376ce6b519ee2d861d61cc5375d18c12c8f2cbcabfb3bc5cd19018\", \"target_rel_path\": \"1136b7c76f76377f4c001655f4ef1175ea7a0f5343dfd41ee0c8da946affaea5\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/run-20260422-raw-intake-registration-and-promotion/validation/source-english-summary-slug-validate-final-tree-2026-04-22.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"0a242ed263157d63b2f9af4cc62c5fe3f7ccc50ca8c27b4747c547f750a5e055\"}"
+      }
+    ]
+  }
+}

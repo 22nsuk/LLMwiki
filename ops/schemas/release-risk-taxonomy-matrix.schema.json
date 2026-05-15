@@ -1,0 +1,254 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Release Risk Taxonomy Matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "status",
+    "taxonomy",
+    "summary",
+    "matrix"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": ["ops/schemas/release-risk-taxonomy-matrix.schema.json"]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": ["release_risk_taxonomy_matrix"]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "producer": {
+      "type": "string",
+      "enum": ["ops.scripts.release_risk_taxonomy_matrix"]
+    },
+    "source_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_tree_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_status": {
+      "type": "string",
+      "enum": ["current"]
+    },
+    "retention_policy": {
+      "type": "string",
+      "enum": ["canonical_report"]
+    },
+    "encoding": {
+      "type": "string",
+      "enum": ["utf-8"]
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["current", "stale", "unknown"]
+        },
+        "checked_at": {
+          "type": "string"
+        }
+      }
+    },
+    "vault": {
+      "type": "string"
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": ["integer", "string"]
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pass"]
+    },
+    "taxonomy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version", "description"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "enum": ["ops/policies/release-risk-taxonomy.json"]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "risk_code_count",
+        "clean_lane_blocking_count",
+        "clean_lane_non_blocking_count",
+        "conditional_operator_review_count",
+        "learning_claim_blocking_count",
+        "advisory_lifecycle_backlog_count"
+      ],
+      "properties": {
+        "risk_code_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "clean_lane_blocking_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "clean_lane_non_blocking_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "conditional_operator_review_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "learning_claim_blocking_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "advisory_lifecycle_backlog_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "matrix": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/matrix_row" }
+    }
+  },
+  "$defs": {
+    "clean_lane_effect": {
+      "type": "string",
+      "enum": ["blocks_clean_lane", "does_not_block_clean_lane"]
+    },
+    "conditional_lane_effect": {
+      "type": "string",
+      "enum": ["operator_review_required", "not_applicable"]
+    },
+    "learning_lane_effect": {
+      "type": "string",
+      "enum": ["blocks_learning_claim", "not_applicable"]
+    },
+    "advisory_lifecycle_effect": {
+      "type": "string",
+      "enum": ["review_backlog", "not_applicable"]
+    },
+    "primary_lane": {
+      "type": "string",
+      "enum": [
+        "clean_lane_blocker",
+        "conditional_operator_review",
+        "learning_claim_blocker",
+        "advisory_lifecycle_backlog",
+        "non_blocking"
+      ]
+    },
+    "matrix_row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "surface",
+        "description",
+        "clean_lane_effect",
+        "conditional_lane_effect",
+        "learning_lane_effect",
+        "advisory_lifecycle_effect",
+        "primary_lane",
+        "clean_lane_blocks",
+        "conditional_operator_review_required",
+        "learning_claim_blocks",
+        "advisory_lifecycle_backlog"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "clean_lane_effect": { "$ref": "#/$defs/clean_lane_effect" },
+        "conditional_lane_effect": { "$ref": "#/$defs/conditional_lane_effect" },
+        "learning_lane_effect": { "$ref": "#/$defs/learning_lane_effect" },
+        "advisory_lifecycle_effect": { "$ref": "#/$defs/advisory_lifecycle_effect" },
+        "primary_lane": { "$ref": "#/$defs/primary_lane" },
+        "clean_lane_blocks": {
+          "type": "boolean"
+        },
+        "conditional_operator_review_required": {
+          "type": "boolean"
+        },
+        "learning_claim_blocks": {
+          "type": "boolean"
+        },
+        "advisory_lifecycle_backlog": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

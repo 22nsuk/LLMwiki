@@ -1,0 +1,842 @@
+from __future__ import annotations
+
+import re
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from ops.scripts.artifact_io_runtime import read_json_object, write_json_object, write_schema_validated_json
+from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope, embed_artifact_envelope_metadata
+from .auto_improve_readiness_runtime import (
+    build_readiness_report,
+    learning_review_required,
+    write_readiness_report,
+)
+from .auto_improve_execute_runtime import (
+    ExecuteEvaluateDependencies,
+    ExecuteEvaluatePhaseResult,
+    ExecuteEvaluateRequest,
+    execute_evaluate_phase,
+)
+from .auto_improve_iteration_runtime import (
+    AutoImproveIterationDependencies,
+    AutoImproveIterationRequest,
+    run_auto_improve_iteration as run_auto_improve_iteration_helper,
+)
+from .auto_improve_execution_runtime import mutation_command
+from .auto_improve_iteration_persistence_runtime import (
+    PersistIterationDependencies,
+    PersistIterationPhaseResult,
+    persist_iteration_phase,
+    write_iteration_telemetry,
+)
+from .auto_improve_route_scaffold_runtime import (
+    RouteScaffoldDependencies,
+    RouteScaffoldPhaseResult,
+    route_scaffold_phase,
+)
+from .auto_improve_session_completion_runtime import (
+    SessionCompletionDependencies,
+    complete_auto_improve_session,
+)
+from ops.scripts.experiment_telemetry_runtime import append_ledger_event
+from .auto_improve_queue_runtime import (
+    build_proposal_queue,
+    select_next_proposal,
+)
+from .auto_improve_outcome_runtime import (
+    apply_execution_outcome,
+    detect_executor_failure,
+    evaluate_experiment_error,
+    evaluate_experiment_result,
+    evaluate_mutation_error,
+    evaluate_scope_blocked,
+    role_report_path,
+)
+from .auto_improve_session_runtime import (
+    build_executor_rollup,
+    build_iteration_rollup,
+    normalize_session_report,
+    build_routing_rollup,
+    build_session_rollups,
+    build_telemetry_rollup,
+    increment_counter,
+)
+from .mechanism_review_runtime import build_report as build_mechanism_review_report
+from .mutation_proposal_runtime import build_report as build_mutation_proposal_report
+from ops.scripts.observability_artifacts_runtime import (
+    write_outcome_metrics_report,
+    write_promotion_decision_trends,
+    write_routing_provenance_aggregate,
+    write_run_artifact_fingerprint,
+)
+from ops.scripts.policy_runtime import load_policy, report_path
+from ops.scripts.proposal_scope_runtime import build_scope_freeze, write_scope_freeze
+from .run_mechanism_experiment_runtime import run_mechanism_experiment
+from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.runtime_event_logging_runtime import append_runtime_event
+from ops.scripts.schema_constants_runtime import AUTO_IMPROVE_SESSION_SCHEMA_PATH
+from ops.scripts.schema_runtime import load_schema_with_vault_override
+from ops.scripts.subagent_routing_runtime import run_selector
+
+
+AUTO_IMPROVE_SESSION_SCHEMA = AUTO_IMPROVE_SESSION_SCHEMA_PATH
+DEFAULT_MECHANISM_REVIEW_REPORT = "ops/reports/mechanism-review-candidates.json"
+DEFAULT_MUTATION_PROPOSAL_REPORT = "ops/reports/mutation-proposals.json"
+
+
+class AutoImproveError(Exception):
+    exit_code = 8
+
+
+class AutoImproveUsageError(AutoImproveError):
+    exit_code = 2
+
+
+class AutoImproveLearningReviewRequiredError(AutoImproveError):
+    exit_code = 4
+
+
+_increment_counter = increment_counter
+_build_iteration_rollup = build_iteration_rollup
+_build_routing_rollup = build_routing_rollup
+_build_executor_rollup = build_executor_rollup
+_build_telemetry_rollup = build_telemetry_rollup
+_build_session_rollups = build_session_rollups
+_build_proposal_queue = build_proposal_queue
+_select_next_proposal = select_next_proposal
+_role_report_path = role_report_path
+_detect_executor_failure = detect_executor_failure
+_mutation_command = mutation_command
+_write_iteration_telemetry = write_iteration_telemetry
+
+
+@dataclass(frozen=True)
+class RefreshSelectPhaseResult:
+    proposal: dict | None
+    queue_snapshot: list[str]
+    stop_reason: str | None = None
+
+
+@dataclass(frozen=True)
+class AutoImproveSessionStart:
+    policy: dict
+    resolved_policy_path: Path
+    auto_policy: dict
+    session: dict
+    session_id: str
+    context: RuntimeContext
+
+
+@dataclass(frozen=True)
+class AutoImproveSessionRequest:
+    vault: Path
+    policy_path: str | None
+    session_id: str | None = None
+    resume_session: str | None = None
+    max_proposals: int | None = None
+    max_minutes: int | None = None
+    max_consecutive_failures: int | None = None
+    executor_name: str | None = None
+    artifact_class: str = "system_mechanism"
+    allow_learning_uncertain: bool = False
+    context: RuntimeContext | None = None
+
+    def resolved(self) -> "AutoImproveSessionRequest":
+        return AutoImproveSessionRequest(
+            vault=self.vault.resolve(),
+            policy_path=self.policy_path,
+            session_id=self.session_id,
+            resume_session=self.resume_session,
+            max_proposals=self.max_proposals,
+            max_minutes=self.max_minutes,
+            max_consecutive_failures=self.max_consecutive_failures,
+            executor_name=self.executor_name,
+            artifact_class=self.artifact_class,
+            allow_learning_uncertain=self.allow_learning_uncertain,
+            context=self.context,
+        )
+
+
+def _coerce_auto_improve_session_request(
+    vault: AutoImproveSessionRequest | Path | None,
+    legacy_kwargs: dict[str, Any],
+) -> AutoImproveSessionRequest:
+    if isinstance(vault, AutoImproveSessionRequest):
+        if legacy_kwargs:
+            unexpected = ", ".join(sorted(legacy_kwargs))
+            raise TypeError(f"unexpected legacy session arguments with request object: {unexpected}")
+        return vault.resolved()
+    if vault is None:
+        raise TypeError("run_auto_improve_session() missing required argument: 'vault'")
+    if "policy_path" not in legacy_kwargs:
+        raise TypeError("run_auto_improve_session() missing required keyword-only argument: 'policy_path'")
+    allowed_keys = {
+        "policy_path",
+        "session_id",
+        "resume_session",
+        "max_proposals",
+        "max_minutes",
+        "max_consecutive_failures",
+        "executor_name",
+        "artifact_class",
+        "allow_learning_uncertain",
+        "context",
+    }
+    unexpected_keys = sorted(set(legacy_kwargs) - allowed_keys)
+    if unexpected_keys:
+        unexpected = ", ".join(unexpected_keys)
+        raise TypeError(f"run_auto_improve_session() got unexpected keyword argument(s): {unexpected}")
+    return AutoImproveSessionRequest(
+        vault=Path(vault).resolve(),
+        policy_path=legacy_kwargs["policy_path"],
+        session_id=legacy_kwargs.get("session_id"),
+        resume_session=legacy_kwargs.get("resume_session"),
+        max_proposals=legacy_kwargs.get("max_proposals"),
+        max_minutes=legacy_kwargs.get("max_minutes"),
+        max_consecutive_failures=legacy_kwargs.get("max_consecutive_failures"),
+        executor_name=legacy_kwargs.get("executor_name"),
+        artifact_class=legacy_kwargs.get("artifact_class", "system_mechanism"),
+        allow_learning_uncertain=bool(legacy_kwargs.get("allow_learning_uncertain", False)),
+        context=legacy_kwargs.get("context"),
+    )
+
+
+@dataclass
+class AutoImproveLoopState:
+    attempted: set[str]
+    quarantined: set[str]
+    consecutive_failures: int
+    stop_reason: str
+    start_monotonic: float
+    pre_promotion_failure_outcomes: set[str]
+
+
+TERMINAL_SUCCESS_OUTCOMES = frozenset({"promoted", "discarded"})
+
+
+def _int_value(value: object, default: int = 0) -> int:
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return default
+    return default
+
+
+def _resolve_budget_value(name: str, value: int | None, default: int) -> int:
+    resolved = default if value is None else value
+    if not isinstance(resolved, int) or isinstance(resolved, bool) or resolved < 1:
+        raise AutoImproveUsageError(f"{name} must be an integer greater than or equal to 1")
+    return resolved
+
+
+def _empty_loop_state(context: RuntimeContext) -> dict:
+    return {
+        "consecutive_failures": 0,
+        "last_outcome": "",
+        "last_decision": "",
+        "last_run_id": "",
+        "last_blocking_reason": "",
+        "updated_at": context.isoformat_z(),
+    }
+
+
+def _reconstructed_loop_state(session: dict, *, context: RuntimeContext) -> dict:
+    state = _empty_loop_state(context)
+    consecutive_failures = 0
+    for iteration in session.get("iterations", []):
+        if not isinstance(iteration, dict):
+            continue
+        outcome = str(iteration.get("outcome", "")).strip()
+        if outcome in TERMINAL_SUCCESS_OUTCOMES:
+            consecutive_failures = 0
+        elif outcome:
+            consecutive_failures += 1
+        state = {
+            "consecutive_failures": consecutive_failures,
+            "last_outcome": outcome,
+            "last_decision": str(iteration.get("decision", "")).strip(),
+            "last_run_id": str(iteration.get("run_id", "")).strip(),
+            "last_blocking_reason": "" if outcome in TERMINAL_SUCCESS_OUTCOMES else outcome,
+            "updated_at": context.isoformat_z(),
+        }
+    return state
+
+
+def _normalize_loop_state(session: dict, *, context: RuntimeContext) -> dict:
+    existing = session.get("loop_state")
+    if not isinstance(existing, dict):
+        return _reconstructed_loop_state(session, context=context)
+    normalized = _empty_loop_state(context)
+    normalized.update(
+        {
+            "consecutive_failures": max(
+                0,
+                _int_value(existing.get("consecutive_failures"), 0),
+            ),
+            "last_outcome": str(existing.get("last_outcome", "")).strip(),
+            "last_decision": str(existing.get("last_decision", "")).strip(),
+            "last_run_id": str(existing.get("last_run_id", "")).strip(),
+            "last_blocking_reason": str(existing.get("last_blocking_reason", "")).strip(),
+            "updated_at": str(existing.get("updated_at", "")).strip() or context.isoformat_z(),
+        }
+    )
+    return normalized
+
+
+def _ensure_session_loop_state(session: dict, *, context: RuntimeContext) -> dict:
+    session["loop_state"] = _normalize_loop_state(session, context=context)
+    return session["loop_state"]
+
+
+def _write_session_report(vault: Path, session: dict, *, context: RuntimeContext) -> Path:
+    session = normalize_session_report(vault, dict(session))
+    _ensure_session_loop_state(session, context=context)
+    session["rollups"] = build_session_rollups(vault, session)
+    policy, resolved_policy_path = load_policy(vault)
+    generated_at = str(session.get("generated_at", "")).strip() or context.isoformat_z()
+    envelope = build_canonical_report_envelope(
+        vault,
+        generated_at=generated_at,
+        artifact_kind="auto_improve_session",
+        producer="ops.scripts.auto_improve_runtime",
+        source_command="python -m ops.scripts.auto_improve_runtime",
+        resolved_policy_path=resolved_policy_path,
+        schema_path=AUTO_IMPROVE_SESSION_SCHEMA,
+        source_paths=[
+            "ops/scripts/auto_improve_runtime.py",
+            "ops/scripts/auto_improve_session_runtime.py",
+            "ops/scripts/artifact_freshness_runtime.py",
+        ],
+        text_inputs={
+            "session_id": str(session.get("session_id", "")),
+            "status": str(session.get("status", "")),
+            "policy_version": str(policy.get("version", "")),
+        },
+    )
+    session = embed_artifact_envelope_metadata(session, envelope)
+    schema = load_schema_with_vault_override(vault, AUTO_IMPROVE_SESSION_SCHEMA)
+    destination = vault / session["path"]
+    write_schema_validated_json(
+        destination,
+        session,
+        schema,
+        context="auto improve session schema validation failed",
+    )
+    write_routing_provenance_aggregate(vault, session, context=context)
+    return destination
+
+
+def _load_session_report(vault: Path, session_id: str) -> dict:
+    path = vault / "ops" / "reports" / "auto-improve-sessions" / f"{session_id}.json"
+    return read_json_object(path)
+
+
+def _new_session_id(context: RuntimeContext) -> str:
+    return "auto-improve-" + re.sub(r"[^0-9a-z]+", "-", context.isoformat_z().lower()).strip("-")
+
+
+def _run_slug(text: str) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    return normalized[:48] or "proposal"
+
+
+def _build_run_id(session_id: str, iteration: int, proposal: dict) -> str:
+    primary = proposal["primary_targets"][0]
+    return f"{session_id}-run-{iteration:02d}-{_run_slug(Path(primary).stem)}"
+
+
+def _validate_auto_improve_request(
+    auto_policy: dict,
+    *,
+    artifact_class: str,
+    executor_name: str | None,
+) -> str:
+    if artifact_class != auto_policy["artifact_class"]:
+        raise AutoImproveUsageError(f"unsupported artifact class: {artifact_class}")
+    requested_executor = executor_name or auto_policy["defaults"]["executor"]
+    allowed_executors = set(auto_policy["allowed_executors"])
+    if requested_executor not in allowed_executors:
+        allowed = ", ".join(sorted(allowed_executors))
+        raise AutoImproveUsageError(
+            f"unsupported executor: {requested_executor}; allowed executors: {allowed}"
+        )
+    return requested_executor
+
+
+def _validate_resume_executor(
+    session: dict,
+    *,
+    executor_name: str | None,
+    allowed_executors: set[str],
+) -> None:
+    session_executor = str(session.get("executor", {}).get("name", "")).strip()
+    if session_executor not in allowed_executors:
+        allowed = ", ".join(sorted(allowed_executors))
+        raise AutoImproveUsageError(
+            f"unsupported executor in resumed session: {session_executor}; allowed executors: {allowed}"
+        )
+    if executor_name is not None and executor_name != session_executor:
+        raise AutoImproveUsageError(
+            f"resume executor mismatch: {executor_name} != {session_executor}"
+        )
+
+
+def _new_auto_improve_session(
+    vault: Path,
+    auto_policy: dict,
+    policy: dict,
+    resolved_policy_path: Path,
+    *,
+    session_id: str,
+    max_proposals: int | None,
+    max_minutes: int | None,
+    max_consecutive_failures: int | None,
+    requested_executor: str,
+    context: RuntimeContext,
+) -> dict:
+    return {
+        "$schema": AUTO_IMPROVE_SESSION_SCHEMA,
+        "session_id": session_id,
+        "generated_at": context.isoformat_z(),
+        "policy": {
+            "path": report_path(vault, resolved_policy_path),
+            "version": policy["version"],
+        },
+        "status": "running",
+        "budget": {
+            "max_proposals": _resolve_budget_value(
+                "max_proposals",
+                max_proposals,
+                auto_policy["defaults"]["max_proposals"],
+            ),
+            "max_minutes": _resolve_budget_value(
+                "max_minutes",
+                max_minutes,
+                auto_policy["defaults"]["max_minutes"],
+            ),
+            "max_consecutive_failures": _resolve_budget_value(
+                "max_consecutive_failures",
+                max_consecutive_failures,
+                auto_policy["defaults"]["max_consecutive_failures"],
+            ),
+        },
+        "executor": {
+            "name": requested_executor,
+        },
+        "attempted_proposal_ids": [],
+        "quarantined_proposal_ids": [],
+        "run_ids": [],
+        "iterations": [],
+        "learning_summary": {
+            "attempt_count": 0,
+            "rework_count": 0,
+            "rollback_signal_count": 0,
+            "defect_escape_pair_count": 0,
+            "session_context_status": "no_iterations",
+            "evidence_gaps": ["session.iterations is empty", "session.run_ids is empty"],
+        },
+        "loop_state": _empty_loop_state(context),
+        "queue_snapshot": [],
+        "stop_reason": "running",
+        "path": f"{auto_policy['session_reports_dir'].rstrip('/')}/{session_id}.json",
+    }
+
+
+def _start_auto_improve_session(request: AutoImproveSessionRequest) -> AutoImproveSessionStart:
+    policy, resolved_policy_path = load_policy(request.vault, request.policy_path)
+    auto_policy = policy["auto_improve_policy"]
+    requested_executor = _validate_auto_improve_request(
+        auto_policy,
+        artifact_class=request.artifact_class,
+        executor_name=request.executor_name,
+    )
+    base_context = request.context or RuntimeContext.from_policy(policy, executor_id=requested_executor)
+
+    if request.resume_session:
+        session = _load_session_report(request.vault, request.resume_session)
+        _ensure_session_loop_state(session, context=base_context)
+        current_session_id = request.resume_session
+        _validate_resume_executor(
+            session,
+            executor_name=request.executor_name,
+            allowed_executors=set(auto_policy["allowed_executors"]),
+        )
+    else:
+        current_session_id = request.session_id or _new_session_id(base_context)
+        session = _new_auto_improve_session(
+            request.vault,
+            auto_policy,
+            policy,
+            resolved_policy_path,
+            session_id=current_session_id,
+            max_proposals=request.max_proposals,
+            max_minutes=request.max_minutes,
+            max_consecutive_failures=request.max_consecutive_failures,
+            requested_executor=requested_executor,
+            context=base_context,
+        )
+
+    return AutoImproveSessionStart(
+        policy=policy,
+        resolved_policy_path=resolved_policy_path,
+        auto_policy=auto_policy,
+        session=session,
+        session_id=current_session_id,
+        context=base_context,
+    )
+
+
+def _pre_run_readiness_snapshot(
+    vault: Path,
+    readiness_report: dict,
+    readiness_destination: Path,
+) -> dict[str, object]:
+    execution = readiness_report.get("execution_readiness")
+    if not isinstance(execution, dict):
+        execution = {}
+    learning = readiness_report.get("learning_readiness")
+    if not isinstance(learning, dict):
+        learning = {}
+    queue = readiness_report.get("queue")
+    if not isinstance(queue, dict):
+        queue = {}
+    metrics = learning.get("metrics")
+    if not isinstance(metrics, dict):
+        metrics = {}
+    return {
+        "report": report_path(vault, readiness_destination),
+        "generated_at": str(readiness_report.get("generated_at", "")).strip(),
+        "execution_status": str(execution.get("status", "")).strip(),
+        "learning_status": str(learning.get("status", "")).strip(),
+        "learning_gate_effect": str(learning.get("gate_effect", "")).strip(),
+        "runnable_proposal_count": _int_value(queue.get("runnable_proposal_count")),
+        "session_reports_considered": _int_value(metrics.get("session_reports_considered")),
+    }
+
+
+def _preflight_learning_gate(
+    vault: Path,
+    start: AutoImproveSessionStart,
+    *,
+    allow_learning_uncertain: bool,
+) -> None:
+    mechanism_review, proposals = _refresh_reports(
+        vault,
+        start.policy,
+        start.resolved_policy_path,
+        context=start.context,
+    )
+    readiness_report = build_readiness_report(
+        vault,
+        policy_path=str(start.resolved_policy_path),
+        context=start.context,
+        mechanism_review_report=mechanism_review,
+        mutation_proposal_report=proposals,
+    )
+    readiness_destination = write_readiness_report(vault, readiness_report)
+    queue = readiness_report.get("queue")
+    runnable_proposal_ids: list[str] = []
+    if isinstance(queue, dict):
+        runnable_proposal_ids = [
+            str(item).strip()
+            for item in queue.get("runnable_proposal_ids", [])
+            if str(item).strip()
+        ]
+    review_required = learning_review_required(readiness_report)
+    start.session["status"] = "running"
+    start.session["stop_reason"] = "running"
+    start.session["queue_snapshot"] = runnable_proposal_ids
+    start.session["learning_mode"] = {
+        "allow_learning_uncertain": allow_learning_uncertain,
+        "bounded_trial": bool(review_required and allow_learning_uncertain),
+    }
+    start.session["pre_run_readiness"] = _pre_run_readiness_snapshot(
+        vault,
+        readiness_report,
+        readiness_destination,
+    )
+    if review_required and not allow_learning_uncertain:
+        start.session["status"] = "blocked"
+        start.session["stop_reason"] = "learning_review_required"
+        _write_session_report(vault, start.session, context=start.context)
+        append_runtime_event(
+            vault,
+            context=start.context,
+            component="auto_improve_session",
+            phase="preflight",
+            decision="learning_review_required",
+            artifact_path=report_path(vault, readiness_destination),
+            session_id=start.session_id,
+            policy_version=start.policy.get("version"),
+        )
+        learning = readiness_report.get("learning_readiness")
+        recommended_next_step = ""
+        if isinstance(learning, dict):
+            recommended_next_step = str(learning.get("recommended_next_step", "")).strip()
+        message = recommended_next_step or (
+            "Auto-improve learning readiness requires explicit review before execution. "
+            "Rerun with --allow-learning-uncertain only for a bounded trial."
+        )
+        raise AutoImproveLearningReviewRequiredError(message)
+    _write_session_report(vault, start.session, context=start.context)
+
+
+def _refresh_reports(
+    vault: Path,
+    policy: dict,
+    policy_path: Path,
+    *,
+    context: RuntimeContext,
+) -> tuple[dict, dict]:
+    mechanism_review = build_mechanism_review_report(
+        vault,
+        policy,
+        policy_path,
+        context=context,
+    )
+    write_json_object(vault / DEFAULT_MECHANISM_REVIEW_REPORT, mechanism_review)
+    proposals = build_mutation_proposal_report(
+        vault,
+        policy,
+        policy_path,
+        context=context,
+    )
+    write_json_object(vault / DEFAULT_MUTATION_PROPOSAL_REPORT, proposals)
+    return mechanism_review, proposals
+
+
+def _refresh_select_phase(
+    vault: Path,
+    policy: dict,
+    resolved_policy_path: Path,
+    *,
+    attempted: set[str],
+    quarantined: set[str],
+    context: RuntimeContext,
+) -> RefreshSelectPhaseResult:
+    _mechanism_review, proposals_report = _refresh_reports(
+        vault,
+        policy,
+        resolved_policy_path,
+        context=context,
+    )
+    proposal, queue_snapshot = _select_next_proposal(
+        proposals_report,
+        attempted=attempted,
+        quarantined=quarantined,
+    )
+    return RefreshSelectPhaseResult(
+        proposal=proposal,
+        queue_snapshot=queue_snapshot,
+        stop_reason="queue_exhausted" if proposal is None else None,
+    )
+
+
+def _route_scaffold_phase(
+    vault: Path,
+    policy: dict,
+    resolved_policy_path: Path,
+    *,
+    run_id: str,
+    proposal: dict,
+    context: RuntimeContext,
+) -> RouteScaffoldPhaseResult:
+    return route_scaffold_phase(
+        vault,
+        policy,
+        resolved_policy_path,
+        run_id=run_id,
+        proposal=proposal,
+        proposal_report_path=DEFAULT_MUTATION_PROPOSAL_REPORT,
+        context=context,
+        dependencies=RouteScaffoldDependencies(
+            build_scope_freeze=build_scope_freeze,
+            write_scope_freeze=write_scope_freeze,
+            run_selector=run_selector,
+            run_mechanism_experiment=run_mechanism_experiment,
+            append_ledger_event=append_ledger_event,
+            role_report_path=_role_report_path,
+        ),
+    )
+
+
+def _execute_evaluate_phase(request: ExecuteEvaluateRequest) -> ExecuteEvaluatePhaseResult:
+    return execute_evaluate_phase(request)
+
+
+def _persist_iteration_phase(
+    vault: Path,
+    session: dict,
+    *,
+    session_id: str,
+    iteration: int,
+    proposal: dict,
+    route_scaffold: RouteScaffoldPhaseResult,
+    execution: ExecuteEvaluatePhaseResult,
+    quarantined: set[str],
+    context: RuntimeContext,
+) -> PersistIterationPhaseResult:
+    return persist_iteration_phase(
+        vault,
+        session,
+        session_id=session_id,
+        iteration=iteration,
+        proposal=proposal,
+        route_scaffold=route_scaffold,
+        execution=execution,
+        quarantined=quarantined,
+        context=context,
+        dependencies=PersistIterationDependencies(
+            apply_execution_outcome=apply_execution_outcome,
+            write_iteration_telemetry=_write_iteration_telemetry,
+            write_run_artifact_fingerprint=write_run_artifact_fingerprint,
+            write_session_report=_write_session_report,
+        ),
+    )
+
+
+def _initial_auto_improve_loop_state(auto_policy: dict, session: dict) -> AutoImproveLoopState:
+    return AutoImproveLoopState(
+        attempted=set(session["attempted_proposal_ids"]),
+        quarantined=set(session["quarantined_proposal_ids"]),
+        consecutive_failures=max(
+            0,
+            _int_value(session.get("loop_state", {}).get("consecutive_failures"), 0),
+        ),
+        stop_reason="queue_exhausted",
+        start_monotonic=time.monotonic(),
+        pre_promotion_failure_outcomes=set(
+            auto_policy["quarantine"]["pre_promotion_failure_outcomes"]
+        ),
+    )
+
+
+def _stop_reason_before_iteration(session: dict, state: AutoImproveLoopState) -> str | None:
+    if time.monotonic() - state.start_monotonic > session["budget"]["max_minutes"] * 60:
+        return "budget_exhausted"
+    if state.consecutive_failures >= session["budget"]["max_consecutive_failures"]:
+        return "failure_budget_exhausted"
+    return None
+
+
+def _run_auto_improve_iteration(
+    vault: Path,
+    start: AutoImproveSessionStart,
+    state: AutoImproveLoopState,
+    iteration: int,
+) -> bool:
+    iteration_context = start.context.with_iteration(iteration).with_executor(
+        start.session["executor"]["name"]
+    )
+    iteration_result = run_auto_improve_iteration_helper(
+        AutoImproveIterationRequest(
+            vault=vault,
+            policy=start.policy,
+            resolved_policy_path=start.resolved_policy_path,
+            session=start.session,
+            session_id=start.session_id,
+            proposal_report_path=DEFAULT_MUTATION_PROPOSAL_REPORT,
+            iteration=iteration,
+            attempted=state.attempted,
+            quarantined=state.quarantined,
+            consecutive_failures=state.consecutive_failures,
+            pre_promotion_failure_outcomes=state.pre_promotion_failure_outcomes,
+            context=iteration_context,
+        ),
+        dependencies=AutoImproveIterationDependencies(
+            refresh_select_phase=_refresh_select_phase,
+            route_scaffold_phase=_route_scaffold_phase,
+            execute_evaluate_dependencies=ExecuteEvaluateDependencies(
+                mutation_command=_mutation_command,
+                run_mechanism_experiment=run_mechanism_experiment,
+                role_report_path=_role_report_path,
+                evaluate_scope_blocked=evaluate_scope_blocked,
+                evaluate_experiment_result=evaluate_experiment_result,
+                evaluate_mutation_error=evaluate_mutation_error,
+                evaluate_experiment_error=evaluate_experiment_error,
+            ),
+            execute_evaluate_phase_fn=execute_evaluate_phase,
+            persist_iteration_dependencies=PersistIterationDependencies(
+                apply_execution_outcome=apply_execution_outcome,
+                write_iteration_telemetry=_write_iteration_telemetry,
+                write_run_artifact_fingerprint=write_run_artifact_fingerprint,
+                write_session_report=_write_session_report,
+            ),
+            persist_iteration_phase_fn=persist_iteration_phase,
+            append_runtime_event=append_runtime_event,
+        ),
+        build_run_id=_build_run_id,
+    )
+    state.consecutive_failures = iteration_result.consecutive_failures
+    if iteration_result.stop_reason is not None:
+        state.stop_reason = iteration_result.stop_reason
+    return iteration_result.keep_running
+
+
+def _complete_auto_improve_session(
+    vault: Path,
+    start: AutoImproveSessionStart,
+    state: AutoImproveLoopState,
+) -> dict:
+    return complete_auto_improve_session(
+        vault,
+        session=start.session,
+        session_id=start.session_id,
+        stop_reason=state.stop_reason,
+        policy=start.policy,
+        resolved_policy_path=start.resolved_policy_path,
+        context=start.context,
+        dependencies=SessionCompletionDependencies(
+            write_session_report=_write_session_report,
+            write_promotion_decision_trends=write_promotion_decision_trends,
+            write_outcome_metrics_report=write_outcome_metrics_report,
+        ),
+    )
+
+
+def run_auto_improve_session(
+    vault: AutoImproveSessionRequest | Path | None = None,
+    **legacy_kwargs: Any,
+) -> dict:
+    request = _coerce_auto_improve_session_request(vault, legacy_kwargs)
+    start = _start_auto_improve_session(request)
+    loop_state = _initial_auto_improve_loop_state(start.auto_policy, start.session)
+    initial_stop_reason = _stop_reason_before_iteration(start.session, loop_state)
+    if initial_stop_reason is None:
+        _preflight_learning_gate(
+            request.vault,
+            start,
+            allow_learning_uncertain=request.allow_learning_uncertain,
+        )
+    else:
+        loop_state.stop_reason = initial_stop_reason
+
+    first_iteration = len(start.session["iterations"]) + 1
+    for iteration in range(first_iteration, start.session["budget"]["max_proposals"] + 1):
+        stop_reason = _stop_reason_before_iteration(start.session, loop_state)
+        if stop_reason is not None:
+            loop_state.stop_reason = stop_reason
+            break
+        if not _run_auto_improve_iteration(request.vault, start, loop_state, iteration):
+            break
+
+    result = _complete_auto_improve_session(request.vault, start, loop_state)
+    append_runtime_event(
+        request.vault,
+        context=start.context,
+        component="auto_improve_session",
+        phase="complete",
+        decision=str(result.get("stop_reason", "")).strip(),
+        artifact_path=str(result.get("session_report", "")).strip(),
+        duration_ms=int(round((time.monotonic() - loop_state.start_monotonic) * 1000)),
+        session_id=start.session_id,
+        policy_version=start.policy.get("version"),
+    )
+    return result

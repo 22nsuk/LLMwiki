@@ -1,0 +1,51 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-07T02:38:25Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "020399c9d2ef990917394771d8d148cc005c6c68725d730863edae8834a92fe7",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "a85e51d0ea249f746f01cdda21658e8edb0410ae95fbe568ae814180cfbad103",
+    "record_id": "7e4756ec2b029ffcaa590efad85b31a05f00e7c118507377641ad3b77f8ec9f4",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "a027c3633608b85cb17cc9e6af784187875eecfb82258b22c08eb71874d18784"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:38:25Z"
+  },
+  "record_id": "t8-t10-release-gate-20260503",
+  "captured_at": "2026-05-03T17:36:32Z",
+  "scope": "repo_maintenance_task",
+  "summary": "T8/T10 follow-up closed: strict release closeout no longer fails on artifact freshness debt, and release-evidence-dashboard-report now preserves dashboard artifacts in no-fail/report mode.",
+  "observations": [
+    {
+      "observation_id": "release_evidence_dashboard_no_fail_surface",
+      "surface": "Makefile release-evidence-* closeout chain",
+      "problem": "release-evidence-dashboard target writes candidate output but exits non-zero on fail state, which blocks conditional closeout chains from promoting machine-readable dashboard artifacts.",
+      "why_it_matters": "Operators lose deterministic downstream artifacts during conditional-pass investigations, increasing manual recovery steps and delaying stale-reference diagnostics.",
+      "automation_candidate": "Introduce release-evidence-dashboard-report (no-fail write target) mirroring release-closeout-summary-report semantics.",
+      "suggested_followup": "Completed in this task: added --no-fail CLI path, introduced release-evidence-dashboard-report target, wired refresh-fast/report flow, aligned self-check artifact to canonical envelope/schema, and stabilized tmp candidate cleanup around artifact-freshness/verify steps. Keep this observation as automated baseline coverage.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "release_sealing_lane_and_operator_summary",
+      "surface": "Makefile, pytest lanes, release evidence sealing, operator summary, external report manifest",
+      "problem": "Review evidence showed report-contract test evidence, semantic closeout status, and sealed artifact evidence were being read as one release signal.",
+      "why_it_matters": "A conditional/operator-accepted state can look like a clean machine release unless suite scope, tmp hygiene, batch digest parity, learning revalidation, and accepted-risk counts are surfaced separately.",
+      "automation_candidate": "Keep test-release-sealing, operator-release-summary, external-report-reference-manifest, self-check dotted path validation, and suite_scope schema fields as durable automation surfaces.",
+      "suggested_followup": "Automated in this task: split test lanes, added release sealing/subprocess lanes, fixed self-check watch paths, added semantic/sealed batch fields, added operator release summary and external report reference manifest, and regenerated conditional sealed evidence. Remaining clean-release follow-up is to close or renew learning readiness accepted risk before treating release-builder-full as clean authority.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "t8-t10-release-gate-20260503"
+}

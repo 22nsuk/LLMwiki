@@ -1,0 +1,42 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-10T04:02:14Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "fac40af382250bb1b65974fdc225488494af8130efc88d1456ed126b73e88863",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "efbc78732678372f6c971c633078587a2de1bf5416522642678fecd9c1cca7d0",
+    "record_id": "dd6885d8595e3dffc20ae93e917bc5e26b749151fd8426e0f0a97acf14838bf2",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "e35d14b416ff1de9deac6d0be5300dd57284fbff00050be513c314b82c63768a"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-10T04:02:14Z"
+  },
+  "record_id": "task-20260510-release-workflow-finalizer-and-intake",
+  "captured_at": "2026-05-09T19:30:41Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Follow-ups discovered while wiring post-check finalization, raw intake gates, release clean-lane evidence review, canonical parity guards, and self-contained closeout workflows.",
+  "observations": [
+    {
+      "observation_id": "release_writer_dependency_single_source",
+      "surface": "Makefile, ops/scripts/workflow_dependency_planner.py, ops/scripts/release_closeout_fixed_point.py, ops/reports/workflow-dependency-planner.json",
+      "problem": "The closeout lane now has fixed-point convergence and a narrow canonical parity guard, but the writer ordering is still encoded manually in Makefile recipes rather than generated from one dependency-policy source.",
+      "why_it_matters": "Manual ordering works for the current release chain, but future canonical writer additions can reintroduce the 'run one writer, remember the next refresh' loop unless workflow_dependency_planner or fixed-point policy becomes the single source for writer dependencies.",
+      "automation_candidate": "Promote the generated writer dependency graph into a policy-backed execution plan that emits the Makefile refresh sequence or validates the handwritten sequence against the planner before closeout.",
+      "suggested_followup": "Automated on 2026-05-10 KST: `make release-workflow-order-guard` now compares release-evidence-closeout/check-finalized sequencing against workflow planner hooks and fixed-point writer policy order, while `workflow_dependency_planner_closeout` derives its fixed-point writer steps from `ops/policies/release-closeout-fixed-point.json`. Keep the Makefile lane as the operator entrypoint, but treat the fixed-point policy plus guard report as the writer-order authority.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260510-release-workflow-finalizer-and-intake"
+}

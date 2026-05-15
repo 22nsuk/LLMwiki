@@ -1,0 +1,363 @@
+{
+  "$schema": "ops/schemas/release-smoke-report.schema.json",
+  "artifact_kind": "release_smoke_report",
+  "generated_at": "2026-05-15T04:16:07Z",
+  "producer": "ops.scripts.release_smoke",
+  "source_command": "python -m ops.scripts.release.release_smoke --vault . --profile full",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "6f14f899e0f4dce979d6152079ccd87ca44a19716266452a0f497b5fb3275d93",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "9e46a20f109e751b9b83ffbd99f8499795b7999bdf08d8bdece430ea7257258f"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-15T04:16:07Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "profile": "full",
+  "status": "pass",
+  "archive_path": "<tmp>/LLMwiki-release-smoke.zip",
+  "archive_file": {
+    "path": "<tmp>/LLMwiki-release-smoke.zip",
+    "exists": true,
+    "size_bytes": 190378464,
+    "sha256": "2b13f903e5a142dc23b2b4f30eb3789129722fc8219c11d506b3ce9353bafa69"
+  },
+  "archive_class": {
+    "name": "release_smoke_zip",
+    "format": "zip",
+    "compression": "ZIP_DEFLATED",
+    "root_prefix": "LLMwiki",
+    "member_path_template": "LLMwiki/<manifest path>",
+    "path_encoding": "utf-8",
+    "zip_create_system": 3,
+    "manifest_exclusion_policy": {
+      "name": "release_manifest_exclusions",
+      "excluded_prefixes": [
+        "ops/reports/",
+        "ops/operator/",
+        "external-reports/",
+        "review/",
+        "runs/",
+        "tmp/",
+        "build/",
+        "dist/",
+        ".venv/",
+        ".venv-",
+        ".coverage"
+      ],
+      "excluded_files": [
+        "ops/manifest.json",
+        "ops/raw-registry.json",
+        "ops/script-output-surfaces.json"
+      ],
+      "excluded_cache_dirs": [
+        ".cache",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+        "__pycache__"
+      ],
+      "excluded_dev_hidden_dirs": [
+        ".eggs",
+        ".git",
+        ".hypothesis",
+        ".idea",
+        ".nox",
+        ".obsidian",
+        ".tox",
+        ".venv",
+        ".vscode"
+      ],
+      "excluded_suffixes": [
+        ".pyc",
+        ".pyo",
+        ":Zone.Identifier"
+      ],
+      "excluded_egg_info_dirs": true
+    }
+  },
+  "archive_budget": {
+    "pass": true,
+    "zip_path_byte_budget": {
+      "limit_bytes": 65535,
+      "max_bytes": 193,
+      "status": "pass"
+    },
+    "zip_component_byte_budget": {
+      "limit_bytes": 255,
+      "max_bytes": 167,
+      "status": "pass"
+    },
+    "posix_escape_expanded_filename_budget": {
+      "limit_bytes": 255,
+      "max_bytes": 240,
+      "status": "pass"
+    },
+    "blocking_budget_fail_count": 0,
+    "platform_warning_count": 0,
+    "platform_path_diagnostics": {
+      "status": "pass",
+      "blocker_count": 0,
+      "warning_count": 0,
+      "diagnostics": [
+        {
+          "id": "zip_path_byte_budget",
+          "status": "pass",
+          "severity": "blocker"
+        },
+        {
+          "id": "zip_component_byte_budget",
+          "status": "pass",
+          "severity": "blocker"
+        },
+        {
+          "id": "infozip_c_locale_escape_filename_budget",
+          "status": "pass",
+          "severity": "warn"
+        }
+      ]
+    },
+    "top_offenders": [
+      {
+        "path": "raw/web-snapshots/‘출연연 통폐합’ 이번엔 다를까…대통령이 불 지펴 ‘현실화’ 수순 이준기의 과·알·세.md",
+        "archive_path": "LLMwiki/raw/web-snapshots/‘출연연 통폐합’ 이번엔 다를까…대통령이 불 지펴 ‘현실화’ 수순 이준기의 과·알·세.md",
+        "size_bytes": 6268,
+        "zip_path_bytes": 150,
+        "zip_component_bytes": 124,
+        "python_unicode_escape_filename_bytes": 236,
+        "posix_escape_expanded_filename_bytes": 240,
+        "infozip_c_locale_escape_filename_bytes": 240,
+        "max_budget_ratio": 0.9411764705882353
+      },
+      {
+        "path": "raw/web-snapshots/오픈AI 수석과학자가 말하는 연구 인턴급 AI, 지속학습, 장기 정렬 - 특이점이 온다 마이너 갤러리.md",
+        "archive_path": "LLMwiki/raw/web-snapshots/오픈AI 수석과학자가 말하는 연구 인턴급 AI, 지속학습, 장기 정렬 - 특이점이 온다 마이너 갤러리.md",
+        "size_bytes": 42931,
+        "zip_path_bytes": 157,
+        "zip_component_bytes": 131,
+        "python_unicode_escape_filename_bytes": 239,
+        "posix_escape_expanded_filename_bytes": 239,
+        "infozip_c_locale_escape_filename_bytes": 239,
+        "max_budget_ratio": 0.9372549019607843
+      },
+      {
+        "path": "raw/web-snapshots/빅터 차, 정동영 반박 “美CSIS ‘구성 北핵시설 보고서’ 쓴 적 없다”…‘우라늄 농축’ 관건.md",
+        "archive_path": "LLMwiki/raw/web-snapshots/빅터 차, 정동영 반박 “美CSIS ‘구성 北핵시설 보고서’ 쓴 적 없다”…‘우라늄 농축’ 관건.md",
+        "size_bytes": 5844,
+        "zip_path_bytes": 154,
+        "zip_component_bytes": 128,
+        "python_unicode_escape_filename_bytes": 236,
+        "posix_escape_expanded_filename_bytes": 236,
+        "infozip_c_locale_escape_filename_bytes": 236,
+        "max_budget_ratio": 0.9254901960784314
+      },
+      {
+        "path": "raw/web-snapshots/데미스 하사비스가 말한 AI의 최선과 가장 큰 위험 알파폴드, AGI - 특이점이 온다 마이너 갤러리.md",
+        "archive_path": "LLMwiki/raw/web-snapshots/데미스 하사비스가 말한 AI의 최선과 가장 큰 위험 알파폴드, AGI - 특이점이 온다 마이너 갤러리.md",
+        "size_bytes": 61640,
+        "zip_path_bytes": 155,
+        "zip_component_bytes": 129,
+        "python_unicode_escape_filename_bytes": 234,
+        "posix_escape_expanded_filename_bytes": 234,
+        "infozip_c_locale_escape_filename_bytes": 234,
+        "max_budget_ratio": 0.9176470588235294
+      },
+      {
+        "path": "raw/web-snapshots/고객님은 XX 요금제가 적합합니다 10월부터 최적요금제 고지 의무화, 요금제 대이동 벌어질까.md",
+        "archive_path": "LLMwiki/raw/web-snapshots/고객님은 XX 요금제가 적합합니다 10월부터 최적요금제 고지 의무화, 요금제 대이동 벌어질까.md",
+        "size_bytes": 5741,
+        "zip_path_bytes": 152,
+        "zip_component_bytes": 126,
+        "python_unicode_escape_filename_bytes": 234,
+        "posix_escape_expanded_filename_bytes": 234,
+        "infozip_c_locale_escape_filename_bytes": 234,
+        "max_budget_ratio": 0.9176470588235294
+      },
+      {
+        "path": "raw/web-snapshots/삼성전자만 있냐 나도 있다!…올해 2배 올랐는데, 역대급 목표주가 나온 ‘이 회사’ 종목Pick.md",
+        "archive_path": "LLMwiki/raw/web-snapshots/삼성전자만 있냐 나도 있다!…올해 2배 올랐는데, 역대급 목표주가 나온 ‘이 회사’ 종목Pick.md",
+        "size_bytes": 4712,
+        "zip_path_bytes": 152,
+        "zip_component_bytes": 126,
+        "python_unicode_escape_filename_bytes": 231,
+        "posix_escape_expanded_filename_bytes": 231,
+        "infozip_c_locale_escape_filename_bytes": 231,
+        "max_budget_ratio": 0.9058823529411765
+      },
+      {
+        "path": "raw/web-snapshots/“직원 3만명 해고했더니 주가 폭등”…직원들 피눈물 날 때 주주들은 환호했다, 무슨 일.md",
+        "archive_path": "LLMwiki/raw/web-snapshots/“직원 3만명 해고했더니 주가 폭등”…직원들 피눈물 날 때 주주들은 환호했다, 무슨 일.md",
+        "size_bytes": 5555,
+        "zip_path_bytes": 147,
+        "zip_component_bytes": 121,
+        "python_unicode_escape_filename_bytes": 226,
+        "posix_escape_expanded_filename_bytes": 226,
+        "infozip_c_locale_escape_filename_bytes": 226,
+        "max_budget_ratio": 0.8862745098039215
+      },
+      {
+        "path": "raw/web-snapshots/‘3달 만에 무려 42조’ 벌써 작년보다 3배나 많아…대기업 자사주 소각 ‘속도전’ 투자360.md",
+        "archive_path": "LLMwiki/raw/web-snapshots/‘3달 만에 무려 42조’ 벌써 작년보다 3배나 많아…대기업 자사주 소각 ‘속도전’ 투자360.md",
+        "size_bytes": 3397,
+        "zip_path_bytes": 149,
+        "zip_component_bytes": 123,
+        "python_unicode_escape_filename_bytes": 225,
+        "posix_escape_expanded_filename_bytes": 225,
+        "infozip_c_locale_escape_filename_bytes": 225,
+        "max_budget_ratio": 0.8823529411764706
+      },
+      {
+        "path": "raw/web-snapshots/딥마인드 연구 부사장 우리는 잎이 아닌 뿌리를 찾는다. - 특이점이 온다 마이너 갤러리.md",
+        "archive_path": "LLMwiki/raw/web-snapshots/딥마인드 연구 부사장 우리는 잎이 아닌 뿌리를 찾는다. - 특이점이 온다 마이너 갤러리.md",
+        "size_bytes": 42325,
+        "zip_path_bytes": 145,
+        "zip_component_bytes": 119,
+        "python_unicode_escape_filename_bytes": 221,
+        "posix_escape_expanded_filename_bytes": 221,
+        "infozip_c_locale_escape_filename_bytes": 221,
+        "max_budget_ratio": 0.8666666666666667
+      },
+      {
+        "path": "raw/web-snapshots/‘2.3조 빅딜’ 9부 능선 넘은 DB손보…환율·건전성·본업 부진에 정종표號 ‘골머리’.md",
+        "archive_path": "LLMwiki/raw/web-snapshots/‘2.3조 빅딜’ 9부 능선 넘은 DB손보…환율·건전성·본업 부진에 정종표號 ‘골머리’.md",
+        "size_bytes": 5698,
+        "zip_path_bytes": 143,
+        "zip_component_bytes": 117,
+        "python_unicode_escape_filename_bytes": 217,
+        "posix_escape_expanded_filename_bytes": 221,
+        "infozip_c_locale_escape_filename_bytes": 221,
+        "max_budget_ratio": 0.8666666666666667
+      }
+    ]
+  },
+  "archive_reproducibility": {
+    "status": "pass",
+    "run_count": 2,
+    "first_archive_sha256": "2b13f903e5a142dc23b2b4f30eb3789129722fc8219c11d506b3ce9353bafa69",
+    "second_archive_sha256": "2b13f903e5a142dc23b2b4f30eb3789129722fc8219c11d506b3ce9353bafa69",
+    "same_archive_sha256": true,
+    "first_source_manifest_digest": "21cbc8c476fadd130129508b741293fbaec2f52e91d382258ed2aa9735f37917",
+    "second_source_manifest_digest": "21cbc8c476fadd130129508b741293fbaec2f52e91d382258ed2aa9735f37917",
+    "same_source_manifest_digest": true,
+    "summary": "archive_reproducibility=pass; same_archive_sha256=true; same_source_manifest_digest=true"
+  },
+  "archive_self_description": {
+    "path": "release-archive-self-description.json",
+    "archive_root_name": "LLMwiki",
+    "archive_member_path": "LLMwiki/release-archive-self-description.json",
+    "sha256": "549f8e433aca23f465de131dc87ae57ef5aabe6e7d1b53b83fdeeadebea0d23d",
+    "size_bytes": 4079,
+    "profile": "full",
+    "source_manifest_digest": "f1dead892f7ca4840d14df8252c307b6a1a6feea58154cd0dffc98d63bd8b3d7",
+    "source_manifest_file_count": 1551,
+    "tmp_included": false,
+    "external_reports_included": false,
+    "evidence_linkage_phase": "pre_seal_package_build_snapshot",
+    "post_seal_authority": "ops/reports/release-closeout-batch-manifest.json",
+    "evidence_linked_artifact_count": 8
+  },
+  "extracted_vault": "<tmp>/unpacked/LLMwiki",
+  "packed_file_count": 1552,
+  "manifest_comparison": {
+    "pass": true,
+    "expected_file_count": 1552,
+    "extracted_file_count": 1552,
+    "missing_paths": [],
+    "unexpected_paths": [],
+    "sha_mismatches": [],
+    "size_mismatches": []
+  },
+  "commands": [
+    {
+      "name": "raw_registry_preflight",
+      "command": "python -m ops.scripts.registry.raw_registry_preflight --vault .",
+      "pass": true,
+      "returncode": 0,
+      "timed_out": false,
+      "timeout_seconds": 5400,
+      "termination_reason": "completed",
+      "duration_ms": 1230,
+      "stdout_tail": "      \"path_list_separator\": \":\",\n      \"path_separator\": \"/\",\n      \"platform_system\": \"Linux\",\n      \"posix_escape_expanded_component_byte_limit\": \"255\",\n      \"preferred_encoding\": \"UTF-8\"\n    }\n  },\n  \"metric_semantics\": {\n    \"entry_count\": {\n      \"scope\": \"registry_entries\",\n      \"description\": \"Parsed raw registry entries after inventory enrichment.\"\n    },\n    \"error_count\": {\n      \"scope\": \"diagnostics\",\n      \"description\": \"Number of preflight diagnostics emitted with fail severity.\"\n    },\n    \"warning_count\": {\n      \"scope\": \"diagnostics\",\n      \"description\": \"Number of preflight diagnostics emitted with warn severity.\"\n    },\n    \"path_alias_match_count\": {\n      \"scope\": \"entries_with_missing_canonical_storage_path\",\n      \"description\": \"Entries whose canonical storage_path was absent but a manual, exported, or deterministic environment alias existed on disk.\"\n    },\n    \"content_hash_fallback_count\": {\n      \"scope\": \"entries_with_missing_canonical_storage_path_and_aliases\",\n      \"description\": \"Entries whose path locators were absent but exactly one raw inventory file matched the entry content_sha256.\"\n    }\n  },\n  \"unsupported_environment\": false,\n  \"errors\": [],\n  \"warnings\": [],\n  \"stats\": {\n    \"entry_count\": 446,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"path_alias_match_count\": 0,\n    \"content_hash_fallback_count\": 0\n  }\n}",
+      "stderr_tail": ""
+    },
+    {
+      "name": "wiki_lint",
+      "command": "python -m ops.scripts.eval.wiki_lint --vault . --release-archive-profile",
+      "pass": true,
+      "returncode": 0,
+      "timed_out": false,
+      "timeout_seconds": 5400,
+      "termination_reason": "completed",
+      "duration_ms": 2411,
+      "stdout_tail": "      \"reason\": \"wiki synthesis is broad enough to watch for future scope creep, but it already declares exclusion, tension, and future-ingest boundaries\",\n      \"suggested_action\": \"watch_scope_boundary_and_future_ingest_routes\",\n      \"advisory\": {\n        \"boundary_sections_present\": [\n          \"What this synthesis excludes\",\n          \"Tensions / contradictions\",\n          \"Implications for future ingest\"\n        ],\n        \"exclusion_axes\": [\n          \"global market repricing\",\n          \"macro policy\"\n        ],\n        \"tension_axes\": [\n          \"달러 우위 safe haven\",\n          \"금의 중기 지지\",\n          \"risk-off가 강하다\",\n          \"아직 generalized funding stop은 아니다\",\n          \"어느 자산군, 어느 지역, 어느 정책 채널에 먼저 압력이 집중되는가\"\n        ],\n        \"future_ingest_axes\": [\n          \"EM flow\",\n          \"dollar\",\n          \"inflation pass-through\",\n          \"consumer expectations\",\n          \"Fed scenario\",\n          \"central-bank gold\",\n          \"post-ceasefire precious-metals rotation\",\n          \"physical disruption\",\n          \"financial repricing\"\n        ]\n      }\n    }\n  ],\n  \"stats\": {\n    \"page_count\": 487,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"review_candidate_count\": 15\n  }\n}",
+      "stderr_tail": ""
+    },
+    {
+      "name": "wiki_eval",
+      "command": "python -m ops.scripts.eval.wiki_eval --vault . --release-archive-profile --require-max-score",
+      "pass": true,
+      "returncode": 0,
+      "timed_out": false,
+      "timeout_seconds": 5400,
+      "termination_reason": "completed",
+      "duration_ms": 1025,
+      "stdout_tail": "        {\n          \"eval\": \"frontmatter_contract\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"required_sections_present\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"source_trace_present\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"source_trace_targets_exist\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"link_integration\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"high_severity_open_questions_within_budget\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"medium_severity_open_questions_within_budget\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"broken_link_free\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"placeholder_discipline\",\n          \"pass\": true\n        }\n      ]\n    }\n  ]\n}",
+      "stderr_tail": ""
+    },
+    {
+      "name": "wiki_stage2_eval",
+      "command": "python -m ops.scripts.eval.wiki_stage2_eval --vault . --require-max-score",
+      "pass": true,
+      "returncode": 0,
+      "timed_out": false,
+      "timeout_seconds": 5400,
+      "termination_reason": "completed",
+      "duration_ms": 533,
+      "stdout_tail": "        {\n          \"eval\": \"declared_source_count_matches_evidence\",\n          \"pass\": true,\n          \"detail\": {\n            \"declared_source_count\": 7,\n            \"evidence_source_count\": 7,\n            \"evidence_source_links\": [\n              \"source--ai-memory-boom-and-supply-constraints-2026-04-13\",\n              \"source--asml-ai-chip-demand-and-semiconductor-capex-resilience-2026-04-16\",\n              \"source--memory-product-mix-upside-for-samsung-and-sk-hynix-2026-04-21\",\n              \"source--samsung-labor-bonus-dispute-and-semiconductor-workforce-risk-2026-04-17\",\n              \"source--samsung-process-blueprint-trade-secret-case-2026-04-21\",\n              \"source--samsung-strategic-output-increase-and-preorders-2026-04-21\",\n              \"source--sk-hynix-socamm2-ai-memory-scaleup-2026-04-21\"\n            ]\n          }\n        }\n      ]\n    },\n    {\n      \"page\": \"system/synthesis--stage1-planning-harness-bridge.md\",\n      \"score\": 1,\n      \"max_score\": 1,\n      \"results\": [\n        {\n          \"eval\": \"declared_source_count_matches_evidence\",\n          \"pass\": true,\n          \"detail\": {\n            \"declared_source_count\": 2,\n            \"evidence_source_count\": 2,\n            \"evidence_source_links\": [\n              \"source--ouroboros-repo\",\n              \"source--stage1-planning-harness-mvp\"\n            ]\n          }\n        }\n      ]\n    }\n  ]\n}",
+      "stderr_tail": ""
+    },
+    {
+      "name": "planning_gate_validate",
+      "command": "python -m ops.scripts.mechanism.planning_gate_validate --vault .",
+      "pass": true,
+      "returncode": 0,
+      "timed_out": false,
+      "timeout_seconds": 5400,
+      "termination_reason": "completed",
+      "duration_ms": 241,
+      "stdout_tail": "    },\n    {\n      \"artifact\": \"planning-validation.json\",\n      \"schema\": \"ops/schemas/planning-validation.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"run-ledger.json\",\n      \"schema\": \"ops/schemas/run-ledger.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"promotion-report.json\",\n      \"schema\": \"ops/schemas/promotion-report.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"improvement-observations.json\",\n      \"schema\": \"ops/schemas/improvement-observations.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    }\n  ],\n  \"cross_checks\": [\n    {\n      \"check\": \"run_id_alignment\",\n      \"pass\": true,\n      \"detail\": {\n        \"seed.yaml\": \"run-YYYYMMDD-slug\",\n        \"planning-validation.json\": \"run-YYYYMMDD-slug\",\n        \"run-ledger.json\": \"run-YYYYMMDD-slug\",\n        \"promotion-report.json\": \"run-YYYYMMDD-slug\"\n      }\n    }\n  ],\n  \"phase_checks\": []\n}",
+      "stderr_tail": ""
+    }
+  ],
+  "output_parent_preflight": {
+    "status": "pass",
+    "checks": [
+      {
+        "name": "archive",
+        "path": "<tmp>/LLMwiki-release-smoke.zip",
+        "parent": "<tmp>",
+        "status": "pass",
+        "reason": "parent writable"
+      },
+      {
+        "name": "report",
+        "path": "ops/reports/release-smoke-report.json",
+        "parent": "ops/reports",
+        "status": "pass",
+        "reason": "parent writable"
+      }
+    ]
+  }
+}

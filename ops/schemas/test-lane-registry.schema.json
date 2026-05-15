@@ -1,0 +1,332 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llm-wiki-vnext.invalid/schemas/test-lane-registry.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "version",
+    "description",
+    "persistent_lanes",
+    "derived_packs",
+    "compatibility_layers",
+    "documentation_boundary"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "ops/schemas/test-lane-registry.schema.json"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "persistent_lanes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/persistent_lane"
+      }
+    },
+    "derived_packs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/derived_pack"
+      }
+    },
+    "compatibility_layers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/compatibility_layer"
+      }
+    },
+    "documentation_boundary": {
+      "$ref": "#/$defs/documentation_boundary"
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "hyphen_identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1
+    },
+    "marker_expr": {
+      "type": "string",
+      "minLength": 1
+    },
+    "string_list": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "pytest_mark_expr"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "marker_expression"
+          ]
+        },
+        "pytest_mark_expr": {
+          "$ref": "#/$defs/marker_expr"
+        }
+      }
+    },
+    "persistent_lane": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lane_id",
+        "marker",
+        "authority",
+        "semantics",
+        "ci_tier",
+        "ci_entrypoint",
+        "ci_steps",
+        "make_target",
+        "allowed_markers",
+        "forbidden_markers",
+        "selection"
+      ],
+      "properties": {
+        "lane_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "marker": {
+          "$ref": "#/$defs/identifier"
+        },
+        "authority": {
+          "const": "persistent"
+        },
+        "semantics": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "ci_tier": {
+          "$ref": "#/$defs/hyphen_identifier"
+        },
+        "ci_entrypoint": {
+          "$ref": "#/$defs/hyphen_identifier"
+        },
+        "ci_steps": {
+          "$ref": "#/$defs/string_list"
+        },
+        "make_target": {
+          "$ref": "#/$defs/hyphen_identifier"
+        },
+        "allowed_markers": {
+          "$ref": "#/$defs/string_list"
+        },
+        "forbidden_markers": {
+          "$ref": "#/$defs/string_list"
+        },
+        "selection": {
+          "$ref": "#/$defs/selection"
+        }
+      }
+    },
+    "derived_suite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "suite_id",
+        "suite_scope",
+        "summary_target",
+        "make_summary_target"
+      ],
+      "properties": {
+        "suite_id": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "suite_scope": {
+          "enum": [
+            "fast_unit",
+            "public_contract",
+            "report_contract_summary",
+            "artifact_finalization",
+            "release_sealing",
+            "subprocess_integration",
+            "full_suite",
+            "release_builder_full"
+          ]
+        },
+        "summary_target": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "make_summary_target": {
+          "$ref": "#/$defs/hyphen_identifier"
+        }
+      }
+    },
+    "derived_selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "marker_expression",
+            "explicit_selectors"
+          ]
+        },
+        "pytest_mark_expr": {
+          "$ref": "#/$defs/marker_expr"
+        },
+        "selectors": {
+          "$ref": "#/$defs/string_list"
+        },
+        "deselects": {
+          "$ref": "#/$defs/string_list"
+        },
+        "deselection_policy": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "tests_argument": {
+          "$ref": "#/$defs/non_empty_string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "marker_expression"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "pytest_mark_expr"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "explicit_selectors"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "selectors"
+            ]
+          }
+        }
+      ]
+    },
+    "derived_pack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pack_id",
+        "authority",
+        "status",
+        "semantics",
+        "backing_targets",
+        "selection",
+        "ci_entrypoint",
+        "documented_entrypoints"
+      ],
+      "properties": {
+        "pack_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_-]+$"
+        },
+        "authority": {
+          "enum": [
+            "derived",
+            "advisory"
+          ]
+        },
+        "status": {
+          "enum": [
+            "mechanically_validated",
+            "derived_from_registry"
+          ]
+        },
+        "semantics": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "backing_targets": {
+          "$ref": "#/$defs/string_list"
+        },
+        "selection": {
+          "$ref": "#/$defs/derived_selection"
+        },
+        "summary_suite": {
+          "$ref": "#/$defs/derived_suite"
+        },
+        "ci_entrypoint": {
+          "$ref": "#/$defs/hyphen_identifier"
+        },
+        "ci_steps": {
+          "$ref": "#/$defs/string_list"
+        },
+        "documented_entrypoints": {
+          "$ref": "#/$defs/string_list"
+        }
+      }
+    },
+    "compatibility_layer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "maps_to"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "make_target",
+            "ci_tier",
+            "documented_entrypoint"
+          ]
+        },
+        "name": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "maps_to": {
+          "$ref": "#/$defs/identifier"
+        }
+      }
+    },
+    "documentation_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authoritative_documents",
+        "out_of_scope_documents"
+      ],
+      "properties": {
+        "authoritative_documents": {
+          "$ref": "#/$defs/string_list"
+        },
+        "out_of_scope_documents": {
+          "$ref": "#/$defs/string_list"
+        }
+      }
+    }
+  }
+}

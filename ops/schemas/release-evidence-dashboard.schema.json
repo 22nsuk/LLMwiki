@@ -1,0 +1,1004 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Release Evidence Dashboard",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "status",
+    "source_tree_fingerprint_current",
+    "inputs",
+    "budget_signals",
+    "confirmed_evidence_summary",
+    "accepted_risk_delta",
+    "summary",
+    "gates"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": ["ops/schemas/release-evidence-dashboard.schema.json"]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": ["release_evidence_dashboard"]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "producer": {
+      "type": "string",
+      "enum": ["ops.scripts.release_evidence_dashboard"]
+    },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": {
+      "type": "string",
+      "enum": ["current", "archived", "stale", "unknown"]
+    },
+    "retention_policy": {
+      "type": "string",
+      "enum": ["canonical_report"]
+    },
+    "encoding": {
+      "type": "string",
+      "enum": ["utf-8"]
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["current", "stale", "unknown", "invalid"]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "vault": { "type": "string" },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string" },
+        "version": { "type": ["integer", "string"] }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pass", "attention", "fail"]
+    },
+    "source_tree_fingerprint_current": { "type": "string", "minLength": 1 },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_closeout_summary",
+        "release_closeout_fixed_point",
+        "release_closeout_fixed_point_cost_trend",
+        "learning_readiness_signoff_revalidation",
+        "artifact_freshness",
+        "learning_delta_scoreboard"
+      ],
+      "properties": {
+        "release_closeout_summary": { "$ref": "#/$defs/closeout_input_status" },
+        "release_closeout_fixed_point": { "$ref": "#/$defs/fixed_point_input_status" },
+        "release_closeout_fixed_point_cost_trend": { "$ref": "#/$defs/input_status" },
+        "learning_readiness_signoff_revalidation": { "$ref": "#/$defs/input_status" },
+        "artifact_freshness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["load_status", "status", "stable_debt_count", "schema_invalid_artifact_count"],
+          "properties": {
+            "load_status": { "type": "string" },
+            "status": { "type": "string" },
+            "stable_debt_count": { "type": "integer", "minimum": 0 },
+            "schema_invalid_artifact_count": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "learning_delta_scoreboard": { "$ref": "#/$defs/learning_claim_guard_summary" }
+      }
+    },
+    "accepted_risk_delta": {
+      "$ref": "#/$defs/accepted_risk_delta"
+    },
+    "budget_signals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["release_smoke_boundedness", "fixed_point_finalizer_cost"],
+      "properties": {
+        "fixed_point_finalizer_cost": { "$ref": "#/$defs/fixed_point_finalizer_cost" },
+        "release_smoke_boundedness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "status",
+            "archive_budget_pass",
+            "failing_budget_count",
+            "top_offender_count",
+            "summary"
+          ],
+          "properties": {
+            "path": { "type": "string", "minLength": 1 },
+            "status": { "type": "string", "enum": ["pass", "fail", "unknown"] },
+            "archive_budget_pass": { "type": "boolean" },
+            "failing_budget_count": { "type": "integer", "minimum": 0 },
+            "top_offender_count": { "type": "integer", "minimum": 0 },
+            "summary": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "confirmed_evidence_summary": { "$ref": "#/$defs/confirmed_evidence_summary" },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gate_count",
+        "authoritative_gate_count",
+        "checked_in_fail_count",
+        "live_rerun_fail_count",
+        "live_rerun_not_run_count",
+        "accepted_risk_count",
+        "gate_attention_count",
+        "required_input_fail_count",
+        "learning_claim_guard_status",
+        "learning_claim_allowed",
+        "learning_likely",
+        "bounded_learning_claim_allowed",
+        "confirmed_learning_improvement_allowed",
+        "improvement_claim_status",
+        "confirmed_learning_improvement_status",
+        "evidence_cohort_status",
+        "learning_claim_blocker_status",
+        "confirmed_blocking_predicate_ids",
+        "confirmed_evidence_summary",
+        "claim_level",
+        "claim_scope",
+        "learning_claim_unlock_review_status",
+        "learning_claim_unlock_review_approved",
+        "learning_claim_unlock_review_revocation_status",
+        "learning_claim_evidence_bundle_status",
+        "claim_wording_allowed",
+        "claim_wording_policy_status",
+        "confirmed_wording_allowed",
+        "confirmed_wording_policy_status",
+        "self_improvement_claim_model",
+        "same_eval_reason_coverage_status",
+        "strict_secondary_improvement_coverage_status",
+        "behavior_delta_digest_coverage_status",
+        "placeholder_audit_status"
+      ],
+      "properties": {
+        "gate_count": { "type": "integer", "minimum": 0 },
+        "authoritative_gate_count": { "type": "integer", "minimum": 0 },
+        "checked_in_fail_count": { "type": "integer", "minimum": 0 },
+        "live_rerun_fail_count": { "type": "integer", "minimum": 0 },
+        "live_rerun_not_run_count": { "type": "integer", "minimum": 0 },
+        "accepted_risk_count": { "type": "integer", "minimum": 0 },
+        "gate_attention_count": { "type": "integer", "minimum": 0 },
+        "required_input_fail_count": { "type": "integer", "minimum": 0 },
+        "learning_claim_guard_status": {
+          "type": "string",
+          "enum": ["pass", "blocked", "unknown"]
+        },
+        "learning_claim_allowed": { "type": "boolean" },
+        "learning_likely": { "type": "boolean" },
+        "bounded_learning_claim_allowed": { "type": "boolean" },
+        "confirmed_learning_improvement_allowed": { "type": "boolean" },
+        "improvement_claim_status": {
+          "type": "string",
+          "enum": ["not_ready", "eligible", "auto_confirmed", "revoked"]
+        },
+        "confirmed_learning_improvement_status": {
+          "type": "string",
+          "enum": ["not_ready", "eligible", "auto_confirmed", "revoked"]
+        },
+        "evidence_cohort_status": {
+          "type": "string",
+          "enum": ["not_ready", "auto_confirmed", "revoked"]
+        },
+        "learning_claim_blocker_status": {
+          "type": "string",
+          "enum": ["clear", "blocked", "not_evaluated"]
+        },
+        "confirmed_blocking_predicate_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "confirmed_evidence_summary": { "$ref": "#/$defs/confirmed_evidence_summary" },
+        "claim_level": {
+          "type": "string",
+          "enum": ["none", "learning_likely", "bounded_learning_likely", "confirmed_learning_improvement"]
+        },
+        "claim_scope": { "type": "string" },
+        "learning_claim_unlock_review_status": {
+          "type": "string",
+          "enum": ["not_ready", "required", "approved", "auto_approved", "stale", "revoked", "unknown"]
+        },
+        "learning_claim_unlock_review_approved": { "type": "boolean" },
+        "learning_claim_unlock_review_revocation_status": {
+          "type": "string",
+          "enum": ["active", "stale", "revoked", "not_evaluated"]
+        },
+        "learning_claim_evidence_bundle_status": {
+          "type": "string",
+          "enum": ["active", "stale", "revoked", "missing", "not_evaluated"]
+        },
+        "claim_wording_allowed": { "type": "boolean" },
+        "claim_wording_policy_status": {
+          "type": "string",
+          "enum": ["pre_seal_ready", "blocked"]
+        },
+        "confirmed_wording_allowed": { "type": "boolean" },
+        "confirmed_wording_policy_status": {
+          "type": "string",
+          "enum": ["pre_seal_ready", "blocked"]
+        },
+        "self_improvement_claim_model": { "$ref": "#/$defs/self_improvement_claim_model" },
+        "same_eval_reason_coverage_status": { "$ref": "#/$defs/coverage_status" },
+        "strict_secondary_improvement_coverage_status": { "$ref": "#/$defs/coverage_status" },
+        "behavior_delta_digest_coverage_status": { "$ref": "#/$defs/coverage_status" },
+        "placeholder_audit_status": {
+          "type": "string",
+          "enum": ["pass", "fail", "unknown"]
+        }
+      }
+    },
+    "gates": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/gate" }
+    }
+  },
+  "$defs": {
+    "self_improvement_claim_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "stage_order",
+        "stages",
+        "highest_supported_stage",
+        "improvement_claim_status",
+        "evidence_cohort_status",
+        "learning_claim_blocker_status",
+        "claim_wording_allowed",
+        "claim_wording_policy_status",
+        "summary"
+      ],
+      "properties": {
+        "schema_version": { "type": "integer", "minimum": 1 },
+        "stage_order": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "regression_safe",
+              "same_eval_gain",
+              "cross_eval_gain",
+              "persistence",
+              "production_learning"
+            ]
+          }
+        },
+        "stages": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/improvement_claim_stage" }
+        },
+        "highest_supported_stage": {
+          "type": "string",
+          "enum": [
+            "none",
+            "regression_safe",
+            "same_eval_gain",
+            "cross_eval_gain",
+            "persistence",
+            "production_learning"
+          ]
+        },
+        "improvement_claim_status": {
+          "type": "string",
+          "enum": ["not_ready", "eligible", "auto_confirmed", "revoked"]
+        },
+        "evidence_cohort_status": {
+          "type": "string",
+          "enum": ["not_ready", "auto_confirmed", "revoked"]
+        },
+        "learning_claim_blocker_status": {
+          "type": "string",
+          "enum": ["clear", "blocked", "not_evaluated"]
+        },
+        "claim_wording_allowed": { "type": "boolean" },
+        "claim_wording_policy_status": {
+          "type": "string",
+          "enum": ["pre_seal_ready", "blocked"]
+        },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "improvement_claim_stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "status", "evidence", "summary"],
+      "properties": {
+        "stage": {
+          "type": "string",
+          "enum": [
+            "regression_safe",
+            "same_eval_gain",
+            "cross_eval_gain",
+            "persistence",
+            "production_learning"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pass", "blocked", "not_claimed", "not_evaluated", "not_ready"]
+        },
+        "evidence": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "input_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "load_status", "status"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "load_status": { "type": "string" },
+        "status": { "type": "string" }
+      }
+    },
+    "fixed_point_input_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "load_status", "status", "converged"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "load_status": { "type": "string" },
+        "status": { "type": "string" },
+        "converged": { "type": "boolean" }
+      }
+    },
+    "fixed_point_finalizer_cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "load_status",
+        "fixed_point_report_status",
+        "status",
+        "converged",
+        "iteration_count",
+        "command_run_count",
+        "total_duration_ms",
+        "writer_costs",
+        "expensive_prerequisites_once",
+        "threshold_summary",
+        "evidence_basis",
+        "summary"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "load_status": { "type": "string" },
+        "fixed_point_report_status": {
+          "type": "string",
+          "enum": ["pass", "non_converged", "fail", "unknown"]
+        },
+        "status": { "type": "string", "enum": ["pass", "attention", "non_converged", "fail", "unknown"] },
+        "converged": { "type": "boolean" },
+        "iteration_count": { "type": "integer", "minimum": 0 },
+        "command_run_count": { "type": "integer", "minimum": 0 },
+        "total_duration_ms": { "type": "integer", "minimum": 0 },
+        "writer_costs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/fixed_point_writer_cost" }
+        },
+        "expensive_prerequisites_once": {
+          "$ref": "#/$defs/fixed_point_expensive_prerequisites_once"
+        },
+        "threshold_summary": { "$ref": "#/$defs/fixed_point_cost_threshold_summary" },
+        "evidence_basis": { "$ref": "#/$defs/fixed_point_cost_evidence_basis" },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "fixed_point_writer_cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "target",
+        "run_count",
+        "selected_iteration_count",
+        "total_duration_ms",
+        "average_duration_ms",
+        "max_duration_ms",
+        "skipped_after_first_iteration_count"
+      ],
+      "properties": {
+        "name": { "type": "string" },
+        "target": { "type": "string", "minLength": 1 },
+        "run_count": { "type": "integer", "minimum": 0 },
+        "selected_iteration_count": { "type": "integer", "minimum": 0 },
+        "total_duration_ms": { "type": "integer", "minimum": 0 },
+        "average_duration_ms": { "type": "integer", "minimum": 0 },
+        "max_duration_ms": { "type": "integer", "minimum": 0 },
+        "skipped_after_first_iteration_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "fixed_point_expensive_prerequisites_once": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targets",
+        "configured_target_count",
+        "observed_target_count",
+        "first_iteration_run_count",
+        "post_first_iteration_selected_count",
+        "post_first_iteration_run_count",
+        "skipped_post_first_iteration_selection_count",
+        "total_duration_ms",
+        "skip_policy_effective",
+        "summary"
+      ],
+      "properties": {
+        "targets": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "configured_target_count": { "type": "integer", "minimum": 0 },
+        "observed_target_count": { "type": "integer", "minimum": 0 },
+        "first_iteration_run_count": { "type": "integer", "minimum": 0 },
+        "post_first_iteration_selected_count": { "type": "integer", "minimum": 0 },
+        "post_first_iteration_run_count": { "type": "integer", "minimum": 0 },
+        "skipped_post_first_iteration_selection_count": { "type": "integer", "minimum": 0 },
+        "total_duration_ms": { "type": "integer", "minimum": 0 },
+        "skip_policy_effective": { "type": "boolean" },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "fixed_point_cost_threshold_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "breached_writer_count", "breached_writers", "summary"],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "attention", "not_evaluated"] },
+        "breached_writer_count": { "type": "integer", "minimum": 0 },
+        "breached_writers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "fixed_point_cost_evidence_basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fixed_point_report_path",
+        "fixed_point_report_digest",
+        "current_fixed_point_report_digest",
+        "fixed_point_generated_at",
+        "cost_trend_path",
+        "cost_trend_load_status",
+        "cost_trend_digest",
+        "cost_trend_sample_count",
+        "cost_trend_latest_fixed_point_digest",
+        "sampled_fixed_point_report_digest",
+        "basis_relation_to_current_fixed_point"
+      ],
+      "properties": {
+        "fixed_point_report_path": { "type": "string", "minLength": 1 },
+        "fixed_point_report_digest": {
+          "type": "string",
+          "pattern": "^(|[0-9a-f]{64})$"
+        },
+        "current_fixed_point_report_digest": {
+          "type": "string",
+          "pattern": "^(|[0-9a-f]{64})$"
+        },
+        "fixed_point_generated_at": { "type": "string" },
+        "cost_trend_path": { "type": "string", "minLength": 1 },
+        "cost_trend_load_status": { "type": "string" },
+        "cost_trend_digest": {
+          "type": "string",
+          "pattern": "^(|[0-9a-f]{64})$"
+        },
+        "cost_trend_sample_count": { "type": "integer", "minimum": 0 },
+        "cost_trend_latest_fixed_point_digest": {
+          "type": "string",
+          "pattern": "^(|[0-9a-f]{64})$"
+        },
+        "sampled_fixed_point_report_digest": {
+          "type": "string",
+          "pattern": "^(|[0-9a-f]{64})$"
+        },
+        "basis_relation_to_current_fixed_point": {
+          "type": "string",
+          "enum": [
+            "sampled_current_fixed_point",
+            "sampled_different_fixed_point",
+            "sample_missing",
+            "cost_trend_unavailable"
+          ]
+        }
+      }
+    },
+    "closeout_input_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "load_status",
+        "status",
+        "release_readiness_state",
+        "release_authority_status",
+        "semantic_release_status",
+        "sealed_release_status",
+        "status_v2_blocker_reason_ids",
+        "status_v2_used_legacy_fallback_fields",
+        "machine_release_allowed",
+        "operator_release_allowed",
+        "requires_accepted_risk_review",
+        "live_make_check_status",
+        "live_make_check_ready",
+        "live_make_check_blocking",
+        "summary"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "load_status": { "type": "string" },
+        "status": { "type": "string" },
+        "release_readiness_state": {
+          "type": "string",
+          "enum": ["clean_pass", "conditional_pass", "blocked", "unknown"]
+        },
+        "release_authority_status": {
+          "type": "string",
+          "enum": ["clean_pass", "conditional_pass", "blocked", "unknown"]
+        },
+        "semantic_release_status": {
+          "type": "string",
+          "enum": ["clean_pass", "conditional_pass", "blocked", "unknown"]
+        },
+        "sealed_release_status": {
+          "type": "string",
+          "enum": [
+            "sealed_clean_pass",
+            "sealed_conditional_pass",
+            "unsealed_distribution_not_provided",
+            "unsealed_artifact_incomplete",
+            "unsealed_release_blocked",
+            "unknown"
+          ]
+        },
+        "status_v2_blocker_reason_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "status_v2_used_legacy_fallback_fields": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "machine_release_allowed": { "type": "boolean" },
+        "operator_release_allowed": { "type": "boolean" },
+        "requires_accepted_risk_review": { "type": "boolean" },
+        "live_make_check_status": {
+          "type": "string",
+          "enum": ["pass", "fail", "not_run", "unknown"]
+        },
+        "live_make_check_ready": { "type": "boolean" },
+        "live_make_check_blocking": { "type": "boolean" },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "coverage_status": {
+      "type": "string",
+      "enum": ["full", "partial", "none", "no_evidence", "not_applicable", "unknown"]
+    },
+    "learning_claim_guard_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "load_status",
+        "status",
+        "claims_learning_improved",
+        "learning_claim_allowed",
+        "learning_likely",
+        "bounded_learning_claim_allowed",
+        "confirmed_learning_improvement_allowed",
+        "improvement_claim_status",
+        "confirmed_learning_improvement_status",
+        "evidence_cohort_status",
+        "learning_claim_blocker_status",
+        "confirmed_blocking_predicate_ids",
+        "confirmed_evidence_summary",
+        "confirmed_predicate_results",
+        "claim_level",
+        "claim_scope",
+        "learning_claim_unlock_review_status",
+        "learning_claim_unlock_review_approved",
+        "learning_claim_unlock_review_revocation_status",
+        "learning_claim_evidence_bundle_status",
+        "claim_wording_allowed",
+        "claim_wording_policy_status",
+        "confirmed_wording_allowed",
+        "confirmed_wording_policy_status",
+        "self_improvement_claim_model",
+        "learning_claim_unlock_review_source",
+        "same_eval_run_count",
+        "telemetry_coverage_ratio",
+        "telemetry_coverage_status",
+        "same_eval_reason_coverage_ratio",
+        "same_eval_reason_coverage_status",
+        "strict_secondary_improvement_coverage_ratio",
+        "strict_secondary_improvement_coverage_status",
+        "behavior_delta_digest_coverage_ratio",
+        "behavior_delta_digest_coverage_status",
+        "placeholder_audit_status",
+        "placeholder_count",
+        "reason"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "load_status": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["pass", "blocked", "unknown"]
+        },
+        "claims_learning_improved": { "type": "boolean" },
+        "learning_claim_allowed": { "type": "boolean" },
+        "learning_likely": { "type": "boolean" },
+        "bounded_learning_claim_allowed": { "type": "boolean" },
+        "confirmed_learning_improvement_allowed": { "type": "boolean" },
+        "improvement_claim_status": {
+          "type": "string",
+          "enum": ["not_ready", "eligible", "auto_confirmed", "revoked"]
+        },
+        "confirmed_learning_improvement_status": {
+          "type": "string",
+          "enum": ["not_ready", "eligible", "auto_confirmed", "revoked"]
+        },
+        "evidence_cohort_status": {
+          "type": "string",
+          "enum": ["not_ready", "auto_confirmed", "revoked"]
+        },
+        "learning_claim_blocker_status": {
+          "type": "string",
+          "enum": ["clear", "blocked", "not_evaluated"]
+        },
+        "confirmed_blocking_predicate_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "confirmed_evidence_summary": { "$ref": "#/$defs/confirmed_evidence_summary" },
+        "confirmed_predicate_results": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/predicate_result" }
+        },
+        "claim_level": {
+          "type": "string",
+          "enum": ["none", "learning_likely", "bounded_learning_likely", "confirmed_learning_improvement"]
+        },
+        "claim_scope": { "type": "string" },
+        "learning_claim_unlock_review_status": {
+          "type": "string",
+          "enum": ["not_ready", "required", "approved", "auto_approved", "stale", "revoked", "unknown"]
+        },
+        "learning_claim_unlock_review_approved": { "type": "boolean" },
+        "learning_claim_unlock_review_revocation_status": {
+          "type": "string",
+          "enum": ["active", "stale", "revoked", "not_evaluated"]
+        },
+        "learning_claim_evidence_bundle_status": {
+          "type": "string",
+          "enum": ["active", "stale", "revoked", "missing", "not_evaluated"]
+        },
+        "claim_wording_allowed": { "type": "boolean" },
+        "claim_wording_policy_status": {
+          "type": "string",
+          "enum": ["pre_seal_ready", "blocked"]
+        },
+        "confirmed_wording_allowed": { "type": "boolean" },
+        "confirmed_wording_policy_status": {
+          "type": "string",
+          "enum": ["pre_seal_ready", "blocked"]
+        },
+        "self_improvement_claim_model": { "$ref": "#/$defs/self_improvement_claim_model" },
+        "learning_claim_unlock_review_source": { "type": "string" },
+        "same_eval_run_count": { "type": "integer", "minimum": 0 },
+        "telemetry_coverage_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "telemetry_coverage_status": { "$ref": "#/$defs/coverage_status" },
+        "same_eval_reason_coverage_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "same_eval_reason_coverage_status": { "$ref": "#/$defs/coverage_status" },
+        "strict_secondary_improvement_coverage_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "strict_secondary_improvement_coverage_status": { "$ref": "#/$defs/coverage_status" },
+        "behavior_delta_digest_coverage_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "behavior_delta_digest_coverage_status": { "$ref": "#/$defs/coverage_status" },
+        "placeholder_audit_status": {
+          "type": "string",
+          "enum": ["pass", "fail", "unknown"]
+        },
+        "placeholder_count": { "type": "integer", "minimum": 0 },
+        "reason": { "type": "string" }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gate_id",
+        "source_path",
+        "checked_in_state",
+        "live_rerun_state",
+        "authoritative_for_release",
+        "accepted_risk",
+        "owner",
+        "expiry",
+        "next_action",
+        "required_evidence",
+        "claims"
+      ],
+      "properties": {
+        "gate_id": { "type": "string", "minLength": 1 },
+        "source_path": { "type": "string", "minLength": 1 },
+        "checked_in_state": {
+          "type": "string",
+          "enum": ["pass", "attention", "fail", "not_run"]
+        },
+        "live_rerun_state": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "reason"],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["pass", "attention", "fail", "not_run"]
+            },
+            "reason": { "type": "string" }
+          }
+        },
+        "authoritative_for_release": { "type": "boolean" },
+        "accepted_risk": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["count", "codes"],
+          "properties": {
+            "count": { "type": "integer", "minimum": 0 },
+            "codes": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "owner": { "type": "string" },
+        "expiry": { "type": "string" },
+        "next_action": { "type": "string" },
+        "required_evidence": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "claims": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/claim" }
+        }
+      }
+    },
+    "confirmed_evidence_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_cohort_status",
+        "confirmed_evidence_status",
+        "valid_run_count",
+        "min_required_run_count",
+        "eligible_family_count",
+        "selected_valid_run_ids",
+        "blocking_predicate_ids",
+        "rejected_run_count",
+        "rejected_run_diagnostics",
+        "legacy_reconstruction_summary"
+      ],
+      "properties": {
+        "evidence_cohort_status": {
+          "type": "string",
+          "enum": ["not_ready", "auto_confirmed", "revoked"]
+        },
+        "confirmed_evidence_status": {
+          "type": "string",
+          "enum": ["not_ready", "auto_confirmed", "revoked"]
+        },
+        "valid_run_count": { "type": "integer", "minimum": 0 },
+        "min_required_run_count": { "type": "integer", "minimum": 0 },
+        "eligible_family_count": { "type": "integer", "minimum": 0 },
+        "selected_valid_run_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "blocking_predicate_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "rejected_run_count": { "type": "integer", "minimum": 0 },
+        "rejected_run_diagnostics": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/rejected_run_diagnostic" }
+        },
+        "legacy_reconstruction_summary": { "$ref": "#/$defs/legacy_reconstruction_summary" }
+      }
+    },
+    "legacy_reconstruction_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "reconstruction_needed_count",
+        "reconstructed_run_count",
+        "blocked_run_count",
+        "run_diagnostics"
+      ],
+      "properties": {
+        "status": { "type": "string", "enum": ["not_used", "pass", "fail"] },
+        "reconstruction_needed_count": { "type": "integer", "minimum": 0 },
+        "reconstructed_run_count": { "type": "integer", "minimum": 0 },
+        "blocked_run_count": { "type": "integer", "minimum": 0 },
+        "run_diagnostics": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/legacy_reconstruction_run_diagnostic" }
+        }
+      }
+    },
+    "legacy_reconstruction_run_diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "families",
+        "reconstruction_status",
+        "selection_reason",
+        "reconstruction_reasons",
+        "secondary_axis_evidence_source",
+        "secondary_axis_evidence_detail",
+        "parsed_secondary_axes"
+      ],
+      "properties": {
+        "run_id": { "type": "string", "minLength": 1 },
+        "families": { "type": "array", "items": { "type": "string" } },
+        "reconstruction_status": {
+          "type": "string",
+          "enum": ["not_applicable", "not_needed", "reconstructed", "blocked"]
+        },
+        "selection_reason": { "type": "string" },
+        "reconstruction_reasons": { "type": "array", "items": { "type": "string" } },
+        "secondary_axis_evidence_source": {
+          "type": "string",
+          "enum": ["telemetry_field", "legacy_reconstruction_artifact", "missing"]
+        },
+        "secondary_axis_evidence_detail": { "type": "string" },
+        "parsed_secondary_axes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "rejected_run_diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_id", "decision", "families", "status", "reasons", "missing_artifacts"],
+      "properties": {
+        "run_id": { "type": "string" },
+        "decision": { "type": "string" },
+        "families": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["fail", "pass"] },
+        "reasons": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "missing_artifacts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["baseline_mechanism_assessment", "candidate_mechanism_assessment", "promotion_report"]
+          }
+        }
+      }
+    },
+    "predicate_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "source_path", "required_condition", "observed_value", "summary"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["pass", "fail"] },
+        "source_path": { "type": "string" },
+        "required_condition": { "type": "string" },
+        "observed_value": { "type": "string" },
+        "summary": { "type": "string" }
+      }
+    },
+    "accepted_risk_delta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "previous_report_generated_at",
+        "added_count",
+        "removed_count",
+        "unchanged_count",
+        "added",
+        "removed",
+        "unchanged",
+        "summary"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["no_previous_report", "changed", "unchanged"]
+        },
+        "previous_report_generated_at": { "type": "string" },
+        "added_count": { "type": "integer", "minimum": 0 },
+        "removed_count": { "type": "integer", "minimum": 0 },
+        "unchanged_count": { "type": "integer", "minimum": 0 },
+        "added": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "removed": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "unchanged": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim", "provenance_label"],
+      "properties": {
+        "claim": { "type": "string", "minLength": 1 },
+        "provenance_label": {
+          "type": "string",
+          "enum": [
+            "checked_in_json_confirmed",
+            "schema_validated",
+            "fingerprint_equivalent_to_checked_in",
+            "live_command_rerun_confirmed",
+            "diagnostic_workspace_only",
+            "review_reported_only",
+            "inferred_from_file_inventory",
+            "not_reverified_due_environment"
+          ]
+        }
+      }
+    }
+  }
+}

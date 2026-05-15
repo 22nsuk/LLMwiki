@@ -1,0 +1,50 @@
+{
+  "$schema": "ops/schemas/sbom-readiness-gate-report.schema.json",
+  "artifact_kind": "sbom_readiness_gate_report",
+  "generated_at": "2026-05-14T12:49:24Z",
+  "producer": "ops.scripts.sbom_readiness_gate_runtime",
+  "source_command": "python -m ops.scripts.sbom_readiness_gate_runtime --vault .",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "c848a4c2fc8919d5a720738ed147aa5f54e5f56b91bd52916b68aac9379dfb2b",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "7e6f01ee2f10c815e320b9eea6da882fdcf15c52c76e91cfbd31edec73a7a001",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "76728034ca3dd4ccb9de259cc9a4180aef3e573930a6a3950c2645492244e9e1",
+    "sbom_mapping_report": "fad38849e3f9409c4b4386af395de4ea898799b4395ea4dd3266ce36e0ae776a",
+    "refresh_mapping": "60a33e6cf5151f2d52eddae9685cfa270426aa89d8dbc7dfb854606f1d1a40fe"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-14T12:49:24Z"
+  },
+  "vault": ".",
+  "sbom_mapping_report_ref": "ops/reports/sbom-export-mapping.json",
+  "status": "pass",
+  "checks": [
+    {
+      "rule": "sbom_mapping_report_exists",
+      "pass": true
+    },
+    {
+      "rule": "mapping_report_status_pass",
+      "pass": true
+    },
+    {
+      "rule": "full_mapping_ready",
+      "pass": true
+    },
+    {
+      "rule": "public_export_subset_of_release_manifest",
+      "pass": true
+    },
+    {
+      "rule": "locked_dependency_graph_observed",
+      "pass": true
+    }
+  ]
+}

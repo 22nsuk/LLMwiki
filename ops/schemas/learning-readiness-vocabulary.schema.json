@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki/schemas/learning-readiness-vocabulary",
+  "title": "Learning Readiness Vocabulary",
+  "$defs": {
+    "learning_status": {
+      "type": "string",
+      "enum": [
+        "learning_likely",
+        "learning_uncertain",
+        "not_runnable"
+      ]
+    },
+    "learning_blocker_id": {
+      "type": "string",
+      "enum": [
+        "learning_blocked_by_execution_not_runnable",
+        "learning_blocked_by_review_required"
+      ]
+    },
+    "release_blocker_id": {
+      "type": "string",
+      "enum": [
+        "learning_blocked_by_execution_not_runnable",
+        "learning_blocked_by_review_required",
+        "execution_blocked_by_no_runnable_proposal",
+        "promotion_blocked_by_artifact_contract_failure",
+        "promotion_blocked_by_selected_contract_failure",
+        "promotion_blocked_by_source_package_failure",
+        "promotion_blocked_by_release_closeout_summary_failure",
+        "promotion_blocked_by_release_batch_manifest_failure",
+        "promotion_blocked_by_release_finality_failure",
+        "promotion_blocked_by_release_authority_preflight_failure",
+        "promotion_blocked_by_release_lineage_mismatch",
+        "promotion_blocked_by_artifact_finalization_failure"
+      ]
+    },
+    "learning_source_status": {
+      "type": "string",
+      "enum": [
+        "learning_uncertain",
+        "not_runnable"
+      ]
+    },
+    "release_blocker_source_status": {
+      "type": "string",
+      "enum": [
+        "warn",
+        "fail",
+        "not_run",
+        "missing",
+        "unknown",
+        "learning_uncertain",
+        "not_runnable"
+      ]
+    },
+    "signoff_supported_learning_blocker_id": {
+      "type": "string",
+      "enum": [
+        "learning_blocked_by_review_required"
+      ]
+    }
+  }
+}

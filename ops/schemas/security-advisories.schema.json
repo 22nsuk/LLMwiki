@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Security Advisories",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "vault",
+    "generated_at",
+    "policy",
+    "source_ref",
+    "status",
+    "advisory_count",
+    "advisories"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/security-advisories.schema.json"
+      ]
+    },
+    "vault": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "policy": {
+      "$ref": "#/$defs/policy"
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "source_ref": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "empty",
+        "present"
+      ]
+    },
+    "advisory_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "advisories": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/advisory"
+      }
+    }
+  },
+  "$defs": {
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "properties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metadataProperty"
+          }
+        }
+      }
+    },
+    "metadataProperty": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "name",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "justification",
+        "action_statement",
+        "resolved_version",
+        "note"
+      ],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "affected",
+            "not_affected",
+            "fixed",
+            "under_investigation"
+          ]
+        },
+        "justification": {
+          "type": "string"
+        },
+        "action_statement": {
+          "type": "string"
+        },
+        "resolved_version": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "advisory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "aliases",
+        "package",
+        "version_range",
+        "summary",
+        "reference_urls",
+        "analysis"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "package": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version_range": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "reference_urls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "analysis": {
+          "$ref": "#/$defs/analysis"
+        }
+      }
+    }
+  }
+}

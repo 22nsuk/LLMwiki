@@ -1,0 +1,59 @@
+{
+  "$schema": "ops/schemas/behavior-delta.schema.json",
+  "run_id": "run-20260507-auto-improve-iteration-persistence-typed-same-eval",
+  "generated_at": "2026-05-06T19:12:55Z",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "primary_targets": [
+    "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+  ],
+  "supporting_targets": [
+    "ops/schemas/run-telemetry.schema.json"
+  ],
+  "test_files": [
+    "tests/test_auto_improve_iteration_runtime.py"
+  ],
+  "inputs": {
+    "baseline_eval_report": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/baseline-eval.json",
+    "candidate_eval_report": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/candidate-eval.json",
+    "baseline_lint_report": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/baseline-lint.json",
+    "candidate_lint_report": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/candidate-lint.json",
+    "baseline_mechanism_report": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/baseline-mechanism-assessment.json",
+    "candidate_mechanism_report": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/candidate-mechanism-assessment.json",
+    "changed_files_manifest": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/changed-files-manifest.json"
+  },
+  "summary": {
+    "behavior_changed": false,
+    "changed_file_count": 0,
+    "delta_count": 0,
+    "intended_change_count": 0,
+    "unexpected_change_count": 0,
+    "unknown_intent_count": 0,
+    "coverage_gap_count": 0,
+    "contract_touch_count": 0,
+    "high_risk_delta_count": 0,
+    "regression_count": 0,
+    "risk_level": "none"
+  },
+  "deltas": [],
+  "diagnostics": {
+    "notes": [
+      "v2-v4 behavior delta remains deterministic: intent is derived from declared run scope, contract touches from path policy, and regression_count is only populated by explicit future policy annotations."
+    ],
+    "skipped_files": []
+  },
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-05-06T19:12:55Z\", \"generated_at_source\": \"payload.generated_at\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-05-06T19:21:48Z\", \"source_artifact\": \"runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/behavior-delta.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/behavior-delta.schema.json\", \"artifact_kind\": \"behavior_delta\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-05-06T19:21:48Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-06T19:12:55Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"90b8dd93ca16ce63fd94315fb2e4c3d0892287015867f56dacbdd854a928cbfe\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"fc0340f868a19c5980eebfb4b9eb41620ff6571ed9de83a030bf0a59b3d20be6\", \"policy\": \"606ba1235550f640f7365d46d76aa52b84ef8f831502790010a6c776a7b721d1\", \"schema\": \"42a836df7464e4e8d02f886eccea62d19b7913fd11fe1ab63bccbf511d959ea8\", \"target_rel_path\": \"1434260e41d311a718bcc0b29a4cfee69c38feed0a295a903e577e1dd9eee7c2\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/behavior-delta.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"4d71b2c629631e09c56c9b207b5d345494a4f2342dd1715e5fd931ae016dee6b\"}"
+      }
+    ]
+  }
+}

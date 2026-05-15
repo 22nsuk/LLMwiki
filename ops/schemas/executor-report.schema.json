@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Executor Report",
+  "type": "object",
+  "required": [
+    "$schema",
+    "run_id",
+    "role",
+    "generated_at",
+    "executor",
+    "status",
+    "command",
+    "artifacts",
+    "result"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/executor-report.schema.json"
+      ]
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "executor": {
+      "type": "object",
+      "required": [
+        "name",
+        "sandbox_mode",
+        "model",
+        "reasoning_effort"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "sandbox_mode": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "reasoning_effort": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "command": {
+      "type": "object",
+      "required": [
+        "argv"
+      ],
+      "properties": {
+        "argv": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "artifacts": {
+      "type": "object",
+      "required": [
+        "prompt",
+        "output_last_message",
+        "stdout",
+        "stderr"
+      ],
+      "properties": {
+        "prompt": {
+          "type": "string"
+        },
+        "output_last_message": {
+          "type": "string"
+        },
+        "stdout": {
+          "type": "string"
+        },
+        "stderr": {
+          "type": "string"
+        },
+        "timeout_failure": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "returncode",
+        "timed_out",
+        "timeout_seconds",
+        "termination_reason",
+        "launch_succeeded",
+        "signal_sent",
+        "final_state_observed",
+        "stdout_received",
+        "stderr_received"
+      ],
+      "properties": {
+        "returncode": {
+          "type": "integer"
+        },
+        "timed_out": {
+          "type": "boolean"
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "termination_reason": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "timeout"
+          ]
+        },
+        "launch_succeeded": {
+          "type": "boolean"
+        },
+        "signal_sent": {
+          "type": "string"
+        },
+        "final_state_observed": {
+          "type": "string"
+        },
+        "stdout_received": {
+          "type": "boolean"
+        },
+        "stderr_received": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "diagnostics": {
+      "type": "object",
+      "properties": {
+        "routing_report": {
+          "type": "string"
+        },
+        "scope_freeze": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

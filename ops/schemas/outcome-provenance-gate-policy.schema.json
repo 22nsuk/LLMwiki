@@ -1,0 +1,261 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Outcome Provenance Gate Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "status",
+    "policy",
+    "current_policy_mode",
+    "recommended_next_mode",
+    "summary",
+    "promotion_blocker_escalation_conditions",
+    "evidence",
+    "default_gate_readiness"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "ops/schemas/outcome-provenance-gate-policy.schema.json"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "const": "outcome_provenance_gate_policy"
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "producer": {
+      "type": "string",
+      "const": "ops.scripts.outcome_provenance_gate_policy"
+    },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": {
+      "type": "string",
+      "enum": ["current", "archived", "stale", "unknown"]
+    },
+    "retention_policy": { "type": "string", "const": "canonical_report" },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": { "$ref": "#/$defs/currentness" },
+    "vault": { "type": "string" },
+    "status": { "type": "string", "enum": ["pass", "attention"] },
+    "policy": { "$ref": "#/$defs/policy_identity" },
+    "current_policy_mode": {
+      "type": "string",
+      "enum": ["audit_only", "optional_strict", "default_gate"]
+    },
+    "recommended_next_mode": {
+      "type": "string",
+      "enum": ["remain_audit_or_optional_strict", "default_gate_candidate"]
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "escalation_condition_count",
+        "default_gate_blocker_count",
+        "routing_aggregate_count",
+        "rollback_signal_count",
+        "rollback_rehearsal_coverage_count",
+        "defect_escape_count"
+      ],
+      "properties": {
+        "escalation_condition_count": { "type": "integer", "minimum": 0 },
+        "default_gate_blocker_count": { "type": "integer", "minimum": 0 },
+        "routing_aggregate_count": { "type": "integer", "minimum": 0 },
+        "rollback_signal_count": { "type": "integer", "minimum": 0 },
+        "rollback_rehearsal_coverage_count": { "type": "integer", "minimum": 0 },
+        "defect_escape_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "promotion_blocker_escalation_conditions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/escalation_condition" }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome_metrics",
+        "routing_provenance",
+        "supply_chain_gate",
+        "rollback_rehearsal_schema"
+      ],
+      "properties": {
+        "outcome_metrics": { "$ref": "#/$defs/outcome_metrics_evidence" },
+        "routing_provenance": { "$ref": "#/$defs/routing_provenance_evidence" },
+        "supply_chain_gate": { "$ref": "#/$defs/supply_chain_gate_evidence" },
+        "rollback_rehearsal_schema": { "$ref": "#/$defs/rollback_schema_evidence" }
+      }
+    },
+    "default_gate_readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "blockers", "next_mode"],
+      "properties": {
+        "status": { "type": "string", "enum": ["ready", "blocked"] },
+        "blockers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "next_mode": {
+          "type": "string",
+          "enum": ["remain_audit_or_optional_strict", "default_gate_candidate"]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["current", "stale", "unknown", "invalid"]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "policy_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string" },
+        "version": { "type": ["integer", "string", "null"] }
+      }
+    },
+    "escalation_condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "condition_id",
+        "promotion_effect_when_default",
+        "required_evidence",
+        "rollback_rehearsal_required"
+      ],
+      "properties": {
+        "condition_id": { "type": "string", "minLength": 1 },
+        "promotion_effect_when_default": { "type": "string", "minLength": 1 },
+        "required_evidence": { "type": "string", "minLength": 1 },
+        "rollback_rehearsal_required": { "type": "boolean" }
+      }
+    },
+    "outcome_metrics_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "load_status",
+        "status",
+        "attempts_considered",
+        "recent_attempt_count",
+        "rework_count",
+        "rollback_signal_count",
+        "rollback_rehearsal_coverage_count",
+        "defect_escape_count",
+        "moving_average_hold",
+        "moving_average_discard",
+        "maturity_status"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "load_status": { "type": "string", "enum": ["ok", "missing", "invalid"] },
+        "status": { "type": "string" },
+        "attempts_considered": { "type": "integer", "minimum": 0 },
+        "recent_attempt_count": { "type": "integer", "minimum": 0 },
+        "rework_count": { "type": "integer", "minimum": 0 },
+        "rollback_signal_count": { "type": "integer", "minimum": 0 },
+        "rollback_rehearsal_coverage_count": { "type": "integer", "minimum": 0 },
+        "defect_escape_count": { "type": "integer", "minimum": 0 },
+        "moving_average_hold": { "type": "number", "minimum": 0 },
+        "moving_average_discard": { "type": "number", "minimum": 0 },
+        "maturity_status": { "type": "string", "enum": ["pass", "attention", "missing"] }
+      }
+    },
+    "routing_provenance_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path_glob",
+        "aggregate_count",
+        "complete_aggregate_count",
+        "status",
+        "health_flags"
+      ],
+      "properties": {
+        "path_glob": { "type": "string", "minLength": 1 },
+        "aggregate_count": { "type": "integer", "minimum": 0 },
+        "complete_aggregate_count": { "type": "integer", "minimum": 0 },
+        "status": { "type": "string", "enum": ["pass", "attention", "missing"] },
+        "health_flags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "supply_chain_gate_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "load_status", "status", "failing_rules", "maturity_status"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "load_status": { "type": "string", "enum": ["ok", "missing", "invalid"] },
+        "status": { "type": "string" },
+        "failing_rules": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "maturity_status": { "type": "string", "enum": ["pass", "attention", "missing"] }
+      }
+    },
+    "rollback_schema_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_path",
+        "load_status",
+        "schema_locked",
+        "required_field_count",
+        "required_fields"
+      ],
+      "properties": {
+        "schema_path": { "type": "string", "minLength": 1 },
+        "load_status": { "type": "string", "enum": ["ok", "missing", "invalid"] },
+        "schema_locked": { "type": "boolean" },
+        "required_field_count": { "type": "integer", "minimum": 0 },
+        "required_fields": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

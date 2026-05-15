@@ -1,0 +1,133 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-14T19:00:00Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "eebbc5c928075ad1ab8c87fffaacf8c5d2244709ab73104842971f6e3193e43c",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "1bd2ac2d021a7e2ff32e1732141ab12b6b72a3f11b4b0d7a5f70e00e9965c273",
+    "observations": "a3c14b569a7d58193faf6a87fc97ca4f6dd54c1e7d3d1afde41966c9a9ae07f4",
+    "record_id": "04828890301dac597dca8a93572311effdceed86dc29ecbaa70eb93b0c9e3d89",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "19dfa58655db44f649b761bc4355e49266ee2dea94b4c74604c9dd2df4f62dfe"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-14T19:00:00Z"
+  },
+  "record_id": "task-20260515-reconciled-improvement-plan",
+  "captured_at": "2026-05-14T19:00:00Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Day 0-Day 4+ checkpoint observations for the reconciled external improvement report plan.",
+  "observations": [
+    {
+      "observation_id": "strict_preview_allowlist_path_precheck",
+      "surface": "ops/mypy-strict-preview-allowlist.txt, ops/ruff-strict-preview-allowlist.txt, tests/test_makefile_static_gates.py",
+      "problem": "Strict preview allowlists can drift after module relocation; mypy strict preview failed on stale paths before it could report actual type-quality debt.",
+      "why_it_matters": "Preview gates should be early-warning signals for upcoming stricter rules. Stale allowlist paths turn them into noisy infrastructure failures and can hide import-order or typing regressions.",
+      "automation_candidate": "Add a static smoke test that every strict-preview allowlist entry resolves to an existing repository path before interpreting preview failures.",
+      "suggested_followup": "Automated in Day 0 by adding test_strict_preview_allowlists_reference_existing_paths, refreshing the mypy strict allowlist to canonical subpackage paths, and fixing the Ruff import-order preview failures. Future strict-preview targets should pass this path-existence smoke before being treated as quality evidence.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "source_trace_profile_runtime_classification",
+      "surface": "ops/scripts/core/source_trace_profile_runtime.py, ops/scripts/eval/wiki_quality_runtime.py, ops/scripts/eval/wiki_lint_page_runtime.py, ops/scripts/eval/wiki_eval.py, tests/test_source_trace_runtime.py, tests/test_source_trace_checks.py",
+      "problem": "Release/source-package profile checks previously treated export-excluded source trace targets as a filter, which made it hard to distinguish durable out-of-band evidence from unbound missing tmp/build references.",
+      "why_it_matters": "Source trace strictness should not be weakened for distribution profiles. Missing targets need an explicit classification with authority, digest, linkage, and repair requirements so release archives can pass without hiding evidence gaps.",
+      "automation_candidate": "Share a profile-aware source trace classifier across wiki lint/eval and source-package/release profiles, allowing only bound export exclusions or rebuildable generated artifacts while blocking unbound missing paths.",
+      "suggested_followup": "Automated in Day 1 with source_trace_profile_runtime classifications, wiki lint/eval profile details, and tests that keep missing_export_excluded_bound allowed while missing_export_excluded_unbound remains blocking. Source-package release-profile eval showed 63 bound export exclusions and 9 rebuildable generated misses as classified non-blocking evidence.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "source_package_wrong_lane_guard",
+      "surface": "ops/scripts/core/execution_lane_guard.py, ops/policies/execution-lanes.json, mk/release.mk, tests/test_execution_lane_guard.py, tests/test_makefile_static_gates.py",
+      "problem": "A clean source-package extract contains raw/wiki/system sentinels plus release-archive-self-description.json, so lane detection must prefer the source-package sentinel before full-vault corpus sentinels.",
+      "why_it_matters": "Full-vault-only release targets should fail fast inside a source package with operator-friendly alternatives instead of replaying packaging and failing later with ambiguous archive errors.",
+      "automation_candidate": "Give source-package sentinel precedence, register release packaging/closeout targets in the execution-lane policy, and make Make targets invoke explicit lane guard prerequisites.",
+      "suggested_followup": "Automated in Day 1. Rebuilt source-package clean extract passed, then make -C tmp/source-package-check/extract/LLMwiki release-distribution-zip exited 2 at release-distribution-zip-lane-guard with detected lane source_package_extract and alternatives make static, make test-source-package, make release-source-package-check.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "release_archive_self_description_replay_guard",
+      "surface": "ops/scripts/release/release_smoke.py, tests/test_release_smoke.py",
+      "problem": "Replaying archive construction from an already extracted source package can create duplicate release-archive-self-description.json members or otherwise blur package source authority.",
+      "why_it_matters": "The release self-description is the package authority anchor. It must be singular, generated from full-vault source state, and rejected when a source tree already carries the archive self-description from a previous package.",
+      "automation_candidate": "Hard fail release archive build preflight when the source tree already has release-archive-self-description.json, and verify archives contain exactly one self-description member.",
+      "suggested_followup": "Automated in Day 1 with preflight_self_description_replay build failure and duplicate-member archive verification tests. Keep this guard before any future replay convenience target that accepts extracted release packages.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "learning_claim_activation_explainability_report",
+      "surface": "ops/scripts/learning/learning_claim_activation_report.py, ops/schemas/learning-claim-activation-report.schema.json, mk/release.mk, tests/test_learning_claim_activation_report.py",
+      "problem": "Learning readiness could be likely-to-learn while release wording still had to remain claim_level=none, leaving operators to cross-read readiness, unlock review, evidence bundle, scoreboard, and post-seal artifacts to understand why.",
+      "why_it_matters": "The release pass lane and learning-claim lane must stay separate. A single explainability report lets the system show current, required, repair target, evidence digest, and post-seal linkage without relaxing the claim gate.",
+      "automation_candidate": "Generate a schema-backed learning_claim_activation_report that keeps claim wording closed while enumerating blocked predicates and evidence bindings.",
+      "suggested_followup": "Automated in Day 2. make learning-claim-activation-report now promotes ops/reports/learning_claim_activation_report.json; current full-vault output has activation_status=blocked, claim_level=none, claim_wording_allowed=false, and blocked predicates for auto_improve_can_promote_result, learning_claim_blocker_absence, and learning_claim_unlock_review_not_approved.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "anti_slop_negative_learning_preview_ledger",
+      "surface": "ops/reports/learning_claim_activation_report.json, ops/scripts/learning/learning_claim_activation_report.py, tests/test_learning_claim_activation_report.py",
+      "problem": "Anti-slop and negative-learning signals existed across scoreboard, readiness, run telemetry, and rejected-run diagnostics, but there was no compact preview surface showing which axes are advisory and which failed run patterns should not be repeated.",
+      "why_it_matters": "Long-running auto-improve should avoid repeating HOLD/DISCARD or blocked queue patterns, while anti-slop pressure must remain advisory until it is mature enough to gate promotion.",
+      "automation_candidate": "Expose preview-only anti-slop axes for claim hygiene, evidence density, reproducibility, scope discipline, context efficiency, and operator override pressure, plus an advisory negative-learning pattern ledger for HOLD, DISCARD, and blocked queue reasons.",
+      "suggested_followup": "Automated in Day 2 inside learning_claim_activation_report with gate_effect=none. Current output reports six anti-slop axes and five advisory negative-learning patterns, including blocked_queue_recent_log_overlap, while keeping promotion and claim gates unchanged.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "auto_improve_readiness_orchestrator_decomposition",
+      "surface": "ops/scripts/mechanism/auto_improve_readiness_runtime.py, ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py, ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py, ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py, ops/scripts/mechanism/auto_improve_readiness_constants_runtime.py, tests/test_auto_improve_readiness_runtime.py",
+      "problem": "auto_improve_readiness_runtime.py mixed queue selection, learning readiness, release authority gates, rendering, and constants in one large orchestrator, so touched complexity could not pass after the initial queue split alone.",
+      "why_it_matters": "The readiness report is a release-critical gate. Keeping unrelated domains in one builder makes future source-package, learning-claim, and release-authority fixes harder to verify without broad regression risk.",
+      "automation_candidate": "Split readiness into constants, queue, learning, and release-authority helper modules while keeping the public build/render API and schema-backed report shape unchanged.",
+      "suggested_followup": "Automated in Day 3. auto_improve_readiness_runtime.py now holds the orchestration/render surface at 631 nonempty lines, with queue, learning, release-authority, and constants modules tracked in READINESS_SOURCE_PATHS. Focused readiness tests passed 30 cases, and touched complexity passed for all five split files with zero attention targets.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "learning_delta_scoreboard_claim_unlock_decomposition",
+      "surface": "ops/scripts/learning/learning_delta_scoreboard.py, ops/scripts/learning/learning_delta_scoreboard_constants.py, ops/scripts/learning/learning_delta_scoreboard_unlock_runtime.py, ops/scripts/learning/learning_delta_scoreboard_anti_slop_runtime.py, tests/test_learning_delta_scoreboard.py",
+      "problem": "learning_delta_scoreboard.py mixed report orchestration with learning-claim unlock evaluation, constants, and anti-slop scoring, leaving the checked-in scoreboard as a compact artifact but the runtime as a broad hotspot.",
+      "why_it_matters": "Claim unlock and anti-slop policy will keep evolving independently. Separating them keeps future claim-safety work narrow and makes source-path fingerprints show the actual policy modules behind the scoreboard.",
+      "automation_candidate": "Extract scoreboard constants, unlock-review state evaluation, and anti-slop scoring into source-fingerprinted helper modules while preserving build_report/write_report behavior.",
+      "suggested_followup": "Automated in Day 3. learning_delta_scoreboard.py is now 696 nonempty lines under the touched budget, helper modules are tracked in SCOREBOARD_SOURCE_PATHS, focused scoreboard tests passed 20 cases, and touched complexity passed for all four split files with zero attention targets.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "canonical_session_synopsis_entrypoint",
+      "surface": "ops/scripts/learning/session_synopsis.py, ops/schemas/session-synopsis.schema.json, mk/release.mk, tests/test_session_synopsis.py, ops/reports/session-synopsis.json",
+      "problem": "Long-running self-improvement work previously relied on scattered readiness, activation, scoreboard, source-package, and observation artifacts to reconstruct the next session entrypoint.",
+      "why_it_matters": "A 4-day-plus plan should not depend on conversational memory. The next agent needs compact blocker, success-pattern, forbidden-repeat, seed-run, and evidence-gap state with explicit stop conditions.",
+      "automation_candidate": "Generate a schema-backed session_synopsis artifact that compresses current long-run state without changing promotion or claim gates.",
+      "suggested_followup": "Automated in Day 4+. make session-synopsis now promotes ops/reports/session-synopsis.json through a candidate path, release phase 2 refreshes it after learning-claim activation, and the current synopsis records promotion_allowed=false, claim_wording_allowed=false, five recent blockers, five forbidden repeat patterns, source-package replay status=pass, and first commands for the next session.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "source_package_schema_sample_replay_guard",
+      "surface": "tests/fixtures/report_schema_samples.json, tools/regenerate_report_schema_samples.py, tests/test_report_schema_sample_regeneration.py, ops/reports/source-package-clean-extract.json",
+      "problem": "After runtime module decomposition, source-package replay exposed stale report schema samples even though the focused implementation tests and public tests were already passing.",
+      "why_it_matters": "Source packages run a broader contract profile. Frozen report samples must track source-path fingerprints from decomposed modules, or replayability fails late in the release lane with a fixture mismatch instead of a mechanism regression.",
+      "automation_candidate": "Treat report schema sample regeneration as part of any source-fingerprinted orchestrator split, then rerun release-source-package-check before closeout.",
+      "suggested_followup": "Automated during final closeout by regenerating tests/fixtures/report_schema_samples.json with tools/regenerate_report_schema_samples.py, passing tests/test_report_schema_sample_regeneration.py, and rerunning make release-source-package-check to a pass with ruff, mypy, and test-source-package all clean.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "reconciled_plan_final_closeout_verification_matrix",
+      "surface": "ops/reports/artifact-freshness-report.json, ops/reports/public-check-summary.json, ops/reports/source-package-clean-extract.json, ops/reports/test-execution-summary.json, ops/reports/release-smoke-report.json",
+      "problem": "A multi-day improvement plan can appear complete while canonical release, public, source-package, and artifact-finalization reports are looking at slightly different source fingerprints.",
+      "why_it_matters": "The closeout should prove that the long-run plan, public mirror, source package, generated artifact index, and report-contract fixtures converged on the same current state after all late repairs.",
+      "automation_candidate": "End reconciled-plan closeouts with static/strict previews, test-public, public-check, release-source-package-check, release-smoke, test-execution-summary, artifact freshness, and focused artifact-contract validation after the last report mutation.",
+      "suggested_followup": "Completed in final closeout: make static ruff-strict-preview mypy-strict-preview passed; make test-public passed 333 tests; make public-check passed with command_fail_count=0; make release-source-package-check passed with ruff, mypy, and test-source-package clean; make check passed 666 tests; artifact freshness is pass/current with 305 records and zero attention/fail records; focused generated-report/session/report-sample contracts passed 42 tests.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260515-reconciled-improvement-plan"
+}

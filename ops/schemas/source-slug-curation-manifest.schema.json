@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Source Slug Curation Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "generated_at",
+    "scope",
+    "source_count",
+    "instructions",
+    "entries"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/source-slug-curation-manifest.schema.json"
+      ]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "scope": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "instructions": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registry_id",
+        "title",
+        "raw_path",
+        "source_page",
+        "current_slug",
+        "date_suffix",
+        "curated_english_slug"
+      ],
+      "properties": {
+        "registry_id": {
+          "type": [
+            "string",
+            "number",
+            "null"
+          ]
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "raw_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_page": {
+          "type": "string"
+        },
+        "current_slug": {
+          "type": "string"
+        },
+        "date_suffix": {
+          "type": "string"
+        },
+        "curated_english_slug": {
+          "type": "string"
+        },
+        "proposed_action": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "family_bridge_candidates": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

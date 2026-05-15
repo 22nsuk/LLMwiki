@@ -1,0 +1,60 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-07T02:38:29Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "020399c9d2ef990917394771d8d148cc005c6c68725d730863edae8834a92fe7",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "e22666730d4ceee03596f15cd57166ed1f8ba3eb075170ce6b59e7844ba5fa48",
+    "record_id": "f08c9747c90a907ec28b67fb15e160a95af459d8d67685760658e1bcb2e014c1",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "b4ce509859678d2d043ee38a71f5295edc62ea48ac8bfb8de16980e2712fa460"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:38:29Z"
+  },
+  "record_id": "task-20260429-release-closeout-summary",
+  "captured_at": "2026-04-29T10:22:55Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Follow-up discovered while adding the release closeout summary aggregator.",
+  "observations": [
+    {
+      "observation_id": "release_closeout_summary_nonzero_write_target_split",
+      "surface": "Makefile, ops/scripts/release_closeout_summary.py, ops/reports/release-closeout-summary.json",
+      "problem": "make release-closeout-summary writes the closeout report and then returns nonzero when release_ready is false, so a multi-target refresh command can stop after producing the expected diagnostic artifact.",
+      "why_it_matters": "Release closeout often needs to persist a negative readiness summary for review, and treating the write path and gate path as one Make target makes scripted refresh chains awkward when blockers are expected.",
+      "automation_candidate": "Split the closeout workflow into a write-only report target and a strict gate target, or add an explicit make target that tolerates release_ready=false while preserving the current strict target for CI-style gating.",
+      "suggested_followup": "Automated by adding release_closeout_summary.py --no-fail, make release-closeout-summary-report, and make report-contract-closeout. Keep strict make release-closeout-summary for CI/release gate usage while using the write-only target for operator evidence refreshes.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "report_contract_closeout_duplicate_prerequisite_not_ordered",
+      "surface": "Makefile, tests/test_makefile_static_gates.py, README.md, ops/README.md",
+      "problem": "report-contract-closeout listed artifact-freshness twice as prerequisites, but Make de-duplicated the target and did not rerun freshness after release-closeout-summary-report wrote a new generated report.",
+      "why_it_matters": "The closeout chain could leave artifact-freshness reporting stale schema debt for the just-regenerated closeout summary, which made the final release-closeout-summary retain an avoidable artifact_freshness_failed blocker.",
+      "automation_candidate": "Move report-contract-closeout sequencing into an explicit recipe that runs the expensive pytest wrapper once, then runs only cheap generated report refresh steps in the required order.",
+      "suggested_followup": "Automated by converting report-contract-closeout to an ordered recipe: test-execution-summary, generated-artifact-index, artifact-freshness, release-closeout-summary-report, artifact-freshness, release-closeout-summary-report.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "report_contract_closeout_generated_precheck_before_wrapper",
+      "surface": "Makefile, tests/test_makefile_static_gates.py, README.md, ops/README.md",
+      "problem": "report-contract-closeout could run the expensive report-contract pytest wrapper while checked-in generated evidence was already stale, causing tests that inspect artifact freshness records to fail before the target reached its generated refresh steps.",
+      "why_it_matters": "A closeout target meant to avoid repeated pytest runs should clear cheap generated evidence drift before invoking the expensive wrapper, otherwise callers must discover the stale report manually and rerun the wrapper after a cheap refresh.",
+      "automation_candidate": "Add a cheap generated-artifact-index and artifact-freshness precheck before test-execution-summary, while keeping the existing post-wrapper refresh and closeout summary second pass.",
+      "suggested_followup": "Automated by running generated-artifact-index and artifact-freshness before test-execution-summary, then keeping the post-wrapper generated refresh, artifact freshness, release closeout summary, freshness second pass, and final closeout summary.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260429-release-closeout-summary"
+}

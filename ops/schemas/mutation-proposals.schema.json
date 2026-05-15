@@ -1,0 +1,746 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Mutation Proposals",
+  "type": "object",
+  "required": [
+    "$schema",
+    "vault",
+    "generated_at",
+    "artifact_kind",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "policy",
+    "status",
+    "summary",
+    "diagnostics",
+    "proposals"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/mutation-proposals.schema.json"
+      ]
+    },
+    "vault": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_tree_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_status": {
+      "type": "string",
+      "enum": [
+        "current",
+        "archived",
+        "stale",
+        "unknown"
+      ]
+    },
+    "retention_policy": {
+      "type": "string",
+      "enum": [
+        "ephemeral",
+        "canonical_report",
+        "archive"
+      ]
+    },
+    "encoding": {
+      "type": "string",
+      "enum": [
+        "utf-8"
+      ]
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "checked_at"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown",
+            "invalid"
+          ]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "attention",
+        "fail"
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "source_candidates_read",
+        "log_entries_scanned",
+        "proposals_emitted",
+        "blocked_proposals",
+        "queue_pressure_summary"
+      ],
+      "properties": {
+        "source_candidates_read": {
+          "type": "integer"
+        },
+        "log_entries_scanned": {
+          "type": "integer"
+        },
+        "proposals_emitted": {
+          "type": "integer"
+        },
+        "blocked_proposals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "candidate_blocker_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "proposal_blocker_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "queue_pressure_summary": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "diagnostics": {
+      "type": "object",
+      "required": [
+        "source_mechanism_review_report",
+        "skipped_candidates",
+        "evidence_gaps",
+        "family_session_calibration",
+        "queue_selection",
+        "recent_log_overlap"
+      ],
+      "properties": {
+        "source_mechanism_review_report": {
+          "type": "string"
+        },
+        "skipped_candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "candidate_id",
+              "reason"
+            ],
+            "properties": {
+              "candidate_id": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "evidence_gaps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "empty_queue_blockers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "blocker_type",
+              "reason",
+              "detail",
+              "source"
+            ],
+            "properties": {
+              "blocker_type": {
+                "type": "string",
+                "enum": [
+                  "threshold",
+                  "schema",
+                  "history",
+                  "outcome",
+                  "session",
+                  "policy",
+                  "selection",
+                  "source"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "detail": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1
+              },
+              "candidate_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "candidate_type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "primary_targets": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "family_session_calibration": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "status",
+            "proposal_count",
+            "blocked_proposal_count",
+            "by_family"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "disabled",
+                "no_proposals",
+                "no_session_context",
+                "active"
+              ]
+            },
+            "proposal_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "blocked_proposal_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "by_family": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "family",
+                  "proposal_count",
+                  "blocked_proposal_count",
+                  "session_priority_delta",
+                  "boosted_candidates",
+                  "lowered_candidates",
+                  "unchanged_candidates",
+                  "validation_blocked_sessions",
+                  "review_blocked_sessions",
+                  "mutation_failed_sessions",
+                  "validator_dispatch_sessions",
+                  "reviewer_dispatch_sessions",
+                  "high_risk_routing_sessions"
+                ],
+                "properties": {
+                  "family": {
+                    "type": "string"
+                  },
+                  "proposal_count": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "blocked_proposal_count": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "session_priority_delta": {
+                    "type": "integer"
+                  },
+                  "boosted_candidates": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "lowered_candidates": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "unchanged_candidates": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "validation_blocked_sessions": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "review_blocked_sessions": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "mutation_failed_sessions": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "validator_dispatch_sessions": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "reviewer_dispatch_sessions": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "high_risk_routing_sessions": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "queue_selection": {
+          "type": "object",
+          "required": [
+            "available_proposal_count",
+            "selected_proposal_count",
+            "runnable_available_count",
+            "blocked_available_count",
+            "selected_runnable_count",
+            "selected_blocked_count",
+            "blocked_reason_counts"
+          ],
+          "properties": {
+            "available_proposal_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "selected_proposal_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "runnable_available_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "blocked_available_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "selected_runnable_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "selected_blocked_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "blocked_reason_counts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "reason",
+                  "count"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "recent_log_overlap": {
+          "type": "object",
+          "required": [
+            "dedupe_window",
+            "section_ordering",
+            "scanned_log_headings",
+            "matches"
+          ],
+          "properties": {
+            "dedupe_window": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "section_ordering": {
+              "type": "string",
+              "enum": [
+                "timestamp",
+                "file_order_fallback"
+              ]
+            },
+            "scanned_log_headings": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "matches": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "proposal_id",
+                  "source_candidate_id",
+                  "matched_marker",
+                  "matched_log_heading",
+                  "unblock_condition"
+                ],
+                "properties": {
+                  "proposal_id": {
+                    "type": "string"
+                  },
+                  "source_candidate_id": {
+                    "type": "string"
+                  },
+                  "matched_marker": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "matched_log_heading": {
+                    "type": "string"
+                  },
+                  "unblock_condition": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "proposals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "proposal_id",
+          "source_candidate_id",
+          "source_candidate_type",
+          "family",
+          "tier",
+          "priority",
+          "primary_targets",
+          "supporting_targets",
+          "metrics_triggered",
+          "run_ids",
+          "failure_mode",
+          "single_mechanism_scope",
+          "change_hypothesis",
+          "expected_binary_signal",
+          "blast_radius_score",
+          "must_change_tests",
+          "must_change_budget_signal",
+          "must_not_expand_apply_roots",
+          "must_not_increase_untyped_surface",
+          "required_artifacts",
+          "blocked_by",
+          "priority_breakdown",
+          "why_now"
+        ],
+        "properties": {
+          "proposal_id": {
+            "type": "string"
+          },
+          "source_candidate_id": {
+            "type": "string"
+          },
+          "source_candidate_type": {
+            "type": "string"
+          },
+          "family": {
+            "type": "string"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "core",
+              "supporting"
+            ]
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "primary_targets": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "supporting_targets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "metrics_triggered": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "run_ids": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "failure_mode": {
+            "type": "string",
+            "enum": [
+              "branch_growth_without_test_growth",
+              "high_complexity_low_test_pressure",
+              "schema_change_without_test_guardrails",
+              "policy_surface_growth_without_eval_gain",
+              "repeated_same_eval_or_discard",
+              "repeated_same_eval_after_promote",
+              "repeated_discard_runs",
+              "bootstrap_history_insufficient",
+              "recent_log_overlap_queue_blocked"
+            ]
+          },
+          "single_mechanism_scope": {
+            "type": "string"
+          },
+          "change_hypothesis": {
+            "type": "string"
+          },
+          "expected_binary_signal": {
+            "type": "string"
+          },
+          "blast_radius_score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "must_change_tests": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "must_change_budget_signal": {
+            "type": "object",
+            "required": [
+              "signal",
+              "expected_change"
+            ],
+            "properties": {
+              "signal": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_change": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          },
+          "must_not_expand_apply_roots": {
+            "type": "boolean"
+          },
+          "must_not_increase_untyped_surface": {
+            "type": "boolean"
+          },
+          "required_artifacts": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "blocked_by": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "priority_breakdown": {
+            "type": "object",
+            "required": [
+              "base_priority",
+              "historical_calibration_delta",
+              "session_calibration_delta",
+              "review_candidate_priority",
+              "recent_log_overlap_penalty",
+              "final_priority"
+            ],
+            "properties": {
+              "base_priority": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "historical_calibration_delta": {
+                "type": "integer"
+              },
+              "session_calibration_delta": {
+                "type": "integer"
+              },
+              "review_candidate_priority": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "recent_log_overlap_penalty": {
+                "type": "integer"
+              },
+              "final_priority": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              }
+            },
+            "additionalProperties": false
+          },
+          "why_now": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "summary"
+        ],
+        "properties": {
+          "summary": {
+            "type": "object",
+            "required": [
+              "proposals_emitted",
+              "blocked_proposals"
+            ],
+            "properties": {
+              "proposals_emitted": {
+                "const": 0
+              },
+              "blocked_proposals": {
+                "const": 0
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "diagnostics": {
+            "type": "object",
+            "required": [
+              "empty_queue_blockers"
+            ],
+            "properties": {
+              "empty_queue_blockers": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false
+}

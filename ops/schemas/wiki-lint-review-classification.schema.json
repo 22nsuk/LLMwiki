@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/wiki-lint-review-classification.schema.json",
+  "title": "Wiki Lint Review Classification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "status",
+    "policy",
+    "lint_report",
+    "summary",
+    "type_counts",
+    "classifications"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "ops/schemas/wiki-lint-review-classification.schema.json"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "const": "wiki_lint_review_classification"
+    },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": {
+      "type": "string",
+      "const": "ops.scripts.wiki_lint_review_classification"
+    },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string" },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": { "type": "string", "enum": ["current", "stale"] },
+    "retention_policy": { "type": "string", "minLength": 1 },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown"] },
+        "checked_at": { "type": "string", "minLength": 1 }
+      }
+    },
+    "vault": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "const": "pass" },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "lint_report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "status", "review_candidate_count"],
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "status": { "type": "string" },
+        "review_candidate_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "review_candidate_count",
+        "function_budget_count",
+        "documentation_candidate_count",
+        "true_refactor_target_count",
+        "refactor_candidate_count"
+      ],
+      "properties": {
+        "review_candidate_count": { "type": "integer", "minimum": 0 },
+        "function_budget_count": { "type": "integer", "minimum": 0 },
+        "documentation_candidate_count": { "type": "integer", "minimum": 0 },
+        "true_refactor_target_count": { "type": "integer", "minimum": 0 },
+        "refactor_candidate_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "type_counts": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "classifications": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/classification" }
+    }
+  },
+  "$defs": {
+    "classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "page",
+        "symbol",
+        "line",
+        "profile",
+        "triggered_budgets",
+        "primary_bucket",
+        "refactor_candidate",
+        "value",
+        "threshold",
+        "metrics",
+        "thresholds",
+        "overage",
+        "suggested_action",
+        "rationale"
+      ],
+      "properties": {
+        "type": { "type": "string" },
+        "page": { "type": "string" },
+        "symbol": { "type": "string" },
+        "line": { "type": "integer", "minimum": 0 },
+        "profile": { "type": "string" },
+        "triggered_budgets": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "primary_bucket": {
+          "type": "string",
+          "enum": ["function_budget", "documentation_candidate", "true_refactor_target"]
+        },
+        "refactor_candidate": { "type": "boolean" },
+        "value": { "type": ["integer", "number", "string"] },
+        "threshold": { "type": ["integer", "number", "string"] },
+        "metrics": { "$ref": "#/$defs/function_metrics" },
+        "thresholds": { "$ref": "#/$defs/function_metrics" },
+        "overage": { "type": "integer", "minimum": 0 },
+        "suggested_action": { "type": "string" },
+        "rationale": { "type": "string", "minLength": 1 }
+      }
+    },
+    "function_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["function_lines", "parameter_count", "branch_node_count"],
+      "properties": {
+        "function_lines": { "type": "integer", "minimum": 0 },
+        "parameter_count": { "type": "integer", "minimum": 0 },
+        "branch_node_count": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

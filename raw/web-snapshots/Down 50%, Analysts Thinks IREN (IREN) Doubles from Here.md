@@ -1,0 +1,41 @@
+---
+title: "Down 50%, Analysts Thinks IREN (IREN) Doubles from Here"
+source: "https://finance.yahoo.com/markets/stocks/articles/down-50-analysts-thinks-iren-180407148.html"
+author:
+  - "[[Thomas Richmond]]"
+published: 2026-04-10
+created: 2026-04-14
+description: "IREN Ltd (NASDAQ:IREN) currently trades at $36.83, while the Wall Street consensus price target sits at $73.47, implying roughly 99% upside from current levels. This level of implied upside stands out and suggests the market may not yet be fully pricing in the company’s earnings power as that contracted revenue begins to materialize. IREN is ... Down 50%, Analysts Thinks IREN (IREN) Doubles from Here"
+tags:
+  - "clippings"
+---
+### Quick Read
+
+- Iren (IREN) trades at $36.83 against a $73.47 analyst consensus target, implying 99% upside, with $2.3 billion in annualized contracted revenue already secured. $1.9 billion comes from Microsoft for GPU deployments at its Childress, Texas facility and $0.4 billion from Prince George, British Columbia. The company holds $2.8 billion in cash and a $3.6 billion delayed draw term loan from Goldman Sachs and JPMorgan at under 6% interest covering 95% of GPU capex, yet Q2 revenue missed consensus due to deliberate Bitcoin mining reduction during the AI transition.
+- Iren’s transition from Bitcoin mining to AI cloud infrastructure creates a valuation disconnect because contracted revenue has yet to materialize in financial results, though the company’s financing structure and power capacity positioning position it to capture the revenue ramp if execution delivers on schedule.
+- The analyst who called NVIDIA in 2010 just named his top 10 AI stocks. [Get them here FREE](https://247wallst.com/lp/top-10-ai-stocks/?i=9a0e1c82-378d-448e-b972-1d6a0b4d646f&p=ecf6d5a4-7e6e-4e25-84bb-587ab66e3617&pos=keypoints&tpid=1579755&l=638c347b-1fc0-4533-9fc4-e1873549c1c3&c=de44328e-c72f-42e3-a560-da454af2ac81&utm_source=yahoo&utm_medium=referral&utm_campaign=feed&utm_content=feed||1579755).
+
+**IREN Ltd** ([NASDAQ:IREN](https://finance.yahoo.com/quote/IREN/)) currently trades at $36.83, while the Wall Street consensus price target sits at $73.47, implying roughly 99% upside from current levels. This level of implied upside stands out and suggests the market may not yet be fully pricing in the company’s earnings power as that contracted revenue begins to materialize.
+
+IREN is a vertically integrated data center company pivoting from Bitcoin mining to AI cloud infrastructure. The company has secured more than 4.5GW of power capacity across North America and landed a $9.7 billion contract with Microsoft for phased GPU deployments at its Childress, Texas campus. The stock traded as high as $76.87 heading into late 2025 before collapsing.
+
+## A Revenue Miss During a Critical Transition
+
+IREN's most recent quarter delivered a revenue miss. Q2 FY26 revenue came in at $184.7 million against a consensus estimate of $226.9 million, an 18.6% miss. Shares fell roughly 12% in the session following results. The revenue shortfall stemmed from deliberate capacity reallocation. CFO Anthony Lewis explained that total revenue was down 23% on the prior quarter primarily on account of lower Bitcoin mining revenue, driven by a reduction in Bitcoin mined as a result of the AI transition, which lowered operating hashrate against the backdrop of an increasing global hashrate, together with lower average Bitcoin prices over the period. IREN chose to shrink its most profitable current business to build its future one.
+
+*READ: The analyst who called NVIDIA in 2010* [*just named his top 10 AI stocks*](https://247wallst.com/lp/top-10-ai-stocks/?i=9a0e1c82-378d-448e-b972-1d6a0b4d646f&p=b46e70c8-cf34-4e1c-a27d-bb4cdc79b4f6&pos=mid_content&tpid=1579755&l=638c347b-1fc0-4533-9fc4-e1873549c1c3&c=de44328e-c72f-42e3-a560-da454af2ac81)
+
+A net loss of $155.4 million amplified the damage, though most was non-cash. A $219.2 million one-time debt conversion inducement expense and a $31.8 million mining hardware impairment inflated the headline loss. Adjusted EBITDA held at $75.3 million with a 41% margin, better than the 38% margin posted the prior quarter. The operating business remained intact, but headline numbers were ugly enough to do real damage.
+
+- Not that long ago, **Iren** (NASDAQ: IREN) enjoyed a monumental bull run, soaring from $5 to $76 in less than a year. That euphoric [momentum](https://www.fool.com/investing/stock-market/types-of-stocks/momentum-stocks/?utm_source=yahoo-host-full&utm_medium=feed&utm_campaign=article&referring_guid=ed2dbce1-865b-4ed3-9e9c-6cbb656ed330) has been depleted. The stock has crashed by 54% from its all-time high, but the long-term picture is stronger than ever. Here's why Iren looks like a buy despite strong pessimism from retail investors.
+	## Capital raises are causing investors to ignore long-term catalysts
+	No one likes it when their stock gets [diluted](https://www.fool.com/terms/s/share-dilution/?utm_source=yahoo-host-full&utm_medium=feed&utm_campaign=article&referring_guid=ed2dbce1-865b-4ed3-9e9c-6cbb656ed330), and it can cause investors to scramble. Iren has been raising money through loans with competitive rates for a while, but its at-the-market equity program of up to $6 billion drew skepticism.
+	***Will AI create the world's first trillionaire?** Our team just released a report on the one little-known company, called an "Indispensable Monopoly" providing the critical technology Nvidia and Intel both need. [**Continue »**](https://api.fool.com/infotron/infotrack/click?apikey=35527423-a535-4519-a07f-20014582e03e&impression=19b1b6eb-6a0d-46fc-8a1a-3fa8350dcc2e&url=https%3A%2F%2Fwww.fool.com%2Fmms%2Fmark%2Fa-sa-ai-boom-nvidias%3Faid%3D10891%26source%3Disaediica0000069%26ftm_cam%3Dsa-ai-boom%26ftm_veh%3Dtop_incontent_pitch_feed_yahoo%26ftm_pit%3D18914&utm_source=yahoo-host-full&utm_medium=feed&utm_campaign=article&referring_guid=ed2dbce1-865b-4ed3-9e9c-6cbb656ed330)*
+	Iren currently has a $11 billion market cap, so this proposal can result in the dilution of half of its shares. However, it's not guaranteed to happen right away. Iren can theoretically wait until its market cap is much higher before tapping into the at-the-market equity program, which would result in less dilution.
+	The company operates in an industry that requires significant capital, but these issues will become more manageable as Iren signs more deals. Its landmark five-year $9.7 billion deal with **Microsoft** for 200 megawatts of capacity at its artificial intelligence (AI) data center captured headlines in November. While many investors have become impatient due to the lack of additional deals, Iren still has the gigawatts, land, and AI data centers that serve as the foundation for AI growth.
+	![A yellow road sign that says &quot;Buy the dip.&quot;](https://s.yimg.com/ny/api/res/1.2/mip9xo8aMOWqVFQkomQlWA--/YXBwaWQ9aGlnaGxhbmRlcjt3PTk2MDtoPTYzNw--/https://media.zenfs.com/en/motleyfool.com/8d21919cc679506f81e56905410c697a)
+	Image source: Getty Images.
+	## Iren grew its gigawatt pipeline in the first quarter
+	Although Iren didn't announce a new deal with a tech giant in the second quarter of fiscal year 2026, which ended Dec. 31, 2025, it secured a 1.6 gigawatt site in Oklahoma, boosting its total pipeline to more than 4.5 gigawatts. Energy is a major constraint in AI, and with Iren securing $1.94 billion per year for 200 megawatts in its deal with Microsoft, it's easy to see how much its revenue can scale.
+	Iren can support more than 20 additional deals like the Microsoft one, which can eventually translate into over $40 billion in annual recurring revenue. It will take a while for Iren to reach that level, since some of its AI data centers aren't yet complete, but more capacity will become available over time.
+	The expansion of Iren's gigawatt pipeline is a major catalyst for new deals, and Iren doubled down by entering into a purchase agreement for more than 50,000 **Nvidia** chips. These aren't the moves of a struggling company. Iren is maximizing its ability to sign as many lucrative deals as possible. Its 6% APR for $3.6 billion in GPU financing related to the Microsoft contract shows that lenders also believe in Iren's future.

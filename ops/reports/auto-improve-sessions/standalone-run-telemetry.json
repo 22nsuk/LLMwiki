@@ -1,0 +1,264 @@
+{
+  "$schema": "ops/schemas/auto-improve-session.schema.json",
+  "session_id": "standalone-run-telemetry",
+  "generated_at": "2026-05-02T03:03:47Z",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "complete",
+  "budget": {
+    "max_proposals": 6,
+    "max_minutes": 1,
+    "max_consecutive_failures": 6
+  },
+  "executor": {
+    "name": "standalone_run_reconstruction"
+  },
+  "attempted_proposal_ids": [],
+  "quarantined_proposal_ids": [],
+  "run_ids": [
+    "run-20260414-mechanism-planning-gate",
+    "run-20260415-mechanism-planning-gate-second-clean",
+    "run-20260422-auto-improve-decision-record-fallback-retry",
+    "run-20260422-auto-improve-decision-record-fallback-retry2",
+    "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+    "run-20260422-auto-improve-timeout-telemetry-fallback"
+  ],
+  "iterations": [
+    {
+      "index": 1,
+      "proposal_id": "",
+      "source_candidate_id": "",
+      "run_id": "run-20260414-mechanism-planning-gate",
+      "status": "complete",
+      "decision": "PROMOTE",
+      "outcome": "promoted",
+      "failure_taxonomy": "",
+      "proposal_snapshot": "",
+      "scope_freeze": "",
+      "routing_reports": [],
+      "executor_reports": [],
+      "run_telemetry": "",
+      "promotion_report": "runs/run-20260414-mechanism-planning-gate/promotion-report.json",
+      "quarantined": false,
+      "primary_targets": []
+    },
+    {
+      "index": 2,
+      "proposal_id": "",
+      "source_candidate_id": "",
+      "run_id": "run-20260415-mechanism-planning-gate-second-clean",
+      "status": "complete",
+      "decision": "PROMOTE",
+      "outcome": "promoted",
+      "failure_taxonomy": "",
+      "proposal_snapshot": "",
+      "scope_freeze": "",
+      "routing_reports": [],
+      "executor_reports": [],
+      "run_telemetry": "",
+      "promotion_report": "runs/run-20260415-mechanism-planning-gate-second-clean/promotion-report.json",
+      "quarantined": false,
+      "primary_targets": []
+    },
+    {
+      "index": 3,
+      "proposal_id": "",
+      "source_candidate_id": "",
+      "run_id": "run-20260422-auto-improve-decision-record-fallback-retry",
+      "status": "blocked",
+      "decision": "SKIPPED",
+      "outcome": "",
+      "failure_taxonomy": "",
+      "proposal_snapshot": "",
+      "scope_freeze": "",
+      "routing_reports": [],
+      "executor_reports": [],
+      "run_telemetry": "runs/run-20260422-auto-improve-decision-record-fallback-retry/run-telemetry.json",
+      "promotion_report": "runs/run-20260422-auto-improve-decision-record-fallback-retry/promotion-report.json",
+      "quarantined": false,
+      "primary_targets": [
+        "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+      ]
+    },
+    {
+      "index": 4,
+      "proposal_id": "",
+      "source_candidate_id": "",
+      "run_id": "run-20260422-auto-improve-decision-record-fallback-retry2",
+      "status": "blocked",
+      "decision": "HOLD",
+      "outcome": "hold",
+      "failure_taxonomy": "hold",
+      "proposal_snapshot": "",
+      "scope_freeze": "",
+      "routing_reports": [],
+      "executor_reports": [],
+      "run_telemetry": "",
+      "promotion_report": "runs/run-20260422-auto-improve-decision-record-fallback-retry2/promotion-report.json",
+      "quarantined": false,
+      "primary_targets": []
+    },
+    {
+      "index": 5,
+      "proposal_id": "",
+      "source_candidate_id": "",
+      "run_id": "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+      "status": "complete",
+      "decision": "DISCARD",
+      "outcome": "discarded",
+      "failure_taxonomy": "",
+      "proposal_snapshot": "",
+      "scope_freeze": "",
+      "routing_reports": [],
+      "executor_reports": [],
+      "run_telemetry": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/run-telemetry.json",
+      "promotion_report": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/promotion-report.json",
+      "quarantined": false,
+      "primary_targets": [
+        "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+      ]
+    },
+    {
+      "index": 6,
+      "proposal_id": "",
+      "source_candidate_id": "",
+      "run_id": "run-20260422-auto-improve-timeout-telemetry-fallback",
+      "status": "complete",
+      "decision": "PROMOTE",
+      "outcome": "promoted",
+      "failure_taxonomy": "",
+      "proposal_snapshot": "",
+      "scope_freeze": "",
+      "routing_reports": [],
+      "executor_reports": [],
+      "run_telemetry": "runs/run-20260422-auto-improve-timeout-telemetry-fallback/run-telemetry.json",
+      "promotion_report": "runs/run-20260422-auto-improve-timeout-telemetry-fallback/promotion-report.json",
+      "quarantined": false,
+      "primary_targets": [
+        "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+      ]
+    }
+  ],
+  "learning_summary": {
+    "attempt_count": 6,
+    "rework_count": 2,
+    "rollback_signal_count": 0,
+    "defect_escape_pair_count": 1,
+    "session_context_status": "partial_context",
+    "evidence_gaps": [
+      "3 iteration(s) are missing run_telemetry"
+    ]
+  },
+  "loop_state": {
+    "consecutive_failures": 0,
+    "last_outcome": "promoted",
+    "last_decision": "PROMOTE",
+    "last_run_id": "run-20260422-auto-improve-timeout-telemetry-fallback",
+    "last_blocking_reason": "",
+    "updated_at": "2026-05-02T03:03:47Z"
+  },
+  "queue_snapshot": [],
+  "stop_reason": "reconstructed_from_standalone_run_artifacts",
+  "path": "ops/reports/auto-improve-sessions/standalone-run-telemetry.json",
+  "metadata": {
+    "source": "standalone_run_artifact_reconstruction",
+    "reason": "surface run telemetry that predates auto-improve session_id persistence",
+    "properties": [
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/auto-improve-session.schema.json\", \"artifact_kind\": \"auto_improve_session\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-02T03:03:47Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-02T03:03:47Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"policy\": \"7d45acc617992bca127ce0b7defb6715caac5b774dcc489acf984502cea3a402\", \"run_ids\": \"2ec459d44f092ec3b681008674eb5c78785d5908693b3167de31050177631df6\", \"schema\": \"e68e068696ae88cd027480826e255953102504028c35127b83268624025f35d5\", \"session_id\": \"c98afbb0c3af0cb19b560ec0ddbae775b2620f3a3d454f15bf98250eceddb958\"}, \"producer\": \"ops.scripts.observability_routing_provenance_runtime\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.observability_routing_provenance_runtime --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"f3dc81c29eb9d0d0a153b44ee5b0c15bcf611a2297aa27db91c9e00e1f683831\"}"
+      }
+    ]
+  },
+  "rollups": {
+    "iterations": {
+      "count": 6,
+      "outcome_counts": {
+        "promoted": 3,
+        "hold": 1,
+        "discarded": 1
+      },
+      "decision_counts": {
+        "PROMOTE": 3,
+        "SKIPPED": 1,
+        "HOLD": 1,
+        "DISCARD": 1
+      },
+      "status_counts": {
+        "complete": 4,
+        "blocked": 2
+      },
+      "quarantined_proposal_count": 0
+    },
+    "routing": {
+      "report_count": 0,
+      "role_counts": {},
+      "selected_rung_counts": {},
+      "score_band_counts": {},
+      "sandbox_mode_counts": {},
+      "model_counts": {},
+      "reasoning_effort_counts": {},
+      "risk_flag_counts": {}
+    },
+    "executor": {
+      "report_count": 0,
+      "role_counts": {},
+      "status_counts": {},
+      "blocking_role_counts": {},
+      "returncode_counts": {}
+    },
+    "telemetry": {
+      "report_count": 3,
+      "failure_taxonomy_counts": {},
+      "phase_totals_seconds": {},
+      "phase_max_seconds": {}
+    },
+    "outcome_metrics": {
+      "attempt_count": 6,
+      "recent_window": 20,
+      "recent_attempt_count": 6,
+      "rework_count": 2,
+      "rollback_signal_count": 0,
+      "rollback_rehearsal_coverage_count": 1,
+      "moving_averages": {
+        "hold": 0.1667,
+        "discard": 0.1667,
+        "rollback_signal": 0.0
+      },
+      "operator_effort_proxy": {
+        "phase_totals_seconds": {},
+        "executor_report_count": 0,
+        "reviewer_dispatch_count": 0,
+        "validator_dispatch_count": 0,
+        "auditor_dispatch_count": 0,
+        "hold_count": 1
+      },
+      "rework_keys": [
+        {
+          "key": "targets:ops/scripts/auto_improve_iteration_persistence_runtime.py",
+          "attempt_count": 3,
+          "rework_count": 2,
+          "run_ids": [
+            "run-20260422-auto-improve-timeout-telemetry-fallback",
+            "run-20260422-auto-improve-decision-record-fallback-retry",
+            "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp"
+          ]
+        }
+      ],
+      "defect_escape_proxy": {
+        "count": 1,
+        "pairs": [
+          {
+            "target": "ops/scripts/auto_improve_iteration_persistence_runtime.py",
+            "promoted_run_id": "run-20260422-auto-improve-timeout-telemetry-fallback",
+            "escaped_run_id": "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+            "escaped_decision": "DISCARD",
+            "escaped_outcome": "discarded"
+          }
+        ]
+      }
+    }
+  }
+}

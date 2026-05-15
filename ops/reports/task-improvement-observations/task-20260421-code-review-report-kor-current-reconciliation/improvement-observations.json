@@ -1,0 +1,78 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-07T02:38:26Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "020399c9d2ef990917394771d8d148cc005c6c68725d730863edae8834a92fe7",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "92aeec6a3d7db517fb0d7a060a10c531b0e854848569adf1c829ecf6686fb3a3",
+    "record_id": "6f062fce88858a3789d10ba3c7a30ed8c7802291c5077234846c8f221da90c79",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "e101b59d70252fdeb8ee767d21a574259732433666a2e2e5b1fbf096ae905ce7"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:38:26Z"
+  },
+  "record_id": "task-20260421-code-review-report-kor-current-reconciliation",
+  "captured_at": "2026-04-21T10:30:41Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Follow-up automation and hygiene gaps found while reconciling llm_wiki_vnext_code_review_report_kor_20260421.md against the current repository state.",
+  "observations": [
+    {
+      "observation_id": "auto_improve_phase_split_gap",
+      "surface": "ops/scripts/auto_improve_runtime.py",
+      "problem": "The runtime already has phase dataclasses, but route/scaffold orchestration, ledger events, routing role fanout, and scaffold invocation still sit in one large phase function.",
+      "why_it_matters": "The external review correctly identifies orchestration concentration as the main maintainability risk; this specific function remains a high-change surface for scope freeze, routing, scaffold, and audit artifact wiring.",
+      "automation_candidate": "Split route/scaffold into bounded helpers for scope freeze, role routing, scaffold invocation, and ledger/audit event recording, then pin each helper with focused unit tests.",
+      "suggested_followup": "Automated on 2026-04-21 KST by extracting route/scaffold helpers into ops/scripts/auto_improve_route_scaffold_runtime.py, execute/evaluate helpers into ops/scripts/auto_improve_execute_runtime.py, session completion into ops/scripts/auto_improve_session_completion_runtime.py, and iteration persistence into ops/scripts/auto_improve_iteration_persistence_runtime.py while preserving the auto_improve_runtime.py facade and monkeypatch seams. Continue with session-start or loop-iteration orchestration only if future complexity reports still flag the runtime.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "runtime_structured_logging_gap",
+      "surface": "ops/scripts/auto_improve_runtime.py, ops/scripts/planning_gate_report_runtime.py, ops/scripts/codex_exec_executor.py, ops/scripts/observability_artifacts_runtime.py, ops/scripts/runtime_event_logging_runtime.py",
+      "problem": "The repository produces rich JSON artifacts, but runtime progress and failure context are still mostly terminal print output or post-run artifact inspection rather than structured execution logs.",
+      "why_it_matters": "Operators can audit completed runs, but debugging a stuck or failed auto-improve session still requires manually reconstructing phase order, artifact paths, decisions, and durations from dispersed files.",
+      "automation_candidate": "Add a tiny repo-local structured logging helper that emits JSONL events with run_id, session_id, phase, component, decision, artifact_path, duration_ms, and policy_version fields.",
+      "suggested_followup": "Automated on 2026-04-21 KST by adding ops/scripts/runtime_event_logging_runtime.py and wiring audit-only JSONL events into auto-improve session route/complete flow, planning gate validation, codex exec executor reports, and routing provenance aggregate writes. Updated on 2026-04-23 KST by adding a runtime-event JSON schema, validating each JSONL line before append, and carrying optional proposal_id, candidate_id, blocker, blocker_kind, and decision_reason keys through route/scaffold and executor event writers. Continue only if operators need more signal, and keep schema-backed JSON artifacts as the canonical audit record.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "outcome_metrics_shadow_priority_gap",
+      "surface": "ops/scripts/mechanism_review_outcome_metrics_calibration_runtime.py, ops/scripts/mechanism_review_candidate_runtime.py, ops/policies/wiki-maintainer-policy.yaml, ops/reports/outcome-metrics.json",
+      "problem": "Outcome metrics are now schema-backed, the calibration runtime already supports shadow-priority style ordering deltas, and diagnostics surface the preview knobs, but the default live policy still keeps outcome metrics in audit-only mode.",
+      "why_it_matters": "The self-improvement loop can already observe rework, HOLD/DISCARD trends, rollback signals, and defect escape proxies, yet the default policy still treats those signals as non-binding diagnostics instead of collecting a steady preview corpus of ordering deltas.",
+      "automation_candidate": "Add a shadow_priority preview that computes non-binding priority deltas from outcome metrics, records before/after ordering, and reports calibration confidence separately from gate decisions.",
+      "suggested_followup": "Updated on 2026-04-25 KST: this is already automated in code. `mechanism_review_outcome_metrics_calibration_runtime.py` computes non-binding shadow-priority ordering deltas, preserves `mode=audit_only` as the default policy posture, and keeps `gate_effect=none` while surfacing the preview through mechanism-review diagnostics. Remaining follow-up is policy-only: keep the preview non-binding until false-positive and calibration drift review justify any explicit promotion beyond audit-only mode.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "cross_artifact_fault_test_gap",
+      "surface": "tests/test_observability_artifacts_runtime.py, tests/test_planning_gate_validate_runtime.py, tests/test_mechanism_run_validation_runtime.py, tests/fixtures/report_schema_samples.json",
+      "problem": "Current tests cover many individual schema-backed reports, but cross-artifact consistency and fault-injection coverage is still partial for missing, stale, malformed, or contradictory run artifacts.",
+      "why_it_matters": "The audit surface is valuable only if links between scope freeze, routing reports, executor reports, behavior delta, changed-files manifest, telemetry, promotion report, and fingerprints remain trustworthy under partial-run failure modes.",
+      "automation_candidate": "Add compact fixtures that intentionally omit or corrupt one artifact at a time and assert deterministic diagnostics without relying on a full auto-improve run.",
+      "suggested_followup": "Automated on 2026-04-21 KST by closing the remaining P2 consistency fixtures: scope-freeze/apply-allowlist guardrail alignment in tests/test_proposal_scope_runtime.py, outcome-metrics and promotion-trend overlapping run-set consistency in tests/test_observability_artifacts_runtime.py, and domain-load fault coverage for planning artifacts plus invalid promotion decision-record fallback coverage. Updated on 2026-04-23 KST with queue/readiness fault fixtures for all-blocked and mixed runnable/blocked proposal sets, timestamp-sorted recent-log overlap behavior, and schema-backed runtime-event linking fields. Continue only if future report surfaces add new cross-artifact joins that need dedicated deterministic fixtures.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "windows_command_runtime_smoke_gap",
+      "surface": ".github/workflows/ci.yml, tests/test_ci_workflow_static.py, tests/test_command_runtime.py, ops/scripts/command_runtime.py",
+      "problem": "The repository already has a Windows smoke lane, but before this tranche it did not directly exercise the Windows-specific command-runtime branch that switches from POSIX process-group signaling to terminate/kill semantics and disables start_new_session.",
+      "why_it_matters": "A Windows smoke job is only a partial safeguard if the job never touches the platform-specific subprocess and timeout path that the maintainer runtime depends on when wrapper commands stall or exit unexpectedly.",
+      "automation_candidate": "Insert a dedicated Windows command-runtime smoke step into CI and pin it with static workflow assertions plus focused unit tests that exercise terminate/kill, killpg, timeout escalation, and start_new_session branching.",
+      "suggested_followup": "Automated on 2026-04-22 KST by keeping a dedicated `tests/test_command_runtime.py` step in the `windows-release-smoke` job and pinning that contract with `tests/test_ci_workflow_static.py`, while `tests/test_command_runtime.py` covers Windows terminate/kill, POSIX killpg, timeout escalation, and start_new_session branching. Continue only if future Windows-only subprocess regressions require broader end-to-end release-smoke assertions.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260421-code-review-report-kor-current-reconciliation"
+}

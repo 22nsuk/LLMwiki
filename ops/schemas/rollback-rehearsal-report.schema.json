@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Rollback Rehearsal Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "mode",
+    "status",
+    "generated_at",
+    "source_shadow_apply_report",
+    "source_manifest",
+    "guard",
+    "summary",
+    "files",
+    "diagnostics"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/rollback-rehearsal-report.schema.json"
+      ]
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "rollback_rehearsal"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "source_shadow_apply_report": {
+      "type": "string"
+    },
+    "source_manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "run_id"
+      ],
+      "properties": {
+        "schema": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        }
+      }
+    },
+    "guard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed_apply_roots",
+        "changed_paths",
+        "invalid_paths",
+        "disallowed_paths"
+      ],
+      "properties": {
+        "allowed_apply_roots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "changed_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "invalid_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "disallowed_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total_changed_files",
+        "apply_verified",
+        "rollback_verified",
+        "failed"
+      ],
+      "properties": {
+        "total_changed_files": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "apply_verified": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rollback_verified": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/file"
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "change_type",
+        "live_exists_before",
+        "workspace_exists",
+        "apply_verified",
+        "rollback_verified",
+        "diagnostics"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "change_type": {
+          "type": "string",
+          "enum": [
+            "added",
+            "modified",
+            "deleted"
+          ]
+        },
+        "live_exists_before": {
+          "type": "boolean"
+        },
+        "workspace_exists": {
+          "type": "boolean"
+        },
+        "apply_verified": {
+          "type": "boolean"
+        },
+        "rollback_verified": {
+          "type": "boolean"
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

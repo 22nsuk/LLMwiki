@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Raw Intake Absorption Matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "generated_at",
+    "scope",
+    "source_count",
+    "action_counts",
+    "confidence_counts",
+    "target_counts",
+    "matrix"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/raw-intake-absorption-matrix.schema.json"
+      ]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "scope": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "action_counts": {
+      "$ref": "#/$defs/counts"
+    },
+    "confidence_counts": {
+      "$ref": "#/$defs/counts"
+    },
+    "target_counts": {
+      "$ref": "#/$defs/counts"
+    },
+    "matrix": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/matrix_entry"
+      }
+    }
+  },
+  "$defs": {
+    "counts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "matrix_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registry_id",
+        "title",
+        "raw_path",
+        "source_page",
+        "proposed_action",
+        "target",
+        "rationale",
+        "confidence",
+        "review_status"
+      ],
+      "properties": {
+        "registry_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "raw_path": {
+          "type": "string"
+        },
+        "source_page": {
+          "type": "string"
+        },
+        "current_topic_family": {
+          "type": "string"
+        },
+        "current_domain": {
+          "type": "string"
+        },
+        "proposed_action": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "string"
+        },
+        "review_status": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

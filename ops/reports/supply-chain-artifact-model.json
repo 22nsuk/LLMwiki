@@ -1,0 +1,1414 @@
+{
+  "$schema": "ops/schemas/supply-chain-artifact-model.schema.json",
+  "vault": ".",
+  "generated_at": "2026-05-14T12:49:24Z",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "tooling": {
+    "generator": "ops.scripts.supply_chain_artifact_model"
+  },
+  "subject": {
+    "type": "application",
+    "name": "llm-wiki-vnext",
+    "version": "0.1.0",
+    "bom_ref": "pkg:generic/llm-wiki-vnext@0.1.0",
+    "purl": "pkg:generic/llm-wiki-vnext@0.1.0"
+  },
+  "provenance_summary": {
+    "status": "pass",
+    "locked_package_count": 24,
+    "locked_dependency_edge_count": 24
+  },
+  "mapping_summary": {
+    "status": "pass",
+    "full_mapping_ready": true,
+    "release_dependency_inputs_complete": true,
+    "public_dependency_inputs_complete": true
+  },
+  "artifact_context": {
+    "artifact_set_id": "564bfe0324dd424d",
+    "security_advisories_ref": "ops/reports/security-advisories.json",
+    "model_ref": "ops/reports/supply-chain-artifact-model.json",
+    "cyclonedx_ref": "ops/reports/cyclonedx-bom.json",
+    "spdx_ref": "ops/reports/spdx-sbom.json",
+    "openvex_ref": "ops/reports/openvex-draft.json",
+    "in_toto_statement_ref": "ops/reports/in-toto-statement.json",
+    "sigstore_bundle_ref": "ops/reports/sigstore-bundle-verification.json"
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/build@1.5.0",
+      "name": "build",
+      "version": "1.5.0",
+      "scope": "excluded",
+      "purl": "pkg:pypi/build@1.5.0",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "3"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/78/e0/df5e171f685f82f37b12e1f208064e24244911079d7b767447d1af7e0d70/build-1.5.0.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:302c22c3ba2a0fd5f3911918651341ebb3896176cbdec15bd421f80b1afc7647"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2026-04-30T03:18:25.17Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:13f3eecb844759ab66efec90ca17639bbf14dc06cb2fdf37a9010322d9c50a6f"
+        },
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "pyproject.toml:project.optional-dependencies.dev"
+        },
+        {
+          "name": "urn:openai:sbom:requirement",
+          "value": "build>=1.3,<2"
+        },
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "requirements-dev.txt"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/colorama@0.4.6",
+      "name": "colorama",
+      "version": "0.4.6",
+      "scope": "excluded",
+      "purl": "pkg:pypi/colorama@0.4.6",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "0"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/d8/53/6f443c9a4a8358a93a6792e2acffb9d9d5cb0a5cfd8802644b7b1c9a02e4/colorama-0.4.6.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2022-10-25T02:36:22.414Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/execnet@2.1.2",
+      "name": "execnet",
+      "version": "2.1.2",
+      "scope": "excluded",
+      "purl": "pkg:pypi/execnet@2.1.2",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "0"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/bf/89/780e11f9588d9e7128a3f87788354c7946a9cbb1401ad38a48c4db9a4f07/execnet-2.1.2.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:63d83bfdd9a23e35b9c6a3261412324f964c2ec8dcd8d3c6916ee9373e0befcd"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2025-11-12T09:56:37.75Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:67fba928dd5a544b783f6056f449e5e3931a5c378b128bc18501f7ea79e296ec"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/iniconfig@2.3.0",
+      "name": "iniconfig",
+      "version": "2.3.0",
+      "scope": "excluded",
+      "purl": "pkg:pypi/iniconfig@2.3.0",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "0"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/72/34/14ca021ce8e5dfedc35312d08ba8bf51fdd999c576889fc2c24cb97f4f10/iniconfig-2.3.0.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:c76315c77db068650d49c5b56314774a7804df16fee4402c1f19d6d15d8c4730"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2025-10-18T21:55:43.219Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/librt@0.9.0",
+      "name": "librt",
+      "version": "0.9.0",
+      "scope": "excluded",
+      "purl": "pkg:pypi/librt@0.9.0",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "52"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "0"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/eb/6b/3d5c13fb3e3c4f43206c8f9dfed13778c2ed4f000bacaa0b7ce3c402a265/librt-0.9.0.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:a0951822531e7aee6e0dfb556b30d5ee36bbe234faf60c20a16c01be3530869d"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2026-04-09T16:06:26.173Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:9b3e3bc363f71bda1639a4ee593cb78f7fbfeacc73411ec0d4c92f00730010a4"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:2",
+          "value": "sha256:0a09c2f5869649101738653a9b7ab70cf045a1105ac66cbb8f4055e61df78f2d"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:3",
+          "value": "sha256:5ca8e133d799c948db2ab1afc081c333a825b5540475164726dcbf73537e5c2f"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:4",
+          "value": "sha256:603138ee838ee1583f1b960b62d5d0007845c5c423feb68e44648b1359014e27"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:5",
+          "value": "sha256:f4003f70c56a5addd6aa0897f200dd59afd3bf7bcd5b3cce46dd21f925743bc2"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/mypy@1.20.1",
+      "name": "mypy",
+      "version": "1.20.1",
+      "scope": "excluded",
+      "purl": "pkg:pypi/mypy@1.20.1",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "29"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "4"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/0b/3d/5b373635b3146264eb7a68d09e5ca11c305bbb058dfffbb47c47daf4f632/mypy-1.20.1.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:6fc3f4ecd52de81648fed1945498bf42fa2993ddfad67c9056df36ae5757f804"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2026-04-13T02:46:51.474Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:36ee2b9c6599c230fea89bbd79f401f9f9f8e9fcf0c777827789b19b7da90f51"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:2",
+          "value": "sha256:fba3fb0968a7b48806b0c90f38d39296f10766885a94c83bd21399de1e14eb28"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:3",
+          "value": "sha256:ef1415a637cd3627d6304dfbeddbadd21079dafc2a8a753c477ce4fc0c2af54f"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:4",
+          "value": "sha256:ef3461b1ad5cd446e540016e90b5984657edda39f982f4cc45ca317b628f5a37"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:5",
+          "value": "sha256:542dd63c9e1339b6092eb25bd515f3a32a1453aee8c9521d2ddb17dacd840237"
+        },
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "pyproject.toml:project.optional-dependencies.dev"
+        },
+        {
+          "name": "urn:openai:sbom:requirement",
+          "value": "mypy>=1.20,<2"
+        },
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "requirements-dev.txt"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/mypy-extensions@1.1.0",
+      "name": "mypy-extensions",
+      "version": "1.1.0",
+      "scope": "excluded",
+      "purl": "pkg:pypi/mypy-extensions@1.1.0",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "0"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/a2/6e/371856a3fb9d31ca8dac321cda606860fa4548858c0cc45d9d1d4ca2628b/mypy_extensions-1.1.0.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:52e68efc3284861e772bbcd66823fde5ae21fd2fdb51c62a211403730b916558"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2025-04-22T14:54:24.164Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:1be4cccdb0f2482337c4743e60421de3a356cd97508abadd57d47403e94f5505"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/packaging@26.1",
+      "name": "packaging",
+      "version": "26.1",
+      "scope": "excluded",
+      "purl": "pkg:pypi/packaging@26.1",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "0"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/df/de/0d2b39fb4af88a0258f3bac87dfcbb48e73fbdea4a2ed0e2213f9a4c2f9a/packaging-26.1.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:f042152b681c4bfac5cae2742a55e103d27ab2ec0f3d88037136b6bfe7c9c5de"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2026-04-14T21:12:49.362Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:5d9c0669c6285e491e0ced2eee587eaf67b670d94a19e94e3984a481aba6802f"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pathspec@1.0.4",
+      "name": "pathspec",
+      "version": "1.0.4",
+      "scope": "excluded",
+      "purl": "pkg:pypi/pathspec@1.0.4",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "0"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/fa/36/e27608899f9b8d4dff0617b2d9ab17ca5608956ca44461ac14ac48b44015/pathspec-1.0.4.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:0210e2ae8a21a9137c0d470578cb0e595af87edaa6ebf12ff176f14a02e0e645"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2026-01-27T03:59:46.938Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:fb6ae2fd4e7c921a165808a552060e722767cfa526f99ca5156ed2ce45a5c723"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pluggy@1.6.0",
+      "name": "pluggy",
+      "version": "1.6.0",
+      "scope": "excluded",
+      "purl": "pkg:pypi/pluggy@1.6.0",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "0"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/f9/e2/3e91f31a7d2b083fe6ef3fa267035b518369d9511ffab804f839851d2779/pluggy-1.6.0.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2025-05-15T12:30:07.975Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pygments@2.20.0",
+      "name": "pygments",
+      "version": "2.20.0",
+      "scope": "excluded",
+      "purl": "pkg:pypi/pygments@2.20.0",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "0"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/c3/b2/bc9c9196916376152d655522fdcebac55e66de6603a76a02bca1b6414f6c/pygments-2.20.0.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:6757cd03768053ff99f3039c1a36d6c0aa0b263438fcab17520b30a303a82b5f"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2026-03-29T13:29:33.898Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:81a9e26dd42fd28a23a2d169d86d7ac03b46e2f8b59ed4698fb4785f946d0176"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pyproject-hooks@1.2.0",
+      "name": "pyproject-hooks",
+      "version": "1.2.0",
+      "scope": "excluded",
+      "purl": "pkg:pypi/pyproject-hooks@1.2.0",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "0"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/e7/82/28175b2414effca1cdac8dc99f76d660e7a4fb0ceefa4b4ab8f5f6742925/pyproject_hooks-1.2.0.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:1e859bd5c40fae9448642dd871adf459e5e2084186e8d2c2a79a824c970da1f8"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2024-09-29T09:24:13.293Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:9e5c6bfa8dcc30091c74b0cf803c81fdd29d94f01992a7707bc97babb1141913"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pytest@8.4.2",
+      "name": "pytest",
+      "version": "8.4.2",
+      "scope": "excluded",
+      "purl": "pkg:pypi/pytest@8.4.2",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "5"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/a3/5c/00a0e072241553e1a7496d638deababa67c5058571567b92a7eaa258397c/pytest-8.4.2.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:86c0d0b93306b961d58d62a4db4879f27fe25513d4b969df351abdddb3c30e01"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2025-09-04T14:34:22.711Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:872f880de3fc3a5bdc88a11b39c9710c3497a547cfa9320bc3c5e62fbf272e79"
+        },
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "pyproject.toml:project.optional-dependencies.dev"
+        },
+        {
+          "name": "urn:openai:sbom:requirement",
+          "value": "pytest>=8.3,<9"
+        },
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "requirements-dev.txt"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pytest-xdist@3.8.0",
+      "name": "pytest-xdist",
+      "version": "3.8.0",
+      "scope": "excluded",
+      "purl": "pkg:pypi/pytest-xdist@3.8.0",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "2"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/78/b4/439b179d1ff526791eb921115fca8e44e596a13efeda518b9d845a619450/pytest_xdist-3.8.0.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:7e578125ec9bc6050861aa93f2d59f1d8d085595d6551c2c90b6f4fad8d3a9f1"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2025-07-01T13:30:59.346Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:202ca578cfeb7370784a8c33d6d05bc6e13b4f25b5053c30a152269fd10f0b88"
+        },
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "pyproject.toml:project.optional-dependencies.dev"
+        },
+        {
+          "name": "urn:openai:sbom:requirement",
+          "value": "pytest-xdist>=3.6,<4"
+        },
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "requirements-dev.txt"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/ruff@0.15.11",
+      "name": "ruff",
+      "version": "0.15.11",
+      "scope": "excluded",
+      "purl": "pkg:pypi/ruff@0.15.11",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "17"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "0"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/e4/8d/192f3d7103816158dfd5ea50d098ef2aec19194e6cbccd4b3485bdb2eb2d/ruff-0.15.11.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:f092b21708bf0e7437ce9ada249dfe688ff9a0954fc94abab05dcea7dcd29c33"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2026-04-16T18:46:26.58Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:e927cfff503135c558eb581a0c9792264aae9507904eb27809cdcff2f2c847b7"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:2",
+          "value": "sha256:7a1b5b2938d8f890b76084d4fa843604d787a912541eae85fd7e233398bbb73e"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:3",
+          "value": "sha256:d4176f3d194afbdaee6e41b9ccb1a2c287dba8700047df474abfbe773825d1cb"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:4",
+          "value": "sha256:3b17c886fb88203ced3afe7f14e8d5ae96e9d2f4ccc0ee66aa19f2c2675a27e4"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:5",
+          "value": "sha256:49fafa220220afe7758a487b048de4c8f9f767f37dfefad46b9dd06759d003eb"
+        },
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "pyproject.toml:project.optional-dependencies.dev"
+        },
+        {
+          "name": "urn:openai:sbom:requirement",
+          "value": "ruff>=0.15,<1"
+        },
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "requirements-dev.txt"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/types-pyyaml@6.0.12.20260408",
+      "name": "types-pyyaml",
+      "version": "6.0.12.20260408",
+      "scope": "excluded",
+      "purl": "pkg:pypi/types-pyyaml@6.0.12.20260408",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "0"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/74/73/b759b1e413c31034cc01ecdfb96b38115d0ab4db55a752a3929f0cd449fd/types_pyyaml-6.0.12.20260408.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:92a73f2b8d7f39ef392a38131f76b970f8c66e4c42b3125ae872b7c93b556307"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2026-04-08T04:30:50.974Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:fbc42037d12159d9c801ebfcc79ebd28335a7c13b08a4cfbc6916df78fee9384"
+        },
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "pyproject.toml:project.optional-dependencies.dev"
+        },
+        {
+          "name": "urn:openai:sbom:requirement",
+          "value": "types-PyYAML>=6.0,<7"
+        },
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "requirements-dev.txt"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/attrs@26.1.0",
+      "name": "attrs",
+      "version": "26.1.0",
+      "scope": "required",
+      "purl": "pkg:pypi/attrs@26.1.0",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "0"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/9a/8e/82a0fe20a541c03148528be8cac2408564a6c9a0cc7e9171802bc1d26985/attrs-26.1.0.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:d03ceb89cb322a8fd706d4fb91940737b6642aa36998fe130a9bc96c985eff32"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2026-03-19T14:22:25.026Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/jsonschema@4.26.0",
+      "name": "jsonschema",
+      "version": "4.26.0",
+      "scope": "required",
+      "purl": "pkg:pypi/jsonschema@4.26.0",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "4"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/b3/fc/e067678238fa451312d4c62bf6e6cf5ec56375422aee02f9cb5f909b3047/jsonschema-4.26.0.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:0c26707e2efad8aa1bfc5b7ce170f3fccc2e4918ff85989ba9ffa9facb2be326"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2026-01-07T13:41:07.246Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/jsonschema-specifications@2025.9.1",
+      "name": "jsonschema-specifications",
+      "version": "2025.9.1",
+      "scope": "required",
+      "purl": "pkg:pypi/jsonschema-specifications@2025.9.1",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/19/74/a633ee74eb36c44aa6d1095e7cc5569bebf04342ee146178e2d36600708b/jsonschema_specifications-2025.9.1.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:b540987f239e745613c7a9176f3edb72b832a4ac465cf02712288397832b5e8d"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2025-09-08T01:34:59.186Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/pyyaml@6.0.3",
+      "name": "pyyaml",
+      "version": "6.0.3",
+      "scope": "required",
+      "purl": "pkg:pypi/pyyaml@6.0.3",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "38"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "0"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/05/8e/961c0007c59b8dd7729d542c61a4d537767a59645b82a0b521206e1e25c2/pyyaml-6.0.3.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:d76623373421df22fb4cf8817020cbb7ef15c725b9d5e45f17e189bfc384190f"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2025-09-25T21:33:16.546Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:7f047e29dcae44602496db43be01ad42fc6f1cc0d8cd6c83d342306c32270196"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:2",
+          "value": "sha256:fc09d0aa354569bc501d4e787133afc08552722d3ab34836a80547331bb5d4a0"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:3",
+          "value": "sha256:9149cad251584d5fb4981be1ecde53a1ca46c891a79788c0df828d2f166bda28"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:4",
+          "value": "sha256:5fdec68f91a0c6739b380c83b951e2c72ac0197ace422360e6d5a959d8d97b2c"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:5",
+          "value": "sha256:ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/referencing@0.37.0",
+      "name": "referencing",
+      "version": "0.37.0",
+      "scope": "required",
+      "purl": "pkg:pypi/referencing@0.37.0",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "3"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/22/f5/df4e9027acead3ecc63e50fe1e36aca1523e1719559c499951bb4b53188f/referencing-0.37.0.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:44aefc3142c5b842538163acb373e24cce6632bd54bdb01b21ad5863489f50d8"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2025-10-13T15:30:48.871Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/rpds-py@0.30.0",
+      "name": "rpds-py",
+      "version": "0.30.0",
+      "scope": "required",
+      "purl": "pkg:pypi/rpds-py@0.30.0",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "73"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "0"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/20/af/3f2f423103f1113b36230496629986e0ef7e199d2aa8392452b484b38ced/rpds_py-0.30.0.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:dd8ff7cf90014af0c0f787eea34794ebf6415242ee1d6fa91eaba725cc441e84"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2025-11-30T20:24:38.837Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:a161f20d9a43006833cd7068375a94d035714d73a172b681d8881820600abfad"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:2",
+          "value": "sha256:6abc8880d9d036ecaafe709079969f56e876fcf107f7a8e9920ba6d5a3878d05"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:3",
+          "value": "sha256:ca28829ae5f5d569bb62a79512c842a03a12576375d5ece7d2cadf8abe96ec28"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:4",
+          "value": "sha256:a1010ed9524c73b94d15919ca4d41d8780980e1765babf85f9a2f90d247153dd"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:5",
+          "value": "sha256:f8d1736cfb49381ba528cd5baa46f82fdc65c06e843dab24dd70b63d09121b3f"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:pypi/typing-extensions@4.15.0",
+      "name": "typing-extensions",
+      "version": "4.15.0",
+      "scope": "required",
+      "purl": "pkg:pypi/typing-extensions@4.15.0",
+      "publisher": "https://pypi.org/simple",
+      "properties": [
+        {
+          "name": "urn:openai:sbom:component-source",
+          "value": "uv.lock"
+        },
+        {
+          "name": "urn:openai:sbom:registry",
+          "value": "https://pypi.org/simple"
+        },
+        {
+          "name": "urn:openai:sbom:editable",
+          "value": ""
+        },
+        {
+          "name": "urn:openai:sbom:wheel-count",
+          "value": "1"
+        },
+        {
+          "name": "urn:openai:sbom:dependency-count",
+          "value": "0"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-url",
+          "value": "https://files.pythonhosted.org/packages/72/94/1a15dd82efb362ac84269196e94cf00f187f7ed21c242792a923cdb1c61f/typing_extensions-4.15.0.tar.gz"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-hash",
+          "value": "sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466"
+        },
+        {
+          "name": "urn:openai:sbom:sdist-upload-time",
+          "value": "2025-08-25T13:49:26.313Z"
+        },
+        {
+          "name": "urn:openai:sbom:wheel-hash:1",
+          "value": "sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:generic/llm-wiki-vnext@0.1.0",
+      "dependsOn": [
+        "pkg:pypi/jsonschema@4.26.0",
+        "pkg:pypi/pyyaml@6.0.3"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/attrs@26.1.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/build@1.5.0",
+      "dependsOn": [
+        "pkg:pypi/colorama@0.4.6",
+        "pkg:pypi/packaging@26.1",
+        "pkg:pypi/pyproject-hooks@1.2.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/colorama@0.4.6",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/execnet@2.1.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/iniconfig@2.3.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/jsonschema@4.26.0",
+      "dependsOn": [
+        "pkg:pypi/attrs@26.1.0",
+        "pkg:pypi/jsonschema-specifications@2025.9.1",
+        "pkg:pypi/referencing@0.37.0",
+        "pkg:pypi/rpds-py@0.30.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/jsonschema-specifications@2025.9.1",
+      "dependsOn": [
+        "pkg:pypi/referencing@0.37.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/librt@0.9.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/mypy@1.20.1",
+      "dependsOn": [
+        "pkg:pypi/librt@0.9.0",
+        "pkg:pypi/mypy-extensions@1.1.0",
+        "pkg:pypi/pathspec@1.0.4",
+        "pkg:pypi/typing-extensions@4.15.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/mypy-extensions@1.1.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/packaging@26.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pathspec@1.0.4",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pluggy@1.6.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pygments@2.20.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pyproject-hooks@1.2.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pytest@8.4.2",
+      "dependsOn": [
+        "pkg:pypi/colorama@0.4.6",
+        "pkg:pypi/iniconfig@2.3.0",
+        "pkg:pypi/packaging@26.1",
+        "pkg:pypi/pluggy@1.6.0",
+        "pkg:pypi/pygments@2.20.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/pytest-xdist@3.8.0",
+      "dependsOn": [
+        "pkg:pypi/execnet@2.1.2",
+        "pkg:pypi/pytest@8.4.2"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/pyyaml@6.0.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/referencing@0.37.0",
+      "dependsOn": [
+        "pkg:pypi/attrs@26.1.0",
+        "pkg:pypi/rpds-py@0.30.0",
+        "pkg:pypi/typing-extensions@4.15.0"
+      ]
+    },
+    {
+      "ref": "pkg:pypi/rpds-py@0.30.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/ruff@0.15.11",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/types-pyyaml@6.0.12.20260408",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/typing-extensions@4.15.0",
+      "dependsOn": []
+    }
+  ],
+  "advisories": [],
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/supply-chain-artifact-model.schema.json\", \"artifact_kind\": \"supply_chain_artifact_model\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-14T12:49:24Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-14T12:49:24Z\", \"input_fingerprints\": {\"advisory_count\": \"5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"artifact_set_id\": \"5254e09bebf3577018a5841362f79afa4278abb32f4ce6f6ce5b4444e631455d\", \"mapping_status\": \"d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1\", \"policy\": \"ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f\", \"provenance_status\": \"d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1\", \"schema\": \"8b02a0c6bf9fb1c08e11d2fbd35675286b26a2e1391a6c7e37f939a3db7757ba\", \"source_paths\": \"2a899fbbe950735d48dee808fa63a30110565801720e96311c011846f2a17ee8\"}, \"producer\": \"ops.scripts.supply_chain_artifact_model\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.supply_chain.supply_chain_artifact_model\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"c848a4c2fc8919d5a720738ed147aa5f54e5f56b91bd52916b68aac9379dfb2b\"}"
+      }
+    ]
+  }
+}

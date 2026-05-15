@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki/schemas/release-authority-vocabulary",
+  "title": "Release authority vocabulary",
+  "description": "Shared status and reason vocabulary for release authority, sealed distribution, and readiness release-gate blockers.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "release_authority_status": {
+      "type": "string",
+      "enum": ["clean_pass", "conditional_pass", "blocked", "unknown"]
+    },
+    "sealed_release_status": {
+      "type": "string",
+      "enum": ["sealed_clean_pass", "sealed_conditional_pass"]
+    },
+    "release_authority_reason_id": {
+      "type": "string",
+      "enum": [
+        "release_authority_not_clean_pass",
+        "machine_release_not_allowed",
+        "sealed_release_not_clean_pass",
+        "distribution_package_not_materialized",
+        "artifact_inventory_not_current"
+      ]
+    },
+    "operator_summary_parser": {
+      "type": "string",
+      "const": "release_authority_operator_summary_v1"
+    },
+    "operator_summary_field": {
+      "type": "string",
+      "enum": [
+        "release_authority_status",
+        "semantic_release_status",
+        "sealed_release_status",
+        "machine_release_allowed",
+        "clean_release_ready",
+        "batch_integrity_status",
+        "distribution_package_status",
+        "authority_reason_ids",
+        "sealed_reason_ids",
+        "blocker_reason_ids"
+      ]
+    }
+  }
+}

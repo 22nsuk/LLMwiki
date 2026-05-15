@@ -1,0 +1,269 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Artifact Relocation Audit",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "status",
+    "recommended_next_action",
+    "relocation_rules",
+    "dependency_scan",
+    "summary",
+    "candidates",
+    "blocking_references"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": ["ops/schemas/artifact-relocation-audit.schema.json"]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": ["artifact_relocation_audit"]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "producer": {
+      "type": "string",
+      "enum": ["ops.scripts.artifact_relocation_audit"]
+    },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": {
+      "type": "string",
+      "enum": ["current", "archived", "stale", "unknown"]
+    },
+    "retention_policy": {
+      "type": "string",
+      "enum": ["canonical_report"]
+    },
+    "encoding": {
+      "type": "string",
+      "enum": ["utf-8"]
+    },
+    "currentness": {
+      "$ref": "#/$defs/currentness"
+    },
+    "vault": { "type": "string" },
+    "policy": {
+      "$ref": "#/$defs/policy_identity"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pass", "attention", "fail"]
+    },
+    "recommended_next_action": { "type": "string", "minLength": 1 },
+    "relocation_rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/relocation_rule" }
+    },
+    "dependency_scan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roots", "excluded_prefixes", "file_count", "files"],
+      "properties": {
+        "roots": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "excluded_prefixes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "file_count": { "type": "integer", "minimum": 0 },
+        "files": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_count",
+        "relocated_count",
+        "move_ready_count",
+        "blocking_candidate_count",
+        "old_reference_count",
+        "new_reference_count",
+        "dependency_file_count"
+      ],
+      "properties": {
+        "candidate_count": { "type": "integer", "minimum": 0 },
+        "relocated_count": { "type": "integer", "minimum": 0 },
+        "move_ready_count": { "type": "integer", "minimum": 0 },
+        "blocking_candidate_count": { "type": "integer", "minimum": 0 },
+        "old_reference_count": { "type": "integer", "minimum": 0 },
+        "new_reference_count": { "type": "integer", "minimum": 0 },
+        "dependency_file_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/candidate" }
+    },
+    "blocking_references": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/blocking_reference_group" }
+    }
+  },
+  "$defs": {
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["current", "stale", "unknown", "invalid"]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "policy_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string" },
+        "version": { "type": ["integer", "string", "null"] }
+      }
+    },
+    "relocation_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule_id", "description", "gate_effect"],
+      "properties": {
+        "rule_id": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "gate_effect": {
+          "type": "string",
+          "enum": ["blocking", "advisory"]
+        }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_name",
+        "classification",
+        "old_path",
+        "new_path",
+        "reason",
+        "status",
+        "relocation_status",
+        "recommended_next_action",
+        "old_path_exists",
+        "new_path_exists",
+        "old_reference_count",
+        "new_reference_count",
+        "blocking_references",
+        "new_path_references"
+      ],
+      "properties": {
+        "artifact_name": { "type": "string", "minLength": 1 },
+        "classification": {
+          "type": "string",
+          "enum": ["operator_only"]
+        },
+        "old_path": { "type": "string", "minLength": 1 },
+        "new_path": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 },
+        "status": {
+          "type": "string",
+          "enum": ["pass", "attention", "fail"]
+        },
+        "relocation_status": {
+          "type": "string",
+          "enum": [
+            "relocated",
+            "move_ready",
+            "artifact_missing",
+            "old_path_references_block_relocation",
+            "old_and_new_paths_both_exist"
+          ]
+        },
+        "recommended_next_action": { "type": "string", "minLength": 1 },
+        "old_path_exists": { "type": "boolean" },
+        "new_path_exists": { "type": "boolean" },
+        "old_reference_count": { "type": "integer", "minimum": 0 },
+        "new_reference_count": { "type": "integer", "minimum": 0 },
+        "blocking_references": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/reference" }
+        },
+        "new_path_references": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/reference" }
+        }
+      }
+    },
+    "blocking_reference_group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate", "old_path", "references"],
+      "properties": {
+        "candidate": { "type": "string", "minLength": 1 },
+        "old_path": { "type": "string", "minLength": 1 },
+        "references": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/reference" }
+        }
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "match_count", "matches"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "match_count": { "type": "integer", "minimum": 1 },
+        "matches": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/reference_match" }
+        }
+      }
+    },
+    "reference_match": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["line", "excerpt"],
+      "properties": {
+        "line": { "type": "integer", "minimum": 1 },
+        "excerpt": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

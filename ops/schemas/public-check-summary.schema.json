@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Public Check Summary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "status",
+    "summary",
+    "public_export",
+    "commands"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": ["ops/schemas/public-check-summary.schema.json"]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": ["public_check_summary"]
+    },
+    "generated_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" },
+    "producer": { "type": "string", "enum": ["ops.scripts.public_check_summary"] },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": { "type": "string", "enum": ["current", "archived", "stale", "unknown"] },
+    "retention_policy": { "type": "string", "enum": ["canonical_report"] },
+    "encoding": { "type": "string", "enum": ["utf-8"] },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown", "invalid"] },
+        "checked_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" }
+      }
+    },
+    "vault": { "type": "string" },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string" },
+        "version": { "type": ["integer", "string", "null"] }
+      }
+    },
+    "status": { "type": "string", "enum": ["pass", "fail", "timeout", "interrupted"] },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "public_export_status",
+        "public_check_status",
+        "export_file_count",
+        "export_source_file_count",
+        "export_root_fingerprint",
+        "public_export_manifest_sha256",
+        "public_surface_policy_sha256",
+        "command_count",
+        "command_fail_count",
+        "pytest_passed",
+        "pytest_failed",
+        "pytest_errors",
+        "pytest_skipped"
+      ],
+      "properties": {
+        "public_export_status": { "type": "string", "enum": ["pass"] },
+        "public_check_status": { "type": "string", "enum": ["pass", "fail", "timeout", "interrupted"] },
+        "export_file_count": { "type": "integer", "minimum": 0 },
+        "export_source_file_count": { "type": "integer", "minimum": 0 },
+        "export_root_fingerprint": { "$ref": "#/$defs/sha256" },
+        "public_export_manifest_sha256": { "$ref": "#/$defs/sha256" },
+        "public_surface_policy_sha256": { "$ref": "#/$defs/sha256" },
+        "command_count": { "type": "integer", "minimum": 0 },
+        "command_fail_count": { "type": "integer", "minimum": 0 },
+        "pytest_passed": { "type": "integer", "minimum": 0 },
+        "pytest_failed": { "type": "integer", "minimum": 0 },
+        "pytest_errors": { "type": "integer", "minimum": 0 },
+        "pytest_skipped": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "public_export": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "output_dir",
+        "manifest_file",
+        "file_count",
+        "source_file_count",
+        "export_root_fingerprint",
+        "manifest_sha256"
+      ],
+      "properties": {
+        "output_dir": { "type": "string", "minLength": 1 },
+        "manifest_file": { "type": "string", "minLength": 1 },
+        "file_count": { "type": "integer", "minimum": 0 },
+        "source_file_count": { "type": "integer", "minimum": 0 },
+        "export_root_fingerprint": { "$ref": "#/$defs/sha256" },
+        "manifest_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "$ref": "#/$defs/command_result" }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "command_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "command",
+        "cwd",
+        "status",
+        "returncode",
+        "timed_out",
+        "timeout_seconds",
+        "termination_reason",
+        "duration_ms",
+        "stdout_tail",
+        "stderr_tail",
+        "pytest_counts"
+      ],
+      "properties": {
+        "id": { "type": "string", "enum": ["ruff", "mypy", "pytest_public"] },
+        "command": { "type": "string", "minLength": 1 },
+        "cwd": { "type": "string", "enum": ["."] },
+        "status": { "type": "string", "enum": ["pass", "fail"] },
+        "returncode": { "type": "integer" },
+        "timed_out": { "type": "boolean" },
+        "timeout_seconds": { "type": "integer", "minimum": 1 },
+        "termination_reason": { "type": "string", "minLength": 1 },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "stdout_tail": { "type": "string" },
+        "stderr_tail": { "type": "string" },
+        "pytest_counts": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

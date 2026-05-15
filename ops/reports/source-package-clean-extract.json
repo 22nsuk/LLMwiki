@@ -1,0 +1,157 @@
+{
+  "$schema": "ops/schemas/source-package-clean-extract.schema.json",
+  "artifact_kind": "source_package_clean_extract",
+  "generated_at": "2026-05-15T04:09:25Z",
+  "producer": "ops.scripts.source_package_clean_extract",
+  "source_command": "python -m ops.scripts.source_package_clean_extract --vault .",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "18842902f78376ea18432b26556335983a966baf4fd8bb4877e16d177a3addfc",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "0ce65c4392243c1c7eb939c1c56448c326795f83c58572a8400d7db1b8b89cc0",
+    "source_zip": "c7b29eafe5c0b07413265e5728c8314dcf3d2b934ceadf90409c70bd49367a76",
+    "zip_smoke_report": "b10f059a8c8be80cb73b3874323b394598c14e7b754ff166378792c115c75965",
+    "archive_root_name": "16e8bef78c32198777a85a911c5318b19502b6097d5f994a951578e17d052627",
+    "archive_root_source": "1024cb551d0155801d1a6906c526613eab1bef5238d87887d9b83892ac6f90d3",
+    "deselection_policy": "d7cdf13d224bc19222fd99a33e87e00034c5ace72c4d0f4e4f1055e5bc4f3d1a",
+    "deselects": "f16d40e28a77a9c1421d7d3deea85dcacfa691dc176b520ef5281fbb7282e863",
+    "mypy_targets": "8753c0405e3ead0fa3d38c57aaa1dd341c056404c22e2dc81b52f1e6d53899c7",
+    "pytest_flags": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pytest_mark_expr": "4dc35b564f83d5109a5f3cbb47b1b4dad161bae97ce634e8a0fe8a5043997ee0",
+    "ruff_targets": "63b9a1a2de05adb2ffcecc065230ee43f75db552729734006d1a3d081d3157cd",
+    "source_python": "5981ac7b22f0a92bfc7c35da027723ed252fb3297b95679821074a0dbd211829",
+    "status": "d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1",
+    "test_summary_out": "09739e1706c923a4976d24f25b0ae7432a47575e2f23f702689a7a5c3542b284",
+    "tests": "59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-15T04:09:25Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "pass",
+  "source_zip": {
+    "path": "tmp/source-package-check/LLMwiki-source.zip",
+    "exists": true,
+    "sha256": "c7b29eafe5c0b07413265e5728c8314dcf3d2b934ceadf90409c70bd49367a76"
+  },
+  "extract": {
+    "parent": "tmp/source-package-check/extract",
+    "root": "tmp/source-package-check/extract/LLMwiki",
+    "archive_root_name": "LLMwiki",
+    "archive_root_source": "archive_self_description",
+    "status": "pass",
+    "summary": "source package extracted"
+  },
+  "commands": [
+    {
+      "name": "ruff",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "ruff",
+        "check",
+        "ops/scripts",
+        "tests",
+        "tools"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "timeout_seconds": 5400,
+      "termination_reason": "completed",
+      "duration_ms": 36,
+      "stdout_tail": "All checks passed!\n",
+      "stderr_tail": "",
+      "status": "pass"
+    },
+    {
+      "name": "mypy",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "mypy",
+        "@ops/mypy-allowlist.txt"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "timeout_seconds": 5400,
+      "termination_reason": "completed",
+      "duration_ms": 2858,
+      "stdout_tail": "Success: no issues found in 224 source files\n",
+      "stderr_tail": "",
+      "status": "pass"
+    },
+    {
+      "name": "test-source-package",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "ops.scripts.test_execution_summary",
+        "--vault",
+        ".",
+        "--out",
+        "tmp/test-source-package-summary.json",
+        "--suite",
+        "source-package",
+        "--collect-nodeids",
+        "--deselection-policy",
+        "ops/policies/source-package-test-deselections.json",
+        "--",
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-m",
+        "not artifact_finalization and not release_sealing",
+        "tests",
+        "--deselect=tests/test_generated_report_contracts.py",
+        "--deselect=tests/test_external_report_lifecycle_static.py",
+        "--deselect=tests/test_import_fallback_contract.py",
+        "--deselect=tests/test_script_module_surface_contract.py",
+        "--deselect=tests/test_writer_output_paths.py"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "timeout_seconds": 5400,
+      "termination_reason": "completed",
+      "duration_ms": 301966,
+      "stdout_tail": "_policy_entry_count\": 0,\n    \"unused_policy_entry_count\": 0,\n    \"risk_owner\": \"runtime-maintainer\",\n    \"expires_at\": \"2026-06-08T00:00:00Z\",\n    \"count_increase_gate_effect\": \"fail\",\n    \"expiry_gate_effect\": \"fail\",\n    \"next_action\": \"none\",\n    \"blockers\": []\n  },\n  \"pytest_marker_deselected_count\": 118,\n  \"policy_deselected_count\": 5,\n  \"pytest_collect_nodeid_digest\": {\n    \"status\": \"collected\",\n    \"command\": \"'<home>/code/LLMwiki/.venv/bin/python' -m pytest -o addopts= --collect-only -q --capture=no tests -m 'not artifact_finalization and not release_sealing' --deselect=tests/test_generated_report_contracts.py --deselect=tests/test_external_report_lifecycle_static.py --deselect=tests/test_import_fallback_contract.py --deselect=tests/test_script_module_surface_contract.py --deselect=tests/test_writer_output_paths.py\",\n    \"nodeid_count\": 1102,\n    \"sha256\": \"21df233d903c7c089da8999386c4274a3e46ccdba65c9e97e65ef8e2c3268e4e\",\n    \"reason\": \"\"\n  },\n  \"nodeid_outcome_consistency\": {\n    \"status\": \"pass\",\n    \"nodeid_count\": 1102,\n    \"outcome_count\": 1102,\n    \"counted_outcomes\": {\n      \"passed\": 1097,\n      \"skipped\": 5,\n      \"xfailed\": 0,\n      \"xpassed\": 0\n    },\n    \"delta\": 0,\n    \"reason\": \"collected nodeid count matches passed + skipped + xfailed/xpassed outcomes\"\n  },\n  \"evidence_artifacts\": [],\n  \"stdout_tail\": \"........................................................................ [  6%]/n......................................................sssss............. [ 13%]/n........................................................................ [ 19%]/n........................................................................ [ 26%]/n........................................................................ [ 32%]/n........................................................................ [ 39%]/n........................................................................ [ 45%]/n........................................................................ [ 52%]/n........................................................................ [ 58%]/n........................................................................ [ 65%]/n........................................................................ [ 71%]/n........................................................................ [ 78%]/n........................................................................ [ 84%]/n........................................................................ [ 91%]/n........................................................................ [ 98%]/n......................                                                   [100%]/n1097 passed, 5 skipped, 123 deselected in 298.86s (0:04:58)/n\",\n  \"stderr_tail\": \"\",\n  \"release_contract_diagnosis\": [\n    {\n      \"name\": \"pytest_contract_summary\",\n      \"status\": \"clean_pass\",\n      \"lane\": \"clean\",\n      \"command\": \"'<home>/code/LLMwiki/.venv/bin/python' -m pytest -m 'not artifact_finalization and not release_sealing' tests --deselect=tests/test_generated_report_contracts.py --deselect=tests/test_external_report_lifecycle_static.py --deselect=tests/test_import_fallback_contract.py --deselect=tests/test_script_module_surface_contract.py --deselect=tests/test_writer_output_paths.py\",\n      \"duration_seconds\": 299.18,\n      \"checked_at\": \"2026-05-15T04:14:23Z\",\n      \"blocker_conditions\": [],\n      \"accepted_risk_family\": null,\n      \"risk_acceptance_ref\": null,\n      \"reason\": \"\"\n    },\n    {\n      \"name\": \"static_checks\",\n      \"status\": \"not_run\",\n      \"lane\": \"blocked\",\n      \"command\": \"make static\",\n      \"duration_seconds\": null,\n      \"checked_at\": null,\n      \"blocker_conditions\": [\n        \"external_static_evidence_not_captured_by_summary\"\n      ],\n      \"accepted_risk_family\": null,\n      \"risk_acceptance_ref\": null,\n      \"reason\": \"not executed inside this pytest summary; use release-builder evidence before treating static checks as covered\"\n    }\n  ]\n}\n\nwritten_to=tmp/test-source-package-summary.json\n",
+      "stderr_tail": "",
+      "status": "pass"
+    }
+  ],
+  "ruff_status": "pass",
+  "mypy_status": "pass",
+  "test_source_package_status": "pass",
+  "test_source_package_summary": {
+    "path": "tmp/source-package-check/extract/LLMwiki/tmp/test-source-package-summary.json",
+    "load_status": "ok",
+    "status": "pass"
+  },
+  "deselection_budget_status": {
+    "status": "pass",
+    "load_status": "ok",
+    "actual_deselected_count": 5,
+    "max_allowed_deselected_count": 5,
+    "over_budget": false,
+    "expires_at": "2026-06-08T00:00:00Z",
+    "next_action": "none"
+  },
+  "source_package_reproducibility_status": "pass",
+  "zip_smoke_report": {
+    "path": "tmp/source-package-check/release-distribution-zip-smoke.json",
+    "load_status": "ok",
+    "status": "pass",
+    "manifest_comparison_pass": true,
+    "archive_budget_pass": true
+  }
+}

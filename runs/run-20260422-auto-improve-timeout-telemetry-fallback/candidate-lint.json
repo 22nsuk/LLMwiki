@@ -1,0 +1,1323 @@
+{
+  "$schema": "ops/schemas/lint-report.schema.json",
+  "vault": ".",
+  "generated_at": "2026-04-22T12:52:35Z",
+  "artifact_kind": "wiki_lint_report",
+  "producer": "ops.scripts.wiki_lint",
+  "source_command": "python -m ops.scripts.wiki_lint",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "legacy_backfill_run_20260422_auto_improve_timeout_telemetry_fallback_candidate_lint",
+  "input_fingerprints": {
+    "policy": "legacy_backfill",
+    "schema": "legacy_backfill",
+    "artifact_envelope_schema": "legacy_backfill",
+    "legacy_original_sha256": "f24f9c4bf245998dcd1c06812ec72315d357b4a543f1a1ccf0b60fcf4ea481ba"
+  },
+  "schema_version": 1,
+  "artifact_status": "archived",
+  "retention_policy": "archive",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-04-22T12:52:35Z"
+  },
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "pass",
+  "errors": [],
+  "warnings": [],
+  "review_candidates": [
+    {
+      "type": "page_lines_over_threshold",
+      "page": "wiki/index.md",
+      "value": 162,
+      "threshold": 160,
+      "suggested_action": "review_for_split_or_restructure"
+    },
+    {
+      "type": "page_lines_over_threshold",
+      "page": "system/synthesis--llm-wiki-self-improvement-architecture.md",
+      "value": 161,
+      "threshold": 160,
+      "suggested_action": "review_for_split_or_restructure"
+    },
+    {
+      "type": "raw_registry_shard_lines_over_threshold",
+      "page": "system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-1.md",
+      "value": 636,
+      "threshold": 500,
+      "entry_count": 55,
+      "top_contributing_families": [
+        {
+          "topic_family": "global-markets-and-misc-intake",
+          "entry_count": 55,
+          "estimated_line_count": 605
+        }
+      ],
+      "suggested_action": "review_family_router_or_second_order_shard"
+    },
+    {
+      "type": "raw_registry_shard_lines_over_threshold",
+      "page": "system/system-raw-registry/wiki.md",
+      "value": 527,
+      "threshold": 500,
+      "entry_count": 35,
+      "top_contributing_families": [
+        {
+          "topic_family": "market-access-and-domestic-strain",
+          "entry_count": 6,
+          "estimated_line_count": 66
+        },
+        {
+          "topic_family": "ai-media-gatekeeping",
+          "entry_count": 3,
+          "estimated_line_count": 33
+        },
+        {
+          "topic_family": "middle-east-security-statecraft",
+          "entry_count": 3,
+          "estimated_line_count": 33
+        }
+      ],
+      "suggested_action": "review_family_router_or_second_order_shard"
+    },
+    {
+      "type": "wiki_synthesis_multi_question_watch_candidate",
+      "page": "wiki/synthesis--ai-capability-claims-and-validation-gap-2026-04-12.md",
+      "value": {
+        "source_links": 21,
+        "analysis_subsections": 5,
+        "line_count": 140
+      },
+      "threshold": {
+        "source_links": 5,
+        "analysis_subsections": 5,
+        "line_count": 55
+      },
+      "missing_boundary_sections": [],
+      "supporting_pages": [
+        "wiki/source--ai-engineering-harness-systems-over-models-2026-04-21.md",
+        "wiki/source--ai-kelly-bench-and-long-horizon-failure-2026-04-13.md",
+        "wiki/source--anthropic-advisor-strategy-2026-04-13.md",
+        "wiki/source--anthropic-automated-weak-to-strong-researcher-2026-04-15.md",
+        "wiki/source--anthropic-claude-shrinkflation-controversy-2026-04-21.md",
+        "wiki/source--anthropic-mythos-security-claims-critique-2026-04-12.md",
+        "wiki/source--apple-siri-ai-bootcamp-and-integration-debt-2026-04-16.md",
+        "wiki/source--china-ai-research-output-and-patent-lead-2026-04-16.md",
+        "wiki/source--claude-opus-regression-and-b2b-focus-2026-04-21.md",
+        "wiki/source--claude-verification-bypass-in-china-2026-04-21.md",
+        "wiki/source--deepmind-roots-over-leaves-research-philosophy-2026-04-21.md",
+        "wiki/source--glasswing-government-mythos-cyber-response-2026-04-21.md",
+        "wiki/source--google-ai-adoption-20-60-20-gap-2026-04-21.md",
+        "wiki/source--government-anthropic-mythos-security-consultation-2026-04-21.md",
+        "wiki/source--grok-4-3-agentic-vision-update-2026-04-21.md",
+        "wiki/source--openai-research-intern-and-continual-learning-2026-04-12.md",
+        "wiki/source--openai-science-leadership-exits-2026-04-21.md",
+        "wiki/source--project-glasswing-defensive-ai-cybersecurity-2026-04-15.md",
+        "wiki/source--self-learning-ai-startup-funding-surge-2026-04-21.md",
+        "wiki/source--tesla-fsd-paid-upgrade-breakdown-2026-04-21.md",
+        "wiki/source--white-house-anthropic-mythos-response-2026-04-21.md"
+      ],
+      "reason": "wiki synthesis is broad enough to watch for future scope creep, but it already declares exclusion, tension, and future-ingest boundaries",
+      "suggested_action": "watch_scope_boundary_and_future_ingest_routes",
+      "advisory": {
+        "boundary_sections_present": [
+          "What this synthesis excludes",
+          "Tensions / contradictions",
+          "Implications for future ingest"
+        ],
+        "exclusion_axes": [
+          "실행 인프라 economics",
+          "누가 더 강한가",
+          "무슨 종류의 증거 위에 그 주장이 올라가 있는가"
+        ],
+        "tension_axes": [
+          "인상적인 benchmark narrative",
+          "장기 실사용 실패 signal",
+          "벤더 내부 평가와 공식 rollout의 실용성",
+          "독립 재현의 부족"
+        ],
+        "future_ingest_axes": [
+          "직접 실험",
+          "외삽",
+          "벤더 benchmark 또는 공식 vendor artifact",
+          "장기 과업 평가",
+          "전망",
+          "capability validation",
+          "institutional rollout narrative"
+        ]
+      }
+    },
+    {
+      "type": "wiki_synthesis_multi_question_watch_candidate",
+      "page": "wiki/synthesis--ai-compute-control-us-china-geopolitical-choke-2026-04-18.md",
+      "value": {
+        "source_links": 10,
+        "analysis_subsections": 5,
+        "line_count": 107
+      },
+      "threshold": {
+        "source_links": 5,
+        "analysis_subsections": 5,
+        "line_count": 55
+      },
+      "missing_boundary_sections": [],
+      "supporting_pages": [
+        "wiki/source--asml-ai-chip-demand-and-semiconductor-capex-resilience-2026-04-16.md",
+        "wiki/source--china-ai-research-output-and-patent-lead-2026-04-16.md",
+        "wiki/source--chinese-ai-chipmakers-local-share-gains-under-export-controls-2026-04-14.md",
+        "wiki/source--google-marvell-dual-ai-chip-plans-2026-04-21.md",
+        "wiki/source--google-marvell-inference-tpu-collaboration-2026-04-21.md",
+        "wiki/source--sk-hynix-us-adr-and-ai-memory-capital-access-2026-04-16.md",
+        "wiki/source--taiwan-market-cap-semiconductor-rerating-2026-04-16.md",
+        "wiki/source--us-ai-diffusion-rule-rescission-and-chip-export-reset-2026-04-13.md",
+        "wiki/source--us-chip-export-controls-prc-background-2026-04-13.md",
+        "wiki/source--us-h200-license-review-policy-for-china-2026-04-13.md"
+      ],
+      "reason": "wiki synthesis is broad enough to watch for future scope creep, but it already declares exclusion, tension, and future-ingest boundaries",
+      "suggested_action": "watch_scope_boundary_and_future_ingest_routes",
+      "advisory": {
+        "boundary_sections_present": [
+          "What this synthesis excludes",
+          "Tensions / contradictions",
+          "Implications for future ingest"
+        ],
+        "exclusion_axes": [],
+        "tension_axes": [],
+        "future_ingest_axes": [
+          "policy perimeter",
+          "license exception",
+          "local substitution",
+          "research-output narrative",
+          "ally supplier exposure",
+          "capital-market rerating"
+        ]
+      }
+    },
+    {
+      "type": "wiki_synthesis_multi_question_watch_candidate",
+      "page": "wiki/synthesis--ai-execution-surface-and-runtime-efficiency-2026-04-13.md",
+      "value": {
+        "source_links": 9,
+        "analysis_subsections": 8,
+        "line_count": 121
+      },
+      "threshold": {
+        "source_links": 5,
+        "analysis_subsections": 5,
+        "line_count": 55
+      },
+      "missing_boundary_sections": [],
+      "supporting_pages": [
+        "wiki/source--google-turboquant-kv-cache-compression-2026-04-13.md",
+        "wiki/source--google-turboquant-validation-and-memory-stock-watch-2026-04-21.md",
+        "wiki/source--hbm-challengers-and-ai-memory-architecture-race-2026-04-13.md",
+        "wiki/source--kv-cache-ssd-for-inference-expansion-2026-04-21.md",
+        "wiki/source--memory-caching-rnns-with-growing-memory-2026-04-14.md",
+        "wiki/source--mit-attention-matching-kv-cache-compression-2026-04-13.md",
+        "wiki/source--nvidia-marvell-ai-ran-strategy-2026-04-12.md",
+        "wiki/source--nvidia-triattention-kv-cache-efficiency-2026-04-13.md",
+        "wiki/source--turboquant-memory-savings-claim-calibration-2026-04-13.md"
+      ],
+      "reason": "wiki synthesis is broad enough to watch for future scope creep, but it already declares exclusion, tension, and future-ingest boundaries",
+      "suggested_action": "watch_scope_boundary_and_future_ingest_routes",
+      "advisory": {
+        "boundary_sections_present": [
+          "What this synthesis excludes",
+          "Tensions / contradictions",
+          "Implications for future ingest"
+        ],
+        "exclusion_axes": [
+          "누가 capacity와 procurement path를 잠그는가"
+        ],
+        "tension_axes": [
+          "더 많이 공급한다",
+          "더 잘 압축한다",
+          "모델 family를 바꾼다",
+          "기술 자체",
+          "headline calibration"
+        ],
+        "future_ingest_axes": [
+          "edge/telecom execution surface",
+          "runtime efficiency",
+          "claim calibration",
+          "recurrent-memory scaling",
+          "architecture bypass",
+          "network execution expansion",
+          "runtime efficiency design",
+          "runtime claim calibration",
+          "quantization",
+          "attention-preserving compression",
+          "새 source가 execution surface 확장인지, compression design인지, claim calibration인지"
+        ]
+      }
+    },
+    {
+      "type": "wiki_synthesis_multi_question_watch_candidate",
+      "page": "wiki/synthesis--ai-inference-economics-and-pricing-2026-04-18.md",
+      "value": {
+        "source_links": 8,
+        "analysis_subsections": 5,
+        "line_count": 98
+      },
+      "threshold": {
+        "source_links": 5,
+        "analysis_subsections": 5,
+        "line_count": 55
+      },
+      "missing_boundary_sections": [],
+      "supporting_pages": [
+        "wiki/source--batched-contextual-reinforcement-efficient-reasoning-2026-04-17.md",
+        "wiki/source--github-copilot-usage-limits-and-anthropic-tiering-2026-04-21.md",
+        "wiki/source--google-turboquant-kv-cache-compression-2026-04-13.md",
+        "wiki/source--gpu-rental-inflation-and-ai-compute-scarcity-2026-04-14.md",
+        "wiki/source--nvidia-triattention-kv-cache-efficiency-2026-04-13.md",
+        "wiki/source--turboquant-memory-savings-claim-calibration-2026-04-13.md",
+        "wiki/source--unlimited-ai-subscription-model-breakdown-2026-04-14.md",
+        "wiki/source--usage-based-ai-subscription-pricing-shift-2026-04-21.md"
+      ],
+      "reason": "wiki synthesis is broad enough to watch for future scope creep, but it already declares exclusion, tension, and future-ingest boundaries",
+      "suggested_action": "watch_scope_boundary_and_future_ingest_routes",
+      "advisory": {
+        "boundary_sections_present": [
+          "What this synthesis excludes",
+          "Tensions / contradictions",
+          "Implications for future ingest"
+        ],
+        "exclusion_axes": [],
+        "tension_axes": [],
+        "future_ingest_axes": [
+          "consumer pricing",
+          "enterprise monetization",
+          "GPU rental market",
+          "service rationing",
+          "runtime cost reduction",
+          "token-budget efficiency",
+          "claim calibration"
+        ]
+      }
+    },
+    {
+      "type": "wiki_synthesis_multi_question_watch_candidate",
+      "page": "wiki/synthesis--ai-infrastructure-rerating-power-bottlenecks-and-transition-risk-2026-04-14.md",
+      "value": {
+        "source_links": 14,
+        "analysis_subsections": 5,
+        "line_count": 126
+      },
+      "threshold": {
+        "source_links": 5,
+        "analysis_subsections": 5,
+        "line_count": 55
+      },
+      "missing_boundary_sections": [],
+      "supporting_pages": [
+        "wiki/source--amazon-anthropic-investment-and-infrastructure-alliance-2026-04-21.md",
+        "wiki/source--cerebras-ipo-and-ai-chip-capital-market-reopening-2026-04-18.md",
+        "wiki/source--foreign-buyers-fill-samsung-sk-hynix-selloff-2026-04-21.md",
+        "wiki/source--google-ai-data-center-off-balance-sheet-financing-2026-04-16.md",
+        "wiki/source--hansol-semiconductor-financing-pivot-2026-04-21.md",
+        "wiki/source--iren-microsoft-contract-and-ai-cloud-rerating-case-2026-04-14.md",
+        "wiki/source--iren-mining-revenue-dip-and-ai-cloud-transition-risk-2026-04-14.md",
+        "wiki/source--oracle-ai-data-center-boom-through-2027-2026-04-13.md",
+        "wiki/source--sandisk-nand-supercycle-outlook-2026-04-21.md",
+        "wiki/source--sandisk-rally-on-agentic-ai-storage-demand-2026-04-21.md",
+        "wiki/source--sk-ai-data-center-private-capital-and-strategic-asset-control-2026-04-18.md",
+        "wiki/source--sk-hynix-us-adr-and-ai-memory-capital-access-2026-04-16.md",
+        "wiki/source--stargate-norway-microsoft-takeover-and-openai-capex-retrenchment-2026-04-16.md",
+        "wiki/source--taiwan-market-cap-semiconductor-rerating-2026-04-16.md"
+      ],
+      "reason": "wiki synthesis is broad enough to watch for future scope creep, but it already declares exclusion, tension, and future-ingest boundaries",
+      "suggested_action": "watch_scope_boundary_and_future_ingest_routes",
+      "advisory": {
+        "boundary_sections_present": [
+          "What this synthesis excludes",
+          "Tensions / contradictions",
+          "Implications for future ingest"
+        ],
+        "exclusion_axes": [
+          "누가 compute access gate를 잠그는가",
+          "무엇이 실제 build-out 속도를 막는가"
+        ],
+        "tension_axes": [
+          "contracted demand optimism",
+          "cash conversion lag"
+        ],
+        "future_ingest_axes": [
+          "project finance",
+          "off-balance-sheet capex",
+          "revenue recognition",
+          "transition discount",
+          "tenant substitution",
+          "capital-market access",
+          "national equity rerating",
+          "AI data-center project finance",
+          "AI infra transition discount",
+          "AI semiconductor exposure and global capital access"
+        ]
+      }
+    },
+    {
+      "type": "wiki_synthesis_multi_question_watch_candidate",
+      "page": "wiki/synthesis--ai-physical-buildout-bottlenecks-and-supplier-leverage-2026-04-18.md",
+      "value": {
+        "source_links": 17,
+        "analysis_subsections": 5,
+        "line_count": 133
+      },
+      "threshold": {
+        "source_links": 5,
+        "analysis_subsections": 5,
+        "line_count": 55
+      },
+      "missing_boundary_sections": [],
+      "supporting_pages": [
+        "wiki/source--ai-memory-boom-and-supply-constraints-2026-04-13.md",
+        "wiki/source--asml-ai-chip-demand-and-semiconductor-capex-resilience-2026-04-16.md",
+        "wiki/source--energy-and-ai-demand-and-data-center-power-2026-04-14.md",
+        "wiki/source--korea-power-equipment-backlog-and-balance-sheet-risk-2026-04-21.md",
+        "wiki/source--korean-materials-suppliers-for-ai-chips-2026-04-21.md",
+        "wiki/source--large-load-electricity-rate-designs-and-data-center-tariffs-2026-04-15.md",
+        "wiki/source--lg-electronics-data-center-cooling-solution-2026-04-21.md",
+        "wiki/source--ls-electric-aws-switchgear-data-center-supply-2026-04-14.md",
+        "wiki/source--memory-supply-gap-and-chip-shortage-through-2027-2026-04-21.md",
+        "wiki/source--nuclear-power-alliances-and-korea-ai-energy-gap-2026-04-21.md",
+        "wiki/source--openai-microsoft-data-center-delay-2026-04-21.md",
+        "wiki/source--power-equipment-slot-reservation-and-lead-time-lockup-2026-04-16.md",
+        "wiki/source--power-plant-interconnection-queues-and-grid-backlog-2026-04-15.md",
+        "wiki/source--samsung-electro-mechanics-ai-server-components-upcycle-2026-04-13.md",
+        "wiki/source--samsung-texas-austin-taylor-dual-fab-operations-2026-04-21.md",
+        "wiki/source--us-data-center-water-and-power-regulation-2026-04-21.md",
+        "wiki/source--virginia-data-center-policy-and-local-grid-impacts-2026-04-15.md"
+      ],
+      "reason": "wiki synthesis is broad enough to watch for future scope creep, but it already declares exclusion, tension, and future-ingest boundaries",
+      "suggested_action": "watch_scope_boundary_and_future_ingest_routes",
+      "advisory": {
+        "boundary_sections_present": [
+          "What this synthesis excludes",
+          "Tensions / contradictions",
+          "Implications for future ingest"
+        ],
+        "exclusion_axes": [
+          "누가 compute access gate를 제도적으로 잠그는가",
+          "시장이 누구를 re-rate하거나 discount하는가"
+        ],
+        "tension_axes": [],
+        "future_ingest_axes": [
+          "power demand",
+          "tariff/ratepayer risk",
+          "interconnection queue",
+          "local policy backlash",
+          "switchgear/equipment lead time",
+          "memory/component/equipment capacity",
+          "power-grid bottlenecks",
+          "semiconductor/component supplier leverage"
+        ]
+      }
+    },
+    {
+      "type": "wiki_synthesis_multi_question_watch_candidate",
+      "page": "wiki/synthesis--european-tech-regulation-and-digital-sovereignty-2026-04-12.md",
+      "value": {
+        "source_links": 5,
+        "analysis_subsections": 7,
+        "line_count": 96
+      },
+      "threshold": {
+        "source_links": 5,
+        "analysis_subsections": 5,
+        "line_count": 55
+      },
+      "missing_boundary_sections": [],
+      "supporting_pages": [
+        "wiki/source--eu-digital-sovereignty-framework-2026-04-13.md",
+        "wiki/source--france-linux-digital-sovereignty-shift-2026-04-12.md",
+        "wiki/source--hungary-post-orban-eu-realignment-2026-04-14.md",
+        "wiki/source--interoperable-europe-act-and-public-sector-digital-sovereignty-2026-04-13.md",
+        "wiki/source--tesla-fsd-netherlands-approval-2026-04-12.md"
+      ],
+      "reason": "wiki synthesis is broad enough to watch for future scope creep, but it already declares exclusion, tension, and future-ingest boundaries",
+      "suggested_action": "watch_scope_boundary_and_future_ingest_routes",
+      "advisory": {
+        "boundary_sections_present": [
+          "What this synthesis excludes",
+          "Tensions / contradictions",
+          "Implications for future ingest"
+        ],
+        "exclusion_axes": [
+          "EU competition law",
+          "data protection law",
+          "semiconductor industrial policy",
+          "member-state procurement execution",
+          "budget realism",
+          "Tesla FSD approval",
+          "EU-wide autonomous-driving regime",
+          "public-sector sovereignty",
+          "broader strategic autonomy"
+        ],
+        "tension_axes": [
+          "openness",
+          "strategic control",
+          "cross-border interoperability",
+          "dependency reduction",
+          "regulated product approval",
+          "public-sector vendor migration",
+          "digital sovereignty",
+          "broader strategic autonomy"
+        ],
+        "future_ingest_axes": [
+          "regulated product approval",
+          "public-sector sovereignty",
+          "interoperability regime",
+          "strategic dependency management",
+          "security autonomy spillover",
+          "AI product governance",
+          "open-source migration",
+          "public procurement control",
+          "interoperability-by-design"
+        ]
+      }
+    },
+    {
+      "type": "wiki_synthesis_multi_question_watch_candidate",
+      "page": "wiki/synthesis--korea-defense-export-and-physical-ai-2026-04-18.md",
+      "value": {
+        "source_links": 20,
+        "analysis_subsections": 5,
+        "line_count": 135
+      },
+      "threshold": {
+        "source_links": 5,
+        "analysis_subsections": 5,
+        "line_count": 55
+      },
+      "missing_boundary_sections": [],
+      "supporting_pages": [
+        "wiki/source--aging-k5-sidearm-readiness-gap-2026-04-21.md",
+        "wiki/source--canada-submarine-bid-industrial-offset-pressure-2026-04-21.md",
+        "wiki/source--defense-export-and-missile-quality-signals-2026-04-17.md",
+        "wiki/source--gulf-air-defense-diversification-and-korean-interceptor-demand-2026-04-13.md",
+        "wiki/source--hanwha-aerospace-liquidity-for-future-investment-2026-04-21.md",
+        "wiki/source--hanwha-aerospace-profit-boost-from-cost-cuts-2026-04-21.md",
+        "wiki/source--hanwha-defense-shipbuilding-cash-flow-strain-2026-04-18.md",
+        "wiki/source--hyundai-rotem-defense-vertical-integration-and-physical-ai-capital-shift-2026-04-16.md",
+        "wiki/source--hyundai-rotem-poland-k2-cash-build-2026-04-21.md",
+        "wiki/source--japan-lethal-arms-export-shift-2026-04-21.md",
+        "wiki/source--kf21-networked-warfare-case-against-f35-dependence-2026-04-21.md",
+        "wiki/source--korea-defense-tech-investment-control-tower-2026-04-21.md",
+        "wiki/source--korea-manufacturing-us-ai-naval-warfare-synergy-2026-04-21.md",
+        "wiki/source--korean-unmanned-defense-capability-and-k9-automation-2026-04-18.md",
+        "wiki/source--middle-east-arms-import-dependence-and-iran-war-2026-04-14.md",
+        "wiki/source--middle-east-windfall-for-korean-defense-makers-2026-04-21.md",
+        "wiki/source--north-korea-drone-war-preparation-2026-04-21.md",
+        "wiki/source--north-korea-missile-testing-and-allied-command-targeting-2026-04-13.md",
+        "wiki/source--north-korea-nuclear-expansion-and-deterrence-pressure-2026-04-18.md",
+        "wiki/source--us-defense-industrial-mobilization-and-civilian-manufacturing-2026-04-16.md"
+      ],
+      "reason": "wiki synthesis is broad enough to watch for future scope creep, but it already declares exclusion, tension, and future-ingest boundaries",
+      "suggested_action": "watch_scope_boundary_and_future_ingest_routes",
+      "advisory": {
+        "boundary_sections_present": [
+          "What this synthesis excludes",
+          "Tensions / contradictions",
+          "Implications for future ingest"
+        ],
+        "exclusion_axes": [],
+        "tension_axes": [],
+        "future_ingest_axes": [
+          "Gulf interceptor replenishment",
+          "Korean defense export pipeline",
+          "industrial verticalization",
+          "civilian manufacturing conversion",
+          "physical AI capital rotation",
+          "battlefield quality signal",
+          "Korean deterrence demand"
+        ]
+      }
+    },
+    {
+      "type": "wiki_synthesis_multi_question_watch_candidate",
+      "page": "wiki/synthesis--korea-fx-liquidity-and-spot-dollar-pressure-2026-04-14.md",
+      "value": {
+        "source_links": 16,
+        "analysis_subsections": 8,
+        "line_count": 137
+      },
+      "threshold": {
+        "source_links": 5,
+        "analysis_subsections": 5,
+        "line_count": 55
+      },
+      "missing_boundary_sections": [],
+      "supporting_pages": [
+        "wiki/source--bank-of-korea-february-balance-of-payments-2026-04-14.md",
+        "wiki/source--bank-of-korea-march-foreign-reserves-2026-04-14.md",
+        "wiki/source--bank-of-korea-march-international-finance-and-fx-market-trends-2026-04-14.md",
+        "wiki/source--bank-of-korea-rate-hold-and-middle-east-risk-2026-04-13.md",
+        "wiki/source--bok-dollar-funding-abundance-and-won-weakness-2026-04-14.md",
+        "wiki/source--cgfs-foreign-currency-funding-risk-and-cross-border-liquidity-2026-04-14.md",
+        "wiki/source--korean-corporate-dollar-hoarding-on-fx-fears-2026-04-21.md",
+        "wiki/source--lee-changyong-exit-after-crisis-era-tenure-2026-04-21.md",
+        "wiki/source--national-pension-fx-hedging-and-won-support-2026-04-14.md",
+        "wiki/source--reserve-liquidity-limit-and-crisis-warning-2026-04-21.md",
+        "wiki/source--shin-hyunsong-cautious-flexible-monetary-policy-2026-04-21.md",
+        "wiki/source--shin-hyunsong-faces-inflation-and-fx-crisis-2026-04-21.md",
+        "wiki/source--shin-hyunsong-inflation-risk-and-fx-pressure-2026-04-13.md",
+        "wiki/source--wgbi-inclusion-and-korea-bond-inflows-fx-stability-2026-04-14.md",
+        "wiki/source--wgbi-inflows-boost-korean-bond-demand-2026-04-21.md",
+        "wiki/source--won-dollar-near-1500-and-middle-east-fx-pressure-2026-04-13.md"
+      ],
+      "reason": "wiki synthesis is broad enough to watch for future scope creep, but it already declares exclusion, tension, and future-ingest boundaries",
+      "suggested_action": "watch_scope_boundary_and_future_ingest_routes",
+      "advisory": {
+        "boundary_sections_present": [
+          "What this synthesis excludes",
+          "Tensions / contradictions",
+          "Implications for future ingest"
+        ],
+        "exclusion_axes": [
+          "외환시장 메커니즘과 buffer surface"
+        ],
+        "tension_axes": [
+          "달러가 풍부하다",
+          "원화가 약하다",
+          "WGBI·경상수지·외환보유액·국민연금 환헤지"
+        ],
+        "future_ingest_axes": [
+          "spot FX demand",
+          "swap/funding liquidity",
+          "portfolio flow",
+          "reserve/buffer",
+          "official stabilization tool",
+          "policy reaction function",
+          "대외차입 스프레드",
+          "swap basis",
+          "foreign bond inflow",
+          "reserve operation"
+        ]
+      }
+    },
+    {
+      "type": "wiki_synthesis_multi_question_watch_candidate",
+      "page": "wiki/synthesis--middle-east-shipping-and-energy-risk-2026-04-12.md",
+      "value": {
+        "source_links": 21,
+        "analysis_subsections": 7,
+        "line_count": 153
+      },
+      "threshold": {
+        "source_links": 5,
+        "analysis_subsections": 5,
+        "line_count": 55
+      },
+      "missing_boundary_sections": [],
+      "supporting_pages": [
+        "wiki/source--eia-short-term-energy-outlook-april-2026-2026-04-14.md",
+        "wiki/source--hormuz-blockade-enforcement-and-isr-attrition-2026-04-15.md",
+        "wiki/source--hormuz-blockade-oil-over-100-and-global-macro-shock-2026-04-13.md",
+        "wiki/source--hormuz-chokepoint-flows-and-bypass-capacity-2026-04-13.md",
+        "wiki/source--hormuz-shipping-risk-outlook-2026-04-12.md",
+        "wiki/source--iran-hormuz-control-law-and-inalienable-right-claim-2026-04-21.md",
+        "wiki/source--korea-hormuz-defense-mission-preparation-2026-04-21.md",
+        "wiki/source--korea-india-naphtha-and-petrochemical-supply-coordination-2026-04-21.md",
+        "wiki/source--korea-oil-supply-outlook-2026-04-12.md",
+        "wiki/source--korea-pushes-us-crude-diversification-after-war-2026-04-21.md",
+        "wiki/source--korean-tankers-reroute-via-red-sea-2026-04-21.md",
+        "wiki/source--kuwait-force-majeure-on-oil-exports-after-hormuz-blockade-2026-04-21.md",
+        "wiki/source--ships-hit-after-hormuz-reopening-2026-04-21.md",
+        "wiki/source--stranded-korean-ships-move-near-uae-after-hormuz-closure-2026-04-21.md",
+        "wiki/source--trump-hormuz-blockade-order-2026-04-12.md",
+        "wiki/source--trump-invokes-korean-war-law-for-energy-support-2026-04-21.md",
+        "wiki/source--trump-oil-price-warning-and-iran-retaliation-2026-04-13.md",
+        "wiki/source--us-iran-talks-pakistan-pullout-2026-04-12.md",
+        "wiki/source--us-navy-drone-minesweeping-in-hormuz-2026-04-21.md",
+        "wiki/source--us-seizes-iranian-cargo-vessel-after-truce-2026-04-21.md",
+        "wiki/source--white-house-situation-room-on-renewed-hormuz-risk-2026-04-21.md"
+      ],
+      "reason": "wiki synthesis is broad enough to watch for future scope creep, but it already declares exclusion, tension, and future-ingest boundaries",
+      "suggested_action": "watch_scope_boundary_and_future_ingest_routes",
+      "advisory": {
+        "boundary_sections_present": [
+          "What this synthesis excludes",
+          "Tensions / contradictions",
+          "Implications for future ingest"
+        ],
+        "exclusion_axes": [
+          "전쟁의 2차 투자 효과",
+          "외교 -> 해운 심리 -> 에너지 가격 -> 조달 완충",
+          "macro and market repricing"
+        ],
+        "tension_axes": [
+          "즉각 붕괴는 아니지만 구조적 불안은 크다",
+          "실물 공급 붕괴",
+          "완충 재고 존재"
+        ],
+        "future_ingest_axes": [
+          "실물 해상/조달",
+          "공식 baseline scenario",
+          "국내 거시 전이"
+        ]
+      }
+    },
+    {
+      "type": "wiki_synthesis_multi_question_watch_candidate",
+      "page": "wiki/synthesis--middle-east-war-macro-and-market-repricing-2026-04-13.md",
+      "value": {
+        "source_links": 16,
+        "analysis_subsections": 8,
+        "line_count": 140
+      },
+      "threshold": {
+        "source_links": 5,
+        "analysis_subsections": 5,
+        "line_count": 55
+      },
+      "missing_boundary_sections": [],
+      "supporting_pages": [
+        "wiki/source--bank-of-korea-april-economic-assessment-2026-04-13.md",
+        "wiki/source--bank-of-korea-rate-hold-and-middle-east-risk-2026-04-13.md",
+        "wiki/source--bok-governor-warns-middle-east-inflation-growth-risk-2026-04-21.md",
+        "wiki/source--china-central-bank-gold-buying-streak-2026-04-13.md",
+        "wiki/source--china-q1-growth-rebound-and-war-dimmed-2026-outlook-2026-04-14.md",
+        "wiki/source--dollar-safe-haven-bid-after-failed-us-iran-talks-2026-04-13.md",
+        "wiki/source--emerging-market-outflows-after-iran-war-2026-04-13.md",
+        "wiki/source--fed-war-risk-minutes-and-inflation-scenarios-2026-04-13.md",
+        "wiki/source--fx-market-bets-on-us-iran-deal-2026-04-21.md",
+        "wiki/source--gold-rebound-after-ceasefire-and-safe-haven-rotation-2026-04-13.md",
+        "wiki/source--israel-lebanon-ceasefire-and-iran-talks-relief-2026-04-16.md",
+        "wiki/source--premature-optimism-on-middle-east-war-2026-04-21.md",
+        "wiki/source--us-consumer-inflation-gasoline-shock-2026-04-13.md",
+        "wiki/source--us-consumer-sentiment-record-low-amid-iran-war-2026-04-13.md",
+        "wiki/source--wall-street-relief-rally-on-us-iran-deal-hopes-2026-04-14.md",
+        "wiki/source--won-dollar-near-1500-and-middle-east-fx-pressure-2026-04-13.md"
+      ],
+      "reason": "wiki synthesis is broad enough to watch for future scope creep, but it already declares exclusion, tension, and future-ingest boundaries",
+      "suggested_action": "watch_scope_boundary_and_future_ingest_routes",
+      "advisory": {
+        "boundary_sections_present": [
+          "What this synthesis excludes",
+          "Tensions / contradictions",
+          "Implications for future ingest"
+        ],
+        "exclusion_axes": [
+          "global market repricing",
+          "macro policy"
+        ],
+        "tension_axes": [
+          "달러 우위 safe haven",
+          "금의 중기 지지",
+          "risk-off가 강하다",
+          "아직 generalized funding stop은 아니다",
+          "어느 자산군, 어느 지역, 어느 정책 채널에 먼저 압력이 집중되는가"
+        ],
+        "future_ingest_axes": [
+          "EM flow",
+          "dollar",
+          "inflation pass-through",
+          "consumer expectations",
+          "Fed scenario",
+          "central-bank gold",
+          "post-ceasefire precious-metals rotation",
+          "physical disruption",
+          "financial repricing"
+        ]
+      }
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "ops/scripts/mechanism_review_history_runtime.py",
+      "symbol": "load_mechanism_run_snapshots",
+      "line": 82,
+      "profile": "runtime",
+      "triggered_budgets": [
+        "function_lines"
+      ],
+      "value": {
+        "function_lines": 127,
+        "parameter_count": 3,
+        "branch_node_count": 11
+      },
+      "threshold": {
+        "function_lines": 120,
+        "parameter_count": 10,
+        "branch_node_count": 18
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "ops/scripts/mechanism_review_outcome_metrics_calibration_runtime.py",
+      "symbol": "build_outcome_metrics_calibration_diagnostics",
+      "line": 610,
+      "profile": "runtime",
+      "triggered_budgets": [
+        "function_lines"
+      ],
+      "value": {
+        "function_lines": 132,
+        "parameter_count": 4,
+        "branch_node_count": 5
+      },
+      "threshold": {
+        "function_lines": 120,
+        "parameter_count": 10,
+        "branch_node_count": 18
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "ops/scripts/mechanism_review_session_calibration_runtime.py",
+      "symbol": "session_calibration_summary",
+      "line": 76,
+      "profile": "runtime",
+      "triggered_budgets": [
+        "function_lines"
+      ],
+      "value": {
+        "function_lines": 126,
+        "parameter_count": 6,
+        "branch_node_count": 13
+      },
+      "threshold": {
+        "function_lines": 120,
+        "parameter_count": 10,
+        "branch_node_count": 18
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "ops/scripts/mechanism_run_promotion_runtime.py",
+      "symbol": "_build_promotion_report",
+      "line": 66,
+      "profile": "runtime",
+      "triggered_budgets": [
+        "parameter_count"
+      ],
+      "value": {
+        "function_lines": 54,
+        "parameter_count": 14,
+        "branch_node_count": 0
+      },
+      "threshold": {
+        "function_lines": 120,
+        "parameter_count": 10,
+        "branch_node_count": 18
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "ops/scripts/mechanism_run_scaffold_resolution_runtime.py",
+      "symbol": "resolve_experiment_inputs",
+      "line": 219,
+      "profile": "runtime",
+      "triggered_budgets": [
+        "parameter_count"
+      ],
+      "value": {
+        "function_lines": 80,
+        "parameter_count": 16,
+        "branch_node_count": 3
+      },
+      "threshold": {
+        "function_lines": 120,
+        "parameter_count": 10,
+        "branch_node_count": 18
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "ops/scripts/mechanism_run_scaffold_runtime.py",
+      "symbol": "_scaffold_run_dir",
+      "line": 131,
+      "profile": "runtime",
+      "triggered_budgets": [
+        "parameter_count"
+      ],
+      "value": {
+        "function_lines": 103,
+        "parameter_count": 11,
+        "branch_node_count": 11
+      },
+      "threshold": {
+        "function_lines": 120,
+        "parameter_count": 10,
+        "branch_node_count": 18
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "ops/scripts/promotion_decision_registry_runtime.py",
+      "symbol": "make_decision_proposal",
+      "line": 178,
+      "profile": "runtime",
+      "triggered_budgets": [
+        "parameter_count"
+      ],
+      "value": {
+        "function_lines": 29,
+        "parameter_count": 12,
+        "branch_node_count": 0
+      },
+      "threshold": {
+        "function_lines": 120,
+        "parameter_count": 10,
+        "branch_node_count": 18
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "ops/scripts/promotion_gate.py",
+      "symbol": "mechanism_class_report",
+      "line": 118,
+      "profile": "runtime",
+      "triggered_budgets": [
+        "parameter_count"
+      ],
+      "value": {
+        "function_lines": 48,
+        "parameter_count": 19,
+        "branch_node_count": 0
+      },
+      "threshold": {
+        "function_lines": 120,
+        "parameter_count": 10,
+        "branch_node_count": 18
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "ops/scripts/promotion_gate_mechanism_state_runtime.py",
+      "symbol": "build_mechanism_promotion_state",
+      "line": 198,
+      "profile": "runtime",
+      "triggered_budgets": [
+        "function_lines"
+      ],
+      "value": {
+        "function_lines": 138,
+        "parameter_count": 7,
+        "branch_node_count": 2
+      },
+      "threshold": {
+        "function_lines": 120,
+        "parameter_count": 10,
+        "branch_node_count": 18
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "ops/scripts/promotion_gate_page_runtime.py",
+      "symbol": "_page_class_report_context",
+      "line": 98,
+      "profile": "runtime",
+      "triggered_budgets": [
+        "parameter_count"
+      ],
+      "value": {
+        "function_lines": 93,
+        "parameter_count": 12,
+        "branch_node_count": 5
+      },
+      "threshold": {
+        "function_lines": 120,
+        "parameter_count": 10,
+        "branch_node_count": 18
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "ops/scripts/promotion_gate_page_runtime.py",
+      "symbol": "page_class_report",
+      "line": 426,
+      "profile": "runtime",
+      "triggered_budgets": [
+        "parameter_count"
+      ],
+      "value": {
+        "function_lines": 34,
+        "parameter_count": 12,
+        "branch_node_count": 0
+      },
+      "threshold": {
+        "function_lines": 120,
+        "parameter_count": 10,
+        "branch_node_count": 18
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "ops/scripts/runtime_event_logging_runtime.py",
+      "symbol": "append_runtime_event",
+      "line": 60,
+      "profile": "runtime",
+      "triggered_budgets": [
+        "parameter_count"
+      ],
+      "value": {
+        "function_lines": 40,
+        "parameter_count": 11,
+        "branch_node_count": 2
+      },
+      "threshold": {
+        "function_lines": 120,
+        "parameter_count": 10,
+        "branch_node_count": 18
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "ops/scripts/structural_complexity_budget_runtime.py",
+      "symbol": "build_report",
+      "line": 192,
+      "profile": "runtime",
+      "triggered_budgets": [
+        "function_lines"
+      ],
+      "value": {
+        "function_lines": 124,
+        "parameter_count": 5,
+        "branch_node_count": 4
+      },
+      "threshold": {
+        "function_lines": 120,
+        "parameter_count": 10,
+        "branch_node_count": 18
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "ops/scripts/wiki_eval.py",
+      "symbol": "evaluate",
+      "line": 55,
+      "profile": "runtime",
+      "triggered_budgets": [
+        "function_lines"
+      ],
+      "value": {
+        "function_lines": 179,
+        "parameter_count": 4,
+        "branch_node_count": 7
+      },
+      "threshold": {
+        "function_lines": 120,
+        "parameter_count": 10,
+        "branch_node_count": 18
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "tests/minimal_vault_runtime.py",
+      "symbol": "seed_minimal_vault",
+      "line": 166,
+      "profile": "tests",
+      "triggered_budgets": [
+        "function_lines"
+      ],
+      "value": {
+        "function_lines": 387,
+        "parameter_count": 2,
+        "branch_node_count": 4
+      },
+      "threshold": {
+        "function_lines": 180,
+        "parameter_count": 12,
+        "branch_node_count": 12
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "tests/minimal_vault_runtime.py",
+      "symbol": "seed_open_question_smoke_vault",
+      "line": 555,
+      "profile": "tests",
+      "triggered_budgets": [
+        "function_lines"
+      ],
+      "value": {
+        "function_lines": 286,
+        "parameter_count": 2,
+        "branch_node_count": 2
+      },
+      "threshold": {
+        "function_lines": 180,
+        "parameter_count": 12,
+        "branch_node_count": 12
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "tests/test_auto_improve_runtime.py",
+      "symbol": "AutoImproveRuntimeTests.test_run_auto_improve_session_writes_successful_session_report",
+      "line": 220,
+      "profile": "tests",
+      "triggered_budgets": [
+        "function_lines"
+      ],
+      "value": {
+        "function_lines": 264,
+        "parameter_count": 0,
+        "branch_node_count": 2
+      },
+      "threshold": {
+        "function_lines": 180,
+        "parameter_count": 12,
+        "branch_node_count": 12
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "tests/test_mutation_proposal.py",
+      "symbol": "mechanism_review_report",
+      "line": 60,
+      "profile": "tests",
+      "triggered_budgets": [
+        "function_lines"
+      ],
+      "value": {
+        "function_lines": 211,
+        "parameter_count": 0,
+        "branch_node_count": 0
+      },
+      "threshold": {
+        "function_lines": 180,
+        "parameter_count": 12,
+        "branch_node_count": 12
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "tests/test_planning_gate_validate.py",
+      "symbol": "seed_mechanism_run_artifacts",
+      "line": 28,
+      "profile": "tests",
+      "triggered_budgets": [
+        "function_lines"
+      ],
+      "value": {
+        "function_lines": 280,
+        "parameter_count": 3,
+        "branch_node_count": 3
+      },
+      "threshold": {
+        "function_lines": 180,
+        "parameter_count": 12,
+        "branch_node_count": 12
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "tests/test_policy_runtime.py",
+      "symbol": "PolicyRuntimeTest.test_live_policy_loads_as_single_source_of_truth",
+      "line": 17,
+      "profile": "tests",
+      "triggered_budgets": [
+        "function_lines"
+      ],
+      "value": {
+        "function_lines": 376,
+        "parameter_count": 0,
+        "branch_node_count": 0
+      },
+      "threshold": {
+        "function_lines": 180,
+        "parameter_count": 12,
+        "branch_node_count": 12
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "tests/test_promotion_gate_equal_score.py",
+      "symbol": "mechanism_report",
+      "line": 101,
+      "profile": "tests",
+      "triggered_budgets": [
+        "parameter_count"
+      ],
+      "value": {
+        "function_lines": 73,
+        "parameter_count": 16,
+        "branch_node_count": 6
+      },
+      "threshold": {
+        "function_lines": 180,
+        "parameter_count": 12,
+        "branch_node_count": 12
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "tests/test_run_mechanism_experiment.py",
+      "symbol": "RunMechanismExperimentTests.test_wrapper_holds_without_finalization_when_signoff_is_pending.fake_build_promotion_report",
+      "line": 452,
+      "profile": "tests",
+      "triggered_budgets": [
+        "parameter_count"
+      ],
+      "value": {
+        "function_lines": 59,
+        "parameter_count": 13,
+        "branch_node_count": 0
+      },
+      "threshold": {
+        "function_lines": 180,
+        "parameter_count": 12,
+        "branch_node_count": 12
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "tests/test_run_mechanism_experiment.py",
+      "symbol": "RunMechanismExperimentTests.test_wrapper_hold_keeps_nonempty_candidate_changes_run_local",
+      "line": 573,
+      "profile": "tests",
+      "triggered_budgets": [
+        "function_lines"
+      ],
+      "value": {
+        "function_lines": 192,
+        "parameter_count": 0,
+        "branch_node_count": 2
+      },
+      "threshold": {
+        "function_lines": 180,
+        "parameter_count": 12,
+        "branch_node_count": 12
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "tests/test_run_mechanism_experiment.py",
+      "symbol": "RunMechanismExperimentTests.test_wrapper_hold_keeps_nonempty_candidate_changes_run_local.fake_build_promotion_report",
+      "line": 631,
+      "profile": "tests",
+      "triggered_budgets": [
+        "parameter_count"
+      ],
+      "value": {
+        "function_lines": 66,
+        "parameter_count": 13,
+        "branch_node_count": 0
+      },
+      "threshold": {
+        "function_lines": 180,
+        "parameter_count": 12,
+        "branch_node_count": 12
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "tests/test_run_mechanism_experiment.py",
+      "symbol": "RunMechanismExperimentTests.test_wrapper_apply_barrier_rejects_promoted_changes_outside_allowed_apply_roots.fake_build_promotion_report",
+      "line": 931,
+      "profile": "tests",
+      "triggered_budgets": [
+        "parameter_count"
+      ],
+      "value": {
+        "function_lines": 61,
+        "parameter_count": 13,
+        "branch_node_count": 0
+      },
+      "threshold": {
+        "function_lines": 180,
+        "parameter_count": 12,
+        "branch_node_count": 12
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "tests/test_run_mechanism_experiment.py",
+      "symbol": "RunMechanismExperimentTests.test_wrapper_ignores_ephemeral_workspace_noise_in_changed_manifest",
+      "line": 1049,
+      "profile": "tests",
+      "triggered_budgets": [
+        "function_lines"
+      ],
+      "value": {
+        "function_lines": 188,
+        "parameter_count": 0,
+        "branch_node_count": 2
+      },
+      "threshold": {
+        "function_lines": 180,
+        "parameter_count": 12,
+        "branch_node_count": 12
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "tests/test_run_mechanism_experiment.py",
+      "symbol": "RunMechanismExperimentTests.test_wrapper_ignores_ephemeral_workspace_noise_in_changed_manifest.fake_build_promotion_report",
+      "line": 1118,
+      "profile": "tests",
+      "triggered_budgets": [
+        "parameter_count"
+      ],
+      "value": {
+        "function_lines": 61,
+        "parameter_count": 13,
+        "branch_node_count": 0
+      },
+      "threshold": {
+        "function_lines": 180,
+        "parameter_count": 12,
+        "branch_node_count": 12
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    },
+    {
+      "type": "python_function_budget_candidate",
+      "page": "tools/manual_mutate_auto_improve_timeout_telemetry.py",
+      "symbol": "main",
+      "line": 14,
+      "profile": "runtime",
+      "triggered_budgets": [
+        "function_lines"
+      ],
+      "value": {
+        "function_lines": 206,
+        "parameter_count": 0,
+        "branch_node_count": 0
+      },
+      "threshold": {
+        "function_lines": 120,
+        "parameter_count": 10,
+        "branch_node_count": 18
+      },
+      "suggested_action": "review_for_function_split_or_interface_object"
+    }
+  ],
+  "stats": {
+    "page_count": 487,
+    "error_count": 0,
+    "warning_count": 0,
+    "review_candidate_count": 43
+  }
+}

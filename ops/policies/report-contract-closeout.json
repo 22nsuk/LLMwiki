@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "pre_refresh_targets": [
+    "script-output-surfaces",
+    "generated-artifact-index",
+    "auto-improve-readiness-report",
+    "artifact-freshness"
+  ]
+}

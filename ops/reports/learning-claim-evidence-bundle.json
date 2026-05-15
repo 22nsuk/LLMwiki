@@ -1,0 +1,732 @@
+{
+  "$schema": "ops/schemas/learning-claim-evidence-bundle.schema.json",
+  "artifact_kind": "learning_claim_evidence_bundle",
+  "generated_at": "2026-05-15T04:23:33Z",
+  "producer": "ops.scripts.learning_claim_evidence_bundle",
+  "source_command": "python -m ops.scripts.learning_claim_evidence_bundle --vault .",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "5d96654b43ee21ca9e073bff4bfa78778f690771c9df676370d5d5ab2c88c14e",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "f77ecb540d9826e20850d89d0c41d8cc23d8004cd8d6e329887db26e231d3884",
+    "learning_claim_evidence_bundle_inputs": "edacef74fb222473d6eead514eaa8810969a4b6da6164dbbe04abb9bd59622cc"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-15T04:23:33Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "pass",
+  "summary": {
+    "bundle_sha256": "4e6118c540721a799ba27accd51368eb9a9807017450d1dbc411af97d293e35a",
+    "revocation_status": "active",
+    "bundle_item_count": 7,
+    "missing_required_count": 0,
+    "stale_evidence_count": 0,
+    "revoked_evidence_count": 0,
+    "telemetry_run_count": 2,
+    "telemetry_missing_count": 0,
+    "behavior_delta_digest_missing_count": 0,
+    "behavior_delta_digest_mismatch_count": 0,
+    "confirmed_telemetry_run_count": 5,
+    "confirmed_telemetry_missing_count": 0,
+    "confirmed_behavior_delta_digest_missing_count": 0,
+    "confirmed_behavior_delta_artifact_mismatch_count": 0,
+    "confirmed_run_artifact_missing_count": 0,
+    "behavior_delta_artifact_missing_count": 0,
+    "behavior_delta_artifact_mismatch_count": 0,
+    "behavior_delta_artifact_readback_status": "pass",
+    "legacy_reconstruction_sha256": "cae29355764a06344cd6db8a1fe4fc8e0d9d1b2cc40bc0e77119cb909e4dc75d",
+    "legacy_reconstruction_status": "pass",
+    "legacy_reconstruction_blocked_run_count": 0,
+    "legacy_reconstruction_operator_summary": [
+      {
+        "run_id": "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+        "families": [
+          "contract_regression_signals"
+        ],
+        "reconstruction_status": "not_needed",
+        "reconstruction_needed": false,
+        "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+        "reconstruction_reasons": [],
+        "parsed_secondary_axes": [
+          "lint",
+          "complexity",
+          "tests"
+        ],
+        "parsed_secondary_axis_evidence": {
+          "source": "promotion_report_check_detail",
+          "check_id": "equal_score_secondary_eligibility",
+          "detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=false, selected_any_improvement=true",
+          "strict_signal": true,
+          "axes": [
+            "lint",
+            "complexity",
+            "tests"
+          ]
+        }
+      },
+      {
+        "run_id": "run-20260422-auto-improve-timeout-telemetry-fallback",
+        "families": [
+          "contract_regression_signals"
+        ],
+        "reconstruction_status": "not_needed",
+        "reconstruction_needed": false,
+        "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+        "reconstruction_reasons": [],
+        "parsed_secondary_axes": [
+          "lint",
+          "complexity",
+          "tests"
+        ],
+        "parsed_secondary_axis_evidence": {
+          "source": "promotion_report_check_detail",
+          "check_id": "equal_score_secondary_eligibility",
+          "detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=true, selected_any_improvement=true",
+          "strict_signal": true,
+          "axes": [
+            "lint",
+            "complexity",
+            "tests"
+          ]
+        }
+      },
+      {
+        "run_id": "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
+        "families": [
+          "contract_regression_signals"
+        ],
+        "reconstruction_status": "not_needed",
+        "reconstruction_needed": false,
+        "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+        "reconstruction_reasons": [],
+        "parsed_secondary_axes": [
+          "lint",
+          "complexity",
+          "tests"
+        ],
+        "parsed_secondary_axis_evidence": {
+          "source": "promotion_report_check_detail",
+          "check_id": "equal_score_secondary_eligibility",
+          "detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=true, selected_any_improvement=true",
+          "strict_signal": true,
+          "axes": [
+            "lint",
+            "complexity",
+            "tests"
+          ]
+        }
+      },
+      {
+        "run_id": "run-20260507-auto-improve-iteration-persistence-discard-path",
+        "families": [
+          "contract_regression_signals"
+        ],
+        "reconstruction_status": "reconstructed",
+        "reconstruction_needed": true,
+        "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+        "reconstruction_reasons": [
+          "telemetry behavior_delta_digest missing or invalid",
+          "telemetry strict secondary improvement fields missing or incomplete"
+        ],
+        "parsed_secondary_axes": [
+          "lint",
+          "complexity",
+          "tests"
+        ],
+        "parsed_secondary_axis_evidence": {
+          "source": "promotion_report_check_detail",
+          "check_id": "equal_score_secondary_eligibility",
+          "detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=true, selected_any_improvement=true",
+          "strict_signal": true,
+          "axes": [
+            "lint",
+            "complexity",
+            "tests"
+          ]
+        }
+      },
+      {
+        "run_id": "run-20260507-auto-improve-iteration-persistence-typed-same-eval",
+        "families": [
+          "contract_regression_signals"
+        ],
+        "reconstruction_status": "not_needed",
+        "reconstruction_needed": false,
+        "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+        "reconstruction_reasons": [],
+        "parsed_secondary_axes": [
+          "lint",
+          "complexity",
+          "tests"
+        ],
+        "parsed_secondary_axis_evidence": {
+          "source": "promotion_report_check_detail",
+          "check_id": "equal_score_secondary_eligibility",
+          "detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=true, selected_any_improvement=false",
+          "strict_signal": false,
+          "axes": [
+            "lint",
+            "complexity",
+            "tests"
+          ]
+        }
+      }
+    ],
+    "external_manifest_sha256": "d11f835d86dbe0e01a79dcbf9678109a741f0df05cd81174df6ed9f56e868331",
+    "run_set_digest": "0d4d301514832166276660d9623a2dcf36345a066ace35c8480978d2cd38b13f"
+  },
+  "bundle_identity": {
+    "digest_algorithm": "sha256",
+    "bundle_payload_version": 1,
+    "evidence_bundle_digest": "4e6118c540721a799ba27accd51368eb9a9807017450d1dbc411af97d293e35a"
+  },
+  "evidence_items": [
+    {
+      "id": "auto_improve_readiness",
+      "path": "ops/reports/auto-improve-readiness.json",
+      "role": "blocking",
+      "required": true,
+      "exists": true,
+      "sha256": "0a2d4fc090d157ef80bc65b7e472aaeca8828555109a2937c7176b58c9a13b94",
+      "status": "present",
+      "revocation_effect": "none"
+    },
+    {
+      "id": "mechanism_review_candidates",
+      "path": "ops/reports/mechanism-review-candidates.json",
+      "role": "blocking",
+      "required": true,
+      "exists": true,
+      "sha256": "84d1ca2aafbdf4a2a683d3523af35ffe751c73a94eebb034d84574a007c61f47",
+      "status": "present",
+      "revocation_effect": "none"
+    },
+    {
+      "id": "mutation_proposals",
+      "path": "ops/reports/mutation-proposals.json",
+      "role": "blocking",
+      "required": true,
+      "exists": true,
+      "sha256": "3629d45f0cf6ab218f3e3019637f6a450a9d167e032c7d5a7dc170d022e3fb9a",
+      "status": "present",
+      "revocation_effect": "none"
+    },
+    {
+      "id": "outcome_metrics",
+      "path": "ops/reports/outcome-metrics.json",
+      "role": "blocking",
+      "required": true,
+      "exists": true,
+      "sha256": "98edea9e7f5a3e21957f1635969e24751345b5cdc9aa02d3ff197b1bc47504a4",
+      "status": "present",
+      "revocation_effect": "none"
+    },
+    {
+      "id": "public_check_summary",
+      "path": "ops/reports/public-check-summary.json",
+      "role": "blocking",
+      "required": true,
+      "exists": true,
+      "sha256": "f04a728c35c665b7f44202dd230792af1fa28fda21d57a05d548023332fb8e4f",
+      "status": "present",
+      "revocation_effect": "none"
+    },
+    {
+      "id": "learning_confirmed_legacy_reconstruction",
+      "path": "ops/reports/learning-confirmed-legacy-reconstruction.json",
+      "role": "blocking",
+      "required": true,
+      "exists": true,
+      "sha256": "cae29355764a06344cd6db8a1fe4fc8e0d9d1b2cc40bc0e77119cb909e4dc75d",
+      "status": "present",
+      "revocation_effect": "none"
+    },
+    {
+      "id": "external_report_reference_manifest",
+      "path": "external-reports/report-reference-manifest.json",
+      "role": "blocking",
+      "required": true,
+      "exists": true,
+      "sha256": "d11f835d86dbe0e01a79dcbf9678109a741f0df05cd81174df6ed9f56e868331",
+      "status": "present",
+      "revocation_effect": "none"
+    }
+  ],
+  "run_set": {
+    "source_path": "ops/reports/mutation-proposals.json",
+    "run_ids": [
+      "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+      "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+    ],
+    "run_count": 2,
+    "proposal_families": [
+      "contract_regression_signals"
+    ],
+    "run_set_digest": "0d4d301514832166276660d9623a2dcf36345a066ace35c8480978d2cd38b13f"
+  },
+  "telemetry_evidence": [
+    {
+      "run_id": "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+      "telemetry_path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/run-telemetry.json",
+      "exists": true,
+      "sha256": "370f77f245e56c0572e6542a94c5dbf3257f9d533d78da70f01507d83a8007d4",
+      "decision": "DISCARD",
+      "behavior_delta_path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/behavior-delta.json",
+      "behavior_delta_artifact_exists": true,
+      "behavior_delta_artifact_sha256": "bc4231630e01a551a57771095f5abe69411646b5f79fceeee2999e1163c29d66",
+      "behavior_delta_artifact_digest_match": true,
+      "behavior_delta_artifact_readback_status": "pass",
+      "same_eval_reason_code": "telemetry_discoverability_improved",
+      "strict_secondary_improvement_present": true,
+      "secondary_improvement_axes": [
+        "tests"
+      ],
+      "behavior_delta_digest": "bc4231630e01a551a57771095f5abe69411646b5f79fceeee2999e1163c29d66",
+      "behavior_delta_digest_present": true,
+      "behavior_delta_digest_valid": true,
+      "behavior_delta_digest_source": "telemetry_field",
+      "legacy_reconstruction_path": "",
+      "legacy_reconstruction_status": "not_applicable",
+      "legacy_reconstruction_selection_reason": "",
+      "legacy_reconstruction_reasons": [],
+      "secondary_axis_evidence_source": "telemetry_field",
+      "secondary_axis_evidence_detail": ""
+    },
+    {
+      "run_id": "run-20260507-auto-improve-iteration-persistence-typed-same-eval",
+      "telemetry_path": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/run-telemetry.json",
+      "exists": true,
+      "sha256": "9048eb29f9df2973099c992e7d5f5f920d21fbc05f258ce3625499e5dd26e7a6",
+      "decision": "DISCARD",
+      "behavior_delta_path": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/behavior-delta.json",
+      "behavior_delta_artifact_exists": true,
+      "behavior_delta_artifact_sha256": "297e3886f43ccf40b0ad8a0a5b3eb3fd3a5564834809eac2ec5e7f9db88f1478",
+      "behavior_delta_artifact_digest_match": true,
+      "behavior_delta_artifact_readback_status": "pass",
+      "same_eval_reason_code": "behavior_delta_digest_added",
+      "strict_secondary_improvement_present": true,
+      "secondary_improvement_axes": [
+        "typed_same_eval_contract",
+        "behavior_delta_digest"
+      ],
+      "behavior_delta_digest": "297e3886f43ccf40b0ad8a0a5b3eb3fd3a5564834809eac2ec5e7f9db88f1478",
+      "behavior_delta_digest_present": true,
+      "behavior_delta_digest_valid": true,
+      "behavior_delta_digest_source": "telemetry_field",
+      "legacy_reconstruction_path": "",
+      "legacy_reconstruction_status": "not_applicable",
+      "legacy_reconstruction_selection_reason": "",
+      "legacy_reconstruction_reasons": [],
+      "secondary_axis_evidence_source": "telemetry_field",
+      "secondary_axis_evidence_detail": ""
+    }
+  ],
+  "confirmed_run_set": {
+    "source_path": "ops/reports/mechanism-review-candidates.json",
+    "run_ids": [
+      "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+      "run-20260422-auto-improve-timeout-telemetry-fallback",
+      "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
+      "run-20260507-auto-improve-iteration-persistence-discard-path",
+      "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+    ],
+    "run_count": 5,
+    "proposal_families": [
+      "contract_regression_signals"
+    ],
+    "run_families": [
+      {
+        "run_id": "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+        "families": [
+          "contract_regression_signals"
+        ]
+      },
+      {
+        "run_id": "run-20260422-auto-improve-timeout-telemetry-fallback",
+        "families": [
+          "contract_regression_signals"
+        ]
+      },
+      {
+        "run_id": "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
+        "families": [
+          "contract_regression_signals"
+        ]
+      },
+      {
+        "run_id": "run-20260507-auto-improve-iteration-persistence-discard-path",
+        "families": [
+          "contract_regression_signals"
+        ]
+      },
+      {
+        "run_id": "run-20260507-auto-improve-iteration-persistence-typed-same-eval",
+        "families": [
+          "contract_regression_signals"
+        ]
+      }
+    ],
+    "run_set_digest": "6a4f2147a61174389799b8a0e871103cd935336e9b9ce5e37e1b76512aef30db"
+  },
+  "confirmed_telemetry_evidence": [
+    {
+      "run_id": "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+      "telemetry_path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/run-telemetry.json",
+      "exists": true,
+      "sha256": "370f77f245e56c0572e6542a94c5dbf3257f9d533d78da70f01507d83a8007d4",
+      "decision": "DISCARD",
+      "behavior_delta_path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/behavior-delta.json",
+      "behavior_delta_artifact_exists": true,
+      "behavior_delta_artifact_sha256": "bc4231630e01a551a57771095f5abe69411646b5f79fceeee2999e1163c29d66",
+      "behavior_delta_artifact_digest_match": true,
+      "behavior_delta_artifact_readback_status": "pass",
+      "same_eval_reason_code": "telemetry_discoverability_improved",
+      "strict_secondary_improvement_present": true,
+      "secondary_improvement_axes": [
+        "tests"
+      ],
+      "behavior_delta_digest": "bc4231630e01a551a57771095f5abe69411646b5f79fceeee2999e1163c29d66",
+      "behavior_delta_digest_present": true,
+      "behavior_delta_digest_valid": true,
+      "behavior_delta_digest_source": "telemetry_field",
+      "promotion_report_path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/promotion-report.json",
+      "legacy_reconstruction_path": "ops/reports/learning-confirmed-legacy-reconstruction.json",
+      "legacy_reconstruction_status": "not_needed",
+      "legacy_reconstruction_selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+      "legacy_reconstruction_reasons": [],
+      "secondary_axis_evidence_source": "telemetry_field",
+      "secondary_axis_evidence_detail": "",
+      "families": [
+        "contract_regression_signals"
+      ]
+    },
+    {
+      "run_id": "run-20260422-auto-improve-timeout-telemetry-fallback",
+      "telemetry_path": "runs/run-20260422-auto-improve-timeout-telemetry-fallback/run-telemetry.json",
+      "exists": true,
+      "sha256": "55e4f4f1c4918c55598cc11dec230feb0348a9145ef8ab1c9b447f3a2efd2d8d",
+      "decision": "PROMOTE",
+      "behavior_delta_path": "runs/run-20260422-auto-improve-timeout-telemetry-fallback/behavior-delta.json",
+      "behavior_delta_artifact_exists": true,
+      "behavior_delta_artifact_sha256": "2efb697d67f44f3922f2e3465b1d444fa13031b6d42cc3b6b4af517711ae1991",
+      "behavior_delta_artifact_digest_match": true,
+      "behavior_delta_artifact_readback_status": "pass",
+      "same_eval_reason_code": "telemetry_discoverability_improved",
+      "strict_secondary_improvement_present": true,
+      "secondary_improvement_axes": [
+        "complexity",
+        "tests"
+      ],
+      "behavior_delta_digest": "2efb697d67f44f3922f2e3465b1d444fa13031b6d42cc3b6b4af517711ae1991",
+      "behavior_delta_digest_present": true,
+      "behavior_delta_digest_valid": true,
+      "behavior_delta_digest_source": "telemetry_field",
+      "promotion_report_path": "runs/run-20260422-auto-improve-timeout-telemetry-fallback/promotion-report.json",
+      "legacy_reconstruction_path": "ops/reports/learning-confirmed-legacy-reconstruction.json",
+      "legacy_reconstruction_status": "not_needed",
+      "legacy_reconstruction_selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+      "legacy_reconstruction_reasons": [],
+      "secondary_axis_evidence_source": "telemetry_field",
+      "secondary_axis_evidence_detail": "",
+      "families": [
+        "contract_regression_signals"
+      ]
+    },
+    {
+      "run_id": "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
+      "telemetry_path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/run-telemetry.json",
+      "exists": true,
+      "sha256": "d8f5101d691c70b8acd20a42333860a46eb76b62f348b8b147ca9cb6750fd605",
+      "decision": "PROMOTE",
+      "behavior_delta_path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/behavior-delta.json",
+      "behavior_delta_artifact_exists": true,
+      "behavior_delta_artifact_sha256": "514097d562a83a47866da20e7707687cabe31968d32e435484851f7cc63b902b",
+      "behavior_delta_artifact_digest_match": true,
+      "behavior_delta_artifact_readback_status": "pass",
+      "same_eval_reason_code": "telemetry_discoverability_improved",
+      "strict_secondary_improvement_present": true,
+      "secondary_improvement_axes": [
+        "complexity"
+      ],
+      "behavior_delta_digest": "514097d562a83a47866da20e7707687cabe31968d32e435484851f7cc63b902b",
+      "behavior_delta_digest_present": true,
+      "behavior_delta_digest_valid": true,
+      "behavior_delta_digest_source": "telemetry_field",
+      "promotion_report_path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/promotion-report.json",
+      "legacy_reconstruction_path": "ops/reports/learning-confirmed-legacy-reconstruction.json",
+      "legacy_reconstruction_status": "not_needed",
+      "legacy_reconstruction_selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+      "legacy_reconstruction_reasons": [],
+      "secondary_axis_evidence_source": "telemetry_field",
+      "secondary_axis_evidence_detail": "",
+      "families": [
+        "contract_regression_signals"
+      ]
+    },
+    {
+      "run_id": "run-20260507-auto-improve-iteration-persistence-discard-path",
+      "telemetry_path": "runs/run-20260507-auto-improve-iteration-persistence-discard-path/run-telemetry.json",
+      "exists": true,
+      "sha256": "c66a1fb1b615e5b4b2bc5461341e31f302a46e6bfcbb5d4227b16ad8c6d5af21",
+      "decision": "PROMOTE",
+      "behavior_delta_path": "runs/run-20260507-auto-improve-iteration-persistence-discard-path/behavior-delta.json",
+      "behavior_delta_artifact_exists": true,
+      "behavior_delta_artifact_sha256": "8a01cb3873cfbf4037ad5f4a06f67762902e7770df7f5c982af696175dd019dc",
+      "behavior_delta_artifact_digest_match": true,
+      "behavior_delta_artifact_readback_status": "pass",
+      "same_eval_reason_code": "",
+      "strict_secondary_improvement_present": true,
+      "secondary_improvement_axes": [
+        "lint",
+        "complexity",
+        "tests"
+      ],
+      "behavior_delta_digest": "8a01cb3873cfbf4037ad5f4a06f67762902e7770df7f5c982af696175dd019dc",
+      "behavior_delta_digest_present": true,
+      "behavior_delta_digest_valid": true,
+      "behavior_delta_digest_source": "legacy_reconstruction_artifact",
+      "promotion_report_path": "runs/run-20260507-auto-improve-iteration-persistence-discard-path/promotion-report.json",
+      "legacy_reconstruction_path": "ops/reports/learning-confirmed-legacy-reconstruction.json",
+      "legacy_reconstruction_status": "reconstructed",
+      "legacy_reconstruction_selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+      "legacy_reconstruction_reasons": [
+        "telemetry behavior_delta_digest missing or invalid",
+        "telemetry strict secondary improvement fields missing or incomplete"
+      ],
+      "secondary_axis_evidence_source": "legacy_reconstruction_artifact",
+      "secondary_axis_evidence_detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=true, selected_any_improvement=true",
+      "families": [
+        "contract_regression_signals"
+      ]
+    },
+    {
+      "run_id": "run-20260507-auto-improve-iteration-persistence-typed-same-eval",
+      "telemetry_path": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/run-telemetry.json",
+      "exists": true,
+      "sha256": "9048eb29f9df2973099c992e7d5f5f920d21fbc05f258ce3625499e5dd26e7a6",
+      "decision": "DISCARD",
+      "behavior_delta_path": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/behavior-delta.json",
+      "behavior_delta_artifact_exists": true,
+      "behavior_delta_artifact_sha256": "297e3886f43ccf40b0ad8a0a5b3eb3fd3a5564834809eac2ec5e7f9db88f1478",
+      "behavior_delta_artifact_digest_match": true,
+      "behavior_delta_artifact_readback_status": "pass",
+      "same_eval_reason_code": "behavior_delta_digest_added",
+      "strict_secondary_improvement_present": true,
+      "secondary_improvement_axes": [
+        "typed_same_eval_contract",
+        "behavior_delta_digest"
+      ],
+      "behavior_delta_digest": "297e3886f43ccf40b0ad8a0a5b3eb3fd3a5564834809eac2ec5e7f9db88f1478",
+      "behavior_delta_digest_present": true,
+      "behavior_delta_digest_valid": true,
+      "behavior_delta_digest_source": "telemetry_field",
+      "promotion_report_path": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/promotion-report.json",
+      "legacy_reconstruction_path": "ops/reports/learning-confirmed-legacy-reconstruction.json",
+      "legacy_reconstruction_status": "not_needed",
+      "legacy_reconstruction_selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+      "legacy_reconstruction_reasons": [],
+      "secondary_axis_evidence_source": "telemetry_field",
+      "secondary_axis_evidence_detail": "",
+      "families": [
+        "contract_regression_signals"
+      ]
+    }
+  ],
+  "confirmed_run_artifacts": [
+    {
+      "run_id": "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+      "artifacts": [
+        {
+          "id": "baseline_mechanism_assessment",
+          "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/baseline-mechanism-assessment.json",
+          "exists": true,
+          "sha256": "bed21273d7e47feb06b264f11a89a7167de2030362dd679373ef4a9f1e7c769f",
+          "required_for_confirmed": true,
+          "status": "present"
+        },
+        {
+          "id": "candidate_mechanism_assessment",
+          "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/candidate-mechanism-assessment.json",
+          "exists": true,
+          "sha256": "ff28767912de6d98e216edd3c2d30828c9c299bc1aaf02fdb15ec7b012ce8fc4",
+          "required_for_confirmed": true,
+          "status": "present"
+        },
+        {
+          "id": "promotion_report",
+          "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/promotion-report.json",
+          "exists": true,
+          "sha256": "8dbd94b2cf516d0485f975a282cfd77463481a2e4d33d9a4f48cbfb15d15eecd",
+          "required_for_confirmed": true,
+          "status": "present"
+        }
+      ],
+      "required_artifact_count": 3,
+      "present_required_artifact_count": 3,
+      "missing_required_artifact_count": 0,
+      "status": "pass"
+    },
+    {
+      "run_id": "run-20260422-auto-improve-timeout-telemetry-fallback",
+      "artifacts": [
+        {
+          "id": "baseline_mechanism_assessment",
+          "path": "runs/run-20260422-auto-improve-timeout-telemetry-fallback/baseline-mechanism-assessment.json",
+          "exists": true,
+          "sha256": "e6ff258acc75eeb8a5b3e8cdd44a6f17d223afa8190032bb93f216109f585384",
+          "required_for_confirmed": true,
+          "status": "present"
+        },
+        {
+          "id": "candidate_mechanism_assessment",
+          "path": "runs/run-20260422-auto-improve-timeout-telemetry-fallback/candidate-mechanism-assessment.json",
+          "exists": true,
+          "sha256": "956aad853281fb2932074e9103c7cf1265930069135460031f876efe116cdc60",
+          "required_for_confirmed": true,
+          "status": "present"
+        },
+        {
+          "id": "promotion_report",
+          "path": "runs/run-20260422-auto-improve-timeout-telemetry-fallback/promotion-report.json",
+          "exists": true,
+          "sha256": "432276f82246b4c6f2f21991a327ec06b93e847db5c8e0b526df9576d39a026f",
+          "required_for_confirmed": true,
+          "status": "present"
+        }
+      ],
+      "required_artifact_count": 3,
+      "present_required_artifact_count": 3,
+      "missing_required_artifact_count": 0,
+      "status": "pass"
+    },
+    {
+      "run_id": "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
+      "artifacts": [
+        {
+          "id": "baseline_mechanism_assessment",
+          "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/baseline-mechanism-assessment.json",
+          "exists": true,
+          "sha256": "bc5027ec13af9e5c82f974be8a58a64e60553f29f8302bee3435df25c747ae26",
+          "required_for_confirmed": true,
+          "status": "present"
+        },
+        {
+          "id": "candidate_mechanism_assessment",
+          "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/candidate-mechanism-assessment.json",
+          "exists": true,
+          "sha256": "6e4d2966b66858d8e54bcc0caa45ffd5d6d42dfd539fa20226470b75dc8dc3ec",
+          "required_for_confirmed": true,
+          "status": "present"
+        },
+        {
+          "id": "promotion_report",
+          "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/promotion-report.json",
+          "exists": true,
+          "sha256": "c0c80ccf35241e9fef7c845b45566816e929f734469dc2ccebef239a550dba3b",
+          "required_for_confirmed": true,
+          "status": "present"
+        }
+      ],
+      "required_artifact_count": 3,
+      "present_required_artifact_count": 3,
+      "missing_required_artifact_count": 0,
+      "status": "pass"
+    },
+    {
+      "run_id": "run-20260507-auto-improve-iteration-persistence-discard-path",
+      "artifacts": [
+        {
+          "id": "baseline_mechanism_assessment",
+          "path": "runs/run-20260507-auto-improve-iteration-persistence-discard-path/baseline-mechanism-assessment.json",
+          "exists": true,
+          "sha256": "db5ae91766f17d7f9d4ebfb8091cf2fe3fed2b9d508acc92dbd95af807609bfc",
+          "required_for_confirmed": true,
+          "status": "present"
+        },
+        {
+          "id": "candidate_mechanism_assessment",
+          "path": "runs/run-20260507-auto-improve-iteration-persistence-discard-path/candidate-mechanism-assessment.json",
+          "exists": true,
+          "sha256": "a72ccd62df5bae5be7399ed730a56837f70f7133b5cd007ad10b65844234e100",
+          "required_for_confirmed": true,
+          "status": "present"
+        },
+        {
+          "id": "promotion_report",
+          "path": "runs/run-20260507-auto-improve-iteration-persistence-discard-path/promotion-report.json",
+          "exists": true,
+          "sha256": "468f04ffbfd54564caae74e32c7ac161d76c89c459b66f623dfcda9435c6539d",
+          "required_for_confirmed": true,
+          "status": "present"
+        }
+      ],
+      "required_artifact_count": 3,
+      "present_required_artifact_count": 3,
+      "missing_required_artifact_count": 0,
+      "status": "pass"
+    },
+    {
+      "run_id": "run-20260507-auto-improve-iteration-persistence-typed-same-eval",
+      "artifacts": [
+        {
+          "id": "baseline_mechanism_assessment",
+          "path": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/baseline-mechanism-assessment.json",
+          "exists": true,
+          "sha256": "74da7f0e37d846ac4a5f08894fe9754b1bcb7c9a6d2f182013b4b0a5a9d1fca9",
+          "required_for_confirmed": true,
+          "status": "present"
+        },
+        {
+          "id": "candidate_mechanism_assessment",
+          "path": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/candidate-mechanism-assessment.json",
+          "exists": true,
+          "sha256": "b0e52a9431ad222bf4c21b3f4c1557822e457f52947f65129250ea4cb898321c",
+          "required_for_confirmed": true,
+          "status": "present"
+        },
+        {
+          "id": "promotion_report",
+          "path": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/promotion-report.json",
+          "exists": true,
+          "sha256": "70684eff29b18e82e9ffe57b924dc18f8f48ee93961a589ada1987ff74b7c215",
+          "required_for_confirmed": true,
+          "status": "present"
+        }
+      ],
+      "required_artifact_count": 3,
+      "present_required_artifact_count": 3,
+      "missing_required_artifact_count": 0,
+      "status": "pass"
+    }
+  ],
+  "behavior_delta_digest_readback": {
+    "status": "pass",
+    "missing_count": 0,
+    "mismatch_count": 0,
+    "source": "run_telemetry.behavior_delta_digest or confirmed behavior_delta artifact readback"
+  },
+  "behavior_delta_artifact_readback": {
+    "status": "pass",
+    "missing_count": 0,
+    "mismatch_count": 0,
+    "source": "run_telemetry.behavior_delta -> behavior_delta_digest"
+  },
+  "revocation": {
+    "status": "active",
+    "reasons": [],
+    "stale_item_ids": [],
+    "revoked_item_ids": []
+  }
+}

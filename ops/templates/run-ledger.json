@@ -1,0 +1,20 @@
+{
+  "$schema": "ops/schemas/run-ledger.schema.json",
+  "run_id": "run-YYYYMMDD-slug",
+  "status": "draft",
+  "events": [
+    {
+      "ts": "2026-04-14T00:00:00Z",
+      "type": "created",
+      "summary": "Initialized run artifacts from ops/templates.",
+      "artifacts": [
+        "seed.yaml",
+        "planning-validation.json",
+        "run-ledger.json",
+        "plan.md",
+        "open-questions.md"
+      ],
+      "decision": ""
+    }
+  ]
+}

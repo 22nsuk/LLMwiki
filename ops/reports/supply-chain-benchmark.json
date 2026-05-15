@@ -1,0 +1,29 @@
+{
+  "$schema": "ops/schemas/supply-chain-benchmark.schema.json",
+  "vault": ".",
+  "generated_at": "2026-05-13T18:28:45Z",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "strict_path": {
+    "elapsed_seconds": 6.169534,
+    "intermediate_reuse": false
+  },
+  "cached_path": {
+    "elapsed_seconds": 2.349378,
+    "intermediate_reuse": true
+  },
+  "comparison": {
+    "strict_over_cached_ratio": 2.626029,
+    "cached_faster_or_equal": true
+  },
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/supply-chain-benchmark.schema.json\", \"artifact_kind\": \"supply_chain_benchmark\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-13T18:28:45Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-13T18:28:45Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"cached_elapsed\": \"2c4d7aa171c7180ae5624e4db203487271e3a55cdd2f9dbf436efd11b0593c43\", \"policy\": \"ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f\", \"schema\": \"31f4de0a6a12287c410230c078ab34586c02ba1b9f1770edf267b8d90a03c4fa\", \"source_paths\": \"efa18df0daa60f690bf035faad5a0eb5cfe70d6907c59a618e9c6e79f159563a\", \"strict_elapsed\": \"a5505c0dd74efed3f56e6d9c37ed387369ee20174e676d68aaf3b3b058030196\", \"strict_over_cached_ratio\": \"2f71af21afedb82be860ba1baf3874e7bd742b8ad9d9c92c23f54080762d03be\"}, \"producer\": \"ops.scripts.supply_chain_benchmark\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.supply_chain.supply_chain_benchmark\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"ceff32f6f3c9156b3aa6ffd7a0d030e38a2bfc9e7f31d7c70bc6ba91df194b0a\"}"
+      }
+    ]
+  }
+}

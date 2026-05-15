@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "lanes": {
+    "full_vault": {
+      "description": "Private/full local vault checkout with raw, wiki, system, and generated release evidence surfaces available.",
+      "sentinels": [
+        "raw",
+        "wiki/index.md",
+        "system/system-index.md"
+      ]
+    },
+    "source_package_extract": {
+      "description": "Clean extract of the public release source package; generated full-vault artifacts are intentionally absent.",
+      "sentinels": [
+        "release-archive-self-description.json"
+      ]
+    },
+    "public_or_partial_checkout": {
+      "description": "Public mirror or partial checkout without full-vault private corpus and generated evidence surfaces."
+    }
+  },
+  "targets": {
+    "check-clean": {
+      "required_lane": "full_vault",
+      "reason": "check-clean includes artifact-finalization and release evidence checks that require full-vault generated artifacts.",
+      "alternatives": [
+        "make static",
+        "make test",
+        "make test-source-package",
+        "make release-source-package-check"
+      ]
+    },
+    "release-distribution-zip": {
+      "required_lane": "full_vault",
+      "reason": "release-distribution-zip builds a new source archive from full-vault state; source-package extracts already contain release-archive-self-description.json and must not replay packaging inside themselves.",
+      "alternatives": [
+        "make static",
+        "make test-source-package",
+        "make release-source-package-check"
+      ]
+    },
+    "release-smoke": {
+      "required_lane": "full_vault",
+      "reason": "release-smoke packages and replays the full source archive profile, which requires full-vault corpus and release policy context.",
+      "alternatives": [
+        "make static",
+        "make test-source-package",
+        "make release-source-package-check"
+      ]
+    },
+    "release-evidence-closeout": {
+      "required_lane": "full_vault",
+      "reason": "release-evidence-closeout refreshes generated release evidence and artifact finalization reports that are intentionally absent from source-package extracts.",
+      "alternatives": [
+        "make static",
+        "make test-source-package",
+        "make release-source-package-check"
+      ]
+    },
+    "release-builder-full": {
+      "required_lane": "full_vault",
+      "reason": "release-builder-full is the full-vault release builder lane and depends on release-evidence-closeout.",
+      "alternatives": [
+        "make static",
+        "make test-source-package",
+        "make release-source-package-check"
+      ]
+    },
+    "test-artifact-finalization": {
+      "blocked_lanes": ["source_package_extract"],
+      "reason": "artifact-finalization validates checked-in generated reports and release artifacts that are intentionally excluded from source-package extracts.",
+      "alternatives": [
+        "make test-report-contract",
+        "make test-source-package",
+        "make release-source-package-check"
+      ]
+    }
+  }
+}

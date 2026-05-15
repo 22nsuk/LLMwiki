@@ -1,0 +1,42 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-07T02:38:26Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "020399c9d2ef990917394771d8d148cc005c6c68725d730863edae8834a92fe7",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "857a10bdfdaac998514e40992046f2f0a8e1db913b4e2d6c964705db2d7c5f1a",
+    "record_id": "474ccd3cd49080c5402b1c287ff3863db848c018b9c91fe448aa4e9be1ebeeee",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "f852f0246e89a206ec7eda8216475c03c524fda250c0c54335e1d6a0331db4c3"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:38:26Z"
+  },
+  "record_id": "task-20260420-review-sbom-vex-alignment",
+  "captured_at": "2026-04-20T11:18:30Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Cached supply-chain artifact generation, shared-model outputs, and release attestation wiring were implemented while accepting the SBOM/OpenVEX review changes.",
+  "observations": [
+    {
+      "observation_id": "sbom_generated_pipeline_reuses_prior_artifacts",
+      "surface": "Makefile, ops/scripts/sbom_export_mapping.py, ops/scripts/cyclonedx_sbom.py, ops/scripts/openvex_draft.py",
+      "problem": "The phony Make chain for openvex-draft reruns sbom-export-mapping and cyclonedx-sbom each time, and those generators repeat release/public manifest traversal before producing the final OpenVEX artifact.",
+      "why_it_matters": "The reports are deterministic, but repeated traversal makes local and CI supply-chain checks noticeably slower on large or Windows-backed workspaces.",
+      "automation_candidate": "Introduce file-backed generated targets or a shared in-process supply-chain report pipeline that reuses the already-written provenance, mapping, and CycloneDX artifacts when their dependency inputs have not changed.",
+      "suggested_followup": "The cached path now exists and emits the broader artifact family. The remaining operational decision is whether the new release attestation outputs should graduate from optional workflow evidence to a default hard release gate after enough soak time.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260420-review-sbom-vex-alignment"
+}

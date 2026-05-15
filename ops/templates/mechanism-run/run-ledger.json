@@ -1,0 +1,29 @@
+{
+  "$schema": "ops/schemas/run-ledger.schema.json",
+  "run_id": "run-YYYYMMDD-mechanism-slug",
+  "status": "draft",
+  "events": [
+    {
+      "ts": "2026-04-14T00:00:00Z",
+      "type": "created",
+      "summary": "Initialized mechanism experiment artifacts from ops/templates/mechanism-run.",
+      "artifacts": [
+        "seed.yaml",
+        "planning-validation.json",
+        "run-ledger.json",
+        "promotion-report.json",
+        "plan.md",
+        "open-questions.md",
+        "baseline-eval.json",
+        "candidate-eval.json",
+        "baseline-lint.json",
+        "candidate-lint.json",
+        "baseline-mechanism-assessment.json",
+        "candidate-mechanism-assessment.json",
+        "changed-files-manifest.json",
+        "behavior-delta.json"
+      ],
+      "decision": ""
+    }
+  ]
+}

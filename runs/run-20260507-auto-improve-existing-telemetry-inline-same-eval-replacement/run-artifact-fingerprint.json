@@ -1,0 +1,193 @@
+{
+  "$schema": "ops/schemas/run-artifact-fingerprint.schema.json",
+  "scope": "run",
+  "run_id": "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
+  "generated_at": "2026-05-06T19:49:44Z",
+  "repo_provenance_snapshot": {
+    "report_path": "ops/reports/supply-chain-provenance.json",
+    "report_sha256": "9d6eb6edf215310a15ab1f4bc17c20acfdd12924782a9463ca42c161234ccdf4",
+    "report_generated_at": "2026-04-30T18:43:53Z",
+    "report_status": "pass",
+    "exists_at_run_start": true
+  },
+  "summary": {
+    "artifact_count": 23,
+    "schema_backed_count": 16,
+    "total_size_bytes": 1217570
+  },
+  "artifacts": [
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/baseline-eval.json",
+      "artifact_role": "baseline_eval",
+      "schema": "ops/schemas/eval-report.schema.json",
+      "size_bytes": 518492,
+      "sha256": "b808c84fb447f787505e311407084e1068368888fa9855e08990dcce5c3738d6"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/baseline-lint.json",
+      "artifact_role": "baseline_lint",
+      "schema": "ops/schemas/lint-report.schema.json",
+      "size_bytes": 66461,
+      "sha256": "77d7a90d37cad7ff0867fd20040427042155cc4ef45f9ba90f6d03c9b772be42"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/baseline-mechanism-assessment.json",
+      "artifact_role": "baseline_mechanism_assessment",
+      "schema": "ops/schemas/mechanism-assessment-report.schema.json",
+      "size_bytes": 3452,
+      "sha256": "ea430d2200646c8614cbcda202f1718c37e7f643c11307cf521ce9d1f77d4e04"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/behavior-delta.json",
+      "artifact_role": "behavior_delta",
+      "schema": "ops/schemas/behavior-delta.schema.json",
+      "size_bytes": 4022,
+      "sha256": "049348b7c9dd2809df27dc3070f20d9dd9ad7f24f48011ca37e1445652eb4775"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/candidate-eval.json",
+      "artifact_role": "candidate_eval",
+      "schema": "ops/schemas/eval-report.schema.json",
+      "size_bytes": 518492,
+      "sha256": "99d4a26f4f56a67622245d7af67425326edeec045872f4bcaf760be49b7d21cb"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/candidate-lint.json",
+      "artifact_role": "candidate_lint",
+      "schema": "ops/schemas/lint-report.schema.json",
+      "size_bytes": 66461,
+      "sha256": "0288762bd36899a83416602283893292fe030988cf93c6b9a1d9581a198a1b46"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/candidate-mechanism-assessment.json",
+      "artifact_role": "candidate_mechanism_assessment",
+      "schema": "ops/schemas/mechanism-assessment-report.schema.json",
+      "size_bytes": 3452,
+      "sha256": "fe0e3b7cd07325a14a7beec0d453dc2f17ec41d55465a704e657c688e5d5a8e3"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/changed-files-manifest.json",
+      "artifact_role": "changed_files_manifest",
+      "schema": "ops/schemas/changed-files-manifest.schema.json",
+      "size_bytes": 952,
+      "sha256": "e9f9bfa0ed52d6537fbaef9c863664b0f52c03b3a8a42a28a27e5d4149a74a3f"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/improvement-observations.json",
+      "artifact_role": "improvement_observations",
+      "schema": "ops/schemas/improvement-observations.schema.json",
+      "size_bytes": 1727,
+      "sha256": "3577bc3efce33670796b65ad5855e6ac4e7596cabad55caeffca19ac7defcf82"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/mutation-command.stderr.txt",
+      "artifact_role": "command_stderr",
+      "schema": "",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/mutation-command.stdout.txt",
+      "artifact_role": "command_stdout",
+      "schema": "",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/open-questions.md",
+      "artifact_role": "open_questions",
+      "schema": "",
+      "size_bytes": 580,
+      "sha256": "c43d30065ba2385276aa97dc43d1cef253343882b1e471f6c4a82cace9ee380e"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/plan.md",
+      "artifact_role": "plan",
+      "schema": "",
+      "size_bytes": 1561,
+      "sha256": "21d484821c8c1a196f48f73230129145374461fbe49bee9ac78fa9cdce334e32"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/planning-validation.json",
+      "artifact_role": "planning_validation",
+      "schema": "ops/schemas/planning-validation.schema.json",
+      "size_bytes": 2695,
+      "sha256": "2e5c35701db8b199af0c7b9dbf7ac1fb0386934b089b0d0e095dd876f51a8f78"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/promotion-report.json",
+      "artifact_role": "promotion_report",
+      "schema": "ops/schemas/promotion-report.schema.json",
+      "size_bytes": 10663,
+      "sha256": "84f9d19667e49d3d5a6eddf2a2eb703288e7758560ed020b04cbb3380a124ee8"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/proposal-snapshot.json",
+      "artifact_role": "proposal_snapshot",
+      "schema": "ops/schemas/proposal-snapshot.schema.json",
+      "size_bytes": 2928,
+      "sha256": "a7c6aab819ca678c356979cba0bd93c5fbdeea7fbe1f91da553ad7fab1ffba27"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/repo-health.stderr.txt",
+      "artifact_role": "command_stderr",
+      "schema": "",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/repo-health.stdout.txt",
+      "artifact_role": "command_stdout",
+      "schema": "",
+      "size_bytes": 80,
+      "sha256": "06955fb47f16312e5d13266c774a2aa4648c46e423cbe6564a92e25b68e39131"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/run-ledger.json",
+      "artifact_role": "run_ledger",
+      "schema": "ops/schemas/run-ledger.schema.json",
+      "size_bytes": 6979,
+      "sha256": "bbdb1e8b4733c46c937f29c1904b4c793c1b947a014c7eda16d7a435c3155bc6"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/run-telemetry.json",
+      "artifact_role": "run_telemetry",
+      "schema": "ops/schemas/run-telemetry.schema.json",
+      "size_bytes": 3193,
+      "sha256": "54f1a3291c902f926f7a3c028c8f6c42ac6efe383aef4037993fdcbc6b29b548"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/runtime-events.jsonl",
+      "artifact_role": "runtime_events.jsonl",
+      "schema": "",
+      "size_bytes": 516,
+      "sha256": "bc6612e8825e340a29edb1e0d4819c7a1b7663cb03bd913c8144b76435bcf2d7"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/seed.yaml",
+      "artifact_role": "seed",
+      "schema": "ops/schemas/seed.schema.json",
+      "size_bytes": 3631,
+      "sha256": "08784fac8d3160712d31bc8dd977ac664574827ed1af4103790d9845d3750a5e"
+    },
+    {
+      "path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/shadow-apply-report.json",
+      "artifact_role": "shadow_apply_report",
+      "schema": "ops/schemas/shadow-apply-report.schema.json",
+      "size_bytes": 1233,
+      "sha256": "6106956a9798a1066ae0822015819ebf6765d9cfc15747011c9ff2c7884b4bcc"
+    }
+  ],
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-05-06T19:49:44Z\", \"generated_at_source\": \"payload.generated_at\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-05-06T19:58:37Z\", \"source_artifact\": \"runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/run-artifact-fingerprint.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/run-artifact-fingerprint.schema.json\", \"artifact_kind\": \"run_artifact_fingerprint\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-05-06T19:58:37Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-06T19:49:44Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"d0a50cf34b59c22a0d5f2c8c7daa83a5d60f09242102de5d55651945d83e3c1b\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"fc0340f868a19c5980eebfb4b9eb41620ff6571ed9de83a030bf0a59b3d20be6\", \"policy\": \"606ba1235550f640f7365d46d76aa52b84ef8f831502790010a6c776a7b721d1\", \"schema\": \"c3fa463ce25ed927ecb12bd0f4d9010e0b5a7dc2478778d417a2fe28e3fedfac\", \"target_rel_path\": \"8361e38293bdf38f5cbde37392caf8c3c7c7c5885aee3d399c04e89b88bacc39\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/run-artifact-fingerprint.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"1c4078849302f6b54e4eb36b8d169b09ac7d3e7592d883a1170caf453b2b4219\"}"
+      }
+    ]
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Script Module Surfaces",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "version",
+    "description",
+    "stable_import_surfaces"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "ops/schemas/script-module-surfaces.schema.json"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stable_import_surfaces": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/stableImportSurface"
+      }
+    }
+  },
+  "$defs": {
+    "stableImportSurface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "role",
+        "direct_script_entrypoint",
+        "exports"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^ops/scripts/([A-Za-z0-9_]+/)*[A-Za-z0-9_]+\\.py$"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "cli_facade",
+            "compatibility_facade",
+            "internal_facade"
+          ]
+        },
+        "direct_script_entrypoint": {
+          "type": "boolean"
+        },
+        "exports": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          }
+        }
+      }
+    }
+  }
+}

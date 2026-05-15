@@ -1,0 +1,616 @@
+{
+  "$schema": "ops/schemas/external-report-action-matrix.schema.json",
+  "artifact_kind": "external_report_action_matrix",
+  "generated_at": "2026-05-15T04:22:30Z",
+  "producer": "ops.scripts.external_report_action_matrix",
+  "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "2d153426e33bfc08ababa978b2582bea4cca848b7d52e6db79afb6435143d9af",
+    "active_external_reports": "21b0512cbc784b769da611016d2af8a5fb6e55a04ba676abe22c754962270171",
+    "action_catalog": "492c64eb6bef254267b50176612142ec71eb2a2a0051bb399fd37eef58cf495d"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-15T04:22:30Z"
+  },
+  "vault": ".",
+  "status": "attention",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "summary": {
+    "active_report_count": 3,
+    "archived_report_count": 63,
+    "action_item_count": 19,
+    "implemented_count": 10,
+    "partially_automated_count": 3,
+    "requires_release_run_verification_count": 0,
+    "planned_count": 6,
+    "unmatched_active_report_count": 0,
+    "reference_manifest_alignment_status": "current",
+    "reference_manifest_missing_active_report_count": 0,
+    "reference_manifest_stale_reference_count": 0
+  },
+  "reference_manifest_alignment": {
+    "status": "current",
+    "expected_reference_paths": [
+      "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+      "external-reports/llmwiki_review_reconciled_improvement_report.md"
+    ],
+    "manifest_reference_paths": [
+      "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+      "external-reports/llmwiki_review_reconciled_improvement_report.md"
+    ],
+    "missing_active_report_paths": [],
+    "stale_reference_paths": []
+  },
+  "active_report_coverage": [
+    {
+      "path": "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+      "report_type": "narrative_report",
+      "priority_mentions": {
+        "P0": 14,
+        "P1": 11,
+        "P2": 8
+      },
+      "matched_action_ids": [
+        "function_budget_proposal_adapter",
+        "outcome_provenance_gate_policy",
+        "source_package_distribution_binding",
+        "release_evidence_bundle_and_attestation",
+        "full_suite_evidence_currentness",
+        "promotion_truth_ladder",
+        "goal_contract_schema",
+        "codex_goal_adapter",
+        "goal_run_status_audit_resume",
+        "command_heartbeat_observability",
+        "selected_contract_currentness_gate",
+        "sealed_preflight_canonicalization",
+        "negative_learning_ledger",
+        "remediation_backlog",
+        "git_worktree_goal_guard"
+      ],
+      "matched_action_count": 15
+    },
+    {
+      "path": "external-reports/llmwiki_review_reconciled_improvement_report.md",
+      "report_type": "narrative_report",
+      "priority_mentions": {
+        "P0": 1,
+        "P1": 1,
+        "P2": 1
+      },
+      "matched_action_ids": [
+        "script_output_surfaces_currentness",
+        "outcome_provenance_gate_policy",
+        "source_package_distribution_binding",
+        "release_evidence_bundle_and_attestation",
+        "full_suite_evidence_currentness",
+        "promotion_truth_ladder",
+        "negative_learning_ledger",
+        "remediation_backlog"
+      ],
+      "matched_action_count": 8
+    },
+    {
+      "path": "external-reports/report-reference-manifest.json",
+      "report_type": "reference_manifest",
+      "priority_mentions": {
+        "P0": 0,
+        "P1": 0,
+        "P2": 0
+      },
+      "matched_action_ids": [
+        "external_report_lifecycle"
+      ],
+      "matched_action_count": 1
+    }
+  ],
+  "action_items": [
+    {
+      "action_id": "script_output_surfaces_currentness",
+      "priority": "P0",
+      "theme": "writer output surface currentness",
+      "current_status": "implemented",
+      "source_report_paths": [
+        "external-reports/llmwiki_review_reconciled_improvement_report.md"
+      ],
+      "recommended_target": "script-output-surfaces",
+      "evidence": [
+        {
+          "path": "ops/script-output-surfaces.json",
+          "exists": true,
+          "status": "",
+          "producer": "ops.scripts.script_output_surfaces"
+        }
+      ]
+    },
+    {
+      "action_id": "release_writer_dependency_single_source",
+      "priority": "P0",
+      "theme": "release writer ordering single source",
+      "current_status": "implemented",
+      "source_report_paths": [],
+      "recommended_target": "release-workflow-order-guard",
+      "evidence": [
+        {
+          "path": "tmp/workflow-dependency-planner.json",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tmp/release-workflow-order-guard.json",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "function_budget_proposal_adapter",
+      "priority": "P1",
+      "theme": "wiki_lint function-budget triage",
+      "current_status": "implemented",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
+      ],
+      "recommended_target": "function-budget-refactor-proposals",
+      "evidence": [
+        {
+          "path": "ops/reports/function-budget-refactor-proposals.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.function_budget_refactor_proposals"
+        }
+      ]
+    },
+    {
+      "action_id": "windows_path_and_archive_alias_parity",
+      "priority": "P1",
+      "theme": "path portability and archive alias normalization",
+      "current_status": "implemented",
+      "source_report_paths": [],
+      "recommended_target": "test-public",
+      "evidence": [
+        {
+          "path": "tests/test_writer_output_paths.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_planning_gate_validate_runtime.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_release_smoke.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "outcome_provenance_gate_policy",
+      "priority": "P2",
+      "theme": "outcome/provenance policy escalation",
+      "current_status": "implemented",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_review_reconciled_improvement_report.md"
+      ],
+      "recommended_target": "outcome-provenance-gate-policy",
+      "evidence": [
+        {
+          "path": "ops/reports/outcome-provenance-gate-policy.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.outcome_provenance_gate_policy"
+        }
+      ]
+    },
+    {
+      "action_id": "external_report_lifecycle",
+      "priority": "P1",
+      "theme": "active external report lifecycle",
+      "current_status": "implemented",
+      "source_report_paths": [
+        "external-reports/report-reference-manifest.json"
+      ],
+      "recommended_target": "external-report-action-matrix",
+      "evidence": [
+        {
+          "path": "external-reports/report-reference-manifest.json",
+          "exists": true,
+          "status": "",
+          "producer": "ops.scripts.external_report_reference_manifest"
+        },
+        {
+          "path": "ops/reports/external-report-action-matrix.json",
+          "exists": true,
+          "status": "attention",
+          "producer": "ops.scripts.external_report_action_matrix"
+        }
+      ]
+    },
+    {
+      "action_id": "source_package_distribution_binding",
+      "priority": "P0",
+      "theme": "source package and distribution ZIP binding",
+      "current_status": "implemented",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_review_reconciled_improvement_report.md"
+      ],
+      "recommended_target": "release-source-package-check",
+      "evidence": [
+        {
+          "path": "ops/reports/source-package-clean-extract.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.source_package_clean_extract"
+        },
+        {
+          "path": "ops/reports/release-smoke-report.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.release_smoke"
+        },
+        {
+          "path": "external-reports/report-reference-manifest.json",
+          "exists": true,
+          "status": "",
+          "producer": "ops.scripts.external_report_reference_manifest"
+        }
+      ]
+    },
+    {
+      "action_id": "release_evidence_bundle_and_attestation",
+      "priority": "P1",
+      "theme": "release evidence bundle and attestation",
+      "current_status": "implemented",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_review_reconciled_improvement_report.md"
+      ],
+      "recommended_target": "release-evidence-closeout-sealed-dry-run",
+      "evidence": [
+        {
+          "path": "ops/reports/release-closeout-finality-attestation.json",
+          "exists": true,
+          "status": "",
+          "producer": "ops.scripts.release_closeout_finality_attestation"
+        },
+        {
+          "path": "ops/reports/release-closeout-batch-manifest.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.release_closeout_batch_manifest"
+        }
+      ]
+    },
+    {
+      "action_id": "full_suite_evidence_currentness",
+      "priority": "P1",
+      "theme": "full-suite evidence currentness",
+      "current_status": "implemented",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_review_reconciled_improvement_report.md"
+      ],
+      "recommended_target": "test-execution-summary-full-refresh",
+      "evidence": [
+        {
+          "path": "ops/reports/test-execution-summary-full.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.test_execution_summary"
+        }
+      ]
+    },
+    {
+      "action_id": "promotion_truth_ladder",
+      "priority": "P0",
+      "theme": "live gate and promotion truth ladder",
+      "current_status": "implemented",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_review_reconciled_improvement_report.md"
+      ],
+      "recommended_target": "auto-improve-readiness-report",
+      "evidence": [
+        {
+          "path": "ops/reports/auto-improve-readiness.json",
+          "exists": true,
+          "status": "",
+          "producer": "ops.scripts.auto_improve_readiness_runtime"
+        },
+        {
+          "path": "ops/reports/release-closeout-summary.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.release_closeout_summary"
+        },
+        {
+          "path": "ops/reports/release-evidence-dashboard.json",
+          "exists": true,
+          "status": "attention",
+          "producer": "ops.scripts.release_evidence_dashboard"
+        }
+      ]
+    },
+    {
+      "action_id": "goal_contract_schema",
+      "priority": "P0",
+      "theme": "goal contract schema for long-running auto-improve",
+      "current_status": "planned",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
+      ],
+      "recommended_target": "codex-goal-contract",
+      "evidence": [
+        {
+          "path": "ops/schemas/codex-goal-contract.schema.json",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_codex_goal_contract.py",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "codex_goal_adapter",
+      "priority": "P0",
+      "theme": "local set_goal adapter and backend detection",
+      "current_status": "planned",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
+      ],
+      "recommended_target": "codex-goal-client",
+      "evidence": [
+        {
+          "path": "ops/scripts/core/codex_goal_client.py",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_codex_goal_client.py",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "goal_run_status_audit_resume",
+      "priority": "P0",
+      "theme": "goal run status, audit log, checkpoint, and resume contract",
+      "current_status": "planned",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
+      ],
+      "recommended_target": "auto-improve-goal-status",
+      "evidence": [
+        {
+          "path": "ops/schemas/goal-run-status.schema.json",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/scripts/mechanism/goal_run_status.py",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/reports/goal-run-status.json",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_goal_run_status.py",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "command_heartbeat_observability",
+      "priority": "P1",
+      "theme": "long command heartbeat and quiet-run observability",
+      "current_status": "partially_automated",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
+      ],
+      "recommended_target": "test-subprocess",
+      "evidence": [
+        {
+          "path": "ops/scripts/core/command_runtime.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/schemas/executor-report.schema.json",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_command_runtime_heartbeat.py",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "selected_contract_currentness_gate",
+      "priority": "P0",
+      "theme": "selected contract currentness gate distinct from artifact freshness",
+      "current_status": "partially_automated",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
+      ],
+      "recommended_target": "auto-improve-readiness-report",
+      "evidence": [
+        {
+          "path": "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_auto_improve_readiness_release_authority_runtime.py",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "sealed_preflight_canonicalization",
+      "priority": "P0",
+      "theme": "sealed authority preflight clean-required canonical evidence",
+      "current_status": "partially_automated",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
+      ],
+      "recommended_target": "release-authority-sealed-preflight",
+      "evidence": [
+        {
+          "path": "ops/scripts/release/release_closeout_sealed_rehearsal_check.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/schemas/release-closeout-sealed-rehearsal-check.schema.json",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_release_closeout_sealed_rehearsal_check.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "negative_learning_ledger",
+      "priority": "P2",
+      "theme": "standalone negative learning ledger",
+      "current_status": "planned",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_review_reconciled_improvement_report.md"
+      ],
+      "recommended_target": "self-improvement-negative-lessons",
+      "evidence": [
+        {
+          "path": "ops/schemas/self-improvement-negative-lessons.schema.json",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/reports/self-improvement-negative-lessons.json",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_self_improvement_negative_lessons.py",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "remediation_backlog",
+      "priority": "P1",
+      "theme": "remediation backlog for repeated blockers",
+      "current_status": "planned",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_review_reconciled_improvement_report.md"
+      ],
+      "recommended_target": "remediation-backlog",
+      "evidence": [
+        {
+          "path": "ops/schemas/remediation-backlog.schema.json",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/reports/remediation-backlog.json",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_remediation_backlog.py",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "git_worktree_goal_guard",
+      "priority": "P1",
+      "theme": "Git worktree and ZIP mode guard for long goal runs",
+      "current_status": "planned",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
+      ],
+      "recommended_target": "auto-improve-goal-preflight",
+      "evidence": [
+        {
+          "path": "ops/scripts/mechanism/goal_worktree_guard.py",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_goal_worktree_guard.py",
+          "exists": false,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    }
+  ],
+  "archive_policy": {
+    "active_root": "external-reports",
+    "archive_root": "external-reports/archive",
+    "reference_manifest": "external-reports/report-reference-manifest.json",
+    "archive_excluded_from_action_matching": true
+  }
+}

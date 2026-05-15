@@ -1,0 +1,1627 @@
+{
+  "generated_at": "2026-04-22T00:00:00Z",
+  "source_count": 180,
+  "manifest": "runs/run-20260422-raw-intake-registration-and-promotion/registration/source-english-summary-slug-manifest-2026-04-22.json",
+  "entries": [
+    {
+      "registry_id": "W-221",
+      "old_page": "wiki/source--ai-index-report-2026-2026-04-21.md",
+      "new_page": "wiki/source--ai-index-report-2026-2026-04-21.md",
+      "old_stem": "source--ai-index-report-2026-2026-04-21",
+      "new_stem": "source--ai-index-report-2026-2026-04-21",
+      "old_slug": "ai-index-report-2026",
+      "new_slug": "ai-index-report-2026"
+    },
+    {
+      "registry_id": "W-222",
+      "old_page": "wiki/source--미토스-충격-에-백악관-앤트로픽-회동-양측-다-생산적이었다-밝혀-2026-04-21.md",
+      "new_page": "wiki/source--white-house-anthropic-mythos-response-2026-04-21.md",
+      "old_stem": "source--미토스-충격-에-백악관-앤트로픽-회동-양측-다-생산적이었다-밝혀-2026-04-21",
+      "new_stem": "source--white-house-anthropic-mythos-response-2026-04-21",
+      "old_slug": "미토스-충격-에-백악관-앤트로픽-회동-양측-다-생산적이었다-밝혀",
+      "new_slug": "white-house-anthropic-mythos-response"
+    },
+    {
+      "registry_id": "W-223",
+      "old_page": "wiki/source--방산-대국-야심-일본-살상-무기-수출-허용-2026-04-21.md",
+      "new_page": "wiki/source--japan-lethal-arms-export-shift-2026-04-21.md",
+      "old_stem": "source--방산-대국-야심-일본-살상-무기-수출-허용-2026-04-21",
+      "new_stem": "source--japan-lethal-arms-export-shift-2026-04-21",
+      "old_slug": "방산-대국-야심-일본-살상-무기-수출-허용",
+      "new_slug": "japan-lethal-arms-export-shift"
+    },
+    {
+      "registry_id": "W-224",
+      "old_page": "wiki/source--사이버-핵무기-된-ai-미토스-6개월내-中도-만들-것-2026-04-21.md",
+      "new_page": "wiki/source--mythos-as-cyber-weapon-and-china-catchup-2026-04-21.md",
+      "old_stem": "source--사이버-핵무기-된-ai-미토스-6개월내-中도-만들-것-2026-04-21",
+      "new_stem": "source--mythos-as-cyber-weapon-and-china-catchup-2026-04-21",
+      "old_slug": "사이버-핵무기-된-ai-미토스-6개월내-中도-만들-것",
+      "new_slug": "mythos-as-cyber-weapon-and-china-catchup"
+    },
+    {
+      "registry_id": "W-225",
+      "old_page": "wiki/source--일시-개방-발표-이튿날-호르무즈서-선박-잇단-피격-종합2보-2026-04-21.md",
+      "new_page": "wiki/source--ships-hit-after-hormuz-reopening-2026-04-21.md",
+      "old_stem": "source--일시-개방-발표-이튿날-호르무즈서-선박-잇단-피격-종합2보-2026-04-21",
+      "new_stem": "source--ships-hit-after-hormuz-reopening-2026-04-21",
+      "old_slug": "일시-개방-발표-이튿날-호르무즈서-선박-잇단-피격-종합2보",
+      "new_slug": "ships-hit-after-hormuz-reopening"
+    },
+    {
+      "registry_id": "W-226",
+      "old_page": "wiki/source--자기학습-ai-로-설립-4개월-만에-7300억-투자-유치한-슈퍼-스타트업-등장-2026-04-21.md",
+      "new_page": "wiki/source--self-learning-ai-startup-funding-surge-2026-04-21.md",
+      "old_stem": "source--자기학습-ai-로-설립-4개월-만에-7300억-투자-유치한-슈퍼-스타트업-등장-2026-04-21",
+      "new_stem": "source--self-learning-ai-startup-funding-surge-2026-04-21",
+      "old_slug": "자기학습-ai-로-설립-4개월-만에-7300억-투자-유치한-슈퍼-스타트업-등장",
+      "new_slug": "self-learning-ai-startup-funding-surge"
+    },
+    {
+      "registry_id": "W-227",
+      "old_page": "wiki/source--자사주-의무소각-eb-발행금지-상법-개정-효과-자금조달-자취-감춰-2026-04-21.md",
+      "new_page": "wiki/source--treasury-stock-cancellation-and-eb-ban-funding-gap-2026-04-21.md",
+      "old_stem": "source--자사주-의무소각-eb-발행금지-상법-개정-효과-자금조달-자취-감춰-2026-04-21",
+      "new_stem": "source--treasury-stock-cancellation-and-eb-ban-funding-gap-2026-04-21",
+      "old_slug": "자사주-의무소각-eb-발행금지-상법-개정-효과-자금조달-자취-감춰",
+      "new_slug": "treasury-stock-cancellation-and-eb-ban-funding-gap"
+    },
+    {
+      "registry_id": "W-228",
+      "old_page": "wiki/source--탈-엔비디아-구글-마벨과-신규-ai-추론-tpu-공동-개발-협의-2026-04-21.md",
+      "new_page": "wiki/source--google-marvell-inference-tpu-collaboration-2026-04-21.md",
+      "old_stem": "source--탈-엔비디아-구글-마벨과-신규-ai-추론-tpu-공동-개발-협의-2026-04-21",
+      "new_stem": "source--google-marvell-inference-tpu-collaboration-2026-04-21",
+      "old_slug": "탈-엔비디아-구글-마벨과-신규-ai-추론-tpu-공동-개발-협의",
+      "new_slug": "google-marvell-inference-tpu-collaboration"
+    },
+    {
+      "registry_id": "W-229",
+      "old_page": "wiki/source--환율-다시-오를라-기업들-달러-쓸어담았다-2026-04-21.md",
+      "new_page": "wiki/source--korean-corporate-dollar-hoarding-on-fx-fears-2026-04-21.md",
+      "old_stem": "source--환율-다시-오를라-기업들-달러-쓸어담았다-2026-04-21",
+      "new_stem": "source--korean-corporate-dollar-hoarding-on-fx-fears-2026-04-21",
+      "old_slug": "환율-다시-오를라-기업들-달러-쓸어담았다",
+      "new_slug": "korean-corporate-dollar-hoarding-on-fx-fears"
+    },
+    {
+      "registry_id": "W-230",
+      "old_page": "wiki/source--121곳-중-착공-1곳-오세훈표-모아타운-석관동-미래는-2026-04-21.md",
+      "new_page": "wiki/source--moa-town-project-start-delay-2026-04-21.md",
+      "old_stem": "source--121곳-중-착공-1곳-오세훈표-모아타운-석관동-미래는-2026-04-21",
+      "new_stem": "source--moa-town-project-start-delay-2026-04-21",
+      "old_slug": "121곳-중-착공-1곳-오세훈표-모아타운-석관동-미래는",
+      "new_slug": "moa-town-project-start-delay"
+    },
+    {
+      "registry_id": "W-231",
+      "old_page": "wiki/source--180m-높이-vs-분담금-제로-삼성물산-포스코-신반포대전-2026-04-21.md",
+      "new_page": "wiki/source--shinbanpo-redevelopment-height-versus-assessment-fees-2026-04-21.md",
+      "old_stem": "source--180m-높이-vs-분담금-제로-삼성물산-포스코-신반포대전-2026-04-21",
+      "new_stem": "source--shinbanpo-redevelopment-height-versus-assessment-fees-2026-04-21",
+      "old_slug": "180m-높이-vs-분담금-제로-삼성물산-포스코-신반포대전",
+      "new_slug": "shinbanpo-redevelopment-height-versus-assessment-fees"
+    },
+    {
+      "registry_id": "W-232",
+      "old_page": "wiki/source--2-3년간-낸드-초호황-온다-날개-단-샌디스크-2026-04-21.md",
+      "new_page": "wiki/source--sandisk-nand-supercycle-outlook-2026-04-21.md",
+      "old_stem": "source--2-3년간-낸드-초호황-온다-날개-단-샌디스크-2026-04-21",
+      "new_stem": "source--sandisk-nand-supercycle-outlook-2026-04-21",
+      "old_slug": "2-3년간-낸드-초호황-온다-날개-단-샌디스크",
+      "new_slug": "sandisk-nand-supercycle-outlook"
+    },
+    {
+      "registry_id": "W-233",
+      "old_page": "wiki/source--4월13일-ai-엔지니어링의-새로운-기준-하네스-모델-성능-넘어-시스템이-경쟁력-2026-04-21.md",
+      "new_page": "wiki/source--ai-engineering-harness-systems-over-models-2026-04-21.md",
+      "old_stem": "source--4월13일-ai-엔지니어링의-새로운-기준-하네스-모델-성능-넘어-시스템이-경쟁력-2026-04-21",
+      "new_stem": "source--ai-engineering-harness-systems-over-models-2026-04-21",
+      "old_slug": "4월13일-ai-엔지니어링의-새로운-기준-하네스-모델-성능-넘어-시스템이-경쟁력",
+      "new_slug": "ai-engineering-harness-systems-over-models"
+    },
+    {
+      "registry_id": "W-234",
+      "old_page": "wiki/source--4월16일-구글이-ai-활용에-뒤처졌다는-비판-다시-부각된-20-60-20-의-법칙-2026-04-21.md",
+      "new_page": "wiki/source--google-ai-adoption-20-60-20-gap-2026-04-21.md",
+      "old_stem": "source--4월16일-구글이-ai-활용에-뒤처졌다는-비판-다시-부각된-20-60-20-의-법칙-2026-04-21",
+      "new_stem": "source--google-ai-adoption-20-60-20-gap-2026-04-21",
+      "old_slug": "4월16일-구글이-ai-활용에-뒤처졌다는-비판-다시-부각된-20-60-20-의-법칙",
+      "new_slug": "google-ai-adoption-20-60-20-gap"
+    },
+    {
+      "registry_id": "W-235",
+      "old_page": "wiki/source--4월20일-성능-퇴보-논란-휩싸인-클로드-오퍼스-4-7-b2b-집중에-일반-사용자-불만-2026-04-21.md",
+      "new_page": "wiki/source--claude-opus-regression-and-b2b-focus-2026-04-21.md",
+      "old_stem": "source--4월20일-성능-퇴보-논란-휩싸인-클로드-오퍼스-4-7-b2b-집중에-일반-사용자-불만-2026-04-21",
+      "new_stem": "source--claude-opus-regression-and-b2b-focus-2026-04-21",
+      "old_slug": "4월20일-성능-퇴보-논란-휩싸인-클로드-오퍼스-4-7-b2b-집중에-일반-사용자-불만",
+      "new_slug": "claude-opus-regression-and-b2b-focus"
+    },
+    {
+      "registry_id": "W-236",
+      "old_page": "wiki/source--ai-반도체에-필수-k소재사도-귀한-몸-2026-04-21.md",
+      "new_page": "wiki/source--korean-materials-suppliers-for-ai-chips-2026-04-21.md",
+      "old_stem": "source--ai-반도체에-필수-k소재사도-귀한-몸-2026-04-21",
+      "new_stem": "source--korean-materials-suppliers-for-ai-chips-2026-04-21",
+      "old_slug": "ai-반도체에-필수-k소재사도-귀한-몸",
+      "new_slug": "korean-materials-suppliers-for-ai-chips"
+    },
+    {
+      "registry_id": "W-237",
+      "old_page": "wiki/source--ai-에이전트-덕분에-중동-불안-속-샌디스크-나홀로-질주-2026-04-21.md",
+      "new_page": "wiki/source--sandisk-rally-on-agentic-ai-storage-demand-2026-04-21.md",
+      "old_stem": "source--ai-에이전트-덕분에-중동-불안-속-샌디스크-나홀로-질주-2026-04-21",
+      "new_stem": "source--sandisk-rally-on-agentic-ai-storage-demand-2026-04-21",
+      "old_slug": "ai-에이전트-덕분에-중동-불안-속-샌디스크-나홀로-질주",
+      "new_slug": "sandisk-rally-on-agentic-ai-storage-demand"
+    },
+    {
+      "registry_id": "W-238",
+      "old_page": "wiki/source--ai-투자로-끌어올린-skt-기업가치-엔트로픽에-리벨리온-가세-2026-04-21.md",
+      "new_page": "wiki/source--skt-anthropic-rebellions-ai-rerating-2026-04-21.md",
+      "old_stem": "source--ai-투자로-끌어올린-skt-기업가치-엔트로픽에-리벨리온-가세-2026-04-21",
+      "new_stem": "source--skt-anthropic-rebellions-ai-rerating-2026-04-21",
+      "old_slug": "ai-투자로-끌어올린-skt-기업가치-엔트로픽에-리벨리온-가세",
+      "new_slug": "skt-anthropic-rebellions-ai-rerating"
+    },
+    {
+      "registry_id": "W-239",
+      "old_page": "wiki/source--cu-물류-파업-적법성-논란-확산-절차-방식-모두-위법-소지-2026-04-21.md",
+      "new_page": "wiki/source--cu-logistics-strike-legality-dispute-2026-04-21.md",
+      "old_stem": "source--cu-물류-파업-적법성-논란-확산-절차-방식-모두-위법-소지-2026-04-21",
+      "new_stem": "source--cu-logistics-strike-legality-dispute-2026-04-21",
+      "old_slug": "cu-물류-파업-적법성-논란-확산-절차-방식-모두-위법-소지",
+      "new_slug": "cu-logistics-strike-legality-dispute"
+    },
+    {
+      "registry_id": "W-240",
+      "old_page": "wiki/source--hbm만으론-부족-ai-추론-확산에-뜨는-kv-캐시-ssd-2026-04-21.md",
+      "new_page": "wiki/source--kv-cache-ssd-for-inference-expansion-2026-04-21.md",
+      "old_stem": "source--hbm만으론-부족-ai-추론-확산에-뜨는-kv-캐시-ssd-2026-04-21",
+      "new_stem": "source--kv-cache-ssd-for-inference-expansion-2026-04-21",
+      "old_slug": "hbm만으론-부족-ai-추론-확산에-뜨는-kv-캐시-ssd",
+      "new_slug": "kv-cache-ssd-for-inference-expansion"
+    },
+    {
+      "registry_id": "W-241",
+      "old_page": "wiki/source--imf-내년-한국-부채비율-선진-非기축통화국-평균-넘을-듯-2026-04-21.md",
+      "new_page": "wiki/source--korea-public-debt-ratio-above-peer-median-2026-04-21.md",
+      "old_stem": "source--imf-내년-한국-부채비율-선진-非기축통화국-평균-넘을-듯-2026-04-21",
+      "new_stem": "source--korea-public-debt-ratio-above-peer-median-2026-04-21",
+      "old_slug": "imf-내년-한국-부채비율-선진-非기축통화국-평균-넘을-듯",
+      "new_slug": "korea-public-debt-ratio-above-peer-median"
+    },
+    {
+      "registry_id": "W-242",
+      "old_page": "wiki/source--k2-축포-쏜-현대로템-곳간-빵빵-폴란드-수출로-순현금-1조원-돌파-2026-04-21.md",
+      "new_page": "wiki/source--hyundai-rotem-poland-k2-cash-build-2026-04-21.md",
+      "old_stem": "source--k2-축포-쏜-현대로템-곳간-빵빵-폴란드-수출로-순현금-1조원-돌파-2026-04-21",
+      "new_stem": "source--hyundai-rotem-poland-k2-cash-build-2026-04-21",
+      "old_slug": "k2-축포-쏜-현대로템-곳간-빵빵-폴란드-수출로-순현금-1조원-돌파",
+      "new_slug": "hyundai-rotem-poland-k2-cash-build"
+    },
+    {
+      "registry_id": "W-243",
+      "old_page": "wiki/source--ms-깃허브-ai-코딩-사용량-제한-최고-요금제만-앤트로픽-모델-사용-2026-04-21.md",
+      "new_page": "wiki/source--github-copilot-usage-limits-and-anthropic-tiering-2026-04-21.md",
+      "old_stem": "source--ms-깃허브-ai-코딩-사용량-제한-최고-요금제만-앤트로픽-모델-사용-2026-04-21",
+      "new_stem": "source--github-copilot-usage-limits-and-anthropic-tiering-2026-04-21",
+      "old_slug": "ms-깃허브-ai-코딩-사용량-제한-최고-요금제만-앤트로픽-모델-사용",
+      "new_slug": "github-copilot-usage-limits-and-anthropic-tiering"
+    },
+    {
+      "registry_id": "W-244",
+      "old_page": "wiki/source--pancreatic-cancer-mrna-vaccine-shows-lasting-results-in-an-early-trial-2026-04-21.md",
+      "new_page": "wiki/source--pancreatic-cancer-mrna-vaccine-lasting-response-2026-04-21.md",
+      "old_stem": "source--pancreatic-cancer-mrna-vaccine-shows-lasting-results-in-an-early-trial-2026-04-21",
+      "new_stem": "source--pancreatic-cancer-mrna-vaccine-lasting-response-2026-04-21",
+      "old_slug": "pancreatic-cancer-mrna-vaccine-shows-lasting-results-in-an-early-trial",
+      "new_slug": "pancreatic-cancer-mrna-vaccine-lasting-response"
+    },
+    {
+      "registry_id": "W-245",
+      "old_page": "wiki/source--sk하이닉스-socamm2-양산-ai-메모리-풀스택-속도-2026-04-21.md",
+      "new_page": "wiki/source--sk-hynix-socamm2-ai-memory-scaleup-2026-04-21.md",
+      "old_stem": "source--sk하이닉스-socamm2-양산-ai-메모리-풀스택-속도-2026-04-21",
+      "new_stem": "source--sk-hynix-socamm2-ai-memory-scaleup-2026-04-21",
+      "old_slug": "sk하이닉스-socamm2-양산-ai-메모리-풀스택-속도",
+      "new_slug": "sk-hynix-socamm2-ai-memory-scaleup"
+    },
+    {
+      "registry_id": "W-246",
+      "old_page": "wiki/source--sw키트-무제한-ai-요금제-저무나-쓴-만큼-돈-내는-시대-온다-2026-04-21.md",
+      "new_page": "wiki/source--usage-based-ai-subscription-pricing-shift-2026-04-21.md",
+      "old_stem": "source--sw키트-무제한-ai-요금제-저무나-쓴-만큼-돈-내는-시대-온다-2026-04-21",
+      "new_stem": "source--usage-based-ai-subscription-pricing-shift-2026-04-21",
+      "old_slug": "sw키트-무제한-ai-요금제-저무나-쓴-만큼-돈-내는-시대-온다",
+      "new_slug": "usage-based-ai-subscription-pricing-shift"
+    },
+    {
+      "registry_id": "W-247",
+      "old_page": "wiki/source--wgbi-편입-2주-만에-외국인-8조-순매수-일본계-큰손-도-2-8조-유입-2026-04-21.md",
+      "new_page": "wiki/source--wgbi-inflows-boost-korean-bond-demand-2026-04-21.md",
+      "old_stem": "source--wgbi-편입-2주-만에-외국인-8조-순매수-일본계-큰손-도-2-8조-유입-2026-04-21",
+      "new_stem": "source--wgbi-inflows-boost-korean-bond-demand-2026-04-21",
+      "old_slug": "wgbi-편입-2주-만에-외국인-8조-순매수-일본계-큰손-도-2-8조-유입",
+      "new_slug": "wgbi-inflows-boost-korean-bond-demand"
+    },
+    {
+      "registry_id": "W-248",
+      "old_page": "wiki/source--2-3조-빅딜-9부-능선-넘은-db손보-환율-건전성-본업-부진에-정종표號-골머리-2026-04-21.md",
+      "new_page": "wiki/source--db-insurance-megabid-amid-fx-and-capital-strain-2026-04-21.md",
+      "old_stem": "source--2-3조-빅딜-9부-능선-넘은-db손보-환율-건전성-본업-부진에-정종표號-골머리-2026-04-21",
+      "new_stem": "source--db-insurance-megabid-amid-fx-and-capital-strain-2026-04-21",
+      "old_slug": "2-3조-빅딜-9부-능선-넘은-db손보-환율-건전성-본업-부진에-정종표號-골머리",
+      "new_slug": "db-insurance-megabid-amid-fx-and-capital-strain"
+    },
+    {
+      "registry_id": "W-249",
+      "old_page": "wiki/source--3달-만에-무려-42조-벌써-작년보다-3배나-많아-대기업-자사주-소각-속도전-투자360-2026-04-21.md",
+      "new_page": "wiki/source--chaebol-treasury-share-burn-acceleration-2026-04-21.md",
+      "old_stem": "source--3달-만에-무려-42조-벌써-작년보다-3배나-많아-대기업-자사주-소각-속도전-투자360-2026-04-21",
+      "new_stem": "source--chaebol-treasury-share-burn-acceleration-2026-04-21",
+      "old_slug": "3달-만에-무려-42조-벌써-작년보다-3배나-많아-대기업-자사주-소각-속도전-투자360",
+      "new_slug": "chaebol-treasury-share-burn-acceleration"
+    },
+    {
+      "registry_id": "W-250",
+      "old_page": "wiki/source--ai-괴물-해커-미토스-쇼크-정부-앤스로픽-긴급면담-추진-2026-04-21.md",
+      "new_page": "wiki/source--government-anthropic-mythos-security-consultation-2026-04-21.md",
+      "old_stem": "source--ai-괴물-해커-미토스-쇼크-정부-앤스로픽-긴급면담-추진-2026-04-21",
+      "new_stem": "source--government-anthropic-mythos-security-consultation-2026-04-21",
+      "old_slug": "ai-괴물-해커-미토스-쇼크-정부-앤스로픽-긴급면담-추진",
+      "new_slug": "government-anthropic-mythos-security-consultation"
+    },
+    {
+      "registry_id": "W-251",
+      "old_page": "wiki/source--m-a-큰-손-하림-홈플익스-인수-우협-선정-2026-04-21.md",
+      "new_page": "wiki/source--harim-homeplus-express-preferred-bidder-2026-04-21.md",
+      "old_stem": "source--m-a-큰-손-하림-홈플익스-인수-우협-선정-2026-04-21",
+      "new_stem": "source--harim-homeplus-express-preferred-bidder-2026-04-21",
+      "old_slug": "m-a-큰-손-하림-홈플익스-인수-우협-선정",
+      "new_slug": "harim-homeplus-express-preferred-bidder"
+    },
+    {
+      "registry_id": "W-252",
+      "old_page": "wiki/source--뒤늦은-후회-영국인-53-어중간한-관계보다-eu-재가입-원한다-2026-04-21.md",
+      "new_page": "wiki/source--uk-eu-rejoin-majority-shift-2026-04-21.md",
+      "old_stem": "source--뒤늦은-후회-영국인-53-어중간한-관계보다-eu-재가입-원한다-2026-04-21",
+      "new_stem": "source--uk-eu-rejoin-majority-shift-2026-04-21",
+      "old_slug": "뒤늦은-후회-영국인-53-어중간한-관계보다-eu-재가입-원한다",
+      "new_slug": "uk-eu-rejoin-majority-shift"
+    },
+    {
+      "registry_id": "W-253",
+      "old_page": "wiki/source--아찔한-경고-남자-이것-과다-섭취시-기억력-영구-손상된다-2026-04-21.md",
+      "new_page": "wiki/source--excessive-intake-linked-to-permanent-memory-loss-in-men-2026-04-21.md",
+      "old_stem": "source--아찔한-경고-남자-이것-과다-섭취시-기억력-영구-손상된다-2026-04-21",
+      "new_stem": "source--excessive-intake-linked-to-permanent-memory-loss-in-men-2026-04-21",
+      "old_slug": "아찔한-경고-남자-이것-과다-섭취시-기억력-영구-손상된다",
+      "new_slug": "excessive-intake-linked-to-permanent-memory-loss-in-men"
+    },
+    {
+      "registry_id": "W-254",
+      "old_page": "wiki/source--인도-나프타-석화업계-단비-되나-인도-에너지-대란은-변수-2026-04-21.md",
+      "new_page": "wiki/source--india-naphtha-opportunity-with-energy-risk-2026-04-21.md",
+      "old_stem": "source--인도-나프타-석화업계-단비-되나-인도-에너지-대란은-변수-2026-04-21",
+      "new_stem": "source--india-naphtha-opportunity-with-energy-risk-2026-04-21",
+      "old_slug": "인도-나프타-석화업계-단비-되나-인도-에너지-대란은-변수",
+      "new_slug": "india-naphtha-opportunity-with-energy-risk"
+    },
+    {
+      "registry_id": "W-255",
+      "old_page": "wiki/source--중동발-특수-국내-방산-4사-영업익-30-이상-성장-2026-04-21.md",
+      "new_page": "wiki/source--middle-east-windfall-for-korean-defense-makers-2026-04-21.md",
+      "old_stem": "source--중동발-특수-국내-방산-4사-영업익-30-이상-성장-2026-04-21",
+      "new_stem": "source--middle-east-windfall-for-korean-defense-makers-2026-04-21",
+      "old_slug": "중동발-특수-국내-방산-4사-영업익-30-이상-성장",
+      "new_slug": "middle-east-windfall-for-korean-defense-makers"
+    },
+    {
+      "registry_id": "W-256",
+      "old_page": "wiki/source--출연연-통폐합-이번엔-다를까-대통령이-불-지펴-현실화-수순-이준기의-과-알-세-2026-04-21.md",
+      "new_page": "wiki/source--government-research-institute-merger-push-2026-04-21.md",
+      "old_stem": "source--출연연-통폐합-이번엔-다를까-대통령이-불-지펴-현실화-수순-이준기의-과-알-세-2026-04-21",
+      "new_stem": "source--government-research-institute-merger-push-2026-04-21",
+      "old_slug": "출연연-통폐합-이번엔-다를까-대통령이-불-지펴-현실화-수순-이준기의-과-알-세",
+      "new_slug": "government-research-institute-merger-push"
+    },
+    {
+      "registry_id": "W-257",
+      "old_page": "wiki/source--포토샵-어도비의-ai-에이전트-승부수-챗gpt-클로드-제미나이-다-품었다-2026-04-21.md",
+      "new_page": "wiki/source--adobe-agentic-photoshop-multi-model-integration-2026-04-21.md",
+      "old_stem": "source--포토샵-어도비의-ai-에이전트-승부수-챗gpt-클로드-제미나이-다-품었다-2026-04-21",
+      "new_stem": "source--adobe-agentic-photoshop-multi-model-integration-2026-04-21",
+      "old_slug": "포토샵-어도비의-ai-에이전트-승부수-챗gpt-클로드-제미나이-다-품었다",
+      "new_slug": "adobe-agentic-photoshop-multi-model-integration"
+    },
+    {
+      "registry_id": "W-258",
+      "old_page": "wiki/source--ai가-전부인-줄-아나-어느-번역가의-혼잣말-딸깍-에-시작된-번역가-분투기-딸깍-노동③-2026-04-21.md",
+      "new_page": "wiki/source--translator-labor-resistance-to-clickwork-ai-2026-04-21.md",
+      "old_stem": "source--ai가-전부인-줄-아나-어느-번역가의-혼잣말-딸깍-에-시작된-번역가-분투기-딸깍-노동③-2026-04-21",
+      "new_stem": "source--translator-labor-resistance-to-clickwork-ai-2026-04-21",
+      "old_slug": "ai가-전부인-줄-아나-어느-번역가의-혼잣말-딸깍-에-시작된-번역가-분투기-딸깍-노동③",
+      "new_slug": "translator-labor-resistance-to-clickwork-ai"
+    },
+    {
+      "registry_id": "W-259",
+      "old_page": "wiki/source--美장교-실종에-몇시간-고함-트럼프-허세-뒤에-두려움-있다-2026-04-21.md",
+      "new_page": "wiki/source--trump-fear-and-missing-us-officer-2026-04-21.md",
+      "old_stem": "source--美장교-실종에-몇시간-고함-트럼프-허세-뒤에-두려움-있다-2026-04-21",
+      "new_stem": "source--trump-fear-and-missing-us-officer-2026-04-21",
+      "old_slug": "美장교-실종에-몇시간-고함-트럼프-허세-뒤에-두려움-있다",
+      "new_slug": "trump-fear-and-missing-us-officer"
+    },
+    {
+      "registry_id": "W-260",
+      "old_page": "wiki/source--교황은-몇-개-사단이나-거느리고-있소-김태훈의-의미-또는-재미-2026-04-21.md",
+      "new_page": "wiki/source--papal-moral-authority-and-nuclear-diplomacy-2026-04-21.md",
+      "old_stem": "source--교황은-몇-개-사단이나-거느리고-있소-김태훈의-의미-또는-재미-2026-04-21",
+      "new_stem": "source--papal-moral-authority-and-nuclear-diplomacy-2026-04-21",
+      "old_slug": "교황은-몇-개-사단이나-거느리고-있소-김태훈의-의미-또는-재미",
+      "new_slug": "papal-moral-authority-and-nuclear-diplomacy"
+    },
+    {
+      "registry_id": "W-261",
+      "old_page": "wiki/source--낙관은-이르다-중동전쟁-오독-셋-공급망-금리-taco-함정-2026-04-21.md",
+      "new_page": "wiki/source--premature-optimism-on-middle-east-war-2026-04-21.md",
+      "old_stem": "source--낙관은-이르다-중동전쟁-오독-셋-공급망-금리-taco-함정-2026-04-21",
+      "new_stem": "source--premature-optimism-on-middle-east-war-2026-04-21",
+      "old_slug": "낙관은-이르다-중동전쟁-오독-셋-공급망-금리-taco-함정",
+      "new_slug": "premature-optimism-on-middle-east-war"
+    },
+    {
+      "registry_id": "W-262",
+      "old_page": "wiki/source--높은-베개가-눈-건강-해친다-녹내장-예방하는-수면-습관-2026-04-21.md",
+      "new_page": "wiki/source--high-pillow-glaucoma-sleep-risk-2026-04-21.md",
+      "old_stem": "source--높은-베개가-눈-건강-해친다-녹내장-예방하는-수면-습관-2026-04-21",
+      "new_stem": "source--high-pillow-glaucoma-sleep-risk-2026-04-21",
+      "old_slug": "높은-베개가-눈-건강-해친다-녹내장-예방하는-수면-습관",
+      "new_slug": "high-pillow-glaucoma-sleep-risk"
+    },
+    {
+      "registry_id": "W-263",
+      "old_page": "wiki/source--똘똘한-비은행이-안-보인다-1조-클럽-문턱-걸린-임종룡의-고뇌-2026-04-21.md",
+      "new_page": "wiki/source--woori-financial-nonbank-earnings-gap-2026-04-21.md",
+      "old_stem": "source--똘똘한-비은행이-안-보인다-1조-클럽-문턱-걸린-임종룡의-고뇌-2026-04-21",
+      "new_stem": "source--woori-financial-nonbank-earnings-gap-2026-04-21",
+      "old_slug": "똘똘한-비은행이-안-보인다-1조-클럽-문턱-걸린-임종룡의-고뇌",
+      "new_slug": "woori-financial-nonbank-earnings-gap"
+    },
+    {
+      "registry_id": "W-264",
+      "old_page": "wiki/source--발암물질-70-줄어-고기-구울-땐-강황-가루-식탐-2026-04-21.md",
+      "new_page": "wiki/source--turmeric-reduces-carcinogens-in-grilled-meat-2026-04-21.md",
+      "old_stem": "source--발암물질-70-줄어-고기-구울-땐-강황-가루-식탐-2026-04-21",
+      "new_stem": "source--turmeric-reduces-carcinogens-in-grilled-meat-2026-04-21",
+      "old_slug": "발암물질-70-줄어-고기-구울-땐-강황-가루-식탐",
+      "new_slug": "turmeric-reduces-carcinogens-in-grilled-meat"
+    },
+    {
+      "registry_id": "W-265",
+      "old_page": "wiki/source--산업-기여-높여라-캐나다-잠수함-입찰-연장하며-한화오션-tkms-압박-2026-04-21.md",
+      "new_page": "wiki/source--canada-submarine-bid-industrial-offset-pressure-2026-04-21.md",
+      "old_stem": "source--산업-기여-높여라-캐나다-잠수함-입찰-연장하며-한화오션-tkms-압박-2026-04-21",
+      "new_stem": "source--canada-submarine-bid-industrial-offset-pressure-2026-04-21",
+      "old_slug": "산업-기여-높여라-캐나다-잠수함-입찰-연장하며-한화오션-tkms-압박",
+      "new_slug": "canada-submarine-bid-industrial-offset-pressure"
+    },
+    {
+      "registry_id": "W-266",
+      "old_page": "wiki/source--상폐-회피-끝까지-추적해-엄단-금감원-총력대응-나선다-2026-04-21.md",
+      "new_page": "wiki/source--regulator-crackdown-on-delisting-evasion-2026-04-21.md",
+      "old_stem": "source--상폐-회피-끝까지-추적해-엄단-금감원-총력대응-나선다-2026-04-21",
+      "new_stem": "source--regulator-crackdown-on-delisting-evasion-2026-04-21",
+      "old_slug": "상폐-회피-끝까지-추적해-엄단-금감원-총력대응-나선다",
+      "new_slug": "regulator-crackdown-on-delisting-evasion"
+    },
+    {
+      "registry_id": "W-267",
+      "old_page": "wiki/source--여기-학군이-시원찮네요-학교-직접-세우고-교사-연봉-1-2억-부른-동네-2026-04-21.md",
+      "new_page": "wiki/source--school-building-to-fix-neighborhood-education-2026-04-21.md",
+      "old_stem": "source--여기-학군이-시원찮네요-학교-직접-세우고-교사-연봉-1-2억-부른-동네-2026-04-21",
+      "new_stem": "source--school-building-to-fix-neighborhood-education-2026-04-21",
+      "old_slug": "여기-학군이-시원찮네요-학교-직접-세우고-교사-연봉-1-2억-부른-동네",
+      "new_slug": "school-building-to-fix-neighborhood-education"
+    },
+    {
+      "registry_id": "W-268",
+      "old_page": "wiki/source--직원-3만명-해고했더니-주가-폭등-직원들-피눈물-날-때-주주들은-환호했다-무슨-일-2026-04-21.md",
+      "new_page": "wiki/source--layoff-driven-stock-pop-and-shareholder-primacy-2026-04-21.md",
+      "old_stem": "source--직원-3만명-해고했더니-주가-폭등-직원들-피눈물-날-때-주주들은-환호했다-무슨-일-2026-04-21",
+      "new_stem": "source--layoff-driven-stock-pop-and-shareholder-primacy-2026-04-21",
+      "old_slug": "직원-3만명-해고했더니-주가-폭등-직원들-피눈물-날-때-주주들은-환호했다-무슨-일",
+      "new_slug": "layoff-driven-stock-pop-and-shareholder-primacy"
+    },
+    {
+      "registry_id": "W-269",
+      "old_page": "wiki/source--혼자선-못-싸운다-f-35-약점-파고든-kf-21의-반전-카드-박수찬의-軍-2026-04-21.md",
+      "new_page": "wiki/source--kf21-networked-warfare-case-against-f35-dependence-2026-04-21.md",
+      "old_stem": "source--혼자선-못-싸운다-f-35-약점-파고든-kf-21의-반전-카드-박수찬의-軍-2026-04-21",
+      "new_stem": "source--kf21-networked-warfare-case-against-f35-dependence-2026-04-21",
+      "old_slug": "혼자선-못-싸운다-f-35-약점-파고든-kf-21의-반전-카드-박수찬의-軍",
+      "new_slug": "kf21-networked-warfare-case-against-f35-dependence"
+    },
+    {
+      "registry_id": "W-270",
+      "old_page": "wiki/source--中-北-이어-러시아까지-한국정부-공격-사이버-강압-외교-서막-2026-04-21.md",
+      "new_page": "wiki/source--cyber-coercion-against-korea-by-china-russia-and-north-korea-2026-04-21.md",
+      "old_stem": "source--中-北-이어-러시아까지-한국정부-공격-사이버-강압-외교-서막-2026-04-21",
+      "new_stem": "source--cyber-coercion-against-korea-by-china-russia-and-north-korea-2026-04-21",
+      "old_slug": "中-北-이어-러시아까지-한국정부-공격-사이버-강압-외교-서막",
+      "new_slug": "cyber-coercion-against-korea-by-china-russia-and-north-korea"
+    },
+    {
+      "registry_id": "W-271",
+      "old_page": "wiki/source--北-탄도미사일-집속탄두-시험발사-김정은-표적타격-만족-2026-04-21.md",
+      "new_page": "wiki/source--north-korea-cluster-warhead-missile-test-2026-04-21.md",
+      "old_stem": "source--北-탄도미사일-집속탄두-시험발사-김정은-표적타격-만족-2026-04-21",
+      "new_stem": "source--north-korea-cluster-warhead-missile-test-2026-04-21",
+      "old_slug": "北-탄도미사일-집속탄두-시험발사-김정은-표적타격-만족",
+      "new_slug": "north-korea-cluster-warhead-missile-test"
+    },
+    {
+      "registry_id": "W-272",
+      "old_page": "wiki/source--李-인도-순방에-재계-총출동-포스코-hd현대-현대차-투자-행렬-2026-04-21.md",
+      "new_page": "wiki/source--korea-india-trip-corporate-investment-delegation-2026-04-21.md",
+      "old_stem": "source--李-인도-순방에-재계-총출동-포스코-hd현대-현대차-투자-행렬-2026-04-21",
+      "new_stem": "source--korea-india-trip-corporate-investment-delegation-2026-04-21",
+      "old_slug": "李-인도-순방에-재계-총출동-포스코-hd현대-현대차-투자-행렬",
+      "new_slug": "korea-india-trip-corporate-investment-delegation"
+    },
+    {
+      "registry_id": "W-273",
+      "old_page": "wiki/source--李대통령-호르무즈-방어임무-참여-공식화-청해부대-왕건함-파견-준비-2026-04-21.md",
+      "new_page": "wiki/source--korea-hormuz-defense-mission-preparation-2026-04-21.md",
+      "old_stem": "source--李대통령-호르무즈-방어임무-참여-공식화-청해부대-왕건함-파견-준비-2026-04-21",
+      "new_stem": "source--korea-hormuz-defense-mission-preparation-2026-04-21",
+      "old_slug": "李대통령-호르무즈-방어임무-참여-공식화-청해부대-왕건함-파견-준비",
+      "new_slug": "korea-hormuz-defense-mission-preparation"
+    },
+    {
+      "registry_id": "W-274",
+      "old_page": "wiki/source--美-제조업-조용한-생산-호황-ai-항공우주가-끌었다-2026-04-21.md",
+      "new_page": "wiki/source--us-manufacturing-boom-on-ai-and-aerospace-2026-04-21.md",
+      "old_stem": "source--美-제조업-조용한-생산-호황-ai-항공우주가-끌었다-2026-04-21",
+      "new_stem": "source--us-manufacturing-boom-on-ai-and-aerospace-2026-04-21",
+      "old_slug": "美-제조업-조용한-생산-호황-ai-항공우주가-끌었다",
+      "new_slug": "us-manufacturing-boom-on-ai-and-aerospace"
+    },
+    {
+      "registry_id": "W-275",
+      "old_page": "wiki/source--美-北기술-관련-정보공유-일부-제한-미사일-감시는-정상-2026-04-21.md",
+      "new_page": "wiki/source--us-limits-some-north-korea-tech-intel-sharing-2026-04-21.md",
+      "old_stem": "source--美-北기술-관련-정보공유-일부-제한-미사일-감시는-정상-2026-04-21",
+      "new_stem": "source--us-limits-some-north-korea-tech-intel-sharing-2026-04-21",
+      "old_slug": "美-北기술-관련-정보공유-일부-제한-미사일-감시는-정상",
+      "new_slug": "us-limits-some-north-korea-tech-intel-sharing"
+    },
+    {
+      "registry_id": "W-276",
+      "old_page": "wiki/source--美해군-호르무즈-기뢰-제거에-드론-투입-손실돼도-대체-가능-2026-04-21.md",
+      "new_page": "wiki/source--us-navy-drone-minesweeping-in-hormuz-2026-04-21.md",
+      "old_stem": "source--美해군-호르무즈-기뢰-제거에-드론-투입-손실돼도-대체-가능-2026-04-21",
+      "new_stem": "source--us-navy-drone-minesweeping-in-hormuz-2026-04-21",
+      "old_slug": "美해군-호르무즈-기뢰-제거에-드론-투입-손실돼도-대체-가능",
+      "new_slug": "us-navy-drone-minesweeping-in-hormuz"
+    },
+    {
+      "registry_id": "W-277",
+      "old_page": "wiki/source--英총리-엡스타인-연루-맨델슨-보안탈락-몰랐다-사퇴-압박-2026-04-21.md",
+      "new_page": "wiki/source--uk-pm-pressure-over-mandelson-security-case-2026-04-21.md",
+      "old_stem": "source--英총리-엡스타인-연루-맨델슨-보안탈락-몰랐다-사퇴-압박-2026-04-21",
+      "new_stem": "source--uk-pm-pressure-over-mandelson-security-case-2026-04-21",
+      "old_slug": "英총리-엡스타인-연루-맨델슨-보안탈락-몰랐다-사퇴-압박",
+      "new_slug": "uk-pm-pressure-over-mandelson-security-case"
+    },
+    {
+      "registry_id": "W-278",
+      "old_page": "wiki/source--金총리-전쟁-추경-생명은-속도-비상경제대응체계-굳건-유지-종합-2026-04-21.md",
+      "new_page": "wiki/source--wartime-supplementary-budget-speed-priority-2026-04-21.md",
+      "old_stem": "source--金총리-전쟁-추경-생명은-속도-비상경제대응체계-굳건-유지-종합-2026-04-21",
+      "new_stem": "source--wartime-supplementary-budget-speed-priority-2026-04-21",
+      "old_slug": "金총리-전쟁-추경-생명은-속도-비상경제대응체계-굳건-유지-종합",
+      "new_slug": "wartime-supplementary-budget-speed-priority"
+    },
+    {
+      "registry_id": "W-279",
+      "old_page": "wiki/source--韓-제조-능력-美-ai-기술-시너지-미래-해전-게임체인저-양산-2026-04-21.md",
+      "new_page": "wiki/source--korea-manufacturing-us-ai-naval-warfare-synergy-2026-04-21.md",
+      "old_stem": "source--韓-제조-능력-美-ai-기술-시너지-미래-해전-게임체인저-양산-2026-04-21",
+      "new_stem": "source--korea-manufacturing-us-ai-naval-warfare-synergy-2026-04-21",
+      "old_slug": "韓-제조-능력-美-ai-기술-시너지-미래-해전-게임체인저-양산",
+      "new_slug": "korea-manufacturing-us-ai-naval-warfare-synergy"
+    },
+    {
+      "registry_id": "W-280",
+      "old_page": "wiki/source--韓-인도-정상회담서-경제협력-위한-전담데스크-설치-논의-2026-04-21.md",
+      "new_page": "wiki/source--korea-india-economic-cooperation-desk-2026-04-21.md",
+      "old_stem": "source--韓-인도-정상회담서-경제협력-위한-전담데스크-설치-논의-2026-04-21",
+      "new_stem": "source--korea-india-economic-cooperation-desk-2026-04-21",
+      "old_slug": "韓-인도-정상회담서-경제협력-위한-전담데스크-설치-논의",
+      "new_slug": "korea-india-economic-cooperation-desk"
+    },
+    {
+      "registry_id": "W-281",
+      "old_page": "wiki/source--韓-인도-cepa협상-재개선언-산업협력委-mou-등-문건-15개-채택-2026-04-21.md",
+      "new_page": "wiki/source--korea-india-cepa-restart-and-industrial-mous-2026-04-21.md",
+      "old_stem": "source--韓-인도-cepa협상-재개선언-산업협력委-mou-등-문건-15개-채택-2026-04-21",
+      "new_stem": "source--korea-india-cepa-restart-and-industrial-mous-2026-04-21",
+      "old_slug": "韓-인도-cepa협상-재개선언-산업협력委-mou-등-문건-15개-채택",
+      "new_slug": "korea-india-cepa-restart-and-industrial-mous"
+    },
+    {
+      "registry_id": "W-282",
+      "old_page": "wiki/source--결국-오세훈-카드-택한-국힘-공세-거세질수록-부각된-현역-경쟁력-2026-04-21.md",
+      "new_page": "wiki/source--ruling-party-oh-se-hoon-election-bet-2026-04-21.md",
+      "old_stem": "source--결국-오세훈-카드-택한-국힘-공세-거세질수록-부각된-현역-경쟁력-2026-04-21",
+      "new_stem": "source--ruling-party-oh-se-hoon-election-bet-2026-04-21",
+      "old_slug": "결국-오세훈-카드-택한-국힘-공세-거세질수록-부각된-현역-경쟁력",
+      "new_slug": "ruling-party-oh-se-hoon-election-bet"
+    },
+    {
+      "registry_id": "W-283",
+      "old_page": "wiki/source--고객님은-xx-요금제가-적합합니다-10월부터-최적요금제-고지-의무화-요금제-대이동-벌어질까-2026-04-21.md",
+      "new_page": "wiki/source--mandated-best-mobile-plan-disclosure-2026-04-21.md",
+      "old_stem": "source--고객님은-xx-요금제가-적합합니다-10월부터-최적요금제-고지-의무화-요금제-대이동-벌어질까-2026-04-21",
+      "new_stem": "source--mandated-best-mobile-plan-disclosure-2026-04-21",
+      "old_slug": "고객님은-xx-요금제가-적합합니다-10월부터-최적요금제-고지-의무화-요금제-대이동-벌어질까",
+      "new_slug": "mandated-best-mobile-plan-disclosure"
+    },
+    {
+      "registry_id": "W-284",
+      "old_page": "wiki/source--고무값-뛰고-운임-폭등-속-타는-타이어-2026-04-21.md",
+      "new_page": "wiki/source--tire-industry-squeezed-by-rubber-and-freight-2026-04-21.md",
+      "old_stem": "source--고무값-뛰고-운임-폭등-속-타는-타이어-2026-04-21",
+      "new_stem": "source--tire-industry-squeezed-by-rubber-and-freight-2026-04-21",
+      "old_slug": "고무값-뛰고-운임-폭등-속-타는-타이어",
+      "new_slug": "tire-industry-squeezed-by-rubber-and-freight"
+    },
+    {
+      "registry_id": "W-285",
+      "old_page": "wiki/source--고점-공포에-개미-삼전닉스-10조-던질-때-외인은-3조-빈집-채웠다-2026-04-21.md",
+      "new_page": "wiki/source--foreign-buyers-fill-samsung-sk-hynix-selloff-2026-04-21.md",
+      "old_stem": "source--고점-공포에-개미-삼전닉스-10조-던질-때-외인은-3조-빈집-채웠다-2026-04-21",
+      "new_stem": "source--foreign-buyers-fill-samsung-sk-hynix-selloff-2026-04-21",
+      "old_slug": "고점-공포에-개미-삼전닉스-10조-던질-때-외인은-3조-빈집-채웠다",
+      "new_slug": "foreign-buyers-fill-samsung-sk-hynix-selloff"
+    },
+    {
+      "registry_id": "W-286",
+      "old_page": "wiki/source--과기부-복지부-노후화된-공공의료시스템-ai-saas로-전면-교체-나선다-2026-04-21.md",
+      "new_page": "wiki/source--public-health-it-ai-saas-overhaul-2026-04-21.md",
+      "old_stem": "source--과기부-복지부-노후화된-공공의료시스템-ai-saas로-전면-교체-나선다-2026-04-21",
+      "new_stem": "source--public-health-it-ai-saas-overhaul-2026-04-21",
+      "old_slug": "과기부-복지부-노후화된-공공의료시스템-ai-saas로-전면-교체-나선다",
+      "new_slug": "public-health-it-ai-saas-overhaul"
+    },
+    {
+      "registry_id": "W-287",
+      "old_page": "wiki/source--구광모-abc-전략-또-통했다-lg-에이전틱-ai로-암-치료-설계-하루-로-단축-2026-04-21.md",
+      "new_page": "wiki/source--lg-agentic-ai-cancer-design-acceleration-2026-04-21.md",
+      "old_stem": "source--구광모-abc-전략-또-통했다-lg-에이전틱-ai로-암-치료-설계-하루-로-단축-2026-04-21",
+      "new_stem": "source--lg-agentic-ai-cancer-design-acceleration-2026-04-21",
+      "old_slug": "구광모-abc-전략-또-통했다-lg-에이전틱-ai로-암-치료-설계-하루-로-단축",
+      "new_slug": "lg-agentic-ai-cancer-design-acceleration"
+    },
+    {
+      "registry_id": "W-288",
+      "old_page": "wiki/source--구글-제미나이-인-크롬-국내-출시-사이드-패널로-ai-호출-2026-04-21.md",
+      "new_page": "wiki/source--gemini-in-chrome-korea-launch-2026-04-21.md",
+      "old_stem": "source--구글-제미나이-인-크롬-국내-출시-사이드-패널로-ai-호출-2026-04-21",
+      "new_stem": "source--gemini-in-chrome-korea-launch-2026-04-21",
+      "old_slug": "구글-제미나이-인-크롬-국내-출시-사이드-패널로-ai-호출",
+      "new_slug": "gemini-in-chrome-korea-launch"
+    },
+    {
+      "registry_id": "W-289",
+      "old_page": "wiki/source--구글-독립형-ai-음악-생성-플랫폼-플로우-뮤직-공개-2026-04-21.md",
+      "new_page": "wiki/source--google-flow-music-generation-platform-2026-04-21.md",
+      "old_stem": "source--구글-독립형-ai-음악-생성-플랫폼-플로우-뮤직-공개-2026-04-21",
+      "new_stem": "source--google-flow-music-generation-platform-2026-04-21",
+      "old_slug": "구글-독립형-ai-음악-생성-플랫폼-플로우-뮤직-공개",
+      "new_slug": "google-flow-music-generation-platform"
+    },
+    {
+      "registry_id": "W-290",
+      "old_page": "wiki/source--구글-마벨과-ai-칩-2종-개발-논의-중-추론-수요-확대-대비-2026-04-21.md",
+      "new_page": "wiki/source--google-marvell-dual-ai-chip-plans-2026-04-21.md",
+      "old_stem": "source--구글-마벨과-ai-칩-2종-개발-논의-중-추론-수요-확대-대비-2026-04-21",
+      "new_stem": "source--google-marvell-dual-ai-chip-plans-2026-04-21",
+      "old_slug": "구글-마벨과-ai-칩-2종-개발-논의-중-추론-수요-확대-대비",
+      "new_slug": "google-marvell-dual-ai-chip-plans"
+    },
+    {
+      "registry_id": "W-291",
+      "old_page": "wiki/source--구윤철-imf-위기의-해설자-아닌-협력의-설계자가-돼달라-2026-04-21.md",
+      "new_page": "wiki/source--koo-yoon-cheol-asks-imf-to-design-cooperation-2026-04-21.md",
+      "old_stem": "source--구윤철-imf-위기의-해설자-아닌-협력의-설계자가-돼달라-2026-04-21",
+      "new_stem": "source--koo-yoon-cheol-asks-imf-to-design-cooperation-2026-04-21",
+      "old_slug": "구윤철-imf-위기의-해설자-아닌-협력의-설계자가-돼달라",
+      "new_slug": "koo-yoon-cheol-asks-imf-to-design-cooperation"
+    },
+    {
+      "registry_id": "W-292",
+      "old_page": "wiki/source--국내-첫-대학병원-평가-삼성서울병원-종합-1위-2026-04-21.md",
+      "new_page": "wiki/source--samsung-medical-center-tops-first-hospital-ranking-2026-04-21.md",
+      "old_stem": "source--국내-첫-대학병원-평가-삼성서울병원-종합-1위-2026-04-21",
+      "new_stem": "source--samsung-medical-center-tops-first-hospital-ranking-2026-04-21",
+      "old_slug": "국내-첫-대학병원-평가-삼성서울병원-종합-1위",
+      "new_slug": "samsung-medical-center-tops-first-hospital-ranking"
+    },
+    {
+      "registry_id": "W-293",
+      "old_page": "wiki/source--군복무-경력-승진-반영은-성차별-법원-인권위-판단-취소-2026-04-21.md",
+      "new_page": "wiki/source--military-service-promotion-credit-ruling-reversed-2026-04-21.md",
+      "old_stem": "source--군복무-경력-승진-반영은-성차별-법원-인권위-판단-취소-2026-04-21",
+      "new_stem": "source--military-service-promotion-credit-ruling-reversed-2026-04-21",
+      "old_slug": "군복무-경력-승진-반영은-성차별-법원-인권위-판단-취소",
+      "new_slug": "military-service-promotion-credit-ruling-reversed"
+    },
+    {
+      "registry_id": "W-294",
+      "old_page": "wiki/source--김범석-총수-지정-가닥-쿠팡-공정위-소송전-가나-2026-04-21.md",
+      "new_page": "wiki/source--coupang-chairman-designation-and-ftc-lawsuit-risk-2026-04-21.md",
+      "old_stem": "source--김범석-총수-지정-가닥-쿠팡-공정위-소송전-가나-2026-04-21",
+      "new_stem": "source--coupang-chairman-designation-and-ftc-lawsuit-risk-2026-04-21",
+      "old_slug": "김범석-총수-지정-가닥-쿠팡-공정위-소송전-가나",
+      "new_slug": "coupang-chairman-designation-and-ftc-lawsuit-risk"
+    },
+    {
+      "registry_id": "W-295",
+      "old_page": "wiki/source--김정관-美-원유-확대-불가피-전쟁-끝나도-공급망-다변화-2026-04-21.md",
+      "new_page": "wiki/source--korea-pushes-us-crude-diversification-after-war-2026-04-21.md",
+      "old_stem": "source--김정관-美-원유-확대-불가피-전쟁-끝나도-공급망-다변화-2026-04-21",
+      "new_stem": "source--korea-pushes-us-crude-diversification-after-war-2026-04-21",
+      "old_slug": "김정관-美-원유-확대-불가피-전쟁-끝나도-공급망-다변화",
+      "new_slug": "korea-pushes-us-crude-diversification-after-war"
+    },
+    {
+      "registry_id": "W-296",
+      "old_page": "wiki/source--내년-최저임금-심의-시작-새-위원장엔-권순원-교수-2026-04-21.md",
+      "new_page": "wiki/source--korea-minimum-wage-committee-new-chair-2026-04-21.md",
+      "old_stem": "source--내년-최저임금-심의-시작-새-위원장엔-권순원-교수-2026-04-21",
+      "new_stem": "source--korea-minimum-wage-committee-new-chair-2026-04-21",
+      "old_slug": "내년-최저임금-심의-시작-새-위원장엔-권순원-교수",
+      "new_slug": "korea-minimum-wage-committee-new-chair"
+    },
+    {
+      "registry_id": "W-297",
+      "old_page": "wiki/source--내년-최저임금-첫-심의-도급제-근로자-적용-쟁점-2026-04-21.md",
+      "new_page": "wiki/source--minimum-wage-contract-worker-coverage-dispute-2026-04-21.md",
+      "old_stem": "source--내년-최저임금-첫-심의-도급제-근로자-적용-쟁점-2026-04-21",
+      "new_stem": "source--minimum-wage-contract-worker-coverage-dispute-2026-04-21",
+      "old_slug": "내년-최저임금-첫-심의-도급제-근로자-적용-쟁점",
+      "new_slug": "minimum-wage-contract-worker-coverage-dispute"
+    },
+    {
+      "registry_id": "W-298",
+      "old_page": "wiki/source--다시-파키스탄-가는-美부통령-이번에도-노딜-이면-큰-타격-2026-04-21.md",
+      "new_page": "wiki/source--us-vice-president-pakistan-return-and-no-deal-risk-2026-04-21.md",
+      "old_stem": "source--다시-파키스탄-가는-美부통령-이번에도-노딜-이면-큰-타격-2026-04-21",
+      "new_stem": "source--us-vice-president-pakistan-return-and-no-deal-risk-2026-04-21",
+      "old_slug": "다시-파키스탄-가는-美부통령-이번에도-노딜-이면-큰-타격",
+      "new_slug": "us-vice-president-pakistan-return-and-no-deal-risk"
+    },
+    {
+      "registry_id": "W-299",
+      "old_page": "wiki/source--다칠까봐-소외감-느낄까봐-요즘-학교는-운동장-축구도-금지-2026-04-21.md",
+      "new_page": "wiki/source--schoolyard-soccer-ban-for-safety-and-inclusion-2026-04-21.md",
+      "old_stem": "source--다칠까봐-소외감-느낄까봐-요즘-학교는-운동장-축구도-금지-2026-04-21",
+      "new_stem": "source--schoolyard-soccer-ban-for-safety-and-inclusion-2026-04-21",
+      "old_slug": "다칠까봐-소외감-느낄까봐-요즘-학교는-운동장-축구도-금지",
+      "new_slug": "schoolyard-soccer-ban-for-safety-and-inclusion"
+    },
+    {
+      "registry_id": "W-300",
+      "old_page": "wiki/source--단독-7-싸게-들여와-40-비싸게-팔아-뻔뻔한-명품-가격표-2026-04-21.md",
+      "new_page": "wiki/source--luxury-goods-import-markup-controversy-2026-04-21.md",
+      "old_stem": "source--단독-7-싸게-들여와-40-비싸게-팔아-뻔뻔한-명품-가격표-2026-04-21",
+      "new_stem": "source--luxury-goods-import-markup-controversy-2026-04-21",
+      "old_slug": "단독-7-싸게-들여와-40-비싸게-팔아-뻔뻔한-명품-가격표",
+      "new_slug": "luxury-goods-import-markup-controversy"
+    },
+    {
+      "registry_id": "W-301",
+      "old_page": "wiki/source--단독-k5-권총-노후-경고등-공군-77-육군-1만정-내구연한-초과-2026-04-21.md",
+      "new_page": "wiki/source--aging-k5-sidearm-readiness-gap-2026-04-21.md",
+      "old_stem": "source--단독-k5-권총-노후-경고등-공군-77-육군-1만정-내구연한-초과-2026-04-21",
+      "new_stem": "source--aging-k5-sidearm-readiness-gap-2026-04-21",
+      "old_slug": "단독-k5-권총-노후-경고등-공군-77-육군-1만정-내구연한-초과",
+      "new_slug": "aging-k5-sidearm-readiness-gap"
+    },
+    {
+      "registry_id": "W-302",
+      "old_page": "wiki/source--단독-美-하루-더-있자-는-장동혁-욕-더-먹어-지도부만-떠났다-2026-04-21.md",
+      "new_page": "wiki/source--jang-donghyuk-us-trip-party-backlash-2026-04-21.md",
+      "old_stem": "source--단독-美-하루-더-있자-는-장동혁-욕-더-먹어-지도부만-떠났다-2026-04-21",
+      "new_stem": "source--jang-donghyuk-us-trip-party-backlash-2026-04-21",
+      "old_slug": "단독-美-하루-더-있자-는-장동혁-욕-더-먹어-지도부만-떠났다",
+      "new_slug": "jang-donghyuk-us-trip-party-backlash"
+    },
+    {
+      "registry_id": "W-303",
+      "old_page": "wiki/source--단독-미토스-해킹-악용-막자-정부-글래스윙에-손짓-2026-04-21.md",
+      "new_page": "wiki/source--glasswing-government-mythos-cyber-response-2026-04-21.md",
+      "old_stem": "source--단독-미토스-해킹-악용-막자-정부-글래스윙에-손짓-2026-04-21",
+      "new_stem": "source--glasswing-government-mythos-cyber-response-2026-04-21",
+      "old_slug": "단독-미토스-해킹-악용-막자-정부-글래스윙에-손짓",
+      "new_slug": "glasswing-government-mythos-cyber-response"
+    },
+    {
+      "registry_id": "W-304",
+      "old_page": "wiki/source--단독-경제-통화-투톱-사흘-만에-회동-정책-공조-주목-2026-04-21.md",
+      "new_page": "wiki/source--korea-fiscal-and-monetary-chiefs-policy-huddle-2026-04-21.md",
+      "old_stem": "source--단독-경제-통화-투톱-사흘-만에-회동-정책-공조-주목-2026-04-21",
+      "new_stem": "source--korea-fiscal-and-monetary-chiefs-policy-huddle-2026-04-21",
+      "old_slug": "단독-경제-통화-투톱-사흘-만에-회동-정책-공조-주목",
+      "new_slug": "korea-fiscal-and-monetary-chiefs-policy-huddle"
+    },
+    {
+      "registry_id": "W-305",
+      "old_page": "wiki/source--단독-금융당국-압박에-카드론-줄이는-카드사들-2026-04-21.md",
+      "new_page": "wiki/source--card-loan-cutbacks-under-regulatory-pressure-2026-04-21.md",
+      "old_stem": "source--단독-금융당국-압박에-카드론-줄이는-카드사들-2026-04-21",
+      "new_stem": "source--card-loan-cutbacks-under-regulatory-pressure-2026-04-21",
+      "old_slug": "단독-금융당국-압박에-카드론-줄이는-카드사들",
+      "new_slug": "card-loan-cutbacks-under-regulatory-pressure"
+    },
+    {
+      "registry_id": "W-306",
+      "old_page": "wiki/source--단독-멈추는-순간-재앙-삼성-반도체-8대-공정-도면까지-들고-법원-찾았다-2026-04-21.md",
+      "new_page": "wiki/source--samsung-process-blueprint-trade-secret-case-2026-04-21.md",
+      "old_stem": "source--단독-멈추는-순간-재앙-삼성-반도체-8대-공정-도면까지-들고-법원-찾았다-2026-04-21",
+      "new_stem": "source--samsung-process-blueprint-trade-secret-case-2026-04-21",
+      "old_slug": "단독-멈추는-순간-재앙-삼성-반도체-8대-공정-도면까지-들고-법원-찾았다",
+      "new_slug": "samsung-process-blueprint-trade-secret-case"
+    },
+    {
+      "registry_id": "W-307",
+      "old_page": "wiki/source--단독-애-안-낳던-韓-달라졌다-임산부-35만명-돌파-2026-04-21.md",
+      "new_page": "wiki/source--korea-pregnancy-count-rebound-2026-04-21.md",
+      "old_stem": "source--단독-애-안-낳던-韓-달라졌다-임산부-35만명-돌파-2026-04-21",
+      "new_stem": "source--korea-pregnancy-count-rebound-2026-04-21",
+      "old_slug": "단독-애-안-낳던-韓-달라졌다-임산부-35만명-돌파",
+      "new_slug": "korea-pregnancy-count-rebound"
+    },
+    {
+      "registry_id": "W-308",
+      "old_page": "wiki/source--단독-한국판-팰런티어-안두릴-키울-방산-투자-컨트롤타워-만든다-2026-04-21.md",
+      "new_page": "wiki/source--korea-defense-tech-investment-control-tower-2026-04-21.md",
+      "old_stem": "source--단독-한국판-팰런티어-안두릴-키울-방산-투자-컨트롤타워-만든다-2026-04-21",
+      "new_stem": "source--korea-defense-tech-investment-control-tower-2026-04-21",
+      "old_slug": "단독-한국판-팰런티어-안두릴-키울-방산-투자-컨트롤타워-만든다",
+      "new_slug": "korea-defense-tech-investment-control-tower"
+    },
+    {
+      "registry_id": "W-309",
+      "old_page": "wiki/source--단독-개혁신당-조응천-경기지사-게임체인저-출격-채비-2026-04-21.md",
+      "new_page": "wiki/source--reform-party-preps-cho-eungcheon-gyeonggi-run-2026-04-21.md",
+      "old_stem": "source--단독-개혁신당-조응천-경기지사-게임체인저-출격-채비-2026-04-21",
+      "new_stem": "source--reform-party-preps-cho-eungcheon-gyeonggi-run-2026-04-21",
+      "old_slug": "단독-개혁신당-조응천-경기지사-게임체인저-출격-채비",
+      "new_slug": "reform-party-preps-cho-eungcheon-gyeonggi-run"
+    },
+    {
+      "registry_id": "W-310",
+      "old_page": "wiki/source--담장을-넘자-발동한-본능-탈출-늑대-늑구-가-열흘간-멀쩡했던-진짜-이유-사이언스-pick-2026-04-21.md",
+      "new_page": "wiki/source--escaped-wolf-survival-instinct-explainer-2026-04-21.md",
+      "old_stem": "source--담장을-넘자-발동한-본능-탈출-늑대-늑구-가-열흘간-멀쩡했던-진짜-이유-사이언스-pick-2026-04-21",
+      "new_stem": "source--escaped-wolf-survival-instinct-explainer-2026-04-21",
+      "old_slug": "담장을-넘자-발동한-본능-탈출-늑대-늑구-가-열흘간-멀쩡했던-진짜-이유-사이언스-pick",
+      "new_slug": "escaped-wolf-survival-instinct-explainer"
+    },
+    {
+      "registry_id": "W-311",
+      "old_page": "wiki/source--대규모-흑자-전망에도-정유업계-전전긍긍-역풍-우려-2026-04-21.md",
+      "new_page": "wiki/source--refiners-fear-backlash-despite-profit-windfall-2026-04-21.md",
+      "old_stem": "source--대규모-흑자-전망에도-정유업계-전전긍긍-역풍-우려-2026-04-21",
+      "new_stem": "source--refiners-fear-backlash-despite-profit-windfall-2026-04-21",
+      "old_slug": "대규모-흑자-전망에도-정유업계-전전긍긍-역풍-우려",
+      "new_slug": "refiners-fear-backlash-despite-profit-windfall"
+    },
+    {
+      "registry_id": "W-312",
+      "old_page": "wiki/source--대통령-셋-전쟁-셋-내우외환-4년-한은-이끈-이창용-총재-내일-퇴임-2026-04-21.md",
+      "new_page": "wiki/source--lee-changyong-exit-after-crisis-era-tenure-2026-04-21.md",
+      "old_stem": "source--대통령-셋-전쟁-셋-내우외환-4년-한은-이끈-이창용-총재-내일-퇴임-2026-04-21",
+      "new_stem": "source--lee-changyong-exit-after-crisis-era-tenure-2026-04-21",
+      "old_slug": "대통령-셋-전쟁-셋-내우외환-4년-한은-이끈-이창용-총재-내일-퇴임",
+      "new_slug": "lee-changyong-exit-after-crisis-era-tenure"
+    },
+    {
+      "registry_id": "W-313",
+      "old_page": "wiki/source--딥마인드-연구-부사장-우리는-잎이-아닌-뿌리를-찾는다-특이점이-온다-마이너-갤러리-2026-04-21.md",
+      "new_page": "wiki/source--deepmind-roots-over-leaves-research-philosophy-2026-04-21.md",
+      "old_stem": "source--딥마인드-연구-부사장-우리는-잎이-아닌-뿌리를-찾는다-특이점이-온다-마이너-갤러리-2026-04-21",
+      "new_stem": "source--deepmind-roots-over-leaves-research-philosophy-2026-04-21",
+      "old_slug": "딥마인드-연구-부사장-우리는-잎이-아닌-뿌리를-찾는다-특이점이-온다-마이너-갤러리",
+      "new_slug": "deepmind-roots-over-leaves-research-philosophy"
+    },
+    {
+      "registry_id": "W-314",
+      "old_page": "wiki/source--레바논-대통령-이스라엘과-직접-협상-결정-헤즈볼라-무장-해제-언급-안-해-2026-04-21.md",
+      "new_page": "wiki/source--lebanon-direct-talks-with-israel-without-hezbollah-disarmament-2026-04-21.md",
+      "old_stem": "source--레바논-대통령-이스라엘과-직접-협상-결정-헤즈볼라-무장-해제-언급-안-해-2026-04-21",
+      "new_stem": "source--lebanon-direct-talks-with-israel-without-hezbollah-disarmament-2026-04-21",
+      "old_slug": "레바논-대통령-이스라엘과-직접-협상-결정-헤즈볼라-무장-해제-언급-안-해",
+      "new_slug": "lebanon-direct-talks-with-israel-without-hezbollah-disarmament"
+    },
+    {
+      "registry_id": "W-315",
+      "old_page": "wiki/source--릴리-올들어-인-비보-car-t에-14조-베팅-k-바이오-도-잰걸음-2026-04-21.md",
+      "new_page": "wiki/source--lilly-in-vivo-cart-investment-wave-2026-04-21.md",
+      "old_stem": "source--릴리-올들어-인-비보-car-t에-14조-베팅-k-바이오-도-잰걸음-2026-04-21",
+      "new_stem": "source--lilly-in-vivo-cart-investment-wave-2026-04-21",
+      "old_slug": "릴리-올들어-인-비보-car-t에-14조-베팅-k-바이오-도-잰걸음",
+      "new_slug": "lilly-in-vivo-cart-investment-wave"
+    },
+    {
+      "registry_id": "W-316",
+      "old_page": "wiki/source--마켓인-다음은-우리-계열사-상법-개정이-쏘아올린-영창-회생-충격-2026-04-21.md",
+      "new_page": "wiki/source--corporate-law-revision-and-yeongchang-restructuring-shock-2026-04-21.md",
+      "old_stem": "source--마켓인-다음은-우리-계열사-상법-개정이-쏘아올린-영창-회생-충격-2026-04-21",
+      "new_stem": "source--corporate-law-revision-and-yeongchang-restructuring-shock-2026-04-21",
+      "old_slug": "마켓인-다음은-우리-계열사-상법-개정이-쏘아올린-영창-회생-충격",
+      "new_slug": "corporate-law-revision-and-yeongchang-restructuring-shock"
+    },
+    {
+      "registry_id": "W-317",
+      "old_page": "wiki/source--메모리-3사-추가-공급-수요-60-불과-칩-부족-2027년까지-2026-04-21.md",
+      "new_page": "wiki/source--memory-supply-gap-and-chip-shortage-through-2027-2026-04-21.md",
+      "old_stem": "source--메모리-3사-추가-공급-수요-60-불과-칩-부족-2027년까지-2026-04-21",
+      "new_stem": "source--memory-supply-gap-and-chip-shortage-through-2027-2026-04-21",
+      "old_slug": "메모리-3사-추가-공급-수요-60-불과-칩-부족-2027년까지",
+      "new_slug": "memory-supply-gap-and-chip-shortage-through-2027"
+    },
+    {
+      "registry_id": "W-318",
+      "old_page": "wiki/source--미-이란-협상-타결에-베팅한-외환시장-환율-1450원대-진입-전망-종합-2026-04-21.md",
+      "new_page": "wiki/source--fx-market-bets-on-us-iran-deal-2026-04-21.md",
+      "old_stem": "source--미-이란-협상-타결에-베팅한-외환시장-환율-1450원대-진입-전망-종합-2026-04-21",
+      "new_stem": "source--fx-market-bets-on-us-iran-deal-2026-04-21",
+      "old_slug": "미-이란-협상-타결에-베팅한-외환시장-환율-1450원대-진입-전망-종합",
+      "new_slug": "fx-market-bets-on-us-iran-deal"
+    },
+    {
+      "registry_id": "W-319",
+      "old_page": "wiki/source--미군-이란-화물선에-함포-쏴-나포-이란-휴전-위반-곧-보복-종합2보-2026-04-21.md",
+      "new_page": "wiki/source--us-seizes-iranian-cargo-vessel-after-truce-2026-04-21.md",
+      "old_stem": "source--미군-이란-화물선에-함포-쏴-나포-이란-휴전-위반-곧-보복-종합2보-2026-04-21",
+      "new_stem": "source--us-seizes-iranian-cargo-vessel-after-truce-2026-04-21",
+      "old_slug": "미군-이란-화물선에-함포-쏴-나포-이란-휴전-위반-곧-보복-종합2보",
+      "new_slug": "us-seizes-iranian-cargo-vessel-after-truce"
+    },
+    {
+      "registry_id": "W-320",
+      "old_page": "wiki/source--박홍근-지금은-추경-집행으로-효과-극대화해야-2차-예단-못해-2026-04-21.md",
+      "new_page": "wiki/source--budget-execution-before-second-supplementary-bill-2026-04-21.md",
+      "old_stem": "source--박홍근-지금은-추경-집행으로-효과-극대화해야-2차-예단-못해-2026-04-21",
+      "new_stem": "source--budget-execution-before-second-supplementary-bill-2026-04-21",
+      "old_slug": "박홍근-지금은-추경-집행으로-효과-극대화해야-2차-예단-못해",
+      "new_slug": "budget-execution-before-second-supplementary-bill"
+    },
+    {
+      "registry_id": "W-321",
+      "old_page": "wiki/source--베네수서-숙청-칼바람-한때-마두로-측근-로드리게스가-총지휘-2026-04-21.md",
+      "new_page": "wiki/source--venezuela-purge-led-by-rodriguez-2026-04-21.md",
+      "old_stem": "source--베네수서-숙청-칼바람-한때-마두로-측근-로드리게스가-총지휘-2026-04-21",
+      "new_stem": "source--venezuela-purge-led-by-rodriguez-2026-04-21",
+      "old_slug": "베네수서-숙청-칼바람-한때-마두로-측근-로드리게스가-총지휘",
+      "new_slug": "venezuela-purge-led-by-rodriguez"
+    },
+    {
+      "registry_id": "W-322",
+      "old_page": "wiki/source--부러워-마세요-곧-됩니다-내-s24도-곧-통화-스크리닝-2026-04-21.md",
+      "new_page": "wiki/source--galaxy-s24-call-screening-rollout-2026-04-21.md",
+      "old_stem": "source--부러워-마세요-곧-됩니다-내-s24도-곧-통화-스크리닝-2026-04-21",
+      "new_stem": "source--galaxy-s24-call-screening-rollout-2026-04-21",
+      "old_slug": "부러워-마세요-곧-됩니다-내-s24도-곧-통화-스크리닝",
+      "new_slug": "galaxy-s24-call-screening-rollout"
+    },
+    {
+      "registry_id": "W-323",
+      "old_page": "wiki/source--북한도-준비-끝났다-드론-전쟁-한반도까지-온다-2026-04-21.md",
+      "new_page": "wiki/source--north-korea-drone-war-preparation-2026-04-21.md",
+      "old_stem": "source--북한도-준비-끝났다-드론-전쟁-한반도까지-온다-2026-04-21",
+      "new_stem": "source--north-korea-drone-war-preparation-2026-04-21",
+      "old_slug": "북한도-준비-끝났다-드론-전쟁-한반도까지-온다",
+      "new_slug": "north-korea-drone-war-preparation"
+    },
+    {
+      "registry_id": "W-324",
+      "old_page": "wiki/source--블루오리진-재사용-로켓-회수-성공-위성-궤도-진입은-실패-2026-04-21.md",
+      "new_page": "wiki/source--blue-origin-booster-recovery-with-orbit-failure-2026-04-21.md",
+      "old_stem": "source--블루오리진-재사용-로켓-회수-성공-위성-궤도-진입은-실패-2026-04-21",
+      "new_stem": "source--blue-origin-booster-recovery-with-orbit-failure-2026-04-21",
+      "old_slug": "블루오리진-재사용-로켓-회수-성공-위성-궤도-진입은-실패",
+      "new_slug": "blue-origin-booster-recovery-with-orbit-failure"
+    },
+    {
+      "registry_id": "W-325",
+      "old_page": "wiki/source--빅터-차-정동영-반박-美csis-구성-北핵시설-보고서-쓴-적-없다-우라늄-농축-관건-2026-04-21.md",
+      "new_page": "wiki/source--csis-disputes-korean-claim-on-north-korea-facility-2026-04-21.md",
+      "old_stem": "source--빅터-차-정동영-반박-美csis-구성-北핵시설-보고서-쓴-적-없다-우라늄-농축-관건-2026-04-21",
+      "new_stem": "source--csis-disputes-korean-claim-on-north-korea-facility-2026-04-21",
+      "old_slug": "빅터-차-정동영-반박-美csis-구성-北핵시설-보고서-쓴-적-없다-우라늄-농축-관건",
+      "new_slug": "csis-disputes-korean-claim-on-north-korea-facility"
+    },
+    {
+      "registry_id": "W-326",
+      "old_page": "wiki/source--빅테크는-원전-동맹-한국은-한전-고지서-벌어지는-ai-격차-에너지-전쟁-중동-쇼크-그-이후-②-2026-04-21.md",
+      "new_page": "wiki/source--nuclear-power-alliances-and-korea-ai-energy-gap-2026-04-21.md",
+      "old_stem": "source--빅테크는-원전-동맹-한국은-한전-고지서-벌어지는-ai-격차-에너지-전쟁-중동-쇼크-그-이후-②-2026-04-21",
+      "new_stem": "source--nuclear-power-alliances-and-korea-ai-energy-gap-2026-04-21",
+      "old_slug": "빅테크는-원전-동맹-한국은-한전-고지서-벌어지는-ai-격차-에너지-전쟁-중동-쇼크-그-이후-②",
+      "new_slug": "nuclear-power-alliances-and-korea-ai-energy-gap"
+    },
+    {
+      "registry_id": "W-327",
+      "old_page": "wiki/source--빅테크도-입도선매-삼성-전략적-증산으로-수익-극대화-only-이데일리-2026-04-21.md",
+      "new_page": "wiki/source--samsung-strategic-output-increase-and-preorders-2026-04-21.md",
+      "old_stem": "source--빅테크도-입도선매-삼성-전략적-증산으로-수익-극대화-only-이데일리-2026-04-21",
+      "new_stem": "source--samsung-strategic-output-increase-and-preorders-2026-04-21",
+      "old_slug": "빅테크도-입도선매-삼성-전략적-증산으로-수익-극대화-only-이데일리",
+      "new_slug": "samsung-strategic-output-increase-and-preorders"
+    },
+    {
+      "registry_id": "W-328",
+      "old_page": "wiki/source--사모펀드-금투협-의견에-사모펀드법-법안-심사-온도차-2026-04-21.md",
+      "new_page": "wiki/source--private-equity-law-review-divide-2026-04-21.md",
+      "old_stem": "source--사모펀드-금투협-의견에-사모펀드법-법안-심사-온도차-2026-04-21",
+      "new_stem": "source--private-equity-law-review-divide-2026-04-21",
+      "old_slug": "사모펀드-금투협-의견에-사모펀드법-법안-심사-온도차",
+      "new_slug": "private-equity-law-review-divide"
+    },
+    {
+      "registry_id": "W-329",
+      "old_page": "wiki/source--삼성전자-美-텍사스-공장-오스틴-테일러-투트랙-가동-2026-04-21.md",
+      "new_page": "wiki/source--samsung-texas-austin-taylor-dual-fab-operations-2026-04-21.md",
+      "old_stem": "source--삼성전자-美-텍사스-공장-오스틴-테일러-투트랙-가동-2026-04-21",
+      "new_stem": "source--samsung-texas-austin-taylor-dual-fab-operations-2026-04-21",
+      "old_slug": "삼성전자-美-텍사스-공장-오스틴-테일러-투트랙-가동",
+      "new_slug": "samsung-texas-austin-taylor-dual-fab-operations"
+    },
+    {
+      "registry_id": "W-330",
+      "old_page": "wiki/source--삼성전자-하이닉스-2배-etf-다음달-22일부터-거래된다-2026-04-21.md",
+      "new_page": "wiki/source--leveraged-samsung-sk-hynix-etf-launch-2026-04-21.md",
+      "old_stem": "source--삼성전자-하이닉스-2배-etf-다음달-22일부터-거래된다-2026-04-21",
+      "new_stem": "source--leveraged-samsung-sk-hynix-etf-launch-2026-04-21",
+      "old_slug": "삼성전자-하이닉스-2배-etf-다음달-22일부터-거래된다",
+      "new_slug": "leveraged-samsung-sk-hynix-etf-launch"
+    },
+    {
+      "registry_id": "W-331",
+      "old_page": "wiki/source--삼전-하닉-또-폭락-은-아니겠지-구글-터보퀀트-iclr-검증-앞두고-촉각-ai세계속으로-2026-04-21.md",
+      "new_page": "wiki/source--google-turboquant-validation-and-memory-stock-watch-2026-04-21.md",
+      "old_stem": "source--삼전-하닉-또-폭락-은-아니겠지-구글-터보퀀트-iclr-검증-앞두고-촉각-ai세계속으로-2026-04-21",
+      "new_stem": "source--google-turboquant-validation-and-memory-stock-watch-2026-04-21",
+      "old_slug": "삼전-하닉-또-폭락-은-아니겠지-구글-터보퀀트-iclr-검증-앞두고-촉각-ai세계속으로",
+      "new_slug": "google-turboquant-validation-and-memory-stock-watch"
+    },
+    {
+      "registry_id": "W-332",
+      "old_page": "wiki/source--삼천당제약-사태-막는다-금감원-tf-엇나간-진단-김유림의-바이오핀셋-2026-04-21.md",
+      "new_page": "wiki/source--samchundang-pharma-regulatory-misdiagnosis-debate-2026-04-21.md",
+      "old_stem": "source--삼천당제약-사태-막는다-금감원-tf-엇나간-진단-김유림의-바이오핀셋-2026-04-21",
+      "new_stem": "source--samchundang-pharma-regulatory-misdiagnosis-debate-2026-04-21",
+      "old_slug": "삼천당제약-사태-막는다-금감원-tf-엇나간-진단-김유림의-바이오핀셋",
+      "new_slug": "samchundang-pharma-regulatory-misdiagnosis-debate"
+    },
+    {
+      "registry_id": "W-333",
+      "old_page": "wiki/source--상호주-의결권-제한-기준일-아닌-주총-당일-이-판단-시점-허란의-판례-읽기-2026-04-21.md",
+      "new_page": "wiki/source--cross-shareholding-vote-rights-meeting-day-rule-2026-04-21.md",
+      "old_stem": "source--상호주-의결권-제한-기준일-아닌-주총-당일-이-판단-시점-허란의-판례-읽기-2026-04-21",
+      "new_stem": "source--cross-shareholding-vote-rights-meeting-day-rule-2026-04-21",
+      "old_slug": "상호주-의결권-제한-기준일-아닌-주총-당일-이-판단-시점-허란의-판례-읽기",
+      "new_slug": "cross-shareholding-vote-rights-meeting-day-rule"
+    },
+    {
+      "registry_id": "W-334",
+      "old_page": "wiki/source--섞여서-몰라요-발묶인-캐나다-원유-0-관세-길-뚫렸다-2026-04-21.md",
+      "new_page": "wiki/source--canada-crude-zero-tariff-route-2026-04-21.md",
+      "old_stem": "source--섞여서-몰라요-발묶인-캐나다-원유-0-관세-길-뚫렸다-2026-04-21",
+      "new_stem": "source--canada-crude-zero-tariff-route-2026-04-21",
+      "old_slug": "섞여서-몰라요-발묶인-캐나다-원유-0-관세-길-뚫렸다",
+      "new_slug": "canada-crude-zero-tariff-route"
+    },
+    {
+      "registry_id": "W-335",
+      "old_page": "wiki/source--세제혜택-주며-유치하더니-물-전기-부담되자-데이터센터-규제-나서는-美-2026-04-21.md",
+      "new_page": "wiki/source--us-data-center-water-and-power-regulation-2026-04-21.md",
+      "old_stem": "source--세제혜택-주며-유치하더니-물-전기-부담되자-데이터센터-규제-나서는-美-2026-04-21",
+      "new_stem": "source--us-data-center-water-and-power-regulation-2026-04-21",
+      "old_slug": "세제혜택-주며-유치하더니-물-전기-부담되자-데이터센터-규제-나서는-美",
+      "new_slug": "us-data-center-water-and-power-regulation"
+    },
+    {
+      "registry_id": "W-336",
+      "old_page": "wiki/source--소부장-레이더-보복소송-vs-기술탈취-한미-한화-날선-법정공방-2026-04-21.md",
+      "new_page": "wiki/source--hanmi-hanwha-tech-theft-lawsuit-clash-2026-04-21.md",
+      "old_stem": "source--소부장-레이더-보복소송-vs-기술탈취-한미-한화-날선-법정공방-2026-04-21",
+      "new_stem": "source--hanmi-hanwha-tech-theft-lawsuit-clash-2026-04-21",
+      "old_slug": "소부장-레이더-보복소송-vs-기술탈취-한미-한화-날선-법정공방",
+      "new_slug": "hanmi-hanwha-tech-theft-lawsuit-clash"
+    },
+    {
+      "registry_id": "W-337",
+      "old_page": "wiki/source--속보-트럼프-미-대표단-20일-협상-위해-파키스탄-간다-합의-안하면-모든-발전소와-다리-파괴-2026-04-21.md",
+      "new_page": "wiki/source--trump-threatens-pakistan-talks-and-strike-escalation-2026-04-21.md",
+      "old_stem": "source--속보-트럼프-미-대표단-20일-협상-위해-파키스탄-간다-합의-안하면-모든-발전소와-다리-파괴-2026-04-21",
+      "new_stem": "source--trump-threatens-pakistan-talks-and-strike-escalation-2026-04-21",
+      "old_slug": "속보-트럼프-미-대표단-20일-협상-위해-파키스탄-간다-합의-안하면-모든-발전소와-다리-파괴",
+      "new_slug": "trump-threatens-pakistan-talks-and-strike-escalation"
+    },
+    {
+      "registry_id": "W-338",
+      "old_page": "wiki/source--송언석-장특공-폐지시-李대통령-아파트-양도세-9천300만-6억-2026-04-21.md",
+      "new_page": "wiki/source--housing-capital-gains-deduction-repeal-tax-shock-2026-04-21.md",
+      "old_stem": "source--송언석-장특공-폐지시-李대통령-아파트-양도세-9천300만-6억-2026-04-21",
+      "new_stem": "source--housing-capital-gains-deduction-repeal-tax-shock-2026-04-21",
+      "old_slug": "송언석-장특공-폐지시-李대통령-아파트-양도세-9천300만-6억",
+      "new_slug": "housing-capital-gains-deduction-repeal-tax-shock"
+    },
+    {
+      "registry_id": "W-339",
+      "old_page": "wiki/source--신현송-한은-총재-중동-사태로-물가-성장-불확실-유연한-정책-필요-2026-04-21.md",
+      "new_page": "wiki/source--bok-governor-warns-middle-east-inflation-growth-risk-2026-04-21.md",
+      "old_stem": "source--신현송-한은-총재-중동-사태로-물가-성장-불확실-유연한-정책-필요-2026-04-21",
+      "new_stem": "source--bok-governor-warns-middle-east-inflation-growth-risk-2026-04-21",
+      "old_slug": "신현송-한은-총재-중동-사태로-물가-성장-불확실-유연한-정책-필요",
+      "new_slug": "bok-governor-warns-middle-east-inflation-growth-risk"
+    },
+    {
+      "registry_id": "W-340",
+      "old_page": "wiki/source--신현송-한은-총재-대전환의-시기-신중하고-유연한-통화정책-2026-04-21.md",
+      "new_page": "wiki/source--shin-hyunsong-cautious-flexible-monetary-policy-2026-04-21.md",
+      "old_stem": "source--신현송-한은-총재-대전환의-시기-신중하고-유연한-통화정책-2026-04-21",
+      "new_stem": "source--shin-hyunsong-cautious-flexible-monetary-policy-2026-04-21",
+      "old_slug": "신현송-한은-총재-대전환의-시기-신중하고-유연한-통화정책",
+      "new_slug": "shin-hyunsong-cautious-flexible-monetary-policy"
+    },
+    {
+      "registry_id": "W-341",
+      "old_page": "wiki/source--신현송-한은-총재-고물가-고환율-복합-위기-속-취임-해결능력-시험대-2026-04-21.md",
+      "new_page": "wiki/source--shin-hyunsong-faces-inflation-and-fx-crisis-2026-04-21.md",
+      "old_stem": "source--신현송-한은-총재-고물가-고환율-복합-위기-속-취임-해결능력-시험대-2026-04-21",
+      "new_stem": "source--shin-hyunsong-faces-inflation-and-fx-crisis-2026-04-21",
+      "old_slug": "신현송-한은-총재-고물가-고환율-복합-위기-속-취임-해결능력-시험대",
+      "new_slug": "shin-hyunsong-faces-inflation-and-fx-crisis"
+    },
+    {
+      "registry_id": "W-342",
+      "old_page": "wiki/source--아-또-ai-전화-끊은-그-순간-회사는-웃는다-짜증이-돈-된다는데-2026-04-21.md",
+      "new_page": "wiki/source--ai-call-center-hangup-monetization-2026-04-21.md",
+      "old_stem": "source--아-또-ai-전화-끊은-그-순간-회사는-웃는다-짜증이-돈-된다는데-2026-04-21",
+      "new_stem": "source--ai-call-center-hangup-monetization-2026-04-21",
+      "old_slug": "아-또-ai-전화-끊은-그-순간-회사는-웃는다-짜증이-돈-된다는데",
+      "new_slug": "ai-call-center-hangup-monetization"
+    },
+    {
+      "registry_id": "W-343",
+      "old_page": "wiki/source--아마존-앤트로픽에-최대-250억달러-추가투자-ai인프라-동맹-강화-2026-04-21.md",
+      "new_page": "wiki/source--amazon-anthropic-investment-and-infrastructure-alliance-2026-04-21.md",
+      "old_stem": "source--아마존-앤트로픽에-최대-250억달러-추가투자-ai인프라-동맹-강화-2026-04-21",
+      "new_stem": "source--amazon-anthropic-investment-and-infrastructure-alliance-2026-04-21",
+      "old_slug": "아마존-앤트로픽에-최대-250억달러-추가투자-ai인프라-동맹-강화",
+      "new_slug": "amazon-anthropic-investment-and-infrastructure-alliance"
+    },
+    {
+      "registry_id": "W-344",
+      "old_page": "wiki/source--안전자산-급부상-이곳-에-돈-몰린다-2026-04-21.md",
+      "new_page": "wiki/source--china-bond-safe-haven-rally-2026-04-21.md",
+      "old_stem": "source--안전자산-급부상-이곳-에-돈-몰린다-2026-04-21",
+      "new_stem": "source--china-bond-safe-haven-rally-2026-04-21",
+      "old_slug": "안전자산-급부상-이곳-에-돈-몰린다",
+      "new_slug": "china-bond-safe-haven-rally"
+    },
+    {
+      "registry_id": "W-345",
+      "old_page": "wiki/source--알츠하이머-신약-효과-논란-재점화-치료-패러다임-흔들-2026-04-21.md",
+      "new_page": "wiki/source--alzheimers-drug-efficacy-debate-reignites-2026-04-21.md",
+      "old_stem": "source--알츠하이머-신약-효과-논란-재점화-치료-패러다임-흔들-2026-04-21",
+      "new_stem": "source--alzheimers-drug-efficacy-debate-reignites-2026-04-21",
+      "old_slug": "알츠하이머-신약-효과-논란-재점화-치료-패러다임-흔들",
+      "new_slug": "alzheimers-drug-efficacy-debate-reignites"
+    },
+    {
+      "registry_id": "W-346",
+      "old_page": "wiki/source--애플-차기-수장-존-터너스-누구인가-차세대-기기-ai전략-새-시험대-2026-04-21.md",
+      "new_page": "wiki/source--apple-john-ternus-ai-device-transition-2026-04-21.md",
+      "old_stem": "source--애플-차기-수장-존-터너스-누구인가-차세대-기기-ai전략-새-시험대-2026-04-21",
+      "new_stem": "source--apple-john-ternus-ai-device-transition-2026-04-21",
+      "old_slug": "애플-차기-수장-존-터너스-누구인가-차세대-기기-ai전략-새-시험대",
+      "new_slug": "apple-john-ternus-ai-device-transition"
+    },
+    {
+      "registry_id": "W-347",
+      "old_page": "wiki/source--앤트로픽-클로드-성능-하향-조정-의혹-ai-슈링크플레이션-논란-2026-04-21.md",
+      "new_page": "wiki/source--anthropic-claude-shrinkflation-controversy-2026-04-21.md",
+      "old_stem": "source--앤트로픽-클로드-성능-하향-조정-의혹-ai-슈링크플레이션-논란-2026-04-21",
+      "new_stem": "source--anthropic-claude-shrinkflation-controversy-2026-04-21",
+      "old_slug": "앤트로픽-클로드-성능-하향-조정-의혹-ai-슈링크플레이션-논란",
+      "new_slug": "anthropic-claude-shrinkflation-controversy"
+    },
+    {
+      "registry_id": "W-348",
+      "old_page": "wiki/source--앤트로픽-클로드-인증-강화에-중국-개발자-우회-경쟁-격화-2026-04-21.md",
+      "new_page": "wiki/source--claude-verification-bypass-in-china-2026-04-21.md",
+      "old_stem": "source--앤트로픽-클로드-인증-강화에-중국-개발자-우회-경쟁-격화-2026-04-21",
+      "new_stem": "source--claude-verification-bypass-in-china-2026-04-21",
+      "old_slug": "앤트로픽-클로드-인증-강화에-중국-개발자-우회-경쟁-격화",
+      "new_slug": "claude-verification-bypass-in-china"
+    },
+    {
+      "registry_id": "W-349",
+      "old_page": "wiki/source--야심차게-시작한-버거-사업-2년-만에-접고-로봇-조리-식당도-닫은-한화-김동선-이번엔-파인-다이닝-연다-2026-04-21.md",
+      "new_page": "wiki/source--hanwha-shifts-from-burgers-to-fine-dining-2026-04-21.md",
+      "old_stem": "source--야심차게-시작한-버거-사업-2년-만에-접고-로봇-조리-식당도-닫은-한화-김동선-이번엔-파인-다이닝-연다-2026-04-21",
+      "new_stem": "source--hanwha-shifts-from-burgers-to-fine-dining-2026-04-21",
+      "old_slug": "야심차게-시작한-버거-사업-2년-만에-접고-로봇-조리-식당도-닫은-한화-김동선-이번엔-파인-다이닝-연다",
+      "new_slug": "hanwha-shifts-from-burgers-to-fine-dining"
+    },
+    {
+      "registry_id": "W-350",
+      "old_page": "wiki/source--에이전트-영상-이해-강화한-그록-4-3-출시-2주-간격으로-업데이트-2026-04-21.md",
+      "new_page": "wiki/source--grok-4-3-agentic-vision-update-2026-04-21.md",
+      "old_stem": "source--에이전트-영상-이해-강화한-그록-4-3-출시-2주-간격으로-업데이트-2026-04-21",
+      "new_stem": "source--grok-4-3-agentic-vision-update-2026-04-21",
+      "old_slug": "에이전트-영상-이해-강화한-그록-4-3-출시-2주-간격으로-업데이트",
+      "new_slug": "grok-4-3-agentic-vision-update"
+    },
+    {
+      "registry_id": "W-351",
+      "old_page": "wiki/source--오늘-밤-워시-연준-의장-후보자-청문회-트럼프와-거리두기-시작할까-오미주-2026-04-21.md",
+      "new_page": "wiki/source--warsh-fed-chair-hearing-and-trump-distance-2026-04-21.md",
+      "old_stem": "source--오늘-밤-워시-연준-의장-후보자-청문회-트럼프와-거리두기-시작할까-오미주-2026-04-21",
+      "new_stem": "source--warsh-fed-chair-hearing-and-trump-distance-2026-04-21",
+      "old_slug": "오늘-밤-워시-연준-의장-후보자-청문회-트럼프와-거리두기-시작할까-오미주",
+      "new_slug": "warsh-fed-chair-hearing-and-trump-distance"
+    },
+    {
+      "registry_id": "W-352",
+      "old_page": "wiki/source--오픈ai-과학팀-담당-부사장-등-임원-3명-사임-2026-04-21.md",
+      "new_page": "wiki/source--openai-science-leadership-exits-2026-04-21.md",
+      "old_stem": "source--오픈ai-과학팀-담당-부사장-등-임원-3명-사임-2026-04-21",
+      "new_stem": "source--openai-science-leadership-exits-2026-04-21",
+      "old_slug": "오픈ai-과학팀-담당-부사장-등-임원-3명-사임",
+      "new_slug": "openai-science-leadership-exits"
+    },
+    {
+      "registry_id": "W-353",
+      "old_page": "wiki/source--오픈ai-ms의-데이터센터-공사-40-지연-서비스-확장-늦어지나-2026-04-21.md",
+      "new_page": "wiki/source--openai-microsoft-data-center-delay-2026-04-21.md",
+      "old_stem": "source--오픈ai-ms의-데이터센터-공사-40-지연-서비스-확장-늦어지나-2026-04-21",
+      "new_stem": "source--openai-microsoft-data-center-delay-2026-04-21",
+      "old_slug": "오픈ai-ms의-데이터센터-공사-40-지연-서비스-확장-늦어지나",
+      "new_slug": "openai-microsoft-data-center-delay"
+    },
+    {
+      "registry_id": "W-354",
+      "old_page": "wiki/source--외부감사-진단-전력기기-빅3-수주잭팟에-가려진-재무-뇌관-2026-04-21.md",
+      "new_page": "wiki/source--korea-power-equipment-backlog-and-balance-sheet-risk-2026-04-21.md",
+      "old_stem": "source--외부감사-진단-전력기기-빅3-수주잭팟에-가려진-재무-뇌관-2026-04-21",
+      "new_stem": "source--korea-power-equipment-backlog-and-balance-sheet-risk-2026-04-21",
+      "old_slug": "외부감사-진단-전력기기-빅3-수주잭팟에-가려진-재무-뇌관",
+      "new_slug": "korea-power-equipment-backlog-and-balance-sheet-risk"
+    },
+    {
+      "registry_id": "W-355",
+      "old_page": "wiki/source--외부감사-진단-한화에어로-한화오션-원가절감-덕-1조-이익-인식-2026-04-21.md",
+      "new_page": "wiki/source--hanwha-aerospace-profit-boost-from-cost-cuts-2026-04-21.md",
+      "old_stem": "source--외부감사-진단-한화에어로-한화오션-원가절감-덕-1조-이익-인식-2026-04-21",
+      "new_stem": "source--hanwha-aerospace-profit-boost-from-cost-cuts-2026-04-21",
+      "old_slug": "외부감사-진단-한화에어로-한화오션-원가절감-덕-1조-이익-인식",
+      "new_slug": "hanwha-aerospace-profit-boost-from-cost-cuts"
+    },
+    {
+      "registry_id": "W-356",
+      "old_page": "wiki/source--외환보유고-89-유가증권-유동성-한계-금융위기-경고-2026-04-21.md",
+      "new_page": "wiki/source--reserve-liquidity-limit-and-crisis-warning-2026-04-21.md",
+      "old_stem": "source--외환보유고-89-유가증권-유동성-한계-금융위기-경고-2026-04-21",
+      "new_stem": "source--reserve-liquidity-limit-and-crisis-warning-2026-04-21",
+      "old_slug": "외환보유고-89-유가증권-유동성-한계-금융위기-경고",
+      "new_slug": "reserve-liquidity-limit-and-crisis-warning"
+    },
+    {
+      "registry_id": "W-357",
+      "old_page": "wiki/source--이게-더-돈이-될-줄은-삼전-하닉-또-한번-대박-터지나-테크로그-2026-04-21.md",
+      "new_page": "wiki/source--memory-product-mix-upside-for-samsung-and-sk-hynix-2026-04-21.md",
+      "old_stem": "source--이게-더-돈이-될-줄은-삼전-하닉-또-한번-대박-터지나-테크로그-2026-04-21",
+      "new_stem": "source--memory-product-mix-upside-for-samsung-and-sk-hynix-2026-04-21",
+      "old_slug": "이게-더-돈이-될-줄은-삼전-하닉-또-한번-대박-터지나-테크로그",
+      "new_slug": "memory-product-mix-upside-for-samsung-and-sk-hynix"
+    },
+    {
+      "registry_id": "W-358",
+      "old_page": "wiki/source--이란-군부-호르무즈-개방-전격-선언-외무장관에-불만-2026-04-21.md",
+      "new_page": "wiki/source--iran-military-claims-hormuz-reopening-amid-foreign-ministry-rift-2026-04-21.md",
+      "old_stem": "source--이란-군부-호르무즈-개방-전격-선언-외무장관에-불만-2026-04-21",
+      "new_stem": "source--iran-military-claims-hormuz-reopening-amid-foreign-ministry-rift-2026-04-21",
+      "old_slug": "이란-군부-호르무즈-개방-전격-선언-외무장관에-불만",
+      "new_slug": "iran-military-claims-hormuz-reopening-amid-foreign-ministry-rift"
+    },
+    {
+      "registry_id": "W-359",
+      "old_page": "wiki/source--이란-권력다툼-심각한듯-美-누구와-협상할지-복잡-2026-04-21.md",
+      "new_page": "wiki/source--iran-power-struggle-clouds-us-negotiation-channel-2026-04-21.md",
+      "old_stem": "source--이란-권력다툼-심각한듯-美-누구와-협상할지-복잡-2026-04-21",
+      "new_stem": "source--iran-power-struggle-clouds-us-negotiation-channel-2026-04-21",
+      "old_slug": "이란-권력다툼-심각한듯-美-누구와-협상할지-복잡",
+      "new_slug": "iran-power-struggle-clouds-us-negotiation-channel"
+    },
+    {
+      "registry_id": "W-360",
+      "old_page": "wiki/source--이란-대통령-중재국-파키스탄에-미국-또-배신하려해-종합-2026-04-21.md",
+      "new_page": "wiki/source--iran-president-warns-pakistan-of-us-betrayal-2026-04-21.md",
+      "old_stem": "source--이란-대통령-중재국-파키스탄에-미국-또-배신하려해-종합-2026-04-21",
+      "new_stem": "source--iran-president-warns-pakistan-of-us-betrayal-2026-04-21",
+      "old_slug": "이란-대통령-중재국-파키스탄에-미국-또-배신하려해-종합",
+      "new_slug": "iran-president-warns-pakistan-of-us-betrayal"
+    },
+    {
+      "registry_id": "W-361",
+      "old_page": "wiki/source--이란-매체-2차-회담-보도-사실-아냐-협상-전망-불투명-2026-04-21.md",
+      "new_page": "wiki/source--iran-denies-second-round-talks-report-2026-04-21.md",
+      "old_stem": "source--이란-매체-2차-회담-보도-사실-아냐-협상-전망-불투명-2026-04-21",
+      "new_stem": "source--iran-denies-second-round-talks-report-2026-04-21",
+      "old_slug": "이란-매체-2차-회담-보도-사실-아냐-협상-전망-불투명",
+      "new_slug": "iran-denies-second-round-talks-report"
+    },
+    {
+      "registry_id": "W-362",
+      "old_page": "wiki/source--이란-전쟁-경제-불만-트럼프-국정-지지율-2기-최저로-2026-04-21.md",
+      "new_page": "wiki/source--trump-approval-drops-on-iran-war-and-economy-2026-04-21.md",
+      "old_stem": "source--이란-전쟁-경제-불만-트럼프-국정-지지율-2기-최저로-2026-04-21",
+      "new_stem": "source--trump-approval-drops-on-iran-war-and-economy-2026-04-21",
+      "old_slug": "이란-전쟁-경제-불만-트럼프-국정-지지율-2기-최저로",
+      "new_slug": "trump-approval-drops-on-iran-war-and-economy"
+    },
+    {
+      "registry_id": "W-363",
+      "old_page": "wiki/source--이란-美와-2차-협상-참석-긍정적-검토-중-로이터-2026-04-21.md",
+      "new_page": "wiki/source--iran-positively-considers-second-round-us-talks-2026-04-21.md",
+      "old_stem": "source--이란-美와-2차-협상-참석-긍정적-검토-중-로이터-2026-04-21",
+      "new_stem": "source--iran-positively-considers-second-round-us-talks-2026-04-21",
+      "old_slug": "이란-美와-2차-협상-참석-긍정적-검토-중-로이터",
+      "new_slug": "iran-positively-considers-second-round-us-talks"
+    },
+    {
+      "registry_id": "W-364",
+      "old_page": "wiki/source--이란-미국과의-2차-회담-대표단-파키스탄에-곧-파견-2026-04-21.md",
+      "new_page": "wiki/source--iran-to-send-delegation-to-pakistan-for-second-round-talks-2026-04-21.md",
+      "old_stem": "source--이란-미국과의-2차-회담-대표단-파키스탄에-곧-파견-2026-04-21",
+      "new_stem": "source--iran-to-send-delegation-to-pakistan-for-second-round-talks-2026-04-21",
+      "old_slug": "이란-미국과의-2차-회담-대표단-파키스탄에-곧-파견",
+      "new_slug": "iran-to-send-delegation-to-pakistan-for-second-round-talks"
+    },
+    {
+      "registry_id": "W-365",
+      "old_page": "wiki/source--이란-호르무즈-통제법-곧-시행-양보할-수-없는-권리-주장-2026-04-21.md",
+      "new_page": "wiki/source--iran-hormuz-control-law-and-inalienable-right-claim-2026-04-21.md",
+      "old_stem": "source--이란-호르무즈-통제법-곧-시행-양보할-수-없는-권리-주장-2026-04-21",
+      "new_stem": "source--iran-hormuz-control-law-and-inalienable-right-claim-2026-04-21",
+      "old_slug": "이란-호르무즈-통제법-곧-시행-양보할-수-없는-권리-주장",
+      "new_slug": "iran-hormuz-control-law-and-inalienable-right-claim"
+    },
+    {
+      "registry_id": "W-366",
+      "old_page": "wiki/source--이번주부터-액상형-전자담배도-담배-규제-흡연율-영향줄까-2026-04-21.md",
+      "new_page": "wiki/source--liquid-e-cigarette-reclassified-under-tobacco-rules-2026-04-21.md",
+      "old_stem": "source--이번주부터-액상형-전자담배도-담배-규제-흡연율-영향줄까-2026-04-21",
+      "new_stem": "source--liquid-e-cigarette-reclassified-under-tobacco-rules-2026-04-21",
+      "old_slug": "이번주부터-액상형-전자담배도-담배-규제-흡연율-영향줄까",
+      "new_slug": "liquid-e-cigarette-reclassified-under-tobacco-rules"
+    },
+    {
+      "registry_id": "W-367",
+      "old_page": "wiki/source--인천공항-통행료-오르나-민자도로-손실-기준-만든다-2026-04-21.md",
+      "new_page": "wiki/source--incheon-airport-toll-risk-from-private-road-rules-2026-04-21.md",
+      "old_stem": "source--인천공항-통행료-오르나-민자도로-손실-기준-만든다-2026-04-21",
+      "new_stem": "source--incheon-airport-toll-risk-from-private-road-rules-2026-04-21",
+      "old_slug": "인천공항-통행료-오르나-민자도로-손실-기준-만든다",
+      "new_slug": "incheon-airport-toll-risk-from-private-road-rules"
+    },
+    {
+      "registry_id": "W-368",
+      "old_page": "wiki/source--자율주행-된다더니-테슬라에-천만원-더-썼는데-먹통-2026-04-21.md",
+      "new_page": "wiki/source--tesla-fsd-paid-upgrade-breakdown-2026-04-21.md",
+      "old_stem": "source--자율주행-된다더니-테슬라에-천만원-더-썼는데-먹통-2026-04-21",
+      "new_stem": "source--tesla-fsd-paid-upgrade-breakdown-2026-04-21",
+      "old_slug": "자율주행-된다더니-테슬라에-천만원-더-썼는데-먹통",
+      "new_slug": "tesla-fsd-paid-upgrade-breakdown"
+    },
+    {
+      "registry_id": "W-369",
+      "old_page": "wiki/source--장동혁-패싱-빨라진다-경기도-독자-선대위-출범-선언-2026-04-21.md",
+      "new_page": "wiki/source--jang-donghyuk-bypassed-by-gyeonggi-campaign-2026-04-21.md",
+      "old_stem": "source--장동혁-패싱-빨라진다-경기도-독자-선대위-출범-선언-2026-04-21",
+      "new_stem": "source--jang-donghyuk-bypassed-by-gyeonggi-campaign-2026-04-21",
+      "old_slug": "장동혁-패싱-빨라진다-경기도-독자-선대위-출범-선언",
+      "new_slug": "jang-donghyuk-bypassed-by-gyeonggi-campaign"
+    },
+    {
+      "registry_id": "W-370",
+      "old_page": "wiki/source--장특공-폐지-논란-확산-與-검토-안했다-vs-野-세금-폭탄-충돌-2026-04-21.md",
+      "new_page": "wiki/source--housing-tax-deduction-repeal-political-clash-2026-04-21.md",
+      "old_stem": "source--장특공-폐지-논란-확산-與-검토-안했다-vs-野-세금-폭탄-충돌-2026-04-21",
+      "new_stem": "source--housing-tax-deduction-repeal-political-clash-2026-04-21",
+      "old_slug": "장특공-폐지-논란-확산-與-검토-안했다-vs-野-세금-폭탄-충돌",
+      "new_slug": "housing-tax-deduction-repeal-political-clash"
+    },
+    {
+      "registry_id": "W-371",
+      "old_page": "wiki/source--장하준-세계경제질서-구조적-재편-진행중-일시적-상황-아냐-2026-04-21.md",
+      "new_page": "wiki/source--ha-joon-chang-on-structural-global-order-reset-2026-04-21.md",
+      "old_stem": "source--장하준-세계경제질서-구조적-재편-진행중-일시적-상황-아냐-2026-04-21",
+      "new_stem": "source--ha-joon-chang-on-structural-global-order-reset-2026-04-21",
+      "old_slug": "장하준-세계경제질서-구조적-재편-진행중-일시적-상황-아냐",
+      "new_slug": "ha-joon-chang-on-structural-global-order-reset"
+    },
+    {
+      "registry_id": "W-372",
+      "old_page": "wiki/source--전쟁공포-딛고-전고점-돌파한-코스피-7천피-재도전-나설까-2026-04-21.md",
+      "new_page": "wiki/source--kospi-breakout-after-war-fears-2026-04-21.md",
+      "old_stem": "source--전쟁공포-딛고-전고점-돌파한-코스피-7천피-재도전-나설까-2026-04-21",
+      "new_stem": "source--kospi-breakout-after-war-fears-2026-04-21",
+      "old_slug": "전쟁공포-딛고-전고점-돌파한-코스피-7천피-재도전-나설까",
+      "new_slug": "kospi-breakout-after-war-fears"
+    },
+    {
+      "registry_id": "W-373",
+      "old_page": "wiki/source--정동영-北-구성-핵시설-발언-논란-확산-野-즉각-경질-vs-與-침소봉대-종합-2026-04-21.md",
+      "new_page": "wiki/source--south-korea-row-over-north-korea-facility-claim-2026-04-21.md",
+      "old_stem": "source--정동영-北-구성-핵시설-발언-논란-확산-野-즉각-경질-vs-與-침소봉대-종합-2026-04-21",
+      "new_stem": "source--south-korea-row-over-north-korea-facility-claim-2026-04-21",
+      "old_slug": "정동영-北-구성-핵시설-발언-논란-확산-野-즉각-경질-vs-與-침소봉대-종합",
+      "new_slug": "south-korea-row-over-north-korea-facility-claim"
+    },
+    {
+      "registry_id": "W-374",
+      "old_page": "wiki/source--정밀지도-반출-논의-공회전-구글-정부-교착-2026-04-21.md",
+      "new_page": "wiki/source--google-precision-map-export-stalemate-2026-04-21.md",
+      "old_stem": "source--정밀지도-반출-논의-공회전-구글-정부-교착-2026-04-21",
+      "new_stem": "source--google-precision-map-export-stalemate-2026-04-21",
+      "old_slug": "정밀지도-반출-논의-공회전-구글-정부-교착",
+      "new_slug": "google-precision-map-export-stalemate"
+    },
+    {
+      "registry_id": "W-375",
+      "old_page": "wiki/source--정부-주사기-350만대-추가생산-치료재료수가-2-인상-2026-04-21.md",
+      "new_page": "wiki/source--syringe-output-expansion-and-medical-fee-uplift-2026-04-21.md",
+      "old_stem": "source--정부-주사기-350만대-추가생산-치료재료수가-2-인상-2026-04-21",
+      "new_stem": "source--syringe-output-expansion-and-medical-fee-uplift-2026-04-21",
+      "old_slug": "정부-주사기-350만대-추가생산-치료재료수가-2-인상",
+      "new_slug": "syringe-output-expansion-and-medical-fee-uplift"
+    },
+    {
+      "registry_id": "W-376",
+      "old_page": "wiki/source--종전협상-안갯속-이란-트럼프-새로운-확전-획책-의심-2026-04-21.md",
+      "new_page": "wiki/source--iran-suspects-trump-of-fresh-escalation-before-ceasefire-talks-2026-04-21.md",
+      "old_stem": "source--종전협상-안갯속-이란-트럼프-새로운-확전-획책-의심-2026-04-21",
+      "new_stem": "source--iran-suspects-trump-of-fresh-escalation-before-ceasefire-talks-2026-04-21",
+      "old_slug": "종전협상-안갯속-이란-트럼프-새로운-확전-획책-의심",
+      "new_slug": "iran-suspects-trump-of-fresh-escalation-before-ceasefire-talks"
+    },
+    {
+      "registry_id": "W-377",
+      "old_page": "wiki/source--종전협상-앞-이란-내홍-협상파-의회의장-vs-주전파-혁수대장-2026-04-21.md",
+      "new_page": "wiki/source--iran-hardliner-moderate-rift-before-ceasefire-talks-2026-04-21.md",
+      "old_stem": "source--종전협상-앞-이란-내홍-협상파-의회의장-vs-주전파-혁수대장-2026-04-21",
+      "new_stem": "source--iran-hardliner-moderate-rift-before-ceasefire-talks-2026-04-21",
+      "old_slug": "종전협상-앞-이란-내홍-협상파-의회의장-vs-주전파-혁수대장",
+      "new_slug": "iran-hardliner-moderate-rift-before-ceasefire-talks"
+    },
+    {
+      "registry_id": "W-378",
+      "old_page": "wiki/source--주가-2배-뛰자-거래중단-ats-규제-한도에-투자자-혼란-2026-04-21.md",
+      "new_page": "wiki/source--ats-volatility-halt-confusion-2026-04-21.md",
+      "old_stem": "source--주가-2배-뛰자-거래중단-ats-규제-한도에-투자자-혼란-2026-04-21",
+      "new_stem": "source--ats-volatility-halt-confusion-2026-04-21",
+      "old_slug": "주가-2배-뛰자-거래중단-ats-규제-한도에-투자자-혼란",
+      "new_slug": "ats-volatility-halt-confusion"
+    },
+    {
+      "registry_id": "W-379",
+      "old_page": "wiki/source--중동발-에너지-쇼크에-유럽-풍력업계-인허가-빗장-풀고-자생력-키워야-2026-04-21.md",
+      "new_page": "wiki/source--europe-wind-permitting-push-after-energy-shock-2026-04-21.md",
+      "old_stem": "source--중동발-에너지-쇼크에-유럽-풍력업계-인허가-빗장-풀고-자생력-키워야-2026-04-21",
+      "new_stem": "source--europe-wind-permitting-push-after-energy-shock-2026-04-21",
+      "old_slug": "중동발-에너지-쇼크에-유럽-풍력업계-인허가-빗장-풀고-자생력-키워야",
+      "new_slug": "europe-wind-permitting-push-after-energy-shock"
+    },
+    {
+      "registry_id": "W-380",
+      "old_page": "wiki/source--직업-바꾼-뒤-사고-당하고-보험금청구-대법-보험사-해지-기간-사고-접수일-아닌-위반-인지-시점부터-2026-04-21.md",
+      "new_page": "wiki/source--insurance-cancellation-clock-starts-on-violation-discovery-2026-04-21.md",
+      "old_stem": "source--직업-바꾼-뒤-사고-당하고-보험금청구-대법-보험사-해지-기간-사고-접수일-아닌-위반-인지-시점부터-2026-04-21",
+      "new_stem": "source--insurance-cancellation-clock-starts-on-violation-discovery-2026-04-21",
+      "old_slug": "직업-바꾼-뒤-사고-당하고-보험금청구-대법-보험사-해지-기간-사고-접수일-아닌-위반-인지-시점부터",
+      "new_slug": "insurance-cancellation-clock-starts-on-violation-discovery"
+    },
+    {
+      "registry_id": "W-381",
+      "old_page": "wiki/source--집은-못-사도-침대는-에루샤급-커지는-프리미엄-시장-2026-04-21.md",
+      "new_page": "wiki/source--premium-bed-market-expands-under-housing-stress-2026-04-21.md",
+      "old_stem": "source--집은-못-사도-침대는-에루샤급-커지는-프리미엄-시장-2026-04-21",
+      "new_stem": "source--premium-bed-market-expands-under-housing-stress-2026-04-21",
+      "old_slug": "집은-못-사도-침대는-에루샤급-커지는-프리미엄-시장",
+      "new_slug": "premium-bed-market-expands-under-housing-stress"
+    },
+    {
+      "registry_id": "W-382",
+      "old_page": "wiki/source--청소년-담배보다-약물-경험-더-많아-adhd-치료제-최다-2026-04-21.md",
+      "new_page": "wiki/source--adolescent-drug-exposure-overtakes-smoking-2026-04-21.md",
+      "old_stem": "source--청소년-담배보다-약물-경험-더-많아-adhd-치료제-최다-2026-04-21",
+      "new_stem": "source--adolescent-drug-exposure-overtakes-smoking-2026-04-21",
+      "old_slug": "청소년-담배보다-약물-경험-더-많아-adhd-치료제-최다",
+      "new_slug": "adolescent-drug-exposure-overtakes-smoking"
+    },
+    {
+      "registry_id": "W-383",
+      "old_page": "wiki/source--첼시-말아먹고-에버턴-말아먹고-램파드-벼랑-끝에서-180도-대반전-성공스토리-썼다-2부-17위-팀을-25년-만에-프리미어리그로-2026-04-21.md",
+      "new_page": "wiki/source--lampard-promotion-revival-story-2026-04-21.md",
+      "old_stem": "source--첼시-말아먹고-에버턴-말아먹고-램파드-벼랑-끝에서-180도-대반전-성공스토리-썼다-2부-17위-팀을-25년-만에-프리미어리그로-2026-04-21",
+      "new_stem": "source--lampard-promotion-revival-story-2026-04-21",
+      "old_slug": "첼시-말아먹고-에버턴-말아먹고-램파드-벼랑-끝에서-180도-대반전-성공스토리-썼다-2부-17위-팀을-25년-만에-프리미어리그로",
+      "new_slug": "lampard-promotion-revival-story"
+    },
+    {
+      "registry_id": "W-384",
+      "old_page": "wiki/source--캐나다-총리-美와-긴밀한-경제-관계-이젠-약점-바로잡아야-2026-04-21.md",
+      "new_page": "wiki/source--canada-reduce-us-economic-dependence-2026-04-21.md",
+      "old_stem": "source--캐나다-총리-美와-긴밀한-경제-관계-이젠-약점-바로잡아야-2026-04-21",
+      "new_stem": "source--canada-reduce-us-economic-dependence-2026-04-21",
+      "old_slug": "캐나다-총리-美와-긴밀한-경제-관계-이젠-약점-바로잡아야",
+      "new_slug": "canada-reduce-us-economic-dependence"
+    },
+    {
+      "registry_id": "W-385",
+      "old_page": "wiki/source--케빈-워시-금리-압박에도-연준-독립성-안-흔들려-2026-04-21.md",
+      "new_page": "wiki/source--warsh-defends-fed-independence-2026-04-21.md",
+      "old_stem": "source--케빈-워시-금리-압박에도-연준-독립성-안-흔들려-2026-04-21",
+      "new_stem": "source--warsh-defends-fed-independence-2026-04-21",
+      "old_slug": "케빈-워시-금리-압박에도-연준-독립성-안-흔들려",
+      "new_slug": "warsh-defends-fed-independence"
+    },
+    {
+      "registry_id": "W-386",
+      "old_page": "wiki/source--코스피-8000-8500-간다-골드만삭스-jp모건-목표치-상향-종합-2026-04-21.md",
+      "new_page": "wiki/source--goldman-and-jpm-kospi-target-upgrade-2026-04-21.md",
+      "old_stem": "source--코스피-8000-8500-간다-골드만삭스-jp모건-목표치-상향-종합-2026-04-21",
+      "new_stem": "source--goldman-and-jpm-kospi-target-upgrade-2026-04-21",
+      "old_slug": "코스피-8000-8500-간다-골드만삭스-jp모건-목표치-상향-종합",
+      "new_slug": "goldman-and-jpm-kospi-target-upgrade"
+    },
+    {
+      "registry_id": "W-387",
+      "old_page": "wiki/source--쿠웨이트-호르무즈-봉쇄로-원유수출-불가항력-선언-2026-04-21.md",
+      "new_page": "wiki/source--kuwait-force-majeure-on-oil-exports-after-hormuz-blockade-2026-04-21.md",
+      "old_stem": "source--쿠웨이트-호르무즈-봉쇄로-원유수출-불가항력-선언-2026-04-21",
+      "new_stem": "source--kuwait-force-majeure-on-oil-exports-after-hormuz-blockade-2026-04-21",
+      "old_slug": "쿠웨이트-호르무즈-봉쇄로-원유수출-불가항력-선언",
+      "new_slug": "kuwait-force-majeure-on-oil-exports-after-hormuz-blockade"
+    },
+    {
+      "registry_id": "W-388",
+      "old_page": "wiki/source--텔레그램-구글-계정까지-털렸다-크롬-확장-프로그램-대규모-해킹-2026-04-21.md",
+      "new_page": "wiki/source--chrome-extension-breach-hits-telegram-and-google-accounts-2026-04-21.md",
+      "old_stem": "source--텔레그램-구글-계정까지-털렸다-크롬-확장-프로그램-대규모-해킹-2026-04-21",
+      "new_stem": "source--chrome-extension-breach-hits-telegram-and-google-accounts-2026-04-21",
+      "old_slug": "텔레그램-구글-계정까지-털렸다-크롬-확장-프로그램-대규모-해킹",
+      "new_slug": "chrome-extension-breach-hits-telegram-and-google-accounts"
+    },
+    {
+      "registry_id": "W-389",
+      "old_page": "wiki/source--트럼프-한국戰때-만든-법-발동해-유가-대응-에너지분야-지원-2026-04-21.md",
+      "new_page": "wiki/source--trump-invokes-korean-war-law-for-energy-support-2026-04-21.md",
+      "old_stem": "source--트럼프-한국戰때-만든-법-발동해-유가-대응-에너지분야-지원-2026-04-21",
+      "new_stem": "source--trump-invokes-korean-war-law-for-energy-support-2026-04-21",
+      "old_slug": "트럼프-한국戰때-만든-법-발동해-유가-대응-에너지분야-지원",
+      "new_slug": "trump-invokes-korean-war-law-for-energy-support"
+    },
+    {
+      "registry_id": "W-390",
+      "old_page": "wiki/source--트럼프-호르무즈-재봉쇄-위기-속-백악관-상황실-회의-소집-2026-04-21.md",
+      "new_page": "wiki/source--white-house-situation-room-on-renewed-hormuz-risk-2026-04-21.md",
+      "old_stem": "source--트럼프-호르무즈-재봉쇄-위기-속-백악관-상황실-회의-소집-2026-04-21",
+      "new_stem": "source--white-house-situation-room-on-renewed-hormuz-risk-2026-04-21",
+      "old_slug": "트럼프-호르무즈-재봉쇄-위기-속-백악관-상황실-회의-소집",
+      "new_slug": "white-house-situation-room-on-renewed-hormuz-risk"
+    },
+    {
+      "registry_id": "W-391",
+      "old_page": "wiki/source--티메프-여행-항공-환불할게-카드사-통큰-결정-자신감-배경은-2026-04-21.md",
+      "new_page": "wiki/source--card-issuer-refunds-after-tmon-wemakeprice-travel-failure-2026-04-21.md",
+      "old_stem": "source--티메프-여행-항공-환불할게-카드사-통큰-결정-자신감-배경은-2026-04-21",
+      "new_stem": "source--card-issuer-refunds-after-tmon-wemakeprice-travel-failure-2026-04-21",
+      "old_slug": "티메프-여행-항공-환불할게-카드사-통큰-결정-자신감-배경은",
+      "new_slug": "card-issuer-refunds-after-tmon-wemakeprice-travel-failure"
+    },
+    {
+      "registry_id": "W-392",
+      "old_page": "wiki/source--팀-쿡-사상-최대-실적에도-15년-만에-퇴진-애플은-왜-지금-엔지니어-ceo-택했나-2026-04-21.md",
+      "new_page": "wiki/source--apple-engineer-ceo-succession-after-cook-2026-04-21.md",
+      "old_stem": "source--팀-쿡-사상-최대-실적에도-15년-만에-퇴진-애플은-왜-지금-엔지니어-ceo-택했나-2026-04-21",
+      "new_stem": "source--apple-engineer-ceo-succession-after-cook-2026-04-21",
+      "old_slug": "팀-쿡-사상-최대-실적에도-15년-만에-퇴진-애플은-왜-지금-엔지니어-ceo-택했나",
+      "new_slug": "apple-engineer-ceo-succession-after-cook"
+    },
+    {
+      "registry_id": "W-393",
+      "old_page": "wiki/source--펄펄-끓는-데이터센터-어쩌나-lg전자가-꺼낸-해법은-2026-04-21.md",
+      "new_page": "wiki/source--lg-electronics-data-center-cooling-solution-2026-04-21.md",
+      "old_stem": "source--펄펄-끓는-데이터센터-어쩌나-lg전자가-꺼낸-해법은-2026-04-21",
+      "new_stem": "source--lg-electronics-data-center-cooling-solution-2026-04-21",
+      "old_slug": "펄펄-끓는-데이터센터-어쩌나-lg전자가-꺼낸-해법은",
+      "new_slug": "lg-electronics-data-center-cooling-solution"
+    },
+    {
+      "registry_id": "W-394",
+      "old_page": "wiki/source--한-인도-중동전쟁-대응해-나프타-석유화학-원료-안정-공급-2026-04-21.md",
+      "new_page": "wiki/source--korea-india-naphtha-and-petrochemical-supply-coordination-2026-04-21.md",
+      "old_stem": "source--한-인도-중동전쟁-대응해-나프타-석유화학-원료-안정-공급-2026-04-21",
+      "new_stem": "source--korea-india-naphtha-and-petrochemical-supply-coordination-2026-04-21",
+      "old_slug": "한-인도-중동전쟁-대응해-나프타-석유화학-원료-안정-공급",
+      "new_slug": "korea-india-naphtha-and-petrochemical-supply-coordination"
+    },
+    {
+      "registry_id": "W-395",
+      "old_page": "wiki/source--한솔그룹-반도체-시프트-②1200억-감자-900억-증자-자금력-총동원-2026-04-21.md",
+      "new_page": "wiki/source--hansol-semiconductor-financing-pivot-2026-04-21.md",
+      "old_stem": "source--한솔그룹-반도체-시프트-②1200억-감자-900억-증자-자금력-총동원-2026-04-21",
+      "new_stem": "source--hansol-semiconductor-financing-pivot-2026-04-21",
+      "old_slug": "한솔그룹-반도체-시프트-②1200억-감자-900억-증자-자금력-총동원",
+      "new_slug": "hansol-semiconductor-financing-pivot"
+    },
+    {
+      "registry_id": "W-396",
+      "old_page": "wiki/source--한화에어로-줌인-미래사업-11조-투자-유증-차입-유동성-수혈-2026-04-21.md",
+      "new_page": "wiki/source--hanwha-aerospace-liquidity-for-future-investment-2026-04-21.md",
+      "old_stem": "source--한화에어로-줌인-미래사업-11조-투자-유증-차입-유동성-수혈-2026-04-21",
+      "new_stem": "source--hanwha-aerospace-liquidity-for-future-investment-2026-04-21",
+      "old_slug": "한화에어로-줌인-미래사업-11조-투자-유증-차입-유동성-수혈",
+      "new_slug": "hanwha-aerospace-liquidity-for-future-investment"
+    },
+    {
+      "registry_id": "W-397",
+      "old_page": "wiki/source--현금-1200억-우량기업이-3연속-한정-의견-주가누르기-고의상폐-정조준-2026-04-21.md",
+      "new_page": "wiki/source--qualified-opinion-delisting-pressure-on-cash-rich-firm-2026-04-21.md",
+      "old_stem": "source--현금-1200억-우량기업이-3연속-한정-의견-주가누르기-고의상폐-정조준-2026-04-21",
+      "new_stem": "source--qualified-opinion-delisting-pressure-on-cash-rich-firm-2026-04-21",
+      "old_slug": "현금-1200억-우량기업이-3연속-한정-의견-주가누르기-고의상폐-정조준",
+      "new_slug": "qualified-opinion-delisting-pressure-on-cash-rich-firm"
+    },
+    {
+      "registry_id": "W-398",
+      "old_page": "wiki/source--현대차-소형-전기차-아이오닉3-첫-공개-유럽-시장-정조준-2026-04-21.md",
+      "new_page": "wiki/source--hyundai-ioniq-3-europe-debut-2026-04-21.md",
+      "old_stem": "source--현대차-소형-전기차-아이오닉3-첫-공개-유럽-시장-정조준-2026-04-21",
+      "new_stem": "source--hyundai-ioniq-3-europe-debut-2026-04-21",
+      "old_slug": "현대차-소형-전기차-아이오닉3-첫-공개-유럽-시장-정조준",
+      "new_slug": "hyundai-ioniq-3-europe-debut"
+    },
+    {
+      "registry_id": "W-399",
+      "old_page": "wiki/source--호르무즈-해협-내측-고립-우리-선박-26척-uae-인근-이동-2026-04-21.md",
+      "new_page": "wiki/source--stranded-korean-ships-move-near-uae-after-hormuz-closure-2026-04-21.md",
+      "old_stem": "source--호르무즈-해협-내측-고립-우리-선박-26척-uae-인근-이동-2026-04-21",
+      "new_stem": "source--stranded-korean-ships-move-near-uae-after-hormuz-closure-2026-04-21",
+      "old_slug": "호르무즈-해협-내측-고립-우리-선박-26척-uae-인근-이동",
+      "new_slug": "stranded-korean-ships-move-near-uae-after-hormuz-closure"
+    },
+    {
+      "registry_id": "W-400",
+      "old_page": "wiki/source--홍해-뚫은-한국-유조선-추가-원유-수송-이어질-듯-2026-04-21.md",
+      "new_page": "wiki/source--korean-tankers-reroute-via-red-sea-2026-04-21.md",
+      "old_stem": "source--홍해-뚫은-한국-유조선-추가-원유-수송-이어질-듯-2026-04-21",
+      "new_stem": "source--korean-tankers-reroute-via-red-sea-2026-04-21",
+      "old_slug": "홍해-뚫은-한국-유조선-추가-원유-수송-이어질-듯",
+      "new_slug": "korean-tankers-reroute-via-red-sea"
+    }
+  ]
+}

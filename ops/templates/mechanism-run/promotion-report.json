@@ -1,0 +1,117 @@
+{
+  "$schema": "ops/schemas/promotion-report.schema.json",
+  "run_id": "run-YYYYMMDD-mechanism-slug",
+  "mode": "report_only",
+  "artifact_class": "system_mechanism",
+  "decision": "HOLD",
+  "decision_record": {
+    "decision_id": "decision:run-YYYYMMDD-mechanism-slug:template",
+    "subject_id": "run-YYYYMMDD-mechanism-slug",
+    "subject_kind": "system_mechanism",
+    "decision": "HOLD",
+    "decision_stage": "promotion_gate",
+    "is_terminal": false,
+    "policy_version": 1,
+    "source_rule": "template_placeholder",
+    "source_pass": "system_mechanism",
+    "actor": "promotion_gate",
+    "reason_code": "template_placeholder",
+    "reason_detail": "Replace with the canonical reducer output from promotion_gate.py.",
+    "evidence_refs": [
+      "mechanism_scope_frozen"
+    ],
+    "decided_at": "",
+    "effective_at": "",
+    "supersedes": [],
+    "reducer_key": "promotion_decision_registry_v1",
+    "precedence_key": "0050:HOLD",
+    "dedupe_key": "run-YYYYMMDD-mechanism-slug:promotion_gate",
+    "finalizable": false,
+    "finalize_blockers": [
+      "decision_not_finalizable",
+      "required_signoff_not_approved"
+    ],
+    "ledger_event_type": "promotion_evaluated",
+    "ledger_partition_key": "run-YYYYMMDD-mechanism-slug"
+  },
+  "decision_reduction": {
+    "reducer_key": "promotion_decision_registry_v1",
+    "selected_decision_id": "decision:run-YYYYMMDD-mechanism-slug:template",
+    "proposal_count": 1,
+    "proposals": [
+      {
+        "decision_id": "decision:run-YYYYMMDD-mechanism-slug:template",
+        "subject_id": "run-YYYYMMDD-mechanism-slug",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 1,
+        "source_rule": "template_placeholder",
+        "source_pass": "system_mechanism",
+        "actor": "promotion_gate",
+        "reason_code": "template_placeholder",
+        "reason_detail": "Replace with the canonical reducer output from promotion_gate.py.",
+        "evidence_refs": [
+          "mechanism_scope_frozen"
+        ],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "run-YYYYMMDD-mechanism-slug:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "run-YYYYMMDD-mechanism-slug"
+      }
+    ]
+  },
+  "summary": "Replace with the actual system_mechanism promotion result.",
+  "primary_targets": [
+    "ops/scripts/<primary-target>.py"
+  ],
+  "supporting_targets": [],
+  "checks": [
+    {
+      "id": "mechanism_scope_frozen",
+      "status": "WARN",
+      "detail": "Replace with actual gate results after baseline/candidate artifacts are generated."
+    }
+  ],
+  "signoff": {
+    "required": true,
+    "status": "pending",
+    "by": "",
+    "ts": ""
+  },
+  "log": {
+    "required": true,
+    "page": "system/system-log.md",
+    "summary": "Replace with append-only log summary after the mechanism decision is finalized.",
+    "status": "pending",
+    "entry_ref": ""
+  },
+  "history": {
+    "status": "active",
+    "reason": "",
+    "by": "",
+    "ts": ""
+  },
+  "next_action": "Run promotion_gate.py with baseline/candidate eval, lint, mechanism, changed-files manifest, policy-required behavior-delta, and run-ledger artifacts.",
+  "inputs": {
+    "baseline_eval_report": "runs/<run-id>/baseline-eval.json",
+    "candidate_eval_report": "runs/<run-id>/candidate-eval.json",
+    "baseline_lint_report": "runs/<run-id>/baseline-lint.json",
+    "candidate_lint_report": "runs/<run-id>/candidate-lint.json",
+    "baseline_mechanism_report": "runs/<run-id>/baseline-mechanism-assessment.json",
+    "candidate_mechanism_report": "runs/<run-id>/candidate-mechanism-assessment.json",
+    "changed_files_manifest": "runs/<run-id>/changed-files-manifest.json",
+    "behavior_delta": "runs/<run-id>/behavior-delta.json",
+    "run_ledger": "runs/<run-id>/run-ledger.json"
+  }
+}

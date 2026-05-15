@@ -1,0 +1,105 @@
+{
+  "$schema": "ops/schemas/public-check-summary.schema.json",
+  "artifact_kind": "public_check_summary",
+  "generated_at": "2026-05-15T04:27:48Z",
+  "producer": "ops.scripts.public_check_summary",
+  "source_command": "python -m ops.scripts.public_check_summary --vault .",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "60e44cd49ca6321888bbf40d808c7be70d89d5e19a3a35154a4e235efca7c7fc",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "2aa568966c9a638f901d8eb17d0483385c472e0c1565187a7e12d814668c90e9",
+    "public_check_summary_inputs": "d5233aabb3ed2ef8fa6831cd72f1e8e469b11c0b7ba08a1c6cabe36df5788620"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-15T04:27:48Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "pass",
+  "summary": {
+    "public_export_status": "pass",
+    "public_check_status": "pass",
+    "export_file_count": 617,
+    "export_source_file_count": 616,
+    "export_root_fingerprint": "4a4a3be27819c784d15a728bd7d7cf3820521c646444157fa502624a572f1ccd",
+    "public_export_manifest_sha256": "b69daf4e810d4fd412732ff18251a5211d5f54997b71fc0145ecff42e406882d",
+    "public_surface_policy_sha256": "6551a09d14ab4961d949b71777f6320f4ffed0d2ec50bc4ab6ab109521590dcf",
+    "command_count": 3,
+    "command_fail_count": 0,
+    "pytest_passed": 328,
+    "pytest_failed": 0,
+    "pytest_errors": 0,
+    "pytest_skipped": 5
+  },
+  "public_export": {
+    "output_dir": "<tmp>/llm-wiki-public-repo",
+    "manifest_file": "PUBLIC-EXPORT-MANIFEST.json",
+    "file_count": 617,
+    "source_file_count": 616,
+    "export_root_fingerprint": "4a4a3be27819c784d15a728bd7d7cf3820521c646444157fa502624a572f1ccd",
+    "manifest_sha256": "b69daf4e810d4fd412732ff18251a5211d5f54997b71fc0145ecff42e406882d"
+  },
+  "commands": [
+    {
+      "id": "ruff",
+      "command": ".venv/bin/python -m ruff check ops/scripts tests tools",
+      "cwd": ".",
+      "status": "pass",
+      "returncode": 0,
+      "timed_out": false,
+      "timeout_seconds": 5400,
+      "termination_reason": "completed",
+      "duration_ms": 36,
+      "stdout_tail": "All checks passed!\n",
+      "stderr_tail": "",
+      "pytest_counts": {}
+    },
+    {
+      "id": "mypy",
+      "command": ".venv/bin/python -m mypy @ops/mypy-allowlist.txt",
+      "cwd": ".",
+      "status": "pass",
+      "returncode": 0,
+      "timed_out": false,
+      "timeout_seconds": 5400,
+      "termination_reason": "completed",
+      "duration_ms": 2718,
+      "stdout_tail": "Success: no issues found in 224 source files\n",
+      "stderr_tail": "",
+      "pytest_counts": {}
+    },
+    {
+      "id": "pytest_public",
+      "command": ".venv/bin/python -m pytest -m public -p xdist.plugin -n auto --dist=loadfile",
+      "cwd": ".",
+      "status": "pass",
+      "returncode": 0,
+      "timed_out": false,
+      "timeout_seconds": 5400,
+      "termination_reason": "completed",
+      "duration_ms": 51600,
+      "stdout_tail": "bringing up nodes...\nbringing up nodes...\n\n............ssss..............s......................................... [ 21%]\n........................................................................ [ 43%]\n........................................................................ [ 64%]\n........................................................................ [ 86%]\n.............................................                            [100%]\n328 passed, 5 skipped in 51.42s\n",
+      "stderr_tail": "",
+      "pytest_counts": {
+        "passed": 328,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 5,
+        "xfailed": 0,
+        "xpassed": 0,
+        "warnings": 0
+      }
+    }
+  ]
+}

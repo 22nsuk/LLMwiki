@@ -1,0 +1,51 @@
+$schema: "ops/schemas/seed.schema.json"
+run_id: run-YYYYMMDD-slug
+mode: planning
+
+request:
+  summary: ""
+  requester: human
+  source_pages:
+    - ""
+
+state:
+  current: REQUEST_IN
+  allowed_next:
+    - INTERVIEW
+
+goals:
+  primary:
+    - ""
+  non_goals:
+    - ""
+
+constraints:
+  hard:
+    - ""
+  soft:
+    - ""
+
+success_criteria:
+  - id: SC-001
+    text: ""
+    trace:
+      - ""
+
+assumptions:
+  open:
+    - ""
+  frozen:
+    - ""
+
+evidence:
+  wiki_pages:
+    - ""
+  raw_sources:
+    - ""
+
+signoff:
+  status: pending
+  by: ""
+  ts: ""
+
+notes: ""

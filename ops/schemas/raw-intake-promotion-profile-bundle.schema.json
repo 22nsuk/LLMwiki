@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Raw Intake Promotion Profile Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "generated_from",
+    "page_date",
+    "family_count",
+    "refresh_count",
+    "instructions",
+    "families",
+    "refreshes"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/raw-intake-promotion-profile-bundle.schema.json"
+      ]
+    },
+    "generated_from": {
+      "type": "string"
+    },
+    "page_date": {
+      "type": "string"
+    },
+    "family_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "refresh_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "instructions": {
+      "type": "string"
+    },
+    "families": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/family"
+      }
+    },
+    "refreshes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/refresh"
+      }
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    }
+  },
+  "$defs": {
+    "metadata_property": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "properties"
+      ],
+      "properties": {
+        "properties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metadata_property"
+          }
+        }
+      }
+    },
+    "family": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "family_slug",
+        "registry_ids",
+        "synthesis",
+        "concept"
+      ],
+      "properties": {
+        "family_slug": {
+          "type": "string"
+        },
+        "registry_ids": {
+          "type": "array"
+        },
+        "synthesis": {
+          "type": "object"
+        },
+        "concept": {
+          "type": "object"
+        }
+      }
+    },
+    "refresh": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "target_stem",
+        "registry_ids",
+        "synthesis"
+      ],
+      "properties": {
+        "target_stem": {
+          "type": "string"
+        },
+        "registry_ids": {
+          "type": "array"
+        },
+        "synthesis": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

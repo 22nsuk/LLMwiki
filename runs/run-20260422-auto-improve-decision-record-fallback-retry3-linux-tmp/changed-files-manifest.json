@@ -1,0 +1,49 @@
+{
+  "$schema": "ops/schemas/changed-files-manifest.schema.json",
+  "run_id": "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+  "generated_at": "2026-04-22T14:15:19Z",
+  "declared_targets": {
+    "primary_targets": [
+      "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+    ],
+    "supporting_targets": [
+      "ops/schemas/run-telemetry.schema.json"
+    ],
+    "test_files": [
+      "tests/test_auto_improve_iteration_runtime.py"
+    ]
+  },
+  "summary": {
+    "total_changed_files": 2,
+    "added": 0,
+    "modified": 2,
+    "deleted": 0
+  },
+  "diff_universe": {
+    "model": "full_workspace",
+    "baseline_file_count": 1501,
+    "candidate_file_count": 1501
+  },
+  "files": [
+    {
+      "path": "ops/scripts/auto_improve_iteration_persistence_runtime.py",
+      "change_type": "modified"
+    },
+    {
+      "path": "tests/test_auto_improve_iteration_runtime.py",
+      "change_type": "modified"
+    }
+  ],
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-04-22T14:15:19Z\", \"generated_at_source\": \"payload.generated_at\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-04-28T16:30:35Z\", \"source_artifact\": \"runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/changed-files-manifest.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/changed-files-manifest.schema.json\", \"artifact_kind\": \"changed_files_manifest\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-04-28T16:30:35Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-04-22T14:15:19Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"74e5775a26ad0c6b53e127a4901b71a38d5bab1277ed34a0baf90bfb9fc6196e\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"fc0340f868a19c5980eebfb4b9eb41620ff6571ed9de83a030bf0a59b3d20be6\", \"policy\": \"7d45acc617992bca127ce0b7defb6715caac5b774dcc489acf984502cea3a402\", \"schema\": \"ccc756c2d9ea2f868be439bee0862ba06deef9cc0aeedad78d8a3029ac2408d1\", \"target_rel_path\": \"7571b3b6cd3d98e09ac5b60f31c8bada62a043fe8e2894be3ef806141ed5febc\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/changed-files-manifest.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"09a196453ff92bf1f95dbfd07f010e647e5affc3a3c9dc86690c2a5e396e28a5\"}"
+      }
+    ]
+  }
+}

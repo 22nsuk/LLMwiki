@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Raw Markdown Normalization Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "vault",
+    "generated_at",
+    "policy",
+    "mode",
+    "target_path",
+    "stats",
+    "results"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/raw-markdown-normalization-report.schema.json"
+      ]
+    },
+    "vault": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "policy": {
+      "$ref": "#/$defs/policy"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "write",
+        "report-only"
+      ]
+    },
+    "target_path": {
+      "type": "string"
+    },
+    "stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file_count",
+        "changed_count",
+        "manual_review_count"
+      ],
+      "properties": {
+        "file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "changed_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "manual_review_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/result"
+      }
+    }
+  },
+  "$defs": {
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "changed",
+        "frontmatter_present_before",
+        "pre_sha256",
+        "post_sha256",
+        "metadata",
+        "removed_noise_classes",
+        "manual_review_required",
+        "manual_review_reasons"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "changed": {
+          "type": "boolean"
+        },
+        "frontmatter_present_before": {
+          "type": "boolean"
+        },
+        "pre_sha256": {
+          "type": "string"
+        },
+        "post_sha256": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "removed_noise_classes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "manual_review_required": {
+          "type": "boolean"
+        },
+        "manual_review_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

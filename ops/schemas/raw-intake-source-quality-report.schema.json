@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/raw-intake-source-quality-report.schema.json",
+  "title": "Raw Intake Source Quality Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "status",
+    "matrix",
+    "policy",
+    "thresholds",
+    "summary",
+    "findings"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "ops/schemas/raw-intake-source-quality-report.schema.json"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "const": "raw_intake_source_quality_report"
+    },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": {
+      "type": "string",
+      "const": "ops.scripts.raw_intake_source_quality"
+    },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string" },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": { "type": "string", "enum": ["current", "stale"] },
+    "retention_policy": { "type": "string", "minLength": 1 },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown"] },
+        "checked_at": { "type": "string", "minLength": 1 }
+      }
+    },
+    "vault": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["pass", "attention", "fail"] },
+    "matrix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "scope", "entry_count"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "scope": { "type": "string" },
+        "entry_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "min_summary_chars",
+        "min_key_points",
+        "min_key_point_chars",
+        "min_raw_lead_chars"
+      ],
+      "properties": {
+        "min_summary_chars": { "type": "integer", "minimum": 0 },
+        "min_key_points": { "type": "integer", "minimum": 0 },
+        "min_key_point_chars": { "type": "integer", "minimum": 0 },
+        "min_raw_lead_chars": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entry_count", "pass_count", "review_count", "fail_count"],
+      "properties": {
+        "entry_count": { "type": "integer", "minimum": 0 },
+        "pass_count": { "type": "integer", "minimum": 0 },
+        "review_count": { "type": "integer", "minimum": 0 },
+        "fail_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    }
+  },
+  "$defs": {
+    "cleanedRawLead": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "char_count", "sha256"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["ok", "empty", "missing_path", "missing_file", "not_textual"]
+        },
+        "char_count": { "type": "integer", "minimum": 0 },
+        "sha256": { "type": "string" }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registry_id",
+        "source_page",
+        "raw_path",
+        "proposed_action",
+        "review_status",
+        "source_page_status",
+        "summary_char_count",
+        "key_point_count",
+        "key_point_char_count",
+        "cleaned_raw_lead",
+        "quality_status",
+        "issues"
+      ],
+      "properties": {
+        "registry_id": { "type": "string" },
+        "source_page": { "type": "string" },
+        "raw_path": { "type": "string" },
+        "proposed_action": { "type": "string" },
+        "review_status": { "type": "string" },
+        "source_page_status": { "type": "string", "enum": ["ok", "missing"] },
+        "summary_char_count": { "type": "integer", "minimum": 0 },
+        "key_point_count": { "type": "integer", "minimum": 0 },
+        "key_point_char_count": { "type": "integer", "minimum": 0 },
+        "cleaned_raw_lead": { "$ref": "#/$defs/cleanedRawLead" },
+        "quality_status": { "type": "string", "enum": ["pass", "review", "fail"] },
+        "issues": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Mutation Proposal Snapshot",
+  "type": "object",
+  "required": [
+    "$schema",
+    "run_id",
+    "source_report",
+    "captured_at",
+    "proposal"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/proposal-snapshot.schema.json"
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "properties"
+      ],
+      "properties": {
+        "properties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "value"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "value": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_report": {
+      "type": "string",
+      "minLength": 1
+    },
+    "captured_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "proposal": {
+      "type": "object",
+      "required": [
+        "proposal_id",
+        "source_candidate_id",
+        "source_candidate_type",
+        "family",
+        "tier",
+        "priority",
+        "primary_targets",
+        "supporting_targets",
+        "metrics_triggered",
+        "run_ids",
+        "failure_mode",
+        "single_mechanism_scope",
+        "change_hypothesis",
+        "expected_binary_signal",
+        "blast_radius_score",
+        "must_change_tests",
+        "must_change_budget_signal",
+        "must_not_expand_apply_roots",
+        "must_not_increase_untyped_surface",
+        "required_artifacts",
+        "blocked_by",
+        "priority_breakdown",
+        "why_now"
+      ],
+      "properties": {
+        "proposal_id": {
+          "type": "string"
+        },
+        "source_candidate_id": {
+          "type": "string"
+        },
+        "source_candidate_type": {
+          "type": "string"
+        },
+        "family": {
+          "type": "string"
+        },
+        "tier": {
+          "type": "string",
+          "enum": [
+            "core",
+            "supporting"
+          ]
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "primary_targets": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "supporting_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metrics_triggered": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "run_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "failure_mode": {
+          "type": "string"
+        },
+        "single_mechanism_scope": {
+          "type": "string"
+        },
+        "change_hypothesis": {
+          "type": "string"
+        },
+        "expected_binary_signal": {
+          "type": "string"
+        },
+        "blast_radius_score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "must_change_tests": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "must_change_budget_signal": {
+          "type": "object",
+          "required": [
+            "signal",
+            "expected_change"
+          ],
+          "properties": {
+            "signal": {
+              "type": "string",
+              "minLength": 1
+            },
+            "expected_change": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "must_not_expand_apply_roots": {
+          "type": "boolean"
+        },
+        "must_not_increase_untyped_surface": {
+          "type": "boolean"
+        },
+        "required_artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "blocked_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "priority_breakdown": {
+          "type": "object",
+          "required": [
+            "base_priority",
+            "historical_calibration_delta",
+            "session_calibration_delta",
+            "review_candidate_priority",
+            "recent_log_overlap_penalty",
+            "final_priority"
+          ],
+          "properties": {
+            "base_priority": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "historical_calibration_delta": {
+              "type": "integer"
+            },
+            "session_calibration_delta": {
+              "type": "integer"
+            },
+            "review_candidate_priority": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "recent_log_overlap_penalty": {
+              "type": "integer"
+            },
+            "final_priority": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false
+        },
+        "why_now": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

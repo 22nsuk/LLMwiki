@@ -1,0 +1,31 @@
+{
+  "$schema": "ops/schemas/learning-readiness-signoff.schema.json",
+  "artifact_kind": "learning_readiness_signoff",
+  "generated_at": "2026-04-29T08:30:00Z",
+  "producer": "ops.scripts.learning_readiness_signoff",
+  "source_command": "python -m ops.scripts.learning_readiness_signoff --vault .",
+  "source_revision": "template",
+  "source_tree_fingerprint": "template",
+  "input_fingerprints": {},
+  "schema_version": 1,
+  "artifact_status": "template_only",
+  "retention_policy": "template",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "unknown",
+    "checked_at": "2026-04-29T08:30:00Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": "template"
+  },
+  "linked_blocker_id": "learning_blocked_by_review_required",
+  "accepted_by": "REPLACE_WITH_ACCEPTOR",
+  "accepted_at": "2026-04-29T08:30:00Z",
+  "expires_at": "2026-04-30T08:30:00Z",
+  "risk_owner": "REPLACE_WITH_RISK_OWNER",
+  "revalidation_condition": "REPLACE_WITH_REVALIDATION_CONDITION",
+  "rollback_trigger": "REPLACE_WITH_ROLLBACK_TRIGGER",
+  "notes": "Template only; generate ops/reports/learning-readiness-signoff.json with the script before release closeout."
+}

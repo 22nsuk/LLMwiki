@@ -1,0 +1,75 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-08T11:06:00Z",
+  "producer": "manual.runtime-maintainer",
+  "source_command": "manual observation captured during P0-3/P1/P2 release provenance closeout",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "manual-closeout-update",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "task_scope": "p0-3-p1-p2-release-provenance-closeout"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-08T11:06:00Z"
+  },
+  "record_id": "task-20260508-release-provenance-closeout-p0-3-p1-p2",
+  "task_id": "task-20260508-release-provenance-closeout-p0-3-p1-p2",
+  "captured_at": "2026-05-08T11:06:00Z",
+  "scope": "repo_maintenance_task",
+  "summary": "P0-3/P1/P2 closeout fixed release ZIP provenance, review snapshot hygiene, full-suite evidence refresh, operator blocker separation, the source-release versus live-auto-improve lane split, source package clean-extract testing, post-seal digest linkage, release ZIP atomic/quarantine handling, and runnable auto-improve queue recovery.",
+  "observations": [
+    {
+      "observation_id": "closure_registry_envelope_backfill_target",
+      "surface": "ops/reports/defect-escape-closures.json, ops/reports/rework-closures.json, generated artifact finalization",
+      "problem": "The closeout surfaced closure registries that needed artifact-envelope/currentness fields before generated artifact finalization could treat them as canonical current reports.",
+      "why_it_matters": "Manual envelope backfill is easy to miss during release evidence refresh and can make a clean code change fail late in artifact finalization.",
+      "automation_candidate": "Add a small closure-registry generator or canonical promotion target that stamps the shared artifact envelope and validates both closure registries before generated-artifact-index and artifact-freshness run.",
+      "suggested_followup": "Automated on 2026-05-08: added ops.scripts.closure_registry_envelope, make closure-registry-envelope, generated-artifact-index prewiring, minimal-vault schema seeding, and focused regression coverage that fails if either closure registry lacks the shared envelope/currentness fields.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "source_zip_preseal_linkage_phase_recorded",
+      "surface": "release source ZIP self-description manifest",
+      "problem": "A ZIP self-description can only record evidence digests available at package-build time; final batch/self-check/operator artifacts are necessarily resealed after the ZIP exists.",
+      "why_it_matters": "Without an explicit phase, operators can mistake the ZIP's digest-only evidence list for the final post-seal authority and chase a non-actionable digest cycle.",
+      "automation_candidate": "Record the linkage phase and post-seal authority path in the self-description summary and assert those fields in release smoke tests.",
+      "suggested_followup": "Automated in this task and closed on 2026-05-08: release-archive-self-description records linkage_phase=pre_seal_package_build_snapshot and post_seal_authority=ops/reports/release-closeout-batch-manifest.json; release_post_seal_attestation now adds machine-readable pre_seal_post_seal_linkage with pre-seal observed digest, current post-seal digest, authoritative digest source, binding status, and drift status.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "source_release_auto_improve_lane_split",
+      "surface": "release risk taxonomy, closeout summary, lane summary, clean blocker ledger, operator release summary",
+      "problem": "The source release clean lane was over-coupled to live auto-improve execution readiness, so a non-runnable proposal queue could block packaging even when the source package evidence was otherwise clean.",
+      "why_it_matters": "Source release authority should protect package correctness and provenance, while live auto-improve readiness and learning claims need their own blocker lane with stricter non-signoff semantics.",
+      "automation_candidate": "Classify not-runnable auto-improve blockers as non-source clean lane blockers, keep them active in auto-improve and learning claim lanes, and surface the split in release summaries and ledger reports.",
+      "suggested_followup": "Automated on 2026-05-08: release-risk-taxonomy no longer treats not-runnable execution blockers as source clean lane hard blockers; closeout, lane summary, clean blocker ledger, batch manifest, dashboard, operator summary, README text, and focused tests were updated together. Closed follow-up: mutation_proposal_runtime now emits a runnable recent_log_overlap_queue_blocked rotation proposal when every candidate is blocked only by recent_log_overlap, preserving diagnostics while restoring runnable queue readiness.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "source_package_clean_extract_lane",
+      "surface": "Makefile, ops/policies/source-package-test-deselections.json, source release ZIP clean extract",
+      "problem": "The profile matrix described source package expectations, but the repository did not expose a runnable Make target that built the source ZIP, extracted it cleanly, and ran only tests that do not require canonical generated evidence artifacts.",
+      "why_it_matters": "A source package can be correct while intentionally excluding ops/reports and ops/script-output-surfaces.json; without a dedicated lane, operators had to infer which tests were meaningful after extraction.",
+      "automation_candidate": "Add explicit source-package Make targets and a schema-backed deselection policy for tests that require generated evidence artifacts rather than source package contents.",
+      "suggested_followup": "Automated on 2026-05-08: added make test-source-package, make release-source-package-check, SOURCE_PACKAGE_* variables, and ops/policies/source-package-test-deselections.json. Verified make test-source-package and make release-source-package-check pass, including clean extract ruff, mypy, and source-package pytest.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "release_zip_atomic_quarantine",
+      "surface": "ops/scripts/release_smoke.py release archive writer",
+      "problem": "The release ZIP writer previously opened the final archive path directly, so a failed write or interrupted verification could leave a partial final archive at the authority path.",
+      "why_it_matters": "Release evidence should distinguish a verified, atomically replaced ZIP from a failed partial ZIP, and failures need a quarantine path for diagnosis without corrupting the final archive.",
+      "automation_candidate": "Write release ZIPs to a sibling temp path, verify testzip and self-description readback before atomic replace, and include quarantine metadata in partial reports when archive build fails.",
+      "suggested_followup": "Automated on 2026-05-08: build_release_archive now writes a sibling temp ZIP, validates it, atomically replaces the final path, quarantines failed temp archives, and records archive_write metadata in partial release smoke reports.",
+      "status": "automated"
+    }
+  ]
+}

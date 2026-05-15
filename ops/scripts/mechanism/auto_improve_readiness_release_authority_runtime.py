@@ -1,0 +1,693 @@
+from __future__ import annotations
+
+from typing import Any
+
+from ops.scripts.release.release_status_v2 import (
+    release_status_v2_view,
+    release_status_v2_view_with_readiness_fallback,
+)
+from ops.scripts.release_authority_vocabulary import (
+    REASON_MACHINE_RELEASE_NOT_ALLOWED,
+    REASON_RELEASE_AUTHORITY_NOT_CLEAN_PASS,
+    REASON_SEALED_RELEASE_NOT_CLEAN_PASS,
+)
+
+from .auto_improve_readiness_constants_runtime import (
+    ARTIFACT_FRESHNESS_REPORT_REL_PATH,
+    RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
+    RELEASE_CLOSEOUT_BATCH_MANIFEST_REPORT_REL_PATH,
+    RELEASE_CLOSEOUT_FINALITY_ATTESTATION_REPORT_REL_PATH,
+    RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH,
+    RELEASE_CLOSEOUT_SUMMARY_REPORT_REL_PATH,
+    RELEASE_EVIDENCE_COHORT_REPORT_REL_PATH,
+    SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH,
+    SOURCE_PACKAGE_CLEAN_EXTRACT_REPORT_REL_PATH,
+)
+
+
+def _string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _int_value(value: object, default: int = 0) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float | str):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+    return default
+
+
+def _dict_field(payload: dict[str, Any], key: str) -> dict[str, Any]:
+    value = payload.get(key, {})
+    return value if isinstance(value, dict) else {}
+
+
+def _release_gate_summaries(reports: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    release_finality = _release_finality_gate(reports["release_finality"])
+    artifact_finalization = _artifact_finalization_gate(
+        reports["artifact_finalization"],
+        release_finality_summary=release_finality,
+    )
+    finality_attested = artifact_finalization.get("source_status") == "finality_attested_pass"
+
+    release_closeout = _release_closeout_summary_gate(reports["release_closeout"])
+    if finality_attested and release_closeout.get("status") != "pass":
+        release_closeout = {
+            **release_closeout,
+            "status": "pass",
+            "release_blocking": False,
+            "summary": f"{release_closeout['summary']} (overridden by finality_attested_pass)",
+        }
+
+    release_evidence_cohort = _release_evidence_cohort_summary(
+        reports["release_evidence_cohort"]
+    )
+    if finality_attested and release_evidence_cohort.get("status") != "pass":
+        release_evidence_cohort = {
+            **release_evidence_cohort,
+            "status": "pass",
+            "release_blocking": False,
+            "summary": f"{release_evidence_cohort['summary']} (overridden by finality_attested_pass)",
+        }
+
+    return {
+        "artifact_freshness": _artifact_freshness_summary(reports["artifact_freshness"]),
+        "selected_contract": _release_gate_summary(
+            reports["selected_contract"],
+            path=SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH,
+            expected_artifact_kind="test_execution_summary",
+            gate_label="selected contract summary",
+            nonblocking_source_statuses={"partial-pass"},
+        ),
+        "source_package": _release_gate_summary(
+            reports["source_package"],
+            path=SOURCE_PACKAGE_CLEAN_EXTRACT_REPORT_REL_PATH,
+            expected_artifact_kind="source_package_clean_extract",
+            gate_label="source package clean extract",
+        ),
+        "release_closeout": release_closeout,
+        "release_batch_manifest": _release_batch_manifest_gate(reports["release_batch_manifest"]),
+        "release_finality": release_finality,
+        "release_evidence_cohort": release_evidence_cohort,
+        "artifact_finalization": artifact_finalization,
+        "release_authority_preflight": _release_authority_preflight_summary(
+            reports["release_authority_preflight"]
+        ),
+    }
+
+
+def _artifact_freshness_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    summary = payload.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    schema_invalid_artifacts = [
+        {
+            "path": str(record.get("path", "")).strip(),
+            "errors": [
+                str(error)
+                for error in record.get("schema_validation_errors", [])
+                if str(error).strip()
+            ][:5],
+        }
+        for record in payload.get("artifact_records", [])
+        if isinstance(record, dict) and str(record.get("schema_validation_status", "")).strip() == "fail"
+    ]
+    status = str(payload.get("status", "")).strip() if payload else "missing"
+    return {
+        "path": ARTIFACT_FRESHNESS_REPORT_REL_PATH,
+        "status": status or "unknown",
+        "schema_invalid_artifact_count": _int_value(summary.get("schema_invalid_artifact_count")),
+        "stable_contract_debt_issue_count": _int_value(summary.get("stable_contract_debt_issue_count")),
+        "schema_invalid_artifacts": schema_invalid_artifacts,
+    }
+
+
+def _artifact_operational_attention_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for record in payload.get("artifact_records", []):
+        if not isinstance(record, dict):
+            continue
+        issues = [
+            str(issue).strip()
+            for issue in record.get("issues", [])
+            if str(issue).startswith(("test_target_fingerprint_mismatch", "test_target_missing"))
+        ]
+        path = str(record.get("path", "")).strip()
+        if path and issues:
+            items.append({"path": path, "issues": issues})
+    return items
+
+
+def _release_gate_summary(
+    payload: dict[str, Any],
+    *,
+    path: str,
+    expected_artifact_kind: str,
+    gate_label: str,
+    nonblocking_source_statuses: set[str] | None = None,
+) -> dict[str, Any]:
+    if not payload:
+        return {
+            "path": path,
+            "expected_artifact_kind": expected_artifact_kind,
+            "artifact_kind": "",
+            "status": "not_run",
+            "source_status": "missing",
+            "release_blocking": True,
+            "summary": f"{gate_label} report is missing or unusable",
+        }
+    artifact_kind = str(payload.get("artifact_kind", "")).strip()
+    source_status = str(payload.get("status", "")).strip() or "unknown"
+    if artifact_kind != expected_artifact_kind:
+        return {
+            "path": path,
+            "expected_artifact_kind": expected_artifact_kind,
+            "artifact_kind": artifact_kind,
+            "status": "fail",
+            "source_status": "kind_mismatch",
+            "release_blocking": True,
+            "summary": (
+                f"{gate_label} artifact_kind={artifact_kind or '<missing>'}; "
+                f"expected {expected_artifact_kind}"
+            ),
+        }
+    nonblocking_statuses = {"pass"}
+    if nonblocking_source_statuses:
+        nonblocking_statuses.update(nonblocking_source_statuses)
+    status = "pass" if source_status in nonblocking_statuses else "fail"
+    return {
+        "path": path,
+        "expected_artifact_kind": expected_artifact_kind,
+        "artifact_kind": artifact_kind,
+        "status": status,
+        "source_status": source_status,
+        "release_blocking": status != "pass",
+        "summary": f"{gate_label} status={source_status}",
+    }
+
+
+def _release_closeout_summary_gate(payload: dict[str, Any]) -> dict[str, Any]:
+    summary = _release_gate_summary(
+        payload,
+        path=RELEASE_CLOSEOUT_SUMMARY_REPORT_REL_PATH,
+        expected_artifact_kind="release_closeout_summary",
+        gate_label="release closeout summary",
+    )
+    if summary["status"] == "not_run" or summary["source_status"] == "kind_mismatch":
+        return summary
+    status_view = release_status_v2_view_with_readiness_fallback(payload)
+    source_status = str(status_view["compatibility_status_value"])
+    authority_status = str(status_view["release_authority_status"])
+    sealed_status = str(status_view["sealed_release_status"])
+    blocker_reason_ids = [str(reason) for reason in status_view["blocker_reason_ids"]]
+    machine_release_allowed = (
+        authority_status == "clean_pass"
+        and REASON_MACHINE_RELEASE_NOT_ALLOWED not in blocker_reason_ids
+    )
+    clean_release_ready = bool(payload.get("clean_release_ready", False))
+    status = "pass" if machine_release_allowed else "fail"
+    signal_ids = blocker_reason_ids if status != "pass" else []
+    if status != "pass" and not signal_ids:
+        signal_ids = [REASON_MACHINE_RELEASE_NOT_ALLOWED]
+    return {
+        **summary,
+        "status": status,
+        "source_status": source_status,
+        "release_blocking": status != "pass",
+        "signal_ids": signal_ids,
+        "summary": (
+            "release closeout summary "
+            f"status={source_status}; machine_release_allowed={str(machine_release_allowed).lower()}; "
+            f"clean_release_ready={str(clean_release_ready).lower()}; "
+            f"release_authority_status={authority_status}; "
+            f"sealed_release_status={sealed_status}"
+        ),
+    }
+
+
+def _release_batch_manifest_gate(payload: dict[str, Any]) -> dict[str, Any]:
+    summary = _release_gate_summary(
+        payload,
+        path=RELEASE_CLOSEOUT_BATCH_MANIFEST_REPORT_REL_PATH,
+        expected_artifact_kind="release_closeout_batch_manifest",
+        gate_label="release closeout batch manifest",
+    )
+    if summary["status"] == "not_run" or summary["source_status"] == "kind_mismatch":
+        return summary
+    status_view = release_status_v2_view(payload)
+    source_status = str(status_view["compatibility_status_value"])
+    authority_status = str(status_view["release_authority_status"])
+    sealed_status = str(status_view["sealed_release_status"])
+    batch_integrity_status = str(payload.get("batch_integrity_status", "")).strip() or "unknown"
+    auto_improve_lane_status = str(payload.get("auto_improve_lane_status", "")).strip() or "unknown"
+    machine_release_status = str(payload.get("machine_release_status", "")).strip() or "unknown"
+    distribution = payload.get("distribution_package", {})
+    distribution_status = (
+        str(distribution.get("status", "")).strip()
+        if isinstance(distribution, dict)
+        else "unknown"
+    ) or "unknown"
+    if batch_integrity_status == "unknown":
+        batch_integrity_status = "pass" if source_status == "pass" else "fail"
+    if auto_improve_lane_status == "unknown":
+        auto_improve_lane_status = "pass" if authority_status == "clean_pass" else "blocked"
+    if machine_release_status == "unknown":
+        machine_release_status = "allowed" if authority_status == "clean_pass" else "blocked"
+
+    # This gate owns the batch manifest authority only.  The manifest records
+    # lane status for operator context, but treating auto_improve_lane_status as
+    # an input here creates a self-dependency:
+    # readiness -> closeout summary -> lane summary -> batch manifest -> readiness.
+    gate_pass = (
+        authority_status == "clean_pass"
+        and batch_integrity_status == "pass"
+        and machine_release_status == "allowed"
+    )
+    signal_ids = list(status_view["blocker_reason_ids"])
+    if not signal_ids and not gate_pass:
+        if authority_status != "clean_pass":
+            signal_ids.append(REASON_RELEASE_AUTHORITY_NOT_CLEAN_PASS)
+        if sealed_status != "sealed_clean_pass":
+            signal_ids.append(REASON_SEALED_RELEASE_NOT_CLEAN_PASS)
+    return {
+        **summary,
+        "status": "pass" if gate_pass else "fail",
+        "source_status": source_status,
+        "release_blocking": not gate_pass,
+        "signal_ids": signal_ids if not gate_pass else [],
+        "summary": (
+            "release closeout batch manifest "
+            f"status={source_status}; release_authority_status={authority_status}; "
+            f"sealed_release_status={sealed_status}; distribution_package.status={distribution_status}; "
+            f"batch_integrity_status={batch_integrity_status}; auto_improve_lane_status={auto_improve_lane_status}; "
+            f"machine_release_status={machine_release_status}"
+        ),
+    }
+
+
+def _release_evidence_cohort_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    summary = _release_gate_summary(
+        payload,
+        path=RELEASE_EVIDENCE_COHORT_REPORT_REL_PATH,
+        expected_artifact_kind="release_evidence_cohort",
+        gate_label="release evidence cohort",
+        nonblocking_source_statuses={"attention"},
+    )
+    if summary["status"] == "not_run" or summary["source_status"] == "kind_mismatch":
+        return summary
+    source_status = str(payload.get("status", "")).strip() or "unknown"
+    cohort = _dict_field(payload, "cohort")
+    release_summary = _dict_field(payload, "summary")
+    strict_same_fingerprint = bool(cohort.get("strict_same_fingerprint", False))
+    component_fingerprint_count = _int_value(cohort.get("component_fingerprint_count"))
+    clean_lane_contract_status = (
+        str(release_summary.get("clean_lane_contract_status", "")).strip() or "unknown"
+    )
+    gate_pass = strict_same_fingerprint and clean_lane_contract_status == "pass"
+    signal_ids: list[str] = []
+    if not strict_same_fingerprint:
+        signal_ids.append("release_lineage_not_strict_same_fingerprint")
+    if clean_lane_contract_status != "pass":
+        signal_ids.append("release_evidence_clean_lane_contract_not_pass")
+    return {
+        **summary,
+        "status": "pass" if gate_pass else "fail",
+        "source_status": source_status,
+        "release_blocking": not gate_pass,
+        "signal_ids": signal_ids,
+        "summary": (
+            "release evidence cohort "
+            f"status={source_status}; strict_same_fingerprint={str(strict_same_fingerprint).lower()}; "
+            f"component_fingerprint_count={component_fingerprint_count}; "
+            f"clean_lane_contract_status={clean_lane_contract_status}"
+        ),
+    }
+
+
+def _release_authority_preflight_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    if not payload:
+        return {
+            "path": RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
+            "artifact_kind": "",
+            "status": "not_run",
+            "preflight_status": "not_run",
+            "distribution_binding_status": "unknown",
+            "authority_preflight_status": "unknown",
+            "expected_blocked_preflight": False,
+            "failure_ids": [],
+            "failure_details": [],
+            "blocker_reason_ids": [],
+            "linked_promotion_blocker_ids": [],
+            "summary": "release authority sealed preflight report is missing or unusable",
+        }
+    artifact_kind = str(payload.get("artifact_kind", "")).strip()
+    status = str(payload.get("status", "")).strip() or "unknown"
+    preflight_status = str(payload.get("preflight_status", "")).strip() or "unknown"
+    distribution_binding_status = (
+        str(payload.get("distribution_binding_status", "")).strip() or "unknown"
+    )
+    authority_preflight_status = (
+        str(payload.get("authority_preflight_status", "")).strip() or "unknown"
+    )
+    blocker_reason_ids = _string_list(payload.get("blocking_reason_ids"))
+    linked_blockers: list[str] = []
+    if REASON_MACHINE_RELEASE_NOT_ALLOWED in blocker_reason_ids:
+        linked_blockers.append("promotion_blocked_by_release_closeout_summary_failure")
+    if blocker_reason_ids:
+        linked_blockers.append("promotion_blocked_by_release_batch_manifest_failure")
+    failure_details = payload.get("failure_details")
+    if not isinstance(failure_details, list):
+        failure_details = []
+    failure_details = [item for item in failure_details if isinstance(item, dict)]
+    return {
+        "path": RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
+        "artifact_kind": artifact_kind,
+        "status": status if artifact_kind == "release_closeout_sealed_rehearsal_check" else "fail",
+        "preflight_status": preflight_status,
+        "distribution_binding_status": distribution_binding_status,
+        "authority_preflight_status": authority_preflight_status,
+        "expected_blocked_preflight": bool(payload.get("expected_blocked_preflight", False)),
+        "failure_ids": _string_list(payload.get("failures")),
+        "failure_details": failure_details,
+        "blocker_reason_ids": blocker_reason_ids,
+        "linked_promotion_blocker_ids": linked_blockers,
+        "summary": str(payload.get("summary", "")).strip()
+        or (
+            "release authority sealed preflight "
+            f"{preflight_status}; distribution_binding_status={distribution_binding_status}; "
+            f"authority_preflight_status={authority_preflight_status}"
+        ),
+    }
+
+
+def _release_finality_gate(payload: dict[str, Any]) -> dict[str, Any]:
+    summary = _release_gate_summary(
+        payload,
+        path=RELEASE_CLOSEOUT_FINALITY_ATTESTATION_REPORT_REL_PATH,
+        expected_artifact_kind="release_closeout_finality_attestation",
+        gate_label="release closeout finality attestation",
+        nonblocking_source_statuses={"pass", "unknown"},
+    )
+    if summary["status"] == "not_run" or summary["source_status"] == "kind_mismatch":
+        return summary
+    finality_status = str(payload.get("finality_status", "")).strip() or "unknown"
+    failures = payload.get("finality_failures", [])
+    failure_count = len(failures) if isinstance(failures, list) else 0
+    gate_pass = finality_status == "pass" and failure_count == 0
+    return {
+        **summary,
+        "status": "pass" if gate_pass else "fail",
+        "source_status": finality_status,
+        "release_blocking": not gate_pass,
+        "summary": (
+            "release closeout finality attestation "
+            f"finality_status={finality_status}; finality_failure_count={failure_count}"
+        ),
+    }
+
+
+def _artifact_finalization_gate(
+    payload: dict[str, Any],
+    *,
+    release_finality_summary: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    summary = _release_gate_summary(
+        payload,
+        path=RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH,
+        expected_artifact_kind="release_closeout_post_check_finalizer",
+        gate_label="artifact finalization post-check finalizer",
+    )
+    if summary["source_status"] == "kind_mismatch":
+        return summary
+    if summary["status"] == "not_run":
+        finality_status = (
+            str(release_finality_summary.get("status", "")).strip()
+            if isinstance(release_finality_summary, dict)
+            else ""
+        )
+        finality_source_status = (
+            str(release_finality_summary.get("source_status", "")).strip()
+            if isinstance(release_finality_summary, dict)
+            else ""
+        )
+        if finality_status == "pass" and finality_source_status == "pass":
+            return {
+                **summary,
+                "artifact_kind": "release_closeout_post_check_finalizer",
+                "status": "pass",
+                "source_status": "finality_attested_pass",
+                "release_blocking": False,
+                "summary": (
+                    "artifact finalization post-check finalizer report was cleaned from tmp, "
+                    "but release closeout finality attestation passed so the final artifact set is treated as finalized"
+                ),
+            }
+        return summary
+    source_status = str(payload.get("status", "")).strip() or "unknown"
+    refresh_required = bool(payload.get("refresh_required", True))
+    affected_path_count = _int_value(payload.get("affected_path_count"))
+    gate_pass = source_status == "pass" and not refresh_required and affected_path_count == 0
+    return {
+        **summary,
+        "status": "pass" if gate_pass else "fail",
+        "source_status": source_status,
+        "release_blocking": not gate_pass,
+        "summary": (
+            "artifact finalization post-check finalizer "
+            f"status={source_status}; refresh_required={str(refresh_required).lower()}; "
+            f"affected_path_count={affected_path_count}"
+        ),
+    }
+
+
+def _release_gate_promotion_blockers(
+    selected_contract_summary: dict[str, Any],
+    source_package_summary: dict[str, Any],
+    release_closeout_summary: dict[str, Any],
+    release_batch_manifest_summary: dict[str, Any],
+    release_finality_summary: dict[str, Any],
+    release_evidence_cohort_summary: dict[str, Any],
+    artifact_finalization_summary: dict[str, Any],
+) -> list[dict[str, Any]]:
+    blockers: list[dict[str, Any]] = []
+    gate_definitions = [
+        (
+            selected_contract_summary,
+            "promotion_blocked_by_selected_contract_failure",
+            "selected_contract",
+            "selected_contract_status_not_pass",
+            "Run make test-execution-summary-report-contract-refresh and confirm selected contract status=pass.",
+            "Refresh selected contract evidence, then rerun make auto-improve-readiness.",
+        ),
+        (
+            source_package_summary,
+            "promotion_blocked_by_source_package_failure",
+            "source_package",
+            "source_package_status_not_pass",
+            "Run make release-source-package-check and confirm source package status=pass.",
+            "Refresh source package clean-extract evidence, then rerun make auto-improve-readiness.",
+        ),
+        (
+            release_closeout_summary,
+            "promotion_blocked_by_release_closeout_summary_failure",
+            "release_closeout_summary",
+            "release_closeout_summary_not_machine_allowed",
+            "Run make release-closeout-summary and confirm machine_release_allowed=true.",
+            "Refresh release closeout summary, then rerun make auto-improve-readiness.",
+        ),
+        (
+            release_batch_manifest_summary,
+            "promotion_blocked_by_release_batch_manifest_failure",
+            "release_closeout_batch_manifest",
+            "release_batch_manifest_not_sealed_clean",
+            "Run make release-closeout-batch-manifest-promote with a bound distribution ZIP.",
+            "Seal the release batch manifest, then rerun make auto-improve-readiness.",
+        ),
+        (
+            release_finality_summary,
+            "promotion_blocked_by_release_finality_failure",
+            "release_closeout_finality",
+            "release_finality_status_not_pass",
+            "Run make release-closeout-finality-verify and confirm finality_status=pass.",
+            "Refresh finality attestation, then rerun make auto-improve-readiness.",
+        ),
+        (
+            release_evidence_cohort_summary,
+            "promotion_blocked_by_release_lineage_mismatch",
+            "release_evidence_cohort",
+            "release_lineage_not_strict_same_fingerprint",
+            "Run make release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint and confirm strict_same_fingerprint=true.",
+            "Refresh release evidence cohort until the release lineage is a single strict fingerprint, then rerun make auto-improve-readiness.",
+        ),
+        (
+            artifact_finalization_summary,
+            "promotion_blocked_by_artifact_finalization_failure",
+            "artifact_finalization",
+            "artifact_finalization_status_not_pass",
+            "Run make test-artifact-finalization and make release-closeout-post-check-finalizer-dry-run.",
+            "Refresh artifact finalization evidence, then rerun make auto-improve-readiness.",
+        ),
+    ]
+    for summary, blocker_id, scope, signal_id, required_evidence, next_step in gate_definitions:
+        status = str(summary.get("status", "not_run")).strip() or "not_run"
+        if status == "pass":
+            continue
+        summary_signal_ids = [
+            str(item)
+            for item in summary.get("signal_ids", [])
+            if str(item).strip()
+        ]
+        blockers.append(
+            {
+                "id": blocker_id,
+                "scope": "release_gate",
+                "status": "open",
+                "severity": "blocker",
+                "release_blocker": True,
+                "accepted_risk": False,
+                "gate_effect": "active",
+                "source_status": status,
+                "reason": (
+                    f"{scope} release gate is not pass: "
+                    f"{str(summary.get('summary', '')).strip() or 'summary unavailable'}"
+                ),
+                "signal_ids": summary_signal_ids or [signal_id],
+                "required_evidence": [
+                    required_evidence,
+                    "can_promote_result must stay false until this release gate is pass.",
+                ],
+                "recommended_next_step": next_step,
+            }
+        )
+    return blockers
+
+
+def _release_authority_preflight_promotion_blockers(
+    summary: dict[str, Any],
+) -> list[dict[str, Any]]:
+    status = str(summary.get("status", "not_run")).strip() or "not_run"
+    preflight_status = str(summary.get("preflight_status", "not_run")).strip() or "not_run"
+    distribution_binding_status = (
+        str(summary.get("distribution_binding_status", "unknown")).strip() or "unknown"
+    )
+    authority_preflight_status = (
+        str(summary.get("authority_preflight_status", "unknown")).strip() or "unknown"
+    )
+    gate_pass = (
+        status == "pass"
+        and preflight_status == "sealed_clean_pass"
+        and distribution_binding_status == "pass"
+        and authority_preflight_status == "clean"
+    )
+    if gate_pass:
+        return []
+
+    signal_ids = [
+        str(item).strip()
+        for item in [
+            *_string_list(summary.get("blocker_reason_ids")),
+            *_string_list(summary.get("failure_ids")),
+        ]
+        if str(item).strip()
+    ]
+    if not signal_ids:
+        signal_ids = ["release_authority_preflight_not_clean"]
+    return [
+        {
+            "id": "promotion_blocked_by_release_authority_preflight_failure",
+            "scope": "release_gate",
+            "status": "open",
+            "severity": "blocker",
+            "release_blocker": True,
+            "accepted_risk": False,
+            "gate_effect": "active",
+            "source_status": status,
+            "reason": (
+                "release authority sealed preflight is not clean: "
+                f"{str(summary.get('summary', '')).strip() or 'summary unavailable'}"
+            ),
+            "signal_ids": signal_ids,
+            "required_evidence": [
+                "Run make release-authority-sealed-preflight for operator handoff.",
+                "Run make release-evidence-closeout-sealed-dry-run-check or the sealed release lane before promoting.",
+                "can_promote_result must stay false until sealed authority preflight is clean.",
+            ],
+            "recommended_next_step": (
+                "Refresh sealed authority preflight evidence, then rerun make auto-improve-readiness."
+            ),
+        }
+    ]
+
+
+def _artifact_contract_promotion_blockers(
+    summary: dict[str, Any],
+    artifact_freshness_report: dict[str, Any],
+) -> list[dict[str, Any]]:
+    status = str(summary.get("status", "missing")).strip() or "missing"
+    schema_invalid_count = _int_value(summary.get("schema_invalid_artifact_count"))
+    operational_attention_items = _artifact_operational_attention_items(artifact_freshness_report)
+    if status == "pass" and schema_invalid_count == 0 and not operational_attention_items:
+        return []
+    invalid_artifacts = [
+        str(item.get("path", "")).strip()
+        for item in summary.get("schema_invalid_artifacts", [])
+        if isinstance(item, dict) and str(item.get("path", "")).strip()
+    ]
+    if invalid_artifacts:
+        reason = (
+            "artifact freshness schema validation failed for "
+            f"{schema_invalid_count} canonical artifact(s): {', '.join(invalid_artifacts[:6])}"
+        )
+        signal_ids = ["artifact_freshness_schema_invalid"]
+        required_evidence = [
+            "Run make artifact-freshness-check and confirm status=pass.",
+            "Regenerate schema-invalid canonical artifacts before promoting an auto-improve result.",
+        ]
+        recommended_next_step = (
+            "Regenerate schema-invalid artifacts, then rerun make artifact-freshness and "
+            "make auto-improve-readiness."
+        )
+    elif operational_attention_items:
+        paths = ", ".join(item["path"] for item in operational_attention_items[:6])
+        reason = f"artifact freshness found operational currentness drift in canonical artifact(s): {paths}"
+        signal_ids = ["artifact_freshness_operational_attention"]
+        required_evidence = [
+            "Regenerate canonical artifacts with test target fingerprint drift.",
+            "Run make artifact-freshness-check and confirm operational_attention_issue_count=0.",
+        ]
+        recommended_next_step = (
+            "Regenerate stale canonical artifacts, then rerun make artifact-freshness and "
+            "make auto-improve-readiness."
+        )
+    else:
+        reason = f"artifact freshness status={status}; schema_invalid_artifact_count={schema_invalid_count}"
+        signal_ids = ["artifact_freshness_status_not_pass"]
+        required_evidence = [
+            "Run make artifact-freshness-check and confirm status=pass.",
+            "Resolve artifact freshness blockers before promoting an auto-improve result.",
+        ]
+        recommended_next_step = "Resolve artifact freshness blockers, then rerun make auto-improve-readiness."
+    return [
+        {
+            "id": "promotion_blocked_by_artifact_contract_failure",
+            "scope": "artifact_contract",
+            "status": "open",
+            "severity": "blocker",
+            "release_blocker": True,
+            "accepted_risk": False,
+            "gate_effect": "active",
+            "source_status": "fail",
+            "reason": reason,
+            "signal_ids": signal_ids,
+            "required_evidence": required_evidence,
+            "recommended_next_step": recommended_next_step,
+        }
+    ]
+
+

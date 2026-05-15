@@ -1,0 +1,42 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-07T02:38:30Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "020399c9d2ef990917394771d8d148cc005c6c68725d730863edae8834a92fe7",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "790762d6d576015028fb8363969311cbffb587a4513a166bcbd1b84cb38f046e",
+    "record_id": "a47df89f8fa44f616312b7517c164995c8074f5ea357de276982208c189a2e66",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "156feb8998af4485967892958e6f5a59e6b9713361fe8203bb7bc4692fce7bcf"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:38:30Z"
+  },
+  "record_id": "task-20260504-release-evidence-report-reconciliation",
+  "captured_at": "2026-05-04T10:24:28Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Release evidence reconciliation follow-up captured after status namespace, provenance, and tmp hygiene improvements.",
+  "observations": [
+    {
+      "observation_id": "report_schema_sample_cli_path",
+      "surface": "tools/regenerate_report_schema_samples.py",
+      "problem": "Direct script execution from the repo root failed because the script imports the local tests package without ensuring the repo root is on sys.path.",
+      "why_it_matters": "Frozen schema sample refresh is part of report-contract maintenance; requiring PYTHONPATH=. makes the recovery step easier to miss during release evidence refreshes.",
+      "automation_candidate": "Add the same direct-script import fallback pattern used by ops scripts, or document and wrap the command in a Makefile target.",
+      "suggested_followup": "Automated on 2026-05-05: tools/regenerate_report_schema_samples.py now bootstraps the repo root for direct script execution, and tests/test_report_schema_sample_regeneration.py covers the direct --help path without PYTHONPATH.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260504-release-evidence-report-reconciliation"
+}

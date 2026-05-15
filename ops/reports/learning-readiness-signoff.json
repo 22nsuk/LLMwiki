@@ -1,0 +1,41 @@
+{
+  "$schema": "ops/schemas/learning-readiness-signoff.schema.json",
+  "artifact_kind": "learning_readiness_signoff",
+  "generated_at": "2026-05-03T03:00:01Z",
+  "producer": "ops.scripts.learning_readiness_signoff",
+  "source_command": "python -m ops.scripts.learning_readiness_signoff --vault .",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "1dd874641849806760d30df46ae700ebf21298f08c603ff5c451044193ecd2e2",
+  "input_fingerprints": {
+    "policy": "7d45acc617992bca127ce0b7defb6715caac5b774dcc489acf984502cea3a402",
+    "schema": "374fc641089b7fb985a6db73f45f81db1237c02c3bb7dc540f6012eb27506648",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "accepted_at": "ba3f9990925d449e40cd1ad4316baf3e262d4099bb9a77668e88d53b7cd58819",
+    "accepted_by": "32eaf88c9046b563e61a8e28a30934965c6e7bc5b985399f39bd7e3cc3780977",
+    "expires_at": "ac6d651fee842b34a1c36f7cd13221e7d620b61dc0ba7f1a9beb4a192d351732",
+    "linked_blocker_id": "bbffdeb2708a75a1855d308c338d3e3ff6905eeac99482c36af5652e8a20f2e4",
+    "revalidation_condition": "8373b6827d0c09caf0c7dd79809e17d844413e2e378b5ae0da6bed9d3d5fed67",
+    "risk_owner": "99d40a4e592a4d69672ca5014058116897e28acd799e0b17c8eb05d62de3e062",
+    "rollback_trigger": "b67de02605cbe3069344cf3f4324b4a5d89e2b6f9a7247faaf8b648c3652b283"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-03T03:00:01Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "linked_blocker_id": "learning_blocked_by_review_required",
+  "accepted_by": "operator-requested-via-codex-20260503",
+  "accepted_at": "2026-05-03T03:00:01Z",
+  "expires_at": "2026-05-10T03:00:01Z",
+  "risk_owner": "runtime-maintainer",
+  "revalidation_condition": "Rerun make release-evidence-closeout and inspect learning readiness metrics before release.",
+  "rollback_trigger": "Treat learning_blocked_by_review_required as active again if release evidence changes, learning telemetry regresses, or this signoff expires."
+}

@@ -1,0 +1,798 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Artifact Freshness Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "mtime_source",
+    "zip_metadata_path",
+    "status",
+    "recommended_next_action",
+    "safe_to_backfill",
+    "mtime_sensitive",
+    "summary",
+    "top_debt",
+    "top_debt_files",
+    "debt_queues",
+    "owner_surface",
+    "root_ephemeral_patterns",
+    "root_ephemeral_artifacts",
+    "run_log_placeholders",
+    "non_utf8_text_artifacts",
+    "artifact_records"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/artifact-freshness-report.schema.json"
+      ]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": [
+        "artifact_freshness_report"
+      ]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "producer": {
+      "type": "string",
+      "enum": [
+        "ops.scripts.artifact_freshness_runtime"
+      ]
+    },
+    "source_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_tree_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_status": {
+      "type": "string",
+      "enum": [
+        "current",
+        "archived",
+        "stale",
+        "unknown"
+      ]
+    },
+    "retention_policy": {
+      "type": "string",
+      "enum": [
+        "canonical_report"
+      ]
+    },
+    "encoding": {
+      "type": "string",
+      "enum": [
+        "utf-8"
+      ]
+    },
+    "currentness": {
+      "$ref": "#/$defs/currentness"
+    },
+    "vault": {
+      "type": "string"
+    },
+    "policy": {
+      "$ref": "#/$defs/policy_identity"
+    },
+    "mtime_source": {
+      "$ref": "#/$defs/mtime_source"
+    },
+    "zip_metadata_path": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "attention",
+        "fail"
+      ]
+    },
+    "recommended_next_action": {
+      "type": "string",
+      "minLength": 1
+    },
+    "safe_to_backfill": {
+      "type": "boolean"
+    },
+    "mtime_sensitive": {
+      "type": "boolean"
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_count",
+        "json_artifact_count",
+        "scanned_text_artifact_count",
+        "stale_artifact_count",
+        "mtime_sensitive_artifact_count",
+        "root_ephemeral_artifact_count",
+        "run_log_placeholder_count",
+        "unknown_currentness_artifact_count",
+        "non_utf8_text_artifact_count",
+        "missing_schema_count",
+        "missing_artifact_envelope_count",
+        "schema_invalid_artifact_count",
+        "schema_unavailable_artifact_count",
+        "safe_to_backfill_artifact_count",
+        "stable_contract_debt_artifact_count",
+        "stable_contract_debt_issue_count",
+        "mtime_sensitive_attention_artifact_count",
+        "mtime_sensitive_attention_issue_count"
+      ],
+      "properties": {
+        "artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "json_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scanned_text_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stale_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mtime_sensitive_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "root_ephemeral_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "run_log_placeholder_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unknown_currentness_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "non_utf8_text_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_schema_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_artifact_envelope_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "schema_invalid_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "schema_unavailable_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "safe_to_backfill_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stable_contract_debt_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stable_contract_debt_issue_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mtime_sensitive_attention_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mtime_sensitive_attention_issue_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "operational_attention_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "operational_attention_issue_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "top_debt": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/top_debt_item"
+      }
+    },
+    "top_debt_files": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/top_debt_file_item"
+      }
+    },
+    "debt_queues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/debt_queue_item"
+      }
+    },
+    "owner_surface": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/owner_surface_item"
+      }
+    },
+    "root_ephemeral_patterns": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "root_ephemeral_artifacts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/root_ephemeral_artifact"
+      }
+    },
+    "run_log_placeholders": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/run_log_placeholder"
+      }
+    },
+    "non_utf8_text_artifacts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/text_artifact_issue"
+      }
+    },
+    "artifact_records": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/artifact_record"
+      }
+    }
+  },
+  "$defs": {
+    "policy_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        }
+      }
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "checked_at"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown",
+            "invalid"
+          ]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "root_ephemeral_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "matched_pattern"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "matched_pattern": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "text_artifact_issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "issue"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issue": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "run_log_placeholder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "artifact_role",
+        "size_bytes",
+        "classification"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_role": {
+          "type": "string",
+          "enum": [
+            "run_log_placeholder"
+          ]
+        },
+        "size_bytes": {
+          "type": "integer",
+          "const": 0
+        },
+        "classification": {
+          "type": "string",
+          "enum": [
+            "empty_run_command_log_placeholder"
+          ]
+        }
+      }
+    },
+    "top_debt_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "issue",
+        "count",
+        "owner_surface_counts",
+        "safe_to_backfill_count",
+        "mtime_sensitive_count",
+        "recommended_next_action"
+      ],
+      "properties": {
+        "issue": {
+          "type": "string",
+          "minLength": 1
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "owner_surface_counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "safe_to_backfill_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mtime_sensitive_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recommended_next_action": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "owner_surface_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface",
+        "artifact_count",
+        "issue_count",
+        "safe_to_backfill_count",
+        "mtime_sensitive_count",
+        "recommended_next_action"
+      ],
+      "properties": {
+        "surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "issue_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "safe_to_backfill_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mtime_sensitive_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recommended_next_action": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "debt_queue_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "queue",
+        "status",
+        "item_count",
+        "issue_count",
+        "safe_to_backfill_count",
+        "mtime_sensitive_count",
+        "exit_condition",
+        "recommended_next_action",
+        "paths"
+      ],
+      "properties": {
+        "queue": {
+          "type": "string",
+          "enum": [
+            "runs_historical_archive",
+            "ops_reports_producer_refresh",
+            "operator_reports_producer_refresh",
+            "mtime_sensitive_regeneration"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["open", "complete"]
+        },
+        "item_count": { "type": "integer", "minimum": 0 },
+        "issue_count": { "type": "integer", "minimum": 0 },
+        "safe_to_backfill_count": { "type": "integer", "minimum": 0 },
+        "mtime_sensitive_count": { "type": "integer", "minimum": 0 },
+        "exit_condition": { "type": "string", "minLength": 1 },
+        "recommended_next_action": { "type": "string", "minLength": 1 },
+        "paths": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/debt_queue_path"
+          }
+        }
+      }
+    },
+    "debt_queue_path": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "owner_surface",
+        "primary_issue",
+        "issues",
+        "safe_to_backfill",
+        "mtime_sensitive"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "owner_surface": { "type": "string", "minLength": 1 },
+        "primary_issue": { "type": "string", "minLength": 1 },
+        "issues": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "safe_to_backfill": { "type": "boolean" },
+        "mtime_sensitive": { "type": "boolean" }
+      }
+    },
+    "top_debt_file_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "owner_surface",
+        "primary_issue",
+        "issues",
+        "recommended_next_action",
+        "expected_debt_reduction",
+        "safe_to_backfill",
+        "mtime_sensitive"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner_surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "primary_issue": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issues": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "recommended_next_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expected_debt_reduction": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "safe_to_backfill": {
+          "type": "boolean"
+        },
+        "mtime_sensitive": {
+          "type": "boolean"
+        }
+      }
+    },
+    "artifact_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "owner_surface",
+        "artifact_kind",
+        "utf8_ok",
+        "json_ok",
+        "has_schema",
+        "has_generated_at",
+        "has_artifact_envelope",
+        "generated_at",
+        "artifact_status",
+        "retention_policy",
+        "currentness_status",
+        "file_mtime_utc",
+        "mtime_source",
+        "mtime_status",
+        "mtime_sensitive",
+        "schema_validation_status",
+        "schema_validation_errors",
+        "safe_to_backfill",
+        "recommended_next_action",
+        "contract_issue_class",
+        "stable_contract_issues",
+        "mtime_sensitive_issues",
+        "schema_contract",
+        "issues"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner_surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "utf8_ok": {
+          "type": "boolean"
+        },
+        "json_ok": {
+          "type": "boolean"
+        },
+        "has_schema": {
+          "type": "boolean"
+        },
+        "has_generated_at": {
+          "type": "boolean"
+        },
+        "has_artifact_envelope": {
+          "type": "boolean"
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "artifact_status": {
+          "type": "string"
+        },
+        "retention_policy": {
+          "type": "string"
+        },
+        "currentness_status": {
+          "type": "string"
+        },
+        "file_mtime_utc": {
+          "type": "string"
+        },
+        "mtime_source": {
+          "$ref": "#/$defs/mtime_source"
+        },
+        "mtime_status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown"
+          ]
+        },
+        "mtime_sensitive": {
+          "type": "boolean"
+        },
+        "schema_validation_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "missing_schema",
+            "schema_unavailable",
+            "not_applicable"
+          ]
+        },
+        "schema_validation_errors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "safe_to_backfill": {
+          "type": "boolean"
+        },
+        "recommended_next_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contract_issue_class": {
+          "type": "string",
+          "enum": [
+            "clean",
+            "stable_contract_debt",
+            "stable_contract_failure",
+            "mtime_sensitive_attention",
+            "operational_attention",
+            "artifact_unreadable"
+          ]
+        },
+        "stable_contract_issues": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "mtime_sensitive_issues": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "schema_contract": {
+          "$ref": "#/$defs/schema_contract"
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "mtime_source": {
+      "type": "string",
+      "enum": [
+        "filesystem",
+        "zip_info",
+        "embedded_currentness"
+      ]
+    },
+    "schema_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "classification",
+        "reason",
+        "recommended_next_action"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "present",
+            "missing",
+            "unavailable",
+            "invalid",
+            "not_applicable"
+          ]
+        },
+        "classification": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_next_action": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

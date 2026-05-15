@@ -1,0 +1,273 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/release-closeout-post-check-finalizer.schema.json",
+  "title": "Release closeout post-check finalizer dry-run report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "mode",
+    "status",
+    "diagnostic_status",
+    "refresh_required",
+    "current_source_tree_fingerprint",
+    "fixed_point_report",
+    "artifact_freshness_report",
+    "tracked_artifacts",
+    "affected_path_count",
+    "affected_paths",
+    "recommended_targets",
+    "closeout_plan",
+    "mutating_finalizer_target",
+    "summary"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "ops/schemas/release-closeout-post-check-finalizer.schema.json"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "const": "release_closeout_post_check_finalizer"
+    },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": {
+      "type": "string",
+      "const": "ops.scripts.release_closeout_fixed_point"
+    },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string" },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": {
+      "type": "string",
+      "enum": ["current", "stale"]
+    },
+    "retention_policy": { "type": "string", "minLength": 1 },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown"] },
+        "checked_at": { "type": "string", "minLength": 1 }
+      }
+    },
+    "vault": { "type": "string", "minLength": 1 },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "const": "ops/policies/release-closeout-fixed-point.json"
+        },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "mode": { "type": "string", "const": "dry_run" },
+    "status": { "type": "string", "enum": ["pass", "attention"] },
+    "diagnostic_status": {
+      "type": "string",
+      "enum": ["settled", "evidence_insufficient", "drift_detected", "mixed_attention"]
+    },
+    "refresh_required": { "type": "boolean" },
+    "current_source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "fixed_point_report": { "$ref": "#/$defs/inputReport" },
+    "artifact_freshness_report": { "$ref": "#/$defs/inputReport" },
+    "tracked_artifacts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/trackedArtifact" }
+    },
+    "affected_path_count": { "type": "integer", "minimum": 0 },
+    "affected_paths": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "recommended_targets": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "closeout_plan": { "$ref": "#/$defs/closeoutPlan" },
+    "mutating_finalizer_target": {
+      "type": "string",
+      "const": "release-closeout-fixed-point"
+    },
+    "summary": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^(unknown|[0-9a-f]{64})$"
+    },
+    "inputReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "load_status", "status", "summary"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "load_status": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "minLength": 1 },
+        "digest_count": { "type": "integer", "minimum": 0 },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "trackedArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "path",
+        "producer_target",
+        "load_status",
+        "baseline_digest",
+        "current_digest",
+        "digest_status",
+        "source_tree_fingerprint",
+        "source_tree_status",
+        "schema_validation_status",
+        "freshness_status",
+        "issues",
+        "refresh_needed"
+      ],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 },
+        "producer_target": { "type": "string" },
+        "load_status": {
+          "type": "string",
+          "enum": ["ok", "missing", "unreadable"]
+        },
+        "baseline_digest": {
+          "type": "string",
+          "pattern": "^(missing|[0-9a-f]{64})$"
+        },
+        "current_digest": {
+          "type": "string",
+          "pattern": "^(missing|[0-9a-f]{64})$"
+        },
+        "digest_status": {
+          "type": "string",
+          "enum": ["current", "changed"]
+        },
+        "source_tree_fingerprint": { "type": "string" },
+        "source_tree_status": {
+          "type": "string",
+          "enum": ["current", "stale", "missing", "unreadable"]
+        },
+        "schema_validation_status": { "type": "string", "minLength": 1 },
+        "freshness_status": {
+          "type": "string",
+          "enum": ["pass", "attention"]
+        },
+        "issues": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "refresh_needed": { "type": "boolean" }
+      }
+    },
+    "closeoutPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_kind",
+        "generated_at",
+        "status",
+        "refresh_required",
+        "safe_to_run_in_dry_run",
+        "mutating_finalizer_target",
+        "affected_paths",
+        "evidence_gap_reasons",
+        "drift_reasons",
+        "recommended_target_count",
+        "recommended_targets",
+        "summary"
+      ],
+      "properties": {
+        "artifact_kind": {
+          "type": "string",
+          "const": "release_closeout_post_check_finalizer_plan"
+        },
+        "generated_at": { "type": "string", "minLength": 1 },
+        "status": {
+          "type": "string",
+          "enum": [
+            "settled",
+            "evidence_insufficient",
+            "drift_detected",
+            "mixed_attention"
+          ]
+        },
+        "refresh_required": { "type": "boolean" },
+        "safe_to_run_in_dry_run": { "type": "boolean", "const": true },
+        "mutating_finalizer_target": {
+          "type": "string",
+          "const": "release-closeout-fixed-point"
+        },
+        "affected_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "evidence_gap_reasons": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "drift_reasons": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "recommended_target_count": { "type": "integer", "minimum": 0 },
+        "recommended_targets": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/closeoutTargetPlan" }
+        },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "closeoutTargetPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "why",
+        "writes",
+        "expected_digest_to_settle",
+        "safe_to_run_in_dry_run"
+      ],
+      "properties": {
+        "target": { "type": "string", "minLength": 1 },
+        "why": { "type": "string", "minLength": 1 },
+        "writes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "expected_digest_to_settle": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/digest" }
+        },
+        "safe_to_run_in_dry_run": { "type": "boolean" }
+      }
+    }
+  }
+}

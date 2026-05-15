@@ -1,0 +1,602 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Outcome Metrics",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "vault",
+    "generated_at",
+    "artifact_kind",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "policy",
+    "summary",
+    "metrics",
+    "recent_attempts"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/outcome-metrics.schema.json"
+      ]
+    },
+    "vault": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_tree_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_status": {
+      "type": "string",
+      "enum": [
+        "current",
+        "archived",
+        "stale",
+        "unknown"
+      ]
+    },
+    "retention_policy": {
+      "type": "string",
+      "enum": [
+        "ephemeral",
+        "canonical_report",
+        "archive"
+      ]
+    },
+    "encoding": {
+      "type": "string",
+      "enum": [
+        "utf-8"
+      ]
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "checked_at"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown",
+            "invalid"
+          ]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "policy": {
+      "$ref": "#/$defs/policy"
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempts_considered",
+        "recent_window",
+        "recent_attempt_count",
+        "session_reports_considered"
+      ],
+      "properties": {
+        "attempts_considered": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recent_window": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "recent_attempt_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "session_reports_considered": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "metrics": {
+      "$ref": "#/$defs/metrics"
+    },
+    "recent_attempts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/attempt"
+      }
+    }
+  },
+  "$defs": {
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      }
+    },
+    "number_counter": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0
+      }
+    },
+    "moving_averages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hold",
+        "discard",
+        "rollback_signal"
+      ],
+      "properties": {
+        "hold": {
+          "type": "number",
+          "minimum": 0
+        },
+        "discard": {
+          "type": "number",
+          "minimum": 0
+        },
+        "rollback_signal": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "operator_effort_proxy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase_totals_seconds",
+        "executor_report_count",
+        "reviewer_dispatch_count",
+        "validator_dispatch_count",
+        "auditor_dispatch_count",
+        "hold_count"
+      ],
+      "properties": {
+        "phase_totals_seconds": {
+          "$ref": "#/$defs/number_counter"
+        },
+        "executor_report_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reviewer_dispatch_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "validator_dispatch_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "auditor_dispatch_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hold_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "rework_key": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "attempt_count",
+        "rework_count",
+        "run_ids"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "attempt_count": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "rework_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "run_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "closed_rework_key": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "raw_attempt_count",
+        "raw_rework_count",
+        "run_ids",
+        "active_attempt_count",
+        "active_run_ids",
+        "active_rework_count",
+        "closed_run_ids",
+        "closed_rework_count",
+        "closure_status",
+        "closure_reason",
+        "superseding_run_id",
+        "closed_at",
+        "evidence_refs"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "raw_attempt_count": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "raw_rework_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "run_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "active_attempt_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "active_run_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "active_rework_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "closed_run_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "closed_rework_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "closure_status": {
+          "type": "string",
+          "enum": [
+            "closed",
+            "superseded"
+          ]
+        },
+        "closure_reason": {
+          "type": "string"
+        },
+        "superseding_run_id": {
+          "type": "string"
+        },
+        "closed_at": {
+          "type": "string"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "defect_escape_pair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "promoted_run_id",
+        "escaped_run_id",
+        "escaped_decision",
+        "escaped_outcome"
+      ],
+      "properties": {
+        "target": {
+          "type": "string"
+        },
+        "promoted_run_id": {
+          "type": "string"
+        },
+        "escaped_run_id": {
+          "type": "string"
+        },
+        "escaped_decision": {
+          "type": "string"
+        },
+        "escaped_outcome": {
+          "type": "string"
+        }
+      }
+    },
+    "closed_defect_escape_pair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "promoted_run_id",
+        "escaped_run_id",
+        "escaped_decision",
+        "escaped_outcome",
+        "closure_status",
+        "closure_reason",
+        "superseding_run_id",
+        "closed_at",
+        "evidence_refs"
+      ],
+      "properties": {
+        "target": {
+          "type": "string"
+        },
+        "promoted_run_id": {
+          "type": "string"
+        },
+        "escaped_run_id": {
+          "type": "string"
+        },
+        "escaped_decision": {
+          "type": "string"
+        },
+        "escaped_outcome": {
+          "type": "string"
+        },
+        "closure_status": {
+          "type": "string",
+          "enum": [
+            "closed",
+            "superseded"
+          ]
+        },
+        "closure_reason": {
+          "type": "string"
+        },
+        "superseding_run_id": {
+          "type": "string"
+        },
+        "closed_at": {
+          "type": "string"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempt_count",
+        "recent_window",
+        "recent_attempt_count",
+        "rework_count",
+        "rollback_signal_count",
+        "rollback_rehearsal_coverage_count",
+        "moving_averages",
+        "operator_effort_proxy",
+        "rework_keys",
+        "defect_escape_proxy"
+      ],
+      "properties": {
+        "attempt_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recent_window": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "recent_attempt_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rework_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "raw_rework_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "closed_rework_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rollback_signal_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rollback_rehearsal_coverage_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "moving_averages": {
+          "$ref": "#/$defs/moving_averages"
+        },
+        "operator_effort_proxy": {
+          "$ref": "#/$defs/operator_effort_proxy"
+        },
+        "rework_keys": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rework_key"
+          }
+        },
+        "closed_rework_keys": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/closed_rework_key"
+          }
+        },
+        "defect_escape_proxy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "count",
+            "pairs"
+          ],
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "pairs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/defect_escape_pair"
+              }
+            },
+            "closed_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "closed_pairs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/closed_defect_escape_pair"
+              }
+            }
+          }
+        }
+      }
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "session_id",
+        "proposal_id",
+        "source_candidate_id",
+        "observed_at",
+        "decision",
+        "outcome",
+        "primary_targets",
+        "rework_key",
+        "rollback_rehearsal_covered",
+        "rollback_signal",
+        "run_telemetry",
+        "promotion_report"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "proposal_id": {
+          "type": "string"
+        },
+        "source_candidate_id": {
+          "type": "string"
+        },
+        "observed_at": {
+          "type": "string"
+        },
+        "decision": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "primary_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rework_key": {
+          "type": "string"
+        },
+        "rollback_rehearsal_covered": {
+          "type": "boolean"
+        },
+        "rollback_signal": {
+          "type": "boolean"
+        },
+        "run_telemetry": {
+          "type": "string"
+        },
+        "promotion_report": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

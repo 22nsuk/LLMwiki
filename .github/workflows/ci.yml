@@ -1,0 +1,381 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test-tier:
+    name: ${{ matrix.tier }} / py${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.12"
+          - "3.13"
+          - "3.14"
+        tier:
+          - fast
+          - report-contract
+          - release-closeout-regression
+          - artifact-finalization
+          - release-sealing
+          - subprocess
+          - slow
+          - integration
+          - integration-heavy
+          - public
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+            pyproject.toml
+            uv.lock
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.10.9"
+
+      - name: Install dependencies from lock
+        run: |
+          python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
+          uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
+          python -m pip install --upgrade pip
+          python -m pip install -r tmp/locked-requirements.ci.txt
+
+      - name: Validate package build
+        if: matrix.tier == 'fast'
+        run: python -m build
+
+      - name: Run fast contract tier
+        if: matrix.tier == 'fast'
+        run: |
+          if [ -f system/system-index.md ] && [ -f wiki/index.md ] && [ -d raw ]; then
+            make check-finalized
+            make release-smoke-fast
+          else
+            make static
+            make test-fast
+          fi
+
+      - name: Run report-contract tier
+        if: matrix.tier == 'report-contract'
+        run: |
+          make test-report-contract
+          make external-report-reference-manifest-release-check
+
+      - name: Run release closeout regression tier
+        if: matrix.tier == 'release-closeout-regression'
+        run: |
+          make release-workflow-order-guard
+          make release-closeout-regression-dry-run
+          make release-authority-sealed-preflight
+          make release-closeout-post-check-finalizer-ci-artifact
+          make release-closeout-cost-evidence-ci-artifact
+
+      - name: Upload release closeout cost evidence
+        if: always() && matrix.tier == 'release-closeout-regression'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-closeout-cost-evidence-${{ matrix.python-version }}
+          path: |
+            tmp/release-closeout-fixed-point-cost-trend-ci.json
+            ops/reports/release-closeout-fixed-point.json
+            ops/reports/release-closeout-fixed-point-cost-trend.json
+            ops/reports/release-evidence-dashboard.json
+            tmp/release-workflow-order-guard.json
+            tmp/release-closeout-post-check-finalizer.json
+            tmp/release-closeout-post-check-finalizer-recommended-targets.txt
+            tmp/release-closeout-post-check-finalizer-plan.json
+          if-no-files-found: error
+
+      - name: Upload release authority blocked preflight
+        if: always() && matrix.tier == 'release-closeout-regression'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-authority-blocked-preflight-${{ matrix.python-version }}
+          path: |
+            tmp/release-closeout-sealed-dry-run/LLMwiki-source.zip
+            tmp/release-closeout-sealed-dry-run/release-closeout-batch-manifest.json
+            tmp/release-closeout-sealed-dry-run/external-report-reference-manifest.json
+            tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json
+          if-no-files-found: error
+
+      - name: Run artifact-finalization tier
+        if: matrix.tier == 'artifact-finalization'
+        run: make test-artifact-finalization
+
+      - name: Run release-sealing tier
+        if: matrix.tier == 'release-sealing'
+        run: make test-release-sealing
+
+      - name: Run subprocess tier
+        if: matrix.tier == 'subprocess'
+        run: make test-subprocess
+
+      - name: Run slow test tier
+        if: matrix.tier == 'slow'
+        run: make test-slow
+
+      - name: Run integration test tier
+        if: matrix.tier == 'integration'
+        run: |
+          make test-integration
+          if [ -f system/system-index.md ] && [ -f wiki/index.md ] && [ -d raw ]; then
+            make release-smoke
+          fi
+
+      - name: Run integration-heavy test tier
+        if: matrix.tier == 'integration-heavy'
+        run: make test-integration-heavy
+
+      - name: Run public mirror tier
+        if: matrix.tier == 'public'
+        run: make public-check
+
+  windows-release-smoke:
+    name: windows-release-smoke / py3.12
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+            pyproject.toml
+            uv.lock
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.10.9"
+
+      - name: Install dependencies from lock
+        run: |
+          python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
+          uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
+          python -m pip install --upgrade pip
+          python -m pip install -r tmp/locked-requirements.ci.txt
+
+      - name: Run Windows release smoke
+        run: python -m ops.scripts.release.release_smoke --vault . --profile full --out ops/reports/release-smoke-report-windows.json
+
+      - name: Run Windows command runtime smoke
+        run: python -m pytest -q tests/test_command_runtime.py
+
+      - name: Run Windows strict preview smoke
+        run: |
+          python .\tools\ruff_strict_preview.py --vault . --allowlist ops/ruff-strict-preview-allowlist.txt --select B,SIM,UP,I
+          python -m mypy --config-file pyproject.toml --check-untyped-defs --disallow-untyped-defs --disallow-incomplete-defs @ops/mypy-strict-preview-allowlist.txt
+
+      - name: Run Windows schema and allowlist smoke tests
+        run: |
+          python -m pytest -q tests/test_ci_workflow_static.py tests/test_makefile_static_gates.py tests/test_report_schema_sample_regeneration.py tests/test_report_schemas.py tests/test_ruff_strict_preview.py
+
+      - name: Upload Windows smoke artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-smoke-report
+          path: ops/reports/release-smoke-report-windows.json
+          if-no-files-found: error
+
+  raw-registry-cross-environment:
+    name: raw-registry-cross-env / ${{ matrix.profile }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            profile: linux-c-utf8
+          - os: windows-latest
+            profile: windows-utf8
+          - os: macos-latest
+            profile: macos-utf8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+            pyproject.toml
+            uv.lock
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.10.9"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
+          uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
+          python -m pip install --upgrade pip
+          python -m pip install -r tmp/locked-requirements.ci.txt
+
+      - name: Generate raw registry cross-environment matrix
+        shell: bash
+        run: |
+          python -m ops.scripts.registry.raw_registry_cross_environment_matrix \
+            --vault . \
+            --profile "${{ matrix.profile }}" \
+            --out "ops/reports/raw-registry-cross-environment-matrix-${{ matrix.profile }}.json"
+
+      - name: Upload raw registry cross-environment matrix
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: raw-registry-cross-environment-${{ matrix.profile }}
+          path: ops/reports/raw-registry-cross-environment-matrix-${{ matrix.profile }}.json
+          if-no-files-found: error
+
+  raw-registry-cross-environment-evidence:
+    name: raw-registry-cross-env evidence bundle / py3.12
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: raw-registry-cross-environment
+    if: always()
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+            pyproject.toml
+            uv.lock
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.10.9"
+
+      - name: Install dependencies from lock
+        run: |
+          python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
+          uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
+          python -m pip install --upgrade pip
+          python -m pip install -r tmp/locked-requirements.ci.txt
+
+      - name: Download raw registry cross-environment matrices
+        uses: actions/download-artifact@v4
+        with:
+          pattern: raw-registry-cross-environment-*
+          path: ops/reports
+          merge-multiple: true
+
+      - name: Generate raw registry cross-environment evidence bundle
+        run: |
+          python -m ops.scripts.registry.raw_registry_cross_environment_evidence_bundle \
+            --vault . \
+            --reports-dir ops/reports \
+            --out ops/reports/raw-registry-cross-environment-evidence-bundle.json
+
+      - name: Upload raw registry cross-environment evidence bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: raw-registry-cross-environment-evidence-bundle
+          path: ops/reports/raw-registry-cross-environment-evidence-bundle.json
+          if-no-files-found: error
+
+  supply-chain-gate:
+    name: supply-chain / py3.12
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+            pyproject.toml
+            uv.lock
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.10.9"
+
+      - name: Install dependencies from lock
+        run: |
+          python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
+          uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
+          python -m pip install --upgrade pip
+          python -m pip install -r tmp/locked-requirements.ci.txt
+
+      - name: Run supply-chain gate
+        run: make supply-chain-check
+
+      - name: Run SBOM readiness gate
+        run: make sbom-readiness-check
+
+      - name: Generate CycloneDX and OpenVEX draft artifacts
+        run: make openvex-draft-cached
+
+      - name: Upload supply-chain artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: supply-chain-reports
+          path: |
+            ops/reports/supply-chain-provenance.json
+            ops/reports/supply-chain-gate-report.json
+            ops/reports/security-advisories.json
+            ops/reports/sbom-export-mapping.json
+            ops/reports/sbom-readiness-gate-report.json
+            ops/reports/supply-chain-artifact-model.json
+            ops/reports/cyclonedx-bom.json
+            ops/reports/spdx-sbom.json
+            ops/reports/openvex-draft.json
+            ops/reports/in-toto-statement.json
+            ops/reports/sigstore-bundle-verification.json
+          if-no-files-found: error

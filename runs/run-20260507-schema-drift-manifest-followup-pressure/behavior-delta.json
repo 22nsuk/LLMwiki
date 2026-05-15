@@ -1,0 +1,89 @@
+{
+  "$schema": "ops/schemas/behavior-delta.schema.json",
+  "run_id": "run-20260507-schema-drift-manifest-followup-pressure",
+  "generated_at": "2026-05-07T03:48:03Z",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "primary_targets": [
+    "ops/scripts/mechanism_candidate_registry_runtime.py"
+  ],
+  "supporting_targets": [
+    "ops/scripts/mechanism_review_candidate_runtime.py",
+    "ops/scripts/mechanism_review_history_runtime.py"
+  ],
+  "test_files": [
+    "tests/test_mechanism_review_candidate_runtime.py",
+    "tests/test_mechanism_review_history_runtime.py"
+  ],
+  "inputs": {
+    "baseline_eval_report": "runs/run-20260507-schema-drift-manifest-followup-pressure/baseline-eval.json",
+    "candidate_eval_report": "runs/run-20260507-schema-drift-manifest-followup-pressure/candidate-eval.json",
+    "baseline_lint_report": "runs/run-20260507-schema-drift-manifest-followup-pressure/baseline-lint.json",
+    "candidate_lint_report": "runs/run-20260507-schema-drift-manifest-followup-pressure/candidate-lint.json",
+    "baseline_mechanism_report": "runs/run-20260507-schema-drift-manifest-followup-pressure/baseline-mechanism-assessment.json",
+    "candidate_mechanism_report": "runs/run-20260507-schema-drift-manifest-followup-pressure/candidate-mechanism-assessment.json",
+    "changed_files_manifest": "runs/run-20260507-schema-drift-manifest-followup-pressure/changed-files-manifest.json"
+  },
+  "summary": {
+    "behavior_changed": true,
+    "changed_file_count": 1,
+    "delta_count": 1,
+    "intended_change_count": 1,
+    "unexpected_change_count": 0,
+    "unknown_intent_count": 0,
+    "coverage_gap_count": 0,
+    "contract_touch_count": 1,
+    "high_risk_delta_count": 0,
+    "regression_count": 0,
+    "risk_level": "medium"
+  },
+  "deltas": [
+    {
+      "id": "behavior-delta-001",
+      "target": "ops/scripts/mechanism_candidate_registry_runtime.py",
+      "change_type": "runtime_surface",
+      "manifest_change_type": "modified",
+      "intent": "intended",
+      "semantic_class": "implementation_changed",
+      "expected_direction": "unknown",
+      "contract_touches": [
+        "runtime_logic"
+      ],
+      "behavior": "modified runtime_surface file; no deterministic Python symbol delta detected",
+      "evidence": [
+        "runs/run-20260507-schema-drift-manifest-followup-pressure/changed-files-manifest.json",
+        "tests/test_mechanism_review_candidate_runtime.py",
+        "tests/test_mechanism_review_history_runtime.py"
+      ],
+      "coverage_status": "covered",
+      "risk": "medium",
+      "details": {
+        "file_exists_in_baseline": true,
+        "file_exists_in_candidate": true,
+        "added_symbols": [],
+        "removed_symbols": [],
+        "symbol_count_delta": 0
+      }
+    }
+  ],
+  "diagnostics": {
+    "notes": [
+      "v2-v4 behavior delta remains deterministic: intent is derived from declared run scope, contract touches from path policy, and regression_count is only populated by explicit future policy annotations."
+    ],
+    "skipped_files": []
+  },
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-05-07T03:48:03Z\", \"generated_at_source\": \"payload.generated_at\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-05-07T17:20:47Z\", \"source_artifact\": \"runs/run-20260507-schema-drift-manifest-followup-pressure/behavior-delta.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/behavior-delta.schema.json\", \"artifact_kind\": \"behavior_delta\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-05-07T17:20:47Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-07T03:48:03Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"a70c0c1bbdf7257c1be1358872b02d6acef7107c1d69f1e3805b3f27f3a65f6d\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"fc0340f868a19c5980eebfb4b9eb41620ff6571ed9de83a030bf0a59b3d20be6\", \"policy\": \"0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107\", \"schema\": \"42a836df7464e4e8d02f886eccea62d19b7913fd11fe1ab63bccbf511d959ea8\", \"target_rel_path\": \"71d7bb6c251b88b596ac05b739b7b4c93c8db9313a803f13b6fbd995dea38a8a\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/run-20260507-schema-drift-manifest-followup-pressure/behavior-delta.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"a29a1f5a6ec3e4ac4ac8d79cc69437a5f5e5b6bc55285a780721c53e67d5149d\"}"
+      }
+    ]
+  }
+}

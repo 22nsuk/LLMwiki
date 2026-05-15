@@ -1,0 +1,555 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Subagent Routing Report",
+  "type": "object",
+  "required": [
+    "$schema",
+    "vault",
+    "generated_at",
+    "policy",
+    "role",
+    "profile_path",
+    "inputs",
+    "structural_metrics",
+    "total_structural_metrics",
+    "diagnostics",
+    "complexity_profile",
+    "routing_decision"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/subagent-routing-report.schema.json"
+      ]
+    },
+    "vault": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "policy": {
+      "type": "object",
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "role": {
+      "type": "string"
+    },
+    "profile_path": {
+      "type": "string"
+    },
+    "inputs": {
+      "type": "object",
+      "required": [
+        "primary_targets",
+        "supporting_targets",
+        "test_files",
+        "manual_risk_flags"
+      ],
+      "properties": {
+        "primary_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supporting_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "test_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "manual_risk_flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "structural_metrics": {
+      "type": "object",
+      "required": [
+        "nonempty_line_count_total",
+        "python_function_count",
+        "python_branch_node_count",
+        "markdown_heading_count",
+        "test_file_count",
+        "test_case_count"
+      ],
+      "properties": {
+        "nonempty_line_count_total": {
+          "type": "integer"
+        },
+        "python_function_count": {
+          "type": "integer"
+        },
+        "python_branch_node_count": {
+          "type": "integer"
+        },
+        "markdown_heading_count": {
+          "type": "integer"
+        },
+        "test_file_count": {
+          "type": "integer"
+        },
+        "test_case_count": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "total_structural_metrics": {
+      "type": "object",
+      "required": [
+        "nonempty_line_count_total",
+        "python_function_count",
+        "python_branch_node_count",
+        "markdown_heading_count",
+        "test_file_count",
+        "test_case_count"
+      ],
+      "properties": {
+        "nonempty_line_count_total": {
+          "type": "integer"
+        },
+        "python_function_count": {
+          "type": "integer"
+        },
+        "python_branch_node_count": {
+          "type": "integer"
+        },
+        "markdown_heading_count": {
+          "type": "integer"
+        },
+        "test_file_count": {
+          "type": "integer"
+        },
+        "test_case_count": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "diagnostics": {
+      "type": "object",
+      "required": [
+        "unreadable_targets",
+        "python_parse_failures"
+      ],
+      "properties": {
+        "unreadable_targets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "reason"
+            ],
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "python_parse_failures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "reason"
+            ],
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "complexity_profile": {
+      "type": "object",
+      "required": [
+        "dimensions",
+        "complexity_score",
+        "risk_flags",
+        "detected_risk_flags",
+        "manual_risk_flags",
+        "risk_flag_evidence",
+        "target_profiles",
+        "dimension_evidence"
+      ],
+      "properties": {
+        "dimensions": {
+          "type": "object",
+          "required": [
+            "change_surface",
+            "dependency_impact",
+            "verification_cost",
+            "artifact_heterogeneity",
+            "environment_risk"
+          ],
+          "properties": {
+            "change_surface": {
+              "type": "integer"
+            },
+            "dependency_impact": {
+              "type": "integer"
+            },
+            "verification_cost": {
+              "type": "integer"
+            },
+            "artifact_heterogeneity": {
+              "type": "integer"
+            },
+            "environment_risk": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "complexity_score": {
+          "type": "integer"
+        },
+        "risk_flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "detected_risk_flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "manual_risk_flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "risk_flag_evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "flag",
+              "path",
+              "reason"
+            ],
+            "properties": {
+              "flag": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "target_profiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "kind",
+              "nonempty_line_count",
+              "python_function_count",
+              "python_branch_node_count",
+              "markdown_heading_count",
+              "python_semantic_complexity_points",
+              "whole_file_volume",
+              "coarse_target"
+            ],
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "python",
+                  "markdown",
+                  "yaml",
+                  "json",
+                  "other"
+                ]
+              },
+              "nonempty_line_count": {
+                "type": "integer"
+              },
+              "python_function_count": {
+                "type": "integer"
+              },
+              "python_branch_node_count": {
+                "type": "integer"
+              },
+              "markdown_heading_count": {
+                "type": "integer"
+              },
+              "python_semantic_complexity_points": {
+                "type": "integer"
+              },
+              "whole_file_volume": {
+                "type": "integer"
+              },
+              "coarse_target": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "dimension_evidence": {
+          "type": "object",
+          "required": [
+            "change_surface",
+            "verification_cost"
+          ],
+          "properties": {
+            "change_surface": {
+              "type": "object",
+              "required": [
+                "target_count",
+                "target_count_score",
+                "whole_file_volume",
+                "whole_file_volume_score",
+                "per_target_capped_volume",
+                "per_target_capped_volume_score",
+                "semantic_volume",
+                "semantic_volume_score",
+                "large_file_target_count",
+                "coarse_target_bias_mitigated",
+                "selected_score"
+              ],
+              "properties": {
+                "target_count": {
+                  "type": "integer"
+                },
+                "target_count_score": {
+                  "type": "integer"
+                },
+                "whole_file_volume": {
+                  "type": "integer"
+                },
+                "whole_file_volume_score": {
+                  "type": "integer"
+                },
+                "per_target_capped_volume": {
+                  "type": "integer"
+                },
+                "per_target_capped_volume_score": {
+                  "type": "integer"
+                },
+                "semantic_volume": {
+                  "type": "integer"
+                },
+                "semantic_volume_score": {
+                  "type": "integer"
+                },
+                "large_file_target_count": {
+                  "type": "integer"
+                },
+                "coarse_target_bias_mitigated": {
+                  "type": "boolean"
+                },
+                "selected_score": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": false
+            },
+            "verification_cost": {
+              "type": "object",
+              "required": [
+                "target_count",
+                "test_file_count",
+                "test_case_count",
+                "verification_scope",
+                "reasons",
+                "selected_score"
+              ],
+              "properties": {
+                "target_count": {
+                  "type": "integer"
+                },
+                "test_file_count": {
+                  "type": "integer"
+                },
+                "test_case_count": {
+                  "type": "integer"
+                },
+                "verification_scope": {
+                  "type": "string"
+                },
+                "reasons": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "selected_score": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "routing_decision": {
+      "type": "object",
+      "required": [
+        "default_rung",
+        "allowed_rungs",
+        "score_band",
+        "band_rung",
+        "requested_rung",
+        "selected_rung",
+        "model",
+        "reasoning_effort",
+        "sandbox_mode",
+        "escalation_reasons",
+        "deescalation_reasons",
+        "effort_sufficiency"
+      ],
+      "properties": {
+        "default_rung": {
+          "type": "integer"
+        },
+        "allowed_rungs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "integer"
+          }
+        },
+        "score_band": {
+          "type": "string"
+        },
+        "band_rung": {
+          "type": "integer"
+        },
+        "requested_rung": {
+          "type": "integer"
+        },
+        "selected_rung": {
+          "type": "integer"
+        },
+        "model": {
+          "type": "string"
+        },
+        "reasoning_effort": {
+          "type": "string"
+        },
+        "sandbox_mode": {
+          "type": "string"
+        },
+        "escalation_reasons": {
+          "$ref": "#/$defs/routingReasonList"
+        },
+        "deescalation_reasons": {
+          "$ref": "#/$defs/routingReasonList"
+        },
+        "effort_sufficiency": {
+          "type": "object",
+          "required": [
+            "status",
+            "why"
+          ],
+          "properties": {
+            "status": {
+              "type": "string"
+            },
+            "why": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "routingReasonList": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "type",
+          "detail"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "dimension": {
+            "type": "string"
+          },
+          "value": {
+            "type": "integer"
+          },
+          "threshold": {
+            "type": "integer"
+          },
+          "min_rung": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

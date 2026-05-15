@@ -1,0 +1,424 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LLM Wiki Behavior Delta Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "run_id",
+    "generated_at",
+    "policy",
+    "primary_targets",
+    "supporting_targets",
+    "test_files",
+    "inputs",
+    "summary",
+    "deltas",
+    "diagnostics"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "ops/schemas/behavior-delta.schema.json"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        }
+      }
+    },
+    "primary_targets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "supporting_targets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "test_files": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline_eval_report",
+        "candidate_eval_report",
+        "baseline_lint_report",
+        "candidate_lint_report",
+        "baseline_mechanism_report",
+        "candidate_mechanism_report",
+        "changed_files_manifest"
+      ],
+      "properties": {
+        "baseline_eval_report": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_eval_report": {
+          "type": "string",
+          "minLength": 1
+        },
+        "baseline_lint_report": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_lint_report": {
+          "type": "string",
+          "minLength": 1
+        },
+        "baseline_mechanism_report": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_mechanism_report": {
+          "type": "string",
+          "minLength": 1
+        },
+        "changed_files_manifest": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "behavior_changed",
+        "changed_file_count",
+        "delta_count",
+        "intended_change_count",
+        "unexpected_change_count",
+        "unknown_intent_count",
+        "coverage_gap_count",
+        "contract_touch_count",
+        "high_risk_delta_count",
+        "regression_count",
+        "risk_level"
+      ],
+      "properties": {
+        "behavior_changed": {
+          "type": "boolean"
+        },
+        "changed_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "delta_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "intended_change_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unexpected_change_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unknown_intent_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "coverage_gap_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "contract_touch_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "high_risk_delta_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "regression_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "risk_level": {
+          "type": "string",
+          "enum": [
+            "none",
+            "low",
+            "medium",
+            "high"
+          ]
+        }
+      }
+    },
+    "deltas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "target",
+          "change_type",
+          "manifest_change_type",
+          "intent",
+          "semantic_class",
+          "expected_direction",
+          "contract_touches",
+          "behavior",
+          "evidence",
+          "coverage_status",
+          "risk",
+          "details"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^behavior-delta-[0-9]{3}$"
+          },
+          "target": {
+            "type": "string",
+            "minLength": 1
+          },
+          "change_type": {
+            "type": "string",
+            "enum": [
+              "artifact_contract",
+              "documentation_surface",
+              "policy_surface",
+              "python_api_surface",
+              "runtime_surface",
+              "schema_surface",
+              "test_surface",
+              "unknown"
+            ]
+          },
+          "manifest_change_type": {
+            "type": "string",
+            "enum": [
+              "added",
+              "deleted",
+              "modified"
+            ]
+          },
+          "intent": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "intended",
+              "unexpected"
+            ]
+          },
+          "semantic_class": {
+            "type": "string",
+            "enum": [
+              "api_surface_changed",
+              "artifact_contract_changed",
+              "contract_removed",
+              "documentation_only",
+              "execution_flow_changed",
+              "implementation_changed",
+              "implementation_removed",
+              "planning_gate_changed",
+              "policy_contract_changed",
+              "promotion_gate_changed",
+              "test_expectation_changed",
+              "unknown"
+            ]
+          },
+          "expected_direction": {
+            "type": "string",
+            "enum": [
+              "contract_change",
+              "documentation_change",
+              "execution_change",
+              "gate_change",
+              "test_guardrail_change",
+              "unknown"
+            ]
+          },
+          "contract_touches": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "artifact_contract",
+                "documentation",
+                "planning_gate",
+                "policy_contract",
+                "promotion_gate",
+                "public_surface",
+                "runtime_execution",
+                "runtime_logic",
+                "schema_contract",
+                "telemetry_contract",
+                "test_surface",
+                "unknown"
+              ]
+            }
+          },
+          "behavior": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "coverage_status": {
+            "type": "string",
+            "enum": [
+              "not_applicable",
+              "covered",
+              "coverage_gap",
+              "unknown"
+            ]
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "added_symbols": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "removed_symbols": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "symbol_count_delta": {
+                "type": "integer"
+              },
+              "file_exists_in_baseline": {
+                "type": "boolean"
+              },
+              "file_exists_in_candidate": {
+                "type": "boolean"
+              },
+              "parse_error": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "notes",
+        "skipped_files"
+      ],
+      "properties": {
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "skipped_files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "reason"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "detail": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "properties"
+      ],
+      "properties": {
+        "properties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "value"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "value": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

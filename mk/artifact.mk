@@ -1,0 +1,97 @@
+SCRIPT_OUTPUT_SURFACES_OUT ?= ops/script-output-surfaces.json
+SCRIPT_OUTPUT_SURFACES_CANDIDATE_OUT ?= tmp/script-output-surfaces.candidate.json
+CLOSURE_REGISTRY_ENVELOPE_REGISTRY ?= all
+GENERATED_ARTIFACT_INDEX_OUT ?= ops/reports/generated-artifact-index.json
+GENERATED_ARTIFACT_INDEX_CANDIDATE_OUT ?= tmp/generated-artifact-index.candidate.json
+ARCHIVE_EXECUTION_MANIFEST_OUT ?= tmp/archive-execution-manifest.json
+ARCHIVE_EXECUTION_MANIFEST_SOURCE ?= tmp/archive-execution-manifest.json
+ARCHIVE_EXECUTION_OPERATOR_CONFIRMATION ?=
+ARTIFACT_FRESHNESS_OUT ?= ops/reports/artifact-freshness-report.json
+ARTIFACT_FRESHNESS_CANDIDATE_OUT ?= tmp/artifact-freshness-report.candidate.json
+ARTIFACT_FRESHNESS_CHECK_OUT ?= tmp/artifact-freshness-report-check.json
+ARTIFACT_FRESHNESS_MTIME_SOURCE ?= embedded_currentness
+ARTIFACT_FRESHNESS_ZIP_METADATA ?=
+ARTIFACT_RELOCATION_AUDIT_OUT ?= ops/operator/artifact-relocation-audit.json
+ARTIFACT_RELOCATION_AUDIT_CANDIDATE_OUT ?= tmp/artifact-relocation-audit.candidate.json
+MANUAL_MUTATE_DEFECT_REGISTRY_OUT ?= ops/reports/manual-mutate-defect-registry.json
+MAKE_TARGET_INVENTORY_OUT ?= tmp/make-target-inventory.json
+WORKFLOW_DEPENDENCY_PLANNER_OUT ?= tmp/workflow-dependency-planner.json
+WORKFLOW_DEPENDENCY_PLANNER_CANDIDATE_OUT ?= tmp/workflow-dependency-planner.candidate.json
+WORKFLOW_DEPENDENCY_PLANNER_CHECK_OUT ?= tmp/workflow-dependency-planner-check.json
+WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST ?=
+RELEASE_WORKFLOW_ORDER_GUARD_OUT ?= tmp/release-workflow-order-guard.json
+RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT ?= tmp/release-workflow-order-guard.candidate.json
+RELEASE_RISK_TAXONOMY_MATRIX_OUT ?= ops/reports/release-risk-taxonomy-matrix.json
+RELEASE_RISK_TAXONOMY_MATRIX_CANDIDATE_OUT ?= tmp/release-risk-taxonomy-matrix.candidate.json
+RELEASE_RISK_TAXONOMY_MATRIX_MD_OUT ?= ops/reports/release-risk-taxonomy-matrix.md
+
+.PHONY: artifact-freshness artifact-freshness-check artifact-relocation-audit tmp-json-clean tmp-clean refresh-generated-core refresh-generated-observability refresh-generated script-output-surfaces manual-mutate-defect-registry closure-registry-envelope make-target-inventory workflow-dependency-planner workflow-dependency-planner-check release-workflow-order-guard release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-body archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback 
+
+artifact-freshness:
+	$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CANDIDATE_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",)
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(ARTIFACT_FRESHNESS_CANDIDATE_OUT)" --out "$(ARTIFACT_FRESHNESS_OUT)" --schema ops/schemas/artifact-freshness-report.schema.json --expected-artifact-kind artifact_freshness_report --expected-producer ops.scripts.artifact_freshness_runtime
+
+artifact-freshness-check:
+	$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CHECK_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",) --fail-on-fail
+
+artifact-relocation-audit:
+	$(PYTHON) -m ops.scripts.artifact_relocation_audit --vault "$(VAULT)" --out "$(ARTIFACT_RELOCATION_AUDIT_CANDIDATE_OUT)" --fail-on-fail
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(ARTIFACT_RELOCATION_AUDIT_CANDIDATE_OUT)" --out "$(ARTIFACT_RELOCATION_AUDIT_OUT)" --schema ops/schemas/artifact-relocation-audit.schema.json --expected-artifact-kind artifact_relocation_audit --expected-producer ops.scripts.artifact_relocation_audit
+
+tmp-json-clean:
+	@if [ -d tmp ]; then find tmp -mindepth 1 -delete; fi
+
+tmp-clean: tmp-json-clean
+refresh-generated-core: registry-preflight raw-registry-export manifest script-output-surfaces routing-provenance-aggregate outcome-metrics mechanism-review mutation-proposal
+
+refresh-generated-observability: artifact-relocation-audit release-risk-taxonomy-matrix generated-artifact-index artifact-freshness make-target-inventory workflow-dependency-planner release-workflow-order-guard function-budget-refactor-proposals outcome-provenance-gate-policy external-report-action-matrix
+
+refresh-generated: refresh-generated-core refresh-generated-observability
+	@echo "refresh-generated is a compatibility aggregate; use refresh-generated-core for queue inputs and refresh-generated-observability for advisory reports."
+script-output-surfaces:
+	$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" --out "$(SCRIPT_OUTPUT_SURFACES_CANDIDATE_OUT)"
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(SCRIPT_OUTPUT_SURFACES_CANDIDATE_OUT)" --out "$(SCRIPT_OUTPUT_SURFACES_OUT)" --schema ops/schemas/script-output-surfaces.schema.json --expected-artifact-kind script_output_surfaces --expected-producer ops.scripts.script_output_surfaces
+
+manual-mutate-defect-registry:
+	$(PYTHON) -m ops.scripts.manual_mutate_defect_registry --vault "$(VAULT)" --out "$(MANUAL_MUTATE_DEFECT_REGISTRY_OUT)"
+
+closure-registry-envelope:
+	$(PYTHON) -m ops.scripts.closure_registry_envelope --vault "$(VAULT)" --registry "$(CLOSURE_REGISTRY_ENVELOPE_REGISTRY)"
+
+make-target-inventory:
+	$(PYTHON) -m ops.scripts.make_target_inventory --vault "$(VAULT)" --out "$(MAKE_TARGET_INVENTORY_OUT)"
+
+workflow-dependency-planner:
+	$(PYTHON) -m ops.scripts.workflow_dependency_planner --vault "$(VAULT)" --out "$(WORKFLOW_DEPENDENCY_PLANNER_CANDIDATE_OUT)" $(if $(WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST),--changed-files-manifest "$(WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST)",)
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(WORKFLOW_DEPENDENCY_PLANNER_CANDIDATE_OUT)" --out "$(WORKFLOW_DEPENDENCY_PLANNER_OUT)" --schema ops/schemas/workflow-dependency-planner.schema.json --expected-artifact-kind workflow_dependency_planner --expected-producer ops.scripts.workflow_dependency_planner
+
+workflow-dependency-planner-check:
+	$(PYTHON) -m ops.scripts.workflow_dependency_planner --vault "$(VAULT)" --out "$(WORKFLOW_DEPENDENCY_PLANNER_CHECK_OUT)" $(if $(WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST),--changed-files-manifest "$(WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST)",)
+
+release-workflow-order-guard:
+	$(PYTHON) -m ops.scripts.release_workflow_order_guard --vault "$(VAULT)" --out "$(RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT)"
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT)" --out "$(RELEASE_WORKFLOW_ORDER_GUARD_OUT)" --schema ops/schemas/release-workflow-order-guard.schema.json --expected-artifact-kind release_workflow_order_guard --expected-producer ops.scripts.release_workflow_order_guard
+
+release-risk-taxonomy-matrix:
+	$(PYTHON) -m ops.scripts.release_risk_taxonomy_matrix --vault "$(VAULT)" --out "$(RELEASE_RISK_TAXONOMY_MATRIX_CANDIDATE_OUT)" --markdown-out "$(RELEASE_RISK_TAXONOMY_MATRIX_MD_OUT)"
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_RISK_TAXONOMY_MATRIX_CANDIDATE_OUT)" --out "$(RELEASE_RISK_TAXONOMY_MATRIX_OUT)" --schema ops/schemas/release-risk-taxonomy-matrix.schema.json --expected-artifact-kind release_risk_taxonomy_matrix --expected-producer ops.scripts.release_risk_taxonomy_matrix
+
+generated-artifact-index: artifact-relocation-audit closure-registry-envelope manual-mutate-defect-registry release-risk-taxonomy-matrix generated-artifact-index-body
+
+generated-artifact-index-body:
+	$(PYTHON) -m ops.scripts.generated_artifact_index --vault "$(VAULT)" --out "$(GENERATED_ARTIFACT_INDEX_CANDIDATE_OUT)"
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GENERATED_ARTIFACT_INDEX_CANDIDATE_OUT)" --out "$(GENERATED_ARTIFACT_INDEX_OUT)" --schema ops/schemas/generated-artifact-index.schema.json --expected-artifact-kind generated_artifact_index_report --expected-producer ops.scripts.generated_artifact_index
+
+archive-execution-manifest: generated-artifact-index archive-execution-manifest-report
+
+archive-execution-manifest-report:
+	$(PYTHON) -m ops.scripts.archive_execution_manifest --vault "$(VAULT)" --index-path "$(GENERATED_ARTIFACT_INDEX_OUT)" --out "$(ARCHIVE_EXECUTION_MANIFEST_OUT)" --mode dry_run
+
+archive-execution-manifest-apply:
+	$(PYTHON) -m ops.scripts.archive_execution_manifest --vault "$(VAULT)" --index-path "$(GENERATED_ARTIFACT_INDEX_OUT)" --out "$(ARCHIVE_EXECUTION_MANIFEST_OUT)" --mode applied --operator-confirmation "$(ARCHIVE_EXECUTION_OPERATOR_CONFIRMATION)"
+
+archive-execution-manifest-defer:
+	$(PYTHON) -m ops.scripts.archive_execution_manifest --vault "$(VAULT)" --index-path "$(GENERATED_ARTIFACT_INDEX_OUT)" --out "$(ARCHIVE_EXECUTION_MANIFEST_OUT)" --mode deferred
+
+archive-execution-manifest-rollback:
+	$(PYTHON) -m ops.scripts.archive_execution_manifest --vault "$(VAULT)" --manifest-path "$(ARCHIVE_EXECUTION_MANIFEST_SOURCE)" --out "$(ARCHIVE_EXECUTION_MANIFEST_OUT)" --mode rollback --operator-confirmation "$(ARCHIVE_EXECUTION_OPERATOR_CONFIRMATION)"

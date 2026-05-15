@@ -1,0 +1,820 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test Execution Summary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "suite",
+    "suite_scope",
+    "represents_full_suite",
+    "not_full_suite_reason",
+    "full_suite_evidence",
+    "status",
+    "command",
+    "returncode",
+    "timed_out",
+    "timeout_seconds",
+    "termination_reason",
+    "duration_ms",
+    "counts",
+    "execution_environment",
+    "test_target_fingerprints",
+    "deselected_tests",
+    "deselection_lifecycle",
+    "pytest_collect_nodeid_digest",
+    "nodeid_outcome_consistency",
+    "evidence_artifacts",
+    "stdout_tail",
+    "stderr_tail"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/test-execution-summary.schema.json"
+      ]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": [
+        "test_execution_summary"
+      ]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_tree_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_status": {
+      "type": "string",
+      "enum": [
+        "current",
+        "archived",
+        "stale",
+        "unknown"
+      ]
+    },
+    "retention_policy": {
+      "type": "string",
+      "enum": [
+        "ephemeral",
+        "canonical_report",
+        "archive"
+      ]
+    },
+    "encoding": {
+      "type": "string",
+      "enum": [
+        "utf-8"
+      ]
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "checked_at"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown",
+            "invalid"
+          ]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "vault": {
+      "type": "string"
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        }
+      }
+    },
+    "suite": {
+      "type": "string",
+      "minLength": 1
+    },
+    "suite_scope": {
+      "type": "string",
+      "enum": [
+        "fast_unit",
+        "public_contract",
+        "report_contract_summary",
+        "artifact_finalization",
+        "release_sealing",
+        "subprocess_integration",
+        "full_suite",
+        "release_builder_full"
+      ]
+    },
+    "represents_full_suite": {
+      "type": "boolean"
+    },
+    "not_full_suite_reason": {
+      "type": "string"
+    },
+    "full_suite_evidence": {
+      "$ref": "#/$defs/full_suite_evidence"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail",
+        "timeout",
+        "interrupted",
+        "partial-pass"
+      ]
+    },
+    "command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "returncode": {
+      "type": "integer"
+    },
+    "timed_out": {
+      "type": "boolean"
+    },
+    "timeout_seconds": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "termination_reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "duration_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "passed",
+        "failed",
+        "errors",
+        "skipped",
+        "xfailed",
+        "xpassed",
+        "warnings"
+      ],
+      "properties": {
+        "passed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "errors": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "skipped": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "xfailed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "xpassed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnings": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "execution_environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "python_version",
+        "pytest_version",
+        "plugin_autoload_policy",
+        "interpreter_path_class",
+        "toolchain_contract"
+      ],
+      "properties": {
+        "python_version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+.*$"
+        },
+        "pytest_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plugin_autoload_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "env_var",
+            "value",
+            "autoload_disabled",
+            "policy"
+          ],
+          "properties": {
+            "env_var": {
+              "type": "string",
+              "enum": ["PYTEST_DISABLE_PLUGIN_AUTOLOAD"]
+            },
+            "value": {
+              "type": "string"
+            },
+            "autoload_disabled": {
+              "type": "boolean"
+            },
+            "policy": {
+              "type": "string",
+              "enum": ["disabled", "not_set", "custom"]
+            }
+          }
+        },
+        "interpreter_path_class": {
+          "type": "string",
+          "enum": [
+            "path_lookup",
+            "repo_virtualenv",
+            "repo_relative",
+            "repo_absolute",
+            "relative_external",
+            "external_virtualenv",
+            "external_absolute",
+            "unknown"
+          ]
+        },
+        "toolchain_contract": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "python_supported",
+            "pytest_supported",
+            "supported_python_major_minor",
+            "minimum_pytest_major",
+            "release_evidence_effect",
+            "reason"
+          ],
+          "properties": {
+            "status": { "type": "string", "enum": ["pass", "unsupported"] },
+            "python_supported": { "type": "boolean" },
+            "pytest_supported": { "type": "boolean" },
+            "supported_python_major_minor": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^\\d+\\.\\d+$" }
+            },
+            "minimum_pytest_major": { "type": "integer", "minimum": 1 },
+            "release_evidence_effect": {
+              "type": "string",
+              "enum": ["eligible", "blocked_unsupported_toolchain"]
+            },
+            "reason": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "test_target_fingerprints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "sha256"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    "deselected_tests": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/deselected_test"
+      }
+    },
+    "deselection_lifecycle": {
+      "$ref": "#/$defs/deselection_lifecycle"
+    },
+    "pytest_marker_deselected_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "policy_deselected_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "pytest_collect_nodeid_digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "command",
+        "nodeid_count",
+        "sha256",
+        "reason"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "collected",
+            "failed",
+            "skipped"
+          ]
+        },
+        "command": {
+          "type": "string"
+        },
+        "nodeid_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "type": "string",
+          "anyOf": [
+            {
+              "const": ""
+            },
+            {
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          ]
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "nodeid_outcome_consistency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "nodeid_count",
+        "outcome_count",
+        "counted_outcomes",
+        "delta",
+        "reason"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail", "skipped"]
+        },
+        "nodeid_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "outcome_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "counted_outcomes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["passed", "skipped", "xfailed", "xpassed"],
+          "properties": {
+            "passed": { "type": "integer", "minimum": 0 },
+            "skipped": { "type": "integer", "minimum": 0 },
+            "xfailed": { "type": "integer", "minimum": 0 },
+            "xpassed": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "delta": {
+          "type": "integer"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "evidence_artifacts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence_artifact"
+      }
+    },
+    "stdout_tail": {
+      "type": "string"
+    },
+    "stderr_tail": {
+      "type": "string"
+    },
+    "summary_mode": {
+      "type": "string",
+      "enum": ["single", "aggregate", "reused"]
+    },
+    "reused_from": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "shards": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/summary_shard"
+      }
+    },
+    "release_contract_diagnosis": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/release_contract_diagnosis_item"
+      }
+    }
+  },
+  "$defs": {
+    "full_suite_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "required_command",
+        "release_builder_environment",
+        "reason"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["represented", "not_represented"]
+        },
+        "required_command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "release_builder_environment": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "summary_shard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "suite",
+        "status",
+        "generated_at",
+        "duration_ms",
+        "counts",
+        "represents_full_suite"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "suite": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail", "timeout", "interrupted", "partial-pass"]
+        },
+        "generated_at": { "type": "string" },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "counts": { "$ref": "#/properties/counts" },
+        "represents_full_suite": { "type": "boolean" }
+      }
+    },
+    "deselected_test": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nodeid",
+        "reason",
+        "policy_ref",
+        "risk_owner",
+        "expires_at",
+        "release_blocking",
+        "expected_to_pass_after_refresh"
+      ],
+      "properties": {
+        "nodeid": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy_ref": {
+          "type": "string"
+        },
+        "risk_owner": {
+          "type": "string"
+        },
+        "expires_at": {
+          "type": "string"
+        },
+        "release_blocking": {
+          "type": "boolean"
+        },
+        "expected_to_pass_after_refresh": {
+          "type": "boolean"
+        }
+      }
+    },
+    "evidence_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "path", "exists", "size_bytes", "sha256", "source"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["junit_xml", "execution_log", "failed_nodeids"]
+        },
+        "path": {
+          "type": "string"
+        },
+        "exists": {
+          "type": "boolean"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "type": "string",
+          "anyOf": [
+            { "const": "" },
+            { "pattern": "^[a-f0-9]{64}$" }
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "deselection_lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "checked_at",
+        "actual_deselected_count",
+        "max_allowed_deselected_count",
+        "over_budget",
+        "expired_count",
+        "release_blocking_count",
+        "missing_lifecycle_count",
+        "duplicate_policy_entry_count",
+        "unused_policy_entry_count",
+        "risk_owner",
+        "expires_at",
+        "count_increase_gate_effect",
+        "expiry_gate_effect",
+        "next_action",
+        "blockers"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail"]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        },
+        "actual_deselected_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_allowed_deselected_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "over_budget": {
+          "type": "boolean"
+        },
+        "expired_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "release_blocking_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_lifecycle_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "duplicate_policy_entry_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unused_policy_entry_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "risk_owner": {
+          "type": "string"
+        },
+        "expires_at": {
+          "type": "string"
+        },
+        "count_increase_gate_effect": {
+          "type": "string"
+        },
+        "expiry_gate_effect": {
+          "type": "string"
+        },
+        "next_action": {
+          "type": "string"
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "nodeid",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              },
+              "nodeid": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "release_contract_diagnosis_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "status",
+        "lane",
+        "command"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": ["clean_pass", "conditional_pass", "blocked", "not_run"]
+        },
+        "lane": {
+          "type": "string",
+          "enum": ["clean", "conditional", "blocked"]
+        },
+        "command": {
+          "type": "string"
+        },
+        "duration_seconds": {
+          "type": ["number", "null"]
+        },
+        "checked_at": {
+          "type": ["string", "null"],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        },
+        "blocker_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "accepted_risk_family": {
+          "type": ["string", "null"]
+        },
+        "risk_acceptance_ref": {
+          "oneOf": [
+            { "$ref": "#/$defs/risk_acceptance_ref" },
+            { "type": "null" }
+          ]
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "risk_acceptance_ref": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "artifact_path",
+        "accepted_by",
+        "accepted_at",
+        "expires_at",
+        "risk_owner",
+        "revalidation_command",
+        "status_at_check"
+      ],
+      "properties": {
+        "artifact_path": {
+          "type": "string"
+        },
+        "accepted_by": {
+          "type": "string"
+        },
+        "accepted_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        },
+        "expires_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        },
+        "risk_owner": {
+          "type": "string"
+        },
+        "revalidation_command": {
+          "type": "string"
+        },
+        "status_at_check": {
+          "type": "string",
+          "enum": ["valid", "expired", "not_found"]
+        }
+      }
+    }
+  }
+}

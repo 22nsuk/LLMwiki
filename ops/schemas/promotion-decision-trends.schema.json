@@ -1,0 +1,338 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Promotion Decision Trends",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "vault",
+    "generated_at",
+    "policy",
+    "summary",
+    "decision_counts",
+    "artifact_class_counts",
+    "recent_runs"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/promotion-decision-trends.schema.json"
+      ]
+    },
+    "vault": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "artifact_kind": {
+      "type": "string"
+    },
+    "producer": {
+      "type": "string"
+    },
+    "source_command": {
+      "type": "string"
+    },
+    "source_revision": {
+      "type": "string"
+    },
+    "source_tree_fingerprint": {
+      "type": "string"
+    },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_status": {
+      "type": "string",
+      "enum": [
+        "current",
+        "archived",
+        "stale",
+        "unknown"
+      ]
+    },
+    "retention_policy": {
+      "type": "string",
+      "enum": [
+        "ephemeral",
+        "canonical_report",
+        "archive"
+      ]
+    },
+    "encoding": {
+      "type": "string",
+      "enum": [
+        "utf-8"
+      ]
+    },
+    "currentness": {
+      "$ref": "#/$defs/currentness"
+    },
+    "policy": {
+      "$ref": "#/$defs/policy"
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runs_discovered",
+        "promotion_reports_considered",
+        "finalized_count",
+        "recent_window"
+      ],
+      "properties": {
+        "runs_discovered": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "promotion_reports_considered": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "finalized_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recent_window": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "decision_counts": {
+      "$ref": "#/$defs/counter"
+    },
+    "artifact_class_counts": {
+      "$ref": "#/$defs/counter"
+    },
+    "recent_runs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/recent_run"
+      }
+    }
+  },
+  "$defs": {
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "checked_at"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown",
+            "invalid"
+          ]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      }
+    },
+    "counter": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "recent_run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "observed_at",
+        "decision",
+        "decision_record",
+        "artifact_class",
+        "primary_targets",
+        "finalized",
+        "promotion_report"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observed_at": {
+          "type": "string"
+        },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "PROMOTE",
+            "HOLD",
+            "DISCARD"
+          ]
+        },
+        "decision_record": {
+          "$ref": "#/$defs/decision_record"
+        },
+        "artifact_class": {
+          "type": "string"
+        },
+        "primary_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "finalized": {
+          "type": "boolean"
+        },
+        "promotion_report": {
+          "type": "string"
+        }
+      }
+    },
+    "decision_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision_id",
+        "subject_id",
+        "subject_kind",
+        "decision",
+        "decision_stage",
+        "is_terminal",
+        "policy_version",
+        "source_rule",
+        "source_pass",
+        "actor",
+        "reason_code",
+        "reason_detail",
+        "evidence_refs",
+        "decided_at",
+        "effective_at",
+        "supersedes",
+        "reducer_key",
+        "precedence_key",
+        "dedupe_key",
+        "finalizable",
+        "finalize_blockers",
+        "ledger_event_type",
+        "ledger_partition_key"
+      ],
+      "properties": {
+        "decision_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subject_id": {
+          "type": "string"
+        },
+        "subject_kind": {
+          "type": "string"
+        },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "PROMOTE",
+            "HOLD",
+            "DISCARD"
+          ]
+        },
+        "decision_stage": {
+          "type": "string"
+        },
+        "is_terminal": {
+          "type": "boolean"
+        },
+        "policy_version": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_rule": {
+          "type": "string"
+        },
+        "source_pass": {
+          "type": "string"
+        },
+        "actor": {
+          "type": "string"
+        },
+        "reason_code": {
+          "type": "string"
+        },
+        "reason_detail": {
+          "type": "string"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "decided_at": {
+          "type": "string"
+        },
+        "effective_at": {
+          "type": "string"
+        },
+        "supersedes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reducer_key": {
+          "type": "string"
+        },
+        "precedence_key": {
+          "type": "string"
+        },
+        "dedupe_key": {
+          "type": "string"
+        },
+        "finalizable": {
+          "type": "boolean"
+        },
+        "finalize_blockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ledger_event_type": {
+          "type": "string"
+        },
+        "ledger_partition_key": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "$schema": "ops/schemas/raw-intake-promotion-report.schema.json",
+  "status": "pass",
+  "manifest": "runs/run-20260422-raw-intake-registration-and-promotion/promotion/raw-intake-promotion-profiles-2026-04-22.json",
+  "family_count": 20,
+  "refresh_count": 10,
+  "written_file_count": 50,
+  "written_files": [
+    "wiki/concept--ai-adoption-labor-and-public-sector-deployment.md",
+    "wiki/concept--ai-product-platform-and-agentic-ui.md",
+    "wiki/concept--biomedicine-platform-and-disease-evidence.md",
+    "wiki/concept--commodity-supply-and-price-transmission.md",
+    "wiki/concept--cyber-statecraft-and-ai-security.md",
+    "wiki/concept--energy-transition-policy-under-shock.md",
+    "wiki/concept--global-political-economy-and-institutional-realignment.md",
+    "wiki/concept--industrial-policy-space-and-ev-competition.md",
+    "wiki/concept--korea-corporate-governance-value-up-and-market-structure.md",
+    "wiki/concept--korea-financial-regulation-corporate-governance-and-consumer-redress.md",
+    "wiki/concept--korea-fiscal-and-public-debt-risk.md",
+    "wiki/concept--korea-india-industrial-and-energy-cooperation.md",
+    "wiki/concept--korea-labor-tax-and-domestic-policy.md",
+    "wiki/concept--korea-political-economy-and-policy-coordination.md",
+    "wiki/concept--korea-public-science-health-and-social-policy.md",
+    "wiki/concept--korea-real-estate-infrastructure-and-consumption.md",
+    "wiki/concept--korean-peninsula-deterrence-and-nuclear-intelligence-claims.md",
+    "wiki/concept--middle-east-negotiation-and-iran-regime-friction.md",
+    "wiki/concept--public-health-behavior-and-risk-prevention.md",
+    "wiki/concept--semiconductor-memory-supply-and-labor-risk.md",
+    "wiki/synthesis--ai-adoption-labor-and-public-sector-deployment-2026-04-22.md",
+    "wiki/synthesis--ai-capability-claims-and-validation-gap-2026-04-12.md",
+    "wiki/synthesis--ai-compute-control-us-china-geopolitical-choke-2026-04-18.md",
+    "wiki/synthesis--ai-execution-surface-and-runtime-efficiency-2026-04-13.md",
+    "wiki/synthesis--ai-inference-economics-and-pricing-2026-04-18.md",
+    "wiki/synthesis--ai-infrastructure-rerating-power-bottlenecks-and-transition-risk-2026-04-14.md",
+    "wiki/synthesis--ai-physical-buildout-bottlenecks-and-supplier-leverage-2026-04-18.md",
+    "wiki/synthesis--ai-product-platform-and-agentic-ui-2026-04-22.md",
+    "wiki/synthesis--biomedicine-platform-and-disease-evidence-2026-04-22.md",
+    "wiki/synthesis--commodity-supply-and-price-transmission-2026-04-22.md",
+    "wiki/synthesis--cyber-statecraft-and-ai-security-2026-04-22.md",
+    "wiki/synthesis--energy-transition-policy-under-shock-2026-04-22.md",
+    "wiki/synthesis--global-political-economy-and-institutional-realignment-2026-04-22.md",
+    "wiki/synthesis--industrial-policy-space-and-ev-competition-2026-04-22.md",
+    "wiki/synthesis--korea-corporate-governance-value-up-and-market-structure-2026-04-22.md",
+    "wiki/synthesis--korea-defense-export-and-physical-ai-2026-04-18.md",
+    "wiki/synthesis--korea-financial-regulation-corporate-governance-and-consumer-redress-2026-04-22.md",
+    "wiki/synthesis--korea-fiscal-and-public-debt-risk-2026-04-22.md",
+    "wiki/synthesis--korea-fx-liquidity-and-spot-dollar-pressure-2026-04-14.md",
+    "wiki/synthesis--korea-india-industrial-and-energy-cooperation-2026-04-22.md",
+    "wiki/synthesis--korea-labor-tax-and-domestic-policy-2026-04-22.md",
+    "wiki/synthesis--korea-political-economy-and-policy-coordination-2026-04-22.md",
+    "wiki/synthesis--korea-public-science-health-and-social-policy-2026-04-22.md",
+    "wiki/synthesis--korea-real-estate-infrastructure-and-consumption-2026-04-22.md",
+    "wiki/synthesis--korean-peninsula-deterrence-and-nuclear-intelligence-claims-2026-04-22.md",
+    "wiki/synthesis--middle-east-negotiation-and-iran-regime-friction-2026-04-22.md",
+    "wiki/synthesis--middle-east-shipping-and-energy-risk-2026-04-12.md",
+    "wiki/synthesis--middle-east-war-macro-and-market-repricing-2026-04-13.md",
+    "wiki/synthesis--public-health-behavior-and-risk-prevention-2026-04-22.md",
+    "wiki/synthesis--semiconductor-memory-supply-and-labor-risk-2026-04-22.md"
+  ],
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-04-22T04:20:00Z\", \"generated_at_source\": \"manifest.embedded_envelope.generated_at\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-04-29T02:30:39Z\", \"source_artifact\": \"runs/run-20260422-raw-intake-registration-and-promotion/promotion/raw-intake-promotion-render-after-concept-integration-2026-04-22.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/raw-intake-promotion-report.schema.json\", \"artifact_kind\": \"raw_intake_promotion_report\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-04-29T02:30:39Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-04-22T04:20:00Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"72d2dcea28f2e9efb29874b8c1b2d96cffadd6c407cdf7551f843aede15b3ac6\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"4db29ff6a717c7d4924f0d9921ee725639782c18f213c51ba147eaf41c4944ef\", \"policy\": \"7d45acc617992bca127ce0b7defb6715caac5b774dcc489acf984502cea3a402\", \"schema\": \"924131fe7dbb4e1c1a8382a9db579653fe0582443db26ca002f67967958029dc\", \"target_rel_path\": \"d4a064e047537c19d34526eb1dda3151f3c64e1b2bcb843f62990b8584f5bf6b\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/run-20260422-raw-intake-registration-and-promotion/promotion/raw-intake-promotion-render-after-concept-integration-2026-04-22.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"d050a0ed18ba72f975dd6e53b97575fd5d42d1a35ee28a626c12d0be0748739a\"}"
+      }
+    ]
+  }
+}

@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Release Live Artifact Attestation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "status",
+    "source_zip",
+    "evidence_bundle",
+    "reports",
+    "audit_pack_manifest",
+    "bindings",
+    "release_authority",
+    "verification"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": ["ops/schemas/release-live-artifact-attestation.schema.json"]
+    },
+    "artifact_kind": {
+      "type": "string",
+      "enum": ["release_live_artifact_attestation"]
+    },
+    "generated_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" },
+    "producer": { "type": "string", "enum": ["ops.scripts.release_live_artifact_attestation"] },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": { "type": "string", "enum": ["current", "archived", "stale", "unknown"] },
+    "retention_policy": { "type": "string", "enum": ["canonical_report"] },
+    "encoding": { "type": "string", "enum": ["utf-8"] },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown", "invalid"] },
+        "checked_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" }
+      }
+    },
+    "vault": { "type": "string" },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "version": { "type": ["integer", "string", "null"] }
+      }
+    },
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "source_zip": { "$ref": "#/$defs/file_identity" },
+    "evidence_bundle": { "$ref": "#/$defs/file_identity" },
+    "reports": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_closeout_summary",
+        "release_closeout_batch_manifest",
+        "release_evidence_closeout_self_check"
+      ],
+      "properties": {
+        "release_closeout_summary": { "$ref": "#/$defs/report_identity" },
+        "release_closeout_batch_manifest": { "$ref": "#/$defs/report_identity" },
+        "release_evidence_closeout_self_check": { "$ref": "#/$defs/report_identity" }
+      }
+    },
+    "audit_pack_manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "source_of_truth",
+        "batch_id",
+        "evidence_set_digest",
+        "packed_entry_count",
+        "source_zip_status",
+        "source_zip_path",
+        "source_zip_sha256"
+      ],
+      "properties": {
+        "status": { "type": "string", "enum": ["loaded", "missing", "unreadable"] },
+        "source_of_truth": { "type": "string" },
+        "batch_id": { "type": "string" },
+        "evidence_set_digest": {
+          "type": "string",
+          "anyOf": [
+            { "const": "" },
+            { "pattern": "^[a-f0-9]{64}$" }
+          ]
+        },
+        "packed_entry_count": { "type": "integer", "minimum": 0 },
+        "source_zip_status": { "type": "string" },
+        "source_zip_path": { "type": "string" },
+        "source_zip_sha256": { "$ref": "#/$defs/sha256_or_empty" }
+      }
+    },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_zip_sha256",
+        "evidence_bundle_sha256",
+        "batch_distribution_zip_sha256",
+        "external_source_zip_bound_sha256",
+        "audit_pack_source_zip_sha256",
+        "release_closeout_summary_sha256",
+        "release_closeout_batch_manifest_sha256",
+        "release_evidence_closeout_self_check_sha256",
+        "source_tree_fingerprint",
+        "evidence_set_digest",
+        "audit_pack_evidence_set_digest"
+      ],
+      "properties": {
+        "source_zip_sha256": { "$ref": "#/$defs/sha256_or_empty" },
+        "evidence_bundle_sha256": { "$ref": "#/$defs/sha256_or_empty" },
+        "batch_distribution_zip_sha256": { "$ref": "#/$defs/sha256_or_empty" },
+        "external_source_zip_bound_sha256": { "$ref": "#/$defs/sha256_or_empty" },
+        "audit_pack_source_zip_sha256": { "$ref": "#/$defs/sha256_or_empty" },
+        "release_closeout_summary_sha256": { "$ref": "#/$defs/sha256_or_empty" },
+        "release_closeout_batch_manifest_sha256": { "$ref": "#/$defs/sha256_or_empty" },
+        "release_evidence_closeout_self_check_sha256": { "$ref": "#/$defs/sha256_or_empty" },
+        "source_tree_fingerprint": { "type": "string" },
+        "evidence_set_digest": { "$ref": "#/$defs/sha256_or_empty" },
+        "audit_pack_evidence_set_digest": { "$ref": "#/$defs/sha256_or_empty" }
+      }
+    },
+    "release_authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "machine_release_allowed",
+        "clean_release_ready",
+        "release_readiness_state",
+        "batch_manifest_status",
+        "semantic_release_status",
+        "sealed_release_status",
+        "distribution_package_status",
+        "self_check_status"
+      ],
+      "properties": {
+        "machine_release_allowed": { "type": "boolean" },
+        "clean_release_ready": { "type": "boolean" },
+        "release_readiness_state": { "type": "string" },
+        "batch_manifest_status": { "type": "string" },
+        "semantic_release_status": { "type": "string" },
+        "sealed_release_status": { "type": "string" },
+        "distribution_package_status": { "type": "string" },
+        "self_check_status": { "type": "string" }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "failed_checks", "checks"],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "fail"] },
+        "failed_checks": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "checks": {
+          "type": "object",
+          "additionalProperties": { "type": "boolean" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256_or_empty": {
+      "type": "string",
+      "anyOf": [
+        { "const": "" },
+        { "pattern": "^[a-f0-9]{64}$" }
+      ]
+    },
+    "file_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "path", "exists", "size_bytes", "sha256"],
+      "properties": {
+        "role": { "type": "string", "minLength": 1 },
+        "path": { "type": "string" },
+        "exists": { "type": "boolean" },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "sha256": { "$ref": "#/$defs/sha256_or_empty" }
+      }
+    },
+    "report_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "path",
+        "exists",
+        "size_bytes",
+        "sha256",
+        "artifact_kind",
+        "producer",
+        "generated_at",
+        "source_tree_fingerprint"
+      ],
+      "properties": {
+        "role": { "type": "string", "minLength": 1 },
+        "path": { "type": "string" },
+        "exists": { "type": "boolean" },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "sha256": { "$ref": "#/$defs/sha256_or_empty" },
+        "artifact_kind": { "type": "string" },
+        "producer": { "type": "string" },
+        "generated_at": { "type": "string" },
+        "source_tree_fingerprint": { "type": "string" }
+      }
+    }
+  }
+}

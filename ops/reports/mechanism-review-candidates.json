@@ -1,0 +1,365 @@
+{
+  "$schema": "ops/schemas/mechanism-review-candidates.schema.json",
+  "artifact_kind": "mechanism_review_candidates_report",
+  "generated_at": "2026-05-15T04:15:48Z",
+  "producer": "ops.scripts.mechanism_review_runtime",
+  "source_command": "python -m ops.scripts.mechanism_review",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "c730a4570492eaf5cb038d51227064a8c9404069f62cb3920049a985951e876a",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "b918914e44bad6b4e65120c6e5078ed2f0b422b8d64f3f3253178465e131e835",
+    "excluded_promotion_reports": "537937b42d9eb22a3babdeba680d221f58a70de44d3e3640a55d49301edd827d",
+    "promotion_reports": "47308e6ead45e6366547bffe91c993d0d224544c2a4fb589d598b124c76a0a5f",
+    "skipped_artifacts": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "mechanism_review_enabled": "3cbc87c7681f34db4617feaa2c8801931bc5e42d8d0f560e756dd4cd92885f18",
+    "mechanism_review_max_candidates": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
+    "mechanism_review_max_runs": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-15T04:15:48Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "pass",
+  "summary": {
+    "runs_discovered": 13,
+    "runs_considered": 9,
+    "runs_excluded": 4,
+    "runs_skipped": 0,
+    "candidates_emitted": 1
+  },
+  "diagnostics": {
+    "skipped_runs": [],
+    "excluded_runs": [
+      {
+        "run_id": "run-20260422-auto-improve-decision-record-fallback-retry2",
+        "status": "archived",
+        "reason": "typed same-eval evidence could not be reconstructed because behavior-delta and changed-files manifest were absent; superseded by run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
+        "path": "runs/archive/run-20260422-auto-improve-decision-record-fallback-retry2/promotion-report.json"
+      },
+      {
+        "run_id": "run-20260422-auto-improve-decision-record-fallback",
+        "status": "archived",
+        "reason": "missing promotion inputs; superseded by later retry runs",
+        "path": "runs/archive/run-20260422-auto-improve-decision-record-fallback/promotion-report.json"
+      },
+      {
+        "run_id": "run-20260415-mechanism-planning-gate-second-retry",
+        "status": "archived",
+        "reason": "false discard from runner defect; excluded from active mechanism history",
+        "path": "runs/archive/run-20260415-mechanism-planning-gate-second-retry/promotion-report.json"
+      },
+      {
+        "run_id": "auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime",
+        "status": "archived",
+        "reason": "missing baseline-eval.json and other required mechanism inputs; run incomplete",
+        "path": "runs/archive/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
+      }
+    ],
+    "bootstrap": {
+      "status": "ready",
+      "summary": "comparable mechanism run history는 trend-based candidate를 평가할 수 있을 만큼 확보됐다.",
+      "recommended_next_step": "review current candidates if present; otherwise continue narrow one-mechanism experiments or inspect skipped runs for missing signal",
+      "trend_candidate_requirements": [
+        {
+          "candidate_type": "mechanism_branch_growth_without_test_growth_candidate",
+          "evaluation_min_runs": 2,
+          "full_window_runs": 2
+        },
+        {
+          "candidate_type": "mechanism_schema_drift_candidate",
+          "evaluation_min_runs": 2,
+          "full_window_runs": 2
+        },
+        {
+          "candidate_type": "mechanism_policy_complexity_growth_candidate",
+          "evaluation_min_runs": 2,
+          "full_window_runs": 2
+        },
+        {
+          "candidate_type": "mechanism_eval_stagnation_candidate",
+          "evaluation_min_runs": 2,
+          "full_window_runs": 5
+        }
+      ],
+      "target_groups_under_min_history": [
+        {
+          "primary_targets": [
+            "ops/scripts/mechanism_candidate_registry_runtime.py"
+          ],
+          "comparable_runs": 1,
+          "latest_run_id": "run-20260507-schema-drift-manifest-followup-pressure",
+          "blocked_candidate_types": [
+            {
+              "candidate_type": "mechanism_branch_growth_without_test_growth_candidate",
+              "required_runs": 2,
+              "additional_runs_needed": 1
+            },
+            {
+              "candidate_type": "mechanism_schema_drift_candidate",
+              "required_runs": 2,
+              "additional_runs_needed": 1
+            },
+            {
+              "candidate_type": "mechanism_policy_complexity_growth_candidate",
+              "required_runs": 2,
+              "additional_runs_needed": 1
+            },
+            {
+              "candidate_type": "mechanism_eval_stagnation_candidate",
+              "required_runs": 2,
+              "additional_runs_needed": 1
+            }
+          ]
+        }
+      ],
+      "non_trigger_diagnostics": []
+    },
+    "session_calibration": {
+      "candidates_with_session_context": 1,
+      "candidates_with_rollups": 1,
+      "candidates_without_session_context": 0,
+      "runs_with_session_context": 3,
+      "sessions_considered": 2,
+      "sessions_with_rollups": 1,
+      "validation_blocked_sessions": 0,
+      "review_blocked_sessions": 0,
+      "mutation_failed_sessions": 0,
+      "validator_dispatch_sessions": 0,
+      "reviewer_dispatch_sessions": 0,
+      "high_risk_routing_sessions": 0,
+      "total_priority_delta": 0,
+      "boosted_candidates": 0,
+      "lowered_candidates": 0,
+      "unchanged_candidates": 1,
+      "enabled": true,
+      "status": "active",
+      "candidate_count": 1,
+      "by_family": [
+        {
+          "candidates_with_session_context": 1,
+          "candidates_with_rollups": 1,
+          "candidates_without_session_context": 0,
+          "runs_with_session_context": 3,
+          "sessions_considered": 2,
+          "sessions_with_rollups": 1,
+          "validation_blocked_sessions": 0,
+          "review_blocked_sessions": 0,
+          "mutation_failed_sessions": 0,
+          "validator_dispatch_sessions": 0,
+          "reviewer_dispatch_sessions": 0,
+          "high_risk_routing_sessions": 0,
+          "total_priority_delta": 0,
+          "boosted_candidates": 0,
+          "lowered_candidates": 0,
+          "unchanged_candidates": 1,
+          "family": "contract_regression_signals"
+        }
+      ]
+    },
+    "outcome_metrics_calibration": {
+      "enabled": true,
+      "status": "active",
+      "mode": "audit_only",
+      "gate_effect": "none",
+      "source_report": "ops/reports/outcome-metrics.json",
+      "recent_window": 20,
+      "candidate_count": 1,
+      "candidates_with_outcome_context": 1,
+      "target_count": 1,
+      "thresholds": {
+        "high_rework_count": 1,
+        "hold_or_discard_moving_average": 0.25,
+        "rollback_signal_ratio": 0.2,
+        "defect_escape_pair_count": 1
+      },
+      "global_signals": {
+        "attempt_count": 13,
+        "recent_attempt_count": 13,
+        "moving_averages": {
+          "hold": 0.2308,
+          "discard": 0.2308,
+          "rollback_signal": 0.0
+        },
+        "rework_count": 0,
+        "rollback_signal_count": 0,
+        "defect_escape_pair_count": 0
+      },
+      "target_signals": [
+        {
+          "primary_targets": [
+            "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+          ],
+          "candidate_ids": [
+            "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime"
+          ],
+          "candidate_types": [
+            "mechanism_eval_stagnation_candidate"
+          ],
+          "families": [
+            "contract_regression_signals"
+          ],
+          "candidate_count_by_family": {
+            "contract_regression_signals": 1
+          },
+          "current_priority_max": 100,
+          "attempt_count": 9,
+          "source_run_ids": [
+            "auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime",
+            "run-20260422-auto-improve-decision-record-fallback",
+            "run-20260422-auto-improve-decision-record-fallback-retry",
+            "run-20260422-auto-improve-decision-record-fallback-retry2",
+            "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+            "run-20260422-auto-improve-timeout-telemetry-fallback",
+            "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
+            "run-20260507-auto-improve-iteration-persistence-discard-path",
+            "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+          ],
+          "hold_count": 3,
+          "discard_count": 2,
+          "hold_moving_average": 0.3333,
+          "discard_moving_average": 0.2222,
+          "rollback_signal_count": 0,
+          "rollback_signal_ratio": 0.0,
+          "rework_count": 0,
+          "defect_escape_pair_count": 0,
+          "preview_flags": [
+            "recent_hold_moving_average"
+          ]
+        }
+      ],
+      "family_signals": [
+        {
+          "family": "contract_regression_signals",
+          "target_count": 1,
+          "candidate_count": 1,
+          "attempt_count": 9,
+          "hold_count": 3,
+          "discard_count": 2,
+          "rollback_signal_count": 0,
+          "rework_count": 0,
+          "defect_escape_pair_count": 0,
+          "preview_flags": [
+            "recent_hold_moving_average"
+          ],
+          "hold_moving_average": 0.3333,
+          "discard_moving_average": 0.2222,
+          "rollback_signal_ratio": 0.0
+        }
+      ],
+      "high_rework_targets": [],
+      "defect_escape_pairs": [],
+      "shadow_priority": {
+        "status": "disabled",
+        "gate_effect": "none",
+        "min_attempts_considered": 10,
+        "min_target_attempts": 2,
+        "shadow_priority_max_delta": 10,
+        "attempts_considered": 13,
+        "current_order": [
+          "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime"
+        ],
+        "shadow_order": [
+          "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime"
+        ],
+        "order_changed": false,
+        "ordering_deltas": []
+      },
+      "evidence_gaps": [],
+      "notes": [
+        "audit-only preview: outcome metrics are reported for calibration review and do not change candidate priority.",
+        "priority_delta and gate integration remain disabled until a later explicit policy step."
+      ]
+    },
+    "candidate_blockers": []
+  },
+  "candidates": [
+    {
+      "candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
+      "candidate_type": "mechanism_eval_stagnation_candidate",
+      "family": "contract_regression_signals",
+      "tier": "supporting",
+      "objective": "detect repeated non-improvement against current contract-eval surfaces",
+      "priority": 100,
+      "primary_targets": [
+        "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/schemas/run-telemetry.schema.json"
+      ],
+      "metrics_triggered": [
+        "stage1_same_eval_rate",
+        "repeated_discard_runs"
+      ],
+      "run_ids": [
+        "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+        "run-20260422-auto-improve-timeout-telemetry-fallback",
+        "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
+        "run-20260507-auto-improve-iteration-persistence-discard-path",
+        "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+      ],
+      "evidence": {
+        "runs_examined": 5,
+        "same_eval_runs": 5,
+        "discard_runs": 2,
+        "latest_baseline_eval_score": 4792,
+        "latest_candidate_eval_score": 4792
+      },
+      "rationale": "최근 5개 mechanism run에서 eval non-improvement 또는 DISCARD가 반복돼 다음 실험 scope를 더 좁히거나 failure mode를 재국소화할 필요가 있다.",
+      "suggested_experiments": [
+        "try one mechanism-only experiment on ops/scripts/auto_improve_iteration_persistence_runtime.py",
+        "reduce experiment scope and isolate one failure mode in ops/scripts/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "signal_run_ids": {
+        "repeated_discard_runs": [
+          "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+          "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+        ],
+        "repeated_same_eval_after_promote": [
+          "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+          "run-20260422-auto-improve-timeout-telemetry-fallback",
+          "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
+          "run-20260507-auto-improve-iteration-persistence-discard-path",
+          "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+        ]
+      },
+      "historical_calibration": {
+        "lookback_runs": 6,
+        "history_window_runs": 6,
+        "unstable_followup_window": 2,
+        "historical_promote_count": 3,
+        "promoted_then_regressed_count": 1,
+        "repeated_same_eval_after_promote_count": 3,
+        "durable_promote_count": 0,
+        "priority_before_calibration": 80,
+        "priority_delta": 20,
+        "priority_after_calibration": 100
+      },
+      "session_calibration": {
+        "runs_with_session_context": 3,
+        "sessions_considered": 2,
+        "sessions_with_rollups": 1,
+        "validation_blocked_sessions": 0,
+        "review_blocked_sessions": 0,
+        "mutation_failed_sessions": 0,
+        "validator_dispatch_sessions": 0,
+        "reviewer_dispatch_sessions": 0,
+        "high_risk_routing_sessions": 0,
+        "priority_before_calibration": 100,
+        "priority_delta": 0,
+        "priority_after_calibration": 100
+      }
+    }
+  ]
+}

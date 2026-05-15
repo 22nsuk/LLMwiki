@@ -1,0 +1,73 @@
+{
+  "$schema": "ops/schemas/run-telemetry.schema.json",
+  "session_id": "",
+  "run_id": "run-20260422-auto-improve-decision-record-fallback-retry2",
+  "generated_at": "2026-04-22T14:12:27Z",
+  "proposal_id": "",
+  "proposal_snapshot": "",
+  "scope_freeze": "",
+  "routing_reports": [],
+  "executor_reports": [],
+  "primary_targets": [
+    "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+  ],
+  "supporting_targets": [
+    "ops/schemas/run-telemetry.schema.json"
+  ],
+  "test_files": [
+    "tests/test_auto_improve_iteration_runtime.py"
+  ],
+  "phase_durations": {},
+  "failure_taxonomy": "legacy_backfill_incomplete",
+  "command_timeouts": {
+    "mutation_command": {
+      "timed_out": false,
+      "timeout_seconds": 5400,
+      "termination_reason": "completed",
+      "launch_succeeded": true,
+      "signal_sent": "none",
+      "final_state_observed": "completed",
+      "stdout_received": true,
+      "stderr_received": true
+    },
+    "repo_health": {
+      "timed_out": false,
+      "timeout_seconds": 5400,
+      "termination_reason": "",
+      "launch_succeeded": false,
+      "signal_sent": "none",
+      "final_state_observed": "",
+      "stdout_received": false,
+      "stderr_received": false
+    }
+  },
+  "decision": "HOLD",
+  "finalized": false,
+  "finalize_result": {},
+  "workspace_preparation": {
+    "mode": "full_copy",
+    "diff_model": "full_workspace",
+    "baseline_file_count": 0,
+    "copied_file_count": 0,
+    "diff_universe_file_count": 0,
+    "copy_entry_count": 0,
+    "phase_durations": {}
+  },
+  "behavior_delta": "",
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-04-22T14:12:27Z\", \"generated_at_source\": \"payload.generated_at\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-05-06T15:25:32Z\", \"source_artifact\": \"runs/run-20260422-auto-improve-decision-record-fallback-retry2/run-telemetry.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/run-telemetry.schema.json\", \"artifact_kind\": \"run_telemetry\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-05-06T15:25:32Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-04-22T14:12:27Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"dedb37d3e20a8182497630dafb5ee87d35950b10862daf40cbd5306cc91ca74a\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"fc0340f868a19c5980eebfb4b9eb41620ff6571ed9de83a030bf0a59b3d20be6\", \"policy\": \"606ba1235550f640f7365d46d76aa52b84ef8f831502790010a6c776a7b721d1\", \"schema\": \"2d7cb185ccb04e4b295b2a41111dc218d05198dc27a3d9dd86492bb9ff2c0a7d\", \"target_rel_path\": \"1fa9126da965ff11dd103703d328fb871f1a31c3f8f2eab20562c944e2f18ba0\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/run-20260422-auto-improve-decision-record-fallback-retry2/run-telemetry.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"50083d06eb76e4feb1353d310173d09449792103ecdbd9d8836d0a1a80daddbc\"}"
+      },
+      {
+        "name": "urn:openai:legacy-run-telemetry-backfill",
+        "value": "{\"backfill_scope\":\"presence_only\",\"generated_from\":[\"runs/run-20260422-auto-improve-decision-record-fallback-retry2/run-ledger.json\",\"runs/run-20260422-auto-improve-decision-record-fallback-retry2/promotion-report.json\",\"runs/run-20260422-auto-improve-decision-record-fallback-retry2/candidate-mechanism-assessment.json\"],\"reason\":\"Recover missing run-telemetry presence for learning-delta-scoreboard while leaving typed same-eval reason, strict secondary improvement, and behavior delta digest unset.\",\"normalized_at\":\"2026-05-07T00:00:00Z\"}"
+      }
+    ]
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "$schema": "ops/schemas/seed.schema.json",
+  "run_id": "seed-public-smoke",
+  "mode": "planning",
+  "request": {
+    "summary": "Public mirror smoke seed for validating seed schema and private path hygiene.",
+    "requester": "runtime-maintainer",
+    "source_pages": [
+      "ops/templates/seed.yaml"
+    ]
+  },
+  "state": {
+    "current": "SEED_FROZEN",
+    "allowed_next": [
+      "PLAN_DRAFT",
+      "VALIDATION"
+    ]
+  },
+  "goals": {
+    "primary": [
+      "Keep a deterministic public-safe seed fixture available for mirror validation."
+    ],
+    "non_goals": [
+      "Do not depend on private corpus, run artifacts, or local diagnostic workspaces."
+    ]
+  },
+  "constraints": {
+    "hard": [
+      "Use only public mirror paths.",
+      "Avoid private corpus prefixes."
+    ],
+    "soft": [
+      "Keep the fixture compact and human-reviewable."
+    ]
+  },
+  "success_criteria": [
+    {
+      "id": "schema_valid",
+      "text": "The seed fixture validates against ops/schemas/seed.schema.json.",
+      "trace": [
+        "tests/test_seed_public_mirror_contract.py"
+      ]
+    },
+    {
+      "id": "private_path_free",
+      "text": "The seed fixture contains no path references excluded from the public mirror.",
+      "trace": [
+        "tests/test_seed_public_mirror_contract.py"
+      ]
+    }
+  ],
+  "assumptions": {
+    "open": [],
+    "frozen": [
+      "tests/fixtures is part of the public mirror surface.",
+      "This fixture is schema coverage, not release evidence."
+    ]
+  },
+  "evidence": {
+    "wiki_pages": [],
+    "raw_sources": [],
+    "public_sources": [
+      "ops/schemas/seed.schema.json",
+      "tests/test_seed_public_mirror_contract.py"
+    ]
+  },
+  "signoff": {
+    "status": "approved",
+    "by": "runtime-maintainer",
+    "ts": "2026-05-03T00:00:00Z"
+  },
+  "notes": "Public-safe seed fixture for aggregate public test coverage."
+}

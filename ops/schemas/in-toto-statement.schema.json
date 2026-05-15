@@ -1,0 +1,259 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki In-Toto Statement",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "vault",
+    "generated_at",
+    "policy",
+    "_type",
+    "subject",
+    "predicateType",
+    "predicate",
+    "artifact_context"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/in-toto-statement.schema.json"
+      ]
+    },
+    "vault": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "policy": {
+      "$ref": "#/$defs/policy"
+    },
+    "metadata": {
+      "$ref": "#/$defs/artifactMetadata"
+    },
+    "_type": {
+      "type": "string",
+      "enum": [
+        "https://in-toto.io/Statement/v1"
+      ]
+    },
+    "subject": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/subject"
+      },
+      "minItems": 1
+    },
+    "predicateType": {
+      "type": "string",
+      "enum": [
+        "https://slsa.dev/provenance/v1"
+      ]
+    },
+    "predicate": {
+      "$ref": "#/$defs/predicate"
+    },
+    "artifact_context": {
+      "$ref": "#/$defs/artifactContext"
+    }
+  },
+  "$defs": {
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      }
+    },
+    "artifactMetadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "properties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artifactMetadataProperty"
+          }
+        }
+      }
+    },
+    "artifactMetadataProperty": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "name",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "digest"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sha256"
+      ],
+      "properties": {
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "material": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "uri",
+        "digest"
+      ],
+      "properties": {
+        "uri": {
+          "type": "string"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "artifactContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_set_id",
+        "model_ref",
+        "spdx_ref",
+        "openvex_ref"
+      ],
+      "properties": {
+        "artifact_set_id": {
+          "type": "string"
+        },
+        "model_ref": {
+          "type": "string"
+        },
+        "spdx_ref": {
+          "type": "string"
+        },
+        "openvex_ref": {
+          "type": "string"
+        }
+      }
+    },
+    "predicate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "buildDefinition",
+        "runDetails"
+      ],
+      "properties": {
+        "buildDefinition": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "buildType",
+            "externalParameters",
+            "internalParameters",
+            "resolvedDependencies"
+          ],
+          "properties": {
+            "buildType": {
+              "type": "string"
+            },
+            "externalParameters": {
+              "type": "object"
+            },
+            "internalParameters": {
+              "type": "object"
+            },
+            "resolvedDependencies": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/material"
+              }
+            }
+          }
+        },
+        "runDetails": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "builder",
+            "metadata"
+          ],
+          "properties": {
+            "builder": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                }
+              }
+            },
+            "metadata": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "invocationId",
+                "startedOn",
+                "finishedOn"
+              ],
+              "properties": {
+                "invocationId": {
+                  "type": "string"
+                },
+                "startedOn": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+                },
+                "finishedOn": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "session_id": "auto-improve-2026-05-02t03-27-31z",
+  "run_id": "auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime",
+  "generated_at": "2026-05-02T03:27:34Z",
+  "proposal_id": "repeated_same_eval_or_discard__auto-improve-iteration-persistence-runtime",
+  "source_candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
+  "proposal_snapshot": "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/proposal-snapshot.json",
+  "scope_freeze": "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/scope-freeze.json",
+  "routing_reports": [
+    "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.worker.json",
+    "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.reviewer.json",
+    "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.provenance-auditor.json"
+  ],
+  "executor_reports": [
+    "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/worker-executor-report.json",
+    "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/reviewer-executor-report.json",
+    "runs/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/provenance-auditor-executor-report.json"
+  ],
+  "phase_durations": {
+    "scope_freeze": 0.007,
+    "routing": 0.401,
+    "scaffold": 0.48,
+    "experiment": 0.0
+  },
+  "failure_taxonomy": "scope_blocked",
+  "decision": "",
+  "finalized": false,
+  "finalize_result": {},
+  "supporting_targets": [
+    "ops/schemas/run-telemetry.schema.json"
+  ],
+  "test_files": [],
+  "primary_targets": [
+    "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+  ],
+  "decision_record": {
+    "decision_id": "decision:auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime:c606c035b8b81ea9",
+    "subject_id": "auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime",
+    "subject_kind": "system_mechanism",
+    "decision": "HOLD",
+    "decision_stage": "promotion_gate",
+    "is_terminal": false,
+    "policy_version": 0,
+    "source_rule": "legacy_top_level_decision",
+    "source_pass": "legacy_promotion_report",
+    "actor": "legacy_promotion_report",
+    "reason_code": "legacy_promotion_report",
+    "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+    "evidence_refs": [],
+    "decided_at": "",
+    "effective_at": "",
+    "supersedes": [],
+    "reducer_key": "promotion_decision_registry_v1",
+    "precedence_key": "0050:HOLD",
+    "dedupe_key": "auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime:promotion_gate",
+    "finalizable": false,
+    "finalize_blockers": [
+      "decision_not_finalizable",
+      "required_signoff_not_approved"
+    ],
+    "ledger_event_type": "promotion_evaluated",
+    "ledger_partition_key": "auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime"
+  },
+  "command_timeouts": {
+    "mutation_command": {
+      "timed_out": false,
+      "timeout_seconds": 0,
+      "termination_reason": "",
+      "launch_succeeded": true,
+      "signal_sent": "none",
+      "final_state_observed": "",
+      "stdout_received": false,
+      "stderr_received": false
+    },
+    "repo_health": {
+      "timed_out": false,
+      "timeout_seconds": 0,
+      "termination_reason": "",
+      "launch_succeeded": true,
+      "signal_sent": "none",
+      "final_state_observed": "",
+      "stdout_received": false,
+      "stderr_received": false
+    }
+  },
+  "$schema": "ops/schemas/run-telemetry.schema.json",
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:archived-run-backfill",
+        "value": "{\"archive_reason\": \"run_artifact_embedded_envelope_backfill\", \"envelope_mode\": \"metadata.properties\", \"generated_at\": \"2026-05-02T03:27:34Z\", \"generated_at_source\": \"payload.generated_at\", \"helper\": \"ops.scripts.backfill_archived_run_artifacts\", \"normalized_at\": \"2026-05-02T05:48:12Z\", \"source_artifact\": \"runs/archive/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json\"}"
+      },
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/run-telemetry.schema.json\", \"artifact_kind\": \"run_telemetry\", \"artifact_status\": \"archived\", \"currentness\": {\"checked_at\": \"2026-05-02T05:48:12Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-02T03:27:34Z\", \"input_fingerprints\": {\"archived_run_payload_before_backfill\": \"a6ac0e149aff97e502cca0f3fbf55c932d43dc5d4bad639fa13420f95f50f33d\", \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"envelope_mode\": \"f9416f4de9dee1f94a28cfe3816ddf91a55b45560a990e9279c2582a6cf47e35\", \"generated_at_source\": \"fc0340f868a19c5980eebfb4b9eb41620ff6571ed9de83a030bf0a59b3d20be6\", \"policy\": \"7d45acc617992bca127ce0b7defb6715caac5b774dcc489acf984502cea3a402\", \"schema\": \"50f3fd46c8103d1511272b745ee7ad2e88fceadeaac28d5b0a48fa8429077a6b\", \"target_rel_path\": \"9f9c4e50954b7f97ae23c8fd40728d7a1f462411cb1307e63a3ec9a2e3f04d28\"}, \"producer\": \"ops.scripts.backfill_archived_run_artifacts\", \"retention_policy\": \"archive\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.backfill_archived_run_artifacts --vault . --path runs/archive/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"41b1839ac149b5f321b5037bbd5caf4b174d61ce791ec1182e0daa57534d5c06\"}"
+      }
+    ]
+  }
+}

@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Mechanism Proposal Scope Freeze",
+  "type": "object",
+  "required": [
+    "$schema",
+    "run_id",
+    "proposal_id",
+    "source_candidate_id",
+    "generated_at",
+    "policy",
+    "status",
+    "inputs",
+    "resolution",
+    "apply_guardrails",
+    "dispatch"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/proposal-scope.schema.json"
+      ]
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "proposal_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_candidate_id": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "policy": {
+      "type": "object",
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "runnable",
+        "blocked"
+      ]
+    },
+    "inputs": {
+      "type": "object",
+      "required": [
+        "primary_targets",
+        "supporting_targets"
+      ],
+      "properties": {
+        "primary_targets": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "supporting_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "resolution": {
+      "type": "object",
+      "required": [
+        "test_files",
+        "risk_flags",
+        "blocked_by"
+      ],
+      "properties": {
+        "test_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "risk_flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "blocked_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "apply_guardrails": {
+      "type": "object",
+      "required": [
+        "allowed_apply_roots"
+      ],
+      "properties": {
+        "allowed_apply_roots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "dispatch": {
+      "type": "object",
+      "required": [
+        "worker",
+        "validator",
+        "reviewer",
+        "auditors"
+      ],
+      "properties": {
+        "worker": {
+          "type": "boolean"
+        },
+        "validator": {
+          "type": "boolean"
+        },
+        "reviewer": {
+          "type": "boolean"
+        },
+        "auditors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

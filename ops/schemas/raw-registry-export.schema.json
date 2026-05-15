@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Raw Registry Export",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary_page", "entry_pages", "entry_count", "entries"],
+  "properties": {
+    "summary_page": { "type": "string", "minLength": 1 },
+    "entry_pages": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "entry_count": { "type": "integer", "minimum": 0 },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["registry_id", "storage_path"],
+        "properties": {
+          "registry_id": { "type": "string", "minLength": 1 },
+          "storage_path": { "type": "string", "minLength": 1 },
+          "display_path": { "type": "string" },
+          "path_aliases": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "content_sha256": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

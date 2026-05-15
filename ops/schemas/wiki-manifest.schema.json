@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Wiki Release Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["files", "exclusion_policy"],
+  "properties": {
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "size_bytes"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "size_bytes": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "exclusion_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "excluded_prefixes",
+        "excluded_files",
+        "excluded_cache_dirs",
+        "excluded_dev_hidden_dirs",
+        "excluded_suffixes",
+        "excluded_egg_info_dirs"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["release_manifest_exclusions"]
+        },
+        "excluded_prefixes": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "excluded_files": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "excluded_cache_dirs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "excluded_dev_hidden_dirs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "excluded_suffixes": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "excluded_egg_info_dirs": { "type": "boolean" }
+      }
+    }
+  }
+}

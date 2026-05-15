@@ -1,0 +1,12 @@
+{
+  "$schema": "ops/schemas/test-deselection-policy.schema.json",
+  "policy_kind": "test_deselection_policy",
+  "deselection_budget": {
+    "max_count": 0,
+    "risk_owner": "runtime-maintainer",
+    "expires_at": "2026-06-14T00:00:00Z",
+    "count_increase_gate_effect": "fail",
+    "expiry_gate_effect": "fail"
+  },
+  "deselected_tests": []
+}

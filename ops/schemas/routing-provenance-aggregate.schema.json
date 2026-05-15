@@ -1,0 +1,590 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Routing Provenance Aggregate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "session_id",
+    "generated_at",
+    "policy",
+    "source_session_report",
+    "summary",
+    "audit_rollup",
+    "runs"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/routing-provenance-aggregate.schema.json"
+      ]
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "artifact_kind": {
+      "type": "string"
+    },
+    "producer": {
+      "type": "string"
+    },
+    "source_command": {
+      "type": "string"
+    },
+    "source_revision": {
+      "type": "string"
+    },
+    "source_tree_fingerprint": {
+      "type": "string"
+    },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_status": {
+      "type": "string",
+      "enum": [
+        "current",
+        "archived",
+        "stale",
+        "unknown"
+      ]
+    },
+    "retention_policy": {
+      "type": "string",
+      "enum": [
+        "ephemeral",
+        "canonical_report",
+        "archive"
+      ]
+    },
+    "encoding": {
+      "type": "string",
+      "enum": [
+        "utf-8"
+      ]
+    },
+    "currentness": {
+      "$ref": "#/$defs/currentness"
+    },
+    "policy": {
+      "$ref": "#/$defs/policy"
+    },
+    "source_session_report": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_count",
+        "routing_report_count",
+        "executor_report_count",
+        "telemetry_report_count",
+        "promotion_report_count",
+        "artifact_fingerprint_count"
+      ],
+      "properties": {
+        "run_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "routing_report_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "executor_report_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "telemetry_report_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "promotion_report_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "artifact_fingerprint_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "audit_rollup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "routing",
+        "executor",
+        "telemetry",
+        "coverage",
+        "loop_health"
+      ],
+      "properties": {
+        "routing": {
+          "$ref": "#/$defs/routing_rollup"
+        },
+        "executor": {
+          "$ref": "#/$defs/executor_rollup"
+        },
+        "telemetry": {
+          "$ref": "#/$defs/telemetry_rollup"
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage_rollup"
+        },
+        "loop_health": {
+          "$ref": "#/$defs/loop_health_rollup"
+        }
+      }
+    },
+    "runs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/run"
+      }
+    }
+  },
+  "$defs": {
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "checked_at"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown",
+            "invalid"
+          ]
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      }
+    },
+    "counter": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "number_counter": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0
+      }
+    },
+    "routing_rollup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "report_count",
+        "role_counts",
+        "selected_rung_counts",
+        "score_band_counts",
+        "sandbox_mode_counts",
+        "model_counts",
+        "reasoning_effort_counts",
+        "risk_flag_counts"
+      ],
+      "properties": {
+        "report_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "role_counts": {
+          "$ref": "#/$defs/counter"
+        },
+        "selected_rung_counts": {
+          "$ref": "#/$defs/counter"
+        },
+        "score_band_counts": {
+          "$ref": "#/$defs/counter"
+        },
+        "sandbox_mode_counts": {
+          "$ref": "#/$defs/counter"
+        },
+        "model_counts": {
+          "$ref": "#/$defs/counter"
+        },
+        "reasoning_effort_counts": {
+          "$ref": "#/$defs/counter"
+        },
+        "risk_flag_counts": {
+          "$ref": "#/$defs/counter"
+        }
+      }
+    },
+    "executor_rollup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "report_count",
+        "role_counts",
+        "status_counts",
+        "blocking_role_counts",
+        "returncode_counts"
+      ],
+      "properties": {
+        "report_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "role_counts": {
+          "$ref": "#/$defs/counter"
+        },
+        "status_counts": {
+          "$ref": "#/$defs/counter"
+        },
+        "blocking_role_counts": {
+          "$ref": "#/$defs/counter"
+        },
+        "returncode_counts": {
+          "$ref": "#/$defs/counter"
+        }
+      }
+    },
+    "telemetry_rollup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "report_count",
+        "failure_taxonomy_counts",
+        "phase_totals_seconds",
+        "phase_max_seconds"
+      ],
+      "properties": {
+        "report_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failure_taxonomy_counts": {
+          "$ref": "#/$defs/counter"
+        },
+        "phase_totals_seconds": {
+          "$ref": "#/$defs/number_counter"
+        },
+        "phase_max_seconds": {
+          "$ref": "#/$defs/number_counter"
+        }
+      }
+    },
+    "coverage_rollup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_count",
+        "runs_with_routing",
+        "runs_with_executor",
+        "runs_with_telemetry",
+        "runs_with_promotion_report",
+        "runs_with_artifact_fingerprint"
+      ],
+      "properties": {
+        "run_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "runs_with_routing": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "runs_with_executor": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "runs_with_telemetry": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "runs_with_promotion_report": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "runs_with_artifact_fingerprint": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "moving_average_rollup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hold",
+        "discard",
+        "rollback_signal"
+      ],
+      "properties": {
+        "hold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "discard": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "rollback_signal": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "coverage_ratio_rollup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "routing",
+        "executor",
+        "telemetry",
+        "promotion_report",
+        "artifact_fingerprint"
+      ],
+      "properties": {
+        "routing": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "executor": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "telemetry": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "promotion_report": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "artifact_fingerprint": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "loop_health_rollup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempt_count",
+        "rework_count",
+        "rollback_signal_count",
+        "rollback_rehearsal_coverage_count",
+        "defect_escape_count",
+        "finalized_run_count",
+        "executor_failure_count",
+        "routing_report_parse_gap_count",
+        "executor_report_parse_gap_count",
+        "moving_averages",
+        "coverage_ratios",
+        "health_flags"
+      ],
+      "properties": {
+        "attempt_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rework_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rollback_signal_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rollback_rehearsal_coverage_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "defect_escape_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "finalized_run_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "executor_failure_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "routing_report_parse_gap_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "executor_report_parse_gap_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "moving_averages": {
+          "$ref": "#/$defs/moving_average_rollup"
+        },
+        "coverage_ratios": {
+          "$ref": "#/$defs/coverage_ratio_rollup"
+        },
+        "health_flags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "proposal_id",
+        "source_candidate_id",
+        "decision",
+        "outcome",
+        "primary_targets",
+        "supporting_targets",
+        "test_files",
+        "risk_flags",
+        "roles",
+        "artifacts"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "proposal_id": {
+          "type": "string"
+        },
+        "source_candidate_id": {
+          "type": "string"
+        },
+        "decision": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "primary_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supporting_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "test_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "risk_flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "artifacts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "proposal_snapshot",
+            "scope_freeze",
+            "routing_reports",
+            "executor_reports",
+            "run_telemetry",
+            "promotion_report",
+            "run_artifact_fingerprint"
+          ],
+          "properties": {
+            "proposal_snapshot": {
+              "type": "string"
+            },
+            "scope_freeze": {
+              "type": "string"
+            },
+            "routing_reports": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "executor_reports": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "run_telemetry": {
+              "type": "string"
+            },
+            "promotion_report": {
+              "type": "string"
+            },
+            "run_artifact_fingerprint": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}
