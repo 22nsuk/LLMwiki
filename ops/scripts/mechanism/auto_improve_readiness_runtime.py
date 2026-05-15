@@ -35,6 +35,7 @@ from .auto_improve_readiness_constants_runtime import (
     READINESS_TARGET,
     REFRESH_GENERATED_TARGET,
     RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
+    RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATHS,
     RELEASE_CLOSEOUT_BATCH_MANIFEST_REPORT_REL_PATH,
     RELEASE_CLOSEOUT_FINALITY_ATTESTATION_REPORT_REL_PATH,
     RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH,
@@ -180,6 +181,14 @@ def _load_optional_json(path: Path) -> dict[str, Any]:
     return load_optional_json_object(path)
 
 
+def _load_release_authority_preflight_json(vault: Path) -> dict[str, Any]:
+    for rel_path in RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATHS:
+        payload = _load_optional_json(vault / rel_path)
+        if payload:
+            return {**payload, "_source_rel_path": rel_path}
+    return {}
+
+
 def _string_list(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
@@ -250,9 +259,7 @@ def _load_readiness_report_payloads(
         "release_finality": _load_json(vault / RELEASE_CLOSEOUT_FINALITY_ATTESTATION_REPORT_REL_PATH),
         "release_evidence_cohort": _load_json(vault / RELEASE_EVIDENCE_COHORT_REPORT_REL_PATH),
         "artifact_finalization": _load_json(vault / RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH),
-        "release_authority_preflight": _load_optional_json(
-            vault / RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH
-        ),
+        "release_authority_preflight": _load_release_authority_preflight_json(vault),
     }
 
 
@@ -635,6 +642,11 @@ def render_readiness_report(
                 "release_evidence_cohort_report": RELEASE_EVIDENCE_COHORT_REPORT_REL_PATH,
                 "release_closeout_post_check_finalizer_report": RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH,
                 "release_authority_preflight_report": RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
+            },
+            path_group_inputs={
+                "release_authority_preflight_report_candidates": list(
+                    RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATHS
+                )
             },
         ),
         "vault": report_path(vault, vault),

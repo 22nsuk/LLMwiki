@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/test-execution-summary.schema.json",
   "artifact_kind": "test_execution_summary",
-  "generated_at": "2026-05-15T06:55:00Z",
+  "generated_at": "2026-05-15T08:36:21Z",
   "producer": "ops.scripts.test_execution_summary",
   "source_command": "python -m ops.scripts.test_execution_summary --vault . --suite full-shard-1 --collect-nodeids -- '<home>/code/LLMwiki/.venv/bin/python' -m pytest --junit-xml build/release-payloads/test-execution-summary-full.junit.xml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e05dd1ad01f3136bc54b44d003569089cff4b3722879f16dfeab135c8f3df868",
+  "source_tree_fingerprint": "74f6df85d2598bde9365df9cbf861cf01e824fc2b647fd72ff7bde56d9bb2d2a",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "8e541e00811969ffb63fb334e04f8206073277c8bd422e88e0df898fd6f20328",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "a02d1a42b2eeccd6fad3b3fc0f542f67ebef3ca13b2b54cdbcbd50c6124e37ee",
     "deselected_tests": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-    "deselection_lifecycle": "3c10776666b146f7ebc8fc2095c3475d5fd9b889b9de72243b67b21c2e49f5be",
-    "evidence_artifacts": "aaeef84d696669608fd36d469ef1e2f2bcce9322ed29830153220381fa0be861",
-    "nodeid_outcome_consistency": "9114d0093925a7dedbdb1cbbf3c99874ca77391490fddaf83905dde852acabca",
+    "deselection_lifecycle": "6f5108b86b8478b710a56939f3e6b735a16731eaf3bdfaa560af0f45b0753698",
+    "evidence_artifacts": "a6ac6c8cba7e19d765043fff143294b5317905c9cba7c0fcb153216b467aa78d",
+    "nodeid_outcome_consistency": "a559b0ec90e27e952c578d0ca7b6d1cb3d445f0c11c4f2c7cf6de5ddef4c5dec",
     "suite": "205588069f5c1a564e866d1a14270117417fcded950f99b3c22d61ea96b2568e",
     "suite_coverage": "3bb5e7571f5a9efa71bb9fff3b6da343e7d855b4a6a2af4f9c9eb7fe5c449cf1",
     "wrapped_command": "fc622d16652169d2ba11b798902516ed9f4c8198a903073deb14a962ca04c73d"
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T06:55:00Z"
+    "checked_at": "2026-05-15T08:36:21Z"
   },
   "vault": ".",
   "policy": {
@@ -48,9 +48,9 @@
   "timed_out": false,
   "timeout_seconds": 5400,
   "termination_reason": "completed",
-  "duration_ms": 326822,
+  "duration_ms": 333065,
   "counts": {
-    "passed": 1243,
+    "passed": 1247,
     "failed": 0,
     "errors": 0,
     "skipped": 0,
@@ -87,7 +87,7 @@
   "deselected_tests": [],
   "deselection_lifecycle": {
     "status": "pass",
-    "checked_at": "2026-05-15T06:55:00Z",
+    "checked_at": "2026-05-15T08:36:21Z",
     "actual_deselected_count": 0,
     "max_allowed_deselected_count": 0,
     "over_budget": false,
@@ -108,16 +108,16 @@
   "pytest_collect_nodeid_digest": {
     "status": "collected",
     "command": "'<home>/code/LLMwiki/.venv/bin/python' -m pytest -o addopts= --collect-only -q --capture=no",
-    "nodeid_count": 1243,
-    "sha256": "f96645c339e24d0f8a67ff183c2c65bd14bcd1b77acfd81b5d57bca586487750",
+    "nodeid_count": 1247,
+    "sha256": "d9d0fdb5c7a8e6bdad4e5994d4a7d5a4cae37c9581342d7fc2f3147c57ec53cf",
     "reason": ""
   },
   "nodeid_outcome_consistency": {
     "status": "pass",
-    "nodeid_count": 1243,
-    "outcome_count": 1243,
+    "nodeid_count": 1247,
+    "outcome_count": 1247,
     "counted_outcomes": {
-      "passed": 1243,
+      "passed": 1247,
       "skipped": 0,
       "xfailed": 0,
       "xpassed": 0
@@ -131,15 +131,15 @@
       "path": "build/release-payloads/test-execution-summary-full.log",
       "exists": true,
       "size_bytes": 1653,
-      "sha256": "d0c39e057d167601242a65199326339b8b09891ef6bfd670ee51610cfdf027d0",
+      "sha256": "4c314b108e63499dad36002e5859851abef91676013e9f077e6a176ea4b3d023",
       "source": "captured_pytest_stdout_stderr"
     },
     {
       "kind": "junit_xml",
       "path": "build/release-payloads/test-execution-summary-full.junit.xml",
       "exists": true,
-      "size_bytes": 210179,
-      "sha256": "91d87c6286d264bfffeac2a62233c400919d0b7356ca5b71d5ed3566357e8fd2",
+      "size_bytes": 210795,
+      "sha256": "2cd52e4e08b3a35b97f7920c0c42f80f12d9b151a7abbef037da20517a029706",
       "source": "pytest_junit_xml"
     },
     {
@@ -151,7 +151,7 @@
       "source": "pytest_failure_nodeids"
     }
   ],
-  "stdout_tail": "........................................................................ [  5%]\n........................................................................ [ 11%]\n........................................................................ [ 17%]\n........................................................................ [ 23%]\n........................................................................ [ 28%]\n........................................................................ [ 34%]\n........................................................................ [ 40%]\n........................................................................ [ 46%]\n........................................................................ [ 52%]\n........................................................................ [ 57%]\n........................................................................ [ 63%]\n........................................................................ [ 69%]\n........................................................................ [ 75%]\n........................................................................ [ 81%]\n........................................................................ [ 86%]\n........................................................................ [ 92%]\n........................................................................ [ 98%]\n...................                                                      [100%]\n- generated xml file: build/release-payloads/test-execution-summary-full.junit.xml -\n1243 passed in 326.44s (0:05:26)\n",
+  "stdout_tail": "........................................................................ [  5%]\n........................................................................ [ 11%]\n........................................................................ [ 17%]\n........................................................................ [ 23%]\n........................................................................ [ 28%]\n........................................................................ [ 34%]\n........................................................................ [ 40%]\n........................................................................ [ 46%]\n........................................................................ [ 51%]\n........................................................................ [ 57%]\n........................................................................ [ 63%]\n........................................................................ [ 69%]\n........................................................................ [ 75%]\n........................................................................ [ 80%]\n........................................................................ [ 86%]\n........................................................................ [ 92%]\n........................................................................ [ 98%]\n.......................                                                  [100%]\n- generated xml file: build/release-payloads/test-execution-summary-full.junit.xml -\n1247 passed in 332.62s (0:05:32)\n",
   "stderr_tail": "",
   "release_contract_diagnosis": [
     {
@@ -159,8 +159,8 @@
       "status": "clean_pass",
       "lane": "clean",
       "command": "'<home>/code/LLMwiki/.venv/bin/python' -m pytest --junit-xml build/release-payloads/test-execution-summary-full.junit.xml",
-      "duration_seconds": 326.82,
-      "checked_at": "2026-05-15T06:55:00Z",
+      "duration_seconds": 333.06,
+      "checked_at": "2026-05-15T08:36:21Z",
       "blocker_conditions": [],
       "accepted_risk_family": null,
       "risk_acceptance_ref": null,

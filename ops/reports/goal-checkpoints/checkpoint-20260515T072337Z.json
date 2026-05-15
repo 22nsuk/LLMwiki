@@ -70,11 +70,11 @@
     "any need to bypass release, promotion, or learning-claim gates"
   ],
   "last_event": {
-    "at": "2026-05-15T07:23:38Z",
-    "event": "goal_run_dry_run",
-    "reason": "profile verification without execution: 30-minute-trial"
+    "at": "2026-05-15T07:23:37Z",
+    "event": "checkpoint",
+    "reason": "dry-run profile verification: 30-minute-trial"
   },
-  "source_command": "python -m ops.scripts.mechanism.auto_improve_loop --goal-contract",
+  "source_command": "python -m ops.scripts.goal_run_status checkpoint",
   "source_revision": "unknown",
   "source_tree_fingerprint": "9cd2b584f92d40bb22366ae25acc11d721c20efc0af9e47ded5bf3da43929bc4",
   "input_fingerprints": {
@@ -86,7 +86,7 @@
     "active_profile": "fc0c321ed58d5953bbb3ffdd5c1980fff91b5e07bd3c8b3a465ec96c18cb190e",
     "baseline_commit": "9b991cc65612a682e508185c9374692f04758bfe41123a7463683e96c0bac3d1",
     "branch": "e4410a50f1dfc09ec1e813e3b514e4a2ebea38f5525fc2e952d887f6160801d9",
-    "event": "5253766303e765adff82d6cc19193805eafbdf93a9e9679297ea06f836c85ac3",
+    "event": "47320987f9a49d5b00119b960f247a956773f57543982b8bfcb6da5bb3afd9ef",
     "goal_id": "e4a44b736df2b23145e0d73c83d2f60e510a8ca025f63c44a84b00dd028d0f38",
     "repo_url": "681f9058c57f621647361263ce7f3f4a11f63c769259f752be9a8157ee01aeff",
     "visibility": "7109ec0807d8f2bd40aa93347ea112977e316242f2d457864041f59dfb684fc0",

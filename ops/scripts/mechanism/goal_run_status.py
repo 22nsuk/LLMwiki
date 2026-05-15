@@ -82,6 +82,8 @@ def _goal_contract_envelope(vault: Path, contract: dict[str, Any]) -> dict[str, 
 def _status_source_command(event: str) -> str:
     if event in {"heartbeat", "checkpoint"}:
         return f"python -m ops.scripts.goal_run_status {event}"
+    if event.startswith("goal_run_"):
+        return "python -m ops.scripts.mechanism.auto_improve_loop --goal-contract"
     return "python -m ops.scripts.goal_run_status init"
 
 
@@ -237,23 +239,46 @@ def default_goal_contract(
 
 
 def _profile_budget(contract: dict[str, Any], active_profile: str) -> dict[str, int]:
-    for item in contract.get("execution_ladder", []):
-        if isinstance(item, dict) and item.get("profile") == active_profile:
-            return {
-                "max_minutes": int(item.get("max_minutes", contract["duration"]["max_minutes"])),
-                "max_proposals": int(item.get("max_proposals", contract["budgets"]["max_proposals"])),
-                "max_consecutive_failures": int(
-                    item.get(
-                        "max_consecutive_failures",
-                        contract["budgets"]["max_consecutive_failures"],
-                    )
-                ),
-            }
+    profile = resolve_execution_profile(contract, active_profile, strict=False)
     return {
+        "max_minutes": int(profile["max_minutes"]),
+        "max_proposals": int(profile["max_proposals"]),
+        "max_consecutive_failures": int(profile["max_consecutive_failures"]),
+    }
+
+
+def resolve_execution_profile(
+    contract: dict[str, Any],
+    active_profile: str,
+    *,
+    strict: bool = True,
+) -> dict[str, int | str]:
+    defaults: dict[str, int | str] = {
+        "profile": active_profile,
         "max_minutes": int(contract["duration"]["max_minutes"]),
         "max_proposals": int(contract["budgets"]["max_proposals"]),
         "max_consecutive_failures": int(contract["budgets"]["max_consecutive_failures"]),
+        "heartbeat_interval_minutes": int(contract["budgets"]["heartbeat_interval_minutes"]),
+        "checkpoint_interval_minutes": int(contract["budgets"]["checkpoint_interval_minutes"]),
+        "readiness_interval_hours": int(contract["budgets"]["readiness_interval_hours"]),
+        "session_synopsis_interval_hours": int(contract["budgets"]["session_synopsis_interval_hours"]),
     }
+    for item in contract.get("execution_ladder", []):
+        if isinstance(item, dict) and item.get("profile") == active_profile:
+            merged: dict[str, Any] = {**defaults, **item}
+            return {
+                "profile": str(merged["profile"]),
+                "max_minutes": int(merged["max_minutes"]),
+                "max_proposals": int(merged["max_proposals"]),
+                "max_consecutive_failures": int(merged["max_consecutive_failures"]),
+                "heartbeat_interval_minutes": int(merged["heartbeat_interval_minutes"]),
+                "checkpoint_interval_minutes": int(merged["checkpoint_interval_minutes"]),
+                "readiness_interval_hours": int(merged["readiness_interval_hours"]),
+                "session_synopsis_interval_hours": int(merged["session_synopsis_interval_hours"]),
+            }
+    if strict:
+        raise ValueError(f"unknown goal execution profile: {active_profile}")
+    return defaults
 
 
 def _heartbeat_status(contract: dict[str, Any], context: RuntimeContext) -> dict[str, Any]:

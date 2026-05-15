@@ -1,19 +1,19 @@
 {
   "$schema": "ops/schemas/learning-confirmed-evidence-cohort.schema.json",
   "artifact_kind": "learning_confirmed_evidence_cohort",
-  "generated_at": "2026-05-15T06:56:37Z",
+  "generated_at": "2026-05-15T08:37:59Z",
   "producer": "ops.scripts.learning_confirmed_evidence_cohort",
   "source_command": "python -m ops.scripts.learning_confirmed_evidence_cohort --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e05dd1ad01f3136bc54b44d003569089cff4b3722879f16dfeab135c8f3df868",
+  "source_tree_fingerprint": "74f6df85d2598bde9365df9cbf861cf01e824fc2b647fd72ff7bde56d9bb2d2a",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "8c3178155a66500faa6980395a127016ff8d3dc12163d13c5091b32fde54d9af",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "bb2b3947b63a1c821751be9887477d93589a392612908825b73b590d5bf80e60",
     "confirmed_policy": "5e86b887186269f50558391f58a47354a3db210845541c2d30f0f41855937f52",
-    "learning_claim_evidence_bundle": "5aa3920df3b1efeb5faf5290b71379a46ae4291bc7f1591045bec845f0634a5a",
-    "mutation_proposals": "e33d709a1bfa6d47340fdc30f761e4a1d8a90a50dcfaad5880ac68ec073da5f5",
+    "learning_claim_evidence_bundle": "05d451007502173d7ba72f3d29a7fbc872f51fd6059376b01a5ef24cb944940f",
+    "mutation_proposals": "22129ea707bdc30bdaf4da9ce2314b1be2baeb1880df8ab5ea58aa0c51a1db3d",
     "confirmed_behavior_delta": "134969a5ecf16a917fee6939cf3eaa7bbc36b3482a227e5ec46479c46041505f",
     "confirmed_run_artifacts": "dd1a6711abaed914f144bf0575730b3c36ad368ab91fe530121393cef3c7ca9d",
     "confirmed_run_telemetry": "28eb2b94ce518e6fa681f5aec6dec26699568e244393237772e71d9a5d292f95"
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T06:56:37Z"
+    "checked_at": "2026-05-15T08:37:59Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
   },
   "status": "pass",
   "summary": {
-    "cohort_sha256": "6c1b8c58c9f6126abd42712e38cdbc3c883413b4393e3944fe2cad0ae4d48921",
+    "cohort_sha256": "b69105e336bdd8c8bd5b31bf95d13aad0dd8f35da8828cc90c18c4a3b447da1f",
     "confirmed_evidence_status": "auto_confirmed",
     "confirmed_learning_improvement_allowed": true,
     "evidence_bundle_status": "active",
@@ -170,12 +170,12 @@
   "cohort_identity": {
     "digest_algorithm": "sha256",
     "cohort_payload_version": 1,
-    "cohort_digest": "6c1b8c58c9f6126abd42712e38cdbc3c883413b4393e3944fe2cad0ae4d48921"
+    "cohort_digest": "b69105e336bdd8c8bd5b31bf95d13aad0dd8f35da8828cc90c18c4a3b447da1f"
   },
   "source_bundle": {
     "path": "ops/reports/learning-claim-evidence-bundle.json",
-    "bundle_sha256": "a1c65eb4320a64cec1dc421ee77973aec2b7e21b6155fe10b69e1fc982c15602",
-    "current_bundle_sha256": "a1c65eb4320a64cec1dc421ee77973aec2b7e21b6155fe10b69e1fc982c15602",
+    "bundle_sha256": "bea30523a2156b90b3f557024f043833426c5c510c2d6ed234d1b0e7531e8627",
+    "current_bundle_sha256": "bea30523a2156b90b3f557024f043833426c5c510c2d6ed234d1b0e7531e8627",
     "bundle_status": "active",
     "revocation_status": "active",
     "fingerprint_match_status": "match"

@@ -1,25 +1,25 @@
 {
   "$schema": "ops/schemas/learning-claim-unlock-review.schema.json",
   "artifact_kind": "learning_claim_unlock_review",
-  "generated_at": "2026-05-15T06:56:37Z",
+  "generated_at": "2026-05-15T08:38:00Z",
   "producer": "ops.scripts.learning_claim_unlock_review",
   "source_command": "python -m ops.scripts.learning_claim_unlock_review --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e05dd1ad01f3136bc54b44d003569089cff4b3722879f16dfeab135c8f3df868",
+  "source_tree_fingerprint": "74f6df85d2598bde9365df9cbf861cf01e824fc2b647fd72ff7bde56d9bb2d2a",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "cd80b9607a6fc5bc8ffc579e219a131f7e53ad5ccff551f08e409f55fb80b9c1",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "18e8aceb127c480719a21d82ad8ba473e22f740764772e41783cc53c22e1451a",
-    "auto_improve_readiness": "8e18e62d4cf17e72f042e71f99b45416d557230bce075b3e911ead81c2631072",
-    "learning_claim_evidence_bundle": "5aa3920df3b1efeb5faf5290b71379a46ae4291bc7f1591045bec845f0634a5a",
+    "auto_improve_readiness": "e2b8a4bb637799a767e82b05677eb0d643a632edf46dae87f5895335ebbef3f5",
+    "learning_claim_evidence_bundle": "05d451007502173d7ba72f3d29a7fbc872f51fd6059376b01a5ef24cb944940f",
     "approved_by": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "auto_policy_path": "3f45ad5440c4c08a2eb1578032fc6a9cc18a7805617282c0ebf01507c224d3b4",
     "blocking_blocker_ids": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "blocking_signal_ids": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "confirmed_policy_path": "7a5bf75deba862ce20f09c5bacfb73b21debca9abd9917002f104de90be9a510",
     "evidence_bundle_path": "1e20a8a0389b4be330c122401a83c74021f13d466bf7db3d29c3c391e2ee388d",
-    "machine_policy_decision": "92755f16e55dd291c7579aefe929261e7698f7e3e87dd26e1c1a20b587dd9d4c",
+    "machine_policy_decision": "7035220e1381dbd7a6d4cc23d7142aa90b38c615de808995ec9b50576a227ba2",
     "reviewed_at": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
   "schema_version": 1,
@@ -28,19 +28,19 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T06:56:37Z"
+    "checked_at": "2026-05-15T08:38:00Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "review_status": "required",
-  "approved": false,
-  "approval_mode": "none",
+  "review_status": "auto_approved",
+  "approved": true,
+  "approval_mode": "machine_policy",
   "reviewed_by": "",
   "reviewed_at": "",
-  "decision_reason": "Typed same-eval coverage may be full, but learning claim unlock remains inappropriate until an operator approves release dashboard, readiness, strict-secondary axes, and behavior-delta provenance after remaining readiness signals close.",
+  "decision_reason": "Machine policy auto-approved the bounded learning-likely claim for the active evidence bundle.",
   "source_paths": [
     "ops/reports/release-evidence-dashboard.json",
     "ops/reports/auto-improve-readiness.json",
@@ -59,17 +59,17 @@
     "enabled": true,
     "policy_path": "ops/policies/learning-claim-auto-unlock.json",
     "policy_version": 1,
-    "decision": "requires_human",
-    "evidence_bundle_digest": "a1c65eb4320a64cec1dc421ee77973aec2b7e21b6155fe10b69e1fc982c15602",
+    "decision": "auto_approved",
+    "evidence_bundle_digest": "bea30523a2156b90b3f557024f043833426c5c510c2d6ed234d1b0e7531e8627",
     "bundle_path": "ops/reports/learning-claim-evidence-bundle.json",
-    "bundle_sha256": "a1c65eb4320a64cec1dc421ee77973aec2b7e21b6155fe10b69e1fc982c15602",
-    "current_bundle_sha256": "a1c65eb4320a64cec1dc421ee77973aec2b7e21b6155fe10b69e1fc982c15602",
+    "bundle_sha256": "bea30523a2156b90b3f557024f043833426c5c510c2d6ed234d1b0e7531e8627",
+    "current_bundle_sha256": "bea30523a2156b90b3f557024f043833426c5c510c2d6ed234d1b0e7531e8627",
     "bundle_status": "active",
     "bundle_fingerprint_match_status": "match",
     "revocation_status": "active",
-    "claim_level": "none",
+    "claim_level": "bounded_learning_likely",
     "claim_scope": "bounded_learning_likely_auto_improve_readiness",
-    "bounded_learning_claim_allowed": false,
+    "bounded_learning_claim_allowed": true,
     "confirmed_learning_improvement_allowed": false,
     "improvement_claim_status": "not_ready",
     "confirmed_learning_improvement_status": "not_ready",
@@ -80,8 +80,8 @@
     "confirmed_policy_path": "ops/policies/learning-claim-confirmed-improvement.json",
     "confirmed_policy_version": 1,
     "confirmed_evidence_cohort_path": "ops/reports/learning-confirmed-evidence-cohort.json",
-    "confirmed_evidence_cohort_sha256": "6c1b8c58c9f6126abd42712e38cdbc3c883413b4393e3944fe2cad0ae4d48921",
-    "current_confirmed_evidence_cohort_sha256": "6c1b8c58c9f6126abd42712e38cdbc3c883413b4393e3944fe2cad0ae4d48921",
+    "confirmed_evidence_cohort_sha256": "b69105e336bdd8c8bd5b31bf95d13aad0dd8f35da8828cc90c18c4a3b447da1f",
+    "current_confirmed_evidence_cohort_sha256": "b69105e336bdd8c8bd5b31bf95d13aad0dd8f35da8828cc90c18c4a3b447da1f",
     "confirmed_evidence_cohort_status": "active",
     "confirmed_evidence_cohort_fingerprint_match_status": "match",
     "confirmed_evidence_summary": {
@@ -295,10 +295,10 @@
       },
       {
         "id": "auto_improve_can_promote_result",
-        "status": "fail",
+        "status": "pass",
         "source_path": "ops/reports/auto-improve-readiness.json",
         "required_condition": "auto_improve_readiness.can_promote_result == true",
-        "observed_value": "can_promote_result=False",
+        "observed_value": "can_promote_result=True",
         "summary": "Auto-improve result promotion gate is clean."
       },
       {
@@ -370,12 +370,12 @@
   "review_items": [
     {
       "id": "release_evidence_dashboard",
-      "status": "pending",
+      "status": "pass",
       "source_path": "ops/reports/release-evidence-dashboard.json",
-      "required_condition": "release_evidence_dashboard.reviewed_by_operator == true",
-      "observed_value": "reviewed=false",
-      "requires_human_review": true,
-      "summary": "Operator must review the release evidence dashboard learning-claim guard and placeholder audit."
+      "required_condition": "machine_policy_decision.decision == auto_approved",
+      "observed_value": "machine_policy_decision=auto_approved",
+      "requires_human_review": false,
+      "summary": "Machine policy accepted dashboard review as covered by zero readiness blockers."
     },
     {
       "id": "auto_improve_readiness",
@@ -388,27 +388,22 @@
     },
     {
       "id": "strict_secondary_axes",
-      "status": "pending",
+      "status": "pass",
       "source_path": "runs/**/run-telemetry.json",
-      "required_condition": "strict_secondary_axes.reviewed_by_operator == true",
-      "observed_value": "reviewed=false",
-      "requires_human_review": true,
-      "summary": "Operator must review strict-secondary improvement axes against promotion artifacts."
+      "required_condition": "machine_policy_decision.strict_secondary_coverage_full == pass",
+      "observed_value": "machine_policy_decision=auto_approved",
+      "requires_human_review": false,
+      "summary": "Machine policy accepted strict-secondary coverage from auto-improve readiness metrics."
     },
     {
       "id": "behavior_delta_provenance",
-      "status": "pending",
+      "status": "pass",
       "source_path": "runs/**/run-telemetry.json",
-      "required_condition": "behavior_delta_digest_provenance.reviewed_by_operator == true",
-      "observed_value": "reviewed=false",
-      "requires_human_review": true,
-      "summary": "Operator must review behavior_delta_digest provenance before unlock."
+      "required_condition": "machine_policy_decision.behavior_delta_digest_coverage_full == pass",
+      "observed_value": "machine_policy_decision=auto_approved",
+      "requires_human_review": false,
+      "summary": "Machine policy accepted behavior-delta digest coverage from auto-improve readiness metrics."
     }
   ],
-  "required_followup": [
-    "Close or explicitly review remaining auto_improve_readiness learning signals.",
-    "Close any open auto_improve_readiness learning release blockers.",
-    "Rebuild release evidence dashboard and auto-improve readiness after readiness signals change.",
-    "Approve all learning claim unlock review items only after the refreshed evidence is reviewed."
-  ]
+  "required_followup": []
 }

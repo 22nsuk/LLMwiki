@@ -1,7 +1,7 @@
 # goal-20260515-5day-auto-improve-runtime
 
-- status: `initialized`
-- active_profile: `5-day-sustained`
+- status: `running`
+- active_profile: `30-minute-trial`
 - repo: `https://github.com/22nsuk/LLMwiki`
 - visibility: `PRIVATE`
 - branch: `goal/5day-auto-improve-runtime`

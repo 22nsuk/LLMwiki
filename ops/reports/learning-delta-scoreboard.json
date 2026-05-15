@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-delta-scoreboard.schema.json",
   "artifact_kind": "learning_delta_scoreboard",
-  "generated_at": "2026-05-15T06:58:21Z",
+  "generated_at": "2026-05-15T08:38:51Z",
   "producer": "ops.scripts.learning_delta_scoreboard",
   "source_command": "python -m ops.scripts.learning_delta_scoreboard --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e05dd1ad01f3136bc54b44d003569089cff4b3722879f16dfeab135c8f3df868",
+  "source_tree_fingerprint": "74f6df85d2598bde9365df9cbf861cf01e824fc2b647fd72ff7bde56d9bb2d2a",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "27d4da175fb390b9e8aa35ec13404af61fb32cfef4fcefee316d1e9557b89ae2",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "f4549dd5b13ac715af49224e9ee0822e13f9e0feac17df335f0df02abbf01b11",
-    "learning_delta_inputs": "2306729e8f3904ff9d633c987551d64c0b072105a218103b3bc161493f02d8fc"
+    "learning_delta_inputs": "413f7310da7ddc54cb81926432171df421215bf2c1bc8ee9bf0b634c3c166236"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T06:58:21Z"
+    "checked_at": "2026-05-15T08:38:51Z"
   },
   "vault": ".",
   "policy": {
@@ -220,7 +220,7 @@
           "evidence": [
             "improvement_claim_status=not_ready",
             "evidence_cohort_status=auto_confirmed",
-            "bundle_status=not_evaluated",
+            "bundle_status=stale",
             "claim_level=learning_likely"
           ],
           "summary": "Production learning wording opens only after confirmed claim, confirmed cohort, and active bundle evidence align."
@@ -238,12 +238,12 @@
     "claim_level": "learning_likely",
     "claim_scope": "bounded_learning_likely_auto_improve_readiness",
     "learning_claim_evidence_complete": true,
-    "learning_claim_unlock_review_status": "required",
+    "learning_claim_unlock_review_status": "stale",
     "learning_claim_unlock_review_approved": false,
-    "learning_claim_unlock_review_revocation_status": "not_evaluated",
-    "learning_claim_evidence_bundle_status": "not_evaluated",
-    "learning_claim_evidence_bundle_sha256": "a1c65eb4320a64cec1dc421ee77973aec2b7e21b6155fe10b69e1fc982c15602",
-    "learning_confirmed_evidence_cohort_sha256": "6c1b8c58c9f6126abd42712e38cdbc3c883413b4393e3944fe2cad0ae4d48921",
+    "learning_claim_unlock_review_revocation_status": "stale",
+    "learning_claim_evidence_bundle_status": "stale",
+    "learning_claim_evidence_bundle_sha256": "bea30523a2156b90b3f557024f043833426c5c510c2d6ed234d1b0e7531e8627",
+    "learning_confirmed_evidence_cohort_sha256": "b69105e336bdd8c8bd5b31bf95d13aad0dd8f35da8828cc90c18c4a3b447da1f",
     "learning_confirmed_evidence_cohort_status": "active",
     "telemetry_coverage_ratio": 1.0,
     "telemetry_coverage_status": "full",
@@ -279,7 +279,7 @@
     ]
   },
   "learning_claim_unlock_review": {
-    "status": "required",
+    "status": "stale",
     "approved": false,
     "claim_level": "learning_likely",
     "bounded_learning_claim_allowed": false,
@@ -486,17 +486,17 @@
         "summary": "No accepted learning risk or learning-claim blocker may remain."
       }
     ],
-    "bundle_status": "not_evaluated",
-    "bundle_sha256": "a1c65eb4320a64cec1dc421ee77973aec2b7e21b6155fe10b69e1fc982c15602",
-    "current_bundle_sha256": "",
-    "revocation_status": "not_evaluated",
+    "bundle_status": "stale",
+    "bundle_sha256": "bea30523a2156b90b3f557024f043833426c5c510c2d6ed234d1b0e7531e8627",
+    "current_bundle_sha256": "7c38dfe54b53615a642250caebb8101d08667ed89b085e13a614adf6344b5d52",
+    "revocation_status": "stale",
     "confirmed_evidence_cohort_path": "ops/reports/learning-confirmed-evidence-cohort.json",
-    "confirmed_evidence_cohort_sha256": "6c1b8c58c9f6126abd42712e38cdbc3c883413b4393e3944fe2cad0ae4d48921",
-    "current_confirmed_evidence_cohort_sha256": "6c1b8c58c9f6126abd42712e38cdbc3c883413b4393e3944fe2cad0ae4d48921",
+    "confirmed_evidence_cohort_sha256": "b69105e336bdd8c8bd5b31bf95d13aad0dd8f35da8828cc90c18c4a3b447da1f",
+    "current_confirmed_evidence_cohort_sha256": "b69105e336bdd8c8bd5b31bf95d13aad0dd8f35da8828cc90c18c4a3b447da1f",
     "confirmed_evidence_cohort_status": "active",
     "confirmed_evidence_cohort_fingerprint_match_status": "match",
     "source_path": "ops/reports/learning-claim-unlock-review.json",
-    "reason": "learning claim unlock review artifact is present but not approved",
+    "reason": "learning claim auto approval is no longer active for the current evidence bundle: learning claim evidence bundle digest no longer matches current evidence",
     "required_review_items": [
       "release_evidence_dashboard.placeholder_audit_status == pass",
       "auto_improve_readiness.learning_readiness reviewed after coverage refresh",
@@ -556,7 +556,7 @@
         "evidence": [
           "improvement_claim_status=not_ready",
           "evidence_cohort_status=auto_confirmed",
-          "bundle_status=not_evaluated",
+          "bundle_status=stale",
           "claim_level=learning_likely"
         ],
         "summary": "Production learning wording opens only after confirmed claim, confirmed cohort, and active bundle evidence align."

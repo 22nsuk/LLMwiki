@@ -957,6 +957,51 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "not_run",
         )
 
+    def test_release_authority_preflight_prefers_canonical_release_evidence(self) -> None:
+        self._write_ready_queue_reports()
+        (
+            self.vault
+            / "tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json"
+        ).unlink()
+        self._write_report(
+            "build/release/release-closeout-sealed-rehearsal-check.json",
+            {
+                "artifact_kind": "release_closeout_sealed_rehearsal_check",
+                "status": "pass",
+                "preflight_status": "sealed_clean_pass",
+                "preflight_mode": "clean_required",
+                "distribution_binding_status": "pass",
+                "authority_preflight_status": "clean",
+                "expected_blocked_preflight": False,
+                "clean_required_preflight": True,
+                "failures": [],
+                "failure_details": [],
+                "blocking_reason_ids": [],
+                "summary": "canonical sealed release evidence clean",
+            },
+            enveloped=False,
+        )
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        self.assertTrue(report["can_execute_trial"])
+        self.assertTrue(report["can_promote_result"])
+        promotion_blocker_ids = {item["id"] for item in report["promotion_blockers"]}
+        self.assertNotIn(
+            "promotion_blocked_by_release_authority_preflight_failure",
+            promotion_blocker_ids,
+        )
+        preflight = report["diagnostics"]["release_authority_preflight_summary"]
+        self.assertEqual(
+            preflight["path"],
+            "build/release/release-closeout-sealed-rehearsal-check.json",
+        )
+        self.assertEqual(preflight["preflight_status"], "sealed_clean_pass")
+        self.assertIn(
+            "release_authority_preflight_report_candidates",
+            report["input_fingerprints"],
+        )
+
     def test_release_lineage_mismatch_blocks_promotion(self) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",

@@ -357,9 +357,12 @@ def _release_evidence_cohort_summary(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _release_authority_preflight_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    path = str(payload.get("_source_rel_path", RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH)).strip()
+    if not path:
+        path = RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH
     if not payload:
         return {
-            "path": RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
+            "path": path,
             "artifact_kind": "",
             "status": "not_run",
             "preflight_status": "not_run",
@@ -395,7 +398,7 @@ def _release_authority_preflight_summary(payload: dict[str, Any]) -> dict[str, A
         failure_details = []
     failure_details = [item for item in failure_details if isinstance(item, dict)]
     return {
-        "path": RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
+        "path": path,
         "artifact_kind": artifact_kind,
         "status": status if artifact_kind == "release_closeout_sealed_rehearsal_check" else "fail",
         "preflight_status": preflight_status,

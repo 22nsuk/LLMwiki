@@ -107,7 +107,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "d4cea4da5eb085b75dc0065ea9ebdd704fc7b8b0d5356c7d40ab83528d4d42b7",
+      "sha256": "bd1bc48d98d5d1083d748e3f23f7b47bcc068685e3f25a6d5cccc30272cd9893",
       "size_bytes": 73089
     },
     {
@@ -137,8 +137,8 @@
     },
     {
       "path": "mk/mechanism.mk",
-      "sha256": "a217ec9d1c1eb2cccde23b2dd42163c7f37a7f4b96422cba840f34a56fe5ffac",
-      "size_bytes": 4860
+      "sha256": "6b0fe2f3b6e4c751c51754e6becb5a825f174376dc399bb88c145e2043a9b1c2",
+      "size_bytes": 6954
     },
     {
       "path": "mk/public.mk",
@@ -167,12 +167,12 @@
     },
     {
       "path": "mk/test.mk",
-      "sha256": "4a1c5463f5d583c0a76ddbb3814c2633033771f064e234ce49b7f3ba11b432ec",
+      "sha256": "87e509c1edd88a454ba124891fbd66f8a09da92b5536daa6c07c7091e9f1346a",
       "size_bytes": 19707
     },
     {
       "path": "ops/README.md",
-      "sha256": "ff89d6037851b5f09051290a597963dbed0486637537aa24f1840c22340a6804",
+      "sha256": "1823e9c9ab4e8ae52f40bf2a553f862ecb9fb2184f6822c8171ad53d0d794c7e",
       "size_bytes": 102440
     },
     {
@@ -192,8 +192,8 @@
     },
     {
       "path": "ops/mypy-allowlist.txt",
-      "sha256": "11951cb4c216fa1dfec6a65ddd86f7547b96f816a2a8fb32e28a2cac230d8ddf",
-      "size_bytes": 11583
+      "sha256": "ec254c25b394c81a623618b8c0042eb7fb535069a5ac3c081589ef6a8ad5e7c9",
+      "size_bytes": 11634
     },
     {
       "path": "ops/mypy-strict-preview-allowlist.txt",
@@ -1416,6 +1416,11 @@
       "size_bytes": 926
     },
     {
+      "path": "ops/scripts/mechanism/auto_improve_goal_runtime.py",
+      "sha256": "f193be152377c7c484142754abaac6444965a2ead4be0e4f8bc203c17a961a61",
+      "size_bytes": 13901
+    },
+    {
       "path": "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
       "sha256": "38b93be68304e4a47b52c6eb55d13ca2d1c94d9400e25fa82f9b90413a432e89",
       "size_bytes": 15736
@@ -1432,8 +1437,8 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_loop.py",
-      "sha256": "733e0ba4d15e0bf57de6009c2de2f7d345b768b427b358d9e0484acf2aaec5c7",
-      "size_bytes": 2130
+      "sha256": "d07866d33d1d3a09c5400665cd61ba121f93a6efe720b164db2f3cad19e99183",
+      "size_bytes": 3870
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_outcome_runtime.py",
@@ -1452,8 +1457,8 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_readiness_constants_runtime.py",
-      "sha256": "f7313d7197674b5e6c0e1f8e71c7c2d2580bb492e75fda73436858e2679f2efa",
-      "size_bytes": 3740
+      "sha256": "596d825b251b6a01fd934788bcae33558c8d0acfa9a6ac2bf4587fb5d686b448",
+      "size_bytes": 4022
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py",
@@ -1467,13 +1472,13 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
-      "sha256": "8fbd549eda01a92abb3cd01c1eafd4b1db6de53c14f4696d3b0048467d05c84a",
-      "size_bytes": 31525
+      "sha256": "65eedcacbb3d985b2b5a59b617530c0a608d07681dffbe5f40f19ad134b81f0c",
+      "size_bytes": 31624
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_readiness_runtime.py",
-      "sha256": "c2d496f2604c837e4bd4fdc0627dce851e7dc1ebe4d4e3eabca9b28847e049cb",
-      "size_bytes": 29425
+      "sha256": "d4d752efcaa71cb733d2e15d44790fee52d4a5fd81e548f4969f6638b34aeb79",
+      "size_bytes": 29921
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_route_scaffold_runtime.py",
@@ -1537,8 +1542,8 @@
     },
     {
       "path": "ops/scripts/mechanism/goal_run_status.py",
-      "sha256": "f0d660d01b9ef6d6105c6262d353c0e625ef67b53b35f3a8f6b520e561702d5b",
-      "size_bytes": 20358
+      "sha256": "637c7377cb04e14258266285cc89bad7207642e5701a9649ea9a50a2eedd0fb0",
+      "size_bytes": 21703
     },
     {
       "path": "ops/scripts/mechanism/goal_worktree_guard.py",
@@ -1882,8 +1887,8 @@
     },
     {
       "path": "ops/scripts/release/external_report_lifecycle_runtime.py",
-      "sha256": "d26c3968e59bd00ff8ecd209e9f76302d4fdb3e9c29d2ea432e342ed3f2953fa",
-      "size_bytes": 28129
+      "sha256": "9b92c43f71e3f7baf003d99f149c550d89b40b9c138b2f86322b022424f6af82",
+      "size_bytes": 28378
     },
     {
       "path": "ops/scripts/release/external_report_reference_manifest.py",
@@ -4812,8 +4817,8 @@
     },
     {
       "path": "tests/fixtures/report_schema_samples.json",
-      "sha256": "f9948bc5bc814ce978c179eb4f8ee675100e4dec09200453107f60b2afcfaf19",
-      "size_bytes": 132804
+      "sha256": "f353ef5494014159b66bb56d239904a55893389d7ce64670e4cc9a0fb0ca15f6",
+      "size_bytes": 132883
     },
     {
       "path": "tests/fixtures/yaml/block-scalar.yaml",
@@ -4892,8 +4897,8 @@
     },
     {
       "path": "tests/test_auto_improve_readiness_runtime.py",
-      "sha256": "c3b4d2badecec43530e81d108eed4e887aefbe6bc75197a99b85a6721d93d444",
-      "size_bytes": 95473
+      "sha256": "6ecd922125e701e49012f0f9c47e26942f547fac0c175111b19071267d46f424",
+      "size_bytes": 97392
     },
     {
       "path": "tests/test_auto_improve_route_scaffold_runtime.py",
@@ -5051,6 +5056,11 @@
       "size_bytes": 66396
     },
     {
+      "path": "tests/test_goal_auto_improve_runtime.py",
+      "sha256": "f6972ca78b97498f62da650700bbbb74be41e0e51335fa8efa3643cdf1294126",
+      "size_bytes": 7942
+    },
+    {
       "path": "tests/test_goal_prompt.py",
       "sha256": "f53cdc0faa12ce91798e503bbb2640adc825f66f8d4baf113553d21e50a0757c",
       "size_bytes": 1473
@@ -5127,7 +5137,7 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "9e19854220c6f8ecba2d9d93348e6a5e2f5946ae9d143c7446bf84ddf16a4aa3",
+      "sha256": "d174e82d76b667979c04dee295220cb896e5179f1409622f90013a4e4f50b278",
       "size_bytes": 128409
     },
     {

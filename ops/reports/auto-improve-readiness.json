@@ -1,28 +1,29 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-15T06:58:20Z",
+  "generated_at": "2026-05-15T08:38:51Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e05dd1ad01f3136bc54b44d003569089cff4b3722879f16dfeab135c8f3df868",
+  "source_tree_fingerprint": "74f6df85d2598bde9365df9cbf861cf01e824fc2b647fd72ff7bde56d9bb2d2a",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "e4bbee62a954a9f8b869630b9b6ce9cd27c5dbe7faeadc7e8af48b1d35474533",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "c3594954559478d1baa93895d5d63e5e5bedc720b9f245b4263a749a0ea8dee0",
-    "artifact_freshness_report": "f4c8f39b9f615e8d0a26985514efe6b8c7be15ce8f1008dd964d9463ded86778",
-    "mechanism_review_report": "9a7d94617cc69df3850c22310cea561db79bd186c1a49d5a93c5c1faeb54f865",
-    "mutation_proposal_report": "e33d709a1bfa6d47340fdc30f761e4a1d8a90a50dcfaad5880ac68ec073da5f5",
-    "outcome_metrics_report": "63c5c8448b36bc3b253366d46d86751e0adceabf2cac07e898a4458d258f3397",
-    "release_authority_preflight_report": "9e7e476848af62479450caf434ebc5ea5613fb092a3daeef745fa8697847a50a",
-    "release_closeout_batch_manifest_report": "611bfc95bec5abe813f74b6db95b84f05b4c632c7be9174e18363254d351dbb9",
-    "release_closeout_finality_attestation_report": "5d42d50d142aee756c54ca91fa44240900012d8fc75b0ce3aabf25cd4aa8be4f",
+    "source_paths": "534089a8c499e36102a800f13fb67972ca79f80f65a0fabae0cec17190a05b5b",
+    "artifact_freshness_report": "6c6f8b30d05583656a15c7e9dc9a4d4e33e82ba053b323e8662f853188fb776a",
+    "mechanism_review_report": "be30a7ac7652a4f6a76a3d866c4364aa6ce853f77fad507057735524f9d220c1",
+    "mutation_proposal_report": "22129ea707bdc30bdaf4da9ce2314b1be2baeb1880df8ab5ea58aa0c51a1db3d",
+    "outcome_metrics_report": "1744d31f774612514b9b4226b88d146e55c9742780871b6a06cc8b889d6f95c8",
+    "release_authority_preflight_report": "7cd19e87e7cb07be9b178c7fdebb49caca5b220fe0bc9f7c046b1f49c319a218",
+    "release_closeout_batch_manifest_report": "92ac8517c1cad21e14962c3e49f46bbbc3c17349e588a0e6ebe873a50b7f04d0",
+    "release_closeout_finality_attestation_report": "79553ab62f1dc6db58b9139ba5446e185e4435a14c4dc8a78a22c473ae3055a4",
     "release_closeout_post_check_finalizer_report": "missing",
-    "release_closeout_summary_report": "735d66d77acbfe6b4012aec4e8bb4a05481bd45da431e9297da078cbf2ac707b",
-    "release_evidence_cohort_report": "d0da38b09b07d74e157fb9e31e6682580a98768215509350cc9e996d97d285b4",
-    "selected_contract_summary_report": "7365cb4ddf4686a9e01b278d32f8040b3f4701828f3bee59c035acd9bc8c572b",
-    "source_package_clean_extract_report": "80bebbbc47649cc893d6788fe697ea4613f7382774f44ee39bbdd0d25d62d9af"
+    "release_closeout_summary_report": "88074727c077e6bbaa77ff0924dfa379f8ddcd3e3ed32f157b66bf7344814106",
+    "release_evidence_cohort_report": "b0c47c0a68031d823defe8139d96f9910479051c7d9ca84bc4a0d278953e26bb",
+    "selected_contract_summary_report": "fa7513c5f9e373c70d28298363db8a8e8bd3fccb6bff4001dd1a59d7184908a3",
+    "source_package_clean_extract_report": "c68e88c4bc50dd4d8b601df58bdf51a46d59fba1c4526b05e7e4a8cf68b4c437",
+    "release_authority_preflight_report_candidates": "2d12f3e9e0e2e5e7440370c38a56c3c904477d352e14b273067d401a6f4dfd5f"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -30,7 +31,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T06:58:20Z"
+    "checked_at": "2026-05-15T08:38:51Z"
   },
   "vault": ".",
   "policy": {
@@ -93,14 +94,14 @@
     "release_closeout_finality_attestation_report": "ops/reports/release-closeout-finality-attestation.json",
     "release_evidence_cohort_report": "ops/reports/release-evidence-cohort.json",
     "release_closeout_post_check_finalizer_report": "tmp/release-closeout-post-check-finalizer.json",
-    "release_authority_preflight_report": "tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json"
+    "release_authority_preflight_report": "build/release/release-closeout-sealed-rehearsal-check.json"
   },
   "diagnostics": {
     "loop_health_summary": {
       "status": "available",
       "gate_effect": "none",
       "source_report": "ops/reports/routing-provenance-aggregates/auto-improve-2026-05-02t03-27-31z.json",
-      "source_generated_at": "2026-05-15T06:55:32Z",
+      "source_generated_at": "2026-05-15T08:36:54Z",
       "session_id": "auto-improve-2026-05-02t03-27-31z",
       "summary": "attempts=1, finalized=0, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=1.00 | alerts: unfinalized runs present, recent HOLD trend",
       "health_flags": [
@@ -194,7 +195,7 @@
       "status": "pass",
       "source_status": "pass",
       "release_blocking": false,
-      "summary": "release closeout batch manifest status=pass; release_authority_status=clean_pass; sealed_release_status=sealed_clean_pass; distribution_package.status=materialized; batch_integrity_status=pass; auto_improve_lane_status=blocked; machine_release_status=allowed",
+      "summary": "release closeout batch manifest status=pass; release_authority_status=clean_pass; sealed_release_status=sealed_clean_pass; distribution_package.status=materialized; batch_integrity_status=pass; auto_improve_lane_status=pass; machine_release_status=allowed",
       "signal_ids": []
     },
     "release_closeout_finality_summary": {
@@ -226,7 +227,7 @@
       "summary": "artifact finalization post-check finalizer report was cleaned from tmp, but release closeout finality attestation passed so the final artifact set is treated as finalized"
     },
     "release_authority_preflight_summary": {
-      "path": "tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json",
+      "path": "build/release/release-closeout-sealed-rehearsal-check.json",
       "artifact_kind": "release_closeout_sealed_rehearsal_check",
       "status": "pass",
       "preflight_status": "sealed_clean_pass",

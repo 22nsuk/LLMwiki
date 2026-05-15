@@ -11,6 +11,7 @@ ops/scripts/mechanism/auto_improve_readiness_constants_runtime.py
 ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py
 ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py
 ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py
+ops/scripts/mechanism/auto_improve_goal_runtime.py
 ops/scripts/mechanism/auto_improve_loop.py
 ops/scripts/mechanism/auto_improve_execute_runtime.py
 ops/scripts/mechanism/auto_improve_execution_runtime.py

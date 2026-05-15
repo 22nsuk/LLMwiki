@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-15T06:55:34Z",
+  "generated_at": "2026-05-15T08:36:56Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e05dd1ad01f3136bc54b44d003569089cff4b3722879f16dfeab135c8f3df868",
+  "source_tree_fingerprint": "74f6df85d2598bde9365df9cbf861cf01e824fc2b647fd72ff7bde56d9bb2d2a",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "2d153426e33bfc08ababa978b2582bea4cca848b7d52e6db79afb6435143d9af",
-    "active_external_reports": "e5727b6f1e5e1159e223f9a933916512e8cd848ac3aff094765cd69ad87ad54c",
-    "action_catalog": "492c64eb6bef254267b50176612142ec71eb2a2a0051bb399fd37eef58cf495d"
+    "source_paths": "98e00443d1144a4458b776ed867d959709ccbd8da62963a298681d70251b1db4",
+    "active_external_reports": "3cf9c56c099ed20d3bd3fabd4d3c67cf28726c9f0067090f2e246a5b151ebb1d",
+    "action_catalog": "a0b1cc538b6d99b4f80501952b02c9e7a65c560cb44c6a4dc3ddfedc61ac022b"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T06:55:34Z"
+    "checked_at": "2026-05-15T08:36:56Z"
   },
   "vault": ".",
   "status": "attention",
@@ -32,9 +32,9 @@
     "active_report_count": 3,
     "archived_report_count": 63,
     "action_item_count": 19,
-    "implemented_count": 6,
+    "implemented_count": 10,
     "partially_automated_count": 0,
-    "requires_release_run_verification_count": 13,
+    "requires_release_run_verification_count": 9,
     "planned_count": 0,
     "unmatched_active_report_count": 0,
     "reference_manifest_alignment_status": "current",
@@ -250,7 +250,7 @@
       "action_id": "source_package_distribution_binding",
       "priority": "P0",
       "theme": "source package and distribution ZIP binding",
-      "current_status": "requires_release_run_verification",
+      "current_status": "implemented",
       "source_report_paths": [
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
         "external-reports/llmwiki_review_reconciled_improvement_report.md"
@@ -281,7 +281,7 @@
       "action_id": "release_evidence_bundle_and_attestation",
       "priority": "P1",
       "theme": "release evidence bundle and attestation",
-      "current_status": "requires_release_run_verification",
+      "current_status": "implemented",
       "source_report_paths": [
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
         "external-reports/llmwiki_review_reconciled_improvement_report.md"
@@ -306,7 +306,7 @@
       "action_id": "full_suite_evidence_currentness",
       "priority": "P1",
       "theme": "full-suite evidence currentness",
-      "current_status": "requires_release_run_verification",
+      "current_status": "implemented",
       "source_report_paths": [
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
         "external-reports/llmwiki_review_reconciled_improvement_report.md"
@@ -325,7 +325,7 @@
       "action_id": "promotion_truth_ladder",
       "priority": "P0",
       "theme": "live gate and promotion truth ladder",
-      "current_status": "requires_release_run_verification",
+      "current_status": "implemented",
       "source_report_paths": [
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
         "external-reports/llmwiki_review_reconciled_improvement_report.md"
@@ -347,7 +347,7 @@
         {
           "path": "ops/reports/release-evidence-dashboard.json",
           "exists": true,
-          "status": "fail",
+          "status": "attention",
           "producer": "ops.scripts.release_evidence_dashboard"
         }
       ]
@@ -408,10 +408,22 @@
       "source_report_paths": [
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
       ],
-      "recommended_target": "auto-improve-goal-status",
+      "recommended_target": "auto-improve-goal-run",
       "evidence": [
         {
           "path": "ops/schemas/goal-run-status.schema.json",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/scripts/mechanism/auto_improve_goal_runtime.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/scripts/mechanism/auto_improve_loop.py",
           "exists": true,
           "status": "",
           "producer": ""
@@ -425,8 +437,14 @@
         {
           "path": "ops/reports/goal-run-status.json",
           "exists": true,
-          "status": "initialized",
+          "status": "running",
           "producer": "ops.scripts.goal_run_status"
+        },
+        {
+          "path": "tests/test_goal_auto_improve_runtime.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
         },
         {
           "path": "tests/test_goal_run_status.py",

@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/release-lane-summary.schema.json",
   "artifact_kind": "release_lane_summary",
-  "generated_at": "2026-05-15T06:56:53Z",
+  "generated_at": "2026-05-15T08:38:15Z",
   "producer": "ops.scripts.release_lane_summary",
   "source_command": "python -m ops.scripts.release_lane_summary --vault . --out ops/reports/release-lane-summary.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e05dd1ad01f3136bc54b44d003569089cff4b3722879f16dfeab135c8f3df868",
+  "source_tree_fingerprint": "74f6df85d2598bde9365df9cbf861cf01e824fc2b647fd72ff7bde56d9bb2d2a",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "0d52985f1a335ba2c86dcfcd891717a3c35fc67c6a4f95df49e73822041aa523",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e61b0bc0bda4784ff61850ac5b3d8f5a63b95209cdd9f1e84e6e4142763be1a0",
-    "learning_delta_scoreboard": "5402a0361dfd46c993ad0df77854fb030d5e384bb524ce9d24c88f85ce2b2063",
-    "release_closeout_summary": "735d66d77acbfe6b4012aec4e8bb4a05481bd45da431e9297da078cbf2ac707b",
-    "release_evidence_cohort": "d0da38b09b07d74e157fb9e31e6682580a98768215509350cc9e996d97d285b4",
-    "release_evidence_dashboard": "70cb05d93d51d82033a76e599163a7a79d9fd7255febe4a1e16d7c9dbd68a44a",
-    "current_source_tree_fingerprint": "9893d0ae423aecc0c7b505b0fff024f99ae359009be623705ddecb8efdca48cf"
+    "learning_delta_scoreboard": "870e5dbf7bcfc6efb9cc962c0de9c9b114b9e4e75014a7ff2315009e79313d2f",
+    "release_closeout_summary": "88074727c077e6bbaa77ff0924dfa379f8ddcd3e3ed32f157b66bf7344814106",
+    "release_evidence_cohort": "b0c47c0a68031d823defe8139d96f9910479051c7d9ca84bc4a0d278953e26bb",
+    "release_evidence_dashboard": "3d0f251859ce170ce6bd25a087169d9307eb22581135b2add0ca3e9930d34247",
+    "current_source_tree_fingerprint": "4127588d019a2c12d6cbc5c8bb476bc03582a29f865bc21c33f7744b881010e6"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,33 +23,33 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T06:56:53Z"
+    "checked_at": "2026-05-15T08:38:15Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "status": "attention",
+  "status": "pass",
   "lane_summary": {
     "cohort_status": "pass",
     "clean_lane_status": "pass",
     "conditional_lane_status": "pass",
-    "auto_improve_lane_status": "blocked",
-    "learning_lane_status": "blocked",
+    "auto_improve_lane_status": "pass",
+    "learning_lane_status": "pass",
     "machine_release_status": "allowed",
     "operator_release_status": "allowed",
     "release_authority_status": "clean_pass",
     "sealed_release_status": "unsealed_distribution_not_provided",
     "learning_claim_guard_status": "pass",
-    "learning_claim_allowed": false,
-    "claims_learning_improved": false,
+    "learning_claim_allowed": true,
+    "claims_learning_improved": true,
     "accepted_risk_family_count": 0,
     "accepted_risk_instance_count": 0,
     "accepted_risk_count": 0,
-    "gate_attention_count": 1,
+    "gate_attention_count": 0,
     "clean_lane_blocking_family_count": 0,
-    "learning_claim_blocking_family_count": 1,
+    "learning_claim_blocking_family_count": 0,
     "advisory_lifecycle_family_count": 0
   },
   "provenance": {

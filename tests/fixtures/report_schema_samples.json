@@ -2917,7 +2917,8 @@
       "release_closeout_summary_report": "8d5e15e390335c0066c9a3ead85a28becc041c6f47fc75dfa0aac9e855bcea2b",
       "release_evidence_cohort_report": "d995d4cd4ff3352ee2eb0b5840c66ed136bebe75a6a2c8ef539444081e559a4f",
       "selected_contract_summary_report": "4e9e02a265d34d9e66b94fa563a21de2d047e3c2c71e45502a6d923b7e7d43d2",
-      "source_package_clean_extract_report": "500f16cde3972837f578cb6d0988a23d17c6c8e1973dfab6391320dc34e90099"
+      "source_package_clean_extract_report": "500f16cde3972837f578cb6d0988a23d17c6c8e1973dfab6391320dc34e90099",
+      "release_authority_preflight_report_candidates": "035bcdee69c06d49d404b02dc24708e9a7ce215385eeecbd962b92886cb0170f"
     },
     "schema_version": 1,
     "artifact_status": "current",
@@ -3134,7 +3135,7 @@
       "release_closeout_finality_attestation_report": "ops/reports/release-closeout-finality-attestation.json",
       "release_evidence_cohort_report": "ops/reports/release-evidence-cohort.json",
       "release_closeout_post_check_finalizer_report": "tmp/release-closeout-post-check-finalizer.json",
-      "release_authority_preflight_report": "tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json"
+      "release_authority_preflight_report": "build/release/release-closeout-sealed-rehearsal-check.json"
     },
     "diagnostics": {
       "loop_health_summary": {
@@ -3245,7 +3246,7 @@
         "summary": "artifact finalization post-check finalizer status=pass; refresh_required=false; affected_path_count=0"
       },
       "release_authority_preflight_summary": {
-        "path": "tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json",
+        "path": "build/release/release-closeout-sealed-rehearsal-check.json",
         "artifact_kind": "",
         "status": "not_run",
         "preflight_status": "not_run",

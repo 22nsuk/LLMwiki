@@ -1,3 +1,5 @@
 {"active_profile": "5-day-sustained", "event": "initialized", "goal_id": "goal-20260515-5day-auto-improve-runtime", "reason": "goal runtime initialized", "status": "initialized", "ts": "2026-05-15T05:50:49Z"}
 {"active_profile": "5-day-sustained", "event": "initialized", "goal_id": "goal-20260515-5day-auto-improve-runtime", "reason": "goal runtime initialized", "status": "initialized", "ts": "2026-05-15T06:08:36Z"}
 {"active_profile": "5-day-sustained", "event": "checkpoint", "goal_id": "goal-20260515-5day-auto-improve-runtime", "reason": "clean release evidence and sealed clean-required preflight passed", "status": "initialized", "ts": "2026-05-15T06:59:47Z"}
+{"active_profile": "30-minute-trial", "event": "goal_run_start", "goal_id": "goal-20260515-5day-auto-improve-runtime", "reason": "auto-improve goal profile started: 30-minute-trial", "status": "running", "ts": "2026-05-15T07:23:37Z"}
+{"active_profile": "30-minute-trial", "event": "goal_run_dry_run", "goal_id": "goal-20260515-5day-auto-improve-runtime", "reason": "profile verification without execution: 30-minute-trial", "status": "running", "ts": "2026-05-15T07:23:37Z"}
