@@ -1,0 +1,3 @@
+{"active_profile": "5-day-sustained", "event": "initialized", "goal_id": "goal-20260515-5day-auto-improve-runtime", "reason": "goal runtime initialized", "status": "initialized", "ts": "2026-05-15T05:50:49Z"}
+{"active_profile": "5-day-sustained", "event": "initialized", "goal_id": "goal-20260515-5day-auto-improve-runtime", "reason": "goal runtime initialized", "status": "initialized", "ts": "2026-05-15T06:08:36Z"}
+{"active_profile": "5-day-sustained", "event": "checkpoint", "goal_id": "goal-20260515-5day-auto-improve-runtime", "reason": "clean release evidence and sealed clean-required preflight passed", "status": "initialized", "ts": "2026-05-15T06:59:47Z"}

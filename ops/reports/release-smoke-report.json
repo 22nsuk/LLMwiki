@@ -1,16 +1,16 @@
 {
   "$schema": "ops/schemas/release-smoke-report.schema.json",
   "artifact_kind": "release_smoke_report",
-  "generated_at": "2026-05-15T04:16:07Z",
+  "generated_at": "2026-05-15T06:49:06Z",
   "producer": "ops.scripts.release_smoke",
   "source_command": "python -m ops.scripts.release.release_smoke --vault . --profile full",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "source_tree_fingerprint": "e05dd1ad01f3136bc54b44d003569089cff4b3722879f16dfeab135c8f3df868",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "6f14f899e0f4dce979d6152079ccd87ca44a19716266452a0f497b5fb3275d93",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "9e46a20f109e751b9b83ffbd99f8499795b7999bdf08d8bdece430ea7257258f"
+    "source_paths": "016553880006d6add145d2bc39fb4a95c1ad115f4bb4ca863318d33e04dd31fb"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -18,7 +18,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T04:16:07Z"
+    "checked_at": "2026-05-15T06:49:06Z"
   },
   "vault": ".",
   "policy": {
@@ -27,12 +27,12 @@
   },
   "profile": "full",
   "status": "pass",
-  "archive_path": "<tmp>/LLMwiki-release-smoke.zip",
+  "archive_path": "<tmp>/goal-5day-auto-improve-runtime-release-smoke.zip",
   "archive_file": {
-    "path": "<tmp>/LLMwiki-release-smoke.zip",
+    "path": "<tmp>/goal-5day-auto-improve-runtime-release-smoke.zip",
     "exists": true,
-    "size_bytes": 190378464,
-    "sha256": "2b13f903e5a142dc23b2b4f30eb3789129722fc8219c11d506b3ce9353bafa69"
+    "size_bytes": 190407090,
+    "sha256": "0ccee57560052fba53589799a7216e24fdba975d97f2c5eed13bebe5335147ec"
   },
   "archive_class": {
     "name": "release_smoke_zip",
@@ -245,11 +245,11 @@
   "archive_reproducibility": {
     "status": "pass",
     "run_count": 2,
-    "first_archive_sha256": "2b13f903e5a142dc23b2b4f30eb3789129722fc8219c11d506b3ce9353bafa69",
-    "second_archive_sha256": "2b13f903e5a142dc23b2b4f30eb3789129722fc8219c11d506b3ce9353bafa69",
+    "first_archive_sha256": "0ccee57560052fba53589799a7216e24fdba975d97f2c5eed13bebe5335147ec",
+    "second_archive_sha256": "0ccee57560052fba53589799a7216e24fdba975d97f2c5eed13bebe5335147ec",
     "same_archive_sha256": true,
-    "first_source_manifest_digest": "21cbc8c476fadd130129508b741293fbaec2f52e91d382258ed2aa9735f37917",
-    "second_source_manifest_digest": "21cbc8c476fadd130129508b741293fbaec2f52e91d382258ed2aa9735f37917",
+    "first_source_manifest_digest": "157894197f5cca8bd30654784c15d2b2e162c3c9e5b3ec8481a93cebd3b3fe3a",
+    "second_source_manifest_digest": "157894197f5cca8bd30654784c15d2b2e162c3c9e5b3ec8481a93cebd3b3fe3a",
     "same_source_manifest_digest": true,
     "summary": "archive_reproducibility=pass; same_archive_sha256=true; same_source_manifest_digest=true"
   },
@@ -257,11 +257,11 @@
     "path": "release-archive-self-description.json",
     "archive_root_name": "LLMwiki",
     "archive_member_path": "LLMwiki/release-archive-self-description.json",
-    "sha256": "549f8e433aca23f465de131dc87ae57ef5aabe6e7d1b53b83fdeeadebea0d23d",
-    "size_bytes": 4079,
+    "sha256": "bf35b4f6053310aee741d0e379d5fbb03248fb1f25a640194f795a25fa065975",
+    "size_bytes": 4022,
     "profile": "full",
-    "source_manifest_digest": "f1dead892f7ca4840d14df8252c307b6a1a6feea58154cd0dffc98d63bd8b3d7",
-    "source_manifest_file_count": 1551,
+    "source_manifest_digest": "ad2e44ac41b61c11508348535b04d56eaffc3163237f2fdcd1f585f4a57e0e05",
+    "source_manifest_file_count": 1570,
     "tmp_included": false,
     "external_reports_included": false,
     "evidence_linkage_phase": "pre_seal_package_build_snapshot",
@@ -269,11 +269,11 @@
     "evidence_linked_artifact_count": 8
   },
   "extracted_vault": "<tmp>/unpacked/LLMwiki",
-  "packed_file_count": 1552,
+  "packed_file_count": 1571,
   "manifest_comparison": {
     "pass": true,
-    "expected_file_count": 1552,
-    "extracted_file_count": 1552,
+    "expected_file_count": 1571,
+    "extracted_file_count": 1571,
     "missing_paths": [],
     "unexpected_paths": [],
     "sha_mismatches": [],
@@ -300,8 +300,8 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 2411,
-      "stdout_tail": "      \"reason\": \"wiki synthesis is broad enough to watch for future scope creep, but it already declares exclusion, tension, and future-ingest boundaries\",\n      \"suggested_action\": \"watch_scope_boundary_and_future_ingest_routes\",\n      \"advisory\": {\n        \"boundary_sections_present\": [\n          \"What this synthesis excludes\",\n          \"Tensions / contradictions\",\n          \"Implications for future ingest\"\n        ],\n        \"exclusion_axes\": [\n          \"global market repricing\",\n          \"macro policy\"\n        ],\n        \"tension_axes\": [\n          \"달러 우위 safe haven\",\n          \"금의 중기 지지\",\n          \"risk-off가 강하다\",\n          \"아직 generalized funding stop은 아니다\",\n          \"어느 자산군, 어느 지역, 어느 정책 채널에 먼저 압력이 집중되는가\"\n        ],\n        \"future_ingest_axes\": [\n          \"EM flow\",\n          \"dollar\",\n          \"inflation pass-through\",\n          \"consumer expectations\",\n          \"Fed scenario\",\n          \"central-bank gold\",\n          \"post-ceasefire precious-metals rotation\",\n          \"physical disruption\",\n          \"financial repricing\"\n        ]\n      }\n    }\n  ],\n  \"stats\": {\n    \"page_count\": 487,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"review_candidate_count\": 15\n  }\n}",
+      "duration_ms": 2444,
+      "stdout_tail": "        \"function_lines\": 38,\n        \"parameter_count\": 14,\n        \"branch_node_count\": 0\n      },\n      \"threshold\": {\n        \"function_lines\": 120,\n        \"parameter_count\": 10,\n        \"branch_node_count\": 18\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    },\n    {\n      \"type\": \"python_function_budget_candidate\",\n      \"page\": \"ops/scripts/core/command_runtime.py\",\n      \"symbol\": \"run_with_timeout\",\n      \"line\": 430,\n      \"profile\": \"runtime\",\n      \"triggered_budgets\": [\n        \"function_lines\"\n      ],\n      \"value\": {\n        \"function_lines\": 134,\n        \"parameter_count\": 9,\n        \"branch_node_count\": 5\n      },\n      \"threshold\": {\n        \"function_lines\": 120,\n        \"parameter_count\": 10,\n        \"branch_node_count\": 18\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    }\n  ],\n  \"stats\": {\n    \"page_count\": 487,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"review_candidate_count\": 17\n  }\n}",
       "stderr_tail": ""
     },
     {
@@ -312,7 +312,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 1025,
+      "duration_ms": 1057,
       "stdout_tail": "        {\n          \"eval\": \"frontmatter_contract\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"required_sections_present\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"source_trace_present\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"source_trace_targets_exist\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"link_integration\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"high_severity_open_questions_within_budget\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"medium_severity_open_questions_within_budget\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"broken_link_free\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"placeholder_discipline\",\n          \"pass\": true\n        }\n      ]\n    }\n  ]\n}",
       "stderr_tail": ""
     },
@@ -324,7 +324,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 533,
+      "duration_ms": 542,
       "stdout_tail": "        {\n          \"eval\": \"declared_source_count_matches_evidence\",\n          \"pass\": true,\n          \"detail\": {\n            \"declared_source_count\": 7,\n            \"evidence_source_count\": 7,\n            \"evidence_source_links\": [\n              \"source--ai-memory-boom-and-supply-constraints-2026-04-13\",\n              \"source--asml-ai-chip-demand-and-semiconductor-capex-resilience-2026-04-16\",\n              \"source--memory-product-mix-upside-for-samsung-and-sk-hynix-2026-04-21\",\n              \"source--samsung-labor-bonus-dispute-and-semiconductor-workforce-risk-2026-04-17\",\n              \"source--samsung-process-blueprint-trade-secret-case-2026-04-21\",\n              \"source--samsung-strategic-output-increase-and-preorders-2026-04-21\",\n              \"source--sk-hynix-socamm2-ai-memory-scaleup-2026-04-21\"\n            ]\n          }\n        }\n      ]\n    },\n    {\n      \"page\": \"system/synthesis--stage1-planning-harness-bridge.md\",\n      \"score\": 1,\n      \"max_score\": 1,\n      \"results\": [\n        {\n          \"eval\": \"declared_source_count_matches_evidence\",\n          \"pass\": true,\n          \"detail\": {\n            \"declared_source_count\": 2,\n            \"evidence_source_count\": 2,\n            \"evidence_source_links\": [\n              \"source--ouroboros-repo\",\n              \"source--stage1-planning-harness-mvp\"\n            ]\n          }\n        }\n      ]\n    }\n  ]\n}",
       "stderr_tail": ""
     },
@@ -336,7 +336,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 241,
+      "duration_ms": 247,
       "stdout_tail": "    },\n    {\n      \"artifact\": \"planning-validation.json\",\n      \"schema\": \"ops/schemas/planning-validation.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"run-ledger.json\",\n      \"schema\": \"ops/schemas/run-ledger.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"promotion-report.json\",\n      \"schema\": \"ops/schemas/promotion-report.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"improvement-observations.json\",\n      \"schema\": \"ops/schemas/improvement-observations.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    }\n  ],\n  \"cross_checks\": [\n    {\n      \"check\": \"run_id_alignment\",\n      \"pass\": true,\n      \"detail\": {\n        \"seed.yaml\": \"run-YYYYMMDD-slug\",\n        \"planning-validation.json\": \"run-YYYYMMDD-slug\",\n        \"run-ledger.json\": \"run-YYYYMMDD-slug\",\n        \"promotion-report.json\": \"run-YYYYMMDD-slug\"\n      }\n    }\n  ],\n  \"phase_checks\": []\n}",
       "stderr_tail": ""
     }
@@ -346,7 +346,7 @@
     "checks": [
       {
         "name": "archive",
-        "path": "<tmp>/LLMwiki-release-smoke.zip",
+        "path": "<tmp>/goal-5day-auto-improve-runtime-release-smoke.zip",
         "parent": "<tmp>",
         "status": "pass",
         "reason": "parent writable"

@@ -1,0 +1,33 @@
+{
+  "goal_id": "goal-20260515-5day-auto-improve-runtime",
+  "resume_supported": true,
+  "status_json": "ops/reports/goal-run-status.json",
+  "last_checkpoint": "ops/reports/goal-checkpoints/checkpoint-20260515T065947Z.json",
+  "active_profile": "5-day-sustained",
+  "$schema": "ops/schemas/goal-resume-metadata.schema.json",
+  "artifact_kind": "goal_resume_metadata",
+  "generated_at": "2026-05-15T06:59:47Z",
+  "producer": "ops.scripts.goal_run_status",
+  "source_command": "python -m ops.scripts.goal_run_status checkpoint",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "e05dd1ad01f3136bc54b44d003569089cff4b3722879f16dfeab135c8f3df868",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "5fd6ad7143da6c06dee403a57c7831c464e60e91387a267360c2de79acdeb9f4",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "598a9c0c4078250f9154221a354d421666b6a3975a493802e2b131db469ea615",
+    "goal_status": "37880891fef7eb22a4f6db80074d7dfa66d30d5e3cdab16899778c5c4a283d5d",
+    "active_profile": "378ef337af55e50387985acbdd8ac30f471a68295e1c01cf91498d0f299beafc",
+    "event": "47320987f9a49d5b00119b960f247a956773f57543982b8bfcb6da5bb3afd9ef",
+    "goal_id": "e4a44b736df2b23145e0d73c83d2f60e510a8ca025f63c44a84b00dd028d0f38",
+    "last_checkpoint": "d3cefd24681833a2f626cd600ce8e31a1b9b131b8ad9a85dd13f457c691011f1"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-15T06:59:47Z"
+  }
+}

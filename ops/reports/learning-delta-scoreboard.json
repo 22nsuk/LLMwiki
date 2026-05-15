@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-delta-scoreboard.schema.json",
   "artifact_kind": "learning_delta_scoreboard",
-  "generated_at": "2026-05-15T04:23:35Z",
+  "generated_at": "2026-05-15T06:58:21Z",
   "producer": "ops.scripts.learning_delta_scoreboard",
   "source_command": "python -m ops.scripts.learning_delta_scoreboard --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "source_tree_fingerprint": "e05dd1ad01f3136bc54b44d003569089cff4b3722879f16dfeab135c8f3df868",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "27d4da175fb390b9e8aa35ec13404af61fb32cfef4fcefee316d1e9557b89ae2",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "f4549dd5b13ac715af49224e9ee0822e13f9e0feac17df335f0df02abbf01b11",
-    "learning_delta_inputs": "e03fe635c29c2f39be8d5634735a1dee4cf2574e022874e7cc3108904eb4fa95"
+    "learning_delta_inputs": "2306729e8f3904ff9d633c987551d64c0b072105a218103b3bc161493f02d8fc"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,18 +19,18 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T04:23:35Z"
+    "checked_at": "2026-05-15T06:58:21Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "status": "pass",
+  "status": "attention",
   "summary": {
-    "claims_learning_improved": false,
+    "claims_learning_improved": true,
     "learning_claim_allowed": false,
-    "learning_likely": false,
+    "learning_likely": true,
     "bounded_learning_claim_allowed": false,
     "confirmed_learning_improvement_allowed": false,
     "improvement_claim_status": "not_ready",
@@ -180,15 +180,15 @@
       "stages": [
         {
           "stage": "regression_safe",
-          "status": "pass",
+          "status": "blocked",
           "evidence": [
-            "learning_claim_guard.status=pass"
+            "learning_claim_guard.status=blocked"
           ],
           "summary": "Release may say no learning claim regression blockers are active; this is not a learning-improvement claim."
         },
         {
           "stage": "same_eval_gain",
-          "status": "not_claimed",
+          "status": "blocked",
           "evidence": [
             "same_eval_run_count=2",
             "same_eval_reason_coverage_status=full",
@@ -221,29 +221,29 @@
             "improvement_claim_status=not_ready",
             "evidence_cohort_status=auto_confirmed",
             "bundle_status=not_evaluated",
-            "claim_level=none"
+            "claim_level=learning_likely"
           ],
           "summary": "Production learning wording opens only after confirmed claim, confirmed cohort, and active bundle evidence align."
         }
       ],
-      "highest_supported_stage": "regression_safe",
+      "highest_supported_stage": "none",
       "improvement_claim_status": "not_ready",
       "evidence_cohort_status": "auto_confirmed",
       "learning_claim_blocker_status": "blocked",
       "claim_wording_allowed": false,
       "claim_wording_policy_status": "blocked",
-      "summary": "highest_supported_stage=regression_safe; improvement_claim_status=not_ready; evidence_cohort_status=auto_confirmed; learning_claim_blocker_status=blocked; claim_wording_allowed=false"
+      "summary": "highest_supported_stage=none; improvement_claim_status=not_ready; evidence_cohort_status=auto_confirmed; learning_claim_blocker_status=blocked; claim_wording_allowed=false"
     },
     "claim_vocabulary_version": 1,
-    "claim_level": "none",
+    "claim_level": "learning_likely",
     "claim_scope": "bounded_learning_likely_auto_improve_readiness",
     "learning_claim_evidence_complete": true,
     "learning_claim_unlock_review_status": "required",
     "learning_claim_unlock_review_approved": false,
     "learning_claim_unlock_review_revocation_status": "not_evaluated",
     "learning_claim_evidence_bundle_status": "not_evaluated",
-    "learning_claim_evidence_bundle_sha256": "4e6118c540721a799ba27accd51368eb9a9807017450d1dbc411af97d293e35a",
-    "learning_confirmed_evidence_cohort_sha256": "c9ae755c4d856a03e399821b569c3ee956e1392a402547618c74789b3dc47f35",
+    "learning_claim_evidence_bundle_sha256": "a1c65eb4320a64cec1dc421ee77973aec2b7e21b6155fe10b69e1fc982c15602",
+    "learning_confirmed_evidence_cohort_sha256": "6c1b8c58c9f6126abd42712e38cdbc3c883413b4393e3944fe2cad0ae4d48921",
     "learning_confirmed_evidence_cohort_status": "active",
     "telemetry_coverage_ratio": 1.0,
     "telemetry_coverage_status": "full",
@@ -255,13 +255,13 @@
     "behavior_delta_digest_coverage_ratio": 1.0,
     "behavior_delta_digest_coverage_status": "full",
     "placeholder_count": 0,
-    "anti_slop_status": "clean",
-    "anti_slop_score": 100,
-    "anti_slop_deduction_count": 0,
+    "anti_slop_status": "attention",
+    "anti_slop_score": 80,
+    "anti_slop_deduction_count": 1,
     "evidence_scope_count": 6
   },
   "learning_claim_guard": {
-    "status": "pass",
+    "status": "blocked",
     "improvement_claim_status": "not_ready",
     "evidence_cohort_status": "auto_confirmed",
     "learning_claim_blocker_status": "blocked",
@@ -487,12 +487,12 @@
       }
     ],
     "bundle_status": "not_evaluated",
-    "bundle_sha256": "4e6118c540721a799ba27accd51368eb9a9807017450d1dbc411af97d293e35a",
+    "bundle_sha256": "a1c65eb4320a64cec1dc421ee77973aec2b7e21b6155fe10b69e1fc982c15602",
     "current_bundle_sha256": "",
     "revocation_status": "not_evaluated",
     "confirmed_evidence_cohort_path": "ops/reports/learning-confirmed-evidence-cohort.json",
-    "confirmed_evidence_cohort_sha256": "c9ae755c4d856a03e399821b569c3ee956e1392a402547618c74789b3dc47f35",
-    "current_confirmed_evidence_cohort_sha256": "c9ae755c4d856a03e399821b569c3ee956e1392a402547618c74789b3dc47f35",
+    "confirmed_evidence_cohort_sha256": "6c1b8c58c9f6126abd42712e38cdbc3c883413b4393e3944fe2cad0ae4d48921",
+    "current_confirmed_evidence_cohort_sha256": "6c1b8c58c9f6126abd42712e38cdbc3c883413b4393e3944fe2cad0ae4d48921",
     "confirmed_evidence_cohort_status": "active",
     "confirmed_evidence_cohort_fingerprint_match_status": "match",
     "source_path": "ops/reports/learning-claim-unlock-review.json",
@@ -516,15 +516,15 @@
     "stages": [
       {
         "stage": "regression_safe",
-        "status": "pass",
+        "status": "blocked",
         "evidence": [
-          "learning_claim_guard.status=pass"
+          "learning_claim_guard.status=blocked"
         ],
         "summary": "Release may say no learning claim regression blockers are active; this is not a learning-improvement claim."
       },
       {
         "stage": "same_eval_gain",
-        "status": "not_claimed",
+        "status": "blocked",
         "evidence": [
           "same_eval_run_count=2",
           "same_eval_reason_coverage_status=full",
@@ -557,18 +557,18 @@
           "improvement_claim_status=not_ready",
           "evidence_cohort_status=auto_confirmed",
           "bundle_status=not_evaluated",
-          "claim_level=none"
+          "claim_level=learning_likely"
         ],
         "summary": "Production learning wording opens only after confirmed claim, confirmed cohort, and active bundle evidence align."
       }
     ],
-    "highest_supported_stage": "regression_safe",
+    "highest_supported_stage": "none",
     "improvement_claim_status": "not_ready",
     "evidence_cohort_status": "auto_confirmed",
     "learning_claim_blocker_status": "blocked",
     "claim_wording_allowed": false,
     "claim_wording_policy_status": "blocked",
-    "summary": "highest_supported_stage=regression_safe; improvement_claim_status=not_ready; evidence_cohort_status=auto_confirmed; learning_claim_blocker_status=blocked; claim_wording_allowed=false"
+    "summary": "highest_supported_stage=none; improvement_claim_status=not_ready; evidence_cohort_status=auto_confirmed; learning_claim_blocker_status=blocked; claim_wording_allowed=false"
   },
   "confirmed_evidence_summary": {
     "evidence_cohort_status": "auto_confirmed",
@@ -831,17 +831,23 @@
   },
   "anti_slop_score": {
     "schema_version": 1,
-    "status": "clean",
-    "score": 100,
+    "status": "attention",
+    "score": 80,
     "max_score": 100,
     "placeholder_penalty": 0,
     "evidence_coverage_penalty": 0,
     "unsupported_claim_penalty": 0,
-    "claim_wording_penalty": 0,
-    "deduction_count": 0,
-    "deductions": [],
+    "claim_wording_penalty": 20,
+    "deduction_count": 1,
+    "deductions": [
+      {
+        "id": "claim_wording_not_allowed",
+        "points": 20,
+        "reason": "claim wording is blocked by the learning claim model"
+      }
+    ],
     "inputs": {
-      "claims_learning_improved": false,
+      "claims_learning_improved": true,
       "learning_claim_evidence_complete": true,
       "claim_wording_allowed": false,
       "placeholder_audit_status": "pass",
@@ -851,6 +857,6 @@
       "strict_secondary_improvement_coverage_status": "full",
       "behavior_delta_digest_coverage_status": "full"
     },
-    "summary": "anti_slop_score=100/100; status=clean; deduction_count=0"
+    "summary": "anti_slop_score=80/100; status=attention; deduction_count=1"
   }
 }

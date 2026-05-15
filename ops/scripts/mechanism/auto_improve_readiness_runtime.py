@@ -166,6 +166,16 @@ def _load_json(path: Path) -> dict[str, Any]:
     return payload
 
 
+def _load_selected_contract_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    payload = read_json_object(path)
+    loading_issue = canonical_report_loading_issue(path, payload)
+    if loading_issue and not loading_issue.startswith("currentness_status="):
+        return {}
+    return payload
+
+
 def _load_optional_json(path: Path) -> dict[str, Any]:
     return load_optional_json_object(path)
 
@@ -231,7 +241,9 @@ def _load_readiness_report_payloads(
             else _load_json(vault / MUTATION_PROPOSAL_REPORT_REL_PATH)
         ),
         "artifact_freshness": _load_json(vault / ARTIFACT_FRESHNESS_REPORT_REL_PATH),
-        "selected_contract": _load_json(vault / SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH),
+        "selected_contract": _load_selected_contract_json(
+            vault / SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH
+        ),
         "source_package": _load_json(vault / SOURCE_PACKAGE_CLEAN_EXTRACT_REPORT_REL_PATH),
         "release_closeout": _load_json(vault / RELEASE_CLOSEOUT_SUMMARY_REPORT_REL_PATH),
         "release_batch_manifest": _load_json(vault / RELEASE_CLOSEOUT_BATCH_MANIFEST_REPORT_REL_PATH),

@@ -39,6 +39,10 @@ class TimedProcessResult:
     stdout_received: bool = False
     stderr_received: bool = False
     launch_latency_seconds: float = 0.0
+    heartbeat_interval_seconds: int = 0
+    heartbeat_emitted_count: int = 0
+    last_heartbeat_elapsed_seconds: float = 0.0
+    heartbeat_status: str = "disabled"
 
 
 class ProcessHandle(Protocol):
@@ -301,6 +305,10 @@ def _result_from_completed_process(
     signal_sent: str,
     final_state_observed: str,
     launch_latency_seconds: float = 0.0,
+    heartbeat_interval_seconds: int = 0,
+    heartbeat_emitted_count: int = 0,
+    last_heartbeat_elapsed_seconds: float = 0.0,
+    heartbeat_status: str = "disabled",
 ) -> TimedProcessResult:
     normalized_stdout = _normalize_output(stdout)
     normalized_stderr = _normalize_output(stderr)
@@ -318,6 +326,10 @@ def _result_from_completed_process(
         stdout_received=stdout is not None,
         stderr_received=stderr is not None,
         launch_latency_seconds=launch_latency_seconds,
+        heartbeat_interval_seconds=heartbeat_interval_seconds,
+        heartbeat_emitted_count=heartbeat_emitted_count,
+        last_heartbeat_elapsed_seconds=last_heartbeat_elapsed_seconds,
+        heartbeat_status=heartbeat_status,
     )
 
 
@@ -402,6 +414,19 @@ def _timeout_termination_reason(
     return "execution_timeout"
 
 
+def _heartbeat_snapshot(
+    *,
+    interval_seconds: int,
+    elapsed_seconds: float,
+    timed_out: bool,
+) -> tuple[int, float, str]:
+    if interval_seconds == 0:
+        return 0, 0.0, "disabled"
+    emitted_count = int(elapsed_seconds // interval_seconds)
+    last_elapsed = elapsed_seconds if emitted_count else 0.0
+    return emitted_count, last_elapsed, "timed_out" if timed_out else "completed"
+
+
 def run_with_timeout(
     argv: Sequence[str],
     *,
@@ -412,6 +437,7 @@ def run_with_timeout(
     grace_seconds: float = TIMEOUT_GRACE_SECONDS,
     env: Mapping[str, str] | None = None,
     hermetic: bool = False,
+    heartbeat_interval_seconds: int = 0,
 ) -> TimedProcessResult:
     """Run a command with a timeout, measuring launch latency separately.
 
@@ -423,6 +449,8 @@ def run_with_timeout(
     """
     if timeout_seconds < 1:
         raise ValueError("timeout_seconds must be >= 1")
+    if heartbeat_interval_seconds < 0:
+        raise ValueError("heartbeat_interval_seconds must be >= 0")
 
     argv_list = [str(item) for item in argv]
     subprocess_env: Mapping[str, str] | None
@@ -445,6 +473,12 @@ def run_with_timeout(
             input=input_text,
             timeout=timeout_seconds,
         )
+        elapsed_seconds = time.perf_counter() - launch_start
+        heartbeat_count, last_heartbeat_elapsed, heartbeat_status = _heartbeat_snapshot(
+            interval_seconds=heartbeat_interval_seconds,
+            elapsed_seconds=elapsed_seconds,
+            timed_out=False,
+        )
         return _result_from_completed_process(
             argv_list=argv_list,
             process=process,
@@ -456,11 +490,25 @@ def run_with_timeout(
             signal_sent="none",
             final_state_observed="communicate",
             launch_latency_seconds=launch_latency_seconds,
+            heartbeat_interval_seconds=heartbeat_interval_seconds,
+            heartbeat_emitted_count=heartbeat_count,
+            last_heartbeat_elapsed_seconds=last_heartbeat_elapsed,
+            heartbeat_status=heartbeat_status,
         )
     except subprocess.TimeoutExpired:
         returncode = _poll_returncode(process)
         if returncode is not None:
             stdout, stderr = process.communicate()
+            elapsed_seconds = time.perf_counter() - launch_start
+            (
+                heartbeat_count,
+                last_heartbeat_elapsed,
+                heartbeat_status,
+            ) = _heartbeat_snapshot(
+                interval_seconds=heartbeat_interval_seconds,
+                elapsed_seconds=elapsed_seconds,
+                timed_out=False,
+            )
             return _result_from_completed_process(
                 argv_list=argv_list,
                 process=process,
@@ -472,6 +520,10 @@ def run_with_timeout(
                 signal_sent="none",
                 final_state_observed="poll_before_signal",
                 launch_latency_seconds=launch_latency_seconds,
+                heartbeat_interval_seconds=heartbeat_interval_seconds,
+                heartbeat_emitted_count=heartbeat_count,
+                last_heartbeat_elapsed_seconds=last_heartbeat_elapsed,
+                heartbeat_status=heartbeat_status,
             )
         stdout, stderr, signal_sent, final_state_observed = _finalize_timed_out_process(
             process,
@@ -479,6 +531,12 @@ def run_with_timeout(
             grace_seconds=grace_seconds,
         )
         timed_out = final_state_observed not in TIMEOUT_RECOVERY_STATES
+        elapsed_seconds = time.perf_counter() - launch_start
+        heartbeat_count, last_heartbeat_elapsed, heartbeat_status = _heartbeat_snapshot(
+            interval_seconds=heartbeat_interval_seconds,
+            elapsed_seconds=elapsed_seconds,
+            timed_out=timed_out,
+        )
         termination_reason = _timeout_termination_reason(
             timed_out=timed_out,
             final_state_observed=final_state_observed,
@@ -498,4 +556,8 @@ def run_with_timeout(
             signal_sent=signal_sent,
             final_state_observed=final_state_observed,
             launch_latency_seconds=launch_latency_seconds,
+            heartbeat_interval_seconds=heartbeat_interval_seconds,
+            heartbeat_emitted_count=heartbeat_count,
+            last_heartbeat_elapsed_seconds=last_heartbeat_elapsed,
+            heartbeat_status=heartbeat_status,
         )

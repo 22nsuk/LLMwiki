@@ -101,6 +101,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/test-execution-summary.json",
             {
                 "status": "pass",
+                "currentness": {"status": "current"},
                 "deselection_lifecycle": {"status": "pass"},
             },
         )
@@ -163,9 +164,11 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                 "artifact_kind": "release_closeout_sealed_rehearsal_check",
                 "status": "pass",
                 "preflight_status": "sealed_clean_pass",
+                "preflight_mode": "clean_required",
                 "distribution_binding_status": "pass",
                 "authority_preflight_status": "clean",
                 "expected_blocked_preflight": False,
+                "clean_required_preflight": True,
                 "failures": [],
                 "failure_details": [],
                 "blocking_reason_ids": [],
@@ -764,9 +767,11 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                 "artifact_kind": "release_closeout_sealed_rehearsal_check",
                 "status": "fail",
                 "preflight_status": "binding_pass_authority_blocked",
+                "preflight_mode": "expected_blocked",
                 "distribution_binding_status": "pass",
                 "authority_preflight_status": "blocked",
                 "expected_blocked_preflight": True,
+                "clean_required_preflight": False,
                 "failures": [
                     "batch_release_authority_not_clean_pass",
                     "batch_sealed_release_not_clean_pass",
@@ -842,8 +847,10 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         )
         preflight = report["diagnostics"]["release_authority_preflight_summary"]
         self.assertEqual(preflight["preflight_status"], "binding_pass_authority_blocked")
+        self.assertEqual(preflight["preflight_mode"], "expected_blocked")
         self.assertEqual(preflight["distribution_binding_status"], "pass")
         self.assertTrue(preflight["expected_blocked_preflight"])
+        self.assertFalse(preflight["clean_required_preflight"])
         self.assertEqual(
             preflight["linked_promotion_blocker_ids"],
             [
@@ -1024,7 +1031,10 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         )
 
     def test_selected_contract_partial_pass_bootstrap_does_not_self_block_promotion(self) -> None:
-        self._write_report("ops/reports/test-execution-summary.json", {"status": "partial-pass"})
+        self._write_report(
+            "ops/reports/test-execution-summary.json",
+            {"status": "partial-pass", "currentness": {"status": "current"}},
+        )
 
         report = build_readiness_report(self.vault, context=fixed_context())
 
@@ -1050,6 +1060,24 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertIn("release closeout finality attestation passed", artifact_finalization["summary"])
         blocker_ids = {item["id"] for item in report["promotion_blockers"]}
         self.assertNotIn("promotion_blocked_by_selected_contract_failure", blocker_ids)
+
+    def test_selected_contract_stale_currentness_uses_named_blocker_signal(self) -> None:
+        self._write_report(
+            "ops/reports/test-execution-summary.json",
+            {"status": "pass", "currentness": {"status": "stale"}},
+        )
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        summary = report["diagnostics"]["selected_contract_summary"]
+        self.assertEqual(summary["status"], "fail")
+        self.assertEqual(summary["source_status"], "currentness_stale")
+        self.assertEqual(summary["signal_ids"], ["selected_contract_currentness_not_current"])
+        blockers = {item["id"]: item for item in report["promotion_blockers"]}
+        self.assertEqual(
+            blockers["promotion_blocked_by_selected_contract_failure"]["signal_ids"],
+            ["selected_contract_currentness_not_current"],
+        )
 
     def test_clean_authority_unsealed_batch_manifest_does_not_block_promotion(self) -> None:
         self._write_report(

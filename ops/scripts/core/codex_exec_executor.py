@@ -64,6 +64,7 @@ class ExecutorResultPayload(TypedDict):
     final_state_observed: str
     stdout_received: bool
     stderr_received: bool
+    heartbeat: dict[str, Any]
 
 
 class ExecutorDiagnosticsPayload(TypedDict, total=False):
@@ -194,6 +195,48 @@ def _completed_stderr_received(completed: object) -> bool:
     return bool(getattr(completed, "stderr_received", False))
 
 
+def _completed_int_attr(completed: object, name: str, default: int = 0) -> int:
+    value = getattr(completed, name, default)
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float | str):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+    return default
+
+
+def _completed_float_attr(completed: object, name: str, default: float = 0.0) -> float:
+    value = getattr(completed, name, default)
+    if isinstance(value, bool):
+        return float(value)
+    if isinstance(value, int | float):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except ValueError:
+            return default
+    return default
+
+
+def _completed_heartbeat(completed: object) -> dict[str, Any]:
+    interval = _completed_int_attr(completed, "heartbeat_interval_seconds")
+    count = _completed_int_attr(completed, "heartbeat_emitted_count")
+    elapsed = _completed_float_attr(completed, "last_heartbeat_elapsed_seconds")
+    raw_status = getattr(completed, "heartbeat_status", "disabled")
+    status = raw_status if isinstance(raw_status, str) and raw_status else "disabled"
+    return {
+        "interval_seconds": interval,
+        "emitted_count": count,
+        "last_elapsed_seconds": round(elapsed, 3),
+        "status": status,
+    }
+
+
 def load_agent_profile(path: Path) -> dict[str, Any]:
     try:
         text = path.read_text(encoding="utf-8")
@@ -287,7 +330,13 @@ def _materialize_prompt(request: PromptMaterializationRequest) -> Path:
             "signal_sent": "none",
             "final_state_observed": "communicate",
             "stdout_received": True,
-            "stderr_received": True
+            "stderr_received": True,
+            "heartbeat": {
+                "interval_seconds": 300,
+                "emitted_count": 0,
+                "last_elapsed_seconds": 0.0,
+                "status": "completed"
+            }
         },
         "diagnostics": {
             "routing_report": request.routing_report_rel,
@@ -516,6 +565,7 @@ def _build_executor_report(
             "final_state_observed": _completed_final_state_observed(completed),
             "stdout_received": _completed_stdout_received(completed),
             "stderr_received": _completed_stderr_received(completed),
+            "heartbeat": _completed_heartbeat(completed),
         },
         "diagnostics": {
             "routing_report": routing_report_rel,
@@ -718,6 +768,7 @@ def launch_execution(request: _ExecutionRequest) -> object:
         cwd=request.workspace_root,
         input_text=request.prompt_path.read_text(encoding="utf-8"),
         timeout_seconds=request.timeout_seconds,
+        heartbeat_interval_seconds=300,
     )
 
 

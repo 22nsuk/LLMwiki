@@ -63,6 +63,21 @@ SCHEMA_PATHS = {
     / "ops"
     / "schemas"
     / "auto-improve-readiness-report.schema.json",
+    "codex-goal-contract.schema.json": REPO_ROOT / "ops" / "schemas" / "codex-goal-contract.schema.json",
+    "goal-run-status.schema.json": REPO_ROOT / "ops" / "schemas" / "goal-run-status.schema.json",
+    "goal-resume-metadata.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "goal-resume-metadata.schema.json",
+    "remediation-backlog.schema.json": REPO_ROOT / "ops" / "schemas" / "remediation-backlog.schema.json",
+    "self-improvement-negative-lessons.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "self-improvement-negative-lessons.schema.json",
+    "release-closeout-sealed-rehearsal-check.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "release-closeout-sealed-rehearsal-check.schema.json",
     "run-telemetry.schema.json": REPO_ROOT / "ops" / "schemas" / "run-telemetry.schema.json",
     "run-artifact-fingerprint.schema.json": REPO_ROOT / "ops" / "schemas" / "run-artifact-fingerprint.schema.json",
     "timeout-failure.schema.json": REPO_ROOT / "ops" / "schemas" / "timeout-failure.schema.json",

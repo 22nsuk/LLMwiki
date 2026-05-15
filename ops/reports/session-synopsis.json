@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-15T04:23:36Z",
+  "generated_at": "2026-05-15T06:58:21Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "source_tree_fingerprint": "e05dd1ad01f3136bc54b44d003569089cff4b3722879f16dfeab135c8f3df868",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "0b78062aa1e1d5397e3e6a796019bf61428ea78599033f9a278327a93e887134",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "3250b1bd42b6f1307d7b6116b5365f34d13933c71ff24eb9b607b1c68272a525",
-    "auto_improve_readiness": "0a2d4fc090d157ef80bc65b7e472aaeca8828555109a2937c7176b58c9a13b94",
-    "learning_claim_activation": "2cac9330bc434e5d041ee19201651cf1cc704eff8f45024b7beee2de293142c2",
-    "learning_delta_scoreboard": "a1cfd405d20cc8d1375a9bb0dae02300af21f628c18ac382b5b2f3207d0d0323",
-    "source_package_clean_extract": "470c943c3af1c752391f562d8ca8933beae80002be9ccefb6c991ddd717af655",
+    "auto_improve_readiness": "6799bce3d0672f230e6b5ea258821dc53b190a1fcfed56cd495670d9e9d741df",
+    "learning_claim_activation": "8f9cb468e47bda53bf977ba19a593f8e4fd4598b8ab5d2d837cf088f67b207c2",
+    "learning_delta_scoreboard": "cf61251564c6df25103a4db25e1617fb424abc342ac4cdf1e3886054b596ef54",
+    "source_package_clean_extract": "80bebbbc47649cc893d6788fe697ea4613f7382774f44ee39bbdd0d25d62d9af",
     "task_observations": "de50b3e9d034fac6257d8f0dd900c1fbf54d71a429a79d82833ccc12f5e75d09"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T04:23:36Z"
+    "checked_at": "2026-05-15T06:58:21Z"
   },
   "vault": ".",
   "policy": {
@@ -32,22 +32,15 @@
   },
   "status": "attention",
   "summary": {
-    "recent_blocker_count": 4,
+    "recent_blocker_count": 3,
     "last_success_pattern_count": 5,
     "forbidden_repeat_pattern_count": 5,
     "recommended_seed_run_count": 2,
-    "evidence_gap_count": 5,
+    "evidence_gap_count": 6,
     "source_package_replay_status": "pass",
-    "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded live auto-improve with `.venv/bin/python -m ops.scripts.mechanism.auto_improve_loop --vault . --policy ops/policies/wiki-maintainer-policy.yaml --max-proposals 1 --max-minutes 30 --max-consecutive-failures 1 --executor codex_exec`. Promotion remains blocked until: Refresh sealed authority preflight evidence, then rerun make auto-improve-readiness."
+    "next_action": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded live auto-improve with `.venv/bin/python -m ops.scripts.mechanism.auto_improve_loop --vault . --policy ops/policies/wiki-maintainer-policy.yaml --max-proposals 1 --max-minutes 30 --max-consecutive-failures 1 --executor codex_exec`."
   },
   "recent_blockers": [
-    {
-      "id": "promotion_blocked_by_release_authority_preflight_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "status": "open",
-      "reason": "release authority sealed preflight is not clean: release authority sealed preflight report is missing or unusable",
-      "repair_target": "Refresh sealed authority preflight evidence, then rerun make auto-improve-readiness."
-    },
     {
       "id": "auto_improve_can_promote_result",
       "source": "learning_claim_activation.blocked_predicates",
@@ -187,6 +180,13 @@
   ],
   "evidence_gaps": [
     {
+      "id": "claim_hygiene",
+      "source": "learning_claim_activation.anti_slop_preview_ledger",
+      "current": "claim_level=learning_likely; claim_wording_allowed=False",
+      "required": "No learning-improvement wording unless the claim model allows it.",
+      "repair_target": "Keep claim_level=none or complete the unlock and confirmed-claim predicates."
+    },
+    {
       "id": "context_efficiency",
       "source": "learning_claim_activation.anti_slop_preview_ledger",
       "current": "no dedicated context-efficiency telemetry is bound to the learning claim lane",
@@ -230,9 +230,9 @@
     "summary": "Use the profile-aware source package check before treating distribution evidence as replayable."
   },
   "next_session_entrypoint": {
-    "promotion_allowed": false,
+    "promotion_allowed": true,
     "claim_wording_allowed": false,
-    "recommended_next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded live auto-improve with `.venv/bin/python -m ops.scripts.mechanism.auto_improve_loop --vault . --policy ops/policies/wiki-maintainer-policy.yaml --max-proposals 1 --max-minutes 30 --max-consecutive-failures 1 --executor codex_exec`. Promotion remains blocked until: Refresh sealed authority preflight evidence, then rerun make auto-improve-readiness.",
+    "recommended_next_action": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded live auto-improve with `.venv/bin/python -m ops.scripts.mechanism.auto_improve_loop --vault . --policy ops/policies/wiki-maintainer-policy.yaml --max-proposals 1 --max-minutes 30 --max-consecutive-failures 1 --executor codex_exec`.",
     "first_commands": [
       "make session-synopsis",
       "make static",
@@ -243,9 +243,9 @@
       "Do not claim learning improvement while claim_wording_allowed is false.",
       "Do not repeat forbidden patterns until their repair_target is closed."
     ],
-    "open_blocker_count": 4,
+    "open_blocker_count": 3,
     "forbidden_pattern_count": 5,
-    "evidence_gap_count": 5
+    "evidence_gap_count": 6
   },
   "inputs": {
     "auto_improve_readiness": "ops/reports/auto-improve-readiness.json",

@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/mechanism-review-candidates.schema.json",
   "artifact_kind": "mechanism_review_candidates_report",
-  "generated_at": "2026-05-15T04:15:48Z",
+  "generated_at": "2026-05-15T06:48:48Z",
   "producer": "ops.scripts.mechanism_review_runtime",
   "source_command": "python -m ops.scripts.mechanism_review",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "source_tree_fingerprint": "e05dd1ad01f3136bc54b44d003569089cff4b3722879f16dfeab135c8f3df868",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "c730a4570492eaf5cb038d51227064a8c9404069f62cb3920049a985951e876a",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b918914e44bad6b4e65120c6e5078ed2f0b422b8d64f3f3253178465e131e835",
-    "excluded_promotion_reports": "537937b42d9eb22a3babdeba680d221f58a70de44d3e3640a55d49301edd827d",
+    "excluded_promotion_reports": "12e5c3531aad200a990eba3fbf79b40508a0d52e3b955e81751fc7a5756c9155",
     "promotion_reports": "47308e6ead45e6366547bffe91c993d0d224544c2a4fb589d598b124c76a0a5f",
     "skipped_artifacts": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "mechanism_review_enabled": "3cbc87c7681f34db4617feaa2c8801931bc5e42d8d0f560e756dd4cd92885f18",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T04:15:48Z"
+    "checked_at": "2026-05-15T06:48:48Z"
   },
   "vault": ".",
   "policy": {

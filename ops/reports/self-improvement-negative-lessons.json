@@ -1,0 +1,141 @@
+{
+  "$schema": "ops/schemas/self-improvement-negative-lessons.schema.json",
+  "artifact_kind": "self_improvement_negative_lessons",
+  "generated_at": "2026-05-15T06:12:46Z",
+  "producer": "ops.scripts.self_improvement_negative_lessons",
+  "status": "attention",
+  "source_activation_report": "ops/reports/learning_claim_activation_report.json",
+  "summary": {
+    "pattern_count": 5,
+    "gate_effect": "none"
+  },
+  "patterns": [
+    {
+      "pattern_id": "blocked_queue_recent_log_overlap",
+      "decisions": [
+        "BLOCKED"
+      ],
+      "run_ids": [],
+      "occurrence_count": 1,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane.",
+      "evidence_digests": [
+        {
+          "path": "ops/reports/auto-improve-readiness.json",
+          "exists": true,
+          "sha256": "50f94d3b47b5fe17862abe582a5fd505ceb99e852fcdd22c806417b087a8cae4",
+          "status": "present"
+        }
+      ],
+      "id": "blocked_queue_recent_log_overlap",
+      "status": "open"
+    },
+    {
+      "pattern_id": "discard_behavior_delta_digest_added",
+      "decisions": [
+        "DISCARD"
+      ],
+      "run_ids": [
+        "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+      ],
+      "occurrence_count": 1,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=behavior_delta_digest_added.",
+      "evidence_digests": [
+        {
+          "path": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/run-telemetry.json",
+          "exists": true,
+          "sha256": "9048eb29f9df2973099c992e7d5f5f920d21fbc05f258ce3625499e5dd26e7a6",
+          "status": "present"
+        }
+      ],
+      "id": "discard_behavior_delta_digest_added",
+      "status": "open"
+    },
+    {
+      "pattern_id": "discard_decision_discard",
+      "decisions": [
+        "DISCARD"
+      ],
+      "run_ids": [
+        "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
+        "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+      ],
+      "occurrence_count": 2,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Repair the rejected confirmed-evidence run before using it as learning proof.",
+      "evidence_digests": [
+        {
+          "path": "ops/reports/learning-delta-scoreboard.json",
+          "exists": true,
+          "sha256": "3c118380558a3061d9f413520b609ffc7421c8cd6db505d41be71b4c9ffaef38",
+          "status": "present"
+        }
+      ],
+      "id": "discard_decision_discard",
+      "status": "open"
+    },
+    {
+      "pattern_id": "discard_telemetry_discoverability_improved",
+      "decisions": [
+        "DISCARD"
+      ],
+      "run_ids": [
+        "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp"
+      ],
+      "occurrence_count": 1,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=telemetry_discoverability_improved.",
+      "evidence_digests": [
+        {
+          "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/run-telemetry.json",
+          "exists": true,
+          "sha256": "370f77f245e56c0572e6542a94c5dbf3257f9d533d78da70f01507d83a8007d4",
+          "status": "present"
+        }
+      ],
+      "id": "discard_telemetry_discoverability_improved",
+      "status": "open"
+    },
+    {
+      "pattern_id": "hold_unspecified",
+      "decisions": [
+        "HOLD"
+      ],
+      "run_ids": [
+        "run-20260422-auto-improve-decision-record-fallback-retry2"
+      ],
+      "occurrence_count": 1,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Change the mechanism or evidence predicate before rerunning another HOLD attempt with same_eval_reason_code=unspecified.",
+      "evidence_digests": [
+        {
+          "path": "runs/archive/run-20260422-auto-improve-decision-record-fallback-retry2/run-telemetry.json",
+          "exists": true,
+          "sha256": "79e255527505e97cc870951edfb865a03f7d92b95b0102296b23dbe3aa4907ad",
+          "status": "present"
+        }
+      ],
+      "id": "hold_unspecified",
+      "status": "open"
+    }
+  ],
+  "source_command": "python -m ops.scripts.self_improvement_negative_lessons",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "18862af863964421a884f45ce9915b89f09f08b6eae4c2a72a0abdfcca0a4b30",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "052ab438993194c1bdbf7c04900d9f2098f899652492ce9d01764067f7ed2074",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "90bad4ce2ec600e3959329e96f824fd6489e47e60024510a8f3cb51b8681a4ba",
+    "activation_report": "99e336b6e84a6c75abb32376a704056f8a45f663e74e342b26e964e0b4064093"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-15T06:12:46Z"
+  }
+}

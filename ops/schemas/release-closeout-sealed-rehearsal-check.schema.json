@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Release Closeout Sealed Rehearsal Check",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_kind",
+    "generated_at",
+    "status",
+    "preflight_status",
+    "preflight_mode",
+    "distribution_binding_status",
+    "authority_preflight_status",
+    "expected_blocked_preflight",
+    "clean_required_preflight",
+    "blocking_reason_ids",
+    "unexpected_failure_ids",
+    "operator_summary",
+    "distribution_zip",
+    "batch_manifest",
+    "external_report_reference_manifest",
+    "failures",
+    "failure_details",
+    "summary"
+  ],
+  "properties": {
+    "artifact_kind": {
+      "type": "string",
+      "enum": ["release_closeout_sealed_rehearsal_check"]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pass", "fail"]
+    },
+    "preflight_status": {
+      "type": "string",
+      "enum": [
+        "sealed_clean_pass",
+        "binding_pass_authority_blocked",
+        "binding_failed",
+        "unexpected_failure"
+      ]
+    },
+    "preflight_mode": {
+      "type": "string",
+      "enum": ["clean_required", "expected_blocked"]
+    },
+    "distribution_binding_status": {
+      "type": "string",
+      "enum": ["pass", "fail"]
+    },
+    "authority_preflight_status": {
+      "type": "string",
+      "enum": ["clean", "blocked", "unknown"]
+    },
+    "expected_blocked_preflight": {
+      "type": "boolean"
+    },
+    "clean_required_preflight": {
+      "type": "boolean"
+    },
+    "blocking_reason_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "unexpected_failure_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "operator_summary": {
+      "type": "string"
+    },
+    "distribution_zip": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "exists", "sha256", "entry_count"],
+      "properties": {
+        "path": { "type": "string" },
+        "exists": { "type": "boolean" },
+        "sha256": { "type": "string" },
+        "entry_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "batch_manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "load_status",
+        "release_authority_status",
+        "sealed_release_status",
+        "external_source_zip_bound_status",
+        "distribution_package_status"
+      ],
+      "properties": {
+        "path": { "type": "string" },
+        "load_status": { "type": "string" },
+        "release_authority_status": { "type": "string" },
+        "sealed_release_status": { "type": "string" },
+        "external_source_zip_bound_status": { "type": "string" },
+        "distribution_package_status": { "type": "string" }
+      }
+    },
+    "external_report_reference_manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "load_status",
+        "mode",
+        "status",
+        "basis_zip_matches_current_distribution"
+      ],
+      "properties": {
+        "path": { "type": "string" },
+        "load_status": { "type": "string" },
+        "mode": { "type": "string" },
+        "status": { "type": "string" },
+        "basis_zip_matches_current_distribution": {
+          "type": ["boolean", "null"]
+        }
+      }
+    },
+    "failures": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "failure_details": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["failure_id", "vocabulary_reason_id", "status_axis"],
+        "properties": {
+          "failure_id": { "type": "string" },
+          "vocabulary_reason_id": { "type": "string" },
+          "status_axis": {
+            "type": "string",
+            "enum": ["release_authority", "sealed_distribution", "evidence_binding"]
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "preflight_status": {
+            "const": "binding_pass_authority_blocked"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "preflight_mode": { "const": "expected_blocked" },
+          "expected_blocked_preflight": { "const": true },
+          "clean_required_preflight": { "const": false }
+        }
+      },
+      "else": {
+        "properties": {
+          "preflight_mode": { "const": "clean_required" },
+          "expected_blocked_preflight": { "const": false },
+          "clean_required_preflight": { "const": true }
+        }
+      }
+    }
+  ]
+}

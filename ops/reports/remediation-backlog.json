@@ -1,0 +1,31 @@
+{
+  "$schema": "ops/schemas/remediation-backlog.schema.json",
+  "artifact_kind": "remediation_backlog",
+  "generated_at": "2026-05-15T06:12:46Z",
+  "producer": "ops.scripts.remediation_backlog",
+  "status": "pass",
+  "source_readiness_report": "ops/reports/auto-improve-readiness.json",
+  "summary": {
+    "open_item_count": 0,
+    "repeated_blocker_count": 0
+  },
+  "items": [],
+  "source_command": "python -m ops.scripts.remediation_backlog",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "18862af863964421a884f45ce9915b89f09f08b6eae4c2a72a0abdfcca0a4b30",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "31965fe82a1b7f44914c190a82d35894f9ccf190f267ec71fe9b881784af37f4",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "d6d82770dbb1805b1c216bb3087a0fbc1b8c0b93a10fa029b8f737e5b14603c6",
+    "readiness_report": "50f94d3b47b5fe17862abe582a5fd505ceb99e852fcdd22c806417b087a8cae4"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-15T06:12:46Z"
+  }
+}

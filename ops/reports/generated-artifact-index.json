@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-15T04:27:56Z",
+  "generated_at": "2026-05-15T06:59:50Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "source_tree_fingerprint": "e05dd1ad01f3136bc54b44d003569089cff4b3722879f16dfeab135c8f3df868",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "834eb6cfec958f35d3989a742cfd58414bb50bb75040ab9283e4c90ed61f1657",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "adc7d23b2ba3515c9aefd24130ea09fddffd1d5941d8395dd494764ad6ff96a2",
     "run_promotion_reports": "47308e6ead45e6366547bffe91c993d0d224544c2a4fb589d598b124c76a0a5f",
-    "external_report_inventory": "01a68fd434fe1eefd68783bf20ee6c5a3d334f81572597887525e3d794ebc180",
+    "external_report_inventory": "9543e2809e75ebaebbb0556586fe6bf9493f3949f6526e0ef23f1f9d22c01fae",
     "operator_report_inventory": "0479590a186415fa72ba934ab4431828124b8ca576b06322a6eae193e9627721",
-    "ops_report_inventory": "253c6c575b2f27055220357d2b2874479ed4d97c1d601ef9606e8ada1a3388ea",
+    "ops_report_inventory": "ab1e0e62704f4bbce806d8dbafd6e7bed473571ae2180c2f39fc58e7e9e23e58",
     "task_improvement_observation_inventory": "e990c59c1c80ac09b3ca6423303757b25d7819c3b9dc4716adb30f69105edc79"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T04:27:56Z"
+    "checked_at": "2026-05-15T06:59:50Z"
   },
   "vault": ".",
   "policy": {
@@ -58,7 +58,7 @@
     }
   ],
   "now": [
-    "79 canonical artifact(s) are currently indexed.",
+    "87 canonical artifact(s) are currently indexed.",
     "0 archive candidate(s) remain in active namespaces."
   ],
   "next": [
@@ -66,14 +66,14 @@
   ],
   "why_blocked": [],
   "summary": {
-    "ops_reports_root_file_count": 61,
+    "ops_reports_root_file_count": 69,
     "task_improvement_observation_count": 59,
     "operator_reports_root_file_count": 2,
     "external_reports_root_file_count": 3,
     "external_reports_archive_file_count": 66,
     "run_directory_count": 13,
     "run_archive_directory_count": 4,
-    "canonical_report_count": 79,
+    "canonical_report_count": 87,
     "archive_candidate_count": 0
   },
   "canonical_reports": [
@@ -103,6 +103,17 @@
       "surface": "ops_reports",
       "family": "bootstrap_preflight_report",
       "path": "ops/reports/bootstrap-preflight-report.json",
+      "role": "current_stable_report",
+      "date": "",
+      "reason": "Top-level ops/reports files with stable names are current operational reports.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "operator_preflight"
+    },
+    {
+      "surface": "ops_reports",
+      "family": "codex_goal_contract",
+      "path": "ops/reports/codex-goal-contract.json",
       "role": "current_stable_report",
       "date": "",
       "reason": "Top-level ops/reports files with stable names are current operational reports.",
@@ -158,6 +169,61 @@
       "surface": "ops_reports",
       "family": "generated_artifact_index",
       "path": "ops/reports/generated-artifact-index.json",
+      "role": "current_stable_report",
+      "date": "",
+      "reason": "Top-level ops/reports files with stable names are current operational reports.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "operator_preflight"
+    },
+    {
+      "surface": "ops_reports",
+      "family": "goal_audit_log",
+      "path": "ops/reports/goal-audit-log.jsonl",
+      "role": "current_stable_report",
+      "date": "",
+      "reason": "Top-level ops/reports files with stable names are current operational reports.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "operator_preflight"
+    },
+    {
+      "surface": "ops_reports",
+      "family": "goal_prompt",
+      "path": "ops/reports/goal-prompt.md",
+      "role": "current_stable_report",
+      "date": "",
+      "reason": "Top-level ops/reports files with stable names are current operational reports.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "operator_preflight"
+    },
+    {
+      "surface": "ops_reports",
+      "family": "goal_resume_metadata",
+      "path": "ops/reports/goal-resume-metadata.json",
+      "role": "current_stable_report",
+      "date": "",
+      "reason": "Top-level ops/reports files with stable names are current operational reports.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "operator_preflight"
+    },
+    {
+      "surface": "ops_reports",
+      "family": "goal_run_status",
+      "path": "ops/reports/goal-run-status.json",
+      "role": "current_stable_report",
+      "date": "",
+      "reason": "Top-level ops/reports files with stable names are current operational reports.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "operator_preflight"
+    },
+    {
+      "surface": "ops_reports",
+      "family": "goal_status",
+      "path": "ops/reports/goal-status.md",
       "role": "current_stable_report",
       "date": "",
       "reason": "Top-level ops/reports files with stable names are current operational reports.",
@@ -563,6 +629,17 @@
     },
     {
       "surface": "ops_reports",
+      "family": "remediation_backlog",
+      "path": "ops/reports/remediation-backlog.json",
+      "role": "current_stable_report",
+      "date": "",
+      "reason": "Top-level ops/reports files with stable names are current operational reports.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "operator_preflight"
+    },
+    {
+      "surface": "ops_reports",
       "family": "review_archive_report",
       "path": "ops/reports/review-archive-report.json",
       "role": "current_stable_report",
@@ -609,6 +686,17 @@
       "surface": "ops_reports",
       "family": "security_advisories",
       "path": "ops/reports/security-advisories.json",
+      "role": "current_stable_report",
+      "date": "",
+      "reason": "Top-level ops/reports files with stable names are current operational reports.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "operator_preflight"
+    },
+    {
+      "surface": "ops_reports",
+      "family": "self_improvement_negative_lessons",
+      "path": "ops/reports/self-improvement-negative-lessons.json",
       "role": "current_stable_report",
       "date": "",
       "reason": "Top-level ops/reports files with stable names are current operational reports.",

@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/learning-claim-unlock-review.schema.json",
   "artifact_kind": "learning_claim_unlock_review",
-  "generated_at": "2026-05-15T04:23:34Z",
+  "generated_at": "2026-05-15T06:56:37Z",
   "producer": "ops.scripts.learning_claim_unlock_review",
   "source_command": "python -m ops.scripts.learning_claim_unlock_review --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "source_tree_fingerprint": "e05dd1ad01f3136bc54b44d003569089cff4b3722879f16dfeab135c8f3df868",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "cd80b9607a6fc5bc8ffc579e219a131f7e53ad5ccff551f08e409f55fb80b9c1",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "18e8aceb127c480719a21d82ad8ba473e22f740764772e41783cc53c22e1451a",
-    "auto_improve_readiness": "0a2d4fc090d157ef80bc65b7e472aaeca8828555109a2937c7176b58c9a13b94",
-    "learning_claim_evidence_bundle": "73f7f9a073b0a9a9f682b88008220ef85a92b46a5d42e2ec65a5fe2086c34c07",
+    "auto_improve_readiness": "8e18e62d4cf17e72f042e71f99b45416d557230bce075b3e911ead81c2631072",
+    "learning_claim_evidence_bundle": "5aa3920df3b1efeb5faf5290b71379a46ae4291bc7f1591045bec845f0634a5a",
     "approved_by": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "auto_policy_path": "3f45ad5440c4c08a2eb1578032fc6a9cc18a7805617282c0ebf01507c224d3b4",
     "blocking_blocker_ids": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -28,7 +28,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T04:23:34Z"
+    "checked_at": "2026-05-15T06:56:37Z"
   },
   "vault": ".",
   "policy": {
@@ -60,10 +60,10 @@
     "policy_path": "ops/policies/learning-claim-auto-unlock.json",
     "policy_version": 1,
     "decision": "requires_human",
-    "evidence_bundle_digest": "4e6118c540721a799ba27accd51368eb9a9807017450d1dbc411af97d293e35a",
+    "evidence_bundle_digest": "a1c65eb4320a64cec1dc421ee77973aec2b7e21b6155fe10b69e1fc982c15602",
     "bundle_path": "ops/reports/learning-claim-evidence-bundle.json",
-    "bundle_sha256": "4e6118c540721a799ba27accd51368eb9a9807017450d1dbc411af97d293e35a",
-    "current_bundle_sha256": "4e6118c540721a799ba27accd51368eb9a9807017450d1dbc411af97d293e35a",
+    "bundle_sha256": "a1c65eb4320a64cec1dc421ee77973aec2b7e21b6155fe10b69e1fc982c15602",
+    "current_bundle_sha256": "a1c65eb4320a64cec1dc421ee77973aec2b7e21b6155fe10b69e1fc982c15602",
     "bundle_status": "active",
     "bundle_fingerprint_match_status": "match",
     "revocation_status": "active",
@@ -80,8 +80,8 @@
     "confirmed_policy_path": "ops/policies/learning-claim-confirmed-improvement.json",
     "confirmed_policy_version": 1,
     "confirmed_evidence_cohort_path": "ops/reports/learning-confirmed-evidence-cohort.json",
-    "confirmed_evidence_cohort_sha256": "c9ae755c4d856a03e399821b569c3ee956e1392a402547618c74789b3dc47f35",
-    "current_confirmed_evidence_cohort_sha256": "c9ae755c4d856a03e399821b569c3ee956e1392a402547618c74789b3dc47f35",
+    "confirmed_evidence_cohort_sha256": "6c1b8c58c9f6126abd42712e38cdbc3c883413b4393e3944fe2cad0ae4d48921",
+    "current_confirmed_evidence_cohort_sha256": "6c1b8c58c9f6126abd42712e38cdbc3c883413b4393e3944fe2cad0ae4d48921",
     "confirmed_evidence_cohort_status": "active",
     "confirmed_evidence_cohort_fingerprint_match_status": "match",
     "confirmed_evidence_summary": {

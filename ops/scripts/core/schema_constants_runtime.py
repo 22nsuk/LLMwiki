@@ -83,6 +83,16 @@ PROPOSAL_SCOPE_SCHEMA_PATH = "ops/schemas/proposal-scope.schema.json"
 EXECUTOR_REPORT_SCHEMA_PATH = "ops/schemas/executor-report.schema.json"
 AUTO_IMPROVE_SESSION_SCHEMA_PATH = "ops/schemas/auto-improve-session.schema.json"
 AUTO_IMPROVE_READINESS_REPORT_SCHEMA_PATH = "ops/schemas/auto-improve-readiness-report.schema.json"
+CODEX_GOAL_CONTRACT_SCHEMA_PATH = "ops/schemas/codex-goal-contract.schema.json"
+GOAL_RUN_STATUS_SCHEMA_PATH = "ops/schemas/goal-run-status.schema.json"
+GOAL_RESUME_METADATA_SCHEMA_PATH = "ops/schemas/goal-resume-metadata.schema.json"
+REMEDIATION_BACKLOG_SCHEMA_PATH = "ops/schemas/remediation-backlog.schema.json"
+SELF_IMPROVEMENT_NEGATIVE_LESSONS_SCHEMA_PATH = (
+    "ops/schemas/self-improvement-negative-lessons.schema.json"
+)
+RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_SCHEMA_PATH = (
+    "ops/schemas/release-closeout-sealed-rehearsal-check.schema.json"
+)
 RUNTIME_EVENT_SCHEMA_PATH = "ops/schemas/runtime-event.schema.json"
 RUN_TELEMETRY_SCHEMA_PATH = "ops/schemas/run-telemetry.schema.json"
 RUN_ARTIFACT_FINGERPRINT_SCHEMA_PATH = "ops/schemas/run-artifact-fingerprint.schema.json"

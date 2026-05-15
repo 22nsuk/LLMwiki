@@ -1,0 +1,104 @@
+{
+  "$schema": "ops/schemas/codex-goal-contract.schema.json",
+  "artifact_kind": "codex_goal_contract",
+  "schema_version": 1,
+  "goal_id": "goal-20260515-5day-auto-improve-runtime",
+  "objective": "Build and operate a five-day bounded auto-improve goal runtime with clean release evidence, private GitHub baseline, resumable audit trail, heartbeats, checkpoints, and no promotion until sealed authority is clean.",
+  "status": "running",
+  "created_at": "2026-05-15T06:08:36Z",
+  "duration": {
+    "min_sustained_days": 5,
+    "max_minutes": 7200
+  },
+  "budgets": {
+    "max_proposals": 60,
+    "max_consecutive_failures": 1,
+    "heartbeat_interval_minutes": 5,
+    "checkpoint_interval_minutes": 30,
+    "readiness_interval_hours": 6,
+    "session_synopsis_interval_hours": 6
+  },
+  "promotion_policy": {
+    "can_promote_result": false,
+    "requires_sealed_authority_clean_pass": true,
+    "promotion_ban_reason": "Promotion remains forbidden until can_promote_result=true and sealed authority clean pass are both current."
+  },
+  "github": {
+    "repo_url": "https://github.com/22nsuk/LLMwiki",
+    "visibility": "PRIVATE",
+    "baseline_commit": "6c3ca7c46c6369ad043d78da5114c84173a14973",
+    "branch": "goal/5day-auto-improve-runtime",
+    "worktree_path": "../LLMwiki-worktrees/goal-5day-auto-improve-runtime"
+  },
+  "artifacts": {
+    "status_json": "ops/reports/goal-run-status.json",
+    "status_markdown": "ops/reports/goal-status.md",
+    "audit_log": "ops/reports/goal-audit-log.jsonl",
+    "checkpoints_dir": "ops/reports/goal-checkpoints",
+    "resume_metadata": "ops/reports/goal-resume-metadata.json"
+  },
+  "execution_ladder": [
+    {
+      "profile": "30-minute-trial",
+      "max_minutes": 30,
+      "max_proposals": 1,
+      "max_consecutive_failures": 1,
+      "checkpoint_interval_minutes": 30
+    },
+    {
+      "profile": "6-hour-ramp",
+      "max_minutes": 360,
+      "max_proposals": 6,
+      "checkpoint_interval_minutes": 30
+    },
+    {
+      "profile": "2-day-candidate",
+      "max_minutes": 2880,
+      "max_proposals": 24,
+      "checkpoint_interval_minutes": 30,
+      "readiness_interval_hours": 6,
+      "session_synopsis_interval_hours": 6
+    },
+    {
+      "profile": "5-day-sustained",
+      "max_minutes": 7200,
+      "max_proposals": 60,
+      "max_consecutive_failures": 1,
+      "heartbeat_interval_minutes": 5,
+      "checkpoint_interval_minutes": 30,
+      "readiness_interval_hours": 6,
+      "session_synopsis_interval_hours": 6
+    }
+  ],
+  "stop_conditions": [
+    "allowed-root violation",
+    "repeated blocker cannot be converted to remediation backlog",
+    "status, audit, or heartbeat write failure",
+    "sealed authority or readiness regression",
+    "any need to bypass release, promotion, or learning-claim gates"
+  ],
+  "generated_at": "2026-05-15T06:08:36Z",
+  "producer": "ops.scripts.goal_run_status",
+  "source_command": "python -m ops.scripts.goal_run_status init",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "5d18b4a180b0765b694d330916639ae25e779cc32a69eedb67b9fa893a78fe6f",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "c9bc37a838f0cad90d88482b5f23be28500821d739f7df37de89f22d26eb3dc5",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "41f213b95ffd7a99643897f4f0c668e795964eb33b9051f4d43c0858ae522133",
+    "baseline_commit": "9b991cc65612a682e508185c9374692f04758bfe41123a7463683e96c0bac3d1",
+    "branch": "e4410a50f1dfc09ec1e813e3b514e4a2ebea38f5525fc2e952d887f6160801d9",
+    "goal_id": "e4a44b736df2b23145e0d73c83d2f60e510a8ca025f63c44a84b00dd028d0f38",
+    "repo_url": "681f9058c57f621647361263ce7f3f4a11f63c769259f752be9a8157ee01aeff",
+    "visibility": "7109ec0807d8f2bd40aa93347ea112977e316242f2d457864041f59dfb684fc0",
+    "worktree_path": "d2bd4e15a6cafb639cb5fab712465e08c5f7ba6571ed7f51e959a503be5a32ba"
+  },
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-15T06:08:36Z"
+  }
+}

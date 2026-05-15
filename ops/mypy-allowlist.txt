@@ -26,6 +26,7 @@ ops/scripts/mechanism/auto_improve_session_runtime.py
 ops/scripts/core/behavior_delta_runtime.py
 ops/scripts/core/candidate_rule_runtime.py
 ops/scripts/core/canonical_artifact_promote.py
+ops/scripts/core/codex_goal_client.py
 ops/scripts/core/codex_exec_executor.py
 ops/scripts/core/command_runtime.py
 ops/scripts/supply_chain/cyclonedx_sbom.py
@@ -47,6 +48,9 @@ ops/scripts/mechanism/finalize_run_runtime.py
 ops/scripts/mechanism/finalize_run_state_runtime.py
 ops/scripts/eval/function_budget_refactor_proposals.py
 ops/scripts/mechanism/finalize_run_write_runtime.py
+ops/scripts/mechanism/goal_prompt.py
+ops/scripts/mechanism/goal_run_status.py
+ops/scripts/mechanism/goal_worktree_guard.py
 ops/scripts/core/frontmatter_runtime.py
 ops/scripts/core/generated_artifact_index.py
 ops/scripts/mechanism/improvement_observations.py
@@ -137,6 +141,7 @@ ops/scripts/registry/raw_registry_cross_environment_matrix.py
 ops/scripts/registry/raw_registry_export.py
 ops/scripts/registry/raw_registry_preflight.py
 ops/scripts/registry/raw_registry_runtime.py
+ops/scripts/mechanism/remediation_backlog.py
 ops/scripts/core/registry_alignment_passes_runtime.py
 ops/scripts/core/registry_diagnostics_runtime.py
 ops/scripts/core/registry_exceptions_runtime.py
@@ -187,6 +192,7 @@ ops/scripts/core/schema_runtime.py
 ops/scripts/core/script_output_surfaces.py
 ops/scripts/core/select_subagent_rung.py
 ops/scripts/mechanism/set_mechanism_run_history.py
+ops/scripts/mechanism/self_improvement_negative_lessons.py
 ops/scripts/core/source_page_naming_runtime.py
 ops/scripts/core/source_package_clean_extract.py
 ops/scripts/core/source_tree_fingerprint_runtime.py

@@ -10,8 +10,9 @@ from pathlib import Path
 
 import pytest
 
-from ops.scripts.release_closeout_sealed_rehearsal_check import build_report, main
+from ops.scripts.release_closeout_sealed_rehearsal_check import build_report, main, write_report
 from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.public
@@ -101,9 +102,11 @@ class ReleaseCloseoutSealedRehearsalCheckTests(unittest.TestCase):
 
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["preflight_status"], "sealed_clean_pass")
+        self.assertEqual(report["preflight_mode"], "clean_required")
         self.assertEqual(report["distribution_binding_status"], "pass")
         self.assertEqual(report["authority_preflight_status"], "clean")
         self.assertFalse(report["expected_blocked_preflight"])
+        self.assertTrue(report["clean_required_preflight"])
         self.assertEqual(report["blocking_reason_ids"], [])
         self.assertEqual(report["unexpected_failure_ids"], [])
         self.assertEqual(report["failures"], [])
@@ -218,9 +221,11 @@ class ReleaseCloseoutSealedRehearsalCheckTests(unittest.TestCase):
 
         self.assertEqual(report["status"], "fail")
         self.assertEqual(report["preflight_status"], "binding_pass_authority_blocked")
+        self.assertEqual(report["preflight_mode"], "expected_blocked")
         self.assertEqual(report["distribution_binding_status"], "pass")
         self.assertEqual(report["authority_preflight_status"], "blocked")
         self.assertTrue(report["expected_blocked_preflight"])
+        self.assertFalse(report["clean_required_preflight"])
         self.assertEqual(report["unexpected_failure_ids"], [])
         self.assertEqual(
             report["blocking_reason_ids"],
@@ -260,6 +265,26 @@ class ReleaseCloseoutSealedRehearsalCheckTests(unittest.TestCase):
         )
 
         self.assertEqual(result, 0)
+
+    def test_write_report_validates_sealed_preflight_vocabulary_schema(self) -> None:
+        zip_path = self._write_inputs()
+        report = build_report(
+            self.vault,
+            distribution_zip=zip_path.relative_to(self.vault).as_posix(),
+            context=fixed_context(),
+        )
+
+        out_path = write_report(self.vault, report, "tmp/sealed-check.json")
+        persisted = json.loads(out_path.read_text(encoding="utf-8"))
+
+        schema = load_schema(
+            self.vault
+            / "ops"
+            / "schemas"
+            / "release-closeout-sealed-rehearsal-check.schema.json"
+        )
+        self.assertEqual(validate_with_schema(persisted, schema), [])
+        self.assertEqual(persisted["preflight_mode"], "clean_required")
 
     def test_sealed_rehearsal_check_rejects_legacy_status_without_migrated_fields(
         self,

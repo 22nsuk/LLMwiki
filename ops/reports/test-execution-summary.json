@@ -1,25 +1,25 @@
 {
   "$schema": "ops/schemas/test-execution-summary.schema.json",
   "artifact_kind": "test_execution_summary",
-  "generated_at": "2026-05-15T04:22:25Z",
+  "generated_at": "2026-05-15T06:55:28Z",
   "producer": "ops.scripts.test_execution_summary",
-  "source_command": "python -m ops.scripts.test_execution_summary --vault . --suite report-contract-summary --collect-nodeids --deselection-policy ops/policies/report-contract-deselections.json -- .venv/bin/python -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py",
+  "source_command": "python -m ops.scripts.test_execution_summary --vault . --suite report-contract-summary --collect-nodeids --deselection-policy ops/policies/report-contract-deselections.json -- '<home>/code/LLMwiki/.venv/bin/python' -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "3888a8f92f87b53728d51f585675b6854bf04a3a8c8ed2fb5ae02eef2945a26e",
+  "source_tree_fingerprint": "e05dd1ad01f3136bc54b44d003569089cff4b3722879f16dfeab135c8f3df868",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "8e541e00811969ffb63fb334e04f8206073277c8bd422e88e0df898fd6f20328",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "876546bfd46cdefb8124f7f1fe172f497e3e2849d72581d0106bdad990f87e5f",
+    "source_paths": "a02d1a42b2eeccd6fad3b3fc0f542f67ebef3ca13b2b54cdbcbd50c6124e37ee",
     "deselection_policy": "304ab09b5d5d34ab1992a9b2ce54aa5a5f4e0b73f928db808de6e6df372fba91",
-    "test_targets": "7d621e2d6ab3b22637a44c498c2da70e78f3ea4b8a1d53d2ff27470f7b4368fd",
+    "test_targets": "e3054db1debff3532fbb966ff68655737a84a2637fb37c036224effb8aa9eaa8",
     "deselected_tests": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-    "deselection_lifecycle": "a0ff5ebeafed1006c71cbce8470760cd69909cc93d0043ba848190abc7cc5524",
+    "deselection_lifecycle": "aa81383f7b770f57579cb24e644f9908330c7074ae74271fae789cd06ba1984a",
     "evidence_artifacts": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
     "nodeid_outcome_consistency": "c2288096f5b2bb26a18afad0574aa834767832c4d4857b89d9341c8f9736adc5",
     "suite": "e8806087007f73940192067c46554732289adb000251e116b8eda2437a0ff078",
     "suite_coverage": "b77ace30e3859d15a04208659cffabca258e1fcdfda97192c160769a041b2b7e",
-    "wrapped_command": "e85e3f18039eee8432b2cb9f259da23f3fb3f3cd31e95f42439315a5f7a35853"
+    "wrapped_command": "0fcd2abd39a2c79d15d93071d6382c8af33f7cb899ad66ba6e37135e5e879b3d"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -27,7 +27,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T04:22:25Z"
+    "checked_at": "2026-05-15T06:55:28Z"
   },
   "vault": ".",
   "policy": {
@@ -45,12 +45,12 @@
     "reason": "report-contract-summary is a targeted report-contract subset; use full release-builder evidence before treating this as full-suite proof."
   },
   "status": "pass",
-  "command": ".venv/bin/python -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py",
+  "command": "'<home>/code/LLMwiki/.venv/bin/python' -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py",
   "returncode": 0,
   "timed_out": false,
   "timeout_seconds": 5400,
   "termination_reason": "completed",
-  "duration_ms": 21270,
+  "duration_ms": 21419,
   "counts": {
     "passed": 171,
     "failed": 0,
@@ -69,7 +69,7 @@
       "autoload_disabled": true,
       "policy": "disabled"
     },
-    "interpreter_path_class": "repo_virtualenv",
+    "interpreter_path_class": "external_absolute",
     "toolchain_contract": {
       "status": "pass",
       "python_supported": true,
@@ -100,7 +100,7 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "c5d4b87a062bad572531356f69c904fd1f5ac20ce83a0c1dadb7c72b447769ea"
+      "sha256": "9e19854220c6f8ecba2d9d93348e6a5e2f5946ae9d143c7446bf84ddf16a4aa3"
     },
     {
       "path": "tests/test_pytest_entrypoint_guidance.py",
@@ -108,7 +108,7 @@
     },
     {
       "path": "tests/test_report_schema_sample_regeneration.py",
-      "sha256": "c42e945c10bfcd4a4f7ffea054aae684ff7573208b82e071ca410e62b3bf9d8c"
+      "sha256": "b9371428e504ea2eb8e5fc8c08ef87c06de48956ca0676b38438f07a90204dcc"
     },
     {
       "path": "tests/test_report_schemas.py",
@@ -130,7 +130,7 @@
   "deselected_tests": [],
   "deselection_lifecycle": {
     "status": "pass",
-    "checked_at": "2026-05-15T04:22:25Z",
+    "checked_at": "2026-05-15T06:55:28Z",
     "actual_deselected_count": 0,
     "max_allowed_deselected_count": 0,
     "over_budget": false,
@@ -150,7 +150,7 @@
   "policy_deselected_count": 0,
   "pytest_collect_nodeid_digest": {
     "status": "collected",
-    "command": ".venv/bin/python -m pytest -o addopts= --collect-only -q --capture=no tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py -m 'report_contract and not artifact_finalization'",
+    "command": "'<home>/code/LLMwiki/.venv/bin/python' -m pytest -o addopts= --collect-only -q --capture=no tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py -m 'report_contract and not artifact_finalization'",
     "nodeid_count": 171,
     "sha256": "ae66089710ace896acb99ab2514fd3877369f9b08355c16c5dc3ac6f72e0cda3",
     "reason": ""
@@ -169,16 +169,16 @@
     "reason": "collected nodeid count matches passed + skipped + xfailed/xpassed outcomes"
   },
   "evidence_artifacts": [],
-  "stdout_tail": "........................................................................ [ 42%]\n........................................................................ [ 84%]\n...........................                                              [100%]\n171 passed, 7 deselected in 21.07s\n",
+  "stdout_tail": "........................................................................ [ 42%]\n........................................................................ [ 84%]\n...........................                                              [100%]\n171 passed, 7 deselected in 21.22s\n",
   "stderr_tail": "",
   "release_contract_diagnosis": [
     {
       "name": "pytest_contract_summary",
       "status": "clean_pass",
       "lane": "clean",
-      "command": ".venv/bin/python -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py",
-      "duration_seconds": 21.27,
-      "checked_at": "2026-05-15T04:22:25Z",
+      "command": "'<home>/code/LLMwiki/.venv/bin/python' -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py",
+      "duration_seconds": 21.42,
+      "checked_at": "2026-05-15T06:55:28Z",
       "blocker_conditions": [],
       "accepted_risk_family": null,
       "risk_acceptance_ref": null,

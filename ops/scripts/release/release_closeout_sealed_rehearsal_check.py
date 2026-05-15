@@ -4,7 +4,6 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
-import json
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,11 +12,13 @@ from typing import Any
 from ops.scripts.artifact_io_runtime import (
     load_optional_json_object_with_diagnostics,
     resolve_repo_artifact_path,
+    write_schema_validated_json,
 )
 from ops.scripts.output_runtime import display_path
 from .release_authority_vocabulary import legacy_sealed_rehearsal_reason_id
 from .release_status_v2 import release_status_v2_view
 from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.schema_runtime import load_schema_with_vault_override
 
 
 BATCH_MANIFEST_PATH = "ops/reports/release-closeout-batch-manifest.json"
@@ -25,6 +26,7 @@ EXTERNAL_REPORT_REFERENCE_MANIFEST_PATH = (
     "external-reports/report-reference-manifest.json"
 )
 DEFAULT_OUT = "tmp/release-closeout-sealed-rehearsal-check.json"
+SCHEMA_PATH = "ops/schemas/release-closeout-sealed-rehearsal-check.schema.json"
 AUTHORITY_FAILURE_IDS = {
     "batch_release_authority_not_clean_pass",
     "batch_sealed_release_not_clean_pass",
@@ -241,9 +243,11 @@ def _preflight_status(
         authority_preflight_status = "unknown"
     return {
         "preflight_status": preflight_status,
+        "preflight_mode": "expected_blocked" if preflight_status == "binding_pass_authority_blocked" else "clean_required",
         "distribution_binding_status": distribution_binding_status,
         "authority_preflight_status": authority_preflight_status,
         "expected_blocked_preflight": preflight_status == "binding_pass_authority_blocked",
+        "clean_required_preflight": preflight_status != "binding_pass_authority_blocked",
         "blocking_reason_ids": _vocabulary_reason_ids(failures, batch),
         "unexpected_failure_ids": binding_failures
         if preflight_status != "binding_pass_authority_blocked"
@@ -494,12 +498,13 @@ def write_report(vault: Path, report: dict[str, Any], out_path: str | None) -> P
     destination = resolve_repo_artifact_path(
         vault, out_path, default_relative_path=DEFAULT_OUT
     )
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
+    return write_schema_validated_json(
+        destination,
+        report,
+        load_schema_with_vault_override(vault, SCHEMA_PATH),
+        context="release closeout sealed rehearsal check schema validation failed",
+        trailing_newline=True,
     )
-    return destination
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

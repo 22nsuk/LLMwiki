@@ -117,7 +117,8 @@
         "signal_sent",
         "final_state_observed",
         "stdout_received",
-        "stderr_received"
+        "stderr_received",
+        "heartbeat"
       ],
       "properties": {
         "returncode": {
@@ -151,6 +152,38 @@
         },
         "stderr_received": {
           "type": "boolean"
+        },
+        "heartbeat": {
+          "type": "object",
+          "required": [
+            "interval_seconds",
+            "emitted_count",
+            "last_elapsed_seconds",
+            "status"
+          ],
+          "properties": {
+            "interval_seconds": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "emitted_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "last_elapsed_seconds": {
+              "type": "number",
+              "minimum": 0
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "disabled",
+                "completed",
+                "timed_out"
+              ]
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

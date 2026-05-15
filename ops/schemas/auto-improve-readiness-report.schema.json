@@ -1081,6 +1081,10 @@
             "minLength": 1
           }
         },
+        "currentness_status": {
+          "type": "string",
+          "minLength": 1
+        },
         "summary": {
           "type": "string",
           "minLength": 1
@@ -1095,9 +1099,11 @@
         "artifact_kind",
         "status",
         "preflight_status",
+        "preflight_mode",
         "distribution_binding_status",
         "authority_preflight_status",
         "expected_blocked_preflight",
+        "clean_required_preflight",
         "failure_ids",
         "failure_details",
         "blocker_reason_ids",
@@ -1119,6 +1125,10 @@
             "unknown"
           ]
         },
+        "preflight_mode": {
+          "type": "string",
+          "enum": ["clean_required", "expected_blocked"]
+        },
         "distribution_binding_status": {
           "type": "string",
           "enum": ["pass", "fail", "unknown"]
@@ -1128,6 +1138,7 @@
           "enum": ["clean", "blocked", "unknown"]
         },
         "expected_blocked_preflight": { "type": "boolean" },
+        "clean_required_preflight": { "type": "boolean" },
         "failure_ids": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }

@@ -79,12 +79,8 @@ def _release_gate_summaries(reports: dict[str, dict[str, Any]]) -> dict[str, dic
 
     return {
         "artifact_freshness": _artifact_freshness_summary(reports["artifact_freshness"]),
-        "selected_contract": _release_gate_summary(
+        "selected_contract": _selected_contract_summary(
             reports["selected_contract"],
-            path=SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH,
-            expected_artifact_kind="test_execution_summary",
-            gate_label="selected contract summary",
-            nonblocking_source_statuses={"partial-pass"},
         ),
         "source_package": _release_gate_summary(
             reports["source_package"],
@@ -189,6 +185,36 @@ def _release_gate_summary(
         "source_status": source_status,
         "release_blocking": status != "pass",
         "summary": f"{gate_label} status={source_status}",
+    }
+
+
+def _selected_contract_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    summary = _release_gate_summary(
+        payload,
+        path=SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH,
+        expected_artifact_kind="test_execution_summary",
+        gate_label="selected contract summary",
+        nonblocking_source_statuses={"partial-pass"},
+    )
+    if summary["status"] == "not_run" or summary["source_status"] == "kind_mismatch":
+        return summary
+    currentness = payload.get("currentness")
+    currentness = currentness if isinstance(currentness, dict) else {}
+    currentness_status = str(currentness.get("status", "")).strip() or "missing"
+    if summary["status"] != "pass":
+        return {**summary, "currentness_status": currentness_status}
+    if currentness_status == "current":
+        return {**summary, "currentness_status": currentness_status}
+    return {
+        **summary,
+        "status": "fail",
+        "source_status": f"currentness_{currentness_status}",
+        "currentness_status": currentness_status,
+        "release_blocking": True,
+        "signal_ids": ["selected_contract_currentness_not_current"],
+        "summary": (
+            f"{summary['summary']}; selected_contract_currentness_status={currentness_status}"
+        ),
     }
 
 
@@ -337,9 +363,11 @@ def _release_authority_preflight_summary(payload: dict[str, Any]) -> dict[str, A
             "artifact_kind": "",
             "status": "not_run",
             "preflight_status": "not_run",
+            "preflight_mode": "clean_required",
             "distribution_binding_status": "unknown",
             "authority_preflight_status": "unknown",
             "expected_blocked_preflight": False,
+            "clean_required_preflight": True,
             "failure_ids": [],
             "failure_details": [],
             "blocker_reason_ids": [],
@@ -349,6 +377,7 @@ def _release_authority_preflight_summary(payload: dict[str, Any]) -> dict[str, A
     artifact_kind = str(payload.get("artifact_kind", "")).strip()
     status = str(payload.get("status", "")).strip() or "unknown"
     preflight_status = str(payload.get("preflight_status", "")).strip() or "unknown"
+    preflight_mode = str(payload.get("preflight_mode", "")).strip() or "clean_required"
     distribution_binding_status = (
         str(payload.get("distribution_binding_status", "")).strip() or "unknown"
     )
@@ -370,9 +399,11 @@ def _release_authority_preflight_summary(payload: dict[str, Any]) -> dict[str, A
         "artifact_kind": artifact_kind,
         "status": status if artifact_kind == "release_closeout_sealed_rehearsal_check" else "fail",
         "preflight_status": preflight_status,
+        "preflight_mode": preflight_mode,
         "distribution_binding_status": distribution_binding_status,
         "authority_preflight_status": authority_preflight_status,
         "expected_blocked_preflight": bool(payload.get("expected_blocked_preflight", False)),
+        "clean_required_preflight": bool(payload.get("clean_required_preflight", True)),
         "failure_ids": _string_list(payload.get("failures")),
         "failure_details": failure_details,
         "blocker_reason_ids": blocker_reason_ids,
@@ -689,5 +720,3 @@ def _artifact_contract_promotion_blockers(
             "recommended_next_step": recommended_next_step,
         }
     ]
-
-

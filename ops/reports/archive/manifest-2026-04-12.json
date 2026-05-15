@@ -1,0 +1,332 @@
+{
+  "generated_at": "2026-04-12T08:59:37Z",
+  "files": [
+    {
+      "path": ".obsidian/app.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "size_bytes": 2
+    },
+    {
+      "path": ".obsidian/appearance.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "size_bytes": 2
+    },
+    {
+      "path": ".obsidian/core-plugins.json",
+      "sha256": "763cf20a921fd9955735b278006820b90b207b2fc04d9e79ca648279c7c14276",
+      "size_bytes": 696
+    },
+    {
+      "path": ".obsidian/graph.json",
+      "sha256": "89b1b8c279c3229a13509a0fad866ef90a7a70a6536f78d542e9c0960aec3d77",
+      "size_bytes": 493
+    },
+    {
+      "path": ".obsidian/workspace.json",
+      "sha256": "230d9474e566cca745895ca47de2fb8061d5bb790760214829801b7a98e8bd25",
+      "size_bytes": 5075
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "1f6ead3c6de2468a7fa1809798680105f785702b4a029b2cd0b0df20b5ebf003",
+      "size_bytes": 7714
+    },
+    {
+      "path": "README.md",
+      "sha256": "0d86bdcb5a06a1468853dcae28503825ede6137a83916854d2d5bb464d4404c0",
+      "size_bytes": 1383
+    },
+    {
+      "path": "ops/README.md",
+      "sha256": "316bce882a8a9f669156da7cc163dfa2cc9bbcbeadac31d8ca05ba0cf9c8a03a",
+      "size_bytes": 914
+    },
+    {
+      "path": "ops/evals/wiki-quality-evals.md",
+      "sha256": "4b76f96518e4c41b14c161cd3a46502c70c67c128050dcb5acfcfec8260c7571",
+      "size_bytes": 1823
+    },
+    {
+      "path": "ops/manifest.json",
+      "sha256": "db308c22d64985306ede6336e4f6703af9ee21ffa343675a57eec849b58b71bb",
+      "size_bytes": 8922
+    },
+    {
+      "path": "ops/policies/wiki-maintainer-policy.yaml",
+      "sha256": "fe98568fa2f5b04d4357719b6f418890f2848a911e119575cf1d7bb28e292fc2",
+      "size_bytes": 1419
+    },
+    {
+      "path": "ops/reports/eval-initial-2026-04-12.json",
+      "sha256": "be656789b7af7b1c7cc06d5f0bb5d67efe5977db279b8e046e52b0e633569d6f",
+      "size_bytes": 17881
+    },
+    {
+      "path": "ops/reports/lint-initial-2026-04-12.json",
+      "sha256": "00ca2492e9f2aba3f5f4b43c81e1f329573b4da3643f84108a9d1a1285e65516",
+      "size_bytes": 252
+    },
+    {
+      "path": "ops/schemas/bundle-manifest.schema.json",
+      "sha256": "b03b15e6596fc893ea1b5d3b4fd1ec5c558fa4b3f33acdde84a5f312802edd5d",
+      "size_bytes": 668
+    },
+    {
+      "path": "ops/schemas/eval-report.schema.json",
+      "sha256": "a8816f86ea3fbf5fab05e34d23f5f2ee4b63441176644caeccb42e1821645e0c",
+      "size_bytes": 1011
+    },
+    {
+      "path": "ops/schemas/lint-report.schema.json",
+      "sha256": "7d47a35e2abab7e9ec9802ef03cf48cc9933d6893d4833f21a0ce68b579d201b",
+      "size_bytes": 668
+    },
+    {
+      "path": "ops/schemas/run-ledger.schema.json",
+      "sha256": "687915a20f5f1808ce28a2f25a6510dd4274ccbdcdc06c7abe85c9fdcf1423c7",
+      "size_bytes": 991
+    },
+    {
+      "path": "ops/scripts/wiki_eval.py",
+      "sha256": "f0777905e4a48b9685cc292042f6f7a2f12674ef228802bc3c37e3997e5ea32c",
+      "size_bytes": 4418
+    },
+    {
+      "path": "ops/scripts/wiki_lint.py",
+      "sha256": "b47f74c414c66380fb320237ba2807d54ad8f332d9c2ddb4b4c38bac09849515",
+      "size_bytes": 4462
+    },
+    {
+      "path": "ops/scripts/wiki_manifest.py",
+      "sha256": "f3306349fdb97d2b24812ccb85c449deac5429b6a01c7082e4ee9f4e5c282f3f",
+      "size_bytes": 1366
+    },
+    {
+      "path": "raw/2603.23420v1.pdf",
+      "sha256": "cf8855a294869402ffab67a382395a42ee4de171f3eafa57a832b62765e55443",
+      "size_bytes": 611599
+    },
+    {
+      "path": "raw/2603.24755v1.pdf",
+      "sha256": "666d2c48f83aa7d7e2cb48bb449047496bc6a5187930d18e338073a8ce7f89ab",
+      "size_bytes": 662940
+    },
+    {
+      "path": "raw/2603.28052v1.pdf",
+      "sha256": "7d9b90f53a9f4801a090f1a4acb843340cde81e4f865f97d53fff2a6a570eb73",
+      "size_bytes": 1078140
+    },
+    {
+      "path": "raw/V2 stage1_mvp_specification.pdf",
+      "sha256": "3dc676e2df6bb56fc4db0f9129c6b6a50d42d1a43d4672ac1deb93e615172c34",
+      "size_bytes": 533437
+    },
+    {
+      "path": "raw/web-snapshots/autoresearch-skill-skill-and-eval-guide-2026-04-12.md",
+      "sha256": "9707de0e867a91541b9b41f7c7528f00eec0f0c1c83140eb760848af15ef7708",
+      "size_bytes": 1134
+    },
+    {
+      "path": "raw/web-snapshots/jangpm-meta-skills-readme-2026-04-12.md",
+      "sha256": "b9cc34badd7353bd23ac068d5b228b38a818efa5a7d71258c29ac62c59f35de5",
+      "size_bytes": 982
+    },
+    {
+      "path": "raw/web-snapshots/karpathy-autoresearch-readme-and-program-2026-04-12.md",
+      "sha256": "e5a1c7aa86f25834ef55d43dcc6009f81c073e81f69eb5837bede547737bedca",
+      "size_bytes": 1140
+    },
+    {
+      "path": "raw/web-snapshots/manifest.md",
+      "sha256": "33fb3ebf00693779adf75866ca658604c7f74f6c1e1f1f059b41112fc3a5ee3c",
+      "size_bytes": 522
+    },
+    {
+      "path": "raw/web-snapshots/meta-harness-project-page-2026-04-12.md",
+      "sha256": "0b5ce3ced01d591d6fae8884538c81e09b3615bee12811f6a35446167743f363",
+      "size_bytes": 912
+    },
+    {
+      "path": "raw/web-snapshots/ouroboros-readme-and-claude-2026-04-12.md",
+      "sha256": "6b05e34d1194ebe455bf158ff7349f0858a1574e0f301ba8490679557ca03700",
+      "size_bytes": 1205
+    },
+    {
+      "path": "raw/web-snapshots/slopcodebench-design-philosophy-2026-04-12.md",
+      "sha256": "3d37647784e37ac4eead9b0a74488a1d5c4622c26b08a53cb18ef7c272b59f4f",
+      "size_bytes": 639
+    },
+    {
+      "path": "wiki/concept--anti-slop-wiki-governance.md",
+      "sha256": "48428c5c2432afd7fa9e564f969530f74317571f86bb4fc146318b8a85070ef7",
+      "size_bytes": 2127
+    },
+    {
+      "path": "wiki/concept--artifact-contracts.md",
+      "sha256": "f1cc85b394cc635d3994ff7c24af06773004a9dc6dc5bf3ef9e6f57f6e34c131",
+      "size_bytes": 1784
+    },
+    {
+      "path": "wiki/concept--binary-evals.md",
+      "sha256": "5503d48d42efeb43ece8420ff81ec78148ccf342c7335a51b1e920250cb88619",
+      "size_bytes": 1648
+    },
+    {
+      "path": "wiki/concept--cross-reference-maintenance.md",
+      "sha256": "45efd1042a4f8550164461eea24a19912228e4f0e2b3fa1ff73acdb7b9fbdee9",
+      "size_bytes": 1654
+    },
+    {
+      "path": "wiki/concept--harness-optimization.md",
+      "sha256": "282e982020b80313abc6ad02ba20eae61ecb5f5778b53cf248cae876c132d9db",
+      "size_bytes": 1668
+    },
+    {
+      "path": "wiki/concept--llm-wiki.md",
+      "sha256": "f4be8cad2a49e4129dd6abf5043ecee6354ed3367b7762dd84ea1aab93b42ca4",
+      "size_bytes": 1877
+    },
+    {
+      "path": "wiki/concept--persistent-wiki-vs-rag.md",
+      "sha256": "4ec0b9f4210e60d11e0b7c3766b7087d456f4ba131fd9aafccea3b5d3ce10c16",
+      "size_bytes": 1756
+    },
+    {
+      "path": "wiki/concept--planning-gates.md",
+      "sha256": "50c69426c6a81e698226591ee8ca006f190709296242b8397715490bd7b69311",
+      "size_bytes": 1868
+    },
+    {
+      "path": "wiki/concept--self-improving-wiki-loop.md",
+      "sha256": "7ae91008705a46cd090c9d9c3523d2a3a3a5e0a102e0590642c1cbbafc5386fb",
+      "size_bytes": 1783
+    },
+    {
+      "path": "wiki/concept--trace-store-and-run-ledger.md",
+      "sha256": "c16573d8331b2727c571d129dbf6d43d5cfdc06dca2a748dfbae1a8ee016d2f8",
+      "size_bytes": 1786
+    },
+    {
+      "path": "wiki/index.md",
+      "sha256": "382be508bc7db6e18b12e0011d9182d76e5e6a9fccc53b627f9bbbe7cb112e99",
+      "size_bytes": 6463
+    },
+    {
+      "path": "wiki/lint--initial-review-2026-04-12.md",
+      "sha256": "6fef9d120c1f807387e91770eaca38f0ef3b6b9ffabf91e2b268ee1fc8c94af5",
+      "size_bytes": 2662
+    },
+    {
+      "path": "wiki/log.md",
+      "sha256": "09a7a4fb31a0b42a99bfe0894903fb52cba1d76e47e317b6bc659ee7b38815ed",
+      "size_bytes": 7319
+    },
+    {
+      "path": "wiki/query--recommended-next-actions-2026-04-12.md",
+      "sha256": "7a3806b2e080372e5b1d40e01a9276d3cc66b33d644b9b7eace624b5ede52d0d",
+      "size_bytes": 2302
+    },
+    {
+      "path": "wiki/source--autoresearch-skill-repo.md",
+      "sha256": "ec33c1a01768fc9237d2c0855fdd2f4d593343ba83c54e1c43067a35593f53f0",
+      "size_bytes": 2178
+    },
+    {
+      "path": "wiki/source--bilevel-autoresearch.md",
+      "sha256": "19ee741582cc3f5b46169ec222acd5d19a6690297bf62064cf091e96a48a87e8",
+      "size_bytes": 2555
+    },
+    {
+      "path": "wiki/source--jangpm-meta-skills-repo.md",
+      "sha256": "d784c5e33e7491822fb6254c2eb44938783ab0ace5afdf3274c8a5f73fedc039",
+      "size_bytes": 2257
+    },
+    {
+      "path": "wiki/source--karpathy-autoresearch-repo.md",
+      "sha256": "775c06600dcf0302dd8474b75e46559ddc428fc0050d0a9307f8152e395dc700",
+      "size_bytes": 2371
+    },
+    {
+      "path": "wiki/source--meta-harness.md",
+      "sha256": "58e6acaaae8b290e91783842b0e309d0fded4d23935c067acd53a7ad8745642c",
+      "size_bytes": 2706
+    },
+    {
+      "path": "wiki/source--ouroboros-repo.md",
+      "sha256": "cbea5e452a677101e703121afbcd9309308cf98f314c406ef116c68c6c91031c",
+      "size_bytes": 2360
+    },
+    {
+      "path": "wiki/source--slopcodebench.md",
+      "sha256": "23fe0054119ce9771fdc649344553bbf79702b39be074ff7fba47311734c4826",
+      "size_bytes": 2711
+    },
+    {
+      "path": "wiki/source--stage1-planning-harness-mvp.md",
+      "sha256": "44c8b54457384654838040aa38decb28afe5b54052a3b2b17b5e022c5a477857",
+      "size_bytes": 2508
+    },
+    {
+      "path": "wiki/synthesis--karpathy-gist-to-runtime.md",
+      "sha256": "73d0f78f1f1dc84d8a6179d56bcb200cfee380c3d022dd391089c8aaf38179e0",
+      "size_bytes": 2047
+    },
+    {
+      "path": "wiki/synthesis--llm-wiki-self-improvement-architecture.md",
+      "sha256": "d914346375382e0fb5404411067ade5a33c1c1d00cfe867547a7417651c381bd",
+      "size_bytes": 3012
+    },
+    {
+      "path": "wiki/synthesis--meta-harness-vs-bilevel-autoresearch.md",
+      "sha256": "e03457e43c64637bf497c41a2b533461160f7d7bb4809c4733b01d8467203956",
+      "size_bytes": 2787
+    },
+    {
+      "path": "wiki/synthesis--research-insights-to-practical-wiki-rules.md",
+      "sha256": "a343ee76b340bf81f39aac8ed91f99e59f4972571cf6bc4a155c21a46602ac21",
+      "size_bytes": 2787
+    },
+    {
+      "path": "wiki/synthesis--stage1-planning-harness-bridge.md",
+      "sha256": "4633efcd129135e0f9e70c75c9b54c8a3aa0286ae581486e71a50cbbef876335",
+      "size_bytes": 2085
+    }
+  ],
+  "historical_bootstrap": {
+    "archive_reason": "historical_bootstrap_snapshot_normalized_to_archive_contract",
+    "source_artifact": "ops/reports/manifest-2026-04-12.json",
+    "original_generated_at": "2026-04-12T08:59:37.088426Z",
+    "normalized_at": "2026-04-28T05:19:12Z",
+    "original_producer": "ops.scripts.wiki_manifest",
+    "normalizations": [
+      "normalized_generated_at_to_utc_second_precision",
+      "added_archive_envelope"
+    ],
+    "policy_identity": {
+      "path": "ops/policies/wiki-maintainer-policy.yaml",
+      "version": 0,
+      "status": "predates_versioned_policy_contract"
+    }
+  },
+  "$schema": "ops/schemas/bundle-manifest.schema.json",
+  "artifact_kind": "bundle_manifest",
+  "producer": "ops.scripts.backfill_historical_bootstrap_reports",
+  "source_command": "python -m ops.scripts.backfill_historical_bootstrap_reports --vault . --path ops/reports/manifest-2026-04-12.json",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "3e986d6ce6c1bf8236658039af66ea6536d005f6f97b7be98bf18f42483059c9",
+  "input_fingerprints": {
+    "policy": "7d45acc617992bca127ce0b7defb6715caac5b774dcc489acf984502cea3a402",
+    "schema": "b03b15e6596fc893ea1b5d3b4fd1ec5c558fa4b3f33acdde84a5f312802edd5d",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "historical_payload_before_backfill": "032f47ffe80a3a9149327c672baf45cb8069c5b2f9d729a4f1600a2cdf9cea7a",
+    "target_rel_path": "35ab516ca88b991730ddcb9632d569c92f3f274df4c4cd4f63a4861bfab1720a"
+  },
+  "schema_version": 1,
+  "artifact_status": "archived",
+  "retention_policy": "archive",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-04-28T05:19:12Z"
+  }
+}
