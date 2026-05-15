@@ -349,6 +349,57 @@ def test_goal_bound_auto_improve_sustains_heartbeat_until_budget_elapsed(
     )
 
 
+def test_goal_bound_auto_improve_sustains_retryable_executor_usage_limit(
+    tmp_path: Path,
+) -> None:
+    vault = _seed_repo_with_worktree(tmp_path)
+    _copy_goal_runtime_inputs(vault)
+    _initialize_goal(vault)
+
+    def usage_limited_runner(vault_path: Path, **_: Any) -> dict[str, Any]:
+        rel_path = "ops/reports/auto-improve-sessions/goal-usage-limited.json"
+        session_path = vault_path / rel_path
+        session_path.parent.mkdir(parents=True, exist_ok=True)
+        session_path.write_text(
+            json.dumps(
+                {
+                    "iterations": [{"iteration": 1, "outcome": "executor_usage_limited"}],
+                    "attempted_proposal_ids": ["proposal-a"],
+                    "loop_state": {"consecutive_failures": 0},
+                }
+            ),
+            encoding="utf-8",
+        )
+        return {
+            "session_id": "goal-usage-limited",
+            "session_report": rel_path,
+            "iterations": 1,
+            "stop_reason": "executor_usage_limited",
+            "run_ids": [],
+        }
+
+    result = run_goal_bound_auto_improve(
+        GoalAutoImproveRequest(
+            vault=vault,
+            policy_path="ops/policies/wiki-maintainer-policy.yaml",
+            goal_profile="30-minute-trial",
+            heartbeat_interval_seconds=0.02,
+            checkpoint_interval_seconds=0.02,
+            sustain_until_budget=True,
+            sustain_budget_seconds=0.08,
+            context=_context(5),
+        ),
+        runner=usage_limited_runner,
+    )
+
+    status = json.loads((vault / "ops" / "reports" / "goal-run-status.json").read_text())
+
+    assert result["status"] == "running"
+    assert "sustained_budget_elapsed" in status["last_event"]["reason"]
+    assert status["progress"]["iterations_completed"] == 1
+    assert status["progress"]["consecutive_failures"] == 0
+
+
 def test_goal_bound_auto_improve_blocks_when_periodic_readiness_regresses(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -2177,7 +2177,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT ?= tmp/test-execution-summary-full.candidate.json",
             text,
         )
-        self.assertIn("TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT ?= 1257", text)
+        self.assertIn("TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT ?= 1261", text)
         self.assertIn(
             "RELEASE_AUDIT_PAYLOAD_STAGING_DIR ?= build/release-payloads", text
         )
@@ -2457,7 +2457,10 @@ class MakefileStaticGateTests(unittest.TestCase):
             "GOAL_LADDER_PROFILES ?= 30-minute-trial 6-hour-ramp 2-day-candidate 5-day-sustained",
             text,
         )
-        self.assertIn("GOAL_LADDER_RUN_EXTRA_ARGS ?= --sustain-until-budget", text)
+        self.assertIn(
+            "GOAL_LADDER_RUN_EXTRA_ARGS ?= --sustain-until-budget --allow-learning-uncertain",
+            text,
+        )
         self.assertIn("auto-improve-goal-ladder-run", _target_block(text, ".PHONY"))
         self.assertIn("auto-improve-goal-ladder-start", _target_block(text, ".PHONY"))
         run_block = _target_block(text, "auto-improve-goal-ladder-run")

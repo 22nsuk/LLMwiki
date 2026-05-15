@@ -494,6 +494,39 @@ def _assert_successful_runtime_events_and_learning(case: unittest.TestCase, arti
 
 
 class AutoImproveRuntimeTests(unittest.TestCase):
+    def test_mutation_error_classifies_codex_usage_limit_as_retryable_capacity(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            run_id = "auto-session-run-01"
+            (vault / "runs" / run_id).mkdir(parents=True)
+            _write_executor_report(
+                vault,
+                run_id,
+                role="worker",
+                status="fail",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="high",
+                returncode=1,
+                notes=[],
+            )
+            (vault / "runs" / run_id / "worker.stderr.txt").write_text(
+                "ERROR: You've hit your usage limit. Try again at May 16th, 2026 12:29 AM.\n",
+                encoding="utf-8",
+            )
+
+            outcome = auto_improve_runtime.evaluate_mutation_error(
+                run_id=run_id,
+                roles=["worker"],
+                artifact_root=vault,
+                pre_promotion_failure_outcomes={"mutation_failed", "executor_usage_limited"},
+                consecutive_failures=2,
+            )
+
+            self.assertEqual(outcome.outcome, "executor_usage_limited")
+            self.assertEqual(outcome.next_consecutive_failures, 2)
+            self.assertFalse(outcome.quarantine_proposal)
+
     def test_refresh_select_phase_returns_selected_proposal_and_queue_snapshot(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

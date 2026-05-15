@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/public-check-summary.schema.json",
   "artifact_kind": "public_check_summary",
-  "generated_at": "2026-05-15T14:12:36Z",
+  "generated_at": "2026-05-15T14:58:28Z",
   "producer": "ops.scripts.public_check_summary",
   "source_command": "python -m ops.scripts.public_check_summary --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "c6c3e2f474191ee907fe91d311a2ed0f1d7135df0f556d1da4430b5687eb402e",
+  "source_tree_fingerprint": "c03cee95c6d8d7783b9155ae1448e881c205cbf15df93139d5808f05eeada2ad",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "60e44cd49ca6321888bbf40d808c7be70d89d5e19a3a35154a4e235efca7c7fc",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T14:12:36Z"
+    "checked_at": "2026-05-15T14:58:28Z"
   },
   "vault": ".",
   "policy": {
@@ -32,12 +32,12 @@
     "public_check_status": "pass",
     "export_file_count": 641,
     "export_source_file_count": 640,
-    "export_root_fingerprint": "bdbdeb52c142db180bcd2a3785ff3bb46b58b926061456844de770ddb0097dfb",
+    "export_root_fingerprint": "2b85f7f6523ab529917c74ad63c956ac58e790d124bedf381c870eb645a8bb0e",
     "public_export_manifest_sha256": "a87feebeb96af2d853cb47f8d271e231012745bb984142ac78bd09ec4218e70e",
     "public_surface_policy_sha256": "6551a09d14ab4961d949b71777f6320f4ffed0d2ec50bc4ab6ab109521590dcf",
     "command_count": 3,
     "command_fail_count": 0,
-    "pytest_passed": 354,
+    "pytest_passed": 355,
     "pytest_failed": 0,
     "pytest_errors": 0,
     "pytest_skipped": 5
@@ -47,7 +47,7 @@
     "manifest_file": "PUBLIC-EXPORT-MANIFEST.json",
     "file_count": 641,
     "source_file_count": 640,
-    "export_root_fingerprint": "bdbdeb52c142db180bcd2a3785ff3bb46b58b926061456844de770ddb0097dfb",
+    "export_root_fingerprint": "2b85f7f6523ab529917c74ad63c956ac58e790d124bedf381c870eb645a8bb0e",
     "manifest_sha256": "a87feebeb96af2d853cb47f8d271e231012745bb984142ac78bd09ec4218e70e"
   },
   "commands": [
@@ -60,7 +60,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 39,
+      "duration_ms": 37,
       "stdout_tail": "All checks passed!\n",
       "stderr_tail": "",
       "pytest_counts": {}
@@ -74,7 +74,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 2863,
+      "duration_ms": 2877,
       "stdout_tail": "Success: no issues found in 232 source files\n",
       "stderr_tail": "",
       "pytest_counts": {}
@@ -88,11 +88,11 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 53008,
-      "stdout_tail": "bringing up nodes...\nbringing up nodes...\n\n..................ssss............s..................................... [ 20%]\n........................................................................ [ 40%]\n........................................................................ [ 60%]\n........................................................................ [ 80%]\n.......................................................................  [100%]\n354 passed, 5 skipped in 52.77s\n",
+      "duration_ms": 53463,
+      "stdout_tail": "bringing up nodes...\nbringing up nodes...\n\n...........ss..............ss.......s................................... [ 20%]\n........................................................................ [ 40%]\n........................................................................ [ 60%]\n........................................................................ [ 80%]\n........................................................................ [100%]\n355 passed, 5 skipped in 53.24s\n",
       "stderr_tail": "",
       "pytest_counts": {
-        "passed": 354,
+        "passed": 355,
         "failed": 0,
         "errors": 0,
         "skipped": 5,

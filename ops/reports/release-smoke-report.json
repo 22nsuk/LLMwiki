@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/release-smoke-report.schema.json",
   "artifact_kind": "release_smoke_report",
-  "generated_at": "2026-05-15T14:04:49Z",
+  "generated_at": "2026-05-15T14:50:41Z",
   "producer": "ops.scripts.release_smoke",
   "source_command": "python -m ops.scripts.release.release_smoke --vault . --profile full",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "c6c3e2f474191ee907fe91d311a2ed0f1d7135df0f556d1da4430b5687eb402e",
+  "source_tree_fingerprint": "c03cee95c6d8d7783b9155ae1448e881c205cbf15df93139d5808f05eeada2ad",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "6f14f899e0f4dce979d6152079ccd87ca44a19716266452a0f497b5fb3275d93",
@@ -18,7 +18,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T14:04:49Z"
+    "checked_at": "2026-05-15T14:50:41Z"
   },
   "vault": ".",
   "policy": {
@@ -31,8 +31,8 @@
   "archive_file": {
     "path": "<tmp>/goal-5day-auto-improve-runtime-release-smoke.zip",
     "exists": true,
-    "size_bytes": 190421431,
-    "sha256": "a69690910bb7915c7ea4c2024e750d50d5c6428a4bd0847fe85c67debaa93675"
+    "size_bytes": 190422884,
+    "sha256": "51faf74381ae8ec94ce0e67a03e08810200b8c6f43cb9469395d3591b7c706a4"
   },
   "archive_class": {
     "name": "release_smoke_zip",
@@ -245,11 +245,11 @@
   "archive_reproducibility": {
     "status": "pass",
     "run_count": 2,
-    "first_archive_sha256": "a69690910bb7915c7ea4c2024e750d50d5c6428a4bd0847fe85c67debaa93675",
-    "second_archive_sha256": "a69690910bb7915c7ea4c2024e750d50d5c6428a4bd0847fe85c67debaa93675",
+    "first_archive_sha256": "51faf74381ae8ec94ce0e67a03e08810200b8c6f43cb9469395d3591b7c706a4",
+    "second_archive_sha256": "51faf74381ae8ec94ce0e67a03e08810200b8c6f43cb9469395d3591b7c706a4",
     "same_archive_sha256": true,
-    "first_source_manifest_digest": "0aeff1d4484e61374eda76adfaecba6e7f3a8a07262d100650885ebe5e328ab6",
-    "second_source_manifest_digest": "0aeff1d4484e61374eda76adfaecba6e7f3a8a07262d100650885ebe5e328ab6",
+    "first_source_manifest_digest": "1290823e79b7abcd77b96cfd3542045e14bc8ba20a3a9a0819c5320db01f25e5",
+    "second_source_manifest_digest": "1290823e79b7abcd77b96cfd3542045e14bc8ba20a3a9a0819c5320db01f25e5",
     "same_source_manifest_digest": true,
     "summary": "archive_reproducibility=pass; same_archive_sha256=true; same_source_manifest_digest=true"
   },
@@ -257,10 +257,10 @@
     "path": "release-archive-self-description.json",
     "archive_root_name": "LLMwiki",
     "archive_member_path": "LLMwiki/release-archive-self-description.json",
-    "sha256": "09b0a37439b9d374d389669623d4680a7aa93e133436e839874975c22e6ab68d",
+    "sha256": "6c14e310c49223bcfa35a24dd76b54842420593312708b515d2dfbb558b1f8aa",
     "size_bytes": 4022,
     "profile": "full",
-    "source_manifest_digest": "c1f48df0edb941fd62dddef311cf72e849df0e8efb079f995e253d2689366329",
+    "source_manifest_digest": "7412c076ff0f437ca0592415ffcdcc4e421fa2e1e32d77912d00ff184f14b512",
     "source_manifest_file_count": 1573,
     "tmp_included": false,
     "external_reports_included": false,
@@ -288,7 +288,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 1268,
+      "duration_ms": 1253,
       "stdout_tail": "      \"path_list_separator\": \":\",\n      \"path_separator\": \"/\",\n      \"platform_system\": \"Linux\",\n      \"posix_escape_expanded_component_byte_limit\": \"255\",\n      \"preferred_encoding\": \"UTF-8\"\n    }\n  },\n  \"metric_semantics\": {\n    \"entry_count\": {\n      \"scope\": \"registry_entries\",\n      \"description\": \"Parsed raw registry entries after inventory enrichment.\"\n    },\n    \"error_count\": {\n      \"scope\": \"diagnostics\",\n      \"description\": \"Number of preflight diagnostics emitted with fail severity.\"\n    },\n    \"warning_count\": {\n      \"scope\": \"diagnostics\",\n      \"description\": \"Number of preflight diagnostics emitted with warn severity.\"\n    },\n    \"path_alias_match_count\": {\n      \"scope\": \"entries_with_missing_canonical_storage_path\",\n      \"description\": \"Entries whose canonical storage_path was absent but a manual, exported, or deterministic environment alias existed on disk.\"\n    },\n    \"content_hash_fallback_count\": {\n      \"scope\": \"entries_with_missing_canonical_storage_path_and_aliases\",\n      \"description\": \"Entries whose path locators were absent but exactly one raw inventory file matched the entry content_sha256.\"\n    }\n  },\n  \"unsupported_environment\": false,\n  \"errors\": [],\n  \"warnings\": [],\n  \"stats\": {\n    \"entry_count\": 446,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"path_alias_match_count\": 0,\n    \"content_hash_fallback_count\": 0\n  }\n}",
       "stderr_tail": ""
     },
@@ -300,8 +300,8 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 2516,
-      "stdout_tail": "        \"function_lines\": 134,\n        \"parameter_count\": 9,\n        \"branch_node_count\": 5\n      },\n      \"threshold\": {\n        \"function_lines\": 120,\n        \"parameter_count\": 10,\n        \"branch_node_count\": 18\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    },\n    {\n      \"type\": \"python_function_budget_candidate\",\n      \"page\": \"ops/scripts/mechanism/auto_improve_goal_runtime.py\",\n      \"symbol\": \"run_goal_bound_auto_improve\",\n      \"line\": 624,\n      \"profile\": \"runtime\",\n      \"triggered_budgets\": [\n        \"function_lines\"\n      ],\n      \"value\": {\n        \"function_lines\": 121,\n        \"parameter_count\": 2,\n        \"branch_node_count\": 7\n      },\n      \"threshold\": {\n        \"function_lines\": 120,\n        \"parameter_count\": 10,\n        \"branch_node_count\": 18\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    }\n  ],\n  \"stats\": {\n    \"page_count\": 487,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"review_candidate_count\": 18\n  }\n}",
+      "duration_ms": 2499,
+      "stdout_tail": "        \"function_lines\": 134,\n        \"parameter_count\": 9,\n        \"branch_node_count\": 5\n      },\n      \"threshold\": {\n        \"function_lines\": 120,\n        \"parameter_count\": 10,\n        \"branch_node_count\": 18\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    },\n    {\n      \"type\": \"python_function_budget_candidate\",\n      \"page\": \"ops/scripts/mechanism/auto_improve_goal_runtime.py\",\n      \"symbol\": \"run_goal_bound_auto_improve\",\n      \"line\": 628,\n      \"profile\": \"runtime\",\n      \"triggered_budgets\": [\n        \"function_lines\"\n      ],\n      \"value\": {\n        \"function_lines\": 121,\n        \"parameter_count\": 2,\n        \"branch_node_count\": 7\n      },\n      \"threshold\": {\n        \"function_lines\": 120,\n        \"parameter_count\": 10,\n        \"branch_node_count\": 18\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    }\n  ],\n  \"stats\": {\n    \"page_count\": 487,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"review_candidate_count\": 18\n  }\n}",
       "stderr_tail": ""
     },
     {
@@ -312,7 +312,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 1068,
+      "duration_ms": 1052,
       "stdout_tail": "        {\n          \"eval\": \"frontmatter_contract\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"required_sections_present\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"source_trace_present\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"source_trace_targets_exist\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"link_integration\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"high_severity_open_questions_within_budget\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"medium_severity_open_questions_within_budget\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"broken_link_free\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"placeholder_discipline\",\n          \"pass\": true\n        }\n      ]\n    }\n  ]\n}",
       "stderr_tail": ""
     },
@@ -324,7 +324,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 547,
+      "duration_ms": 543,
       "stdout_tail": "        {\n          \"eval\": \"declared_source_count_matches_evidence\",\n          \"pass\": true,\n          \"detail\": {\n            \"declared_source_count\": 7,\n            \"evidence_source_count\": 7,\n            \"evidence_source_links\": [\n              \"source--ai-memory-boom-and-supply-constraints-2026-04-13\",\n              \"source--asml-ai-chip-demand-and-semiconductor-capex-resilience-2026-04-16\",\n              \"source--memory-product-mix-upside-for-samsung-and-sk-hynix-2026-04-21\",\n              \"source--samsung-labor-bonus-dispute-and-semiconductor-workforce-risk-2026-04-17\",\n              \"source--samsung-process-blueprint-trade-secret-case-2026-04-21\",\n              \"source--samsung-strategic-output-increase-and-preorders-2026-04-21\",\n              \"source--sk-hynix-socamm2-ai-memory-scaleup-2026-04-21\"\n            ]\n          }\n        }\n      ]\n    },\n    {\n      \"page\": \"system/synthesis--stage1-planning-harness-bridge.md\",\n      \"score\": 1,\n      \"max_score\": 1,\n      \"results\": [\n        {\n          \"eval\": \"declared_source_count_matches_evidence\",\n          \"pass\": true,\n          \"detail\": {\n            \"declared_source_count\": 2,\n            \"evidence_source_count\": 2,\n            \"evidence_source_links\": [\n              \"source--ouroboros-repo\",\n              \"source--stage1-planning-harness-mvp\"\n            ]\n          }\n        }\n      ]\n    }\n  ]\n}",
       "stderr_tail": ""
     },
@@ -336,7 +336,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 250,
+      "duration_ms": 243,
       "stdout_tail": "    },\n    {\n      \"artifact\": \"planning-validation.json\",\n      \"schema\": \"ops/schemas/planning-validation.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"run-ledger.json\",\n      \"schema\": \"ops/schemas/run-ledger.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"promotion-report.json\",\n      \"schema\": \"ops/schemas/promotion-report.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"improvement-observations.json\",\n      \"schema\": \"ops/schemas/improvement-observations.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    }\n  ],\n  \"cross_checks\": [\n    {\n      \"check\": \"run_id_alignment\",\n      \"pass\": true,\n      \"detail\": {\n        \"seed.yaml\": \"run-YYYYMMDD-slug\",\n        \"planning-validation.json\": \"run-YYYYMMDD-slug\",\n        \"run-ledger.json\": \"run-YYYYMMDD-slug\",\n        \"promotion-report.json\": \"run-YYYYMMDD-slug\"\n      }\n    }\n  ],\n  \"phase_checks\": []\n}",
       "stderr_tail": ""
     }

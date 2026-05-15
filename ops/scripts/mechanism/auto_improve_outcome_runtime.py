@@ -14,6 +14,13 @@ from ops.scripts.promotion_decision_registry_runtime import (
 
 
 TERMINAL_SUCCESS_OUTCOMES = frozenset({"promoted", "discarded"})
+RETRYABLE_EXECUTOR_FAILURE_OUTCOMES = frozenset({"executor_usage_limited"})
+_USAGE_LIMIT_MARKERS = (
+    "executor_usage_limited",
+    "usage limit",
+    "try again at",
+    "upgrade to pro",
+)
 
 
 @dataclass(frozen=True)
@@ -55,6 +62,34 @@ def role_report_path(run_id: str, role: str) -> str:
     return run_rel(run_id, f"{role}-executor-report.json")
 
 
+def _read_report_artifact_text(report: dict, artifact_root: Path, key: str) -> str:
+    artifacts = report.get("artifacts", {})
+    if not isinstance(artifacts, dict):
+        return ""
+    rel_path = str(artifacts.get(key, "")).strip()
+    if not rel_path:
+        return ""
+    artifact_path = Path(rel_path)
+    if artifact_path.is_absolute():
+        return ""
+    path = artifact_root / artifact_path
+    if not path.is_file():
+        return ""
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
+def _executor_report_has_usage_limit(report: dict, artifact_root: Path) -> bool:
+    texts: list[str] = []
+    diagnostics = report.get("diagnostics", {})
+    if isinstance(diagnostics, dict):
+        notes = diagnostics.get("notes", [])
+        if isinstance(notes, list):
+            texts.extend(str(item) for item in notes)
+    texts.append(_read_report_artifact_text(report, artifact_root, "stderr"))
+    combined = "\n".join(texts).lower()
+    return any(marker in combined for marker in _USAGE_LIMIT_MARKERS)
+
+
 def detect_executor_failure(run_id: str, roles: list[str], artifact_root: Path) -> str:
     for role in roles:
         report_path = artifact_root / role_report_path(run_id, role)
@@ -63,6 +98,8 @@ def detect_executor_failure(run_id: str, roles: list[str], artifact_root: Path) 
         report = json.loads(report_path.read_text(encoding="utf-8"))
         if report.get("status") == "pass":
             continue
+        if _executor_report_has_usage_limit(report, artifact_root):
+            return "executor_usage_limited"
         if role == "reviewer":
             return "review_blocked"
         if role == "validator" or role.endswith("auditor"):
@@ -126,10 +163,16 @@ def evaluate_mutation_error(
     consecutive_failures: int,
 ) -> ExecutionOutcome:
     outcome = detect_executor_failure(run_id, roles, artifact_root)
+    next_consecutive_failures = consecutive_failures
+    if outcome not in RETRYABLE_EXECUTOR_FAILURE_OUTCOMES:
+        next_consecutive_failures += 1
     return ExecutionOutcome(
         outcome=outcome,
-        next_consecutive_failures=consecutive_failures + 1,
-        quarantine_proposal=outcome in pre_promotion_failure_outcomes,
+        next_consecutive_failures=next_consecutive_failures,
+        quarantine_proposal=(
+            outcome not in RETRYABLE_EXECUTOR_FAILURE_OUTCOMES
+            and outcome in pre_promotion_failure_outcomes
+        ),
     )
 
 

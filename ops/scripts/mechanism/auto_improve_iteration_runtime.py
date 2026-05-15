@@ -246,6 +246,12 @@ def run_auto_improve_iteration(
         dependencies=dependencies.persist_iteration_dependencies,
     )
     next_consecutive_failures = persisted.consecutive_failures
+    if execution.outcome.outcome == "executor_usage_limited":
+        return AutoImproveIterationResult(
+            consecutive_failures=next_consecutive_failures,
+            stop_reason="executor_usage_limited",
+            keep_running=False,
+        )
     if (
         not execution.outcome.is_terminal_success
         and next_consecutive_failures >= request.session["budget"]["max_consecutive_failures"]

@@ -485,7 +485,11 @@ def _start_maintenance_thread(
 
 
 def _final_status_for_stop_reason(stop_reason: str) -> str:
-    if stop_reason in {"failure_budget_exhausted", "learning_review_required"}:
+    if stop_reason in {
+        "failure_budget_exhausted",
+        "learning_review_required",
+        "executor_usage_limited",
+    }:
         return "blocked"
     return "running"
 

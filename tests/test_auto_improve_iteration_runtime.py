@@ -572,3 +572,74 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                 candidate_id="",
                 decision_reason="scope_freeze_status",
             )
+
+    def test_run_auto_improve_iteration_stops_on_retryable_executor_usage_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            proposal = {"proposal_id": "proposal-1", "primary_targets": ["ops/scripts/example.py"]}
+            route_scaffold = SimpleNamespace(
+                scope_freeze={"status": "ready", "resolution": {"test_files": []}},
+                scope_freeze_rel="runs/auto-session-run-01/scope-freeze.json",
+                roles=["worker"],
+                routing_report_rels=["runs/auto-session-run-01/subagent-routing.worker.json"],
+                phase_durations={"scope": 0.1, "route": 0.2},
+            )
+            execution = ExecuteEvaluatePhaseResult(
+                outcome=ExecutionOutcome(
+                    outcome="executor_usage_limited",
+                    next_consecutive_failures=0,
+                    quarantine_proposal=False,
+                ),
+                phase_durations={"experiment": 0.4},
+            )
+            session = {
+                "budget": {"max_consecutive_failures": 1},
+                "attempted_proposal_ids": [],
+                "run_ids": [],
+                "queue_snapshot": [],
+            }
+            dependencies = AutoImproveIterationDependencies(
+                refresh_select_phase=mock.Mock(
+                    return_value=SimpleNamespace(
+                        proposal=proposal,
+                        queue_snapshot=["proposal-1"],
+                        stop_reason=None,
+                    )
+                ),
+                route_scaffold_phase=mock.Mock(return_value=route_scaffold),
+                execute_evaluate_dependencies=_execute_dependencies(),
+                execute_evaluate_phase_fn=mock.Mock(return_value=execution),
+                persist_iteration_dependencies=_persist_dependencies(),
+                persist_iteration_phase_fn=mock.Mock(
+                    return_value=PersistIterationPhaseResult(
+                        consecutive_failures=0,
+                        telemetry_rel="runs/auto-session-run-01/run-telemetry.json",
+                    )
+                ),
+                append_runtime_event=mock.Mock(),
+            )
+
+            result = run_auto_improve_iteration(
+                AutoImproveIterationRequest(
+                    vault=vault,
+                    policy={"version": "2026-04-21"},
+                    resolved_policy_path=Path("ops/policies/wiki-maintainer-policy.yaml"),
+                    session=session,
+                    session_id="auto-session",
+                    proposal_report_path="ops/reports/mutation-proposals.json",
+                    iteration=1,
+                    attempted=set(),
+                    quarantined=set(),
+                    consecutive_failures=0,
+                    pre_promotion_failure_outcomes={"mutation_failed"},
+                    context=_context(),
+                ),
+                dependencies=dependencies,
+                build_run_id=lambda *_args: "auto-session-run-01",
+            )
+
+            self.assertFalse(result.keep_running)
+            self.assertEqual(result.stop_reason, "executor_usage_limited")
+            self.assertEqual(result.consecutive_failures, 0)
+            self.assertEqual(session["attempted_proposal_ids"], ["proposal-1"])
+            self.assertEqual(session["run_ids"], ["auto-session-run-01"])

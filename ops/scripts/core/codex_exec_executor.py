@@ -25,6 +25,14 @@ from .schema_runtime import load_schema
 
 EXECUTOR_REPORT_SCHEMA = EXECUTOR_REPORT_SCHEMA_PATH
 DEFAULT_CODEX_EXEC_TIMEOUT_SECONDS = 1800
+_CODEX_USAGE_LIMIT_RE = re.compile(
+    r"(usage limit|try again at|upgrade to pro)",
+    flags=re.IGNORECASE,
+)
+_CODEX_USAGE_LIMIT_RETRY_RE = re.compile(
+    r"try again at\s+([^.\n\r]+)",
+    flags=re.IGNORECASE,
+)
 
 
 class CodexExecError(Exception):
@@ -106,6 +114,15 @@ class _ExecutionSummary:
     timed_out: bool
     timeout_seconds: int
     termination_reason: str
+
+
+def _codex_usage_limit_note(stderr: str) -> str:
+    if not _CODEX_USAGE_LIMIT_RE.search(stderr):
+        return ""
+    match = _CODEX_USAGE_LIMIT_RETRY_RE.search(stderr)
+    if match:
+        return f"codex exec blocked by usage limit; retry_after={match.group(1).strip()}"
+    return "codex exec blocked by usage limit"
 
 
 @dataclass(frozen=True)
@@ -505,6 +522,9 @@ def _summarize_execution(
             notes.append(f"codex exec timed out after {timeout_seconds} seconds")
         else:
             notes.append(f"codex exec exited with {returncode}")
+            usage_limit_note = _codex_usage_limit_note(str(getattr(completed, "stderr", "")))
+            if usage_limit_note:
+                notes.append(usage_limit_note)
     elif isinstance(model_output, dict):
         returned_status = str(model_output.get("status", "pass"))
         if returned_status != "pass":

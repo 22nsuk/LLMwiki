@@ -405,6 +405,53 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertTrue(timeout_failure["result"]["timed_out"])
             self.assertIn(report["artifacts"]["timeout_failure"], ledger["events"][-1]["artifacts"])
 
+    def test_role_usage_limit_adds_retryable_diagnostic_note(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["worker"])
+            _write_routing_report(
+                vault,
+                "worker",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="high",
+                selected_rung=2,
+            )
+
+            def fake_run(_argv: list[str], **_: object) -> object:
+                return mock.Mock(
+                    returncode=1,
+                    stdout="",
+                    stderr=(
+                        "ERROR: You've hit your usage limit. "
+                        "Upgrade to Pro, or try again at May 16th, 2026 12:29 AM.\n"
+                    ),
+                    timed_out=False,
+                    timeout_seconds=1800,
+                    termination_reason="completed",
+                )
+
+            with mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+                report = execute_codex_exec_role(
+                    artifact_root=vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    role="worker",
+                    routing_report_rel="runs/run-executor/subagent-routing.worker.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+            self.assertEqual(report["status"], "fail")
+            self.assertIn("codex exec exited with 1", report["diagnostics"]["notes"])
+            self.assertIn(
+                "codex exec blocked by usage limit; retry_after=May 16th, 2026 12:29 AM",
+                report["diagnostics"]["notes"],
+            )
+
     def test_run_executor_pipeline_orders_roles_and_records_reports(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

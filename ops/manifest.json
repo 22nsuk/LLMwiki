@@ -107,7 +107,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "048cd83f767c53c71e0f059b727bb964c4913fb8b4df740cc31602afecadfccf",
+      "sha256": "db046c801499e7d40dce91bbda3d14bf5b567b14952019a9a03e53eff426d602",
       "size_bytes": 73480
     },
     {
@@ -137,8 +137,8 @@
     },
     {
       "path": "mk/mechanism.mk",
-      "sha256": "06251050c874b30226b7b7207b4d5e41cfde99afb15dcb45e24c6911c7234510",
-      "size_bytes": 8675
+      "sha256": "c68ab0895e04e32f0ae49e7488794549970f6cf2d78ed14421480f1666152cbd",
+      "size_bytes": 8702
     },
     {
       "path": "mk/public.mk",
@@ -167,12 +167,12 @@
     },
     {
       "path": "mk/test.mk",
-      "sha256": "2e92d89b3a03a125a6a33dfab9fb2217d313d1410f97782fa925ba517d552278",
+      "sha256": "ef032069b002acef187131939c0d04044a621e39c896a414c48dafed7cc0c85a",
       "size_bytes": 19707
     },
     {
       "path": "ops/README.md",
-      "sha256": "ce77b8cbad7f8486b66d341e807d92a177313733c7e1e443fd5cb91eb3e1879e",
+      "sha256": "951e5fced8088a8c96c85747e2637a064860409e8a5ce772c1ad14567a57d3e0",
       "size_bytes": 102728
     },
     {
@@ -962,8 +962,8 @@
     },
     {
       "path": "ops/scripts/core/codex_exec_executor.py",
-      "sha256": "e01798901d53680b753441010181367f677e7bcc58b0e4676a7a7a5a6a6c04ab",
-      "size_bytes": 28676
+      "sha256": "cda21f06bad642fd3a94c032f0bff940d70fe616d1881027bded79ebea4e179e",
+      "size_bytes": 29391
     },
     {
       "path": "ops/scripts/core/codex_goal_client.py",
@@ -1417,8 +1417,8 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_goal_runtime.py",
-      "sha256": "d485cd356bc40e42fe8d7487f805b1fe1cfb9f81ace7522f4d2d1c61c5298f49",
-      "size_bytes": 27681
+      "sha256": "051a2f97ffa177762bc501fd6580913a39833cb3d29992de946067766567ff05",
+      "size_bytes": 27738
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
@@ -1427,8 +1427,8 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_iteration_runtime.py",
-      "sha256": "fc52ee8e7832ae4bfac28ac33a0f3320b277f646787e9c6dcd1e0bfe59dc4e1f",
-      "size_bytes": 8989
+      "sha256": "9bc35d3af428a3237d2c38f09eb6b6b0e3260fbe807afd2b1ac893906509eb73",
+      "size_bytes": 9246
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_iteration_telemetry_runtime.py",
@@ -1442,8 +1442,8 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_outcome_runtime.py",
-      "sha256": "6bdaa13eab05d935ecabbba5d455161c58525a0b601875a69a26a60833b00b20",
-      "size_bytes": 4767
+      "sha256": "9bd3bfb46d6ec6c4872092ad98fae3f4d5ff31d17657a792766be20bf8b1e98e",
+      "size_bytes": 6349
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_queue_runtime.py",
@@ -4882,8 +4882,8 @@
     },
     {
       "path": "tests/test_auto_improve_iteration_runtime.py",
-      "sha256": "a25a28be869e175cde7425b6b5e46b1f29dc30fe3e62d4d2a26276a0e9ffd2f8",
-      "size_bytes": 25753
+      "sha256": "a5c6223f3042896ac4eab574fe7dcdbc4ad4a858ebcd5b35c3822558f73600f3",
+      "size_bytes": 29173
     },
     {
       "path": "tests/test_auto_improve_outcome_runtime.py",
@@ -4912,8 +4912,8 @@
     },
     {
       "path": "tests/test_auto_improve_runtime.py",
-      "sha256": "8e62797c3d7d16d4aefe35e291d539a1deeb604b031ff05b442f1ce444bd504d",
-      "size_bytes": 57486
+      "sha256": "a2347b51fdb2143e0e3687586ffccd9fc0c4ed670f69d3865442961198f10ded",
+      "size_bytes": 58852
     },
     {
       "path": "tests/test_auto_improve_session_runtime.py",
@@ -5002,8 +5002,8 @@
     },
     {
       "path": "tests/test_executor_runtime.py",
-      "sha256": "0134aedc88c8d1c9d51c022bc54191275653d365c944de2621694135ea4d63bb",
-      "size_bytes": 29373
+      "sha256": "4addea29d656184c48435146843479eddee934c1cc428d9c397d23a7004aab02",
+      "size_bytes": 31443
     },
     {
       "path": "tests/test_experiment_telemetry_runtime.py",
@@ -5062,8 +5062,8 @@
     },
     {
       "path": "tests/test_goal_auto_improve_runtime.py",
-      "sha256": "ae96da0488924c6e1a585ff676f10f2fcfd6bb19e937c15d87bbb936fed3b962",
-      "size_bytes": 15748
+      "sha256": "f6a298957a1e1f6b4713cc80a32acb657f5287783a0010727d8848e910f880bb",
+      "size_bytes": 17612
     },
     {
       "path": "tests/test_goal_prompt.py",
@@ -5142,8 +5142,8 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "e507935248fab2b58dd4530a8a2d8adb816aae0043bc2689e536ba524eb75b08",
-      "size_bytes": 129684
+      "sha256": "a605469efcdf1557913b86f9939348346f249ffc0394d38f080a5ca22174f9a8",
+      "size_bytes": 129746
     },
     {
       "path": "tests/test_manifest_export_symlink_safety.py",

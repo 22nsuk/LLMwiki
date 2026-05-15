@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/outcome-metrics.schema.json",
   "artifact_kind": "outcome_metrics_report",
-  "generated_at": "2026-05-15T14:11:31Z",
+  "generated_at": "2026-05-15T14:57:23Z",
   "producer": "ops.scripts.observability_decision_metrics_runtime",
   "source_command": "python -m ops.scripts.outcome_metrics --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "c6c3e2f474191ee907fe91d311a2ed0f1d7135df0f556d1da4430b5687eb402e",
+  "source_tree_fingerprint": "c03cee95c6d8d7783b9155ae1448e881c205cbf15df93139d5808f05eeada2ad",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "aadbf232f7dc6bf40f35290f0dabcc4e9320b93c70cc2f0177f1167b24ecff29",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "0bc9e2ddbb4f6058d302543a668bbc4e1b7e889b34299afb1fe03d9163239ff1",
-    "defect_escape_closures": "af8078e2fba425e70db23f0ff566a37277f93c1bf5cf4e1b233f979be468423e",
-    "rework_closures": "5635d3581e35e7fde3e55c6e3dcbb0f5c830ccedb9508a6b21624b857d5c6e0b",
+    "defect_escape_closures": "6177254b42664236d450c9a5a30f4801e2b8cd399cfb095f124ac90c5e88a4e5",
+    "rework_closures": "eaddcdda1e3b10ba0b5c515f1fd74f9c84a7d3a26df3bc6d0bf72d1ffb71d627",
     "run_inputs": "29b953989207e0fb94f22d6771f6cf1d82bd853c00ddc9702ee7857f60fc58e0",
-    "session_reports": "fc1ab52c918bc28fb33624931b1ceae248619dbc7cd60c089346bed1f05d777b",
+    "session_reports": "c2e7a15efbc1782cbc080284878915ba41c6239fe3101d7820ce39898c0e352d",
     "recent_window": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T14:11:31Z"
+    "checked_at": "2026-05-15T14:57:23Z"
   },
   "vault": ".",
   "policy": {
@@ -34,7 +34,7 @@
     "attempts_considered": 13,
     "recent_window": 20,
     "recent_attempt_count": 13,
-    "session_reports_considered": 4
+    "session_reports_considered": 3
   },
   "metrics": {
     "attempt_count": 13,

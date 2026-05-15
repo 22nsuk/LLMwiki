@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/function-budget-refactor-proposals.schema.json",
   "artifact_kind": "function_budget_refactor_proposals",
-  "generated_at": "2026-05-15T14:11:31Z",
+  "generated_at": "2026-05-15T14:57:22Z",
   "producer": "ops.scripts.function_budget_refactor_proposals",
   "source_command": "python -m ops.scripts.function_budget_refactor_proposals --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "c6c3e2f474191ee907fe91d311a2ed0f1d7135df0f556d1da4430b5687eb402e",
+  "source_tree_fingerprint": "c03cee95c6d8d7783b9155ae1448e881c205cbf15df93139d5808f05eeada2ad",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "95f193f4886d760375b6e0528a8a9a9bc005c88934387a357d181e03af358634",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "f8d4e95f882683279884cd3cc7572d530e48f8799d3b4efb2a6a002615396ac7",
-    "classification_report": "fd4062e3e2a79473697939c29035d43a257c398bcc4f07fc373143ce2a9abf8d",
+    "classification_report": "9497fbb3a2fbd0e9ef39bf2c5dde03660f3331611938ffca2251138e07b86507",
     "classification_source": "5c51928076384d942097653b9d11de2ef107182b49249dc95a3e8286da6ec0d8",
     "small_adapter_limits": "b4256e8722ca1ad5a2f69f3f096619290caaf9b7e494ddbe85e1ad6282af66fe"
   },
@@ -21,7 +21,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T14:11:31Z"
+    "checked_at": "2026-05-15T14:57:22Z"
   },
   "vault": ".",
   "status": "pass",
@@ -145,7 +145,7 @@
     {
       "page": "ops/scripts/mechanism/auto_improve_goal_runtime.py",
       "symbol": "run_goal_bound_auto_improve",
-      "line": 624,
+      "line": 628,
       "profile": "runtime",
       "owner_surface": "ops/scripts",
       "scope_class": "shared_runtime_helper",
@@ -191,10 +191,10 @@
       "why_small": "single budget axis within adapter overage limits"
     },
     {
-      "proposal_id": "function-budget-ops-scripts-mechanism-auto-improve-goal-runtime-py-run-goal-bound-auto-improve-624",
+      "proposal_id": "function-budget-ops-scripts-mechanism-auto-improve-goal-runtime-py-run-goal-bound-auto-improve-628",
       "page": "ops/scripts/mechanism/auto_improve_goal_runtime.py",
       "symbol": "run_goal_bound_auto_improve",
-      "line": 624,
+      "line": 628,
       "owner_surface": "ops/scripts",
       "scope_class": "shared_runtime_helper",
       "recommended_action": "extract_private_runtime_helper",

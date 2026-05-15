@@ -1,29 +1,29 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-15T14:12:43Z",
+  "generated_at": "2026-05-15T14:58:34Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "c6c3e2f474191ee907fe91d311a2ed0f1d7135df0f556d1da4430b5687eb402e",
+  "source_tree_fingerprint": "c03cee95c6d8d7783b9155ae1448e881c205cbf15df93139d5808f05eeada2ad",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "e4bbee62a954a9f8b869630b9b6ce9cd27c5dbe7faeadc7e8af48b1d35474533",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "559d97ccf4254557da60555ec99fddde7a726b098edc3f0e069218516d110cdc",
-    "artifact_freshness_report": "6009e38e7b220ceec919e20592ea01d6e2d5d9a4f9dd2295b291246f42f2586b",
-    "mechanism_review_report": "633744d9b1bf37de45ec89e677e8b4008837272bf9c5a36394c233e368eb8da5",
-    "mutation_proposal_report": "a555722fb0d1702e49d749491de092bfd79927f8649e009cf2da86af97621733",
-    "outcome_metrics_report": "0b51357abf118c6aa58313ee54927c09bac39b2c1cf743d73356b34628bc5b6a",
-    "release_authority_preflight_report": "829ae595d12fee653ff1b14d23561f10720f2c9f6cb2aa3ff274b044a3f9f9f6",
-    "release_closeout_batch_manifest_report": "8f9fd3fa48cc7e6014f8b9976e29e9452ac915f3147a9676abbbb15962497a7a",
-    "release_closeout_finality_attestation_report": "ef5679d0af797e365cabb94408e770f397c72c17a2bc6c2d3e3074106d3d167c",
+    "artifact_freshness_report": "dbc44c22f60dd1110756b1be599d810068a36e74c704dd035fcb8fd77e179829",
+    "mechanism_review_report": "07f64a6044ac3778c1fc4c7154bae8245473c6968a932a947582c37534f7ebba",
+    "mutation_proposal_report": "626d059000d1fe56d28ea101ff09605e1cc99c240899f993804e89900a52bf5b",
+    "outcome_metrics_report": "4506c9985a4b1daa7f8314f7ef6580d1b98ed4db38f5a395c1457bd7da305079",
+    "release_authority_preflight_report": "0201ef719a4cd2563a71e9cd75f88e3372cb7e504c255f75d97e06c2d8699604",
+    "release_closeout_batch_manifest_report": "73b94eae76efdcf087db7a47b19a9f508db6b32337f18f022dc28c6d586f2b0b",
+    "release_closeout_finality_attestation_report": "8cc27425192ccce3be8d855afcbc078175563c557850cae2aa280380052492a9",
     "release_closeout_post_check_finalizer_report": "missing",
-    "release_closeout_summary_report": "ae4077366919f562b6bb1f07e7367f716972ab6e543a6c3e8e723ba0eb1aca57",
-    "release_evidence_cohort_report": "e77bd14cf66e2e025e3fc883f339be7c24c6b38facde10887df3be18d42ae084",
-    "selected_contract_summary_report": "bfe83e139a4416ec5cdd23208accfb3411b24ade7ccf37697adf3a880a8aa382",
-    "source_package_clean_extract_report": "8451eea0332eb89e38519357cc199cb71eb13db6219ceee419ba6ef09873618a",
-    "release_authority_preflight_report_candidates": "12a8f2896dbac07e56207c3c88bd6b48ca8889a9474f181d4de60dfd2621e43b"
+    "release_closeout_summary_report": "2a9959804a572ded880bbf49363f25413dd3ce431fa643e121657a0ef0f8f7d5",
+    "release_evidence_cohort_report": "f2a96bcbc66509a0f92d6de8b922dda0210fa51357fd2db9d0f037a7cac4d9cc",
+    "selected_contract_summary_report": "566c0151dbf2e596e6ead2db3ed0198b9dddfd57ea86548b3100ff4157a907e4",
+    "source_package_clean_extract_report": "b984c947eb79a2bc7a67478365b920b580ef726ae28417aca4621e4af88aaacb",
+    "release_authority_preflight_report_candidates": "8484764210419db3bd7a9fa841c9f1fae66a40e2f63280333c432a3ad0dfcee5"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -31,7 +31,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T14:12:43Z"
+    "checked_at": "2026-05-15T14:58:34Z"
   },
   "vault": ".",
   "policy": {
@@ -63,7 +63,7 @@
     "metrics": {
       "attempts_considered": 13,
       "min_attempts_considered": 10,
-      "session_reports_considered": 4,
+      "session_reports_considered": 3,
       "session_calibration_status": "active",
       "telemetry_coverage_ratio": 1.0,
       "same_eval_run_count": 2,
@@ -260,7 +260,7 @@
     "source_candidates_read": 1,
     "candidates_emitted": 1,
     "attempts_considered": 13,
-    "session_reports_considered": 4,
+    "session_reports_considered": 3,
     "queue_pressure_summary": "contract_regression_signals 1 proposal, 1 blocked; queue_unblock 1 proposal",
     "review_bootstrap_summary": "comparable mechanism run history는 trend-based candidate를 평가할 수 있을 만큼 확보됐다.",
     "evidence_gaps": []
@@ -297,7 +297,7 @@
     {
       "id": "outcome_metrics_session_rollup_present",
       "pass": true,
-      "detail": "session_reports_considered=4"
+      "detail": "session_reports_considered=3"
     },
     {
       "id": "fallback_target_history_requirement_met",
