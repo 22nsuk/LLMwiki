@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-15T08:38:52Z",
+  "generated_at": "2026-05-15T10:18:31Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "74f6df85d2598bde9365df9cbf861cf01e824fc2b647fd72ff7bde56d9bb2d2a",
+  "source_tree_fingerprint": "17b2ceadf48e508e81cef28ba9c60bd259419e9214727bbea22971e41d986dae",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "0b78062aa1e1d5397e3e6a796019bf61428ea78599033f9a278327a93e887134",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "3250b1bd42b6f1307d7b6116b5365f34d13933c71ff24eb9b607b1c68272a525",
-    "auto_improve_readiness": "dc342aea1237009a70e274cd16eb4260a43a0f98c7912880dd6a8fcd38518f80",
-    "learning_claim_activation": "1aaf6baba5beaf0b4054cc5884ab249936592b35caff8919b061ca782897c02b",
-    "learning_delta_scoreboard": "7d2757eadc06c30c6a506a66da9564427287f706fc6c862a04b4ce593bb0c80e",
-    "source_package_clean_extract": "c68e88c4bc50dd4d8b601df58bdf51a46d59fba1c4526b05e7e4a8cf68b4c437",
+    "auto_improve_readiness": "69203fd7a8f979f65d350cc2e1e7d126c12c4bea436ef655cc04dad2e68d6a7c",
+    "learning_claim_activation": "fdb17ad2bcb73a39629f425e463d5e60f123627f4e3fc95f8e5871f17321deb6",
+    "learning_delta_scoreboard": "63b5eb75c4402549330b213a08c10a70615ea784f2bbda27d3e5418ba786e163",
+    "source_package_clean_extract": "4b144b3f2e45cddbeaf978845ec7a964df6ef291f645d1058828444166cebbc8",
     "task_observations": "de50b3e9d034fac6257d8f0dd900c1fbf54d71a429a79d82833ccc12f5e75d09"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T08:38:52Z"
+    "checked_at": "2026-05-15T10:18:31Z"
   },
   "vault": ".",
   "policy": {
@@ -32,30 +32,15 @@
   },
   "status": "attention",
   "summary": {
-    "recent_blocker_count": 2,
+    "recent_blocker_count": 0,
     "last_success_pattern_count": 5,
     "forbidden_repeat_pattern_count": 5,
     "recommended_seed_run_count": 2,
-    "evidence_gap_count": 4,
+    "evidence_gap_count": 1,
     "source_package_replay_status": "pass",
     "next_action": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded live auto-improve with `.venv/bin/python -m ops.scripts.mechanism.auto_improve_loop --vault . --policy ops/policies/wiki-maintainer-policy.yaml --max-proposals 1 --max-minutes 30 --max-consecutive-failures 1 --executor codex_exec`."
   },
-  "recent_blockers": [
-    {
-      "id": "learning_claim_blocker_absence",
-      "source": "learning_claim_activation.blocked_predicates",
-      "status": "fail",
-      "reason": "",
-      "repair_target": "Resolve release-clean-blocker-ledger learning claim blockers or keep claim_level=none."
-    },
-    {
-      "id": "learning_claim_unlock_review_not_approved",
-      "source": "learning_claim_activation.blocked_predicates",
-      "status": "stale",
-      "reason": "",
-      "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean."
-    }
-  ],
+  "recent_blockers": [],
   "last_success_patterns": [
     {
       "id": "auto_improve_readiness_orchestrator_decomposition",
@@ -173,32 +158,11 @@
   ],
   "evidence_gaps": [
     {
-      "id": "claim_hygiene",
-      "source": "learning_claim_activation.anti_slop_preview_ledger",
-      "current": "claim_level=learning_likely; claim_wording_allowed=False",
-      "required": "No learning-improvement wording unless the claim model allows it.",
-      "repair_target": "Keep claim_level=none or complete the unlock and confirmed-claim predicates."
-    },
-    {
       "id": "context_efficiency",
       "source": "learning_claim_activation.anti_slop_preview_ledger",
       "current": "no dedicated context-efficiency telemetry is bound to the learning claim lane",
       "required": "Claim activation should expose context budget or synopsis reuse pressure before promotion authority uses it.",
       "repair_target": "Add context budget telemetry or a session synopsis digest before making this axis gating."
-    },
-    {
-      "id": "learning_claim_blocker_absence",
-      "source": "learning_claim_activation.blocked_predicates",
-      "current": "",
-      "required": "",
-      "repair_target": "Resolve release-clean-blocker-ledger learning claim blockers or keep claim_level=none."
-    },
-    {
-      "id": "learning_claim_unlock_review_not_approved",
-      "source": "learning_claim_activation.blocked_predicates",
-      "current": "",
-      "required": "",
-      "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean."
     }
   ],
   "source_package_replay": {
@@ -210,7 +174,7 @@
   },
   "next_session_entrypoint": {
     "promotion_allowed": true,
-    "claim_wording_allowed": false,
+    "claim_wording_allowed": true,
     "recommended_next_action": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded live auto-improve with `.venv/bin/python -m ops.scripts.mechanism.auto_improve_loop --vault . --policy ops/policies/wiki-maintainer-policy.yaml --max-proposals 1 --max-minutes 30 --max-consecutive-failures 1 --executor codex_exec`.",
     "first_commands": [
       "make session-synopsis",
@@ -222,9 +186,9 @@
       "Do not claim learning improvement while claim_wording_allowed is false.",
       "Do not repeat forbidden patterns until their repair_target is closed."
     ],
-    "open_blocker_count": 2,
+    "open_blocker_count": 0,
     "forbidden_pattern_count": 5,
-    "evidence_gap_count": 4
+    "evidence_gap_count": 1
   },
   "inputs": {
     "auto_improve_readiness": "ops/reports/auto-improve-readiness.json",

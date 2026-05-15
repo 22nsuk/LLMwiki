@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from ops.scripts.goal_run_status import initialize_goal_runtime
+from ops.scripts.goal_run_status import initialize_goal_runtime, main as goal_run_status_main
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
@@ -111,3 +111,43 @@ def test_initialize_goal_runtime_records_private_github_worktree_and_resume_arti
         encoding="utf-8"
     )
     assert '"event": "initialized"' in audit_events
+
+
+def test_goal_run_status_heartbeat_syncs_promotion_policy_from_readiness(
+    tmp_path: Path,
+) -> None:
+    vault = _seed_repo_with_worktree(tmp_path)
+    _copy_goal_schemas(vault)
+    initialize_goal_runtime(
+        vault,
+        repo_url="https://github.com/22nsuk/LLMwiki",
+        visibility="PRIVATE",
+        baseline_commit="6c3ca7c46c6369ad043d78da5114c84173a14973",
+        branch=GOAL_BRANCH,
+        worktree_path="../LLMwiki-worktrees/goal-5day-auto-improve-runtime",
+        context=fixed_context(),
+    )
+    readiness_path = vault / "ops" / "reports" / "auto-improve-readiness.json"
+    readiness_path.write_text(
+        json.dumps(
+            {
+                "can_promote_result": True,
+                "diagnostics": {
+                    "release_authority_preflight_summary": {
+                        "status": "pass",
+                        "preflight_status": "sealed_clean_pass",
+                        "clean_required_preflight": True,
+                        "expected_blocked_preflight": False,
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert goal_run_status_main(["heartbeat", "--vault", str(vault), "--reason", "sync"]) == 0
+
+    status = json.loads((vault / "ops" / "reports" / "goal-run-status.json").read_text())
+    assert status["promotion_policy"]["can_promote_result"] is True
+    assert status["promotion_policy"]["promotion_ban_active"] is False
+    assert "Promotion gate is open" in status["promotion_policy"]["promotion_ban_reason"]

@@ -1,29 +1,29 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-15T08:38:51Z",
+  "generated_at": "2026-05-15T10:18:33Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "74f6df85d2598bde9365df9cbf861cf01e824fc2b647fd72ff7bde56d9bb2d2a",
+  "source_tree_fingerprint": "17b2ceadf48e508e81cef28ba9c60bd259419e9214727bbea22971e41d986dae",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "e4bbee62a954a9f8b869630b9b6ce9cd27c5dbe7faeadc7e8af48b1d35474533",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "534089a8c499e36102a800f13fb67972ca79f80f65a0fabae0cec17190a05b5b",
-    "artifact_freshness_report": "6c6f8b30d05583656a15c7e9dc9a4d4e33e82ba053b323e8662f853188fb776a",
-    "mechanism_review_report": "be30a7ac7652a4f6a76a3d866c4364aa6ce853f77fad507057735524f9d220c1",
-    "mutation_proposal_report": "22129ea707bdc30bdaf4da9ce2314b1be2baeb1880df8ab5ea58aa0c51a1db3d",
-    "outcome_metrics_report": "1744d31f774612514b9b4226b88d146e55c9742780871b6a06cc8b889d6f95c8",
-    "release_authority_preflight_report": "7cd19e87e7cb07be9b178c7fdebb49caca5b220fe0bc9f7c046b1f49c319a218",
-    "release_closeout_batch_manifest_report": "92ac8517c1cad21e14962c3e49f46bbbc3c17349e588a0e6ebe873a50b7f04d0",
-    "release_closeout_finality_attestation_report": "79553ab62f1dc6db58b9139ba5446e185e4435a14c4dc8a78a22c473ae3055a4",
+    "artifact_freshness_report": "f4e5d78fbb91a9502903f80e9b9be7e1268044418d5e88060f38368d1aa56a2c",
+    "mechanism_review_report": "8c9f7d12ac9ccec043c1cf1dc2170c4b54d1cafb3102d3ec8cf10cec81f5a7b1",
+    "mutation_proposal_report": "f8ecdd06f59dc3dc85cc35b3a1d82ebde9b29bc5f7c37d9bd9196a6ba4487d96",
+    "outcome_metrics_report": "7da48d404d6265542104d9b8e7c78bddb9d8ad290445c2ac814afe7627f894ff",
+    "release_authority_preflight_report": "383227270d7ebcd620518193857b35d279ae1015b94716b00151e2868e81c443",
+    "release_closeout_batch_manifest_report": "528a42d640650eb1d5825a8a5242f58a53c46aefa73ca19db33d8db2d6f986fd",
+    "release_closeout_finality_attestation_report": "037a401cf5b27bfd655456a76a65d168e73b14aaacbbcb0829ba2c5a8124f1ea",
     "release_closeout_post_check_finalizer_report": "missing",
-    "release_closeout_summary_report": "88074727c077e6bbaa77ff0924dfa379f8ddcd3e3ed32f157b66bf7344814106",
-    "release_evidence_cohort_report": "b0c47c0a68031d823defe8139d96f9910479051c7d9ca84bc4a0d278953e26bb",
-    "selected_contract_summary_report": "fa7513c5f9e373c70d28298363db8a8e8bd3fccb6bff4001dd1a59d7184908a3",
-    "source_package_clean_extract_report": "c68e88c4bc50dd4d8b601df58bdf51a46d59fba1c4526b05e7e4a8cf68b4c437",
-    "release_authority_preflight_report_candidates": "2d12f3e9e0e2e5e7440370c38a56c3c904477d352e14b273067d401a6f4dfd5f"
+    "release_closeout_summary_report": "3abe26675126a9a02aa9042538d9be4b15e4dc329448c5504f242f282a8520cb",
+    "release_evidence_cohort_report": "3fbc0ce76c245c6116c703e9e6565b820f436cfa927b0af7ae596891f6c166ae",
+    "selected_contract_summary_report": "4bf13f56e76afc819e14cd7b51d8ba78463b60b5fa8352a78f100135a0bd02dd",
+    "source_package_clean_extract_report": "4b144b3f2e45cddbeaf978845ec7a964df6ef291f645d1058828444166cebbc8",
+    "release_authority_preflight_report_candidates": "9732df3440eddaba1d2e3abaacdfe6f7419b1a4ec274310cccaa8d9ae88213d8"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -31,7 +31,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T08:38:51Z"
+    "checked_at": "2026-05-15T10:18:33Z"
   },
   "vault": ".",
   "policy": {
@@ -101,7 +101,7 @@
       "status": "available",
       "gate_effect": "none",
       "source_report": "ops/reports/routing-provenance-aggregates/auto-improve-2026-05-02t03-27-31z.json",
-      "source_generated_at": "2026-05-15T08:36:54Z",
+      "source_generated_at": "2026-05-15T10:17:20Z",
       "session_id": "auto-improve-2026-05-02t03-27-31z",
       "summary": "attempts=1, finalized=0, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=1.00 | alerts: unfinalized runs present, recent HOLD trend",
       "health_flags": [

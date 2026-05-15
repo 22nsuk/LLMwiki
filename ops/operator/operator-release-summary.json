@@ -1,23 +1,23 @@
 {
   "$schema": "ops/schemas/operator-release-summary.schema.json",
   "artifact_kind": "operator_release_summary",
-  "generated_at": "2026-05-15T08:38:42Z",
+  "generated_at": "2026-05-15T10:19:10Z",
   "producer": "ops.scripts.operator_release_summary",
   "source_command": "python -m ops.scripts.operator_release_summary --vault . --out ops/operator/operator-release-summary.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "74f6df85d2598bde9365df9cbf861cf01e824fc2b647fd72ff7bde56d9bb2d2a",
+  "source_tree_fingerprint": "17b2ceadf48e508e81cef28ba9c60bd259419e9214727bbea22971e41d986dae",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "1162baa2c95574cfa3e9f1f29ed14e34f2df775a2bd8acd3b6e0301827537805",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "6d79652d2ad35694dd11eaaa9c85cd5ededf5b750c2c9975712d69f72efa2471",
-    "batch_manifest": "92ac8517c1cad21e14962c3e49f46bbbc3c17349e588a0e6ebe873a50b7f04d0",
-    "closeout": "88074727c077e6bbaa77ff0924dfa379f8ddcd3e3ed32f157b66bf7344814106",
-    "full_test_summary": "d6817597c2c29cd8aa964874f1b32b3749ef9f5f1c79b7fa7c5e8dd814caadfb",
-    "learning_delta_scoreboard": "870e5dbf7bcfc6efb9cc962c0de9c9b114b9e4e75014a7ff2315009e79313d2f",
-    "learning_revalidation": "0729689e8be6db25f06d855b79a8a18b413d932d064719b6ddb89611a1687d7a",
-    "self_check": "bd4704a94905be2825a167e300fd85b7e48b2ce0edd4d9fb0614fb060f83f274",
-    "test_summary": "fa7513c5f9e373c70d28298363db8a8e8bd3fccb6bff4001dd1a59d7184908a3"
+    "batch_manifest": "17fc82e9becc9f3765fcd20129f50bcbe64939cacef08e74c9b866e68b49e479",
+    "closeout": "eeb422a7e6eeba070c52120482ef0631f5af3b68a6a9ac8665a16409e986fa57",
+    "full_test_summary": "bd913a881144085cc6e7a067720fc22d16c20ee59de24edfcf7db4cad2f409a0",
+    "learning_delta_scoreboard": "63b5eb75c4402549330b213a08c10a70615ea784f2bbda27d3e5418ba786e163",
+    "learning_revalidation": "9164c3dbf4bc8bec4be5bb5fe0116ce99f2fbd4fd62a34d8b7723755ce03c73a",
+    "self_check": "0d17d5dd37cb5e7accf722e185ace455ce5aeee995f187604d2c9dce85b81c7a",
+    "test_summary": "4bf13f56e76afc819e14cd7b51d8ba78463b60b5fa8352a78f100135a0bd02dd"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T08:38:42Z"
+    "checked_at": "2026-05-15T10:19:10Z"
   },
   "vault": ".",
   "policy": {
@@ -42,8 +42,8 @@
     "distribution_status": "materialized",
     "archive_profile": "source_content_package",
     "path": "build/release/LLMwiki-source.zip",
-    "sha256": "7017aacfb9d0ac24a82a50ac6e5892d73a40cd9be5dfd28596e1980f03c4923c",
-    "actual_sha256": "7017aacfb9d0ac24a82a50ac6e5892d73a40cd9be5dfd28596e1980f03c4923c",
+    "sha256": "8e3757ff3c3b0f2d514d9141d35abc6d98a90db8221081fc9a3c8e661672f372",
+    "actual_sha256": "8e3757ff3c3b0f2d514d9141d35abc6d98a90db8221081fc9a3c8e661672f372",
     "file_exists": true,
     "file_digest_matches_batch": true,
     "entry_count": 1573,
@@ -99,16 +99,14 @@
   },
   "learning_claim": {
     "load_status": "ok",
-    "claim_level": "bounded_learning_likely",
+    "claim_level": "confirmed_learning_improvement",
     "bounded_learning_claim_allowed": true,
-    "confirmed_learning_improvement_allowed": false,
-    "improvement_claim_status": "not_ready",
-    "confirmed_learning_improvement_status": "not_ready",
+    "confirmed_learning_improvement_allowed": true,
+    "improvement_claim_status": "auto_confirmed",
+    "confirmed_learning_improvement_status": "auto_confirmed",
     "evidence_cohort_status": "auto_confirmed",
-    "learning_claim_blocker_status": "blocked",
-    "confirmed_blocking_predicate_ids": [
-      "learning_claim_blocker_absence"
-    ],
+    "learning_claim_blocker_status": "clear",
+    "confirmed_blocking_predicate_ids": [],
     "confirmed_evidence_summary": {
       "evidence_cohort_status": "auto_confirmed",
       "confirmed_evidence_status": "auto_confirmed",
@@ -280,21 +278,21 @@
       },
       {
         "id": "learning_claim_blocker_absence",
-        "status": "fail",
+        "status": "pass",
         "source_path": "ops/reports/release-clean-blocker-ledger.json",
-        "observed_value": "learning_claim_blocker_count=1"
+        "observed_value": "learning_claim_blocker_count=0"
       }
     ],
     "learning_claim_evidence_bundle_status": "active",
-    "learning_claim_evidence_bundle_sha256": "bea30523a2156b90b3f557024f043833426c5c510c2d6ed234d1b0e7531e8627",
+    "learning_claim_evidence_bundle_sha256": "396f29203d44e375065dc9c06be777afae641acb4a0a285d404ce344b7dcda11",
     "learning_confirmed_evidence_cohort_status": "active",
-    "learning_confirmed_evidence_cohort_sha256": "b69105e336bdd8c8bd5b31bf95d13aad0dd8f35da8828cc90c18c4a3b447da1f",
-    "claim_wording_allowed": false,
-    "claim_wording_policy_status": "blocked",
-    "confirmed_wording_allowed": false,
-    "confirmed_wording_policy_status": "blocked",
-    "confirmed_wording_policy_reason": "confirmed wording blocked: claim_level=bounded_learning_likely; confirmed_status=not_ready; bundle=active; cohort=active; blockers=learning_claim_blocker_absence",
-    "summary": "claim_level=bounded_learning_likely; bounded=True; confirmed_learning=auto_confirmed; valid_runs=3/3; eligible_families=1; rejected_runs=2; legacy_reconstruction=pass; legacy_reconstructed_runs=1/1; confirmed_blockers=learning_claim_blocker_absence"
+    "learning_confirmed_evidence_cohort_sha256": "bde358def214d8e0441696a9e2b147374ccc0aba6f236fa3623451c889389531",
+    "claim_wording_allowed": true,
+    "claim_wording_policy_status": "pre_seal_ready",
+    "confirmed_wording_allowed": true,
+    "confirmed_wording_policy_status": "pre_seal_ready",
+    "confirmed_wording_policy_reason": "confirmed wording is pre-seal ready; release sidecar must still bind post-seal attestation",
+    "summary": "claim_level=confirmed_learning_improvement; bounded=True; confirmed_learning=auto_confirmed; valid_runs=3/3; eligible_families=1; rejected_runs=2; legacy_reconstruction=pass; legacy_reconstructed_runs=1/1; confirmed_blockers=none"
   },
   "accepted_risk": {
     "operator_accepted_risk_family_count": 0,
@@ -407,5 +405,5 @@
       }
     }
   },
-  "operator_summary": "semantic=clean_pass; sealed=sealed_clean_pass; source_zip=match; artifact_digest=match; artifact_mismatches=0; tmp_json=0; full_suite=pass; auto_improve_lane=pass; learning_revalidation=metrics_close_candidate; confirmed_learning=auto_confirmed; valid_runs=3/3; eligible_families=1; rejected_runs=2; legacy_reconstruction=pass; legacy_reconstructed_runs=1/1; confirmed_blockers=learning_claim_blocker_absence; release_risk_acceptances=0; learning_risk_acceptances=0; gate_attention=0; learning_claim_blocking=0; advisory_lifecycle=0"
+  "operator_summary": "semantic=clean_pass; sealed=sealed_clean_pass; source_zip=match; artifact_digest=match; artifact_mismatches=0; tmp_json=0; full_suite=pass; auto_improve_lane=pass; learning_revalidation=metrics_close_candidate; confirmed_learning=auto_confirmed; valid_runs=3/3; eligible_families=1; rejected_runs=2; legacy_reconstruction=pass; legacy_reconstructed_runs=1/1; confirmed_blockers=none; release_risk_acceptances=0; learning_risk_acceptances=0; gate_attention=0; learning_claim_blocking=0; advisory_lifecycle=0"
 }

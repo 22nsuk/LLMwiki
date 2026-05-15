@@ -2,7 +2,7 @@
   "$schema": "ops/schemas/goal-run-status.schema.json",
   "artifact_kind": "goal_run_status",
   "schema_version": 1,
-  "generated_at": "2026-05-15T10:19:34Z",
+  "generated_at": "2026-05-15T09:22:24Z",
   "producer": "ops.scripts.goal_run_status",
   "goal_id": "goal-20260515-5day-auto-improve-runtime",
   "objective": "Build and operate a five-day bounded auto-improve goal runtime with clean release evidence, private GitHub baseline, resumable audit trail, heartbeats, checkpoints, and no promotion until sealed authority is clean.",
@@ -33,7 +33,7 @@
   },
   "heartbeat": {
     "interval_minutes": 5,
-    "last_heartbeat_at": "2026-05-15T10:19:34Z",
+    "last_heartbeat_at": "2026-05-15T07:23:37Z",
     "stale_after_minutes": 10,
     "status": "fresh"
   },
@@ -70,22 +70,12 @@
       "path": "ops/reports/goal-checkpoints/checkpoint-20260515T092224Z.json",
       "created_at": "2026-05-15T09:22:24Z",
       "reason": "dry-run profile verification: 5-day-sustained"
-    },
-    {
-      "path": "ops/reports/goal-checkpoints/checkpoint-20260515T095115Z.json",
-      "created_at": "2026-05-15T09:51:15Z",
-      "reason": "post-sealed-closeout clean evidence checkpoint"
-    },
-    {
-      "path": "ops/reports/goal-checkpoints/checkpoint-20260515T101934Z.json",
-      "created_at": "2026-05-15T10:19:34Z",
-      "reason": "post-final-sealed-closeout clean evidence checkpoint"
     }
   ],
   "resume": {
     "resume_supported": true,
     "resume_metadata": "ops/reports/goal-resume-metadata.json",
-    "last_checkpoint": "ops/reports/goal-checkpoints/checkpoint-20260515T101934Z.json"
+    "last_checkpoint": "ops/reports/goal-checkpoints/checkpoint-20260515T092224Z.json"
   },
   "stop_conditions": [
     "allowed-root violation",
@@ -95,19 +85,19 @@
     "any need to bypass release, promotion, or learning-claim gates"
   ],
   "last_event": {
-    "at": "2026-05-15T10:19:34Z",
+    "at": "2026-05-15T09:22:24Z",
     "event": "checkpoint",
-    "reason": "post-final-sealed-closeout clean evidence checkpoint"
+    "reason": "dry-run profile verification: 5-day-sustained"
   },
   "source_command": "python -m ops.scripts.goal_run_status checkpoint",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "17b2ceadf48e508e81cef28ba9c60bd259419e9214727bbea22971e41d986dae",
+  "source_tree_fingerprint": "34db878e43ed04a992a15e3005277f300966cd74784f003c060086c94c559cd4",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "d9cb44e37d5e1a86d39dd494ccf904d4549687239fd88f3fe2fa68116978a956",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "2da960f24d224d2ed763bdc011153725722ff2d81ee8aebeafc362c79068aaf0",
-    "auto_improve_readiness": "a5325e66c4eaba8f37de9c305eb8d0555c4502c4aa5405d5eaf32bfe4b51352f",
+    "auto_improve_readiness": "dc342aea1237009a70e274cd16eb4260a43a0f98c7912880dd6a8fcd38518f80",
     "goal_contract": "f374bee05e9be09685659fb7651c75cc4aaad4cb4008e85df6dac36cc2528bd2",
     "active_profile": "378ef337af55e50387985acbdd8ac30f471a68295e1c01cf91498d0f299beafc",
     "baseline_commit": "9b991cc65612a682e508185c9374692f04758bfe41123a7463683e96c0bac3d1",
@@ -123,6 +113,6 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T10:19:34Z"
+    "checked_at": "2026-05-15T09:22:24Z"
   }
 }

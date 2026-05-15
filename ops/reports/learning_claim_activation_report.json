@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-claim-activation-report.schema.json",
   "artifact_kind": "learning_claim_activation_report",
-  "generated_at": "2026-05-15T08:38:52Z",
+  "generated_at": "2026-05-15T10:18:31Z",
   "producer": "ops.scripts.learning_claim_activation_report",
   "source_command": "python -m ops.scripts.learning_claim_activation_report --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "74f6df85d2598bde9365df9cbf861cf01e824fc2b647fd72ff7bde56d9bb2d2a",
+  "source_tree_fingerprint": "17b2ceadf48e508e81cef28ba9c60bd259419e9214727bbea22971e41d986dae",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "d366a06d6c9fbade9f99a3a702f7e88409d8e793328122ab6b196c4d7d670305",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ca60bd6e7fc4a4f6e31aa8e1983ea001202cc8ca0fbf2554d546b9a0d766bb00",
-    "learning_claim_activation_inputs": "201a7669c0c5c1a16df1949fa383d309e8b383a942b733119d8350392d103594"
+    "learning_claim_activation_inputs": "88498cfd9610ed5e62744c8ea0a5ae96b8608a8d6c7251036587321e34bbcc53"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,163 +19,120 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T08:38:52Z"
+    "checked_at": "2026-05-15T10:18:31Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "status": "attention",
+  "status": "pass",
   "summary": {
-    "activation_status": "blocked",
-    "claim_level": "learning_likely",
-    "claim_wording_allowed": false,
-    "blocked_predicate_count": 2,
+    "activation_status": "open",
+    "claim_level": "confirmed_learning_improvement",
+    "claim_wording_allowed": true,
+    "blocked_predicate_count": 0,
     "anti_slop_preview_status": "attention",
     "negative_learning_pattern_count": 5,
     "gate_effect": "none"
   },
   "claim_candidate": {
-    "status": "blocked",
+    "status": "open",
     "candidate": true,
     "current": {
-      "claim_level": "learning_likely",
+      "claim_level": "confirmed_learning_improvement",
       "learning_likely": true,
       "claims_learning_improved": true,
-      "learning_claim_allowed": false,
-      "bounded_learning_claim_allowed": false,
-      "confirmed_learning_improvement_allowed": false,
-      "claim_wording_allowed": false,
-      "claim_wording_policy_status": "blocked",
+      "learning_claim_allowed": true,
+      "bounded_learning_claim_allowed": true,
+      "confirmed_learning_improvement_allowed": true,
+      "claim_wording_allowed": true,
+      "claim_wording_policy_status": "pre_seal_ready",
       "learning_claim_evidence_complete": true
     },
     "required": {
       "bounded_learning_likely": "learning_claim_allowed == true with full same-eval reason, strict-secondary, behavior-delta digest, placeholder-free external report, and approved unlock review",
       "confirmed_learning_improvement": "confirmed evidence cohort, active evidence bundle, clean full/public/revalidation evidence, no learning blockers, and post-seal attestation authority"
     },
-    "repair_target": "Resolve release-clean-blocker-ledger learning claim blockers or keep claim_level=none.",
+    "repair_target": "Keep claim_level=none until learning readiness, unlock review, and post-seal authority all pass.",
     "evidence_digest": {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "7d2757eadc06c30c6a506a66da9564427287f706fc6c862a04b4ce593bb0c80e",
+      "sha256": "63b5eb75c4402549330b213a08c10a70615ea784f2bbda27d3e5418ba786e163",
       "status": "present"
     },
     "post_seal_linkage": {
       "path": "build/release/release-post-seal-attestation.json",
-      "sha256": "0a8bb3065f2a571eba09e681b2dcbb880af3e9ca479dc83c0ad4d3f62c568a3f",
+      "sha256": "a1674a2d0d95d1ff79318238d104604bc21a53866cb6fc7efcae3be453dd8e6e",
       "post_seal_verified": true
     }
   },
-  "blocked_predicates": [
-    {
-      "id": "learning_claim_blocker_absence",
-      "status": "fail",
-      "source": "learning_claim_unlock_review.confirmed_policy",
-      "source_path": "ops/reports/release-clean-blocker-ledger.json",
-      "current": "learning_claim_blocker_count=1",
-      "required": "release_clean_blocker_ledger.learning_claim_blockers == []",
-      "repair_target": "Resolve release-clean-blocker-ledger learning claim blockers or keep claim_level=none.",
-      "summary": "No accepted learning risk or learning-claim blocker may remain.",
-      "evidence_digest": {
-        "path": "ops/reports/release-clean-blocker-ledger.json",
-        "exists": true,
-        "sha256": "825af6ccfe23269efd5e1decd01bc5122cec3335bd1987551bfcd3f951565425",
-        "status": "present"
-      },
-      "post_seal_linkage": {
-        "path": "build/release/release-post-seal-attestation.json",
-        "sha256": "0a8bb3065f2a571eba09e681b2dcbb880af3e9ca479dc83c0ad4d3f62c568a3f",
-        "linked": true
-      }
-    },
-    {
-      "id": "learning_claim_unlock_review_not_approved",
-      "status": "stale",
-      "source": "learning_delta_scoreboard.learning_claim_unlock_review",
-      "source_path": "ops/reports/learning-delta-scoreboard.json",
-      "current": "approved=False; status=stale",
-      "required": "learning_claim_unlock_review.approved == true",
-      "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean.",
-      "summary": "learning claim auto approval is no longer active for the current evidence bundle: learning claim evidence bundle digest no longer matches current evidence",
-      "evidence_digest": {
-        "path": "ops/reports/learning-delta-scoreboard.json",
-        "exists": true,
-        "sha256": "7d2757eadc06c30c6a506a66da9564427287f706fc6c862a04b4ce593bb0c80e",
-        "status": "present"
-      },
-      "post_seal_linkage": {
-        "path": "build/release/release-post-seal-attestation.json",
-        "sha256": "0a8bb3065f2a571eba09e681b2dcbb880af3e9ca479dc83c0ad4d3f62c568a3f",
-        "linked": true
-      }
-    }
-  ],
+  "blocked_predicates": [],
   "evidence_digests": [
     {
       "path": "ops/reports/auto-improve-readiness.json",
       "exists": true,
-      "sha256": "dc342aea1237009a70e274cd16eb4260a43a0f98c7912880dd6a8fcd38518f80",
+      "sha256": "69203fd7a8f979f65d350cc2e1e7d126c12c4bea436ef655cc04dad2e68d6a7c",
       "status": "present"
     },
     {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "7d2757eadc06c30c6a506a66da9564427287f706fc6c862a04b4ce593bb0c80e",
+      "sha256": "63b5eb75c4402549330b213a08c10a70615ea784f2bbda27d3e5418ba786e163",
       "status": "present"
     },
     {
       "path": "ops/reports/learning-claim-unlock-review.json",
       "exists": true,
-      "sha256": "eaa0df4525a0d2e749f07e87add201f893dbd07e4b00f6c545af53dcbf39bf02",
+      "sha256": "e8114778ec7d34c6979c2400d17056de0c395e5e7017595c46ee919d4af6b569",
       "status": "present"
     },
     {
       "path": "ops/reports/learning-claim-evidence-bundle.json",
       "exists": true,
-      "sha256": "05d451007502173d7ba72f3d29a7fbc872f51fd6059376b01a5ef24cb944940f",
+      "sha256": "3af51f63dcfee1ca9e7c178694b8f60dd49d9400cf651017fd5b854353f1d0e5",
       "status": "present"
     },
     {
       "path": "ops/reports/release-clean-blocker-ledger.json",
       "exists": true,
-      "sha256": "825af6ccfe23269efd5e1decd01bc5122cec3335bd1987551bfcd3f951565425",
+      "sha256": "c1aeca6742e11519180ef5de555c62aada9eeac958744d3df799aac53cf3b2de",
       "status": "present"
     },
     {
       "path": "ops/reports/source-package-clean-extract.json",
       "exists": true,
-      "sha256": "c68e88c4bc50dd4d8b601df58bdf51a46d59fba1c4526b05e7e4a8cf68b4c437",
+      "sha256": "4b144b3f2e45cddbeaf978845ec7a964df6ef291f645d1058828444166cebbc8",
       "status": "present"
     },
     {
       "path": "build/release/release-post-seal-attestation.json",
       "exists": true,
-      "sha256": "0a8bb3065f2a571eba09e681b2dcbb880af3e9ca479dc83c0ad4d3f62c568a3f",
+      "sha256": "a1674a2d0d95d1ff79318238d104604bc21a53866cb6fc7efcae3be453dd8e6e",
       "status": "present"
     }
   ],
   "post_seal_linkage": {
     "path": "build/release/release-post-seal-attestation.json",
     "exists": true,
-    "sha256": "0a8bb3065f2a571eba09e681b2dcbb880af3e9ca479dc83c0ad4d3f62c568a3f",
+    "sha256": "a1674a2d0d95d1ff79318238d104604bc21a53866cb6fc7efcae3be453dd8e6e",
     "status": "present",
     "attestation_status": "pass",
-    "claim_level": "bounded_learning_likely",
-    "learning_claim_evidence_bundle_sha256": "bea30523a2156b90b3f557024f043833426c5c510c2d6ed234d1b0e7531e8627",
+    "claim_level": "confirmed_learning_improvement",
+    "learning_claim_evidence_bundle_sha256": "ddf3fc7bc0197887db4d41dfdc0b97f721086e555b523d1e1c17cdae8264e691",
     "post_seal_verified": true
   },
   "anti_slop_preview_ledger": {
     "mode": "preview",
     "gate_effect": "none",
     "status": "attention",
-    "scoreboard_anti_slop_status": "attention",
-    "scoreboard_anti_slop_score": 80,
+    "scoreboard_anti_slop_status": "clean",
+    "scoreboard_anti_slop_score": 100,
     "axes": [
       {
         "axis": "claim_hygiene",
-        "status": "warn",
-        "current": "claim_level=learning_likely; claim_wording_allowed=False",
+        "status": "pass",
+        "current": "claim_level=confirmed_learning_improvement; claim_wording_allowed=True",
         "required": "No learning-improvement wording unless the claim model allows it.",
         "repair_target": "Keep claim_level=none or complete the unlock and confirmed-claim predicates.",
         "gate_effect": "none"
@@ -241,7 +198,7 @@
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "exists": true,
-            "sha256": "dc342aea1237009a70e274cd16eb4260a43a0f98c7912880dd6a8fcd38518f80",
+            "sha256": "69203fd7a8f979f65d350cc2e1e7d126c12c4bea436ef655cc04dad2e68d6a7c",
             "status": "present"
           }
         ]
@@ -282,7 +239,7 @@
           {
             "path": "ops/reports/learning-delta-scoreboard.json",
             "exists": true,
-            "sha256": "7d2757eadc06c30c6a506a66da9564427287f706fc6c862a04b4ce593bb0c80e",
+            "sha256": "63b5eb75c4402549330b213a08c10a70615ea784f2bbda27d3e5418ba786e163",
             "status": "present"
           }
         ]

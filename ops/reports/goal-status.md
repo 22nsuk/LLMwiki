@@ -1,7 +1,7 @@
 # goal-20260515-5day-auto-improve-runtime
 
 - status: `running`
-- active_profile: `30-minute-trial`
+- active_profile: `5-day-sustained`
 - repo: `https://github.com/22nsuk/LLMwiki`
 - visibility: `PRIVATE`
 - branch: `goal/5day-auto-improve-runtime`
@@ -10,4 +10,4 @@
 - worktree_guard: `pass` / `git_worktree`
 - proposals_attempted: `0`
 - consecutive_failures: `0`
-- promotion_ban_active: `True`
+- promotion_ban_active: `False`

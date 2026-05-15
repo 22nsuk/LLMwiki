@@ -26,6 +26,7 @@ DEFAULT_STATUS_MD_PATH = "ops/reports/goal-status.md"
 DEFAULT_AUDIT_LOG_PATH = "ops/reports/goal-audit-log.jsonl"
 DEFAULT_CHECKPOINTS_DIR = "ops/reports/goal-checkpoints"
 DEFAULT_RESUME_METADATA_PATH = "ops/reports/goal-resume-metadata.json"
+AUTO_IMPROVE_READINESS_PATH = "ops/reports/auto-improve-readiness.json"
 PRODUCER = "ops.scripts.goal_run_status"
 POLICY_PATH = "ops/policies/wiki-maintainer-policy.yaml"
 
@@ -88,6 +89,9 @@ def _status_source_command(event: str) -> str:
 
 
 def _goal_status_envelope(vault: Path, status: dict[str, Any], *, event: str) -> dict[str, Any]:
+    file_inputs: dict[str, str | Path] = {"goal_contract": DEFAULT_CONTRACT_PATH}
+    if (vault / AUTO_IMPROVE_READINESS_PATH).is_file():
+        file_inputs["auto_improve_readiness"] = AUTO_IMPROVE_READINESS_PATH
     return _canonical_envelope(
         vault,
         generated_at=str(status["generated_at"]),
@@ -99,7 +103,7 @@ def _goal_status_envelope(vault: Path, status: dict[str, Any], *, event: str) ->
             "ops/scripts/mechanism/goal_worktree_guard.py",
             GOAL_RUN_STATUS_SCHEMA,
         ],
-        file_inputs={"goal_contract": DEFAULT_CONTRACT_PATH},
+        file_inputs=file_inputs,
         text_inputs={
             "event": event,
             "goal_id": str(status["goal_id"]),
@@ -291,6 +295,64 @@ def _heartbeat_status(contract: dict[str, Any], context: RuntimeContext) -> dict
     }
 
 
+def _sealed_authority_clean_pass_current(readiness: dict[str, Any]) -> bool:
+    diagnostics = readiness.get("diagnostics")
+    if not isinstance(diagnostics, dict):
+        return False
+    summary = diagnostics.get("release_authority_preflight_summary")
+    if not isinstance(summary, dict):
+        return False
+    return (
+        summary.get("status") == "pass"
+        and summary.get("preflight_status") == "sealed_clean_pass"
+        and bool(summary.get("clean_required_preflight")) is True
+        and bool(summary.get("expected_blocked_preflight")) is False
+    )
+
+
+def _promotion_policy_from_readiness(
+    vault: Path,
+    current_policy: dict[str, Any],
+) -> dict[str, Any]:
+    policy = dict(current_policy)
+    readiness_path = vault / AUTO_IMPROVE_READINESS_PATH
+    if not readiness_path.is_file():
+        policy["can_promote_result"] = bool(policy.get("can_promote_result", False))
+        policy["requires_sealed_authority_clean_pass"] = bool(
+            policy.get("requires_sealed_authority_clean_pass", True)
+        )
+        policy["promotion_ban_active"] = not bool(policy["can_promote_result"])
+        policy["promotion_ban_reason"] = str(
+            policy.get(
+                "promotion_ban_reason",
+                "Promotion remains forbidden until can_promote_result=true and sealed authority clean pass are both current.",
+            )
+        )
+        return policy
+    readiness = read_json_object(readiness_path)
+    readiness_can_promote = bool(readiness.get("can_promote_result", False))
+    requires_clean = bool(policy.get("requires_sealed_authority_clean_pass", True))
+    sealed_clean_current = _sealed_authority_clean_pass_current(readiness)
+    can_promote = readiness_can_promote and (sealed_clean_current or not requires_clean)
+    policy["can_promote_result"] = can_promote
+    policy["requires_sealed_authority_clean_pass"] = requires_clean
+    policy["promotion_ban_active"] = not can_promote
+    if can_promote:
+        policy["promotion_ban_reason"] = (
+            "Promotion gate is open because auto-improve readiness can_promote_result=true "
+            "and sealed authority clean pass is current."
+        )
+    elif readiness_can_promote and requires_clean:
+        policy["promotion_ban_reason"] = (
+            "Promotion remains forbidden because sealed authority clean pass is not current."
+        )
+    else:
+        policy["promotion_ban_reason"] = (
+            "Promotion remains forbidden until can_promote_result=true and sealed authority clean pass are both current."
+        )
+    return policy
+
+
 def _worktree_guard_summary(vault: Path, contract: dict[str, Any]) -> dict[str, str]:
     report = build_worktree_guard(
         vault,
@@ -429,6 +491,10 @@ def _write_resume_metadata(vault: Path, status: dict[str, Any], *, event: str) -
 def write_goal_status(vault: Path, status: dict[str, Any], *, event: str, reason: str) -> Path:
     schema = load_schema(vault / GOAL_RUN_STATUS_SCHEMA)
     out = vault / status["artifacts"]["status_json"]
+    status["promotion_policy"] = _promotion_policy_from_readiness(
+        vault,
+        status["promotion_policy"],
+    )
     status.update(_goal_status_envelope(vault, status, event=event))
     write_schema_validated_json(out, status, schema, context="goal run status schema validation failed")
     _write_status_markdown(vault, status)
@@ -440,7 +506,12 @@ def write_goal_status(vault: Path, status: dict[str, Any], *, event: str, reason
 def write_checkpoint(vault: Path, status: dict[str, Any], *, reason: str) -> dict[str, Any]:
     checkpoint_dir = vault / status["artifacts"]["checkpoints_dir"]
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
-    checkpoint_name = f"checkpoint-{status['generated_at'].replace(':', '').replace('-', '')}.json"
+    checkpoint_stem = f"checkpoint-{status['generated_at'].replace(':', '').replace('-', '')}"
+    checkpoint_name = f"{checkpoint_stem}.json"
+    suffix = 1
+    while (checkpoint_dir / checkpoint_name).exists():
+        checkpoint_name = f"{checkpoint_stem}-{suffix:02d}.json"
+        suffix += 1
     checkpoint_rel = f"{status['artifacts']['checkpoints_dir'].rstrip('/')}/{checkpoint_name}"
     status["checkpoints"].append(
         {

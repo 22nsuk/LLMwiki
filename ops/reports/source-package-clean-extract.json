@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/source-package-clean-extract.schema.json",
   "artifact_kind": "source_package_clean_extract",
-  "generated_at": "2026-05-15T08:23:21Z",
+  "generated_at": "2026-05-15T10:03:48Z",
   "producer": "ops.scripts.source_package_clean_extract",
   "source_command": "python -m ops.scripts.source_package_clean_extract --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "74f6df85d2598bde9365df9cbf861cf01e824fc2b647fd72ff7bde56d9bb2d2a",
+  "source_tree_fingerprint": "17b2ceadf48e508e81cef28ba9c60bd259419e9214727bbea22971e41d986dae",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "18842902f78376ea18432b26556335983a966baf4fd8bb4877e16d177a3addfc",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "0ce65c4392243c1c7eb939c1c56448c326795f83c58572a8400d7db1b8b89cc0",
-    "source_zip": "c3e4de5ce9246bee79c34305913c6aae472af21346f31963e18c42a9deaa1fd3",
-    "zip_smoke_report": "b5e6503949275cb9aa9607b1c6ca56eb0ecfa964acfb9110c44bd77a6e1e2886",
+    "source_zip": "af2ba9ff871447a810471404761afd0eb8176a80992f800964d0c33d52b704d3",
+    "zip_smoke_report": "1f41de104e68bb0afb116e0308b430b0ce350b7ba22d2d59d5836d9e36a34e8e",
     "archive_root_name": "16e8bef78c32198777a85a911c5318b19502b6097d5f994a951578e17d052627",
     "archive_root_source": "1024cb551d0155801d1a6906c526613eab1bef5238d87887d9b83892ac6f90d3",
     "deselection_policy": "d7cdf13d224bc19222fd99a33e87e00034c5ace72c4d0f4e4f1055e5bc4f3d1a",
@@ -32,7 +32,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T08:23:21Z"
+    "checked_at": "2026-05-15T10:03:48Z"
   },
   "vault": ".",
   "policy": {
@@ -43,7 +43,7 @@
   "source_zip": {
     "path": "tmp/source-package-check/LLMwiki-source.zip",
     "exists": true,
-    "sha256": "c3e4de5ce9246bee79c34305913c6aae472af21346f31963e18c42a9deaa1fd3"
+    "sha256": "af2ba9ff871447a810471404761afd0eb8176a80992f800964d0c33d52b704d3"
   },
   "extract": {
     "parent": "tmp/source-package-check/extract",
@@ -69,7 +69,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 40,
+      "duration_ms": 38,
       "stdout_tail": "All checks passed!\n",
       "stderr_tail": "",
       "status": "pass"
@@ -86,7 +86,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 3000,
+      "duration_ms": 2860,
       "stdout_tail": "Success: no issues found in 231 source files\n",
       "stderr_tail": "",
       "status": "pass"
@@ -123,8 +123,8 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 319718,
-      "stdout_tail": "_policy_entry_count\": 0,\n    \"unused_policy_entry_count\": 0,\n    \"risk_owner\": \"runtime-maintainer\",\n    \"expires_at\": \"2026-06-08T00:00:00Z\",\n    \"count_increase_gate_effect\": \"fail\",\n    \"expiry_gate_effect\": \"fail\",\n    \"next_action\": \"none\",\n    \"blockers\": []\n  },\n  \"pytest_marker_deselected_count\": 118,\n  \"policy_deselected_count\": 5,\n  \"pytest_collect_nodeid_digest\": {\n    \"status\": \"collected\",\n    \"command\": \"'<home>/code/LLMwiki/.venv/bin/python' -m pytest -o addopts= --collect-only -q --capture=no tests -m 'not artifact_finalization and not release_sealing' --deselect=tests/test_generated_report_contracts.py --deselect=tests/test_external_report_lifecycle_static.py --deselect=tests/test_import_fallback_contract.py --deselect=tests/test_script_module_surface_contract.py --deselect=tests/test_writer_output_paths.py\",\n    \"nodeid_count\": 1124,\n    \"sha256\": \"6f0079ef38ce931c2edd2545f25c748f281845aab2508a6a34bd6d1ac4d1f5a1\",\n    \"reason\": \"\"\n  },\n  \"nodeid_outcome_consistency\": {\n    \"status\": \"pass\",\n    \"nodeid_count\": 1124,\n    \"outcome_count\": 1124,\n    \"counted_outcomes\": {\n      \"passed\": 1119,\n      \"skipped\": 5,\n      \"xfailed\": 0,\n      \"xpassed\": 0\n    },\n    \"delta\": 0,\n    \"reason\": \"collected nodeid count matches passed + skipped + xfailed/xpassed outcomes\"\n  },\n  \"evidence_artifacts\": [],\n  \"stdout_tail\": \"........................................................................ [  6%]/n..........................................................sssss......... [ 12%]/n........................................................................ [ 19%]/n........................................................................ [ 25%]/n........................................................................ [ 32%]/n........................................................................ [ 38%]/n........................................................................ [ 44%]/n........................................................................ [ 51%]/n........................................................................ [ 57%]/n........................................................................ [ 64%]/n........................................................................ [ 70%]/n........................................................................ [ 76%]/n........................................................................ [ 83%]/n........................................................................ [ 89%]/n........................................................................ [ 96%]/n............................................                             [100%]/n1119 passed, 5 skipped, 123 deselected in 316.37s (0:05:16)/n\",\n  \"stderr_tail\": \"\",\n  \"release_contract_diagnosis\": [\n    {\n      \"name\": \"pytest_contract_summary\",\n      \"status\": \"clean_pass\",\n      \"lane\": \"clean\",\n      \"command\": \"'<home>/code/LLMwiki/.venv/bin/python' -m pytest -m 'not artifact_finalization and not release_sealing' tests --deselect=tests/test_generated_report_contracts.py --deselect=tests/test_external_report_lifecycle_static.py --deselect=tests/test_import_fallback_contract.py --deselect=tests/test_script_module_surface_contract.py --deselect=tests/test_writer_output_paths.py\",\n      \"duration_seconds\": 316.77,\n      \"checked_at\": \"2026-05-15T08:28:36Z\",\n      \"blocker_conditions\": [],\n      \"accepted_risk_family\": null,\n      \"risk_acceptance_ref\": null,\n      \"reason\": \"\"\n    },\n    {\n      \"name\": \"static_checks\",\n      \"status\": \"not_run\",\n      \"lane\": \"blocked\",\n      \"command\": \"make static\",\n      \"duration_seconds\": null,\n      \"checked_at\": null,\n      \"blocker_conditions\": [\n        \"external_static_evidence_not_captured_by_summary\"\n      ],\n      \"accepted_risk_family\": null,\n      \"risk_acceptance_ref\": null,\n      \"reason\": \"not executed inside this pytest summary; use release-builder evidence before treating static checks as covered\"\n    }\n  ]\n}\n\nwritten_to=tmp/test-source-package-summary.json\n",
+      "duration_ms": 316961,
+      "stdout_tail": "_policy_entry_count\": 0,\n    \"unused_policy_entry_count\": 0,\n    \"risk_owner\": \"runtime-maintainer\",\n    \"expires_at\": \"2026-06-08T00:00:00Z\",\n    \"count_increase_gate_effect\": \"fail\",\n    \"expiry_gate_effect\": \"fail\",\n    \"next_action\": \"none\",\n    \"blockers\": []\n  },\n  \"pytest_marker_deselected_count\": 118,\n  \"policy_deselected_count\": 5,\n  \"pytest_collect_nodeid_digest\": {\n    \"status\": \"collected\",\n    \"command\": \"'<home>/code/LLMwiki/.venv/bin/python' -m pytest -o addopts= --collect-only -q --capture=no tests -m 'not artifact_finalization and not release_sealing' --deselect=tests/test_generated_report_contracts.py --deselect=tests/test_external_report_lifecycle_static.py --deselect=tests/test_import_fallback_contract.py --deselect=tests/test_script_module_surface_contract.py --deselect=tests/test_writer_output_paths.py\",\n    \"nodeid_count\": 1127,\n    \"sha256\": \"b8620ca04248f56f4d3ef52bcc9d615bc978411fcce741c78199808f19e1e3c6\",\n    \"reason\": \"\"\n  },\n  \"nodeid_outcome_consistency\": {\n    \"status\": \"pass\",\n    \"nodeid_count\": 1127,\n    \"outcome_count\": 1127,\n    \"counted_outcomes\": {\n      \"passed\": 1122,\n      \"skipped\": 5,\n      \"xfailed\": 0,\n      \"xpassed\": 0\n    },\n    \"delta\": 0,\n    \"reason\": \"collected nodeid count matches passed + skipped + xfailed/xpassed outcomes\"\n  },\n  \"evidence_artifacts\": [],\n  \"stdout_tail\": \"........................................................................ [  6%]/n..........................................................sssss......... [ 12%]/n........................................................................ [ 19%]/n........................................................................ [ 25%]/n........................................................................ [ 31%]/n........................................................................ [ 38%]/n........................................................................ [ 44%]/n........................................................................ [ 51%]/n........................................................................ [ 57%]/n........................................................................ [ 63%]/n........................................................................ [ 70%]/n........................................................................ [ 76%]/n........................................................................ [ 83%]/n........................................................................ [ 89%]/n........................................................................ [ 95%]/n...............................................                          [100%]/n1122 passed, 5 skipped, 123 deselected in 313.62s (0:05:13)/n\",\n  \"stderr_tail\": \"\",\n  \"release_contract_diagnosis\": [\n    {\n      \"name\": \"pytest_contract_summary\",\n      \"status\": \"clean_pass\",\n      \"lane\": \"clean\",\n      \"command\": \"'<home>/code/LLMwiki/.venv/bin/python' -m pytest -m 'not artifact_finalization and not release_sealing' tests --deselect=tests/test_generated_report_contracts.py --deselect=tests/test_external_report_lifecycle_static.py --deselect=tests/test_import_fallback_contract.py --deselect=tests/test_script_module_surface_contract.py --deselect=tests/test_writer_output_paths.py\",\n      \"duration_seconds\": 314.06,\n      \"checked_at\": \"2026-05-15T10:08:59Z\",\n      \"blocker_conditions\": [],\n      \"accepted_risk_family\": null,\n      \"risk_acceptance_ref\": null,\n      \"reason\": \"\"\n    },\n    {\n      \"name\": \"static_checks\",\n      \"status\": \"not_run\",\n      \"lane\": \"blocked\",\n      \"command\": \"make static\",\n      \"duration_seconds\": null,\n      \"checked_at\": null,\n      \"blocker_conditions\": [\n        \"external_static_evidence_not_captured_by_summary\"\n      ],\n      \"accepted_risk_family\": null,\n      \"risk_acceptance_ref\": null,\n      \"reason\": \"not executed inside this pytest summary; use release-builder evidence before treating static checks as covered\"\n    }\n  ]\n}\n\nwritten_to=tmp/test-source-package-summary.json\n",
       "stderr_tail": "",
       "status": "pass"
     }

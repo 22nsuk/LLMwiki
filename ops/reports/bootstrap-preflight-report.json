@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/bootstrap-preflight-report.schema.json",
   "artifact_kind": "bootstrap_preflight_report",
-  "generated_at": "2026-05-15T08:22:47Z",
+  "generated_at": "2026-05-15T10:03:13Z",
   "producer": "ops.scripts.bootstrap_preflight",
   "source_command": "python -m ops.scripts.bootstrap_preflight --dev --out ops/reports/bootstrap-preflight-report.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "74f6df85d2598bde9365df9cbf861cf01e824fc2b647fd72ff7bde56d9bb2d2a",
+  "source_tree_fingerprint": "17b2ceadf48e508e81cef28ba9c60bd259419e9214727bbea22971e41d986dae",
   "input_fingerprints": {
     "ops/schemas/bootstrap-preflight-report.schema.json": "7a51442b1fee4f5b913f445ad6606977c71fa91f3072e5c1ed9f47d88885c1ab",
     "ops/policies/wiki-maintainer-policy.yaml": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f"
@@ -16,7 +16,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T08:22:47Z"
+    "checked_at": "2026-05-15T10:03:13Z"
   },
   "vault": ".",
   "policy": {

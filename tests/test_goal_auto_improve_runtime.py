@@ -4,12 +4,18 @@ import datetime as dt
 import json
 import shutil
 import subprocess
+import sys
+import time
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from ops.scripts.auto_improve_goal_runtime import GoalAutoImproveRequest, run_goal_bound_auto_improve
+from ops.scripts.auto_improve_goal_runtime import (
+    GoalAutoImproveRequest,
+    _run_periodic_refresh_command,
+    run_goal_bound_auto_improve,
+)
 from ops.scripts.goal_run_status import initialize_goal_runtime
 from ops.scripts.runtime_context import RuntimeContext
 
@@ -230,3 +236,79 @@ def test_goal_bound_auto_improve_resumes_from_checkpoint(
     assert result["checkpoint"] != dry_run["checkpoint"]
     assert status["progress"]["iterations_completed"] == 1
     assert status["resume"]["last_checkpoint"] == result["checkpoint"]
+    assert status["heartbeat"]["last_heartbeat_at"] == "2026-05-15T00:02:00Z"
+
+
+def test_goal_bound_auto_improve_keeps_periodic_checkpoints_from_running_profile(
+    tmp_path: Path,
+) -> None:
+    vault = _seed_repo_with_worktree(tmp_path)
+    _copy_goal_runtime_inputs(vault)
+    _initialize_goal(vault)
+
+    def slow_fake_runner(vault_path: Path, **_: Any) -> dict[str, Any]:
+        rel_path = "ops/reports/auto-improve-sessions/goal-sustained.json"
+        session_path = vault_path / rel_path
+        session_path.parent.mkdir(parents=True, exist_ok=True)
+        session_path.write_text(
+            json.dumps(
+                {
+                    "iterations": [{"iteration": 1}],
+                    "attempted_proposal_ids": ["proposal-a"],
+                    "loop_state": {"consecutive_failures": 0},
+                }
+            ),
+            encoding="utf-8",
+        )
+        time.sleep(0.15)
+        return {
+            "session_id": "goal-sustained",
+            "session_report": rel_path,
+            "iterations": 1,
+            "stop_reason": "budget_exhausted",
+            "run_ids": [],
+        }
+
+    result = run_goal_bound_auto_improve(
+        GoalAutoImproveRequest(
+            vault=vault,
+            policy_path="ops/policies/wiki-maintainer-policy.yaml",
+            goal_profile="5-day-sustained",
+            heartbeat_interval_seconds=0.03,
+            checkpoint_interval_seconds=0.03,
+            readiness_interval_seconds=0,
+            session_synopsis_interval_seconds=0,
+            context=_context(3),
+        ),
+        runner=slow_fake_runner,
+    )
+
+    status = json.loads((vault / "ops" / "reports" / "goal-run-status.json").read_text())
+
+    assert status["active_profile"] == "5-day-sustained"
+    assert status["resume"]["last_checkpoint"] == result["checkpoint"]
+    assert any(
+        item["reason"] == "periodic checkpoint for goal profile: 5-day-sustained"
+        for item in status["checkpoints"]
+    )
+    assert (vault / status["resume"]["last_checkpoint"]).is_file()
+
+
+def test_periodic_refresh_command_uses_current_python_for_worktree_make(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[list[str], dict[str, Any]]] = []
+
+    def fake_run(args: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        calls.append((args, kwargs))
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr("ops.scripts.mechanism.auto_improve_goal_runtime.subprocess.run", fake_run)
+
+    _run_periodic_refresh_command(tmp_path, "auto-improve-readiness-report-body")
+
+    assert calls
+    args, kwargs = calls[0]
+    assert args == ["make", "auto-improve-readiness-report-body", f"PYTHON={sys.executable}"]
+    assert kwargs["cwd"] == tmp_path

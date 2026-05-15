@@ -107,7 +107,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "bd1bc48d98d5d1083d748e3f23f7b47bcc068685e3f25a6d5cccc30272cd9893",
+      "sha256": "6837e10b117327c2863ac2d0c8d7d6cd7439f70e5e6f6d4de23224d6bf233417",
       "size_bytes": 73089
     },
     {
@@ -167,12 +167,12 @@
     },
     {
       "path": "mk/test.mk",
-      "sha256": "87e509c1edd88a454ba124891fbd66f8a09da92b5536daa6c07c7091e9f1346a",
+      "sha256": "c22a7d076a32fd638a88428d14f9aa112baf180c571817b9badbb9b1ad9d0cbd",
       "size_bytes": 19707
     },
     {
       "path": "ops/README.md",
-      "sha256": "1823e9c9ab4e8ae52f40bf2a553f862ecb9fb2184f6822c8171ad53d0d794c7e",
+      "sha256": "b9ae5a15a0411602f569f831dc93f777d445bd60330915a3531cba89ed9810ad",
       "size_bytes": 102440
     },
     {
@@ -1417,8 +1417,8 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_goal_runtime.py",
-      "sha256": "f193be152377c7c484142754abaac6444965a2ead4be0e4f8bc203c17a961a61",
-      "size_bytes": 13901
+      "sha256": "b207a767cc9e5e68ff58f50f3dbb5ddfeebdb3a5c195797d5c5ad7b1c22551c2",
+      "size_bytes": 21957
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
@@ -1542,8 +1542,8 @@
     },
     {
       "path": "ops/scripts/mechanism/goal_run_status.py",
-      "sha256": "637c7377cb04e14258266285cc89bad7207642e5701a9649ea9a50a2eedd0fb0",
-      "size_bytes": 21703
+      "sha256": "89fcdc8ba0b5c7365f9006905a2751f562ca7b93b16e807d0ddf93f75e4dc4ab",
+      "size_bytes": 24859
     },
     {
       "path": "ops/scripts/mechanism/goal_worktree_guard.py",
@@ -5057,8 +5057,8 @@
     },
     {
       "path": "tests/test_goal_auto_improve_runtime.py",
-      "sha256": "f6972ca78b97498f62da650700bbbb74be41e0e51335fa8efa3643cdf1294126",
-      "size_bytes": 7942
+      "sha256": "902dd57fefedc77f8fd72daf3375a5b5842e888a011c8e1edaad33522757b286",
+      "size_bytes": 10823
     },
     {
       "path": "tests/test_goal_prompt.py",
@@ -5067,8 +5067,8 @@
     },
     {
       "path": "tests/test_goal_run_status.py",
-      "sha256": "174e6632d3211b16f2073a22b18dbf700ddfa23448bc6773aa4354666bff864c",
-      "size_bytes": 4317
+      "sha256": "5e02131a4910a916458a216b55f516046ad53912abf2d70d3e353bb3787d951e",
+      "size_bytes": 5893
     },
     {
       "path": "tests/test_goal_worktree_guard.py",
@@ -5137,7 +5137,7 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "d174e82d76b667979c04dee295220cb896e5179f1409622f90013a4e4f50b278",
+      "sha256": "3082ebf79b26e920220511a8805b7072f497a3f59562756e12656668274e0930",
       "size_bytes": 128409
     },
     {
