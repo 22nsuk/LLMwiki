@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-15T11:39:10Z",
+  "generated_at": "2026-05-15T12:44:25Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+  "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "834eb6cfec958f35d3989a742cfd58414bb50bb75040ab9283e4c90ed61f1657",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "5f5b11d14ee66b47c2e0a9f55184eb94306e9ffcdbd9f42b18a4a01abd4f9f3f",
     "run_promotion_reports": "47308e6ead45e6366547bffe91c993d0d224544c2a4fb589d598b124c76a0a5f",
-    "external_report_inventory": "a4143e9cef0770a1c4c9d945b46f6a5f31545bf9bb23ae74efd232542f68dec3",
+    "external_report_inventory": "0104dc34b35216fad7c11c233ed787589919b93c483526f19459613bcc611f4c",
     "operator_report_inventory": "0479590a186415fa72ba934ab4431828124b8ca576b06322a6eae193e9627721",
     "ops_report_inventory": "ab1e0e62704f4bbce806d8dbafd6e7bed473571ae2180c2f39fc58e7e9e23e58",
     "task_improvement_observation_inventory": "e990c59c1c80ac09b3ca6423303757b25d7819c3b9dc4716adb30f69105edc79"
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T11:39:10Z"
+    "checked_at": "2026-05-15T12:44:25Z"
   },
   "vault": ".",
   "policy": {
@@ -58,7 +58,7 @@
     }
   ],
   "now": [
-    "87 canonical artifact(s) are currently indexed.",
+    "88 canonical artifact(s) are currently indexed.",
     "0 archive candidate(s) remain in active namespaces."
   ],
   "next": [
@@ -71,9 +71,9 @@
     "operator_reports_root_file_count": 2,
     "external_reports_root_file_count": 3,
     "external_reports_archive_file_count": 66,
-    "run_directory_count": 13,
+    "run_directory_count": 14,
     "run_archive_directory_count": 4,
-    "canonical_report_count": 87,
+    "canonical_report_count": 88,
     "archive_candidate_count": 0
   },
   "canonical_reports": [
@@ -890,6 +890,17 @@
       "supersedes": [],
       "superseded_by": [],
       "decision_relevance": "review_context"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/auto-improve-2026-05-15t11-44-03z-run-01-mutation-proposal-runtime",
+      "role": "run_history_record",
+      "date": "2026-05-15",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary. Load issues: promotion-report.json:missing, run-ledger.json:missing.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
     },
     {
       "surface": "runs",

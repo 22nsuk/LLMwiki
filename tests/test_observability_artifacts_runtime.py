@@ -754,6 +754,85 @@ class ObservabilityArtifactsRuntimeTests(unittest.TestCase):
             self.assertEqual(outcome_payload["recent_attempts"][0]["run_id"], "run-b")
             self.assertEqual(trends_payload["recent_runs"][0]["run_id"], "run-b")
 
+    def test_outcome_metrics_uses_standalone_session_only_for_missing_session_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            policy, policy_path = load_policy(vault, "ops/policies/wiki-maintainer-policy.yaml")
+
+            for run_id, decision in (("run-a", "HOLD"), ("run-b", "PROMOTE")):
+                _write_json(
+                    vault / "runs" / run_id / "run-telemetry.json",
+                    {
+                        "generated_at": f"2026-04-15T0{1 if run_id == 'run-a' else 2}:00:00Z",
+                        "proposal_id": f"proposal-{run_id}",
+                        "primary_targets": ["ops/scripts/example.py"],
+                        "decision": decision,
+                    },
+                )
+            _write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "auto-session-specific.json",
+                {
+                    "session_id": "auto-session-specific",
+                    "run_ids": ["run-a"],
+                    "iterations": [
+                        {
+                            "index": 1,
+                            "proposal_id": "proposal-run-a",
+                            "run_id": "run-a",
+                            "status": "blocked",
+                            "outcome": "hold",
+                            "decision": "HOLD",
+                        }
+                    ],
+                },
+            )
+            _write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "standalone-run-telemetry.json",
+                {
+                    "session_id": "standalone-run-telemetry",
+                    "run_ids": ["run-a", "run-b"],
+                    "iterations": [
+                        {
+                            "index": 1,
+                            "proposal_id": "proposal-run-a",
+                            "run_id": "run-a",
+                            "status": "blocked",
+                            "outcome": "hold",
+                            "decision": "HOLD",
+                        },
+                        {
+                            "index": 2,
+                            "proposal_id": "proposal-run-b",
+                            "run_id": "run-b",
+                            "status": "complete",
+                            "outcome": "promoted",
+                            "decision": "PROMOTE",
+                        },
+                    ],
+                },
+            )
+
+            outcome_rel = write_outcome_metrics_report(
+                vault,
+                policy,
+                policy_path,
+                context=fixed_context(),
+                recent_window=10,
+            )
+            outcome_payload = json.loads((vault / outcome_rel).read_text(encoding="utf-8"))
+
+            self.assertEqual(outcome_payload["summary"]["attempts_considered"], 2)
+            self.assertEqual(
+                [item["run_id"] for item in outcome_payload["recent_attempts"]],
+                ["run-b", "run-a"],
+            )
+            self.assertEqual(
+                {item["session_id"] for item in outcome_payload["recent_attempts"]},
+                {"standalone-run-telemetry", "auto-session-specific"},
+            )
+
     def test_outcome_metrics_falls_back_to_top_level_decision_when_decision_record_is_invalid(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

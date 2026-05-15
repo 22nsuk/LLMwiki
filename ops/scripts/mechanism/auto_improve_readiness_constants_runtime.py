@@ -36,7 +36,9 @@ READINESS_SOURCE_PATHS = [
     "ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py",
     "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
 ]
-FALLBACK_PRIMARY_TARGETS = ["ops/scripts/auto_improve_iteration_persistence_runtime.py"]
+FALLBACK_PRIMARY_TARGETS = [
+    "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+]
 FALLBACK_SUPPORTING_TARGETS = ["ops/schemas/run-telemetry.schema.json"]
 FALLBACK_TEST_FILES = ["tests/test_auto_improve_iteration_runtime.py"]
 DEFAULT_MIN_ATTEMPTS_CONSIDERED = 10

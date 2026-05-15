@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/outcome-metrics.schema.json",
   "artifact_kind": "outcome_metrics_report",
-  "generated_at": "2026-05-15T11:37:47Z",
+  "generated_at": "2026-05-15T12:43:04Z",
   "producer": "ops.scripts.observability_decision_metrics_runtime",
   "source_command": "python -m ops.scripts.outcome_metrics --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+  "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "aadbf232f7dc6bf40f35290f0dabcc4e9320b93c70cc2f0177f1167b24ecff29",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "cd7aa25c1ced975dc3328bb578f08c39d976ff4ed43633cbeea528b500522c84",
-    "defect_escape_closures": "0a032972e6e6e717d8a4a13e7a3ba91e2df90173a77cf729cc2948d4782b877d",
-    "rework_closures": "40a06443c3970d2725eafcc7ec0f3e3e41cc0f1622dd10343426297b88fad5c3",
+    "source_paths": "0bc9e2ddbb4f6058d302543a668bbc4e1b7e889b34299afb1fe03d9163239ff1",
+    "defect_escape_closures": "4e9ececd8b2797b6dbef35ac71f98d55620306cea5b09b2efd5548ebfc7cabca",
+    "rework_closures": "351cca0f4600fc3e812a16fb92c723b961805c150c9dbb61d24dd01100c1feb5",
     "run_inputs": "29b953989207e0fb94f22d6771f6cf1d82bd853c00ddc9702ee7857f60fc58e0",
-    "session_reports": "6de16ed2343e27d3831f7c445f52758b7420692690c409b7358bed1990f77ef2",
+    "session_reports": "0cbbe1a09ab841669d5cdb9fe863487638b1428cfced11b892e1c060e5c4f23f",
     "recent_window": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T11:37:47Z"
+    "checked_at": "2026-05-15T12:43:04Z"
   },
   "vault": ".",
   "policy": {
@@ -34,7 +34,7 @@
     "attempts_considered": 13,
     "recent_window": 20,
     "recent_attempt_count": 13,
-    "session_reports_considered": 3
+    "session_reports_considered": 4
   },
   "metrics": {
     "attempt_count": 13,
@@ -66,7 +66,7 @@
     "defect_escape_proxy": {
       "count": 0,
       "pairs": [],
-      "closed_count": 5,
+      "closed_count": 4,
       "closed_pairs": [
         {
           "target": "ops/scripts/auto_improve_iteration_persistence_runtime.py",
@@ -103,22 +103,6 @@
         {
           "target": "ops/scripts/auto_improve_iteration_persistence_runtime.py",
           "promoted_run_id": "run-20260422-auto-improve-timeout-telemetry-fallback",
-          "escaped_run_id": "run-20260422-auto-improve-decision-record-fallback",
-          "escaped_decision": "HOLD",
-          "escaped_outcome": "hold",
-          "closure_status": "superseded",
-          "closure_reason": "Superseded by later decision-record recovery and DISCARD-path finalized runs for the same target.",
-          "superseding_run_id": "run-20260507-auto-improve-iteration-persistence-discard-path",
-          "closed_at": "2026-05-07T04:00:00Z",
-          "evidence_refs": [
-            "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/promotion-report.json",
-            "runs/run-20260507-auto-improve-iteration-persistence-discard-path/promotion-report.json",
-            "runs/run-20260507-auto-improve-iteration-persistence-discard-path/run-ledger.json"
-          ]
-        },
-        {
-          "target": "ops/scripts/auto_improve_iteration_persistence_runtime.py",
-          "promoted_run_id": "run-20260422-auto-improve-timeout-telemetry-fallback",
           "escaped_run_id": "auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime",
           "escaped_decision": "HOLD",
           "escaped_outcome": "scope_blocked",
@@ -149,8 +133,8 @@
         }
       ]
     },
-    "raw_rework_count": 7,
-    "closed_rework_count": 7,
+    "raw_rework_count": 6,
+    "closed_rework_count": 6,
     "closed_rework_keys": [
       {
         "key": "proposal:repeated_same_eval_or_discard__auto-improve-iteration-persistence-runtime",
@@ -180,14 +164,13 @@
       },
       {
         "key": "targets:ops/scripts/auto_improve_iteration_persistence_runtime.py",
-        "raw_attempt_count": 7,
-        "raw_rework_count": 6,
+        "raw_attempt_count": 6,
+        "raw_rework_count": 5,
         "run_ids": [
           "run-20260422-auto-improve-timeout-telemetry-fallback",
           "run-20260422-auto-improve-decision-record-fallback-retry",
           "run-20260422-auto-improve-decision-record-fallback-retry2",
           "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
-          "run-20260422-auto-improve-decision-record-fallback",
           "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
           "run-20260507-auto-improve-iteration-persistence-discard-path"
         ],
@@ -199,11 +182,10 @@
           "run-20260422-auto-improve-decision-record-fallback-retry",
           "run-20260422-auto-improve-decision-record-fallback-retry2",
           "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
-          "run-20260422-auto-improve-decision-record-fallback",
           "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
           "run-20260507-auto-improve-iteration-persistence-discard-path"
         ],
-        "closed_rework_count": 6,
+        "closed_rework_count": 5,
         "closure_status": "superseded",
         "closure_reason": "Superseded by finalized same-target runs that close the legacy timeout/decision-record retries and preserve terminal decision provenance without introducing a new HOLD or DISCARD.",
         "superseding_run_id": "run-20260507-auto-improve-iteration-persistence-discard-path",
@@ -220,7 +202,7 @@
   "recent_attempts": [
     {
       "run_id": "run-20260507-schema-drift-manifest-followup-pressure",
-      "session_id": "",
+      "session_id": "standalone-run-telemetry",
       "proposal_id": "",
       "source_candidate_id": "",
       "observed_at": "2026-05-07T03:48:04Z",
@@ -237,7 +219,7 @@
     },
     {
       "run_id": "run-20260507-auto-improve-iteration-persistence-discard-path",
-      "session_id": "",
+      "session_id": "standalone-run-telemetry",
       "proposal_id": "",
       "source_candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
       "observed_at": "2026-05-07T03:07:19Z",
@@ -254,7 +236,7 @@
     },
     {
       "run_id": "run-20260507-auto-improve-iteration-persistence-typed-same-eval",
-      "session_id": "manual-learning-evidence-20260507",
+      "session_id": "standalone-run-telemetry",
       "proposal_id": "repeated_same_eval_or_discard__auto-improve-iteration-persistence-runtime",
       "source_candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
       "observed_at": "2026-05-07T00:00:00Z",
@@ -271,7 +253,7 @@
     },
     {
       "run_id": "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
-      "session_id": "",
+      "session_id": "standalone-run-telemetry",
       "proposal_id": "",
       "source_candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
       "observed_at": "2026-05-06T19:49:44Z",
@@ -302,23 +284,6 @@
       "rollback_signal": false,
       "run_telemetry": "runs/archive/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
       "promotion_report": "runs/archive/auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
-    },
-    {
-      "run_id": "run-20260422-auto-improve-decision-record-fallback",
-      "session_id": "",
-      "proposal_id": "",
-      "source_candidate_id": "",
-      "observed_at": "2026-04-27T06:37:56Z",
-      "decision": "HOLD",
-      "outcome": "hold",
-      "primary_targets": [
-        "ops/scripts/auto_improve_iteration_persistence_runtime.py"
-      ],
-      "rework_key": "targets:ops/scripts/auto_improve_iteration_persistence_runtime.py",
-      "rollback_rehearsal_covered": false,
-      "rollback_signal": false,
-      "run_telemetry": "",
-      "promotion_report": "runs/archive/run-20260422-auto-improve-decision-record-fallback/promotion-report.json"
     },
     {
       "run_id": "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
@@ -389,17 +354,30 @@
       "promotion_report": "runs/run-20260422-auto-improve-timeout-telemetry-fallback/promotion-report.json"
     },
     {
-      "run_id": "run-20260415-mechanism-planning-gate-second-retry",
-      "session_id": "",
+      "run_id": "run-20260422-auto-improve-decision-record-fallback",
+      "session_id": "standalone-run-telemetry",
       "proposal_id": "",
       "source_candidate_id": "",
-      "observed_at": "2026-04-14T15:33:16Z",
+      "observed_at": "",
+      "decision": "HOLD",
+      "outcome": "hold",
+      "primary_targets": [],
+      "rework_key": "",
+      "rollback_rehearsal_covered": false,
+      "rollback_signal": false,
+      "run_telemetry": "",
+      "promotion_report": "runs/archive/run-20260422-auto-improve-decision-record-fallback/promotion-report.json"
+    },
+    {
+      "run_id": "run-20260415-mechanism-planning-gate-second-retry",
+      "session_id": "standalone-run-telemetry",
+      "proposal_id": "",
+      "source_candidate_id": "",
+      "observed_at": "",
       "decision": "DISCARD",
       "outcome": "discarded",
-      "primary_targets": [
-        "ops/scripts/planning_gate_validate.py"
-      ],
-      "rework_key": "targets:ops/scripts/planning_gate_validate.py",
+      "primary_targets": [],
+      "rework_key": "",
       "rollback_rehearsal_covered": false,
       "rollback_signal": false,
       "run_telemetry": "",

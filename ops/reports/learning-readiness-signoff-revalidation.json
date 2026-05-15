@@ -1,19 +1,19 @@
 {
   "$schema": "ops/schemas/learning-readiness-signoff-revalidation.schema.json",
   "artifact_kind": "learning_readiness_signoff_revalidation",
-  "generated_at": "2026-05-15T11:39:10Z",
+  "generated_at": "2026-05-15T12:44:25Z",
   "producer": "ops.scripts.learning_readiness_signoff_revalidation",
   "source_command": "python -m ops.scripts.learning_readiness_signoff_revalidation --vault . --window-days 7",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+  "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "8c536891a172cbe9ad11fa91c7851a82490e204151bd3076dc7ca35e9ad25720",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "77a99c5b496880aaa81b020b1697a75023716dd9ff5dde17b79097c9c84b7621",
-    "auto_improve_readiness": "eeac1da9531233b2caf8d64c38ed8fc93e7048a9fd024464adfcf3c3364a07e0",
+    "auto_improve_readiness": "ed23f1fa35a4b51fef78a4729074660ec1764f80b8b92b75cd74502d64cd04c8",
     "learning_readiness_signoff": "180910b295f2f050481a9f364dd100a28da735521ae45b3914c6e4d10ef7c83c",
-    "release_closeout_summary": "b56a223e3adda1f3d1d4452a38f99d2ad8c8bd7a5d07dbe74b04e99cfeb28cfe",
+    "release_closeout_summary": "5b6770973501507bad54e8970f89c2714d14f7504cda5ecae0ffa29e923a93bc",
     "required_command": "7f735507693fb0fd3c8f5860971f1f24c41d88981f989ef479e1839cafa325bd",
     "required_environment": "1de70756b4dc6ba51342a117ebf94ebc3114606c630cb2f0525a1b333d697bf0",
     "window_days": "7902699be42c8a8e46fbbb4501726517e86b22c56a189f7625a6da49081b2451"
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T11:39:10Z"
+    "checked_at": "2026-05-15T12:44:25Z"
   },
   "vault": ".",
   "policy": {
@@ -41,8 +41,8 @@
     "accepted_by": "operator-requested-via-codex-20260503",
     "accepted_at": "2026-05-03T03:00:01Z",
     "expires_at": "2026-05-10T03:00:01Z",
-    "seconds_until_expiry": -463149,
-    "days_until_expiry": -5.3605,
+    "seconds_until_expiry": -467064,
+    "days_until_expiry": -5.4058,
     "risk_owner": "runtime-maintainer",
     "revalidation_condition": "Rerun make release-evidence-closeout and inspect learning readiness metrics before release.",
     "rollback_trigger": "Treat learning_blocked_by_review_required as active again if release evidence changes, learning telemetry regresses, or this signoff expires.",
@@ -51,7 +51,7 @@
   "closeout": {
     "path": "ops/reports/release-closeout-summary.json",
     "load_status": "ok",
-    "generated_at": "2026-05-15T11:39:10Z",
+    "generated_at": "2026-05-15T12:44:25Z",
     "checked_in_release_ready": true,
     "release_readiness_state": "clean_pass",
     "release_authority_status": "clean_pass",
@@ -68,8 +68,8 @@
     "status": "pass",
     "accepted_learning_risk": false,
     "learning_blocker_active": false,
-    "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
-    "producer_input_fingerprint": "510df5135370079aa439f72ad630946d87a51956f68f1b3ce413b6070d852b35",
+    "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
+    "producer_input_fingerprint": "519c4162082aaf1655c52dc7dcd1d706439f3de66411c6620a15a0865a4cc3a9",
     "currentness_status": "current",
     "summary": "release_authority_status=clean_pass; release_readiness_state=clean_pass; machine_release_allowed=True; operator_release_allowed=True; requires_accepted_risk_review=False"
   },
@@ -87,7 +87,7 @@
     "metrics": {
       "attempts_considered": 13,
       "min_attempts_considered": 10,
-      "session_reports_considered": 3,
+      "session_reports_considered": 4,
       "session_calibration_status": "active",
       "telemetry_coverage_ratio": 1.0,
       "same_eval_run_count": 2,
@@ -104,7 +104,7 @@
   "revalidation": {
     "status": "metrics_close_candidate",
     "window_days": 7,
-    "window_ends_at": "2026-05-22T11:39:10Z",
+    "window_ends_at": "2026-05-22T12:44:25Z",
     "clean_closeout_required": false,
     "status_reason": "learning readiness metrics are sufficient to close the blocker without renewing signoff"
   },

@@ -1,29 +1,29 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-15T11:39:45Z",
+  "generated_at": "2026-05-15T12:45:28Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+  "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "e4bbee62a954a9f8b869630b9b6ce9cd27c5dbe7faeadc7e8af48b1d35474533",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "534089a8c499e36102a800f13fb67972ca79f80f65a0fabae0cec17190a05b5b",
-    "artifact_freshness_report": "9e23de6ef80dbe967d2a616444a8d17df45e4e8b30200a51432df63dfa0d439a",
-    "mechanism_review_report": "f6d4701a860f2b74a96dd0a91190bb631b22916ce3394a1c643d2f7e2b84ce77",
-    "mutation_proposal_report": "933f144925efc670786127d6b0290e804b20547f0c76b6e1e5bb8f1825d4bc96",
-    "outcome_metrics_report": "55c244f2ccc9d2113f731ce9ab13fc0f24ea52a4459b9fe6bb08a74f64059f6b",
-    "release_authority_preflight_report": "ab57cd834a8b39f6bdd5910c6f30c69c4fbb72d9662ae1cc76705fde066306e2",
-    "release_closeout_batch_manifest_report": "6f32babd14054c62b395f8a5e7bb550db46a6d7dc7b86120e533f4be902b7bd9",
-    "release_closeout_finality_attestation_report": "4d0d9c97db5690133ada58064a6e136dab33536b53f50866184030c1b9f38e95",
+    "source_paths": "559d97ccf4254557da60555ec99fddde7a726b098edc3f0e069218516d110cdc",
+    "artifact_freshness_report": "7929db6b4952da0c5b310481c73ab450e9e8ca20a02c94802141181e69f151a1",
+    "mechanism_review_report": "2e8f468247aad6ec0e544d92cabeb77371574cf00200944260fc1838d4a3bc17",
+    "mutation_proposal_report": "b44e022ef9098b27aad017603d15daea8bc0f68df96586d0bdabb79227e24cdd",
+    "outcome_metrics_report": "674d3e306c701adf785102d1b4c541f4fd26508e3148134c9510880d883f4956",
+    "release_authority_preflight_report": "6ecd2599e023d8ee0ee6dd90cdf7f7b83b7a00a3f96163878af944cf3c7ca148",
+    "release_closeout_batch_manifest_report": "0214667a339ac8c457624a90ff1f353d53555b258178f561e26824a11a341004",
+    "release_closeout_finality_attestation_report": "b8d612b45639f2382028788c749dc10343a514461098bb0d56f08ba7a733d05f",
     "release_closeout_post_check_finalizer_report": "missing",
-    "release_closeout_summary_report": "b56a223e3adda1f3d1d4452a38f99d2ad8c8bd7a5d07dbe74b04e99cfeb28cfe",
-    "release_evidence_cohort_report": "8f79cae0f35df1401a27938f806b7c008728b3f8eadbbe3ce089f8b578fd2c93",
-    "selected_contract_summary_report": "00554675222221f5664a63fcfa4386e7fac02eeb2f663ad330e3719dace13b05",
-    "source_package_clean_extract_report": "77a2483d1654c2d865822ed512a73e461a957947307495090e1f5321f485c263",
-    "release_authority_preflight_report_candidates": "7eb0b3bc3e6707aaaf24f88e23e3ab6ce869964982214aa162a354dea8103b64"
+    "release_closeout_summary_report": "5b6770973501507bad54e8970f89c2714d14f7504cda5ecae0ffa29e923a93bc",
+    "release_evidence_cohort_report": "15d068b5f5066df7a6844e70332f35dbbda1748e80df7d274c6c7e9350551a85",
+    "selected_contract_summary_report": "9552ab1aa3fd1d9f5136e5f678ef4dc461456321374ee3591d6cd26b5b51ee9b",
+    "source_package_clean_extract_report": "10b8dc96f75b848be8240be27e7b32f12632a455850366c94e0def755f86aa7f",
+    "release_authority_preflight_report_candidates": "5edfccf0c4f6b91fbb2529bc4b2ff92af21a18c4e35de4038183e545af89e750"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -31,7 +31,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T11:39:45Z"
+    "checked_at": "2026-05-15T12:45:28Z"
   },
   "vault": ".",
   "policy": {
@@ -63,7 +63,7 @@
     "metrics": {
       "attempts_considered": 13,
       "min_attempts_considered": 10,
-      "session_reports_considered": 3,
+      "session_reports_considered": 4,
       "session_calibration_status": "active",
       "telemetry_coverage_ratio": 1.0,
       "same_eval_run_count": 2,
@@ -260,7 +260,7 @@
     "source_candidates_read": 1,
     "candidates_emitted": 1,
     "attempts_considered": 13,
-    "session_reports_considered": 3,
+    "session_reports_considered": 4,
     "queue_pressure_summary": "contract_regression_signals 1 proposal, 1 blocked; queue_unblock 1 proposal",
     "review_bootstrap_summary": "comparable mechanism run history는 trend-based candidate를 평가할 수 있을 만큼 확보됐다.",
     "evidence_gaps": []
@@ -268,7 +268,7 @@
   "fallback": {
     "status": "not_needed",
     "primary_targets": [
-      "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+      "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
     ],
     "supporting_targets": [
       "ops/schemas/run-telemetry.schema.json"
@@ -276,11 +276,8 @@
     "test_files": [
       "tests/test_auto_improve_iteration_runtime.py"
     ],
-    "seed_run_count": 2,
-    "seed_runs": [
-      "run-20260422-auto-improve-timeout-telemetry-fallback",
-      "run-20260507-auto-improve-iteration-persistence-discard-path"
-    ],
+    "seed_run_count": 0,
+    "seed_runs": [],
     "history_requirement": 0,
     "additional_runs_needed": 0,
     "queue_recheck_target": "make auto-improve-readiness",
@@ -300,11 +297,11 @@
     {
       "id": "outcome_metrics_session_rollup_present",
       "pass": true,
-      "detail": "session_reports_considered=3"
+      "detail": "session_reports_considered=4"
     },
     {
       "id": "fallback_target_history_requirement_met",
-      "pass": true,
+      "pass": false,
       "detail": "queue is already non-empty, so fallback history depth is not needed."
     }
   ],

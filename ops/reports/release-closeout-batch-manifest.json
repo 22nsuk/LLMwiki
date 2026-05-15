@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/release-closeout-batch-manifest.schema.json",
   "artifact_kind": "release_closeout_batch_manifest",
-  "generated_at": "2026-05-15T11:39:10Z",
+  "generated_at": "2026-05-15T12:44:25Z",
   "producer": "ops.scripts.release_closeout_batch_manifest",
   "source_command": "python -m ops.scripts.release_closeout_batch_manifest --vault . --zip-metadata build/release/LLMwiki-source.zip --zip-timestamp-timezone UTC --distribution-zip build/release/LLMwiki-source.zip",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+  "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "a8af2e9389fc2d8fb095ba6ab26135e49a7c76344e5f070cb2a081c871e54a1d",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ef52351cbe2da5823614848423959fa15dd5be5c0f049eff5b4f16c595c49ee3",
     "artifact_count": "8527a891e224136950ff32ca212b45bc93f69fbb801c3b1ebedac52775f99e61",
-    "batch_id": "b20ff3e9e80b9fc13a1260ee879ebebe0e447fb3cf7336343f016de31017227b",
+    "batch_id": "c53cceba838282a4620a6e71115cc74615a48519219c3a930d0404f964d33d9f",
     "distribution_zip_path": "2518296775474faf3cea3f193e54410e5d13269829a7cacb2d84e9d29efe3ff2",
-    "distribution_zip_sha256": "d888299e2fc2fcce936cc95d3e19b48a9dc1e643518eb743df89add823f61fee",
-    "evidence_set_digest": "acf1af3e5451d9e8f0a5c99e624bb0b1eea197f10369623e0eced8b437679bfe",
+    "distribution_zip_sha256": "311c756f324d077a31ae1a6aaa164633fea64d8bb4db022a1e6f51ee66c75d83",
+    "evidence_set_digest": "2cd5393b2ed3fb223751eef6bb233d72bf56a7e2fd78f6f57d0a750d694011d0",
     "external_source_zip_bound_status": "5e1cf42878df58fea7bfa45b715b7832d889092ad23e802e63912b1bfd205630",
     "finality_attestation_path": "ff3639ee92e4c85a03bb8d26e058a3d7dc2b28876a43bd543ae689e13eebddb4",
     "finality_required": "3cbc87c7681f34db4617feaa2c8801931bc5e42d8d0f560e756dd4cd92885f18",
@@ -29,26 +29,26 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T11:39:10Z"
+    "checked_at": "2026-05-15T12:44:25Z"
   },
-  "batch_id": "batch-2026-05-15T11-39-10",
+  "batch_id": "batch-2026-05-15T12-44-25",
   "distribution_package": {
     "status": "materialized",
     "archive_profile": "source_content_package",
     "path": "build/release/LLMwiki-source.zip",
-    "sha256": "a78f33108c1819b69c16f6203f717ff8cb1a718599b35cf4645bfd421a1ce6e8",
-    "entry_count": 1573,
-    "file_count": 1573,
+    "sha256": "068f8667ad573bd9b2c699ccc40b4dfacea0dedaadaae10d12e87caeec9c739a",
+    "entry_count": 1574,
+    "file_count": 1574,
     "directory_entry_count": 0,
-    "uncompressed_size_bytes": 232749177,
+    "uncompressed_size_bytes": 232764277,
     "root_prefix": "LLMwiki",
     "timestamp_semantics": "normalized_archive_timestamp",
     "timestamp_unique_count": 1,
     "timestamp_min": "1980-01-01T00:00:00",
     "timestamp_max": "1980-01-01T00:00:00",
-    "source_manifest_file_count": 1572,
-    "source_manifest_digest": "cff0bce516942777816c5b05d17f2c8a2d256cdfb5ea1bb10e7765c1dc0855ae",
-    "archive_manifest_digest": "0d95b58d6affbf6f9adc7413d18cb8b6dd3771c2ba83f3f539ce493573fb81bb",
+    "source_manifest_file_count": 1573,
+    "source_manifest_digest": "5c47d529fbf4237cb3ab2c7395efbe514046d45a42d1671eaffd114c419c13d2",
+    "archive_manifest_digest": "4640d38dcf1d804e58fac53cbcffe04d6f24d69a5b19f40feb46704a799b4cde",
     "path_set_matches_release_manifest": true,
     "content_digest_matches_release_manifest": true,
     "zip_only_path_count": 0,
@@ -59,13 +59,13 @@
       "release-archive-self-description.json"
     ],
     "manifest_only_paths": [],
-    "summary": "distribution package status=materialized; archive_profile=source_content_package; path_set_matches_release_manifest=True; content_digest_matches_release_manifest=True; allowed_virtual_zip_path_count=1; file_count=1573"
+    "summary": "distribution package status=materialized; archive_profile=source_content_package; path_set_matches_release_manifest=True; content_digest_matches_release_manifest=True; allowed_virtual_zip_path_count=1; file_count=1574"
   },
   "external_source_zip_bound": {
     "status": "bound",
     "source": "distribution_package",
     "path": "build/release/LLMwiki-source.zip",
-    "sha256": "a78f33108c1819b69c16f6203f717ff8cb1a718599b35cf4645bfd421a1ce6e8",
+    "sha256": "068f8667ad573bd9b2c699ccc40b4dfacea0dedaadaae10d12e87caeec9c739a",
     "path_set_matches_release_manifest": true,
     "content_digest_matches_release_manifest": true,
     "release_authority_status": "clean_pass",
@@ -78,7 +78,7 @@
     "optional_bundle_target": "release-audit-pack",
     "bundle_source_of_truth": "release-closeout-batch-manifest.json",
     "artifact_count": 14,
-    "evidence_set_digest": "d6f076bb469f640ed7ef6c95bdede92845021758abfd02a1ac3a5b3fb4541c0a",
+    "evidence_set_digest": "768fa03d48293e9d9136b6d7c21be384a981c09cae956c99b85fe38a74896968",
     "optional_payload_policy": {
       "status": "available",
       "include_by_default": false,
@@ -96,7 +96,7 @@
       {
         "kind": "execution_log",
         "path": "build/release-payloads/test-execution-summary-full.log",
-        "sha256": "c23b525feabeee9b5b3fb5a6abcb7df7ba4f9d1420deab84907241404e5ad3fc",
+        "sha256": "28c34b7a9526df763eefaadf8e5f376b6fb8cba2c16924678985f7f4b823ccc1",
         "size_bytes": 1653,
         "required": false,
         "include_in_default_pack": false,
@@ -106,8 +106,8 @@
       {
         "kind": "junit_xml",
         "path": "build/release-payloads/test-execution-summary-full.junit.xml",
-        "sha256": "aea362f7d3295e44a956429a397810666275546c51966475559b591ea0c4e50f",
-        "size_bytes": 211704,
+        "sha256": "c840da785404f779f158be7fc97a0ba8d8d5662fc3d7215d1f4ad1d79e86ff9f",
+        "size_bytes": 212226,
         "required": false,
         "include_in_default_pack": false,
         "source": "ops/reports/test-execution-summary-full.json.evidence_artifacts",
@@ -130,10 +130,10 @@
     {
       "path": "ops/reports/release-smoke-report.json",
       "artifact_kind": "release_smoke_report",
-      "digest": "b7bbff24a617b981b31da172a05711a733d4629c4708ccdf85a138a912272f38",
-      "generated_at": "2026-05-15T11:31:09Z",
+      "digest": "ad0619f1fa0bf54c75e80e562c5f79a74d075fa96639c43f53d00e8d9639215f",
+      "generated_at": "2026-05-15T12:36:25Z",
       "producer": "ops.scripts.release_smoke",
-      "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+      "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
       "currentness_status": "current",
       "role": "primary_evidence",
       "required": true
@@ -141,10 +141,10 @@
     {
       "path": "ops/reports/source-package-clean-extract.json",
       "artifact_kind": "source_package_clean_extract",
-      "digest": "77a2483d1654c2d865822ed512a73e461a957947307495090e1f5321f485c263",
-      "generated_at": "2026-05-15T11:24:07Z",
+      "digest": "10b8dc96f75b848be8240be27e7b32f12632a455850366c94e0def755f86aa7f",
+      "generated_at": "2026-05-15T12:29:21Z",
       "producer": "ops.scripts.source_package_clean_extract",
-      "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+      "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
       "currentness_status": "current",
       "role": "source_package_reproducibility",
       "required": true
@@ -152,10 +152,10 @@
     {
       "path": "external-reports/report-reference-manifest.json",
       "artifact_kind": "external_report_reference_manifest",
-      "digest": "f2ac7bacee98708945aec4963cc89d58a71ce0e625f953fd6c7d5cbadf98cc3c",
-      "generated_at": "2026-05-15T11:23:38Z",
+      "digest": "7715cff333acdfd5bdbeb3c9d4ada877f67e4a746daaa487fe8db56532eebbb2",
+      "generated_at": "2026-05-15T12:28:53Z",
       "producer": "ops.scripts.external_report_reference_manifest",
-      "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+      "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
       "currentness_status": "current",
       "role": "external_review_provenance",
       "required": true
@@ -163,10 +163,10 @@
     {
       "path": "ops/reports/generated-artifact-index.json",
       "artifact_kind": "generated_artifact_index_report",
-      "digest": "a345824234855d37f69da9b6ee8c257fe05d8d2540a4cec10bfe716b8f52695e",
-      "generated_at": "2026-05-15T11:39:10Z",
+      "digest": "7c84115c49e36db3e77b67fcac417169a169b7e2c075b2112127f177d2d0de80",
+      "generated_at": "2026-05-15T12:44:25Z",
       "producer": "ops.scripts.generated_artifact_index",
-      "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+      "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
       "currentness_status": "current",
       "role": "index",
       "required": true
@@ -174,10 +174,10 @@
     {
       "path": "ops/reports/artifact-freshness-report.json",
       "artifact_kind": "artifact_freshness_report",
-      "digest": "9e23de6ef80dbe967d2a616444a8d17df45e4e8b30200a51432df63dfa0d439a",
-      "generated_at": "2026-05-15T11:39:10Z",
+      "digest": "7929db6b4952da0c5b310481c73ab450e9e8ca20a02c94802141181e69f151a1",
+      "generated_at": "2026-05-15T12:44:25Z",
       "producer": "ops.scripts.artifact_freshness_runtime",
-      "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+      "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
       "currentness_status": "current",
       "role": "primary_evidence",
       "required": true
@@ -185,10 +185,10 @@
     {
       "path": "ops/reports/test-execution-summary.json",
       "artifact_kind": "test_execution_summary",
-      "digest": "00554675222221f5664a63fcfa4386e7fac02eeb2f663ad330e3719dace13b05",
-      "generated_at": "2026-05-15T11:37:45Z",
+      "digest": "9552ab1aa3fd1d9f5136e5f678ef4dc461456321374ee3591d6cd26b5b51ee9b",
+      "generated_at": "2026-05-15T12:43:00Z",
       "producer": "ops.scripts.test_execution_summary",
-      "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+      "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
       "currentness_status": "current",
       "role": "report_contract_evidence",
       "required": true
@@ -196,10 +196,10 @@
     {
       "path": "ops/reports/test-execution-summary-full.json",
       "artifact_kind": "test_execution_summary",
-      "digest": "f09c3000adf9c2a39bcbe1e9bdf8aa6c9a4d0953e3ae4134d9c00b42836030b9",
-      "generated_at": "2026-05-15T11:37:16Z",
+      "digest": "d867374543181fed08f0553e95f92f50ab07bad9e98bb9b791c161083c05ba0f",
+      "generated_at": "2026-05-15T12:42:32Z",
       "producer": "ops.scripts.test_execution_summary",
-      "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+      "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
       "currentness_status": "current",
       "role": "full_suite_evidence",
       "required": true
@@ -207,10 +207,10 @@
     {
       "path": "ops/reports/release-closeout-summary.json",
       "artifact_kind": "release_closeout_summary",
-      "digest": "b56a223e3adda1f3d1d4452a38f99d2ad8c8bd7a5d07dbe74b04e99cfeb28cfe",
-      "generated_at": "2026-05-15T11:39:10Z",
+      "digest": "5b6770973501507bad54e8970f89c2714d14f7504cda5ecae0ffa29e923a93bc",
+      "generated_at": "2026-05-15T12:44:25Z",
       "producer": "ops.scripts.release_closeout_summary",
-      "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+      "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
       "currentness_status": "current",
       "role": "decision",
       "required": true
@@ -218,10 +218,10 @@
     {
       "path": "ops/reports/learning-readiness-signoff-revalidation.json",
       "artifact_kind": "learning_readiness_signoff_revalidation",
-      "digest": "382dec4231cd651f248ea71b62dad9944a32ad089f63f89f49566ea4e1ffb3a5",
-      "generated_at": "2026-05-15T11:39:10Z",
+      "digest": "1adbe1c9f61a9da05ee809334aab051d7849a1501d38c4fca112deb08eb558ce",
+      "generated_at": "2026-05-15T12:44:25Z",
       "producer": "ops.scripts.learning_readiness_signoff_revalidation",
-      "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+      "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
       "currentness_status": "current",
       "role": "signoff",
       "required": true
@@ -229,10 +229,10 @@
     {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "artifact_kind": "learning_delta_scoreboard",
-      "digest": "2b72c452f1f09eb2b254708f62117b345cd33f00a4e9407aaf8e97e844f26c25",
-      "generated_at": "2026-05-15T11:38:56Z",
+      "digest": "2597a435acb197f47be048be128c74e71d4f27f1e80fe92185cd281c98c14e32",
+      "generated_at": "2026-05-15T12:44:13Z",
       "producer": "ops.scripts.learning_delta_scoreboard",
-      "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+      "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
       "currentness_status": "current",
       "role": "learning_claim_guard",
       "required": true
@@ -240,10 +240,10 @@
     {
       "path": "ops/reports/release-evidence-cohort.json",
       "artifact_kind": "release_evidence_cohort",
-      "digest": "8f79cae0f35df1401a27938f806b7c008728b3f8eadbbe3ce089f8b578fd2c93",
-      "generated_at": "2026-05-15T11:38:58Z",
+      "digest": "15d068b5f5066df7a6844e70332f35dbbda1748e80df7d274c6c7e9350551a85",
+      "generated_at": "2026-05-15T12:44:15Z",
       "producer": "ops.scripts.release_evidence_cohort",
-      "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+      "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
       "currentness_status": "current",
       "role": "cohort",
       "required": true
@@ -251,10 +251,10 @@
     {
       "path": "ops/reports/release-evidence-dashboard.json",
       "artifact_kind": "release_evidence_dashboard",
-      "digest": "b43b745f93aadf014073532f0beead9e2a992499f8f080616634e1a32ea9ceda",
-      "generated_at": "2026-05-15T11:39:10Z",
+      "digest": "36b879c2a36192994d3939fed3f3b2c7bba95d7ffc491aa50b2df5adc87f18c6",
+      "generated_at": "2026-05-15T12:44:25Z",
       "producer": "ops.scripts.release_evidence_dashboard",
-      "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+      "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
       "currentness_status": "current",
       "role": "dashboard",
       "required": true
@@ -262,10 +262,10 @@
     {
       "path": "ops/reports/release-lane-summary.json",
       "artifact_kind": "release_lane_summary",
-      "digest": "4d08684b5c8c17e92155b59cf3aeeef697026219519757c834b452cf73ac0512",
-      "generated_at": "2026-05-15T11:39:10Z",
+      "digest": "9601fa8b3122ddd0473108f1b21212119d627816aadd7d5cbb03cb0a634e0d58",
+      "generated_at": "2026-05-15T12:44:25Z",
       "producer": "ops.scripts.release_lane_summary",
-      "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+      "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
       "currentness_status": "current",
       "role": "lane_summary",
       "required": true
@@ -273,10 +273,10 @@
     {
       "path": "ops/reports/release-clean-blocker-ledger.json",
       "artifact_kind": "release_clean_blocker_ledger",
-      "digest": "6418a447952b76d04f31c024c846145331b91651ee5d360616be8b52e2599585",
-      "generated_at": "2026-05-15T11:39:10Z",
+      "digest": "9a92b5e086f702e4de6f5e062368452703226fc25f804b8aacef83c5d370c852",
+      "generated_at": "2026-05-15T12:44:25Z",
       "producer": "ops.scripts.release_clean_blocker_ledger",
-      "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+      "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
       "currentness_status": "current",
       "role": "clean_blocker_ledger",
       "required": true
@@ -461,11 +461,11 @@
     "timestamp_semantics": "normalized_archive_timestamp",
     "source_freshness_temporal_authority": "not_claimed",
     "source_freshness_content_authority": "source_tree_fingerprint",
-    "generated_at": "2026-05-15T11:39:10Z",
+    "generated_at": "2026-05-15T12:44:25Z",
     "zip_metadata_path": "build/release/LLMwiki-source.zip",
     "archive_timestamp_has_timezone": false,
     "timestamp_timezone_assumption": "UTC",
-    "source_file_count": 1572,
+    "source_file_count": 1573,
     "latest_source_mtime": "1980-01-01T00:00:00Z",
     "latest_source_path": ".codex/agents/README.md",
     "changed_after_generated_at_count": 0,
@@ -474,7 +474,7 @@
     "missing_zip_member_count": 0,
     "missing_zip_member_path_limit": 50,
     "missing_zip_members": [],
-    "summary": "source_evidence_freshness status=pass; basis=zip_member_timestamp; changed_after_generated_at_count=0; missing_zip_member_count=0; source_file_count=1572"
+    "summary": "source_evidence_freshness status=pass; basis=zip_member_timestamp; changed_after_generated_at_count=0; missing_zip_member_count=0; source_file_count=1573"
   },
   "release_decision_snapshot": {
     "clean_release_ready": true,

@@ -1426,6 +1426,27 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                 },
             },
         )
+        self._write_report(
+            "ops/reports/routing-provenance-aggregates/standalone-run-telemetry.json",
+            {
+                "session_id": "standalone-run-telemetry",
+                "generated_at": "2026-04-22T04:00:00Z",
+                "audit_rollup": {
+                    "loop_health": {
+                        "attempt_count": 99,
+                        "rework_count": 99,
+                        "rollback_signal_count": 99,
+                        "defect_escape_count": 99,
+                        "finalized_run_count": 99,
+                        "executor_failure_count": 99,
+                        "routing_report_parse_gap_count": 99,
+                        "executor_report_parse_gap_count": 99,
+                        "coverage_ratios": {"telemetry": 0.0},
+                        "health_flags": ["missing_telemetry_coverage"],
+                    }
+                },
+            },
+        )
 
         report = build_readiness_report(self.vault, context=fixed_context())
 
@@ -1778,7 +1799,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                         "target_groups_under_min_history": [
                             {
                                 "primary_targets": [
-                                    "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+                                    "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
                                 ],
                                 "blocked_candidate_types": [
                                     {
@@ -1854,7 +1875,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                         "target_groups_under_min_history": [
                             {
                                 "primary_targets": [
-                                    "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+                                    "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
                                 ],
                                 "blocked_candidate_types": [
                                     {
@@ -1900,7 +1921,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                 "finalized": True,
                 "finalize_result": {"run_id": "run-fallback-seed"},
                 "primary_targets": [
-                    "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+                    "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
                 ],
                 "supporting_targets": [
                     "ops/schemas/run-telemetry.schema.json"
@@ -2205,7 +2226,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                         "target_groups_under_min_history": [
                             {
                                 "primary_targets": [
-                                    "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+                                    "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
                                 ],
                                 "blocked_candidate_types": [
                                     {

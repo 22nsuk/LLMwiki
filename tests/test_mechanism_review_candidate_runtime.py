@@ -221,7 +221,7 @@ class MechanismReviewCandidateRuntimeTest(unittest.TestCase):
                     risk_flags=["schema_change"],
                     changed_files=[
                         {
-                            "path": "ops/scripts/auto_improve_iteration_persistence_runtime.py",
+                            "path": "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
                             "change_type": "modified",
                         }
                     ],

@@ -16,6 +16,7 @@ from .auto_improve_readiness_runtime import (
     FALLBACK_TEST_FILES,
 )
 from ops.scripts.filesystem_runtime import manifest_apply_guard_state
+from .current_target_path_runtime import current_repo_target_paths
 from .mechanism_candidate_registry_runtime import (
     MECHANISM_CANDIDATE_REGISTRY,
     proposal_fields_for_candidate,
@@ -52,7 +53,9 @@ RECENT_LOG_OVERLAP_UNBLOCK_SOURCE_CANDIDATE_TYPE = (
     "mechanism_recent_log_overlap_queue_unblock_candidate"
 )
 RECENT_LOG_OVERLAP_UNBLOCK_FAMILY = "queue_unblock"
-RECENT_LOG_OVERLAP_UNBLOCK_PRIMARY_TARGETS = ["ops/scripts/mutation_proposal_runtime.py"]
+RECENT_LOG_OVERLAP_UNBLOCK_PRIMARY_TARGETS = [
+    "ops/scripts/mechanism/mutation_proposal_runtime.py"
+]
 RECENT_LOG_OVERLAP_UNBLOCK_TEST_FILES = ["tests/test_mutation_proposal.py"]
 RECENT_LOG_OVERLAP_UNBLOCK_RUN_ID = "recent-log-overlap-queue-blocked"
 
@@ -650,9 +653,10 @@ def _bootstrap_group_proposal(
     policy: dict,
     group: dict,
 ) -> MutationProposal | None:
-    primary_targets = [
-        str(target).strip() for target in group.get("primary_targets", []) if str(target).strip()
-    ]
+    primary_targets = current_repo_target_paths(
+        vault,
+        [str(target).strip() for target in group.get("primary_targets", []) if str(target).strip()],
+    )
     latest_run_id = str(group.get("latest_run_id", "")).strip()
     if not primary_targets or not latest_run_id:
         return None
@@ -803,7 +807,7 @@ def _bootstrap_no_history_proposal(
         failure_mode=BOOTSTRAP_FAILURE_MODE,
         single_mechanism_scope=(
             "finalize one narrow fallback-family system_mechanism run on "
-            "`ops/scripts/auto_improve_iteration_persistence_runtime.py` with supporting scope "
+            "`ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py` with supporting scope "
             "`ops/schemas/run-telemetry.schema.json` and `tests/test_auto_improve_iteration_runtime.py`"
         ),
         change_hypothesis=(
@@ -896,7 +900,7 @@ def _recent_log_overlap_queue_unblock_proposal(
         run_ids=[RECENT_LOG_OVERLAP_UNBLOCK_RUN_ID],
         failure_mode=RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE,
         single_mechanism_scope=(
-            "keep the unblock experiment scoped to `ops/scripts/mutation_proposal_runtime.py` "
+            "keep the unblock experiment scoped to `ops/scripts/mechanism/mutation_proposal_runtime.py` "
             "and `tests/test_mutation_proposal.py` so all existing recent-log-overlap-blocked proposals "
             "remain diagnostic evidence while one runnable rotation target reopens the queue"
         ),
@@ -944,26 +948,33 @@ def _proposal_from_candidate(
     recent_log_sections: list[RecentLogSection],
 ) -> MutationProposal | None:
     allowed_failure_modes = set(policy["mutation_proposal"]["allowed_failure_modes"])
-    recent_log_matches = _recent_log_overlap_matches(candidate, recent_log_sections)
+    primary_targets = current_repo_target_paths(vault, list(candidate["primary_targets"]))
+    supporting_targets = current_repo_target_paths(vault, list(candidate["supporting_targets"]))
+    current_candidate = {
+        **candidate,
+        "primary_targets": primary_targets,
+        "supporting_targets": supporting_targets,
+    }
+    recent_log_matches = _recent_log_overlap_matches(current_candidate, recent_log_sections)
     blocked_by = ["recent_log_overlap"] if recent_log_matches else []
-    fields = proposal_fields_for_candidate(candidate, MECHANISM_CANDIDATE_REGISTRY)
+    fields = proposal_fields_for_candidate(current_candidate, MECHANISM_CANDIDATE_REGISTRY)
     if fields["failure_mode"] not in allowed_failure_modes:
         return None
-    metrics_triggered = _proposal_metrics_triggered(candidate, fields["failure_mode"])
+    metrics_triggered = _proposal_metrics_triggered(current_candidate, fields["failure_mode"])
     run_ids = _proposal_run_ids(
-        candidate,
+        current_candidate,
         fields["failure_mode"],
         lookback_runs=policy["mutation_proposal"]["lookback_runs"],
     )
-    priority_breakdown = _priority_breakdown(candidate, blocked_by)
+    priority_breakdown = _priority_breakdown(current_candidate, blocked_by)
     must_change_tests = _resolve_must_change_tests(
         vault,
         policy,
-        primary_targets=list(candidate["primary_targets"]),
-        supporting_targets=list(candidate["supporting_targets"]),
+        primary_targets=primary_targets,
+        supporting_targets=supporting_targets,
     )
 
-    proposal_id = _proposal_id(candidate, fields["failure_mode"])
+    proposal_id = _proposal_id(current_candidate, fields["failure_mode"])
     return MutationProposal(
         proposal_id=proposal_id,
         source_candidate_id=candidate["candidate_id"],
@@ -971,8 +982,8 @@ def _proposal_from_candidate(
         family=candidate["family"],
         tier=candidate["tier"],
         priority=priority_breakdown.final_priority,
-        primary_targets=list(candidate["primary_targets"]),
-        supporting_targets=list(candidate["supporting_targets"]),
+        primary_targets=primary_targets,
+        supporting_targets=supporting_targets,
         metrics_triggered=metrics_triggered,
         run_ids=run_ids,
         failure_mode=fields["failure_mode"],
@@ -980,7 +991,7 @@ def _proposal_from_candidate(
         change_hypothesis=fields["change_hypothesis"],
         expected_binary_signal=fields["expected_binary_signal"],
         blast_radius_score=_proposal_blast_radius_score(
-            candidate,
+            current_candidate,
             must_change_tests=must_change_tests,
         ),
         must_change_tests=must_change_tests,
@@ -988,13 +999,17 @@ def _proposal_from_candidate(
         must_not_expand_apply_roots=_must_not_expand_apply_roots(
             vault,
             policy,
-            proposal_targets=[*candidate["primary_targets"], *candidate["supporting_targets"]],
+            proposal_targets=[*primary_targets, *supporting_targets],
             must_change_tests=must_change_tests,
         ),
         must_not_increase_untyped_surface=True,
         required_artifacts=_required_artifacts(),
         blocked_by=blocked_by,
-        why_now=_why_now({**candidate, "metrics_triggered": metrics_triggered}, run_ids, blocked_by),
+        why_now=_why_now(
+            {**current_candidate, "metrics_triggered": metrics_triggered},
+            run_ids,
+            blocked_by,
+        ),
         priority_breakdown=priority_breakdown,
         recent_log_overlap_matches=recent_log_matches,
     )
@@ -1654,7 +1669,10 @@ def _mutation_report_payload(
             source_command=SOURCE_COMMAND,
             resolved_policy_path=policy_path,
             schema_path=MUTATION_PROPOSAL_SCHEMA,
-            source_paths=["ops/scripts/mutation_proposal_runtime.py"],
+            source_paths=[
+                "ops/scripts/mechanism/mutation_proposal_runtime.py",
+                "ops/scripts/mechanism/current_target_path_runtime.py",
+            ],
             file_inputs={
                 "mechanism_review_report": report_path(vault, inputs.mechanism_review_path),
                 "system_log": report_path(vault, inputs.system_log),

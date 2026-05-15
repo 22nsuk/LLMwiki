@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/artifact-relocation-audit.schema.json",
   "artifact_kind": "artifact_relocation_audit",
-  "generated_at": "2026-05-15T11:39:01Z",
+  "generated_at": "2026-05-15T12:44:18Z",
   "producer": "ops.scripts.artifact_relocation_audit",
   "source_command": "python -m ops.scripts.artifact_relocation_audit --vault . --out ops/operator/artifact-relocation-audit.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+  "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "2bca24a2fb1f0a7c49b35b6df2aac4e0676e137502b48691d033ad62e3769173",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "1ffc3cd808f7848d5e07c33875f5b587f2c166346a1e07e6617ac6b127df422c",
     "candidate_spec": "b1200b347913aa0fd79d57373d7874415448511a26db8629fc55c649d860c9c2",
-    "dependency_paths": "386e7da0cf16c61c6b920514f1eaf53e339d6da96ac055cda27e37ba076b9f76",
+    "dependency_paths": "9a20abb93a36168d808972279a978fa03fa0a73c713f42edb85e9dea79ee2432",
     "dependency_roots": "be545ec75d1f4e02ad9ba08e5ac7019a5c4bf7d0baa3aa348395f93db732be97",
     "excluded_scan_paths": "fd1a01cc9a3c77d51ba8bec1c7117e110d4c742ac36077133fbb3b0b3d4b90bd",
     "excluded_scan_prefixes": "e957c42e176e00f268bb61a907a17e555ae0d84924fcabe7c04d0ab207727581"
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T11:39:01Z"
+    "checked_at": "2026-05-15T12:44:18Z"
   },
   "vault": ".",
   "policy": {
@@ -67,7 +67,7 @@
       "system/",
       "external-reports/"
     ],
-    "file_count": 612,
+    "file_count": 613,
     "files": [
       ".github/workflows/ci.yml",
       ".github/workflows/release.yml",
@@ -353,6 +353,7 @@
       "ops/scripts/mechanism/auto_improve_runtime.py",
       "ops/scripts/mechanism/auto_improve_session_completion_runtime.py",
       "ops/scripts/mechanism/auto_improve_session_runtime.py",
+      "ops/scripts/mechanism/current_target_path_runtime.py",
       "ops/scripts/mechanism/finalize_run.py",
       "ops/scripts/mechanism/finalize_run_artifact_runtime.py",
       "ops/scripts/mechanism/finalize_run_errors_runtime.py",
@@ -690,7 +691,7 @@
     "blocking_candidate_count": 0,
     "old_reference_count": 0,
     "new_reference_count": 27,
-    "dependency_file_count": 612
+    "dependency_file_count": 613
   },
   "candidates": [
     {
@@ -847,7 +848,7 @@
           "match_count": 1,
           "matches": [
             {
-              "line": 678,
+              "line": 682,
               "excerpt": "self.assertNotIn(\"ops/operator/operator-release-summary.json\", evidence_paths)"
             }
           ]

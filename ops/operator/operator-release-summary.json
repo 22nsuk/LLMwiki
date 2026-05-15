@@ -1,23 +1,23 @@
 {
   "$schema": "ops/schemas/operator-release-summary.schema.json",
   "artifact_kind": "operator_release_summary",
-  "generated_at": "2026-05-15T11:39:36Z",
+  "generated_at": "2026-05-15T12:44:53Z",
   "producer": "ops.scripts.operator_release_summary",
   "source_command": "python -m ops.scripts.operator_release_summary --vault . --out ops/operator/operator-release-summary.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+  "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "1162baa2c95574cfa3e9f1f29ed14e34f2df775a2bd8acd3b6e0301827537805",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "6d79652d2ad35694dd11eaaa9c85cd5ededf5b750c2c9975712d69f72efa2471",
-    "batch_manifest": "6f32babd14054c62b395f8a5e7bb550db46a6d7dc7b86120e533f4be902b7bd9",
-    "closeout": "b56a223e3adda1f3d1d4452a38f99d2ad8c8bd7a5d07dbe74b04e99cfeb28cfe",
-    "full_test_summary": "f09c3000adf9c2a39bcbe1e9bdf8aa6c9a4d0953e3ae4134d9c00b42836030b9",
-    "learning_delta_scoreboard": "2b72c452f1f09eb2b254708f62117b345cd33f00a4e9407aaf8e97e844f26c25",
-    "learning_revalidation": "382dec4231cd651f248ea71b62dad9944a32ad089f63f89f49566ea4e1ffb3a5",
-    "self_check": "1f8b7f955c37b0ddfcc0b1ebf3646610a8d65cddccdebad1612e9d15e1a05af8",
-    "test_summary": "00554675222221f5664a63fcfa4386e7fac02eeb2f663ad330e3719dace13b05"
+    "batch_manifest": "0214667a339ac8c457624a90ff1f353d53555b258178f561e26824a11a341004",
+    "closeout": "5b6770973501507bad54e8970f89c2714d14f7504cda5ecae0ffa29e923a93bc",
+    "full_test_summary": "d867374543181fed08f0553e95f92f50ab07bad9e98bb9b791c161083c05ba0f",
+    "learning_delta_scoreboard": "2597a435acb197f47be048be128c74e71d4f27f1e80fe92185cd281c98c14e32",
+    "learning_revalidation": "1adbe1c9f61a9da05ee809334aab051d7849a1501d38c4fca112deb08eb558ce",
+    "self_check": "3d67822ff5cbc97ed077f4a7006708fe1e221b0ba31537b1353a0cf83ca119d1",
+    "test_summary": "9552ab1aa3fd1d9f5136e5f678ef4dc461456321374ee3591d6cd26b5b51ee9b"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T11:39:36Z"
+    "checked_at": "2026-05-15T12:44:53Z"
   },
   "vault": ".",
   "policy": {
@@ -42,11 +42,11 @@
     "distribution_status": "materialized",
     "archive_profile": "source_content_package",
     "path": "build/release/LLMwiki-source.zip",
-    "sha256": "a78f33108c1819b69c16f6203f717ff8cb1a718599b35cf4645bfd421a1ce6e8",
-    "actual_sha256": "a78f33108c1819b69c16f6203f717ff8cb1a718599b35cf4645bfd421a1ce6e8",
+    "sha256": "068f8667ad573bd9b2c699ccc40b4dfacea0dedaadaae10d12e87caeec9c739a",
+    "actual_sha256": "068f8667ad573bd9b2c699ccc40b4dfacea0dedaadaae10d12e87caeec9c739a",
     "file_exists": true,
     "file_digest_matches_batch": true,
-    "entry_count": 1573,
+    "entry_count": 1574,
     "path_set_matches_release_manifest": true,
     "content_digest_matches_release_manifest": true,
     "summary": "source_zip=match; distribution_status=materialized; path_matches=True; content_matches=True; file_digest_matches_batch=True"
@@ -284,9 +284,9 @@
       }
     ],
     "learning_claim_evidence_bundle_status": "active",
-    "learning_claim_evidence_bundle_sha256": "5180535e12d7c6de43452126e38c0b3488fe2efcc3d25ebfd90b21982e0f45be",
+    "learning_claim_evidence_bundle_sha256": "7ab241c91452f87a165ef634a779478ef1a2ecafb2b2802e5034cbb88115e59d",
     "learning_confirmed_evidence_cohort_status": "active",
-    "learning_confirmed_evidence_cohort_sha256": "63882cb3bffb72b8eb9110466fe3d40a83a50adf8a192b13a670f71d92916e59",
+    "learning_confirmed_evidence_cohort_sha256": "0df1ead136d836b3dc015d242f934f172c171c0899dd8de35b4ad92b59e2aab9",
     "claim_wording_allowed": true,
     "claim_wording_policy_status": "pre_seal_ready",
     "confirmed_wording_allowed": true,

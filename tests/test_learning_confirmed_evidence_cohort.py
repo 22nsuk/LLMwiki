@@ -225,7 +225,9 @@ class LearningConfirmedEvidenceCohortTests(unittest.TestCase):
                         {
                             "family": "contract_regression_signals",
                             "failure_mode": "repeated_discard_runs",
-                            "primary_targets": ["ops/scripts/auto_improve_iteration_persistence_runtime.py"],
+                            "primary_targets": [
+                                "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+                            ],
                             "supporting_targets": ["ops/schemas/run-telemetry.schema.json"],
                             "run_ids": ["discard-a", "discard-b"],
                         }
@@ -238,7 +240,9 @@ class LearningConfirmedEvidenceCohortTests(unittest.TestCase):
                     "candidates": [
                         {
                             "family": "contract_regression_signals",
-                            "primary_targets": ["ops/scripts/auto_improve_iteration_persistence_runtime.py"],
+                            "primary_targets": [
+                                "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+                            ],
                             "supporting_targets": ["ops/schemas/run-telemetry.schema.json"],
                             "run_ids": ["promote-a", "promote-b", "legacy-promote"],
                         }

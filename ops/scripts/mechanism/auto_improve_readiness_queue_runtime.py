@@ -307,7 +307,7 @@ def _readiness_remediations(
                     remediation_code="seed_fallback_target_family",
                     unblock_action_type="manual_seed_run",
                     minimum_evidence=[
-                        "One finalized system_mechanism run exists for ops/scripts/auto_improve_iteration_persistence_runtime.py.",
+                        "One finalized system_mechanism run exists for ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py.",
                         "The seed run includes tests/test_auto_improve_iteration_runtime.py as evidence.",
                         "make auto-improve-readiness reports fallback.seed_run_count greater than 0.",
                     ],
@@ -585,13 +585,13 @@ def _readiness_next_action(
         return (
             "Queue is empty and the fallback target family has no finalized comparable seed run yet. "
             "Finalize one narrow manual `system_mechanism` run for "
-            "`ops/scripts/auto_improve_iteration_persistence_runtime.py` plus "
+            "`ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py` plus "
             "`tests/test_auto_improve_iteration_runtime.py`, then rerun "
             f"`{READINESS_TARGET}`."
         )
     return (
         "Queue is still empty after the fallback family was seeded. Keep auto-improve paused and either "
-        "add another comparable narrow run for `ops/scripts/auto_improve_iteration_persistence_runtime.py` "
+        "add another comparable narrow run for `ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py` "
         "or review mechanism_review history thresholds, then rerun "
         f"`{READINESS_TARGET}`."
     )

@@ -1,16 +1,16 @@
 {
   "$schema": "ops/schemas/mechanism-review-candidates.schema.json",
   "artifact_kind": "mechanism_review_candidates_report",
-  "generated_at": "2026-05-15T11:30:51Z",
+  "generated_at": "2026-05-15T12:36:06Z",
   "producer": "ops.scripts.mechanism_review_runtime",
   "source_command": "python -m ops.scripts.mechanism_review",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+  "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "c730a4570492eaf5cb038d51227064a8c9404069f62cb3920049a985951e876a",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "b918914e44bad6b4e65120c6e5078ed2f0b422b8d64f3f3253178465e131e835",
+    "source_paths": "da3776a205b1f1f07765b538aa4dc4093e31f68f04dcc435134fccf7e48fae2a",
     "excluded_promotion_reports": "12e5c3531aad200a990eba3fbf79b40508a0d52e3b955e81751fc7a5756c9155",
     "promotion_reports": "47308e6ead45e6366547bffe91c993d0d224544c2a4fb589d598b124c76a0a5f",
     "skipped_artifacts": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T11:30:51Z"
+    "checked_at": "2026-05-15T12:36:06Z"
   },
   "vault": ".",
   "policy": {
@@ -96,7 +96,7 @@
       "target_groups_under_min_history": [
         {
           "primary_targets": [
-            "ops/scripts/mechanism_candidate_registry_runtime.py"
+            "ops/scripts/mechanism/mechanism_candidate_registry_runtime.py"
           ],
           "comparable_runs": 1,
           "latest_run_id": "run-20260507-schema-drift-manifest-followup-pressure",
@@ -130,7 +130,7 @@
       "candidates_with_session_context": 1,
       "candidates_with_rollups": 1,
       "candidates_without_session_context": 0,
-      "runs_with_session_context": 3,
+      "runs_with_session_context": 5,
       "sessions_considered": 2,
       "sessions_with_rollups": 1,
       "validation_blocked_sessions": 0,
@@ -151,7 +151,7 @@
           "candidates_with_session_context": 1,
           "candidates_with_rollups": 1,
           "candidates_without_session_context": 0,
-          "runs_with_session_context": 3,
+          "runs_with_session_context": 5,
           "sessions_considered": 2,
           "sessions_with_rollups": 1,
           "validation_blocked_sessions": 0,
@@ -199,7 +199,7 @@
       "target_signals": [
         {
           "primary_targets": [
-            "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+            "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
           ],
           "candidate_ids": [
             "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime"
@@ -214,28 +214,24 @@
             "contract_regression_signals": 1
           },
           "current_priority_max": 100,
-          "attempt_count": 9,
+          "attempt_count": 5,
           "source_run_ids": [
-            "auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime",
-            "run-20260422-auto-improve-decision-record-fallback",
-            "run-20260422-auto-improve-decision-record-fallback-retry",
-            "run-20260422-auto-improve-decision-record-fallback-retry2",
             "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
             "run-20260422-auto-improve-timeout-telemetry-fallback",
             "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
             "run-20260507-auto-improve-iteration-persistence-discard-path",
             "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
           ],
-          "hold_count": 3,
+          "hold_count": 0,
           "discard_count": 2,
-          "hold_moving_average": 0.3333,
-          "discard_moving_average": 0.2222,
+          "hold_moving_average": 0.0,
+          "discard_moving_average": 0.4,
           "rollback_signal_count": 0,
           "rollback_signal_ratio": 0.0,
           "rework_count": 0,
           "defect_escape_pair_count": 0,
           "preview_flags": [
-            "recent_hold_moving_average"
+            "recent_discard_moving_average"
           ]
         }
       ],
@@ -244,17 +240,17 @@
           "family": "contract_regression_signals",
           "target_count": 1,
           "candidate_count": 1,
-          "attempt_count": 9,
-          "hold_count": 3,
+          "attempt_count": 5,
+          "hold_count": 0,
           "discard_count": 2,
           "rollback_signal_count": 0,
           "rework_count": 0,
           "defect_escape_pair_count": 0,
           "preview_flags": [
-            "recent_hold_moving_average"
+            "recent_discard_moving_average"
           ],
-          "hold_moving_average": 0.3333,
-          "discard_moving_average": 0.2222,
+          "hold_moving_average": 0.0,
+          "discard_moving_average": 0.4,
           "rollback_signal_ratio": 0.0
         }
       ],
@@ -293,7 +289,7 @@
       "objective": "detect repeated non-improvement against current contract-eval surfaces",
       "priority": 100,
       "primary_targets": [
-        "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
       ],
       "supporting_targets": [
         "ops/schemas/run-telemetry.schema.json"
@@ -318,8 +314,8 @@
       },
       "rationale": "최근 5개 mechanism run에서 eval non-improvement 또는 DISCARD가 반복돼 다음 실험 scope를 더 좁히거나 failure mode를 재국소화할 필요가 있다.",
       "suggested_experiments": [
-        "try one mechanism-only experiment on ops/scripts/auto_improve_iteration_persistence_runtime.py",
-        "reduce experiment scope and isolate one failure mode in ops/scripts/auto_improve_iteration_persistence_runtime.py"
+        "try one mechanism-only experiment on ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
+        "reduce experiment scope and isolate one failure mode in ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
       ],
       "signal_run_ids": {
         "repeated_discard_runs": [
@@ -347,7 +343,7 @@
         "priority_after_calibration": 100
       },
       "session_calibration": {
-        "runs_with_session_context": 3,
+        "runs_with_session_context": 5,
         "sessions_considered": 2,
         "sessions_with_rollups": 1,
         "validation_blocked_sessions": 0,

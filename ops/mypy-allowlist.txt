@@ -24,6 +24,7 @@ ops/scripts/mechanism/auto_improve_route_scaffold_runtime.py
 ops/scripts/mechanism/auto_improve_runtime.py
 ops/scripts/mechanism/auto_improve_session_completion_runtime.py
 ops/scripts/mechanism/auto_improve_session_runtime.py
+ops/scripts/mechanism/current_target_path_runtime.py
 ops/scripts/core/behavior_delta_runtime.py
 ops/scripts/core/candidate_rule_runtime.py
 ops/scripts/core/canonical_artifact_promote.py

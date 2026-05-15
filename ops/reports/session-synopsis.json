@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-15T11:38:57Z",
+  "generated_at": "2026-05-15T12:44:14Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+  "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "0b78062aa1e1d5397e3e6a796019bf61428ea78599033f9a278327a93e887134",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "3250b1bd42b6f1307d7b6116b5365f34d13933c71ff24eb9b607b1c68272a525",
-    "auto_improve_readiness": "0dc179c1d1890898f41041cb4f0d602bedfc59d1e39fafcdaa1e89b9594335db",
-    "learning_claim_activation": "5235088f38ceed1428ebf9e0f99367beb964da1c8131c3e98b9f2cda2e747484",
-    "learning_delta_scoreboard": "2b72c452f1f09eb2b254708f62117b345cd33f00a4e9407aaf8e97e844f26c25",
-    "source_package_clean_extract": "77a2483d1654c2d865822ed512a73e461a957947307495090e1f5321f485c263",
+    "auto_improve_readiness": "1f6f5bded41addc832e8abede7080b95531669771ed82c358f532ee1ad909fcc",
+    "learning_claim_activation": "1f13baee1e45e04fc4c7f2d71738a83c336a1f35b6de7715173714ec09b4ffb0",
+    "learning_delta_scoreboard": "2597a435acb197f47be048be128c74e71d4f27f1e80fe92185cd281c98c14e32",
+    "source_package_clean_extract": "10b8dc96f75b848be8240be27e7b32f12632a455850366c94e0def755f86aa7f",
     "task_observations": "de50b3e9d034fac6257d8f0dd900c1fbf54d71a429a79d82833ccc12f5e75d09"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T11:38:57Z"
+    "checked_at": "2026-05-15T12:44:14Z"
   },
   "vault": ".",
   "policy": {
@@ -35,7 +35,7 @@
     "recent_blocker_count": 0,
     "last_success_pattern_count": 5,
     "forbidden_repeat_pattern_count": 5,
-    "recommended_seed_run_count": 2,
+    "recommended_seed_run_count": 3,
     "evidence_gap_count": 1,
     "source_package_replay_status": "pass",
     "next_action": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded live auto-improve with `.venv/bin/python -m ops.scripts.mechanism.auto_improve_loop --vault . --policy ops/policies/wiki-maintainer-policy.yaml --max-proposals 1 --max-minutes 30 --max-consecutive-failures 1 --executor codex_exec`."
@@ -147,12 +147,17 @@
   "recommended_seed_runs": [
     {
       "run_id": "run-20260422-auto-improve-timeout-telemetry-fallback",
-      "source": "auto_improve_readiness.fallback.seed_runs",
+      "source": "learning_delta_scoreboard.selected_valid_run_ids",
+      "reason": "Reusable bounded evidence candidate for the next narrow run."
+    },
+    {
+      "run_id": "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
+      "source": "learning_delta_scoreboard.selected_valid_run_ids",
       "reason": "Reusable bounded evidence candidate for the next narrow run."
     },
     {
       "run_id": "run-20260507-auto-improve-iteration-persistence-discard-path",
-      "source": "auto_improve_readiness.fallback.seed_runs",
+      "source": "learning_delta_scoreboard.selected_valid_run_ids",
       "reason": "Reusable bounded evidence candidate for the next narrow run."
     }
   ],

@@ -1977,6 +1977,74 @@ class MechanismReviewTest(unittest.TestCase):
                 },
             )
 
+    def test_build_report_rewrites_flat_script_aliases_in_live_history_targets(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_review_vault(vault)
+
+            legacy_target = "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+            current_target = "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+            (vault / "ops" / "scripts" / "mechanism").mkdir(parents=True, exist_ok=True)
+            (vault / current_target).write_text(
+                "def persist_iteration_state() -> None:\n"
+                "    return None\n",
+                encoding="utf-8",
+            )
+
+            run_id = "run-20260414-flat-alias"
+            baseline_eval_path = f"runs/{run_id}/baseline-eval.json"
+            candidate_eval_path = f"runs/{run_id}/candidate-eval.json"
+            baseline_mechanism_path = f"runs/{run_id}/baseline-mechanism.json"
+            candidate_mechanism_path = f"runs/{run_id}/candidate-mechanism.json"
+
+            write_json(vault / baseline_eval_path, eval_report(vault, 10))
+            write_json(vault / candidate_eval_path, eval_report(vault, 10))
+            write_json(
+                vault / baseline_mechanism_path,
+                mechanism_report(
+                    vault,
+                    primary_targets=[legacy_target],
+                    nonempty=24,
+                    functions=3,
+                    branches=6,
+                    test_file_count=1,
+                    test_case_count=2,
+                    complexity_score=40,
+                ),
+            )
+            write_json(
+                vault / candidate_mechanism_path,
+                mechanism_report(
+                    vault,
+                    primary_targets=[legacy_target],
+                    nonempty=25,
+                    functions=3,
+                    branches=7,
+                    test_file_count=1,
+                    test_case_count=2,
+                    complexity_score=45,
+                ),
+            )
+            write_json(
+                vault / "runs" / run_id / "promotion-report.json",
+                promotion_report(
+                    run_id,
+                    primary_targets=[legacy_target],
+                    decision="PROMOTE",
+                    baseline_eval_path=baseline_eval_path,
+                    candidate_eval_path=candidate_eval_path,
+                    baseline_mechanism_path=baseline_mechanism_path,
+                    candidate_mechanism_path=candidate_mechanism_path,
+                ),
+            )
+
+            policy, policy_path = load_policy(vault)
+            report = build_report(vault, policy, policy_path)
+
+            group = report["diagnostics"]["bootstrap"]["target_groups_under_min_history"][0]
+            self.assertEqual(group["primary_targets"], [current_target])
+            self.assertNotIn(legacy_target, json.dumps(group, ensure_ascii=False))
+
     def test_ready_without_candidates_emits_non_trigger_diagnostics(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

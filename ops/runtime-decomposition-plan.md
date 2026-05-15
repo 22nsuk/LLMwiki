@@ -18,7 +18,7 @@
   - executor command materialization for codex-exec role dispatch
 - `ops/scripts/auto_improve_execute_runtime.py`
   - execute/evaluate phase request shaping, experiment invocation, and outcome mapping
-- `ops/scripts/auto_improve_iteration_persistence_runtime.py`
+- `ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py`
   - iteration telemetry merge/write
 
 다음 분해 우선순위:

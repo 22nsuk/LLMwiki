@@ -44,6 +44,7 @@ OUTCOME_METRICS_SOURCE_COMMAND = (
     "--vault . "
     "--policy-path ops/policies/wiki-maintainer-policy.yaml"
 )
+STANDALONE_RECONSTRUCTED_SESSION_ID = "standalone-run-telemetry"
 
 
 class OutcomeMetricsAttemptEntry(TypedDict):
@@ -221,6 +222,10 @@ def _load_session_reports(vault: Path) -> list[dict]:
     return reports
 
 
+def _is_standalone_reconstructed_session(session: dict) -> bool:
+    return str(session.get("session_id", "")).strip() == STANDALONE_RECONSTRUCTED_SESSION_ID
+
+
 def _promotion_primary_targets(vault: Path, run_id: str) -> list[str]:
     promotion_rel = resolve_run_artifact_rel(vault, run_id, "promotion-report.json")
     promotion = load_optional_json(vault / promotion_rel) if promotion_rel else None
@@ -318,9 +323,21 @@ def _standalone_attempt(vault: Path, run_id: str) -> AttemptRecord | None:
 def _collect_outcome_attempts(vault: Path) -> list[AttemptRecord]:
     attempts: list[AttemptRecord] = []
     seen_run_ids: set[str] = set()
+    standalone_sessions: list[dict] = []
     for session in _load_session_reports(vault):
+        if _is_standalone_reconstructed_session(session):
+            standalone_sessions.append(session)
+            continue
         for attempt in build_attempt_records(vault, session):
             run_id = str(attempt.get("run_id", "")).strip()
+            if run_id:
+                seen_run_ids.add(run_id)
+            attempts.append(attempt)
+    for session in standalone_sessions:
+        for attempt in build_attempt_records(vault, session):
+            run_id = str(attempt.get("run_id", "")).strip()
+            if run_id and run_id in seen_run_ids:
+                continue
             if run_id:
                 seen_run_ids.add(run_id)
             attempts.append(attempt)

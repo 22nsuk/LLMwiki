@@ -420,7 +420,14 @@ def build_report(
             source_command=SOURCE_COMMAND,
             resolved_policy_path=policy_path,
             schema_path=MECHANISM_REVIEW_SCHEMA,
-            source_paths=["ops/scripts/mechanism_review_runtime.py"],
+            source_paths=[
+                "ops/scripts/mechanism/mechanism_review_runtime.py",
+                "ops/scripts/mechanism/mechanism_review_candidate_runtime.py",
+                "ops/scripts/mechanism/mechanism_review_history_runtime.py",
+                "ops/scripts/mechanism/mechanism_review_outcome_metrics_calibration_runtime.py",
+                "ops/scripts/mechanism/mechanism_review_session_calibration_runtime.py",
+                "ops/scripts/mechanism/current_target_path_runtime.py",
+            ],
             path_group_inputs={
                 "promotion_reports": sorted(snapshot.promotion_report_path for snapshot in snapshots),
                 "excluded_promotion_reports": sorted(

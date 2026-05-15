@@ -13,6 +13,7 @@ from ops.scripts.schema_constants_runtime import (
     PROMOTION_REPORT_SCHEMA_PATH,
 )
 from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_with_schema
+from .current_target_path_runtime import current_repo_target_paths
 
 
 PROMOTION_REPORT_SCHEMA = PROMOTION_REPORT_SCHEMA_PATH
@@ -307,8 +308,14 @@ def load_mechanism_run_snapshots(
             MechanismRunSnapshot(
                 run_id=promotion_report["run_id"],
                 promotion_report_path=report_path(vault, promotion_path),
-                primary_targets=list(promotion_report["primary_targets"]),
-                supporting_targets=list(promotion_report["supporting_targets"]),
+                primary_targets=current_repo_target_paths(
+                    vault,
+                    list(promotion_report["primary_targets"]),
+                ),
+                supporting_targets=current_repo_target_paths(
+                    vault,
+                    list(promotion_report["supporting_targets"]),
+                ),
                 decision=decision_from_report(promotion_report, require_record=False),
                 baseline_eval=loaded_inputs["baseline_eval_report"],
                 candidate_eval=loaded_inputs["candidate_eval_report"],

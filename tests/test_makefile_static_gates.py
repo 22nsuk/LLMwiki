@@ -2177,7 +2177,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT ?= tmp/test-execution-summary-full.candidate.json",
             text,
         )
-        self.assertIn("TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT ?= 1253", text)
+        self.assertIn("TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT ?= 1256", text)
         self.assertIn(
             "RELEASE_AUDIT_PAYLOAD_STAGING_DIR ?= build/release-payloads", text
         )

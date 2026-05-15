@@ -289,9 +289,12 @@ def _latest_routing_provenance_aggregate(vault: Path) -> tuple[str, dict[str, An
     if not reports_dir.exists():
         return "", {}
 
-    latest_key = ("", "")
-    latest_rel_path = ""
-    latest_payload: dict[str, Any] = {}
+    latest_session_key = ("", "")
+    latest_session_rel_path = ""
+    latest_session_payload: dict[str, Any] = {}
+    latest_standalone_key = ("", "")
+    latest_standalone_rel_path = ""
+    latest_standalone_payload: dict[str, Any] = {}
     for path in sorted(reports_dir.glob("*.json")):
         payload = _load_optional_json(path)
         if not payload:
@@ -299,11 +302,19 @@ def _latest_routing_provenance_aggregate(vault: Path) -> tuple[str, dict[str, An
         generated_at = str(payload.get("generated_at", "")).strip()
         rel_path = report_path(vault, path)
         candidate_key = (generated_at, rel_path)
-        if candidate_key >= latest_key:
-            latest_key = candidate_key
-            latest_rel_path = rel_path
-            latest_payload = payload
-    return latest_rel_path, latest_payload
+        if str(payload.get("session_id", "")).strip() == "standalone-run-telemetry":
+            if candidate_key >= latest_standalone_key:
+                latest_standalone_key = candidate_key
+                latest_standalone_rel_path = rel_path
+                latest_standalone_payload = payload
+            continue
+        if candidate_key >= latest_session_key:
+            latest_session_key = candidate_key
+            latest_session_rel_path = rel_path
+            latest_session_payload = payload
+    if latest_session_payload:
+        return latest_session_rel_path, latest_session_payload
+    return latest_standalone_rel_path, latest_standalone_payload
 
 
 def _loop_health_flag_summary(flag: str) -> str:
@@ -763,5 +774,4 @@ def _learning_release_blockers(learning: LearningReadinessAssessment) -> list[Le
             recommended_next_step=learning.recommended_next_step,
         )
     ]
-
 

@@ -95,7 +95,9 @@ def write_machine_bundle_inputs(vault: Path, run_ids: tuple[str, ...] = ("run-a"
                     {
                         "family": "contract_regression_signals",
                         "failure_mode": "repeated_same_eval_or_discard",
-                        "primary_targets": ["ops/scripts/mutation_proposal_runtime.py"],
+                        "primary_targets": [
+                            "ops/scripts/mechanism/mutation_proposal_runtime.py"
+                        ],
                         "supporting_targets": [],
                         "run_ids": list(run_ids),
                     }
@@ -110,7 +112,9 @@ def write_machine_bundle_inputs(vault: Path, run_ids: tuple[str, ...] = ("run-a"
                 "candidates": [
                     {
                         "family": "contract_regression_signals",
-                        "primary_targets": ["ops/scripts/mutation_proposal_runtime.py"],
+                        "primary_targets": [
+                            "ops/scripts/mechanism/mutation_proposal_runtime.py"
+                        ],
                         "supporting_targets": [],
                         "run_ids": list(run_ids),
                     }
@@ -134,7 +138,7 @@ def write_machine_bundle_inputs(vault: Path, run_ids: tuple[str, ...] = ("run-a"
                 "deltas": [
                     {
                         "id": f"{run_id}-delta",
-                        "target": "ops/scripts/mutation_proposal_runtime.py",
+                        "target": "ops/scripts/mechanism/mutation_proposal_runtime.py",
                         "before": f"baseline-{index}",
                         "after": f"candidate-{index}",
                         "coverage_status": "covered",
@@ -734,7 +738,9 @@ class LearningDeltaScoreboardTests(unittest.TestCase):
                             {
                                 "family": "contract_regression_signals",
                                 "failure_mode": "repeated_same_eval_or_discard",
-                                "primary_targets": ["ops/scripts/mutation_proposal_runtime.py"],
+                                "primary_targets": [
+                                    "ops/scripts/mechanism/mutation_proposal_runtime.py"
+                                ],
                                 "supporting_targets": [],
                                 "run_ids": ["run-a"],
                             }
@@ -749,7 +755,9 @@ class LearningDeltaScoreboardTests(unittest.TestCase):
                         "candidates": [
                             {
                                 "family": "contract_regression_signals",
-                                "primary_targets": ["ops/scripts/mutation_proposal_runtime.py"],
+                                "primary_targets": [
+                                    "ops/scripts/mechanism/mutation_proposal_runtime.py"
+                                ],
                                 "supporting_targets": [],
                                 "run_ids": ["run-a"],
                             }
@@ -868,7 +876,9 @@ class LearningDeltaScoreboardTests(unittest.TestCase):
                             {
                                 "family": "contract_regression_signals",
                                 "failure_mode": "repeated_same_eval_or_discard",
-                                "primary_targets": ["ops/scripts/mutation_proposal_runtime.py"],
+                                "primary_targets": [
+                                    "ops/scripts/mechanism/mutation_proposal_runtime.py"
+                                ],
                                 "supporting_targets": [],
                                 "run_ids": ["run-a", "run-b"],
                             }
@@ -883,7 +893,9 @@ class LearningDeltaScoreboardTests(unittest.TestCase):
                         "candidates": [
                             {
                                 "family": "contract_regression_signals",
-                                "primary_targets": ["ops/scripts/mutation_proposal_runtime.py"],
+                                "primary_targets": [
+                                    "ops/scripts/mechanism/mutation_proposal_runtime.py"
+                                ],
                                 "supporting_targets": [],
                                 "run_ids": ["run-a", "run-b"],
                             }

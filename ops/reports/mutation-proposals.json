@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/mutation-proposals.schema.json",
   "artifact_kind": "mutation_proposals_report",
-  "generated_at": "2026-05-15T11:30:52Z",
+  "generated_at": "2026-05-15T12:36:07Z",
   "producer": "ops.scripts.mutation_proposal_runtime",
   "source_command": "python -m ops.scripts.mutation_proposal --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "d25da8f275af3efc2c9499a163d4a0847c6f23af04b6378feecf53b6a306498d",
+  "source_tree_fingerprint": "14bb79eea78a5a93302b077ce9a9fd1ebb9d8d5bb6a29e62b41fa42d14508598",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "fc7cc7e80ffe093b2bcd94ebbd5ff151c46631ade8a953a5b92611a0b0a99c46",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "77bb3f5d19b69eec076301a0b578c245629cd978b39114039d79e5dea634b170",
-    "mechanism_review_report": "f6d4701a860f2b74a96dd0a91190bb631b22916ce3394a1c643d2f7e2b84ce77",
+    "source_paths": "e7d250916f38283813d976b27063288d9139119dfb74bce70f09d764a4ff8c23",
+    "mechanism_review_report": "2e8f468247aad6ec0e544d92cabeb77371574cf00200944260fc1838d4a3bc17",
     "system_log": "32f22f36c00471c3b757974cccf8bbb74c26ebb27089845a2ec63003c7c8fc50",
     "mutation_dedupe_window": "ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d",
     "mutation_max_proposals": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5"
@@ -22,7 +22,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T11:30:52Z"
+    "checked_at": "2026-05-15T12:36:07Z"
   },
   "vault": ".",
   "policy": {
@@ -126,7 +126,7 @@
       "tier": "supporting",
       "priority": 91,
       "primary_targets": [
-        "ops/scripts/mutation_proposal_runtime.py"
+        "ops/scripts/mechanism/mutation_proposal_runtime.py"
       ],
       "supporting_targets": [],
       "metrics_triggered": [
@@ -136,7 +136,7 @@
         "recent-log-overlap-queue-blocked"
       ],
       "failure_mode": "recent_log_overlap_queue_blocked",
-      "single_mechanism_scope": "keep the unblock experiment scoped to `ops/scripts/mutation_proposal_runtime.py` and `tests/test_mutation_proposal.py` so all existing recent-log-overlap-blocked proposals remain diagnostic evidence while one runnable rotation target reopens the queue",
+      "single_mechanism_scope": "keep the unblock experiment scoped to `ops/scripts/mechanism/mutation_proposal_runtime.py` and `tests/test_mutation_proposal.py` so all existing recent-log-overlap-blocked proposals remain diagnostic evidence while one runnable rotation target reopens the queue",
       "change_hypothesis": "If mutation proposal runtime emits a narrow fallback when every candidate is blocked only by recent_log_overlap, auto-improve readiness can keep a runnable queue without weakening the chronology overlap guardrail.",
       "expected_binary_signal": "mutation proposal diagnostics retain recent_log_overlap blocked candidates and queue_selection.runnable_available_count becomes greater than zero",
       "blast_radius_score": 17,
@@ -174,7 +174,7 @@
       "tier": "supporting",
       "priority": 85,
       "primary_targets": [
-        "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
       ],
       "supporting_targets": [
         "ops/schemas/run-telemetry.schema.json"
@@ -187,8 +187,8 @@
         "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
       ],
       "failure_mode": "repeated_discard_runs",
-      "single_mechanism_scope": "narrow the next mechanism experiment on ops/scripts/auto_improve_iteration_persistence_runtime.py to the DISCARD outcome path only",
-      "change_hypothesis": "If the next experiment around ops/scripts/auto_improve_iteration_persistence_runtime.py changes only one DISCARD-producing path and records explicit non-regression evidence, recent discard/rework pressure should drop without expanding the mechanism surface.",
+      "single_mechanism_scope": "narrow the next mechanism experiment on ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py to the DISCARD outcome path only",
+      "change_hypothesis": "If the next experiment around ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py changes only one DISCARD-producing path and records explicit non-regression evidence, recent discard/rework pressure should drop without expanding the mechanism surface.",
       "expected_binary_signal": "next finalized attempt for this target avoids DISCARD while candidate_eval non-regresses and promotion artifacts explain the terminal decision",
       "blast_radius_score": 30,
       "must_change_tests": [

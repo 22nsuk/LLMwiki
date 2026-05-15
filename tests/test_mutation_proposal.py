@@ -631,7 +631,10 @@ class MutationProposalTest(unittest.TestCase):
                 rotation["source_candidate_type"],
                 "mechanism_recent_log_overlap_queue_unblock_candidate",
             )
-            self.assertEqual(rotation["primary_targets"], ["ops/scripts/mutation_proposal_runtime.py"])
+            self.assertEqual(
+                rotation["primary_targets"],
+                ["ops/scripts/mechanism/mutation_proposal_runtime.py"],
+            )
             self.assertEqual(rotation["must_change_tests"], ["tests/test_mutation_proposal.py"])
             self.assertEqual(rotation["blocked_by"], [])
             self.assertEqual(
@@ -744,7 +747,9 @@ class MutationProposalTest(unittest.TestCase):
                     "tier": "supporting",
                     "objective": "detect repeated non-improvement against current contract-eval surfaces",
                     "priority": 72,
-                    "primary_targets": ["ops/scripts/auto_improve_iteration_persistence_runtime.py"],
+                    "primary_targets": [
+                        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+                    ],
                     "supporting_targets": [],
                     "metrics_triggered": ["stage1_same_eval_rate"],
                     "run_ids": ["run-1", "run-2"],
@@ -760,6 +765,63 @@ class MutationProposalTest(unittest.TestCase):
 
             self.assertEqual(
                 proposal_report["proposals"][0]["must_change_tests"],
+                ["tests/test_auto_improve_iteration_runtime.py"],
+            )
+
+    def test_build_report_rewrites_flat_script_alias_to_current_target_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            current_target = "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+            legacy_target = "ops/scripts/auto_improve_iteration_persistence_runtime.py"
+            (vault / "ops" / "scripts" / "mechanism").mkdir(parents=True, exist_ok=True)
+            (vault / current_target).write_text(
+                "def persist_iteration_state() -> None:\n"
+                "    return None\n",
+                encoding="utf-8",
+            )
+            (vault / "tests" / "test_auto_improve_iteration_runtime.py").write_text(
+                (
+                    "from ops.scripts.auto_improve_iteration_persistence_runtime import "
+                    "persist_iteration_state\n\n"
+                    "def test_placeholder() -> None:\n"
+                    "    assert persist_iteration_state is not None\n"
+                ),
+                encoding="utf-8",
+            )
+
+            report = mechanism_review_report()
+            report["summary"]["candidates_emitted"] = 1
+            report["candidates"] = [
+                {
+                    "candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
+                    "candidate_type": "mechanism_eval_stagnation_candidate",
+                    "family": "contract_regression_signals",
+                    "tier": "supporting",
+                    "objective": "detect repeated non-improvement against current contract-eval surfaces",
+                    "priority": 85,
+                    "primary_targets": [legacy_target],
+                    "supporting_targets": ["ops/schemas/run-telemetry.schema.json"],
+                    "metrics_triggered": ["repeated_discard_runs"],
+                    "run_ids": ["run-1", "run-2"],
+                    "evidence": {"runs_examined": 2, "same_eval_runs": 0, "discard_runs": 2},
+                    "rationale": "legacy flat path came from historical run evidence",
+                    "suggested_experiments": [f"try one mechanism-only experiment on {legacy_target}"],
+                }
+            ]
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", report)
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path)
+
+            proposal = proposal_report["proposals"][0]
+            self.assertEqual(proposal["primary_targets"], [current_target])
+            self.assertIn(current_target, proposal["single_mechanism_scope"])
+            self.assertIn(current_target, proposal["change_hypothesis"])
+            self.assertNotIn(legacy_target, json.dumps(proposal, ensure_ascii=False))
+            self.assertEqual(
+                proposal["must_change_tests"],
                 ["tests/test_auto_improve_iteration_runtime.py"],
             )
 
@@ -848,7 +910,9 @@ class MutationProposalTest(unittest.TestCase):
                 ],
                 "target_groups_under_min_history": [
                     {
-                        "primary_targets": ["ops/scripts/auto_improve_iteration_persistence_runtime.py"],
+                        "primary_targets": [
+                            "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+                        ],
                         "comparable_runs": 1,
                         "latest_run_id": "run-1",
                         "blocked_candidate_types": [
@@ -890,7 +954,7 @@ class MutationProposalTest(unittest.TestCase):
             )
             self.assertEqual(
                 proposal_report["proposals"][0]["primary_targets"],
-                ["ops/scripts/auto_improve_iteration_persistence_runtime.py"],
+                ["ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"],
             )
             self.assertEqual(
                 proposal_report["proposals"][0]["must_change_tests"],
