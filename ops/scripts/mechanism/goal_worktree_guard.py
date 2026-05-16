@@ -27,6 +27,37 @@ class GitProbe:
     remote_url: str
 
 
+def _operation_policy(
+    *,
+    status: str,
+    mode: str,
+    reason: str,
+) -> dict[str, str | bool]:
+    if status == "pass" and mode == "git_worktree":
+        return {
+            "long_run_allowed": True,
+            "allowed_operation": "long_run",
+            "blocked_operation_reason": "",
+        }
+    if mode == "zip_or_report_only":
+        return {
+            "long_run_allowed": False,
+            "allowed_operation": "trial_or_report_only",
+            "blocked_operation_reason": (
+                "Long-run goal execution requires a linked Git worktree on the "
+                f"expected branch; this location is limited because {reason}."
+            ),
+        }
+    return {
+        "long_run_allowed": False,
+        "allowed_operation": "report_only",
+        "blocked_operation_reason": (
+            "Long-run goal execution requires a linked Git worktree on the expected "
+            f"branch; this location is report-only because {reason}."
+        ),
+    }
+
+
 def _git(vault: Path, *args: str) -> str:
     completed = subprocess.run(
         ["git", "-C", str(vault), *args],
@@ -63,6 +94,7 @@ def build_report(
     try:
         probe = probe_git(vault)
     except GoalWorktreeGuardError as exc:
+        reason = str(exc)
         return {
             "artifact_kind": "goal_worktree_guard",
             "generated_at": runtime_context.isoformat_z(),
@@ -72,7 +104,12 @@ def build_report(
             "commit": "",
             "remote_url": "",
             "worktree_path": display_path(vault, vault),
-            "reason": str(exc),
+            "reason": reason,
+            **_operation_policy(
+                status="fail",
+                mode="zip_or_report_only",
+                reason=reason,
+            ),
         }
     git_file = (vault / ".git").is_file()
     branch_matches = probe.branch == expected_branch
@@ -93,6 +130,7 @@ def build_report(
         "remote_url": probe.remote_url,
         "worktree_path": display_path(vault.parent, vault),
         "reason": reason,
+        **_operation_policy(status=status, mode=mode, reason=reason),
     }
 
 

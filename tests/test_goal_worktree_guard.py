@@ -26,11 +26,10 @@ def _run_git(cwd: Path, *args: str) -> None:
     )
 
 
-def _seed_repo_with_worktree(tmp_path: Path) -> Path:
+def _seed_repo(tmp_path: Path) -> Path:
     if shutil.which("git") is None:
         pytest.skip("git is required for worktree guard tests")
     repo = tmp_path / "repo"
-    worktree = tmp_path / "goal-worktree"
     repo.mkdir()
     _run_git(repo, "init", "-q", "-b", "main")
     _run_git(repo, "config", "user.name", "Test User")
@@ -39,6 +38,12 @@ def _seed_repo_with_worktree(tmp_path: Path) -> Path:
     _run_git(repo, "add", "README.md")
     _run_git(repo, "commit", "-q", "-m", "initial")
     _run_git(repo, "remote", "add", "origin", "https://github.com/22nsuk/LLMwiki.git")
+    return repo
+
+
+def _seed_repo_with_worktree(tmp_path: Path) -> Path:
+    repo = _seed_repo(tmp_path)
+    worktree = tmp_path / "goal-worktree"
     _run_git(repo, "worktree", "add", "-q", "-b", GOAL_BRANCH, worktree, "main")
     return worktree
 
@@ -60,6 +65,9 @@ def test_goal_worktree_guard_passes_only_for_linked_expected_branch(tmp_path: Pa
     assert report["branch"] == GOAL_BRANCH
     assert report["remote_url"] == "https://github.com/22nsuk/LLMwiki.git"
     assert report["reason"] == "git linked worktree on expected branch"
+    assert report["long_run_allowed"] is True
+    assert report["allowed_operation"] == "long_run"
+    assert report["blocked_operation_reason"] == ""
 
 
 def test_goal_worktree_guard_rejects_zip_or_report_only_directory(tmp_path: Path) -> None:
@@ -68,3 +76,20 @@ def test_goal_worktree_guard_rejects_zip_or_report_only_directory(tmp_path: Path
     assert report["status"] == "fail"
     assert report["mode"] == "zip_or_report_only"
     assert report["branch"] == ""
+    assert report["long_run_allowed"] is False
+    assert report["allowed_operation"] == "trial_or_report_only"
+    assert "Long-run goal execution requires a linked Git worktree" in report[
+        "blocked_operation_reason"
+    ]
+
+
+def test_goal_worktree_guard_rejects_main_worktree_as_report_only(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path)
+
+    report = build_report(repo, expected_branch=GOAL_BRANCH, context=fixed_context())
+
+    assert report["status"] == "fail"
+    assert report["mode"] == "main_worktree"
+    assert report["long_run_allowed"] is False
+    assert report["allowed_operation"] == "report_only"
+    assert "linked git worktree" in report["reason"].lower()

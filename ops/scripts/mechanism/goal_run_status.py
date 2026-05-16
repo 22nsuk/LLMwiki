@@ -353,15 +353,43 @@ def _promotion_policy_from_readiness(
     return policy
 
 
-def _worktree_guard_summary(vault: Path, contract: dict[str, Any]) -> dict[str, str]:
+def _worktree_guard_summary(vault: Path, contract: dict[str, Any]) -> dict[str, Any]:
     report = build_worktree_guard(
         vault,
         expected_branch=str(contract["github"]["branch"]),
     )
+    status = str(report.get("status", "fail"))
+    mode = str(report.get("mode", "unknown"))
+    reason = str(report.get("reason", ""))
+    long_run_allowed = report.get("long_run_allowed")
+    if not isinstance(long_run_allowed, bool):
+        long_run_allowed = status == "pass" and mode == "git_worktree"
+    allowed_operation = str(
+        report.get(
+            "allowed_operation",
+            "long_run"
+            if long_run_allowed
+            else "trial_or_report_only"
+            if mode == "zip_or_report_only"
+            else "report_only",
+        )
+    )
+    if allowed_operation not in {
+        "long_run",
+        "trial_or_report_only",
+        "report_only",
+    }:
+        allowed_operation = "report_only"
+    blocked_operation_reason = str(report.get("blocked_operation_reason", ""))
+    if not long_run_allowed and not blocked_operation_reason:
+        blocked_operation_reason = reason
     return {
-        "status": str(report.get("status", "fail")),
-        "mode": str(report.get("mode", "unknown")),
-        "reason": str(report.get("reason", "")),
+        "status": status,
+        "mode": mode,
+        "reason": reason,
+        "long_run_allowed": long_run_allowed,
+        "allowed_operation": allowed_operation,
+        "blocked_operation_reason": blocked_operation_reason,
     }
 
 
@@ -437,6 +465,8 @@ def _write_status_markdown(vault: Path, status: dict[str, Any]) -> None:
         f"- baseline_commit: `{repo['baseline_commit']}`",
         f"- worktree_path: `{repo['worktree_path']}`",
         f"- worktree_guard: `{repo['worktree_guard']['status']}` / `{repo['worktree_guard']['mode']}`",
+        f"- long_run_allowed: `{repo['worktree_guard']['long_run_allowed']}`",
+        f"- allowed_operation: `{repo['worktree_guard']['allowed_operation']}`",
         f"- proposals_attempted: `{progress['proposals_attempted']}`",
         f"- consecutive_failures: `{progress['consecutive_failures']}`",
         f"- promotion_ban_active: `{status['promotion_policy']['promotion_ban_active']}`",
@@ -578,8 +608,30 @@ def initialize_goal_runtime(
         active_profile=active_profile,
         status="initialized",
     )
-    status = write_checkpoint(vault, status, reason="initial GitHub worktree registration")
-    write_goal_status(vault, status, event="initialized", reason="goal runtime initialized")
+    event = "initialized"
+    reason = "goal runtime initialized"
+    checkpoint_reason = "initial GitHub worktree registration"
+    guard = status["repo"]["worktree_guard"]
+    if (
+        guard["status"] != "pass"
+        or guard["mode"] != "git_worktree"
+        or guard["long_run_allowed"] is not True
+    ):
+        status["status"] = "blocked"
+        event = "goal_runtime_init_blocked_by_worktree_guard"
+        reason = str(
+            guard.get("blocked_operation_reason")
+            or guard.get("reason")
+            or "goal runtime requires a linked Git worktree for long-run execution"
+        )
+        checkpoint_reason = reason
+        status["last_event"] = {
+            "at": runtime_context.isoformat_z(),
+            "event": event,
+            "reason": reason,
+        }
+    status = write_checkpoint(vault, status, reason=checkpoint_reason)
+    write_goal_status(vault, status, event=event, reason=reason)
     return status
 
 

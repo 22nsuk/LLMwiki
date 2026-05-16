@@ -100,6 +100,8 @@ def test_initialize_goal_runtime_records_private_github_worktree_and_resume_arti
     assert persisted_status == status
     assert status["repo"]["visibility"] == "PRIVATE"
     assert status["repo"]["worktree_guard"]["status"] == "pass"
+    assert status["repo"]["worktree_guard"]["long_run_allowed"] is True
+    assert status["repo"]["worktree_guard"]["allowed_operation"] == "long_run"
     assert status["promotion_policy"]["promotion_ban_active"] is True
     assert status["budget"]["max_minutes"] == 7200
     assert status["resume"]["resume_supported"] is True
@@ -111,6 +113,44 @@ def test_initialize_goal_runtime_records_private_github_worktree_and_resume_arti
         encoding="utf-8"
     )
     assert '"event": "initialized"' in audit_events
+
+
+def test_initialize_goal_runtime_blocks_zip_mode_but_writes_report_artifacts(
+    tmp_path: Path,
+) -> None:
+    vault = tmp_path
+    _copy_goal_schemas(vault)
+
+    status = initialize_goal_runtime(
+        vault,
+        repo_url="https://github.com/22nsuk/LLMwiki",
+        visibility="PRIVATE",
+        baseline_commit="6c3ca7c46c6369ad043d78da5114c84173a14973",
+        branch=GOAL_BRANCH,
+        worktree_path="../LLMwiki-worktrees/goal-5day-auto-improve-runtime",
+        context=fixed_context(),
+    )
+
+    status_path = vault / "ops" / "reports" / "goal-run-status.json"
+    status_schema = load_schema(vault / "ops" / "schemas" / "goal-run-status.schema.json")
+    persisted_status = json.loads(status_path.read_text(encoding="utf-8"))
+
+    assert validate_with_schema(persisted_status, status_schema) == []
+    assert persisted_status == status
+    guard = status["repo"]["worktree_guard"]
+    assert status["status"] == "blocked"
+    assert guard["status"] == "fail"
+    assert guard["mode"] == "zip_or_report_only"
+    assert guard["long_run_allowed"] is False
+    assert guard["allowed_operation"] == "trial_or_report_only"
+    assert status["last_event"]["event"] == "goal_runtime_init_blocked_by_worktree_guard"
+    assert "Long-run goal execution requires a linked Git worktree" in guard[
+        "blocked_operation_reason"
+    ]
+    audit_events = (vault / "ops" / "reports" / "goal-audit-log.jsonl").read_text(
+        encoding="utf-8"
+    )
+    assert '"event": "goal_runtime_init_blocked_by_worktree_guard"' in audit_events
 
 
 def test_goal_run_status_heartbeat_syncs_promotion_policy_from_readiness(

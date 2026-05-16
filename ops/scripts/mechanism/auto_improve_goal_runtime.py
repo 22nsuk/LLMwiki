@@ -74,12 +74,17 @@ def _with_artifact_overrides(
     return updated
 
 
-def _validate_goal_runtime_preflight(vault: Path, contract: dict[str, Any]) -> dict[str, str]:
+def _validate_goal_runtime_preflight(vault: Path, contract: dict[str, Any]) -> dict[str, Any]:
     if contract["github"]["visibility"] != "PRIVATE":
         raise ValueError("goal auto-improve runs require PRIVATE GitHub visibility")
     guard = _worktree_guard_summary(vault, contract)
-    if guard["status"] != "pass" or guard["mode"] != "git_worktree":
-        raise ValueError(f"goal auto-improve runs require a Git worktree: {guard['reason']}")
+    if (
+        guard["status"] != "pass"
+        or guard["mode"] != "git_worktree"
+        or guard["long_run_allowed"] is not True
+    ):
+        reason = guard.get("blocked_operation_reason") or guard.get("reason")
+        raise ValueError(f"goal auto-improve runs require a Git worktree: {reason}")
     return guard
 
 

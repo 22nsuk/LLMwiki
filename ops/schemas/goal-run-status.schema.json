@@ -164,7 +164,10 @@
           "required": [
             "status",
             "mode",
-            "reason"
+            "reason",
+            "long_run_allowed",
+            "allowed_operation",
+            "blocked_operation_reason"
           ],
           "properties": {
             "status": {
@@ -183,7 +186,17 @@
                 "unknown"
               ]
             },
-            "reason": { "type": "string" }
+            "reason": { "type": "string" },
+            "long_run_allowed": { "type": "boolean" },
+            "allowed_operation": {
+              "type": "string",
+              "enum": [
+                "long_run",
+                "trial_or_report_only",
+                "report_only"
+              ]
+            },
+            "blocked_operation_reason": { "type": "string" }
           }
         }
       }
