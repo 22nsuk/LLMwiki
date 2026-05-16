@@ -618,7 +618,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                 },
                 "artifact_records": [
                     {
-                        "path": "ops/reports/test-execution-summary.json",
+                        "path": "ops/reports/example-operational-attention.json",
                         "schema_validation_status": "pass",
                         "schema_validation_errors": [],
                         "issues": [
@@ -640,8 +640,81 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         )
         self.assertEqual(artifact_blocker["scope"], "artifact_contract")
         self.assertEqual(artifact_blocker["signal_ids"], ["artifact_freshness_operational_attention"])
-        self.assertIn("ops/reports/test-execution-summary.json", artifact_blocker["reason"])
+        self.assertIn("ops/reports/example-operational-attention.json", artifact_blocker["reason"])
         self.assertIn("operational_attention_issue_count=0", artifact_blocker["required_evidence"][1])
+
+    def test_selected_contract_operational_attention_uses_selected_contract_blocker(self) -> None:
+        self._write_report(
+            "ops/reports/outcome-metrics.json",
+            {
+                "summary": {
+                    "attempts_considered": 12,
+                    "recent_window": 20,
+                    "recent_attempt_count": 12,
+                    "session_reports_considered": 2,
+                }
+            },
+        )
+        self._write_report(
+            "ops/reports/mechanism-review-candidates.json",
+            {
+                "summary": {"candidates_emitted": 1},
+                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+            },
+        )
+        self._write_report(
+            "ops/reports/mutation-proposals.json",
+            {
+                "summary": {
+                    "source_candidates_read": 1,
+                    "proposals_emitted": 1,
+                    "blocked_proposals": 0,
+                    "queue_pressure_summary": "ready",
+                },
+                "diagnostics": {"evidence_gaps": []},
+                "proposals": [
+                    {
+                        "proposal_id": "proposal-ready",
+                        "blocked_by": [],
+                        "priority": 55,
+                    }
+                ],
+            },
+        )
+        self._write_report(
+            "ops/reports/artifact-freshness-report.json",
+            {
+                "status": "pass",
+                "summary": {
+                    "schema_invalid_artifact_count": 0,
+                    "stable_contract_debt_issue_count": 0,
+                    "operational_attention_artifact_count": 1,
+                    "operational_attention_issue_count": 1,
+                },
+                "artifact_records": [
+                    {
+                        "path": "ops/reports/test-execution-summary.json",
+                        "schema_validation_status": "pass",
+                        "schema_validation_errors": [],
+                        "issues": [
+                            "test_target_fingerprint_mismatch:tests/test_makefile_static_gates.py"
+                        ],
+                    }
+                ],
+            },
+        )
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        blockers = {item["id"]: item for item in report["promotion_blockers"]}
+        self.assertNotIn("promotion_blocked_by_artifact_contract_failure", blockers)
+        self.assertEqual(
+            blockers["promotion_blocked_by_selected_contract_failure"]["signal_ids"],
+            ["selected_contract_currentness_not_current"],
+        )
+        selected_summary = report["diagnostics"]["selected_contract_summary"]
+        self.assertEqual(selected_summary["source_status"], "currentness_operational_attention")
+        self.assertIn("operational_attention=", selected_summary["summary"])
 
     def test_selected_contract_and_source_package_failures_block_promotion(self) -> None:
         self._write_report(

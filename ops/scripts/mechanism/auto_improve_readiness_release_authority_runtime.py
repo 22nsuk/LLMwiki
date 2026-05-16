@@ -88,10 +88,17 @@ def _release_gate_summaries(reports: dict[str, dict[str, Any]]) -> dict[str, dic
             "summary": f"{release_evidence_cohort['summary']} (overridden by finality_attested_pass)",
         }
 
+    artifact_freshness = reports["artifact_freshness"]
+    selected_contract_attention = [
+        item
+        for item in _artifact_operational_attention_items(artifact_freshness)
+        if item["path"] == SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH
+    ]
     return {
-        "artifact_freshness": _artifact_freshness_summary(reports["artifact_freshness"]),
+        "artifact_freshness": _artifact_freshness_summary(artifact_freshness),
         "selected_contract": _selected_contract_summary(
             reports["selected_contract"],
+            operational_attention_items=selected_contract_attention,
         ),
         "source_package": _release_gate_summary(
             reports["source_package"],
@@ -199,7 +206,11 @@ def _release_gate_summary(
     }
 
 
-def _selected_contract_summary(payload: dict[str, Any]) -> dict[str, Any]:
+def _selected_contract_summary(
+    payload: dict[str, Any],
+    *,
+    operational_attention_items: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     summary = _release_gate_summary(
         payload,
         path=SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH,
@@ -214,6 +225,25 @@ def _selected_contract_summary(payload: dict[str, Any]) -> dict[str, Any]:
     currentness_status = str(currentness.get("status", "")).strip() or "missing"
     if summary["status"] != "pass":
         return {**summary, "currentness_status": currentness_status}
+    if operational_attention_items:
+        issues = [
+            issue
+            for item in operational_attention_items
+            for issue in _string_list(item.get("issues"))
+        ]
+        issue_summary = ", ".join(issues[:4]) if issues else "operational attention"
+        return {
+            **summary,
+            "status": "fail",
+            "source_status": "currentness_operational_attention",
+            "currentness_status": currentness_status,
+            "release_blocking": True,
+            "signal_ids": ["selected_contract_currentness_not_current"],
+            "summary": (
+                f"{summary['summary']}; selected_contract_currentness_status={currentness_status}; "
+                f"operational_attention={issue_summary}"
+            ),
+        }
     if currentness_status == "current":
         return {**summary, "currentness_status": currentness_status}
     return {
@@ -711,7 +741,11 @@ def _artifact_contract_promotion_blockers(
 ) -> list[dict[str, Any]]:
     status = str(summary.get("status", "missing")).strip() or "missing"
     schema_invalid_count = _int_value(summary.get("schema_invalid_artifact_count"))
-    operational_attention_items = _artifact_operational_attention_items(artifact_freshness_report)
+    operational_attention_items = [
+        item
+        for item in _artifact_operational_attention_items(artifact_freshness_report)
+        if item["path"] != SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH
+    ]
     if status == "pass" and schema_invalid_count == 0 and not operational_attention_items:
         return []
     invalid_artifacts = [
