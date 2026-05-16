@@ -472,6 +472,9 @@
         "$ref": "#/$defs/evidence_artifact"
       }
     },
+    "evidence_artifact_consistency": {
+      "$ref": "#/$defs/evidence_artifact_consistency"
+    },
     "stdout_tail": {
       "type": "string"
     },
@@ -617,6 +620,90 @@
           ]
         },
         "source": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "evidence_artifact_consistency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_artifact_count", "checks", "blockers"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail", "skipped"]
+        },
+        "checked_artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence_artifact_consistency_check"
+          }
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence_artifact_consistency_blocker"
+          }
+        }
+      }
+    },
+    "evidence_artifact_consistency_check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "path", "status", "expected_count", "observed_count"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["junit_xml", "failed_nodeids"]
+        },
+        "path": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail"]
+        },
+        "expected_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "observed_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "evidence_artifact_consistency_blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "path", "expected_count", "observed_count", "message"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "evidence_artifact_missing",
+            "failed_nodeids_count_mismatch",
+            "junit_xml_unreadable",
+            "junit_testcase_count_mismatch"
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "expected_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "observed_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "message": {
           "type": "string",
           "minLength": 1
         }

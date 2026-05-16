@@ -12,6 +12,7 @@ import re
 import shlex
 import sys
 import time
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -111,6 +112,7 @@ class TestExecutionObservations:
     collect_nodeid_digest: dict[str, Any]
     nodeid_outcome_consistency: dict[str, Any]
     evidence_artifacts: list[dict[str, Any]]
+    evidence_artifact_consistency: dict[str, Any]
     execution_environment: dict[str, Any]
     coverage: dict[str, Any]
     status: str
@@ -829,6 +831,147 @@ def write_failed_nodeids_artifact(
     return _artifact_identity(vault, path, kind="failed_nodeids", source="pytest_failure_nodeids")
 
 
+def _artifact_path(vault: Path, artifact: dict[str, Any]) -> Path:
+    path = Path(str(artifact.get("path", "")))
+    if not path.is_absolute():
+        path = vault / path
+    return path
+
+
+def _non_empty_line_count(path: Path) -> int:
+    return sum(1 for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
+
+
+def _xml_local_name(tag: str) -> str:
+    return tag.rsplit("}", 1)[-1]
+
+
+def _junit_testcase_count(path: Path) -> int | None:
+    try:
+        root = ET.parse(path).getroot()
+    except (ET.ParseError, OSError):
+        return None
+
+    suite_counts: list[int] = []
+    for element in root.iter():
+        if _xml_local_name(str(element.tag)) != "testsuite":
+            continue
+        value = element.attrib.get("tests")
+        if value is None:
+            continue
+        try:
+            suite_counts.append(int(value))
+        except ValueError:
+            return None
+    if suite_counts:
+        return sum(suite_counts)
+    return sum(1 for element in root.iter() if _xml_local_name(str(element.tag)) == "testcase")
+
+
+def _counted_outcome_total(counts: dict[str, int]) -> int:
+    return sum(
+        int(counts.get(key, 0) or 0)
+        for key in ("passed", "failed", "errors", "skipped", "xfailed", "xpassed")
+    )
+
+
+def _evidence_artifact_consistency(
+    vault: Path,
+    *,
+    counts: dict[str, int],
+    evidence_artifacts: list[dict[str, Any]],
+) -> dict[str, Any]:
+    checks: list[dict[str, Any]] = []
+    blockers: list[dict[str, Any]] = []
+    expected_failed_nodeids = int(counts.get("failed", 0) or 0) + int(counts.get("errors", 0) or 0)
+    expected_junit_tests = _counted_outcome_total(counts)
+
+    for artifact in evidence_artifacts:
+        kind = str(artifact.get("kind", ""))
+        if kind not in {"failed_nodeids", "junit_xml"}:
+            continue
+        path = _artifact_path(vault, artifact)
+        rel_path = report_path(vault, path)
+        if not path.is_file():
+            check = {
+                "kind": kind,
+                "path": rel_path,
+                "status": "fail",
+                "expected_count": 0,
+                "observed_count": 0,
+            }
+            checks.append(check)
+            blockers.append(
+                {
+                    "code": "evidence_artifact_missing",
+                    "path": rel_path,
+                    "expected_count": 1,
+                    "observed_count": 0,
+                    "message": f"{kind} evidence artifact is referenced but missing.",
+                }
+            )
+            continue
+
+        if kind == "failed_nodeids":
+            observed = _non_empty_line_count(path)
+            expected = expected_failed_nodeids
+            code = "failed_nodeids_count_mismatch"
+            message = "failed-nodeids artifact line count does not match failed + error pytest outcomes."
+        else:
+            observed_count = _junit_testcase_count(path)
+            if observed_count is None:
+                check = {
+                    "kind": kind,
+                    "path": rel_path,
+                    "status": "fail",
+                    "expected_count": expected_junit_tests,
+                    "observed_count": 0,
+                }
+                checks.append(check)
+                blockers.append(
+                    {
+                        "code": "junit_xml_unreadable",
+                        "path": rel_path,
+                        "expected_count": expected_junit_tests,
+                        "observed_count": 0,
+                        "message": "JUnit XML evidence artifact could not be parsed.",
+                    }
+                )
+                continue
+            observed = observed_count
+            expected = expected_junit_tests
+            code = "junit_testcase_count_mismatch"
+            message = "JUnit testcase count does not match counted pytest outcomes."
+
+        status = "pass" if observed == expected else "fail"
+        checks.append(
+            {
+                "kind": kind,
+                "path": rel_path,
+                "status": status,
+                "expected_count": expected,
+                "observed_count": observed,
+            }
+        )
+        if status != "pass":
+            blockers.append(
+                {
+                    "code": code,
+                    "path": rel_path,
+                    "expected_count": expected,
+                    "observed_count": observed,
+                    "message": message,
+                }
+            )
+
+    return {
+        "status": "fail" if blockers else "pass" if checks else "skipped",
+        "checked_artifact_count": len(checks),
+        "checks": checks,
+        "blockers": blockers,
+    }
+
+
 _BUILD_REPORT_KWARGS = {
     "command",
     "result",
@@ -935,6 +1078,12 @@ def _test_execution_observations(
     if collect_nodeid_digest is None:
         collect_nodeid_digest = _default_collect_nodeid_digest()
     nodeid_outcome_consistency = _nodeid_outcome_consistency(counts, collect_nodeid_digest)
+    evidence_artifacts = list(request.evidence_artifacts or [])
+    evidence_artifact_consistency = _evidence_artifact_consistency(
+        vault,
+        counts=counts,
+        evidence_artifacts=evidence_artifacts,
+    )
     execution_environment = build_execution_environment(vault, request.command)
     coverage = _apply_toolchain_contract_to_coverage(
         _suite_coverage(suite=request.suite, command=request.command),
@@ -950,7 +1099,8 @@ def _test_execution_observations(
         policy_deselected_count=policy_deselected_count,
         collect_nodeid_digest=collect_nodeid_digest,
         nodeid_outcome_consistency=nodeid_outcome_consistency,
-        evidence_artifacts=list(request.evidence_artifacts or []),
+        evidence_artifacts=evidence_artifacts,
+        evidence_artifact_consistency=evidence_artifact_consistency,
         execution_environment=execution_environment,
         coverage=coverage,
         status=classify_status(request.result, counts),
@@ -1003,6 +1153,11 @@ def _test_execution_text_inputs(
             sort_keys=True,
             separators=(",", ":"),
         ),
+        "evidence_artifact_consistency": json.dumps(
+            observations.evidence_artifact_consistency,
+            sort_keys=True,
+            separators=(",", ":"),
+        ),
     }
 
 
@@ -1051,6 +1206,7 @@ def _render_test_execution_summary(inputs: TestExecutionRenderInputs) -> dict[st
         "pytest_collect_nodeid_digest": observations.collect_nodeid_digest,
         "nodeid_outcome_consistency": observations.nodeid_outcome_consistency,
         "evidence_artifacts": observations.evidence_artifacts,
+        "evidence_artifact_consistency": observations.evidence_artifact_consistency,
         "stdout_tail": sanitize_report_text(vault, _tail_text(request.result.stdout)),
         "stderr_tail": sanitize_report_text(vault, _tail_text(request.result.stderr)),
         "release_contract_diagnosis": _build_release_contract_diagnosis(
@@ -1283,6 +1439,13 @@ def build_reused_report(
     report["nodeid_outcome_consistency"] = _nodeid_outcome_consistency(
         report["counts"],
         collect_nodeid_digest or dict(existing.get("pytest_collect_nodeid_digest", {})),
+    )
+    report["evidence_artifact_consistency"] = _evidence_artifact_consistency(
+        vault,
+        counts=report["counts"],
+        evidence_artifacts=[
+            item for item in existing.get("evidence_artifacts", []) if isinstance(item, dict)
+        ],
     )
     report["termination_reason"] = "reused_current_summary"
     report["stdout_tail"] = str(existing.get("stdout_tail", ""))
@@ -1529,6 +1692,11 @@ def build_aggregate_report(
     )
     collect_nodeid_digest, nodeid_outcome_consistency = _aggregate_nodeid_consistency(shards, counts)
     evidence_artifacts = _aggregate_shard_dict_items(shards, "evidence_artifacts")
+    evidence_artifact_consistency = _evidence_artifact_consistency(
+        vault,
+        counts=counts,
+        evidence_artifacts=evidence_artifacts,
+    )
     return {
         **build_canonical_report_envelope(
             vault,
@@ -1550,6 +1718,11 @@ def build_aggregate_report(
                 "suite_coverage": json.dumps(coverage, sort_keys=True, separators=(",", ":")),
                 "deselection_lifecycle": json.dumps(
                     deselection_lifecycle,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
+                "evidence_artifact_consistency": json.dumps(
+                    evidence_artifact_consistency,
                     sort_keys=True,
                     separators=(",", ":"),
                 ),
@@ -1582,6 +1755,7 @@ def build_aggregate_report(
         "pytest_collect_nodeid_digest": collect_nodeid_digest,
         "nodeid_outcome_consistency": nodeid_outcome_consistency,
         "evidence_artifacts": evidence_artifacts,
+        "evidence_artifact_consistency": evidence_artifact_consistency,
         "stdout_tail": json.dumps(shard_refs, ensure_ascii=False, sort_keys=True),
         "stderr_tail": "",
         "summary_mode": "aggregate",

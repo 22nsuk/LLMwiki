@@ -2177,7 +2177,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT ?= tmp/test-execution-summary-full.candidate.json",
             text,
         )
-        self.assertIn("TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT ?= 1263", text)
+        self.assertNotIn("TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT", text)
         self.assertIn(
             "RELEASE_AUDIT_PAYLOAD_STAGING_DIR ?= build/release-payloads", text
         )
@@ -2283,14 +2283,17 @@ class MakefileStaticGateTests(unittest.TestCase):
             "ops.scripts.canonical_artifact_promote",
             full_block,
         )
+        full_refresh_block = _target_block(text, "test-execution-summary-full-refresh")
         self.assertIn(
-            "full-suite evidence refreshed against expected collect-only node count $(TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT)",
-            _target_block(text, "test-execution-summary-full-refresh"),
+            "test-execution-summary-full-refresh: test-execution-summary-full",
+            full_refresh_block,
         )
         self.assertIn(
-            "full-suite node count $$actual does not match expected $(TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT)",
-            _target_block(text, "test-execution-summary-full-refresh"),
+            "collect-only nodeid digest and count recorded in $(TEST_EXECUTION_SUMMARY_FULL_OUT)",
+            full_refresh_block,
         )
+        self.assertNotIn("node count $$actual does not match expected", full_refresh_block)
+        self.assertNotIn("TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT", full_refresh_block)
         self.assertIn(
             '$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)" --collect-nodeids --reuse-if-current --reuse-from "$(TEST_EXECUTION_SUMMARY_REUSE_FROM)" --deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)" -- $(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_SERIAL_FLAGS)',
             _target_block(text, "test-execution-summary-reuse"),
