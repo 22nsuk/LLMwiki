@@ -1,15 +1,10 @@
 from __future__ import annotations
 
 import copy
-import datetime as dt
-import re
-import subprocess
-import sys
 import time
-from dataclasses import dataclass
 from pathlib import Path
-from threading import Event, Thread
-from typing import Any, Callable
+from threading import Event
+from typing import Any
 
 from ops.scripts.artifact_io_runtime import read_json_object
 from ops.scripts.codex_goal_client import GoalBackend, require_persistent_goal_backend
@@ -18,9 +13,6 @@ from ops.scripts.schema_runtime import load_schema, validate_or_raise
 
 from .auto_improve_runtime import run_auto_improve_session
 from .goal_run_status import (
-    DEFAULT_AUDIT_LOG_PATH,
-    DEFAULT_CONTRACT_PATH,
-    DEFAULT_STATUS_PATH,
     GOAL_CONTRACT_SCHEMA,
     GOAL_RUN_STATUS_SCHEMA,
     _build_status_from_contract,
@@ -30,87 +22,21 @@ from .goal_run_status import (
     write_checkpoint,
     write_goal_status,
 )
-
-
-AutoImproveRunner = Callable[..., dict[str, Any]]
-_RETRY_AFTER_RE = re.compile(r"retry_after=([^\n\r;]+)", re.IGNORECASE)
-_ORDINAL_DAY_SUFFIX_RE = re.compile(r"\b(\d{1,2})(st|nd|rd|th)\b", re.IGNORECASE)
-
-
-@dataclass(frozen=True)
-class GoalAutoImproveRequest:
-    vault: Path
-    policy_path: str | None
-    goal_contract: str = DEFAULT_CONTRACT_PATH
-    goal_profile: str = "5-day-sustained"
-    status_out: str = DEFAULT_STATUS_PATH
-    audit_jsonl: str = DEFAULT_AUDIT_LOG_PATH
-    resume_from_checkpoint: str | None = None
-    session_id: str | None = None
-    resume_session: str | None = None
-    executor_name: str = "codex_exec"
-    artifact_class: str = "system_mechanism"
-    allow_learning_uncertain: bool = False
-    heartbeat_interval_minutes: int | None = None
-    heartbeat_interval_seconds: float | None = None
-    checkpoint_interval_minutes: int | None = None
-    checkpoint_interval_seconds: float | None = None
-    readiness_interval_seconds: float | None = None
-    session_synopsis_interval_seconds: float | None = None
-    sustain_until_budget: bool = False
-    sustain_budget_seconds: float | None = None
-    dry_run: bool = False
-    goal_backend: GoalBackend | None = None
-    context: RuntimeContext | None = None
-
-
-def _context(request: GoalAutoImproveRequest) -> RuntimeContext:
-    return request.context or RuntimeContext(display_timezone=dt.timezone.utc)
-
-
-def _isoformat_z(value: dt.datetime) -> str:
-    return value.astimezone(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
-def _parse_isoformat_z(value: str) -> dt.datetime | None:
-    text = value.strip()
-    if not text:
-        return None
-    try:
-        parsed = dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=dt.timezone.utc)
-    return parsed.astimezone(dt.timezone.utc)
-
-
-def _parse_retry_after_utc(value: str, context: RuntimeContext) -> dt.datetime | None:
-    parsed = _parse_isoformat_z(value)
-    if parsed is not None:
-        return parsed
-    normalized = _ORDINAL_DAY_SUFFIX_RE.sub(r"\1", value.strip())
-    for fmt in ("%B %d, %Y %I:%M %p", "%b %d, %Y %I:%M %p"):
-        try:
-            parsed = dt.datetime.strptime(normalized, fmt)
-        except ValueError:
-            continue
-        return parsed.replace(tzinfo=context.display_timezone).astimezone(dt.timezone.utc)
-    return None
-
-
-def _retry_after_text_from_text(text: str) -> str:
-    match = _RETRY_AFTER_RE.search(text)
-    if not match:
-        return ""
-    return match.group(1).strip()
-
-
-def _rel_to_vault(vault: Path, path: Path) -> str:
-    try:
-        return path.relative_to(vault).as_posix()
-    except ValueError:
-        return path.as_posix()
+from .goal_runtime_backoff import (
+    active_executor_backoff_from_status as _active_executor_backoff_from_status,
+    executor_backoff_wait_seconds as _executor_backoff_wait_seconds,
+    usage_limit_backoff_from_result as _usage_limit_backoff_from_result,
+)
+from .goal_runtime_maintenance import (
+    run_periodic_refresh_command as _run_periodic_refresh_command,
+    start_maintenance_thread as _start_maintenance_thread,
+)
+from .goal_runtime_request import (
+    AutoImproveRunner,
+    GoalAutoImproveRequest,
+    auto_improve_command as _auto_improve_command,
+    context_from_request as _context,
+)
 
 
 def _load_goal_contract(vault: Path, rel_path: str) -> dict[str, Any]:
@@ -146,47 +72,6 @@ def _with_artifact_overrides(
     updated["budgets"]["heartbeat_interval_minutes"] = heartbeat_interval_minutes
     updated["budgets"]["checkpoint_interval_minutes"] = checkpoint_interval_minutes
     return updated
-
-
-def _auto_improve_command(request: GoalAutoImproveRequest, profile: dict[str, int | str]) -> list[str]:
-    command = [
-        ".venv/bin/python",
-        "-m",
-        "ops.scripts.mechanism.auto_improve_loop",
-        "--vault",
-        ".",
-        "--policy",
-        request.policy_path or "ops/policies/wiki-maintainer-policy.yaml",
-        "--goal-contract",
-        request.goal_contract,
-        "--goal-profile",
-        str(profile["profile"]),
-        "--status-out",
-        request.status_out,
-        "--audit-jsonl",
-        request.audit_jsonl,
-        "--max-proposals",
-        str(profile["max_proposals"]),
-        "--max-minutes",
-        str(profile["max_minutes"]),
-        "--max-consecutive-failures",
-        str(profile["max_consecutive_failures"]),
-        "--executor",
-        request.executor_name,
-    ]
-    if request.resume_from_checkpoint:
-        command.extend(["--resume-from-checkpoint", request.resume_from_checkpoint])
-    if request.session_id:
-        command.extend(["--session-id", request.session_id])
-    if request.resume_session:
-        command.extend(["--resume-session", request.resume_session])
-    if request.allow_learning_uncertain:
-        command.append("--allow-learning-uncertain")
-    if request.sustain_until_budget:
-        command.append("--sustain-until-budget")
-    if request.sustain_budget_seconds is not None:
-        command.extend(["--sustain-budget-seconds", str(request.sustain_budget_seconds)])
-    return command
 
 
 def _validate_goal_runtime_preflight(vault: Path, contract: dict[str, Any]) -> dict[str, str]:
@@ -275,377 +160,6 @@ def _read_session_progress(vault: Path, result: dict[str, Any]) -> dict[str, Any
     if isinstance(loop_state, dict):
         progress["consecutive_failures"] = int(loop_state.get("consecutive_failures", 0) or 0)
     return progress
-
-
-def _executor_report_paths(vault: Path, result: dict[str, Any]) -> list[Path]:
-    paths: list[Path] = []
-    run_ids = result.get("run_ids", [])
-    if not isinstance(run_ids, list):
-        return paths
-    for item in run_ids:
-        run_id = str(item).strip()
-        if not run_id:
-            continue
-        run_dir = vault / "runs" / run_id
-        if run_dir.is_dir():
-            paths.extend(sorted(run_dir.glob("*-executor-report.json")))
-    return paths
-
-
-def _retry_after_from_executor_report(vault: Path, report_path: Path) -> str:
-    try:
-        report = read_json_object(report_path)
-    except (OSError, ValueError, TypeError):
-        return ""
-    texts: list[str] = []
-    diagnostics = report.get("diagnostics")
-    if isinstance(diagnostics, dict):
-        notes = diagnostics.get("notes")
-        if isinstance(notes, list):
-            texts.extend(str(item) for item in notes)
-    artifacts = report.get("artifacts")
-    if isinstance(artifacts, dict):
-        stderr_rel = str(artifacts.get("stderr", "")).strip()
-        if stderr_rel:
-            stderr_artifact = Path(stderr_rel)
-            stderr_path = vault / stderr_artifact
-            if not stderr_artifact.is_absolute() and stderr_path.is_file():
-                texts.append(stderr_path.read_text(encoding="utf-8", errors="replace"))
-    for text in texts:
-        retry_after = _retry_after_text_from_text(text)
-        if retry_after:
-            return retry_after
-    return ""
-
-
-def _usage_limit_backoff_from_result(
-    vault: Path,
-    result: dict[str, Any],
-    context: RuntimeContext,
-) -> dict[str, Any] | None:
-    if str(result.get("stop_reason", "")).strip() != "executor_usage_limited":
-        return None
-    for report_path in _executor_report_paths(vault, result):
-        retry_after = _retry_after_from_executor_report(vault, report_path)
-        if not retry_after:
-            continue
-        parsed = _parse_retry_after_utc(retry_after, context)
-        return {
-            "active": True,
-            "reason": "executor_usage_limited",
-            "retry_after": retry_after,
-            "retry_after_utc": _isoformat_z(parsed) if parsed is not None else "",
-            "source": _rel_to_vault(vault, report_path),
-            "last_observed_at": context.isoformat_z(),
-        }
-    return None
-
-
-def _executor_backoff_wait_seconds(
-    backoff: dict[str, Any],
-    context: RuntimeContext,
-) -> float | None:
-    retry_after_utc = str(backoff.get("retry_after_utc", "")).strip()
-    if not retry_after_utc:
-        retry_after = str(backoff.get("retry_after", "")).strip()
-        parsed = _parse_retry_after_utc(retry_after, context) if retry_after else None
-    else:
-        parsed = _parse_isoformat_z(retry_after_utc)
-    if parsed is None:
-        return None
-    return max(0.0, (parsed - context.utcnow()).total_seconds())
-
-
-def _active_executor_backoff_from_status(
-    vault: Path,
-    status_path: str,
-    context: RuntimeContext,
-) -> dict[str, Any] | None:
-    path = vault / status_path
-    if not path.is_file():
-        return None
-    try:
-        status = read_json_object(path)
-    except (OSError, ValueError, TypeError):
-        return None
-    backoff = status.get("executor_backoff")
-    if not isinstance(backoff, dict) or not bool(backoff.get("active", False)):
-        return None
-    if str(backoff.get("reason", "")) != "executor_usage_limited":
-        return None
-    wait_seconds = _executor_backoff_wait_seconds(backoff, context)
-    if wait_seconds is None or wait_seconds <= 0:
-        return None
-    return dict(backoff)
-
-
-@dataclass(frozen=True)
-class GoalMaintenanceSchedule:
-    heartbeat_interval_seconds: float | None
-    checkpoint_interval_seconds: float | None
-    readiness_interval_seconds: float | None
-    session_synopsis_interval_seconds: float | None
-
-
-def _positive_interval_seconds(value: float | int | None) -> float | None:
-    if value is None:
-        return None
-    resolved = float(value)
-    if resolved <= 0:
-        return None
-    return resolved
-
-
-def _build_maintenance_schedule(
-    request: GoalAutoImproveRequest,
-    profile: dict[str, int | str],
-) -> GoalMaintenanceSchedule:
-    if request.heartbeat_interval_seconds is not None:
-        heartbeat_interval = _positive_interval_seconds(request.heartbeat_interval_seconds)
-    else:
-        heartbeat_interval = _positive_interval_seconds(
-            int(request.heartbeat_interval_minutes or profile["heartbeat_interval_minutes"]) * 60
-        )
-    if request.checkpoint_interval_seconds is not None:
-        checkpoint_interval = _positive_interval_seconds(request.checkpoint_interval_seconds)
-    else:
-        checkpoint_interval = _positive_interval_seconds(
-            int(request.checkpoint_interval_minutes or profile["checkpoint_interval_minutes"]) * 60
-        )
-    readiness_interval = request.readiness_interval_seconds
-    if readiness_interval is None:
-        readiness_interval = int(profile["readiness_interval_hours"]) * 3600
-    session_synopsis_interval = request.session_synopsis_interval_seconds
-    if session_synopsis_interval is None:
-        session_synopsis_interval = int(profile["session_synopsis_interval_hours"]) * 3600
-    return GoalMaintenanceSchedule(
-        heartbeat_interval_seconds=heartbeat_interval,
-        checkpoint_interval_seconds=checkpoint_interval,
-        readiness_interval_seconds=_positive_interval_seconds(readiness_interval),
-        session_synopsis_interval_seconds=_positive_interval_seconds(session_synopsis_interval),
-    )
-
-
-def _next_due(now: float, interval: float | None) -> float | None:
-    if interval is None:
-        return None
-    return now + interval
-
-
-def _wait_seconds(now: float, due_times: list[float | None]) -> float:
-    active_due_times = [due for due in due_times if due is not None]
-    if not active_due_times:
-        return 0
-    return max(0.0, min(active_due_times) - now)
-
-
-def _run_periodic_refresh_command(vault: Path, target: str) -> None:
-    completed = subprocess.run(
-        ["make", target, f"PYTHON={sys.executable}"],
-        cwd=vault,
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    if completed.returncode != 0:
-        detail = (completed.stderr or completed.stdout).strip().splitlines()
-        suffix = f": {detail[-1]}" if detail else ""
-        raise RuntimeError(f"{target} failed with exit code {completed.returncode}{suffix}")
-
-
-def _readiness_continuation_blocker(vault: Path) -> str | None:
-    readiness_path = vault / "ops/reports/auto-improve-readiness.json"
-    if not readiness_path.is_file():
-        return "auto-improve readiness report is missing"
-    readiness = read_json_object(readiness_path)
-    for blocker_field in (
-        "blockers",
-        "release_blockers",
-        "promotion_blockers",
-        "learning_blockers",
-    ):
-        blockers = readiness.get(blocker_field)
-        if blockers:
-            return f"auto-improve readiness blockers are present: {blocker_field}"
-    if not bool(readiness.get("can_execute_trial", False)):
-        return "auto-improve readiness regression: can_execute_trial=false"
-    if not bool(readiness.get("can_promote_result", False)):
-        return "sealed authority/readiness regression: can_promote_result=false"
-    diagnostics = readiness.get("diagnostics")
-    if not isinstance(diagnostics, dict):
-        return "sealed authority/readiness regression: missing diagnostics"
-    preflight = diagnostics.get("release_authority_preflight_summary")
-    if not isinstance(preflight, dict):
-        return "sealed authority/readiness regression: missing release authority preflight summary"
-    if (
-        preflight.get("status") != "pass"
-        or preflight.get("preflight_status") != "sealed_clean_pass"
-        or bool(preflight.get("clean_required_preflight")) is not True
-        or bool(preflight.get("expected_blocked_preflight")) is not False
-    ):
-        return "sealed authority/readiness regression: clean-required sealed pass is not current"
-    return None
-
-
-def _assert_readiness_allows_continuation(vault: Path) -> None:
-    blocker = _readiness_continuation_blocker(vault)
-    if blocker is not None:
-        raise RuntimeError(blocker)
-
-
-def _read_status_for_periodic_update(
-    vault: Path,
-    status_path: str,
-    context: RuntimeContext,
-) -> dict[str, Any]:
-    status = read_json_object(vault / status_path)
-    status["generated_at"] = context.isoformat_z()
-    status["heartbeat"] = _heartbeat_status(
-        {
-            "budgets": {
-                "heartbeat_interval_minutes": status["heartbeat"]["interval_minutes"],
-            }
-        },
-        context,
-    )
-    return status
-
-
-def _maintenance_loop(
-    vault: Path,
-    status_path: str,
-    *,
-    profile_name: str,
-    schedule: GoalMaintenanceSchedule,
-    stop_event: Event,
-    errors: list[str],
-) -> None:
-    now = time.monotonic()
-    next_heartbeat = _next_due(now, schedule.heartbeat_interval_seconds)
-    next_checkpoint = _next_due(now, schedule.checkpoint_interval_seconds)
-    next_readiness = _next_due(now, schedule.readiness_interval_seconds)
-    next_session_synopsis = _next_due(now, schedule.session_synopsis_interval_seconds)
-    if not any(
-        due is not None
-        for due in (next_heartbeat, next_checkpoint, next_readiness, next_session_synopsis)
-    ):
-        return
-    while True:
-        now = time.monotonic()
-        wait_seconds = _wait_seconds(
-            now,
-            [next_heartbeat, next_checkpoint, next_readiness, next_session_synopsis],
-        )
-        if stop_event.wait(wait_seconds):
-            return
-        try:
-            context = RuntimeContext(display_timezone=dt.timezone.utc)
-            now = time.monotonic()
-            if next_readiness is not None and now >= next_readiness:
-                _run_periodic_refresh_command(vault, "auto-improve-readiness-report-body")
-                _assert_readiness_allows_continuation(vault)
-                status = _read_status_for_periodic_update(vault, status_path, context)
-                status["last_event"] = {
-                    "at": context.isoformat_z(),
-                    "event": "periodic_readiness_refresh",
-                    "reason": f"profile={profile_name}; target=auto-improve-readiness-report-body",
-                }
-                write_goal_status(
-                    vault,
-                    status,
-                    event="periodic_readiness_refresh",
-                    reason=f"profile={profile_name}; target=auto-improve-readiness-report-body",
-                )
-                next_readiness = _next_due(now, schedule.readiness_interval_seconds)
-            if next_session_synopsis is not None and now >= next_session_synopsis:
-                _run_periodic_refresh_command(vault, "session-synopsis")
-                status = _read_status_for_periodic_update(vault, status_path, context)
-                status["last_event"] = {
-                    "at": context.isoformat_z(),
-                    "event": "periodic_session_synopsis",
-                    "reason": f"profile={profile_name}; target=session-synopsis",
-                }
-                write_goal_status(
-                    vault,
-                    status,
-                    event="periodic_session_synopsis",
-                    reason=f"profile={profile_name}; target=session-synopsis",
-                )
-                next_session_synopsis = _next_due(now, schedule.session_synopsis_interval_seconds)
-            if next_checkpoint is not None and now >= next_checkpoint:
-                status = _read_status_for_periodic_update(vault, status_path, context)
-                status["last_event"] = {
-                    "at": context.isoformat_z(),
-                    "event": "checkpoint",
-                    "reason": f"periodic checkpoint for goal profile: {profile_name}",
-                }
-                status = write_checkpoint(
-                    vault,
-                    status,
-                    reason=f"periodic checkpoint for goal profile: {profile_name}",
-                )
-                write_goal_status(
-                    vault,
-                    status,
-                    event="checkpoint",
-                    reason=f"periodic checkpoint for goal profile: {profile_name}",
-                )
-                next_checkpoint = _next_due(now, schedule.checkpoint_interval_seconds)
-                next_heartbeat = _next_due(now, schedule.heartbeat_interval_seconds)
-                continue
-            if next_heartbeat is not None and now >= next_heartbeat:
-                status = _read_status_for_periodic_update(vault, status_path, context)
-                status["last_event"] = {
-                    "at": context.isoformat_z(),
-                    "event": "heartbeat",
-                    "reason": f"auto-improve goal profile heartbeat: {profile_name}",
-                }
-                write_goal_status(
-                    vault,
-                    status,
-                    event="heartbeat",
-                    reason=f"auto-improve goal profile heartbeat: {profile_name}",
-                )
-                next_heartbeat = _next_due(now, schedule.heartbeat_interval_seconds)
-        except (OSError, RuntimeError, ValueError, KeyError, TypeError) as exc:
-            errors.append(str(exc))
-            stop_event.set()
-            return
-
-
-def _start_maintenance_thread(
-    vault: Path,
-    request: GoalAutoImproveRequest,
-    profile: dict[str, int | str],
-) -> tuple[Event, Thread | None, list[str]]:
-    schedule = _build_maintenance_schedule(request, profile)
-    errors: list[str] = []
-    stop_event = Event()
-    if not any(
-        interval is not None
-        for interval in (
-            schedule.heartbeat_interval_seconds,
-            schedule.checkpoint_interval_seconds,
-            schedule.readiness_interval_seconds,
-            schedule.session_synopsis_interval_seconds,
-        )
-    ):
-        return stop_event, None, errors
-    thread = Thread(
-        target=_maintenance_loop,
-        kwargs={
-            "vault": vault,
-            "status_path": request.status_out,
-            "profile_name": str(profile["profile"]),
-            "schedule": schedule,
-            "stop_event": stop_event,
-            "errors": errors,
-        },
-        daemon=True,
-    )
-    thread.start()
-    return stop_event, thread, errors
 
 
 def _final_status_for_stop_reason(stop_reason: str) -> str:
@@ -1025,6 +539,7 @@ def run_goal_bound_auto_improve(
         vault,
         request,
         profile,
+        refresh_command=_run_periodic_refresh_command,
     )
     started = time.monotonic()
     try:

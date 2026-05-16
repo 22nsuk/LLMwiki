@@ -601,7 +601,7 @@ def test_periodic_refresh_command_uses_current_python_for_worktree_make(
         calls.append((args, kwargs))
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
-    monkeypatch.setattr("ops.scripts.mechanism.auto_improve_goal_runtime.subprocess.run", fake_run)
+    monkeypatch.setattr("ops.scripts.mechanism.goal_runtime_maintenance.subprocess.run", fake_run)
 
     _run_periodic_refresh_command(tmp_path, "auto-improve-readiness-report-body")
 
