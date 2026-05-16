@@ -14,6 +14,7 @@ from ops.scripts.schema_runtime import load_schema
 
 
 DEFAULT_ACTIVATION_REPORT = "ops/reports/learning_claim_activation_report.json"
+DEFAULT_REMEDIATION_BACKLOG = "ops/reports/remediation-backlog.json"
 DEFAULT_OUT = "ops/reports/self-improvement-negative-lessons.json"
 SCHEMA_PATH = "ops/schemas/self-improvement-negative-lessons.schema.json"
 POLICY_PATH = "ops/policies/wiki-maintainer-policy.yaml"
@@ -24,8 +25,12 @@ def _artifact_envelope(
     *,
     generated_at: str,
     activation_report: str,
+    remediation_backlog: str,
 ) -> dict[str, Any]:
     _policy, resolved_policy_path = load_policy(vault, POLICY_PATH)
+    file_inputs = {"activation_report": activation_report}
+    if remediation_backlog and (vault / remediation_backlog).is_file():
+        file_inputs["remediation_backlog"] = remediation_backlog
     return build_canonical_report_envelope(
         vault,
         generated_at=generated_at,
@@ -38,7 +43,7 @@ def _artifact_envelope(
             "ops/scripts/mechanism/self_improvement_negative_lessons.py",
             SCHEMA_PATH,
         ],
-        file_inputs={"activation_report": activation_report},
+        file_inputs=file_inputs,
     )
 
 
@@ -51,10 +56,50 @@ def _normalize_pattern(pattern: dict[str, Any], index: int) -> dict[str, Any]:
     return normalized
 
 
+def _remediation_pattern_id(blocker: str, index: int) -> str:
+    normalized = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in blocker.lower())
+    return f"remediation-backlog-{normalized or index}"
+
+
+def _patterns_from_remediation_backlog(backlog: dict[str, Any]) -> list[dict[str, Any]]:
+    items = backlog.get("items", [])
+    if not isinstance(items, list):
+        return []
+    patterns: list[dict[str, Any]] = []
+    for index, item in enumerate(items, start=1):
+        if not isinstance(item, dict):
+            continue
+        if item.get("source") != "goal_audit_log.repeated_blocker":
+            continue
+        blocker = str(item.get("blocker", "")).strip()
+        patterns.append(
+            {
+                "id": _remediation_pattern_id(blocker, index),
+                "status": str(item.get("status") or "open"),
+                "source": "remediation_backlog",
+                "blocker": blocker,
+                "forbidden_repeat": (
+                    "Do not resume or escalate the same goal profile while this "
+                    "runtime blocker remains open in the remediation backlog."
+                ),
+                "repair_target": str(item.get("recommended_next_step", "")).strip(),
+                "evidence_paths": _string_list(item.get("minimum_evidence")),
+            }
+        )
+    return patterns
+
+
+def _string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
 def build_report(
     vault: Path,
     *,
     activation_report: str = DEFAULT_ACTIVATION_REPORT,
+    remediation_backlog: str = DEFAULT_REMEDIATION_BACKLOG,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
     runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
@@ -67,6 +112,12 @@ def build_report(
         _normalize_pattern(pattern, index)
         for index, pattern in enumerate(patterns, start=1)
     ]
+    seen_pattern_ids = {str(pattern["id"]) for pattern in normalized_patterns}
+    backlog = load_optional_json_object(vault / remediation_backlog)
+    for pattern in _patterns_from_remediation_backlog(backlog):
+        if pattern["id"] not in seen_pattern_ids:
+            normalized_patterns.append(pattern)
+            seen_pattern_ids.add(pattern["id"])
     generated_at = runtime_context.isoformat_z()
     report = {
         "$schema": SCHEMA_PATH,
@@ -86,6 +137,7 @@ def build_report(
             vault,
             generated_at=generated_at,
             activation_report=activation_report,
+            remediation_backlog=remediation_backlog,
         )
     )
     return report
@@ -105,6 +157,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Extract standalone negative learning lessons.")
     parser.add_argument("--vault", default=".")
     parser.add_argument("--activation-report", default=DEFAULT_ACTIVATION_REPORT)
+    parser.add_argument("--remediation-backlog", default=DEFAULT_REMEDIATION_BACKLOG)
     parser.add_argument("--out", default=DEFAULT_OUT)
     return parser.parse_args(argv)
 
@@ -112,7 +165,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
-    report = build_report(vault, activation_report=args.activation_report)
+    report = build_report(
+        vault,
+        activation_report=args.activation_report,
+        remediation_backlog=args.remediation_backlog,
+    )
     path = write_report(vault, report, args.out)
     print(display_path(vault, path))
     return 0
