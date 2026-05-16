@@ -12,6 +12,7 @@ from threading import Event, Thread
 from typing import Any, Callable
 
 from ops.scripts.artifact_io_runtime import read_json_object
+from ops.scripts.codex_goal_client import GoalBackend, require_persistent_goal_backend
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_or_raise
 
@@ -59,6 +60,7 @@ class GoalAutoImproveRequest:
     sustain_until_budget: bool = False
     sustain_budget_seconds: float | None = None
     dry_run: bool = False
+    goal_backend: GoalBackend | None = None
     context: RuntimeContext | None = None
 
 
@@ -112,7 +114,16 @@ def _rel_to_vault(vault: Path, path: Path) -> str:
 
 
 def _load_goal_contract(vault: Path, rel_path: str) -> dict[str, Any]:
-    contract = read_json_object(vault / rel_path)
+    backend = require_persistent_goal_backend(
+        vault=vault,
+        goal_contract_path=rel_path,
+    )
+    return _load_goal_contract_from_backend(vault, backend)
+
+
+def _load_goal_contract_from_backend(vault: Path, backend: GoalBackend) -> dict[str, Any]:
+    persistent_backend = require_persistent_goal_backend(backend)
+    contract = persistent_backend.get_goal()
     validate_or_raise(
         contract,
         load_schema(vault / GOAL_CONTRACT_SCHEMA),
@@ -947,7 +958,12 @@ def run_goal_bound_auto_improve(
 ) -> dict[str, Any]:
     vault = request.vault.resolve()
     context = _context(request)
-    contract = _load_goal_contract(vault, request.goal_contract)
+    goal_backend = require_persistent_goal_backend(
+        request.goal_backend,
+        vault=vault,
+        goal_contract_path=request.goal_contract,
+    )
+    contract = _load_goal_contract_from_backend(vault, goal_backend)
     profile = resolve_execution_profile(contract, request.goal_profile)
     if request.heartbeat_interval_minutes is not None:
         profile["heartbeat_interval_minutes"] = request.heartbeat_interval_minutes

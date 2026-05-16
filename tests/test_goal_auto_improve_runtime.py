@@ -16,6 +16,7 @@ from ops.scripts.auto_improve_goal_runtime import (
     _run_periodic_refresh_command,
     run_goal_bound_auto_improve,
 )
+from ops.scripts.codex_goal_client import FakeGoalBackend
 from ops.scripts.goal_run_status import initialize_goal_runtime
 from ops.scripts.runtime_context import RuntimeContext
 
@@ -151,6 +152,26 @@ def test_goal_bound_auto_improve_dry_run_maps_trial_budget_and_checkpoint(
     assert (vault / result["checkpoint"]).is_file()
     assert "--goal-contract" in result["auto_improve_command"]
     assert '"event": "goal_run_dry_run"' in audit
+
+
+def test_goal_bound_auto_improve_rejects_nonpersistent_goal_backend(
+    tmp_path: Path,
+) -> None:
+    vault = _seed_repo_with_worktree(tmp_path)
+    _copy_goal_runtime_inputs(vault)
+    _initialize_goal(vault)
+
+    with pytest.raises(ValueError, match="process-persistent goal backend"):
+        run_goal_bound_auto_improve(
+            GoalAutoImproveRequest(
+                vault=vault,
+                policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                goal_profile="30-minute-trial",
+                goal_backend=FakeGoalBackend(),
+                dry_run=True,
+                context=_context(1),
+            )
+        )
 
 
 def test_goal_bound_auto_improve_executes_ramp_with_profile_budget(
