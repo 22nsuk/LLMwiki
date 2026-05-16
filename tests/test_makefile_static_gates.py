@@ -2513,6 +2513,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "GOAL_LADDER_PROFILES ?= 30-minute-trial 6-hour-ramp 2-day-candidate 5-day-sustained",
             text,
         )
+        self.assertIn("GOAL_ACTIVE_PROFILE ?= 30-minute-trial", text)
         self.assertIn(
             "GOAL_LADDER_RUN_EXTRA_ARGS ?= --sustain-until-budget --allow-learning-uncertain",
             text,

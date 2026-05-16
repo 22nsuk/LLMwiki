@@ -110,7 +110,12 @@ def test_initialize_goal_runtime_records_private_github_worktree_and_resume_arti
     assert status["repo"]["worktree_guard"]["long_run_allowed"] is True
     assert status["repo"]["worktree_guard"]["allowed_operation"] == "long_run"
     assert status["promotion_policy"]["promotion_ban_active"] is True
-    assert status["budget"]["max_minutes"] == 7200
+    assert status["active_profile"] == "30-minute-trial"
+    assert status["budget"]["max_minutes"] == 30
+    assert status["profile_verification"]["required_predecessors_verified"] is True
+    assert status["profile_verification"]["sustained_profile"] == "5-day-sustained"
+    assert status["profile_verification"]["sustained_profile_verified"] is False
+    assert status["profile_verification"]["sustainability_claim_allowed"] is False
     assert status["resume"]["resume_supported"] is True
     assert status["resume"]["last_checkpoint"].startswith("ops/reports/goal-checkpoints/")
     assert (vault / status["resume"]["last_checkpoint"]).is_file()

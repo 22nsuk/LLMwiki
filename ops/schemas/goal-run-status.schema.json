@@ -13,6 +13,7 @@
     "objective",
     "status",
     "active_profile",
+    "profile_verification",
     "execution",
     "repo",
     "budget",
@@ -134,6 +135,86 @@
     },
     "active_profile": {
       "type": "string"
+    },
+    "profile_verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "active_profile",
+        "ladder_order",
+        "required_predecessors",
+        "missing_predecessors",
+        "required_predecessors_verified",
+        "verified_profiles",
+        "sustained_profile",
+        "sustained_profile_verified",
+        "current_profile_verified",
+        "sustainability_claim_allowed",
+        "claim_blocker",
+        "evidence"
+      ],
+      "properties": {
+        "active_profile": { "type": "string", "minLength": 1 },
+        "ladder_order": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "required_predecessors": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "missing_predecessors": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "required_predecessors_verified": { "type": "boolean" },
+        "verified_profiles": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "sustained_profile": { "type": "string" },
+        "sustained_profile_verified": { "type": "boolean" },
+        "current_profile_verified": { "type": "boolean" },
+        "sustainability_claim_allowed": { "type": "boolean" },
+        "claim_blocker": { "type": "string" },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "profile",
+              "status",
+              "started_at",
+              "verified_at",
+              "checkpoint",
+              "session_report",
+              "stop_reason",
+              "detail"
+            ],
+            "properties": {
+              "profile": { "type": "string", "minLength": 1 },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "running",
+                  "incomplete",
+                  "sampled",
+                  "verified",
+                  "blocked"
+                ]
+              },
+              "started_at": { "type": "string" },
+              "verified_at": { "type": "string" },
+              "checkpoint": { "type": "string" },
+              "session_report": { "type": "string" },
+              "stop_reason": { "type": "string" },
+              "detail": { "type": "string" }
+            }
+          }
+        }
+      }
     },
     "execution": {
       "type": "object",

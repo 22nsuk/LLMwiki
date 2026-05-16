@@ -28,7 +28,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--class", dest="artifact_class", default="system_mechanism")
     ap.add_argument("--allow-learning-uncertain", action="store_true")
     ap.add_argument("--goal-contract")
-    ap.add_argument("--goal-profile", default="5-day-sustained")
+    ap.add_argument("--goal-profile", default="30-minute-trial")
     ap.add_argument("--status-out", default="ops/reports/goal-run-status.json")
     ap.add_argument("--audit-jsonl", default="ops/reports/goal-audit-log.jsonl")
     ap.add_argument("--resume-from-checkpoint")

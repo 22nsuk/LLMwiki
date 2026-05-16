@@ -16,14 +16,30 @@ pytestmark = pytest.mark.report_contract
 
 
 class RunTemplateTests(unittest.TestCase):
+    def _assert_template_validation_preserves_runtime_events(
+        self, template_dir: Path, runtime_events: Path
+    ) -> None:
+        before = runtime_events.read_text(encoding="utf-8") if runtime_events.exists() else None
+
+        report = validate_run_dir(REPO_ROOT, template_dir)
+
+        self.assertEqual(report["status"], "pass")
+        if before is None:
+            self.assertFalse(runtime_events.exists())
+        else:
+            self.assertEqual(runtime_events.read_text(encoding="utf-8"), before)
+
     def test_root_template_bundle_includes_plan_and_open_questions_helpers(self) -> None:
         self.assertTrue((REPO_ROOT / "ops" / "templates" / "plan.md").exists())
         self.assertTrue((REPO_ROOT / "ops" / "templates" / "open-questions.md").exists())
         self.assertTrue((REPO_ROOT / "ops" / "templates" / "improvement-observations.json").exists())
 
     def test_root_template_bundle_passes_planning_gate_validation(self) -> None:
-        report = validate_run_dir(REPO_ROOT, REPO_ROOT / "ops" / "templates")
-        self.assertEqual(report["status"], "pass")
+        runtime_events = REPO_ROOT / "runs" / "run-YYYYMMDD-slug" / "runtime-events.jsonl"
+        self._assert_template_validation_preserves_runtime_events(
+            REPO_ROOT / "ops" / "templates",
+            runtime_events,
+        )
 
     def test_mechanism_run_template_bundle_includes_plan_and_open_questions_helpers(self) -> None:
         self.assertTrue((REPO_ROOT / "ops" / "templates" / "mechanism-run" / "plan.md").exists())
@@ -33,8 +49,16 @@ class RunTemplateTests(unittest.TestCase):
         )
 
     def test_mechanism_run_template_bundle_passes_planning_gate_validation(self) -> None:
-        report = validate_run_dir(REPO_ROOT, REPO_ROOT / "ops" / "templates" / "mechanism-run")
-        self.assertEqual(report["status"], "pass")
+        runtime_events = (
+            REPO_ROOT
+            / "runs"
+            / "run-YYYYMMDD-mechanism-slug"
+            / "runtime-events.jsonl"
+        )
+        self._assert_template_validation_preserves_runtime_events(
+            REPO_ROOT / "ops" / "templates" / "mechanism-run",
+            runtime_events,
+        )
 
     def test_mechanism_run_promotion_report_template_validates(self) -> None:
         schema = load_schema(REPO_ROOT / "ops" / "schemas" / "promotion-report.schema.json")

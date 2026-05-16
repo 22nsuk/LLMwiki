@@ -52,6 +52,7 @@ ops/scripts/eval/function_budget_refactor_proposals.py
 ops/scripts/mechanism/finalize_run_write_runtime.py
 ops/scripts/mechanism/goal_prompt.py
 ops/scripts/mechanism/goal_runtime_backoff.py
+ops/scripts/mechanism/goal_runtime_ladder.py
 ops/scripts/mechanism/goal_runtime_maintenance.py
 ops/scripts/mechanism/goal_runtime_request.py
 ops/scripts/mechanism/goal_run_status.py

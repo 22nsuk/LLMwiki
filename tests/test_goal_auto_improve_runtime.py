@@ -92,6 +92,26 @@ def _initialize_goal(vault: Path) -> None:
     )
 
 
+def _seed_verified_profiles(vault: Path, profiles: list[str]) -> None:
+    status_path = vault / "ops" / "reports" / "goal-run-status.json"
+    status = json.loads(status_path.read_text(encoding="utf-8"))
+    evidence = status["profile_verification"]["evidence"]
+    checkpoint = status["resume"]["last_checkpoint"]
+    for profile in profiles:
+        evidence[profile].update(
+            {
+                "status": "verified",
+                "started_at": "2026-05-15T00:00:00Z",
+                "verified_at": "2026-05-15T00:00:00Z",
+                "checkpoint": checkpoint,
+                "session_report": f"ops/reports/auto-improve-sessions/{profile}.json",
+                "stop_reason": "sustained_budget_elapsed",
+                "detail": "seeded full-duration predecessor evidence",
+            }
+        )
+    status_path.write_text(json.dumps(status), encoding="utf-8")
+
+
 def _write_usage_limited_executor_report(
     vault: Path,
     run_id: str,
@@ -153,9 +173,40 @@ def test_goal_bound_auto_improve_dry_run_maps_trial_budget_and_checkpoint(
     assert status["execution"]["requested_session_id"] == "trial-session"
     assert status["execution"]["current_session_id"] == "trial-session"
     assert status["execution"]["run_ids"] == []
+    assert status["profile_verification"]["evidence"]["30-minute-trial"]["status"] == "incomplete"
+    assert status["profile_verification"]["sustainability_claim_allowed"] is False
     assert (vault / result["checkpoint"]).is_file()
     assert "--goal-contract" in result["auto_improve_command"]
     assert '"event": "goal_run_dry_run"' in audit
+
+
+def test_goal_bound_auto_improve_blocks_upper_profile_without_predecessor_evidence(
+    tmp_path: Path,
+) -> None:
+    vault = _seed_repo_with_worktree(tmp_path)
+    _copy_goal_runtime_inputs(vault)
+    _initialize_goal(vault)
+
+    with pytest.raises(ValueError, match="requires verified predecessor profile"):
+        run_goal_bound_auto_improve(
+            GoalAutoImproveRequest(
+                vault=vault,
+                policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                goal_profile="5-day-sustained",
+                dry_run=True,
+                context=_context(1),
+            )
+        )
+
+    status = json.loads((vault / "ops" / "reports" / "goal-run-status.json").read_text())
+    assert status["status"] == "blocked"
+    assert status["last_event"]["event"] == "goal_run_profile_prerequisite_blocked"
+    assert status["profile_verification"]["missing_predecessors"] == [
+        "30-minute-trial",
+        "6-hour-ramp",
+        "2-day-candidate",
+    ]
+    assert status["profile_verification"]["sustainability_claim_allowed"] is False
 
 
 def test_goal_bound_auto_improve_rejects_nonpersistent_goal_backend(
@@ -184,6 +235,7 @@ def test_goal_bound_auto_improve_executes_ramp_with_profile_budget(
     vault = _seed_repo_with_worktree(tmp_path)
     _copy_goal_runtime_inputs(vault)
     _initialize_goal(vault)
+    _seed_verified_profiles(vault, ["30-minute-trial"])
     calls: list[dict[str, Any]] = []
 
     def fake_runner(vault_path: Path, **kwargs: Any) -> dict[str, Any]:
@@ -238,6 +290,8 @@ def test_goal_bound_auto_improve_executes_ramp_with_profile_budget(
     }
     assert status["last_event"]["event"] == "goal_run_complete"
     assert "budget_exhausted" in status["last_event"]["reason"]
+    assert status["profile_verification"]["evidence"]["6-hour-ramp"]["status"] == "incomplete"
+    assert status["profile_verification"]["verified_profiles"] == ["30-minute-trial"]
 
 
 def test_goal_bound_auto_improve_resumes_from_checkpoint(
@@ -311,6 +365,7 @@ def test_goal_bound_auto_improve_keeps_periodic_checkpoints_from_running_profile
     vault = _seed_repo_with_worktree(tmp_path)
     _copy_goal_runtime_inputs(vault)
     _initialize_goal(vault)
+    _seed_verified_profiles(vault, ["30-minute-trial", "6-hour-ramp", "2-day-candidate"])
 
     def slow_fake_runner(vault_path: Path, **_: Any) -> dict[str, Any]:
         rel_path = "ops/reports/auto-improve-sessions/goal-sustained.json"
@@ -366,6 +421,7 @@ def test_goal_bound_auto_improve_sustains_heartbeat_until_budget_elapsed(
     vault = _seed_repo_with_worktree(tmp_path)
     _copy_goal_runtime_inputs(vault)
     _initialize_goal(vault)
+    _seed_verified_profiles(vault, ["30-minute-trial", "6-hour-ramp", "2-day-candidate"])
 
     def fast_fake_runner(vault_path: Path, **_: Any) -> dict[str, Any]:
         rel_path = "ops/reports/auto-improve-sessions/goal-sustain.json"
@@ -409,6 +465,9 @@ def test_goal_bound_auto_improve_sustains_heartbeat_until_budget_elapsed(
 
     assert result["status"] == "running"
     assert "sustained_budget_elapsed" in status["last_event"]["reason"]
+    assert status["profile_verification"]["evidence"]["5-day-sustained"]["status"] == "sampled"
+    assert status["profile_verification"]["sustained_profile_verified"] is False
+    assert status["profile_verification"]["sustainability_claim_allowed"] is False
     assert any(
         item["reason"] == "periodic checkpoint for goal profile: 5-day-sustained"
         for item in status["checkpoints"]
@@ -488,6 +547,7 @@ def test_goal_bound_auto_improve_defers_profile_when_usage_limit_backoff_is_acti
     vault = _seed_repo_with_worktree(tmp_path)
     _copy_goal_runtime_inputs(vault)
     _initialize_goal(vault)
+    _seed_verified_profiles(vault, ["30-minute-trial"])
     status_path = vault / "ops" / "reports" / "goal-run-status.json"
     seeded_status = json.loads(status_path.read_text(encoding="utf-8"))
     seeded_status["executor_backoff"] = {
@@ -533,6 +593,7 @@ def test_goal_bound_auto_improve_blocks_when_periodic_readiness_regresses(
     vault = _seed_repo_with_worktree(tmp_path)
     _copy_goal_runtime_inputs(vault)
     _initialize_goal(vault)
+    _seed_verified_profiles(vault, ["30-minute-trial", "6-hour-ramp", "2-day-candidate"])
 
     def fake_refresh(vault_path: Path, target: str) -> None:
         assert target == "auto-improve-readiness-report-body"

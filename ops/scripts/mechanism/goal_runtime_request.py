@@ -19,7 +19,7 @@ class GoalAutoImproveRequest:
     vault: Path
     policy_path: str | None
     goal_contract: str = DEFAULT_CONTRACT_PATH
-    goal_profile: str = "5-day-sustained"
+    goal_profile: str = "30-minute-trial"
     status_out: str = DEFAULT_STATUS_PATH
     audit_jsonl: str = DEFAULT_AUDIT_LOG_PATH
     resume_from_checkpoint: str | None = None

@@ -14,6 +14,7 @@ from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema
 
+from .goal_runtime_ladder import attach_pending_checkpoint, build_profile_verification
 from .goal_worktree_guard import build_report as build_worktree_guard
 
 
@@ -432,7 +433,7 @@ def _build_status_from_contract(
     contract: dict[str, Any],
     *,
     context: RuntimeContext,
-    active_profile: str = "5-day-sustained",
+    active_profile: str = "30-minute-trial",
     status: str = "initialized",
     last_event: str = "initialized",
     reason: str = "goal runtime status initialized",
@@ -448,6 +449,10 @@ def _build_status_from_contract(
         "objective": contract["objective"],
         "status": status,
         "active_profile": active_profile,
+        "profile_verification": build_profile_verification(
+            contract,
+            active_profile=active_profile,
+        ),
         "execution": _default_execution_identity(),
         "repo": {
             **contract["github"],
@@ -489,6 +494,7 @@ def _write_status_markdown(vault: Path, status: dict[str, Any]) -> None:
     path = vault / status["artifacts"]["status_markdown"]
     repo = status["repo"]
     progress = status["progress"]
+    profile_verification = status["profile_verification"]
     lines = [
         f"# {status['goal_id']}",
         "",
@@ -504,6 +510,9 @@ def _write_status_markdown(vault: Path, status: dict[str, Any]) -> None:
         f"- worktree_guard: `{repo['worktree_guard']['status']}` / `{repo['worktree_guard']['mode']}`",
         f"- long_run_allowed: `{repo['worktree_guard']['long_run_allowed']}`",
         f"- allowed_operation: `{repo['worktree_guard']['allowed_operation']}`",
+        f"- required_predecessors_verified: `{profile_verification['required_predecessors_verified']}`",
+        f"- sustained_profile_verified: `{profile_verification['sustained_profile_verified']}`",
+        f"- sustainability_claim_allowed: `{profile_verification['sustainability_claim_allowed']}`",
         f"- proposals_attempted: `{progress['proposals_attempted']}`",
         f"- consecutive_failures: `{progress['consecutive_failures']}`",
         f"- promotion_ban_active: `{status['promotion_policy']['promotion_ban_active']}`",
@@ -530,6 +539,18 @@ def _append_audit_event(vault: Path, status: dict[str, Any], event: str, reason:
         "status": status["status"],
         "active_profile": status["active_profile"],
         "execution": dict(status.get("execution", _default_execution_identity())),
+        "profile_verification": {
+            "required_predecessors_verified": bool(
+                status["profile_verification"]["required_predecessors_verified"]
+            ),
+            "sustained_profile_verified": bool(
+                status["profile_verification"]["sustained_profile_verified"]
+            ),
+            "sustainability_claim_allowed": bool(
+                status["profile_verification"]["sustainability_claim_allowed"]
+            ),
+            "verified_profiles": list(status["profile_verification"]["verified_profiles"]),
+        },
     }
     with audit_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
@@ -588,6 +609,9 @@ def write_checkpoint(vault: Path, status: dict[str, Any], *, reason: str) -> dic
         checkpoint_name = f"{checkpoint_stem}-{suffix:02d}.json"
         suffix += 1
     checkpoint_rel = f"{status['artifacts']['checkpoints_dir'].rstrip('/')}/{checkpoint_name}"
+    profile_verification = status.get("profile_verification")
+    if isinstance(profile_verification, dict):
+        attach_pending_checkpoint(profile_verification, checkpoint_rel)
     status["checkpoints"].append(
         {
             "path": checkpoint_rel,
@@ -622,7 +646,7 @@ def initialize_goal_runtime(
     branch: str,
     worktree_path: str,
     context: RuntimeContext | None = None,
-    active_profile: str = "5-day-sustained",
+    active_profile: str = "30-minute-trial",
 ) -> dict[str, Any]:
     runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
     contract = default_goal_contract(
@@ -685,7 +709,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     init.add_argument("--baseline-commit", required=True)
     init.add_argument("--branch", required=True)
     init.add_argument("--worktree-path", required=True)
-    init.add_argument("--active-profile", default="5-day-sustained")
+    init.add_argument("--active-profile", default="30-minute-trial")
 
     heartbeat = sub.add_parser("heartbeat")
     heartbeat.add_argument("--vault", default=".")

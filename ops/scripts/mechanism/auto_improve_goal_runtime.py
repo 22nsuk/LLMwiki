@@ -28,6 +28,13 @@ from .goal_runtime_backoff import (
     executor_backoff_wait_seconds as _executor_backoff_wait_seconds,
     usage_limit_backoff_from_result as _usage_limit_backoff_from_result,
 )
+from .goal_runtime_ladder import (
+    PENDING_CHECKPOINT,
+    build_profile_verification,
+    mark_profile_result,
+    mark_profile_running,
+    profile_prerequisite_blocker,
+)
 from .goal_runtime_maintenance import (
     run_periodic_refresh_command as _run_periodic_refresh_command,
     start_maintenance_thread as _start_maintenance_thread,
@@ -135,8 +142,10 @@ def _new_or_resumed_status(
     request: GoalAutoImproveRequest,
     context: RuntimeContext,
 ) -> dict[str, Any]:
+    existing_status: dict[str, Any] | None = None
     if request.resume_from_checkpoint:
         status = read_json_object(vault / request.resume_from_checkpoint)
+        existing_status = status
         _ensure_execution_identity(status)
         validate_or_raise(
             status,
@@ -161,6 +170,7 @@ def _new_or_resumed_status(
             "reason": request.resume_from_checkpoint,
         }
     else:
+        existing_status = _existing_goal_status(vault, request.status_out, contract["goal_id"])
         status = _build_status_from_contract(
             vault,
             contract,
@@ -170,6 +180,16 @@ def _new_or_resumed_status(
             last_event="goal_run_start",
             reason="auto-improve goal profile started",
         )
+    status["profile_verification"] = build_profile_verification(
+        contract,
+        active_profile=profile_name,
+        existing_status=existing_status,
+    )
+    mark_profile_running(
+        status["profile_verification"],
+        active_profile=profile_name,
+        started_at=context.isoformat_z(),
+    )
     _apply_request_execution_identity(status, request)
     status["budget"] = {
         "max_minutes": int(profile["max_minutes"]),
@@ -179,6 +199,19 @@ def _new_or_resumed_status(
     active_backoff = _active_executor_backoff_from_status(vault, request.status_out, context)
     if active_backoff is not None:
         status["executor_backoff"] = active_backoff
+    return status
+
+
+def _existing_goal_status(vault: Path, status_path: str, goal_id: str) -> dict[str, Any] | None:
+    path = vault / status_path
+    if not path.is_file():
+        return None
+    try:
+        status = read_json_object(path)
+    except (OSError, ValueError, TypeError):
+        return None
+    if status.get("goal_id") != goal_id:
+        return None
     return status
 
 
@@ -219,6 +252,45 @@ def _final_status_for_stop_reason(stop_reason: str) -> str:
 
 def _blocking_stop_reason(stop_reason: str) -> bool:
     return stop_reason in {"failure_budget_exhausted", "learning_review_required"}
+
+
+def _profile_result_evidence_status(
+    request: GoalAutoImproveRequest,
+    profile: dict[str, int | str],
+    *,
+    stop_reason: str,
+) -> tuple[str, str]:
+    if stop_reason in {
+        "failure_budget_exhausted",
+        "learning_review_required",
+        "executor_usage_limited",
+        "periodic_maintenance_failure",
+    }:
+        return "blocked", f"profile stopped on blocker: {stop_reason}"
+    if stop_reason != "sustained_budget_elapsed":
+        return (
+            "incomplete",
+            f"profile stopped before full-duration sustain evidence: {stop_reason}",
+        )
+    required_seconds = int(profile["max_minutes"]) * 60
+    if request.sustain_budget_seconds is None:
+        return (
+            "verified",
+            "profile sustained until the configured max_minutes budget elapsed",
+        )
+    observed_seconds = float(request.sustain_budget_seconds)
+    if observed_seconds >= required_seconds:
+        return (
+            "verified",
+            "profile sustained until an override budget at least as long as max_minutes elapsed",
+        )
+    return (
+        "sampled",
+        (
+            f"profile used sustain_budget_seconds={observed_seconds:g}; "
+            f"full verification requires {required_seconds} seconds"
+        ),
+    )
 
 
 def _sustain_budget_seconds(
@@ -548,6 +620,32 @@ def run_goal_bound_auto_improve(
         context=context,
     )
     status["repo"]["worktree_guard"] = guard
+    prerequisite_blocker = profile_prerequisite_blocker(status["profile_verification"])
+    if prerequisite_blocker is not None:
+        status["status"] = "blocked"
+        status["last_event"] = {
+            "at": context.isoformat_z(),
+            "event": "goal_run_profile_prerequisite_blocked",
+            "reason": prerequisite_blocker,
+        }
+        mark_profile_result(
+            status["profile_verification"],
+            active_profile=profile_name,
+            status="blocked",
+            observed_at=context.isoformat_z(),
+            checkpoint=PENDING_CHECKPOINT,
+            session_report="",
+            stop_reason="profile_prerequisite_blocked",
+            detail=prerequisite_blocker,
+        )
+        status = write_checkpoint(vault, status, reason=prerequisite_blocker)
+        write_goal_status(
+            vault,
+            status,
+            event="goal_run_profile_prerequisite_blocked",
+            reason=prerequisite_blocker,
+        )
+        raise ValueError(prerequisite_blocker)
     write_goal_status(
         vault,
         status,
@@ -561,6 +659,16 @@ def run_goal_bound_auto_improve(
             "event": "goal_run_dry_run",
             "reason": f"profile verification without execution: {profile_name}",
         }
+        mark_profile_result(
+            status["profile_verification"],
+            active_profile=profile_name,
+            status="incomplete",
+            observed_at=context.isoformat_z(),
+            checkpoint=PENDING_CHECKPOINT,
+            session_report="",
+            stop_reason="dry_run",
+            detail="dry-run checks command shape only; it is not full-duration profile evidence",
+        )
         status = write_checkpoint(
             vault,
             status,
@@ -624,6 +732,21 @@ def run_goal_bound_auto_improve(
             f"profile={profile_name}; stop_reason={stop_reason}; "
             f"session_report={result.get('session_report', '')}"
         )
+    evidence_status, evidence_detail = _profile_result_evidence_status(
+        request,
+        profile,
+        stop_reason=stop_reason,
+    )
+    mark_profile_result(
+        status["profile_verification"],
+        active_profile=profile_name,
+        status=evidence_status,
+        observed_at=context.isoformat_z(),
+        checkpoint=PENDING_CHECKPOINT,
+        session_report=str(result.get("session_report", "")).strip(),
+        stop_reason=stop_reason,
+        detail=evidence_detail,
+    )
     status["last_event"] = {
         "at": context.isoformat_z(),
         "event": "goal_run_complete",

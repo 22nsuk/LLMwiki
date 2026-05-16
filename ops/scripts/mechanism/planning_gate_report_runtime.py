@@ -185,6 +185,8 @@ def append_planning_validation_event(
     run_ids: dict[str, object],
     policy_version: object,
 ) -> None:
+    if not artifact_dir_report.startswith("runs/"):
+        return
     aligned_run_ids = {
         str(value).strip()
         for value in run_ids.values()
