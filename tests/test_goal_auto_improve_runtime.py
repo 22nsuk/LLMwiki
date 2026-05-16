@@ -134,6 +134,7 @@ def test_goal_bound_auto_improve_dry_run_maps_trial_budget_and_checkpoint(
             vault=vault,
             policy_path="ops/policies/wiki-maintainer-policy.yaml",
             goal_profile="30-minute-trial",
+            session_id="trial-session",
             dry_run=True,
             context=_context(1),
         )
@@ -149,6 +150,9 @@ def test_goal_bound_auto_improve_dry_run_maps_trial_budget_and_checkpoint(
         "max_consecutive_failures": 1,
     }
     assert status["resume"]["last_checkpoint"] == result["checkpoint"]
+    assert status["execution"]["requested_session_id"] == "trial-session"
+    assert status["execution"]["current_session_id"] == "trial-session"
+    assert status["execution"]["run_ids"] == []
     assert (vault / result["checkpoint"]).is_file()
     assert "--goal-contract" in result["auto_improve_command"]
     assert '"event": "goal_run_dry_run"' in audit
@@ -202,7 +206,7 @@ def test_goal_bound_auto_improve_executes_ramp_with_profile_budget(
             "session_report": rel_path,
             "iterations": 2,
             "stop_reason": "budget_exhausted",
-            "run_ids": [],
+            "run_ids": ["goal-ramp-run-a", "goal-ramp-run-b"],
         }
 
     result = run_goal_bound_auto_improve(
@@ -225,6 +229,13 @@ def test_goal_bound_auto_improve_executes_ramp_with_profile_budget(
     assert status["status"] == "running"
     assert status["progress"]["iterations_completed"] == 2
     assert status["progress"]["proposals_attempted"] == 2
+    assert status["execution"] == {
+        "requested_session_id": "",
+        "resume_session": "",
+        "current_session_id": "goal-ramp",
+        "session_report": "ops/reports/auto-improve-sessions/goal-ramp.json",
+        "run_ids": ["goal-ramp-run-a", "goal-ramp-run-b"],
+    }
     assert status["last_event"]["event"] == "goal_run_complete"
     assert "budget_exhausted" in status["last_event"]["reason"]
 
@@ -275,6 +286,7 @@ def test_goal_bound_auto_improve_resumes_from_checkpoint(
             policy_path="ops/policies/wiki-maintainer-policy.yaml",
             goal_profile="30-minute-trial",
             resume_from_checkpoint=str(dry_run["checkpoint"]),
+            resume_session="goal-resume-previous",
             heartbeat_interval_seconds=0,
             context=_context(2),
         ),
@@ -286,6 +298,9 @@ def test_goal_bound_auto_improve_resumes_from_checkpoint(
     assert calls[0]["max_minutes"] == 30
     assert result["checkpoint"] != dry_run["checkpoint"]
     assert status["progress"]["iterations_completed"] == 1
+    assert status["execution"]["resume_session"] == "goal-resume-previous"
+    assert status["execution"]["current_session_id"] == "goal-resume"
+    assert status["execution"]["session_report"] == "ops/reports/auto-improve-sessions/goal-resume.json"
     assert status["resume"]["last_checkpoint"] == result["checkpoint"]
     assert status["heartbeat"]["last_heartbeat_at"] == "2026-05-15T00:02:00Z"
 
@@ -455,6 +470,8 @@ def test_goal_bound_auto_improve_sustains_retryable_executor_usage_limit(
     assert "sustained_budget_elapsed" in status["last_event"]["reason"]
     assert status["progress"]["iterations_completed"] == 1
     assert status["progress"]["consecutive_failures"] == 0
+    assert status["execution"]["current_session_id"] == "goal-usage-limited"
+    assert status["execution"]["run_ids"] == ["goal-usage-limited-run"]
     assert status["executor_backoff"] == {
         "active": True,
         "reason": "executor_usage_limited",

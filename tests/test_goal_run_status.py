@@ -99,6 +99,13 @@ def test_initialize_goal_runtime_records_private_github_worktree_and_resume_arti
     assert validate_with_schema(persisted_contract, contract_schema) == []
     assert persisted_status == status
     assert status["repo"]["visibility"] == "PRIVATE"
+    assert status["execution"] == {
+        "requested_session_id": "",
+        "resume_session": "",
+        "current_session_id": "",
+        "session_report": "",
+        "run_ids": [],
+    }
     assert status["repo"]["worktree_guard"]["status"] == "pass"
     assert status["repo"]["worktree_guard"]["long_run_allowed"] is True
     assert status["repo"]["worktree_guard"]["allowed_operation"] == "long_run"

@@ -295,6 +295,40 @@ def _heartbeat_status(contract: dict[str, Any], context: RuntimeContext) -> dict
     }
 
 
+def _string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _default_execution_identity() -> dict[str, Any]:
+    return {
+        "requested_session_id": "",
+        "resume_session": "",
+        "current_session_id": "",
+        "session_report": "",
+        "run_ids": [],
+    }
+
+
+def _ensure_execution_identity(status: dict[str, Any]) -> dict[str, Any]:
+    execution = status.get("execution")
+    if not isinstance(execution, dict):
+        execution = {}
+    normalized = _default_execution_identity()
+    normalized.update(
+        {
+            "requested_session_id": str(execution.get("requested_session_id", "")).strip(),
+            "resume_session": str(execution.get("resume_session", "")).strip(),
+            "current_session_id": str(execution.get("current_session_id", "")).strip(),
+            "session_report": str(execution.get("session_report", "")).strip(),
+            "run_ids": _string_list(execution.get("run_ids")),
+        }
+    )
+    status["execution"] = normalized
+    return status
+
+
 def _sealed_authority_clean_pass_current(readiness: dict[str, Any]) -> bool:
     diagnostics = readiness.get("diagnostics")
     if not isinstance(diagnostics, dict):
@@ -414,6 +448,7 @@ def _build_status_from_contract(
         "objective": contract["objective"],
         "status": status,
         "active_profile": active_profile,
+        "execution": _default_execution_identity(),
         "repo": {
             **contract["github"],
             "worktree_guard": _worktree_guard_summary(vault, contract),
@@ -459,6 +494,8 @@ def _write_status_markdown(vault: Path, status: dict[str, Any]) -> None:
         "",
         f"- status: `{status['status']}`",
         f"- active_profile: `{status['active_profile']}`",
+        f"- current_session_id: `{status['execution']['current_session_id']}`",
+        f"- run_ids: `{len(status['execution']['run_ids'])}`",
         f"- repo: `{repo['repo_url']}`",
         f"- visibility: `{repo['visibility']}`",
         f"- branch: `{repo['branch']}`",
@@ -492,6 +529,7 @@ def _append_audit_event(vault: Path, status: dict[str, Any], event: str, reason:
         "reason": reason,
         "status": status["status"],
         "active_profile": status["active_profile"],
+        "execution": dict(status.get("execution", _default_execution_identity())),
     }
     with audit_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
@@ -524,6 +562,7 @@ def _write_resume_metadata(vault: Path, status: dict[str, Any], *, event: str) -
 
 
 def write_goal_status(vault: Path, status: dict[str, Any], *, event: str, reason: str) -> Path:
+    _ensure_execution_identity(status)
     schema = load_schema(vault / GOAL_RUN_STATUS_SCHEMA)
     out = vault / status["artifacts"]["status_json"]
     status["promotion_policy"] = _promotion_policy_from_readiness(
@@ -539,6 +578,7 @@ def write_goal_status(vault: Path, status: dict[str, Any], *, event: str, reason
 
 
 def write_checkpoint(vault: Path, status: dict[str, Any], *, reason: str) -> dict[str, Any]:
+    _ensure_execution_identity(status)
     checkpoint_dir = vault / status["artifacts"]["checkpoints_dir"]
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_stem = f"checkpoint-{status['generated_at'].replace(':', '').replace('-', '')}"

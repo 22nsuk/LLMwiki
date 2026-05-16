@@ -13,6 +13,7 @@
     "objective",
     "status",
     "active_profile",
+    "execution",
     "repo",
     "budget",
     "progress",
@@ -133,6 +134,27 @@
     },
     "active_profile": {
       "type": "string"
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requested_session_id",
+        "resume_session",
+        "current_session_id",
+        "session_report",
+        "run_ids"
+      ],
+      "properties": {
+        "requested_session_id": { "type": "string" },
+        "resume_session": { "type": "string" },
+        "current_session_id": { "type": "string" },
+        "session_report": { "type": "string" },
+        "run_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
     },
     "repo": {
       "type": "object",

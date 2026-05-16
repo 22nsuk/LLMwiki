@@ -16,6 +16,7 @@ from .goal_run_status import (
     GOAL_CONTRACT_SCHEMA,
     GOAL_RUN_STATUS_SCHEMA,
     _build_status_from_contract,
+    _ensure_execution_identity,
     _heartbeat_status,
     _worktree_guard_summary,
     resolve_execution_profile,
@@ -88,6 +89,43 @@ def _validate_goal_runtime_preflight(vault: Path, contract: dict[str, Any]) -> d
     return guard
 
 
+def _string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _apply_request_execution_identity(
+    status: dict[str, Any],
+    request: GoalAutoImproveRequest,
+) -> dict[str, Any]:
+    _ensure_execution_identity(status)
+    execution = status["execution"]
+    requested_session_id = str(request.session_id or "").strip()
+    resume_session = str(request.resume_session or "").strip()
+    execution["requested_session_id"] = requested_session_id
+    execution["resume_session"] = resume_session
+    if requested_session_id:
+        execution["current_session_id"] = requested_session_id
+    elif resume_session:
+        execution["current_session_id"] = resume_session
+    return status
+
+
+def _apply_result_execution_identity(
+    status: dict[str, Any],
+    result: dict[str, Any],
+) -> dict[str, Any]:
+    _ensure_execution_identity(status)
+    execution = status["execution"]
+    session_id = str(result.get("session_id", "")).strip()
+    if session_id:
+        execution["current_session_id"] = session_id
+    execution["session_report"] = str(result.get("session_report", "")).strip()
+    execution["run_ids"] = _string_list(result.get("run_ids"))
+    return status
+
+
 def _new_or_resumed_status(
     vault: Path,
     contract: dict[str, Any],
@@ -99,6 +137,7 @@ def _new_or_resumed_status(
 ) -> dict[str, Any]:
     if request.resume_from_checkpoint:
         status = read_json_object(vault / request.resume_from_checkpoint)
+        _ensure_execution_identity(status)
         validate_or_raise(
             status,
             load_schema(vault / GOAL_RUN_STATUS_SCHEMA),
@@ -131,6 +170,7 @@ def _new_or_resumed_status(
             last_event="goal_run_start",
             reason="auto-improve goal profile started",
         )
+    _apply_request_execution_identity(status, request)
     status["budget"] = {
         "max_minutes": int(profile["max_minutes"]),
         "max_proposals": int(profile["max_proposals"]),
@@ -203,6 +243,7 @@ def _write_sustain_wait_status(
     context: RuntimeContext,
 ) -> None:
     status["generated_at"] = context.isoformat_z()
+    _apply_result_execution_identity(status, result)
     progress = _read_session_progress(vault, result)
     progress["elapsed_minutes"] = round((time.monotonic() - started) / 60, 4)
     status["progress"] = progress
@@ -230,6 +271,7 @@ def _write_executor_backoff_status(
     backoff: dict[str, Any],
 ) -> None:
     status["generated_at"] = context.isoformat_z()
+    _apply_result_execution_identity(status, result)
     progress = _read_session_progress(vault, result)
     progress["elapsed_minutes"] = round((time.monotonic() - started) / 60, 4)
     status["progress"] = progress
@@ -565,6 +607,7 @@ def run_goal_bound_auto_improve(
             maintenance_thread.join(timeout=5)
 
     status = _merge_periodic_status_updates(vault, status, status_path=request.status_out)
+    _apply_result_execution_identity(status, result)
     progress = _read_session_progress(vault, result)
     progress["elapsed_minutes"] = round((time.monotonic() - started) / 60, 4)
     status["generated_at"] = context.isoformat_z()

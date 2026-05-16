@@ -228,6 +228,27 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertEqual(actions["release_writer_dependency_single_source"]["current_status"], "implemented")
         self.assertEqual(report["summary"]["requires_release_run_verification_count"], 0)
 
+    def test_goal_native_long_run_terms_map_to_specific_actions(self) -> None:
+        (self.external / "goal-runtime.md").write_text(
+            "# Goal Runtime\n\n"
+            "Track run id and session_id in goal-run-status, verify the 30-minute trial "
+            "to 6-hour ramp to 2-day candidate to 5-day sustained execution ladder, "
+            "and preserve executor retry-after backoff heartbeat observability.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        coverage = {
+            item["path"]: item["matched_action_ids"]
+            for item in report["active_report_coverage"]
+        }
+        matched = set(coverage["external-reports/goal-runtime.md"])
+        self.assertIn("goal_run_status_audit_resume", matched)
+        self.assertIn("goal_execution_ladder_profiles", matched)
+        self.assertIn("goal_executor_backoff_observability", matched)
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_release_verified_actions_accept_conditional_status_v2_authority(self) -> None:
         self._write_release_verification_reports()
         self._write_json(
