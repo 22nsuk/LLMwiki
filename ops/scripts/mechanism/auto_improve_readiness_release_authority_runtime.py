@@ -31,6 +31,17 @@ def _string_list(value: object) -> list[str]:
     return [str(item).strip() for item in value if str(item).strip()]
 
 
+def _unique_strings(values: Any) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        text = str(value).strip()
+        if text and text not in seen:
+            seen.add(text)
+            result.append(text)
+    return result
+
+
 def _int_value(value: object, default: int = 0) -> int:
     if isinstance(value, bool):
         return int(value)
@@ -387,6 +398,17 @@ def _release_authority_preflight_summary(payload: dict[str, Any]) -> dict[str, A
     authority_preflight_status = (
         str(payload.get("authority_preflight_status", "")).strip() or "unknown"
     )
+    expected_blocked_preflight = bool(payload.get("expected_blocked_preflight", False))
+    clean_required_preflight = bool(payload.get("clean_required_preflight", True))
+    clean_required_gate = (
+        status == "pass"
+        and preflight_status == "sealed_clean_pass"
+        and preflight_mode == "clean_required"
+        and distribution_binding_status == "pass"
+        and authority_preflight_status == "clean"
+        and not expected_blocked_preflight
+        and clean_required_preflight
+    )
     blocker_reason_ids = _string_list(payload.get("blocking_reason_ids"))
     linked_blockers: list[str] = []
     if REASON_MACHINE_RELEASE_NOT_ALLOWED in blocker_reason_ids:
@@ -400,13 +422,17 @@ def _release_authority_preflight_summary(payload: dict[str, Any]) -> dict[str, A
     return {
         "path": path,
         "artifact_kind": artifact_kind,
-        "status": status if artifact_kind == "release_closeout_sealed_rehearsal_check" else "fail",
+        "status": (
+            "fail"
+            if artifact_kind != "release_closeout_sealed_rehearsal_check"
+            else "pass" if clean_required_gate else "fail"
+        ),
         "preflight_status": preflight_status,
         "preflight_mode": preflight_mode,
         "distribution_binding_status": distribution_binding_status,
         "authority_preflight_status": authority_preflight_status,
-        "expected_blocked_preflight": bool(payload.get("expected_blocked_preflight", False)),
-        "clean_required_preflight": bool(payload.get("clean_required_preflight", True)),
+        "expected_blocked_preflight": expected_blocked_preflight,
+        "clean_required_preflight": clean_required_preflight,
         "failure_ids": _string_list(payload.get("failures")),
         "failure_details": failure_details,
         "blocker_reason_ids": blocker_reason_ids,
@@ -613,25 +639,45 @@ def _release_authority_preflight_promotion_blockers(
     authority_preflight_status = (
         str(summary.get("authority_preflight_status", "unknown")).strip() or "unknown"
     )
+    preflight_mode = str(summary.get("preflight_mode", "clean_required")).strip() or "clean_required"
+    expected_blocked_preflight = bool(summary.get("expected_blocked_preflight", False))
+    clean_required_preflight = bool(summary.get("clean_required_preflight", True))
     gate_pass = (
         status == "pass"
         and preflight_status == "sealed_clean_pass"
+        and preflight_mode == "clean_required"
         and distribution_binding_status == "pass"
         and authority_preflight_status == "clean"
+        and not expected_blocked_preflight
+        and clean_required_preflight
     )
     if gate_pass:
         return []
 
-    signal_ids = [
+    signal_ids = _unique_strings(
         str(item).strip()
         for item in [
             *_string_list(summary.get("blocker_reason_ids")),
             *_string_list(summary.get("failure_ids")),
         ]
         if str(item).strip()
-    ]
+    )
+    clean_shape_without_mode_flags = (
+        preflight_status == "sealed_clean_pass"
+        and distribution_binding_status == "pass"
+        and authority_preflight_status == "clean"
+    )
+    if clean_shape_without_mode_flags:
+        if preflight_mode != "clean_required":
+            signal_ids.append("release_authority_preflight_not_clean_required")
+        if expected_blocked_preflight:
+            signal_ids.append("release_authority_preflight_expected_blocked")
+        if not clean_required_preflight:
+            signal_ids.append("release_authority_preflight_clean_required_missing")
+    signal_ids = _unique_strings(signal_ids)
     if not signal_ids:
         signal_ids = ["release_authority_preflight_not_clean"]
+    source_status = status if status in {"warn", "fail", "not_run", "missing", "unknown"} else "fail"
     return [
         {
             "id": "promotion_blocked_by_release_authority_preflight_failure",
@@ -641,7 +687,7 @@ def _release_authority_preflight_promotion_blockers(
             "release_blocker": True,
             "accepted_risk": False,
             "gate_effect": "active",
-            "source_status": status,
+            "source_status": source_status,
             "reason": (
                 "release authority sealed preflight is not clean: "
                 f"{str(summary.get('summary', '')).strip() or 'summary unavailable'}"
