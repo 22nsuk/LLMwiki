@@ -2,7 +2,7 @@
   "$schema": "ops/schemas/test-deselection-policy.schema.json",
   "policy_kind": "test_deselection_policy",
   "deselection_budget": {
-    "max_count": 5,
+    "max_count": 2,
     "risk_owner": "runtime-maintainer",
     "expires_at": "2026-06-08T00:00:00Z",
     "count_increase_gate_effect": "fail",
@@ -22,33 +22,6 @@
       "nodeid": "tests/test_external_report_lifecycle_static.py",
       "reason": "source package lane intentionally excludes external-reports root artifacts; lifecycle parity is validated in the full-vault lane before packaging",
       "policy_ref": "source-package-test-lane:external-reports-excluded",
-      "risk_owner": "runtime-maintainer",
-      "expires_at": "2026-06-08T00:00:00Z",
-      "release_blocking": false,
-      "expected_to_pass_after_refresh": false
-    },
-    {
-      "nodeid": "tests/test_import_fallback_contract.py",
-      "reason": "source package lane intentionally excludes canonical script-output surface artifacts such as ops/script-output-surfaces.json",
-      "policy_ref": "source-package-test-lane:canonical-output-surfaces-excluded",
-      "risk_owner": "runtime-maintainer",
-      "expires_at": "2026-06-08T00:00:00Z",
-      "release_blocking": false,
-      "expected_to_pass_after_refresh": false
-    },
-    {
-      "nodeid": "tests/test_script_module_surface_contract.py",
-      "reason": "source package lane intentionally excludes canonical script-output surface artifacts such as ops/script-output-surfaces.json",
-      "policy_ref": "source-package-test-lane:canonical-output-surfaces-excluded",
-      "risk_owner": "runtime-maintainer",
-      "expires_at": "2026-06-08T00:00:00Z",
-      "release_blocking": false,
-      "expected_to_pass_after_refresh": false
-    },
-    {
-      "nodeid": "tests/test_writer_output_paths.py",
-      "reason": "source package lane intentionally excludes canonical output-surface artifacts such as ops/script-output-surfaces.json",
-      "policy_ref": "source-package-test-lane:canonical-output-surfaces-excluded",
       "risk_owner": "runtime-maintainer",
       "expires_at": "2026-06-08T00:00:00Z",
       "release_blocking": false,

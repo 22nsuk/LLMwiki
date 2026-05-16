@@ -81,6 +81,13 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
 
         def fake_run(command: list[str], *, cwd: Path, timeout_seconds: int) -> TimedProcessResult:
             calls.append(" ".join(command))
+            if "ops.scripts.script_output_surfaces" in command:
+                registry_path = cwd / "ops" / "script-output-surfaces.json"
+                registry_path.parent.mkdir(parents=True, exist_ok=True)
+                registry_path.write_text(
+                    json.dumps({"artifact_kind": "script_output_surfaces"}, sort_keys=True),
+                    encoding="utf-8",
+                )
             if "ops.scripts.test_execution_summary" in command:
                 out_path = cwd / command[command.index("--out") + 1]
                 out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -130,6 +137,7 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
             )
 
         self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["script_output_surfaces_status"], "pass")
         self.assertEqual(report["ruff_status"], "pass")
         self.assertEqual(report["mypy_status"], "pass")
         self.assertEqual(report["test_source_package_status"], "pass")
@@ -139,8 +147,19 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
         self.assertEqual(report["extract"]["root"], "tmp/source-package-check/extract/LLMwiki")
         self.assertEqual(report["extract"]["archive_root_name"], "LLMwiki")
         self.assertEqual(report["extract"]["archive_root_source"], "archive_self_description")
-        self.assertEqual(len(report["commands"]), 3)
-        self.assertEqual(len(calls), 3)
+        self.assertEqual(len(report["commands"]), 4)
+        self.assertEqual(
+            [item["name"] for item in report["commands"]],
+            ["script-output-surfaces", "ruff", "mypy", "test-source-package"],
+        )
+        self.assertEqual(len(calls), 4)
+        self.assertTrue((extract_parent / "LLMwiki" / "ops" / "script-output-surfaces.json").is_file())
+        script_output_call = next(index for index, call in enumerate(calls) if "script_output_surfaces" in call)
+        test_source_package_call = next(index for index, call in enumerate(calls) if "test_execution_summary" in call)
+        self.assertLess(
+            script_output_call,
+            test_source_package_call,
+        )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
         self.assertTrue(write_report(self.vault, report).exists())
 

@@ -24,6 +24,7 @@
     "source_zip",
     "extract",
     "commands",
+    "script_output_surfaces_status",
     "ruff_status",
     "mypy_status",
     "test_source_package_status",
@@ -110,6 +111,7 @@
       "type": "array",
       "items": { "$ref": "#/$defs/command_result" }
     },
+    "script_output_surfaces_status": { "$ref": "#/$defs/check_status" },
     "ruff_status": { "$ref": "#/$defs/check_status" },
     "mypy_status": { "$ref": "#/$defs/check_status" },
     "test_source_package_status": { "$ref": "#/$defs/check_status" },

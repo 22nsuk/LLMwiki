@@ -462,7 +462,7 @@
       "pack_id": "source_package",
       "authority": "derived",
       "status": "derived_from_registry",
-    "semantics": "Source-package validation slice layered on top of persistent lanes with explicit exclusions for checked-in generated artifacts and external report roots omitted from source packages.",
+    "semantics": "Source-package validation slice layered on top of persistent lanes with explicit exclusions for checked-in generated artifacts and external report roots omitted from source packages. Clean extract regenerates ops/script-output-surfaces.json before running the source-package pytest lane.",
       "backing_targets": [
         "test-source-package",
         "release-source-package-check"
@@ -473,10 +473,7 @@
         "tests_argument": "tests",
       "deselects": [
         "--deselect=tests/test_generated_report_contracts.py",
-        "--deselect=tests/test_external_report_lifecycle_static.py",
-        "--deselect=tests/test_import_fallback_contract.py",
-        "--deselect=tests/test_script_module_surface_contract.py",
-        "--deselect=tests/test_writer_output_paths.py"
+        "--deselect=tests/test_external_report_lifecycle_static.py"
         ],
         "deselection_policy": "ops/policies/source-package-test-deselections.json"
       },

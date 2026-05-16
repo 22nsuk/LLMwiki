@@ -314,6 +314,18 @@ def _source_package_test_command(request: SourcePackageCleanExtractRequest) -> l
     ]
 
 
+def _script_output_surfaces_command(request: SourcePackageCleanExtractRequest) -> list[str]:
+    return [
+        request.source_python,
+        "-m",
+        "ops.scripts.script_output_surfaces",
+        "--vault",
+        ".",
+        "--out",
+        "ops/script-output-surfaces.json",
+    ]
+
+
 def _clean_extract_commands(
     request: SourcePackageCleanExtractRequest,
     paths: _ExtractPaths,
@@ -322,6 +334,7 @@ def _clean_extract_commands(
     if extract_status != "pass":
         return []
     commands = [
+        ("script-output-surfaces", _script_output_surfaces_command(request)),
         ("ruff", [request.source_python, "-m", "ruff", "check", *shlex.split(request.ruff_targets)]),
         ("mypy", [request.source_python, "-m", "mypy", *shlex.split(request.mypy_targets)]),
         ("test-source-package", _source_package_test_command(request)),
@@ -493,6 +506,7 @@ def _render_report(
             "summary": execution.extract_summary,
         },
         "commands": command_results,
+        "script_output_surfaces_status": _named_command_status(command_results, "script-output-surfaces"),
         "ruff_status": _named_command_status(command_results, "ruff"),
         "mypy_status": _named_command_status(command_results, "mypy"),
         "test_source_package_status": _named_command_status(command_results, "test-source-package"),

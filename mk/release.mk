@@ -28,7 +28,7 @@ SOURCE_PACKAGE_TEST_DESELECT_POLICY ?= ops/policies/source-package-test-deselect
 SOURCE_PACKAGE_CHECK_ROOT ?= tmp/source-package-check
 SOURCE_PACKAGE_TEST_MARK_EXPR ?= not artifact_finalization and not release_sealing
 SOURCE_PACKAGE_TESTS ?= tests
-SOURCE_PACKAGE_TEST_DESELECTS ?= --deselect=tests/test_generated_report_contracts.py --deselect=tests/test_external_report_lifecycle_static.py --deselect=tests/test_import_fallback_contract.py --deselect=tests/test_script_module_surface_contract.py --deselect=tests/test_writer_output_paths.py
+SOURCE_PACKAGE_TEST_DESELECTS ?= --deselect=tests/test_generated_report_contracts.py --deselect=tests/test_external_report_lifecycle_static.py
 SOURCE_PACKAGE_ZIP_OUT ?= $(SOURCE_PACKAGE_CHECK_ROOT)/LLMwiki-source.zip
 SOURCE_PACKAGE_ZIP_SMOKE_OUT ?= $(SOURCE_PACKAGE_CHECK_ROOT)/release-distribution-zip-smoke.json
 SOURCE_PACKAGE_EXTRACT_PARENT ?= $(SOURCE_PACKAGE_CHECK_ROOT)/extract
