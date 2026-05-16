@@ -29,6 +29,11 @@ from ops.scripts.test_lane_registry_runtime import (
     pack_by_id,
     selection_by_make_target,
 )
+from tests.workflow_static_helpers import (
+    load_workflow,
+    workflow_job as _workflow_job,
+    workflow_run_commands as _workflow_run_text,
+)
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
@@ -87,6 +92,30 @@ def _target_block(text: str, target: str) -> str:
 def _recipe_lines(text: str, target: str) -> list[str]:
     block = _target_block(text, target)
     return [line.strip() for line in block.splitlines()[1:] if line.startswith("\t")]
+
+
+def _target_dependencies(text: str, target: str) -> tuple[str, ...]:
+    header = _target_block(text, target).splitlines()[0]
+    _, _, dependency_text = header.partition(":")
+    return tuple(dependency_text.split())
+
+
+def _assert_target_depends_on(
+    case: unittest.TestCase, text: str, target: str, dependency: str
+) -> None:
+    case.assertIn(dependency, _target_dependencies(text, target))
+
+
+def _assert_recipe_contains_tokens(
+    case: unittest.TestCase, text: str, target: str, required_tokens: tuple[str, ...]
+) -> None:
+    recipe = "\n".join(_recipe_lines(text, target))
+    for token in required_tokens:
+        case.assertIn(token, recipe)
+
+
+def _workflow_payload() -> dict[str, object]:
+    return load_workflow(CI_WORKFLOW)
 
 
 def _release_evidence_closeout_expanded_recipe_lines(text: str) -> list[str]:
@@ -1137,101 +1166,81 @@ class MakefileStaticGateTests(unittest.TestCase):
     def test_source_package_targets_pin_clean_extract_test_lane(self) -> None:
         registry = _test_lane_registry()
         text = _makefile_text()
-        test_source_package = _target_block(text, "test-source-package")
-        release_source_package_check = _target_block(
-            text, "release-source-package-check"
-        )
 
-        self.assertIn(
-            "SOURCE_PACKAGE_TEST_SUMMARY_OUT ?= tmp/test-source-package-summary.json",
-            text,
-        )
-        self.assertIn(
-            "SOURCE_PACKAGE_TEST_DESELECT_POLICY ?= ops/policies/source-package-test-deselections.json",
-            text,
-        )
-        self.assertEqual(
-            _makefile_assignment_value(text, "SOURCE_PACKAGE_TEST_DESELECT_POLICY"),
-            pack_deselection_policy(registry, "source_package"),
-        )
-        self.assertIn("SOURCE_PACKAGE_CHECK_ROOT ?= tmp/source-package-check", text)
+        expected_assignments = {
+            "SOURCE_PACKAGE_TEST_SUMMARY_OUT": "tmp/test-source-package-summary.json",
+            "SOURCE_PACKAGE_TEST_DESELECT_POLICY": pack_deselection_policy(
+                registry, "source_package"
+            ),
+            "SOURCE_PACKAGE_CHECK_ROOT": "tmp/source-package-check",
+            "SOURCE_PACKAGE_EXTRACT_PARENT": "$(SOURCE_PACKAGE_CHECK_ROOT)/extract",
+            "SOURCE_PACKAGE_TEST_MARK_EXPR": (
+                "not artifact_finalization and not release_sealing"
+            ),
+            "SOURCE_PACKAGE_PYTHON": "$(PUBLIC_PYTHON)",
+            "SOURCE_PACKAGE_CLEAN_EXTRACT_OUT": (
+                "ops/reports/source-package-clean-extract.json"
+            ),
+            "SOURCE_PACKAGE_CLEAN_EXTRACT_CANDIDATE_OUT": (
+                "tmp/source-package-clean-extract.candidate.json"
+            ),
+        }
+        for variable, expected_value in expected_assignments.items():
+            with self.subTest(variable=variable):
+                self.assertEqual(_makefile_assignment_value(text, variable), expected_value)
         self.assertNotIn("SOURCE_PACKAGE_ARCHIVE_ROOT_NAME", text)
-        self.assertIn(
-            "SOURCE_PACKAGE_EXTRACT_PARENT ?= $(SOURCE_PACKAGE_CHECK_ROOT)/extract",
-            text,
-        )
-        self.assertIn(
-            "SOURCE_PACKAGE_TEST_MARK_EXPR ?= not artifact_finalization and not release_sealing",
-            text,
-        )
         self.assertEqual(
             _makefile_assignment_items(text, "SOURCE_PACKAGE_TEST_DESELECTS"),
             pack_deselects(registry, "source_package"),
         )
-        self.assertIn("SOURCE_PACKAGE_PYTHON ?= $(PUBLIC_PYTHON)", text)
-        self.assertIn(
-            "SOURCE_PACKAGE_CLEAN_EXTRACT_OUT ?= ops/reports/source-package-clean-extract.json",
+        _assert_recipe_contains_tokens(
+            self,
             text,
+            "test-source-package",
+            (
+                "ops.scripts.test_execution_summary",
+                f'--suite {pack_summary_suite(registry, "source_package")["suite_id"]}',
+                "--collect-nodeids",
+                '--deselection-policy "$(SOURCE_PACKAGE_TEST_DESELECT_POLICY)"',
+                '$(PYTHON) -m pytest -m "$(SOURCE_PACKAGE_TEST_MARK_EXPR)"',
+                "$(SOURCE_PACKAGE_TEST_DESELECTS)",
+            ),
         )
-        self.assertIn(
-            "SOURCE_PACKAGE_CLEAN_EXTRACT_CANDIDATE_OUT ?= tmp/source-package-clean-extract.candidate.json",
+        _assert_recipe_contains_tokens(
+            self,
             text,
-        )
-        self.assertIn(
-            f'--suite {pack_summary_suite(registry, "source_package")["suite_id"]}',
-            test_source_package,
-        )
-        self.assertIn("--collect-nodeids", test_source_package)
-        self.assertIn(
-            '--deselection-policy "$(SOURCE_PACKAGE_TEST_DESELECT_POLICY)"',
-            test_source_package,
-        )
-        self.assertIn(
-            '$(PYTHON) -m pytest -m "$(SOURCE_PACKAGE_TEST_MARK_EXPR)"',
-            test_source_package,
-        )
-        self.assertIn("$(SOURCE_PACKAGE_TEST_DESELECTS)", test_source_package)
-        self.assertIn(
-            '$(MAKE) release-distribution-zip RELEASE_DISTRIBUTION_ZIP_OUT="$(SOURCE_PACKAGE_ZIP_OUT)" RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT="$(SOURCE_PACKAGE_ZIP_SMOKE_OUT)"',
-            release_source_package_check,
-        )
-        self.assertIn(
-            "ops.scripts.source_package_clean_extract", release_source_package_check
-        )
-        self.assertIn(
-            '--source-zip "$(SOURCE_PACKAGE_ZIP_OUT)"', release_source_package_check
-        )
-        self.assertIn(
-            '--extract-parent "$(SOURCE_PACKAGE_EXTRACT_PARENT)"',
-            release_source_package_check,
-        )
-        self.assertIn(
-            '--source-python "$(SOURCE_PACKAGE_PYTHON)"', release_source_package_check
-        )
-        self.assertIn(
-            '--zip-smoke-report "$(SOURCE_PACKAGE_ZIP_SMOKE_OUT)"',
-            release_source_package_check,
-        )
-        self.assertIn(
-            '--deselects="$(SOURCE_PACKAGE_TEST_DESELECTS)"',
-            release_source_package_check,
-        )
-        self.assertIn(
-            '--pytest-flags="$(PYTEST_SERIAL_FLAGS)"', release_source_package_check
-        )
-        self.assertIn(
-            "--schema ops/schemas/source-package-clean-extract.schema.json",
-            release_source_package_check,
+            "release-source-package-check",
+            (
+                "$(MAKE) release-distribution-zip",
+                'RELEASE_DISTRIBUTION_ZIP_OUT="$(SOURCE_PACKAGE_ZIP_OUT)"',
+                'RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT="$(SOURCE_PACKAGE_ZIP_SMOKE_OUT)"',
+                "ops.scripts.source_package_clean_extract",
+                '--source-zip "$(SOURCE_PACKAGE_ZIP_OUT)"',
+                '--extract-parent "$(SOURCE_PACKAGE_EXTRACT_PARENT)"',
+                '--source-python "$(SOURCE_PACKAGE_PYTHON)"',
+                '--zip-smoke-report "$(SOURCE_PACKAGE_ZIP_SMOKE_OUT)"',
+                '--deselects="$(SOURCE_PACKAGE_TEST_DESELECTS)"',
+                '--pytest-flags="$(PYTEST_SERIAL_FLAGS)"',
+                "--schema ops/schemas/source-package-clean-extract.schema.json",
+            ),
         )
 
     def test_ci_matrix_runs_named_lane_targets(self) -> None:
         registry = _test_lane_registry()
-        workflow_text = CI_WORKFLOW.read_text(encoding="utf-8")
+        workflow = _workflow_payload()
+        test_tier_job = _workflow_job(workflow, "test-tier")
+        strategy = test_tier_job.get("strategy", {})
+        self.assertIsInstance(strategy, dict)
+        matrix = strategy.get("matrix", {})
+        self.assertIsInstance(matrix, dict)
+        tiers = matrix.get("tier", [])
+        self.assertIsInstance(tiers, list)
+        workflow_run_text = _workflow_run_text(test_tier_job)
         ci_map = compatibility_map(registry, "ci_tier")
 
+        self.assertEqual(tuple(tiers), tuple(ci_map))
         for tier, mapped_id in ci_map.items():
             with self.subTest(tier=tier, mapped_id=mapped_id):
-                self.assertIn(f"- {tier}", workflow_text)
                 if mapped_id in pack_by_id(registry):
                     expected_steps = pack_ci_steps(registry, mapped_id)
                     expected_entrypoint = pack_ci_entrypoint(registry, mapped_id)
@@ -1240,11 +1249,11 @@ class MakefileStaticGateTests(unittest.TestCase):
                     expected_entrypoint = lane_ci_entrypoint(registry, mapped_id)
                 self.assertTrue(expected_steps)
                 self.assertTrue(expected_entrypoint)
-                self.assertIn(f"make {expected_entrypoint}", workflow_text)
+                self.assertIn(f"make {expected_entrypoint}", workflow_run_text)
                 for step in expected_steps:
-                    self.assertIn(step, workflow_text)
-        self.assertIn("make release-authority-sealed-preflight", workflow_text)
-        self.assertIn("make test-fast", workflow_text)
+                    self.assertIn(step, workflow_run_text)
+        self.assertIn("make release-authority-sealed-preflight", workflow_run_text)
+        self.assertIn("make test-fast", workflow_run_text)
 
     def test_readme_ci_tier_summary_matches_current_workflow_shape(self) -> None:
         registry = _test_lane_registry()
@@ -2220,18 +2229,38 @@ class MakefileStaticGateTests(unittest.TestCase):
             ),
             "full-shard-1",
         )
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_FAST_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_FAST_SUITE)" --collect-nodeids -- $(PYTHON) -m pytest -m "$(PYTEST_FAST_MARK_EXPR)" $(PYTEST_SERIAL_FLAGS)',
-            _target_block(text, "test-execution-summary-fast"),
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "test-execution-summary-fast",
+            (
+                "ops.scripts.test_execution_summary",
+                '--out "$(TEST_EXECUTION_SUMMARY_FAST_CANDIDATE_OUT)"',
+                '--suite "$(TEST_EXECUTION_SUMMARY_FAST_SUITE)"',
+                "--collect-nodeids",
+                '$(PYTHON) -m pytest -m "$(PYTEST_FAST_MARK_EXPR)"',
+                "$(PYTEST_SERIAL_FLAGS)",
+                "ops.scripts.canonical_artifact_promote",
+                '--candidate "$(TEST_EXECUTION_SUMMARY_FAST_CANDIDATE_OUT)"',
+                '--out "$(TEST_EXECUTION_SUMMARY_FAST_OUT)"',
+            ),
         )
-        self.assertIn(
-            "ops.scripts.canonical_artifact_promote",
-            _target_block(text, "test-execution-summary-fast"),
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "test-execution-summary-report-contract",
+            (
+                "ops.scripts.test_execution_summary",
+                '--out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)"',
+                '--suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)"',
+                "--collect-nodeids",
+                '--deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)"',
+                "$(REPORT_CONTRACT_SUMMARY_TESTS)",
+                "$(PYTEST_SERIAL_FLAGS)",
+                "ops.scripts.canonical_artifact_promote",
+            ),
         )
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)" --collect-nodeids --deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)" -- $(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_SERIAL_FLAGS)',
-            block,
-        )
+        block = _target_block(text, "test-execution-summary-report-contract")
         self.assertIn("ops.scripts.canonical_artifact_promote", block)
         refresh_block = _target_block(
             text, "test-execution-summary-report-contract-refresh"
@@ -2247,16 +2276,27 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn(
             "strict test-execution-summary will rerun later in closeout", refresh_block
         )
-        self.assertIn(
-            "test-execution-summary: test-execution-summary-report-contract", text
+        _assert_target_depends_on(
+            self, text, "test-execution-summary", "test-execution-summary-report-contract"
         )
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)/full-suite-shard-1.json" --suite "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_SUITE)" --collect-nodeids --junit-xml-path "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)" --execution-log-out "$(TEST_EXECUTION_SUMMARY_FULL_LOG_OUT)" --failed-nodeids-out "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.failed-nodeids.txt" -- $(PYTHON) -m pytest --junit-xml "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)" $(PYTEST_SERIAL_FLAGS)',
-            _target_block(text, "test-execution-summary-full"),
-        )
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_FULL_SUITE)" --aggregate --aggregate-dir "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"',
-            _target_block(text, "test-execution-summary-full"),
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "test-execution-summary-full",
+            (
+                "ops.scripts.test_execution_summary",
+                '--out "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)/full-suite-shard-1.json"',
+                '--suite "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_SUITE)"',
+                "--collect-nodeids",
+                '--junit-xml-path "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)"',
+                '--execution-log-out "$(TEST_EXECUTION_SUMMARY_FULL_LOG_OUT)"',
+                '--failed-nodeids-out "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.failed-nodeids.txt"',
+                '--junit-xml "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)"',
+                '--out "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)"',
+                '--suite "$(TEST_EXECUTION_SUMMARY_FULL_SUITE)"',
+                "--aggregate",
+                '--aggregate-dir "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"',
+            ),
         )
         full_block = _target_block(text, "test-execution-summary-full")
         self.assertNotIn("$(MAKE) refresh-generated-core", full_block)
@@ -2284,9 +2324,11 @@ class MakefileStaticGateTests(unittest.TestCase):
             full_block,
         )
         full_refresh_block = _target_block(text, "test-execution-summary-full-refresh")
-        self.assertIn(
-            "test-execution-summary-full-refresh: test-execution-summary-full",
-            full_refresh_block,
+        _assert_target_depends_on(
+            self,
+            text,
+            "test-execution-summary-full-refresh",
+            "test-execution-summary-full",
         )
         self.assertIn(
             "collect-only nodeid digest and count recorded in $(TEST_EXECUTION_SUMMARY_FULL_OUT)",
@@ -2294,21 +2336,32 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertNotIn("node count $$actual does not match expected", full_refresh_block)
         self.assertNotIn("TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT", full_refresh_block)
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)" --collect-nodeids --reuse-if-current --reuse-from "$(TEST_EXECUTION_SUMMARY_REUSE_FROM)" --deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)" -- $(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_SERIAL_FLAGS)',
-            _target_block(text, "test-execution-summary-reuse"),
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "test-execution-summary-reuse",
+            (
+                "ops.scripts.test_execution_summary",
+                "--collect-nodeids",
+                "--reuse-if-current",
+                '--reuse-from "$(TEST_EXECUTION_SUMMARY_REUSE_FROM)"',
+                '--deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)"',
+                "$(REPORT_CONTRACT_SUMMARY_TESTS)",
+                "ops.scripts.canonical_artifact_promote",
+            ),
         )
-        self.assertIn(
-            "ops.scripts.canonical_artifact_promote",
-            _target_block(text, "test-execution-summary-reuse"),
-        )
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)" --aggregate --aggregate-dir "$(TEST_EXECUTION_SUMMARY_SHARD_DIR)"',
-            _target_block(text, "test-execution-summary-aggregate"),
-        )
-        self.assertIn(
-            "ops.scripts.canonical_artifact_promote",
-            _target_block(text, "test-execution-summary-aggregate"),
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "test-execution-summary-aggregate",
+            (
+                "ops.scripts.test_execution_summary",
+                '--out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)"',
+                '--suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)"',
+                "--aggregate",
+                '--aggregate-dir "$(TEST_EXECUTION_SUMMARY_SHARD_DIR)"',
+                "ops.scripts.canonical_artifact_promote",
+            ),
         )
 
     def test_registry_preflight_writes_reproducibility_and_cross_environment_matrix(
