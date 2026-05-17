@@ -105,7 +105,8 @@ auto-improve-goal-ladder-run: auto-improve-goal-preflight
 			GOAL_MAX_UNATTENDED_SECONDS="$$profile_seconds" \
 			GOAL_MAX_MINUTES="$$profile_minutes" \
 			GOAL_RUNNER_TIMEOUT_SECONDS="$$runner_timeout"; \
-		$(MAKE) goal-profile-verification GOAL_PROFILE_VERIFICATION_PROFILE="$$profile"; \
+		$(MAKE) goal-profile-verification GOAL_PROFILE_VERIFICATION_PROFILE="$$profile" GOAL_PROFILE_VERIFICATION_APPLY=1; \
+		$(PYTHON) -c 'import json, sys; report = json.load(open("$(GOAL_PROFILE_VERIFICATION_OUT)", encoding="utf-8")); profile = sys.argv[1]; verification = report.get("profile", {}); update = report.get("contract_update", {}); status = verification.get("verification_status", ""); applied = update.get("applied"); ok = report.get("status") == "pass" and verification.get("target_profile") == profile and (applied is True or status in {"already_verified", "already_complete"}); sys.stderr.write("" if ok else "goal ladder profile verification failed: profile=%s status=%s applied=%s\n" % (profile, status, applied)); raise SystemExit(0 if ok else 1)' "$$profile"; \
 	done
 
 auto-improve-goal-ladder-start: auto-improve-goal-preflight

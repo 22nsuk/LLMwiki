@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/goal-profile-verification.schema.json",
   "artifact_kind": "goal_profile_verification",
-  "generated_at": "2026-05-17T20:59:33Z",
+  "generated_at": "2026-05-17T21:44:46Z",
   "producer": "ops.scripts.goal_profile_verification",
   "source_command": "python -m ops.scripts.goal_profile_verification --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "849493b1cf9e845c29a59f1c35b780d8e7d2c1f9085aff9955c0c181ed116dc1",
+  "source_tree_fingerprint": "6e54a1804ad6d16e1fa8041f19ed8098baaa98af8411724feaf2f95b556fb019",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "1a12109fa8d5a0bce0c83641b5570df53df9847ed2446fb127d8f023d45e38b7",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "50d48611f74974ddaa6e15df84429c8b6d3185a0cf609c0c25671f84064f3f3f",
     "auto_improve_session": "missing",
-    "goal_contract": "71a00453ce5f95cdee7b88d2645ad935d403854eac59be85ed6c311f70b73dad",
+    "goal_contract": "f54d83eb47d3c555c7bd8bca8d091ec9b4d17ba193d7f649761cf2aaff174285",
     "goal_run_status": "c2e38a0ecedccc3b308f6134935b8c1c480ec2d7ec4e63a0bef8324b61e52ff5",
     "run_audit_log": "missing",
     "run_resume_metadata": "missing",
@@ -24,14 +24,14 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T20:59:33Z"
+    "checked_at": "2026-05-17T21:44:46Z"
   },
   "vault": ".",
   "goal": {
     "contract_path": "ops/reports/codex-goal-contract.json",
     "contract_id": "auto-improve-goal",
-    "contract_sha256_before": "7c79872d42ed5fda795180a7c1a9490f007b903772e7222d8f2da86bfee0a9f0",
-    "contract_sha256_after": "7c79872d42ed5fda795180a7c1a9490f007b903772e7222d8f2da86bfee0a9f0"
+    "contract_sha256_before": "b065a77fcc9a0b9af229effe8ca7decd8e8fb121b9d511599c4aa66f31e6ae79",
+    "contract_sha256_after": "b065a77fcc9a0b9af229effe8ca7decd8e8fb121b9d511599c4aa66f31e6ae79"
   },
   "profile": {
     "target_profile": "30m_trial",

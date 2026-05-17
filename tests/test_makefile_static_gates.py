@@ -2580,6 +2580,8 @@ class MakefileStaticGateTests(unittest.TestCase):
             ("GOAL_EXECUTOR", "codex_exec"),
             ("GOAL_ARTIFACT_CLASS", "system_mechanism"),
             ("GOAL_FINAL_STATUS", "stopped"),
+            ("GOAL_LADDER_PROFILES", "30m_trial 6h_ramp 2d_candidate 5d_sustained"),
+            ("GOAL_RUN_LOG_DIR", "build/goal-runs"),
         ):
             _assert_assignment_exists(self, text, variable, expected)
         for variable in (
@@ -2620,7 +2622,10 @@ class MakefileStaticGateTests(unittest.TestCase):
             "auto-improve-goal-resume",
             "auto-improve-goal-finalize",
             "auto-improve-goal-run-artifacts",
+            "auto-improve-goal-ladder-run",
+            "auto-improve-goal-ladder-start",
             "goal-profile-verification",
+            "goal-worktree-guard",
         ):
             self.assertIn(target, phony)
         _assert_target_depends_on(self, text, "codex-goal-contract", "auto-improve-goal-contract")
@@ -2632,7 +2637,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         _assert_target_depends_on(self, text, "auto-improve-goal-resume", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "auto-improve-goal-finalize", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "auto-improve-goal-run-artifacts", "auto-improve-goal-status")
+        _assert_target_depends_on(self, text, "auto-improve-goal-ladder-run", "auto-improve-goal-preflight")
+        _assert_target_depends_on(self, text, "auto-improve-goal-ladder-start", "auto-improve-goal-preflight")
         _assert_target_depends_on(self, text, "goal-profile-verification", "auto-improve-goal-contract")
+        _assert_target_depends_on(self, text, "goal-worktree-guard", "auto-improve-goal-preflight")
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -2749,6 +2757,22 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(if $(GOAL_PROFILE_VERIFICATION_APPLY),--apply,)",
                 "ops/schemas/goal-profile-verification.schema.json",
                 "--expected-artifact-kind goal_profile_verification",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-goal-ladder-run",
+            (
+                "30m_trial) profile_seconds=1800; profile_minutes=30; runner_timeout=1860",
+                "6h_ramp) profile_seconds=21600; profile_minutes=360; runner_timeout=21660",
+                "2d_candidate) profile_seconds=172800; profile_minutes=2880; runner_timeout=172860",
+                "5d_sustained) profile_seconds=432000; profile_minutes=7200; runner_timeout=432060",
+                "GOAL_PROFILE_VERIFICATION_APPLY=1",
+                "GOAL_PROFILE_VERIFICATION_OUT",
+                "contract_update",
+                "verification_status",
+                "raise SystemExit(0 if ok else 1)",
             ),
         )
 
