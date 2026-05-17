@@ -7,7 +7,6 @@ import datetime as dt
 from pathlib import Path
 import shlex
 import sys
-import time
 from typing import Any
 
 from ops.scripts.command_runtime import (
@@ -34,7 +33,6 @@ from .goal_runtime_maintenance import (
     build_periodic_evidence,
     checkpoint_command_retry_due,
 )
-from .goal_runtime_profile import PROFILE_REQUIREMENTS
 
 
 DEFAULT_RESULT_OUT = "tmp/auto-improve-goal-session-result.json"
@@ -54,7 +52,6 @@ class CheckpointCommandExecution:
 
 
 CheckpointCommandExecutor = Callable[[str, dt.datetime], CheckpointCommandExecution]
-Sleeper = Callable[[float], None]
 
 
 @dataclass(frozen=True)
@@ -78,8 +75,6 @@ class GoalRuntimeRunnerRequest:
     monotonic_clock: Callable[[], float] | None = None
     checkpoint_backend: ProcessBackend | None = None
     checkpoint_command_executor: CheckpointCommandExecutor | None = None
-    profile_minimum_elapsed_seconds: int | None = None
-    sleeper: Sleeper | None = None
 
 
 def _iso_z(value: dt.datetime) -> str:
@@ -278,18 +273,6 @@ def _run_due_checkpoint_commands(
         )
 
 
-def _profile_minimum_elapsed_seconds(request: GoalRuntimeRunnerRequest) -> int:
-    if request.profile_minimum_elapsed_seconds is not None:
-        return max(0, int(request.profile_minimum_elapsed_seconds))
-    requirements = PROFILE_REQUIREMENTS.get(request.profile, {})
-    value = requirements.get("minimum_elapsed_seconds", 0)
-    return max(0, int(value)) if isinstance(value, int) else 0
-
-
-def _elapsed_since_start(started_at: dt.datetime, observed_at: dt.datetime) -> int:
-    return max(0, int((observed_at - started_at).total_seconds()))
-
-
 def run_goal_runtime_command(request: GoalRuntimeRunnerRequest) -> int:
     if not request.command_argv:
         raise ValueError("goal runtime runner requires a command after --")
@@ -368,36 +351,6 @@ def run_goal_runtime_command(request: GoalRuntimeRunnerRequest) -> int:
     if result.stderr:
         print(result.stderr, file=sys.stderr, end="" if result.stderr.endswith("\n") else "\n")
 
-    minimum_elapsed_seconds = _profile_minimum_elapsed_seconds(request)
-    final_command_heartbeat_count = result.heartbeat_count
-    if (
-        result.returncode == 0
-        and not result.timed_out
-        and minimum_elapsed_seconds > 0
-        and request.timeout_seconds >= minimum_elapsed_seconds
-    ):
-        sleeper = request.sleeper or time.sleep
-        observed_elapsed_seconds = _elapsed_since_start(started_at_dt, last_observed_at)
-        while observed_elapsed_seconds < minimum_elapsed_seconds:
-            next_heartbeat_index = final_command_heartbeat_count + 1
-            next_elapsed_seconds = next_heartbeat_index * request.heartbeat_interval_seconds
-            if next_elapsed_seconds <= observed_elapsed_seconds:
-                next_elapsed_seconds = observed_elapsed_seconds + request.heartbeat_interval_seconds
-            next_elapsed_seconds = min(minimum_elapsed_seconds, next_elapsed_seconds)
-            sleeper(max(0.0, float(next_elapsed_seconds - observed_elapsed_seconds)))
-            final_command_heartbeat_count = next_heartbeat_index
-            heartbeat_callback(
-                CommandHeartbeat(
-                    args=list(request.command_argv),
-                    heartbeat_index=final_command_heartbeat_count,
-                    elapsed_seconds=float(next_elapsed_seconds),
-                    timeout_seconds=request.timeout_seconds,
-                    quiet_seconds=next_elapsed_seconds,
-                    observation_mode="process_heartbeat",
-                )
-            )
-            observed_elapsed_seconds = next_elapsed_seconds
-
     completed_now = runtime_context.utcnow().replace(microsecond=0)
     completed_at_dt = max(completed_now, last_observed_at)
     completed_at = _iso_z(completed_at_dt)
@@ -420,7 +373,7 @@ def run_goal_runtime_command(request: GoalRuntimeRunnerRequest) -> int:
             last_command_heartbeat_at=completed_at,
             quiet_seconds=result.quiet_seconds,
             command_observation_mode=result.observation_mode,
-            command_heartbeat_count=final_command_heartbeat_count,
+            command_heartbeat_count=result.heartbeat_count,
             command_timeout_seconds=result.timeout_seconds,
             last_stdout_at=result.last_stdout_at,
             last_stderr_at=result.last_stderr_at,
