@@ -1,0 +1,60 @@
+{
+  "$schema": "ops/schemas/release-closeout-sealed-rehearsal-check.schema.json",
+  "artifact_kind": "release_closeout_sealed_rehearsal_check",
+  "artifact_status": "current",
+  "authority_preflight_status": "clean",
+  "batch_manifest": {
+    "distribution_package_status": "materialized",
+    "external_source_zip_bound_status": "bound",
+    "load_status": "ok",
+    "path": "tmp/release-closeout-sealed-dry-run/release-closeout-batch-manifest.json",
+    "release_authority_status": "clean_pass",
+    "sealed_release_status": "sealed_clean_pass"
+  },
+  "blocking_reason_ids": [],
+  "clean_required_preflight": true,
+  "currentness": {
+    "checked_at": "2026-05-17T20:09:09Z",
+    "status": "current"
+  },
+  "distribution_binding_status": "pass",
+  "distribution_zip": {
+    "entry_count": 1589,
+    "exists": true,
+    "path": "tmp/release-closeout-sealed-dry-run/LLMwiki-source.zip",
+    "sha256": "ad88b81733433e30e760781c2539d1cbb56af0266f00ecd6fee459228c65feb5"
+  },
+  "encoding": "utf-8",
+  "expected_blocked_preflight": false,
+  "external_report_reference_manifest": {
+    "basis_zip_matches_current_distribution": true,
+    "load_status": "ok",
+    "mode": "strict_review_release",
+    "path": "tmp/release-closeout-sealed-dry-run/external-report-reference-manifest.json",
+    "status": "basis_current_match"
+  },
+  "failure_details": [],
+  "failures": [],
+  "generated_at": "2026-05-17T20:09:09Z",
+  "input_fingerprints": {
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "batch_manifest": "5b69baf0853e184a5e446527adeb0ad4a7730745966c8b44ee25eb061e9a3f0b",
+    "distribution_zip": "c3091a294f08983270e68a07ff6044a38d21d42f1b6e4cbefa0b59cf7e514205",
+    "external_manifest": "41857a57fb17504eec95bb6ba2bab5da6334e3839b522893c34eb2524d1eee8a",
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "014ce08f655cddbd6777d046f238b21ccf8d35240c0d87a5f2462806271ce7aa",
+    "source_paths": "eb0b5032641773cbb40586bce05cff05f649c5e1a238a000dcfd0982b38486c4"
+  },
+  "operator_summary": "sealed release evidence clean",
+  "preflight_mode": "clean_required",
+  "preflight_status": "sealed_clean_pass",
+  "producer": "ops.scripts.release_closeout_sealed_rehearsal_check",
+  "retention_policy": "canonical_report",
+  "schema_version": 1,
+  "source_command": "python -m ops.scripts.release_closeout_sealed_rehearsal_check --vault .",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "39e1453c68ad37f95f24b1912650e920af05441bc7135a1473f59d14d7cfb829",
+  "status": "pass",
+  "summary": "sealed closeout rehearsal passed: batch sealed clean pass and external strict manifest bind the distribution ZIP",
+  "unexpected_failure_ids": []
+}
