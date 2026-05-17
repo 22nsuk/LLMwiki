@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-17T20:07:33Z",
+  "generated_at": "2026-05-17T20:10:33Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
@@ -11,9 +11,9 @@
     "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "4fc3b1931508752484bf34aff49424112a3e7f0540bb7c373764dadb93a96ed9",
-    "learning_claim_activation": "27aa6fb755410a4fb960aebfc691bfd00c912e811c294938b390094d19538d9c",
-    "self_improvement_negative_lessons": "b9393891c554009f7e4edd3abf0d26fbe38c3ea2ec788f9c659c101628b8038a",
-    "session_synopsis": "511a0ef88222f26606f798cb9fa56c0f110d91c34fdf0076ac73bb7262135c77",
+    "learning_claim_activation": "c450a6348a5d168934fb2a948f6d08f0ac33af10b91fef380f546805368ca050",
+    "self_improvement_negative_lessons": "8555aa3093c4aafba3ccc5c9afa92bc6f4cac67e6dc1c768c087f26434dced68",
+    "session_synopsis": "f342ec0db41574b93637c1f1e5b9124401f1b6b9770730dd5d421dca63fe15c4",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
     "auto_improve_sessions": "cbadc7d0bcddab9b729c5133dcf68731cc4f3a452bf1e25868eebafaec9095cf"
   },
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T20:07:33Z"
+    "checked_at": "2026-05-17T20:10:33Z"
   },
   "vault": ".",
   "policy": {
@@ -32,10 +32,10 @@
   },
   "status": "attention",
   "summary": {
-    "backlog_item_count": 5,
+    "backlog_item_count": 3,
     "repeated_blocker_count": 0,
-    "active_blocker_count": 5,
-    "open_item_count": 5,
+    "active_blocker_count": 3,
+    "open_item_count": 3,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
     "next_action": "Close or explicitly defer remediation backlog items before promotion."
   },
@@ -53,20 +53,6 @@
       ],
       "repair_target": "Collect bounded runtime evidence for next_profile_required=30m_trial.",
       "next_action": "Collect bounded runtime evidence for next_profile_required=30m_trial."
-    },
-    {
-      "item_id": "active_blocker_goal_status_promotion_blocked_by_release_authority_preflight_failure",
-      "blocker_id": "goal_status_promotion_blocked_by_release_authority_preflight_failure",
-      "source": "goal_run_status.blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
-      "next_action": "Refresh goal run status and close the active blocker before resuming."
     },
     {
       "item_id": "active_blocker_learning_claim_unlock_review_not_approved",
@@ -95,20 +81,6 @@
       ],
       "repair_target": "Run release-post-seal-attestation after the candidate evidence is sealed and verify the learning claim authority binding.",
       "next_action": "Run release-post-seal-attestation after the candidate evidence is sealed and verify the learning claim authority binding."
-    },
-    {
-      "item_id": "active_blocker_promotion_blocked_by_release_authority_preflight_failure",
-      "blocker_id": "promotion_blocked_by_release_authority_preflight_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Refresh sealed authority preflight evidence, then rerun make auto-improve-readiness.",
-      "next_action": "Refresh sealed authority preflight evidence, then rerun make auto-improve-readiness."
     }
   ],
   "inputs": {

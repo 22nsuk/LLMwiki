@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-17T20:07:36Z",
+  "generated_at": "2026-05-17T20:10:37Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -14,7 +14,7 @@
     "run_promotion_reports": "47308e6ead45e6366547bffe91c993d0d224544c2a4fb589d598b124c76a0a5f",
     "external_report_inventory": "af4123132bc65c39b81a2bd406e4867e40c55695efe12aff35d9311f042d6506",
     "operator_report_inventory": "0479590a186415fa72ba934ab4431828124b8ca576b06322a6eae193e9627721",
-    "ops_report_inventory": "8582b9bd4a2c825c100165d4b3f735afc7a3f58e9c38d00b6e147cd56acd3793",
+    "ops_report_inventory": "779ebd78e34aa60638daa0c27b33a99df58dd73b1cb38218a8831faf28588343",
     "task_improvement_observation_inventory": "e5afbe277de7c757caecfe465586864c6e6839f5792c4af9a9ee9004bdef7702"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T20:07:36Z"
+    "checked_at": "2026-05-17T20:10:37Z"
   },
   "vault": ".",
   "policy": {
@@ -58,7 +58,7 @@
     }
   ],
   "now": [
-    "89 canonical artifact(s) are currently indexed.",
+    "90 canonical artifact(s) are currently indexed.",
     "1 archive candidate(s) remain in active namespaces."
   ],
   "next": [
@@ -68,14 +68,14 @@
     "All structured action themes from this external report are implemented in canonical evidence."
   ],
   "summary": {
-    "ops_reports_root_file_count": 70,
+    "ops_reports_root_file_count": 71,
     "task_improvement_observation_count": 62,
     "operator_reports_root_file_count": 2,
     "external_reports_root_file_count": 3,
     "external_reports_archive_file_count": 66,
     "run_directory_count": 15,
     "run_archive_directory_count": 4,
-    "canonical_report_count": 89,
+    "canonical_report_count": 90,
     "archive_candidate_count": 1
   },
   "canonical_reports": [
@@ -545,6 +545,17 @@
       "surface": "ops_reports",
       "family": "release_closeout_fixed_point",
       "path": "ops/reports/release-closeout-fixed-point.json",
+      "role": "current_stable_report",
+      "date": "",
+      "reason": "Top-level ops/reports files with stable names are current operational reports.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "operator_preflight"
+    },
+    {
+      "surface": "ops_reports",
+      "family": "release_closeout_sealed_rehearsal_check",
+      "path": "ops/reports/release-closeout-sealed-rehearsal-check.json",
       "role": "current_stable_report",
       "date": "",
       "reason": "Top-level ops/reports files with stable names are current operational reports.",

@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-17T20:07:29Z",
+  "generated_at": "2026-05-17T20:10:30Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -11,12 +11,12 @@
     "schema": "11c67d4080d38f63d41641a6a5911b0ec8a50b7aa7a4fc791039a94945178b11",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "4ec5600edb2a3287b26597a42e268746b9883b4832aeb15091e2d526a965e1b7",
-    "artifact_freshness_report": "58128d19eaa505f8cc02e7d1559044d7d93e4c68c75787419485d5c88d2584a7",
-    "goal_worktree_guard_report": "b49d14c80ed8024a90d293c7846e22f4e2435586af81920089ed937349555457",
+    "artifact_freshness_report": "559028f68da003a42b32515fa0a31f326f08302cae3bcafea2da2fe60c60c970",
+    "goal_worktree_guard_report": "87908169d16eeb289dfb3770fbd23ca35191b9edde07f71a8646aba2a387f16f",
     "mechanism_review_report": "485f21b4ec5ee0348268d79dc6864d78fe160c6283ac53571b5db303a8c732b9",
     "mutation_proposal_report": "eaaa1eaa518afd5bdcc88d54e003e885143b2cb6004a3e6de9c7b94e2d1c6784",
     "outcome_metrics_report": "119ad29bd7c07c7f82eecffda136098ab5e7251599d33a2f3a3334a972fa9276",
-    "release_authority_preflight_report": "missing",
+    "release_authority_preflight_report": "8771a6022db09e525cf4c8a22c99725d1e3539f340aca5db6445f8d675705b8e",
     "release_closeout_batch_manifest_report": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
     "release_closeout_finality_attestation_report": "7dd3b5e276deee3a02a3e664f5e2c8e28adf36ed7e19eacedd884942521c03ea",
     "release_closeout_post_check_finalizer_report": "missing",
@@ -24,7 +24,7 @@
     "release_evidence_cohort_report": "e2d2076c043dbd15cbe06d8c57d6f9b6bc1c854e62f3a6728016f6582f2d184e",
     "selected_contract_summary_report": "e973d73f3458bd1bcf5201f458de8e96746bb61e24f1871e0862d6fed16a9194",
     "source_package_clean_extract_report": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
-    "release_authority_preflight_report_candidates": "520f91ef6ae26d42fff25f02b8a513451588bae917ecbbb4ae88f8d31371a743"
+    "release_authority_preflight_report_candidates": "e1eb0bbb5af243aed3ae00753b501b0fc2476ca0bed0d1804f95d0d35bb4e18c"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -32,7 +32,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T20:07:29Z"
+    "checked_at": "2026-05-17T20:10:30Z"
   },
   "vault": ".",
   "policy": {
@@ -40,7 +40,7 @@
     "version": 4
   },
   "can_execute_trial": true,
-  "can_promote_result": false,
+  "can_promote_result": true,
   "execution_readiness": {
     "status": "pass",
     "gate_effect": "active",
@@ -80,28 +80,7 @@
     "recommended_next_step": "Learning readiness is clean enough for bounded live auto-improve; keep the run narrow and continue monitoring the shadow signals."
   },
   "learning_blockers": [],
-  "promotion_blockers": [
-    {
-      "id": "promotion_blocked_by_release_authority_preflight_failure",
-      "scope": "release_gate",
-      "status": "open",
-      "severity": "blocker",
-      "release_blocker": true,
-      "accepted_risk": false,
-      "gate_effect": "active",
-      "source_status": "not_run",
-      "reason": "release authority sealed preflight is not clean: release authority sealed preflight report is missing or unusable",
-      "signal_ids": [
-        "release_authority_preflight_not_clean"
-      ],
-      "required_evidence": [
-        "Run make release-authority-sealed-preflight for operator handoff.",
-        "Run make release-evidence-closeout-sealed-dry-run-check or the sealed release lane before promoting.",
-        "can_promote_result must stay false until sealed authority preflight is clean."
-      ],
-      "recommended_next_step": "Refresh sealed authority preflight evidence, then rerun make auto-improve-readiness."
-    }
-  ],
+  "promotion_blockers": [],
   "release_blockers": [],
   "inputs": {
     "refresh_generated_target": "make refresh-generated-core",
@@ -251,19 +230,19 @@
     },
     "release_authority_preflight_summary": {
       "path": "ops/reports/release-closeout-sealed-rehearsal-check.json",
-      "artifact_kind": "",
-      "status": "not_run",
-      "preflight_status": "not_run",
+      "artifact_kind": "release_closeout_sealed_rehearsal_check",
+      "status": "pass",
+      "preflight_status": "sealed_clean_pass",
       "preflight_mode": "clean_required",
-      "distribution_binding_status": "unknown",
-      "authority_preflight_status": "unknown",
+      "distribution_binding_status": "pass",
+      "authority_preflight_status": "clean",
       "expected_blocked_preflight": false,
       "clean_required_preflight": true,
       "failure_ids": [],
       "failure_details": [],
       "blocker_reason_ids": [],
       "linked_promotion_blocker_ids": [],
-      "summary": "release authority sealed preflight report is missing or unusable"
+      "summary": "sealed closeout rehearsal passed: batch sealed clean pass and external strict manifest bind the distribution ZIP"
     },
     "goal_worktree_guard_summary": {
       "path": "tmp/goal-worktree-guard.json",
@@ -344,5 +323,5 @@
     }
   ],
   "remediations": [],
-  "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Refresh sealed authority preflight evidence, then rerun make auto-improve-readiness."
+  "next_action": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured."
 }

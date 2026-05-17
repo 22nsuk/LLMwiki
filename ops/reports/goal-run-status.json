@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/goal-run-status.schema.json",
   "artifact_kind": "goal_run_status",
-  "generated_at": "2026-05-17T20:07:30Z",
+  "generated_at": "2026-05-17T20:10:31Z",
   "producer": "ops.scripts.goal_run_status",
   "source_command": "python -m ops.scripts.goal_run_status --vault .",
   "source_revision": "unknown",
@@ -11,7 +11,7 @@
     "schema": "a0076b65caa987558a05bd5653b0a7df5eb16b0e26cd3185bc1dd64c06030a41",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "c7d0a54810881c6b09557623e89fadce183534a8f146eee81454a532edde6567",
-    "goal_contract": "3d4d446573a00ad807c1fc51180f4e59db4cd40073df543a7257e0941677cd5e",
+    "goal_contract": "2be9e96ed819096a057624527bbd7d2630457e6851d1d93c2db96fd23ad0cf56",
     "session_synopsis_link": "7cbf10072f9b38b0b7b209442fe7e61976148ae82e700c307dc8c735ff054848"
   },
   "schema_version": 1,
@@ -20,11 +20,11 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T20:07:30Z"
+    "checked_at": "2026-05-17T20:10:31Z"
   },
   "goal": {
     "contract_path": "ops/reports/codex-goal-contract.json",
-    "contract_sha256": "ec400172d9e5654a0974864ff78627ee2b48ba0336b4b1c64b4052b7ab8ba2ef",
+    "contract_sha256": "9b16ed8ca4c74290c204799f4fbbe721609429a1b5b51e75ecb1b67caa2e887d",
     "contract_status": "loaded",
     "contract_id": "auto-improve-goal",
     "objective": "Build a bounded auto-improve goal runtime only after profile-ladder evidence, release authority, and promotion guards are current.",
@@ -38,15 +38,15 @@
     "run_id": "auto-improve-trial",
     "status": "blocked",
     "profile": "30m_trial",
-    "started_at": "2026-05-17T20:07:30Z",
-    "updated_at": "2026-05-17T20:07:30Z",
+    "started_at": "2026-05-17T20:10:31Z",
+    "updated_at": "2026-05-17T20:10:31Z",
     "completed_at": ""
   },
   "observability": {
     "heartbeat_interval_seconds": 300,
     "checkpoint_interval_seconds": 1800,
-    "last_heartbeat_at": "2026-05-17T20:07:30Z",
-    "last_checkpoint_at": "2026-05-17T20:07:30Z",
+    "last_heartbeat_at": "2026-05-17T20:10:31Z",
+    "last_checkpoint_at": "2026-05-17T20:10:31Z",
     "last_command_heartbeat_at": "",
     "quiet_seconds": 0,
     "command_observation_mode": "",
@@ -69,8 +69,8 @@
     "command_heartbeat_status": "not_recorded",
     "backoff_status": "inactive",
     "resume_status": "not_requested",
-    "promotion_status": "blocked",
-    "can_promote_result": false
+    "promotion_status": "allowed",
+    "can_promote_result": true
   },
   "profile_ladder": {
     "status": "incomplete",
@@ -187,7 +187,11 @@
           },
           {
             "path": "ops/reports/release-closeout-sealed-rehearsal-check.json",
-            "status": "missing"
+            "status": "present",
+            "report_status": "pass",
+            "preflight_status": "sealed_clean_pass",
+            "distribution_binding_status": "pass",
+            "authority_preflight_status": "clean"
           }
         ]
       }
@@ -204,7 +208,7 @@
       {
         "checkpoint_id": "checkpoint_6h",
         "due_after_seconds": 21600,
-        "due_at": "2026-05-18T02:07:30Z",
+        "due_at": "2026-05-18T02:10:31Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -223,13 +227,13 @@
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "status": "present",
-            "generated_at": "2026-05-17T20:07:29Z",
+            "generated_at": "2026-05-17T20:10:30Z",
             "freshness_status": "not_due"
           },
           {
             "path": "ops/reports/session-synopsis.json",
             "status": "present",
-            "generated_at": "2026-05-17T19:54:32Z",
+            "generated_at": "2026-05-17T20:07:32Z",
             "freshness_status": "not_due"
           }
         ]
@@ -237,7 +241,7 @@
       {
         "checkpoint_id": "checkpoint_12h",
         "due_after_seconds": 43200,
-        "due_at": "2026-05-18T08:07:30Z",
+        "due_at": "2026-05-18T08:10:31Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -269,7 +273,7 @@
       {
         "checkpoint_id": "checkpoint_24h",
         "due_after_seconds": 86400,
-        "due_at": "2026-05-18T20:07:30Z",
+        "due_at": "2026-05-18T20:10:31Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -292,9 +296,9 @@
           },
           {
             "path": "ops/reports/release-closeout-sealed-rehearsal-check.json",
-            "status": "missing",
-            "generated_at": "",
-            "freshness_status": "missing"
+            "status": "present",
+            "generated_at": "2026-05-17T20:09:09Z",
+            "freshness_status": "not_due"
           }
         ]
       }
@@ -304,7 +308,7 @@
     "link_status": "linked",
     "report_path": "ops/reports/session-synopsis.json",
     "status": "attention",
-    "generated_at": "2026-05-17T19:54:32Z",
+    "generated_at": "2026-05-17T20:07:32Z",
     "recent_blocker_count": 5,
     "evidence_gap_count": 3,
     "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Refresh sealed authority preflight evidence, then rerun make auto-improve-readiness."
@@ -317,17 +321,14 @@
     "checkpoint_command_log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl"
   },
   "promotion_guard": {
-    "can_promote_result": false,
-    "promotion_blockers": [
-      "promotion_blocked_by_release_authority_preflight_failure"
-    ],
-    "sealed_authority_clean": false,
+    "can_promote_result": true,
+    "promotion_blockers": [],
+    "sealed_authority_clean": true,
     "profile_verified": "unverified",
     "sustained_runtime_claimed": false,
     "no_sustained_claim_before_profile_verified": true
   },
   "blockers": [
-    "promotion_blocked_by_release_authority_preflight_failure",
     "profile ladder incomplete"
   ],
   "status": "attention"

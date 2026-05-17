@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/learning-claim-activation-report.schema.json",
   "artifact_kind": "learning_claim_activation_report",
-  "generated_at": "2026-05-17T20:07:31Z",
+  "generated_at": "2026-05-17T20:10:32Z",
   "producer": "ops.scripts.learning_claim_activation_report",
   "source_command": "python -m ops.scripts.learning_claim_activation_report --vault .",
   "source_revision": "unknown",
@@ -11,7 +11,7 @@
     "schema": "d366a06d6c9fbade9f99a3a702f7e88409d8e793328122ab6b196c4d7d670305",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b07eab6c0997284ce26fad16b3bd7bbf373e916a726d3ee1372dcd463b8d2c8e",
-    "learning_claim_activation_inputs": "651a1165c69a333bc1e1cdfe502d137f4a53329c590ac5efb99a97c5202c7185"
+    "learning_claim_activation_inputs": "e5e646156a021e4347556f8669fc2098e39982e55adbf4b5fbcd456ae5709cbe"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,17 +19,17 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T20:07:31Z"
+    "checked_at": "2026-05-17T20:10:32Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "status": "pass",
+  "status": "attention",
   "summary": {
     "activation_status": "blocked",
-    "claim_level": "none",
+    "claim_level": "learning_likely",
     "claim_wording_allowed": false,
     "blocked_predicate_count": 2,
     "anti_slop_preview_status": "attention",
@@ -40,9 +40,9 @@
     "status": "blocked",
     "candidate": true,
     "current": {
-      "claim_level": "none",
+      "claim_level": "learning_likely",
       "learning_likely": true,
-      "claims_learning_improved": false,
+      "claims_learning_improved": true,
       "learning_claim_allowed": false,
       "bounded_learning_claim_allowed": false,
       "confirmed_learning_improvement_allowed": false,
@@ -58,7 +58,7 @@
     "evidence_digest": {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "3be946e8d3333358573a23b6dd900caee108d005367afa573f95192fea92bf33",
+      "sha256": "1ef5c1990065962b307eb4cd8e7ff528cf5adc25efc1043de44f331ecfb4f15a",
       "status": "present"
     },
     "post_seal_linkage": {
@@ -80,7 +80,7 @@
       "evidence_digest": {
         "path": "ops/reports/learning-delta-scoreboard.json",
         "exists": true,
-        "sha256": "3be946e8d3333358573a23b6dd900caee108d005367afa573f95192fea92bf33",
+        "sha256": "1ef5c1990065962b307eb4cd8e7ff528cf5adc25efc1043de44f331ecfb4f15a",
         "status": "present"
       },
       "post_seal_linkage": {
@@ -115,13 +115,13 @@
     {
       "path": "ops/reports/auto-improve-readiness.json",
       "exists": true,
-      "sha256": "d27e814630e3e64174e9b479251bdd43da36fafd33cb6f54810e177fc854028f",
+      "sha256": "5d65afd9592c0ce9c778dbc4e82261fc0b3bb167a47e75f001a7164ae4d51545",
       "status": "present"
     },
     {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "3be946e8d3333358573a23b6dd900caee108d005367afa573f95192fea92bf33",
+      "sha256": "1ef5c1990065962b307eb4cd8e7ff528cf5adc25efc1043de44f331ecfb4f15a",
       "status": "present"
     },
     {
@@ -169,13 +169,13 @@
     "mode": "preview",
     "gate_effect": "none",
     "status": "attention",
-    "scoreboard_anti_slop_status": "clean",
-    "scoreboard_anti_slop_score": 100,
+    "scoreboard_anti_slop_status": "attention",
+    "scoreboard_anti_slop_score": 80,
     "axes": [
       {
         "axis": "claim_hygiene",
-        "status": "pass",
-        "current": "claim_level=none; claim_wording_allowed=False",
+        "status": "warn",
+        "current": "claim_level=learning_likely; claim_wording_allowed=False",
         "required": "No learning-improvement wording unless the claim model allows it.",
         "repair_target": "Keep claim_level=none or complete the unlock and confirmed-claim predicates.",
         "gate_effect": "none"
@@ -241,7 +241,7 @@
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "exists": true,
-            "sha256": "d27e814630e3e64174e9b479251bdd43da36fafd33cb6f54810e177fc854028f",
+            "sha256": "5d65afd9592c0ce9c778dbc4e82261fc0b3bb167a47e75f001a7164ae4d51545",
             "status": "present"
           }
         ]
@@ -261,7 +261,7 @@
           {
             "path": "ops/reports/learning-delta-scoreboard.json",
             "exists": true,
-            "sha256": "3be946e8d3333358573a23b6dd900caee108d005367afa573f95192fea92bf33",
+            "sha256": "1ef5c1990065962b307eb4cd8e7ff528cf5adc25efc1043de44f331ecfb4f15a",
             "status": "present"
           }
         ]
