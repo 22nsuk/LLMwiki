@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/goal-profile-verification.schema.json",
   "artifact_kind": "goal_profile_verification",
-  "generated_at": "2026-05-17T19:54:34Z",
+  "generated_at": "2026-05-17T20:07:33Z",
   "producer": "ops.scripts.goal_profile_verification",
   "source_command": "python -m ops.scripts.goal_profile_verification --vault .",
   "source_revision": "unknown",
@@ -11,11 +11,11 @@
     "schema": "5f5f9e5b327a1c48ddfbd6138a82867920fc4777bd2947af348041f8e0a612ab",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "fbfa160013033a090112ec348292ecdf26c66aef329da8ce8cbdfc92c59183fb",
-    "goal_contract": "e8fc7551c391b93491ab08f5421ca649f8037fad4feab524dd71fa1386c6ff34",
-    "goal_run_status": "ee1ec46950a709101bf1cd1285dfcae89b4b14150ae3174587016ef76e17e39c",
-    "run_audit_log": "f1afbe01b3c83d2f222ca3e6628955b0402b45d920e4d2e34cab231c07f73a2c",
-    "run_resume_metadata": "5936142a003db67b7b3af806f88436d9d5c53467214f56ed68c7c15012850f34",
-    "run_status_markdown": "54fb7f5838048e3cd2243b7841970803c1b9f18180071b94f4010222970d8790"
+    "goal_contract": "3d4d446573a00ad807c1fc51180f4e59db4cd40073df543a7257e0941677cd5e",
+    "goal_run_status": "e315d4bc1d45a0b17478ceffb430eccaabab08b24bc602d0828830d833418107",
+    "run_audit_log": "6d20754c46a71041448fd77b0b1b5442971bb7953feb5953bdd1860d1fbc075c",
+    "run_resume_metadata": "20602097f3d7524f42ae8a37e614fe03077187cc4a6f70a12657ad0d76649c47",
+    "run_status_markdown": "05cda5e5077332b534f2d897f3fa1dc9af947412861da8608c41ec763b0a15e3"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,14 +23,14 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T19:54:34Z"
+    "checked_at": "2026-05-17T20:07:33Z"
   },
   "vault": ".",
   "goal": {
     "contract_path": "ops/reports/codex-goal-contract.json",
     "contract_id": "auto-improve-goal",
-    "contract_sha256_before": "0e3b2c331c927f78c74171c22a5eb13470702bfa7f82ae58a1a9d539d8d6573b",
-    "contract_sha256_after": "0e3b2c331c927f78c74171c22a5eb13470702bfa7f82ae58a1a9d539d8d6573b"
+    "contract_sha256_before": "ec400172d9e5654a0974864ff78627ee2b48ba0336b4b1c64b4052b7ab8ba2ef",
+    "contract_sha256_after": "ec400172d9e5654a0974864ff78627ee2b48ba0336b4b1c64b4052b7ab8ba2ef"
   },
   "profile": {
     "target_profile": "30m_trial",
@@ -45,7 +45,7 @@
     "run_id": "auto-improve-trial",
     "run_status": "blocked",
     "run_profile": "30m_trial",
-    "started_at": "2026-05-17T19:54:30Z",
+    "started_at": "2026-05-17T20:07:30Z",
     "completed_at": ""
   },
   "run_artifacts": {
@@ -87,7 +87,7 @@
         "status": "pass"
       }
     ],
-    "audit_event_count": 2,
+    "audit_event_count": 3,
     "runner_command_audit_current": false
   },
   "command_observability": {

@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/self-improvement-negative-lessons.schema.json",
   "artifact_kind": "self_improvement_negative_lessons",
-  "generated_at": "2026-05-17T19:54:33Z",
+  "generated_at": "2026-05-17T20:07:32Z",
   "producer": "ops.scripts.self_improvement_negative_lessons",
   "source_command": "python -m ops.scripts.self_improvement_negative_lessons --vault .",
   "source_revision": "unknown",
@@ -11,8 +11,8 @@
     "schema": "47b79b46ef1a89257481eb0fa0b41f96e2765bb833dd8fe9b2f718d71cf470e2",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "18735e7f986786b975aa5d1c70b6f220d7ced3e5f5ed1c4ddf493e680591dbfa",
-    "learning_claim_activation": "aa373dd7d2e968ba28a1e0592018d30e0fffec2af31d82b67ad721663cad6012",
-    "session_synopsis": "831e091f232f60232d3e60ec2c74a3d210cbc1877d8ea6e988590cd1a554bfc8"
+    "learning_claim_activation": "27aa6fb755410a4fb960aebfc691bfd00c912e811c294938b390094d19538d9c",
+    "session_synopsis": "511a0ef88222f26606f798cb9fa56c0f110d91c34fdf0076ac73bb7262135c77"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T19:54:33Z"
+    "checked_at": "2026-05-17T20:07:32Z"
   },
   "vault": ".",
   "policy": {
@@ -51,7 +51,7 @@
         {
           "path": "ops/reports/auto-improve-readiness.json",
           "exists": true,
-          "sha256": "acf578c92aca419feab5faf433b8f1b072f036c90d2f53a6a9cff1ecfd247c45",
+          "sha256": "d27e814630e3e64174e9b479251bdd43da36fafd33cb6f54810e177fc854028f",
           "status": "present"
         }
       ],
@@ -74,7 +74,7 @@
         {
           "path": "ops/reports/learning-delta-scoreboard.json",
           "exists": true,
-          "sha256": "0c0bda4d9a6d3216b37a9792b713459aeae5af72baf2b9634bb9661c0cf9df60",
+          "sha256": "3be946e8d3333358573a23b6dd900caee108d005367afa573f95192fea92bf33",
           "status": "present"
         }
       ],
