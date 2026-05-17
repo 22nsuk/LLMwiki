@@ -1,21 +1,22 @@
 {
   "$schema": "ops/schemas/goal-profile-verification.schema.json",
   "artifact_kind": "goal_profile_verification",
-  "generated_at": "2026-05-17T20:10:34Z",
+  "generated_at": "2026-05-17T20:59:33Z",
   "producer": "ops.scripts.goal_profile_verification",
   "source_command": "python -m ops.scripts.goal_profile_verification --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "df48a9cdacaaeafe5c8a6b983d704723a44145a44790e030566695cd8f53ad8a",
+  "source_tree_fingerprint": "849493b1cf9e845c29a59f1c35b780d8e7d2c1f9085aff9955c0c181ed116dc1",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
-    "schema": "5f5f9e5b327a1c48ddfbd6138a82867920fc4777bd2947af348041f8e0a612ab",
+    "schema": "1a12109fa8d5a0bce0c83641b5570df53df9847ed2446fb127d8f023d45e38b7",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "fbfa160013033a090112ec348292ecdf26c66aef329da8ce8cbdfc92c59183fb",
-    "goal_contract": "2be9e96ed819096a057624527bbd7d2630457e6851d1d93c2db96fd23ad0cf56",
+    "source_paths": "50d48611f74974ddaa6e15df84429c8b6d3185a0cf609c0c25671f84064f3f3f",
+    "auto_improve_session": "missing",
+    "goal_contract": "71a00453ce5f95cdee7b88d2645ad935d403854eac59be85ed6c311f70b73dad",
     "goal_run_status": "c2e38a0ecedccc3b308f6134935b8c1c480ec2d7ec4e63a0bef8324b61e52ff5",
-    "run_audit_log": "ba8719adaa0c51df60a7f0ee731038747d75643df9c87243ce7ce852fb4412b1",
-    "run_resume_metadata": "a5f9e874e643e83f04449f3ac5ee51573ece46b50f65b96e315127dcf1f3f911",
-    "run_status_markdown": "f20f41fab67cbb823e82503c71153bfd3d73decb5c462f85ac42e0fb7caeee2e"
+    "run_audit_log": "missing",
+    "run_resume_metadata": "missing",
+    "run_status_markdown": "missing"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,14 +24,14 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T20:10:34Z"
+    "checked_at": "2026-05-17T20:59:33Z"
   },
   "vault": ".",
   "goal": {
     "contract_path": "ops/reports/codex-goal-contract.json",
     "contract_id": "auto-improve-goal",
-    "contract_sha256_before": "9b16ed8ca4c74290c204799f4fbbe721609429a1b5b51e75ecb1b67caa2e887d",
-    "contract_sha256_after": "9b16ed8ca4c74290c204799f4fbbe721609429a1b5b51e75ecb1b67caa2e887d"
+    "contract_sha256_before": "7c79872d42ed5fda795180a7c1a9490f007b903772e7222d8f2da86bfee0a9f0",
+    "contract_sha256_after": "7c79872d42ed5fda795180a7c1a9490f007b903772e7222d8f2da86bfee0a9f0"
   },
   "profile": {
     "target_profile": "30m_trial",
@@ -49,46 +50,55 @@
     "completed_at": ""
   },
   "run_artifacts": {
-    "status": "clean",
+    "status": "incomplete",
     "checks": [
       {
         "artifact": "status_markdown_path",
         "path": "runs/goal-auto-improve-trial/status.md",
-        "status": "present"
+        "status": "missing"
       },
       {
         "artifact": "resume_metadata_path",
         "path": "runs/goal-auto-improve-trial/resume-metadata.json",
-        "status": "present"
+        "status": "missing"
       },
       {
         "artifact": "audit_log_path",
         "path": "runs/goal-auto-improve-trial/audit-log.jsonl",
-        "status": "present"
+        "status": "missing"
       },
       {
         "artifact": "status_markdown_current",
         "path": "runs/goal-auto-improve-trial/status.md",
-        "status": "pass"
+        "status": "fail"
       },
       {
         "artifact": "resume_metadata_current",
         "path": "runs/goal-auto-improve-trial/resume-metadata.json",
-        "status": "pass"
+        "status": "fail"
       },
       {
         "artifact": "audit_log_current",
         "path": "runs/goal-auto-improve-trial/audit-log.jsonl",
-        "status": "pass"
+        "status": "fail"
       },
       {
         "artifact": "audit_log_command_observability_current",
         "path": "runs/goal-auto-improve-trial/audit-log.jsonl",
-        "status": "pass"
+        "status": "fail"
       }
     ],
-    "audit_event_count": 4,
+    "audit_event_count": 0,
     "runner_command_audit_current": false
+  },
+  "session_evidence": {
+    "status": "missing",
+    "path": "ops/reports/auto-improve-sessions/auto-improve-trial.json",
+    "session_status": "",
+    "stop_reason": "",
+    "iteration_count": 0,
+    "successful_iteration_count": 0,
+    "has_success_then_followup": false
   },
   "command_observability": {
     "mode": "",
@@ -132,6 +142,8 @@
   "blockers": [
     "goal run is not completed",
     "profile minimum elapsed time not met",
+    "goal run artifacts are not clean",
+    "auto-improve session evidence missing",
     "goal run command heartbeat is not current",
     "goal run command observation mode is not process_heartbeat",
     "goal run command audit was not written by goal runtime runner",

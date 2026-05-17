@@ -72,7 +72,8 @@ Do not claim 5-day sustained operation until the full profile ladder is verified
 
 Resume discipline:
 - Keep the same contract digest across resume.
-- Stop with budget_limited when wall-clock, proposal, or failure budget is reached.
+- Stop with time_budget_exhausted only when the wall-clock budget is reached.
+- Stop with proposal_budget_exhausted or failure_budget_exhausted when those separate caps are reached.
 - Write heartbeat, checkpoint, and status evidence before widening the run profile.
 """,
         )

@@ -477,7 +477,7 @@ def _assert_successful_runtime_events_and_learning(case: unittest.TestCase, arti
     case.assertEqual(run_events[0]["component"], "auto_improve_session")
     case.assertEqual(run_events[0]["policy_version"], 4)
     case.assertEqual(session_events[-1]["phase"], "complete")
-    case.assertEqual(session_events[-1]["decision"], "budget_limited")
+    case.assertEqual(session_events[-1]["decision"], "proposal_budget_exhausted")
     case.assertEqual(
         session["learning_mode"],
         {
@@ -860,7 +860,7 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                     executor_name="codex_exec",
                 )
 
-    def test_budget_limited_resume_keeps_same_goal_contract_digest(self) -> None:
+    def test_proposal_budget_exhausted_resume_keeps_same_goal_contract_digest(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -893,11 +893,11 @@ class AutoImproveRuntimeTests(unittest.TestCase):
 
             first_session = json.loads((vault / first["session_report"]).read_text(encoding="utf-8"))
             contract_digest = first_session["goal_contract"]["contract_sha256"]
-            self.assertEqual(first["stop_reason"], "budget_limited")
+            self.assertEqual(first["stop_reason"], "proposal_budget_exhausted")
 
             with mock.patch(
                 "ops.scripts.auto_improve_runtime._refresh_reports",
-                side_effect=AssertionError("budget-limited resume should not refresh proposals"),
+                side_effect=AssertionError("proposal-budget resume should not refresh proposals"),
             ):
                 resumed = run_auto_improve_session(
                     vault,
@@ -912,7 +912,7 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 )
 
             resumed_session = json.loads((vault / resumed["session_report"]).read_text(encoding="utf-8"))
-            self.assertEqual(resumed["stop_reason"], "budget_limited")
+            self.assertEqual(resumed["stop_reason"], "proposal_budget_exhausted")
             self.assertEqual(resumed["iterations"], 1)
             self.assertEqual(resumed_session["goal_contract"]["contract_sha256"], contract_digest)
 

@@ -147,6 +147,44 @@ class GoalProfileVerificationTests(unittest.TestCase):
             status="completed",
             completed_at=completed_at,
         )
+        self._write_session_evidence("20260517-trial")
+
+    def _write_session_evidence(
+        self,
+        run_id: str,
+        *,
+        stop_reason: str = "time_budget_exhausted",
+        iterations: list[dict[str, object]] | None = None,
+    ) -> None:
+        session_path = self.vault / "ops" / "reports" / "auto-improve-sessions" / f"{run_id}.json"
+        session_path.parent.mkdir(parents=True, exist_ok=True)
+        session_path.write_text(
+            json.dumps(
+                {
+                    "status": "complete",
+                    "stop_reason": stop_reason,
+                    "iterations": iterations
+                    or [
+                        {
+                            "index": 1,
+                            "status": "promoted",
+                            "outcome": "promoted",
+                            "decision": "PROMOTE",
+                            "run_id": f"{run_id}-run-01",
+                        },
+                        {
+                            "index": 2,
+                            "status": "promoted",
+                            "outcome": "promoted",
+                            "decision": "PROMOTE",
+                            "run_id": f"{run_id}-run-02",
+                        },
+                    ],
+                },
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
 
     def test_completed_profile_with_minimum_elapsed_time_and_clean_artifacts_is_eligible(self) -> None:
         self._seed_goal_contract()
@@ -164,6 +202,9 @@ class GoalProfileVerificationTests(unittest.TestCase):
         self.assertEqual(report["profile"]["verification_status"], "eligible")
         self.assertEqual(report["profile"]["observed_elapsed_seconds"], 1800)
         self.assertEqual(report["run_artifacts"]["status"], "clean")
+        self.assertEqual(report["session_evidence"]["status"], "clean")
+        self.assertEqual(report["session_evidence"]["stop_reason"], "time_budget_exhausted")
+        self.assertTrue(report["session_evidence"]["has_success_then_followup"])
         self.assertTrue(report["run_artifacts"]["runner_command_audit_current"])
         self.assertEqual(report["command_observability"]["status"], "clean")
         self.assertEqual(report["command_observability"]["mode"], "process_heartbeat")
@@ -171,6 +212,7 @@ class GoalProfileVerificationTests(unittest.TestCase):
         self.assertNotEqual(report["input_fingerprints"]["run_status_markdown"], "missing")
         self.assertNotEqual(report["input_fingerprints"]["run_resume_metadata"], "missing")
         self.assertNotEqual(report["input_fingerprints"]["run_audit_log"], "missing")
+        self.assertNotEqual(report["input_fingerprints"]["auto_improve_session"], "missing")
         self.assertGreaterEqual(
             report["command_observability"]["heartbeat_count"],
             report["command_observability"]["expected_min_heartbeat_count"],
@@ -178,6 +220,42 @@ class GoalProfileVerificationTests(unittest.TestCase):
         self.assertEqual(report["contract_update"]["verified_profiles_after"], ["30m_trial"])
         self.assertFalse(report["contract_update"]["applied"])
         self.assertEqual(get_goal(vault=self.vault)["runtime_profile"]["verified_profiles"], [])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_completed_profile_requires_actual_repeated_improvement_session(self) -> None:
+        self._seed_goal_contract()
+        self._seed_profile_evidence()
+        self._write_goal_run_status(
+            started_at="2026-05-17T11:30:00Z",
+            completed_at="2026-05-17T12:00:00Z",
+        )
+        self._write_session_evidence(
+            "20260517-trial",
+            stop_reason="proposal_budget_exhausted",
+            iterations=[
+                {
+                    "index": 1,
+                    "status": "promoted",
+                    "outcome": "promoted",
+                    "decision": "PROMOTE",
+                    "run_id": "20260517-trial-run-01",
+                }
+            ],
+        )
+
+        report = build_profile_verification_report(
+            GoalProfileVerificationRequest(vault=self.vault, context=fixed_context())
+        )
+
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["profile"]["verification_status"], "blocked")
+        self.assertEqual(report["session_evidence"]["status"], "incomplete")
+        self.assertIn("auto-improve session did not run until time budget", report["blockers"])
+        self.assertIn("auto-improve session did not repeat improvement iterations", report["blockers"])
+        self.assertIn(
+            "auto-improve session did not continue after a successful improvement",
+            report["blockers"],
+        )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_apply_persists_verified_profile_progress_to_goal_contract(self) -> None:

@@ -1010,9 +1010,9 @@ def _stop_reason_before_iteration(
         _mark_repeated_blocker_stop(session, open_backlog_reason, context=context)
         return "repeated_blocker_backlog_required"
     if len(session.get("iterations", [])) >= session["budget"]["max_proposals"]:
-        return "budget_limited"
+        return "proposal_budget_exhausted"
     if time.monotonic() - state.start_monotonic > session["budget"]["max_minutes"] * 60:
-        return "budget_limited"
+        return "time_budget_exhausted"
     if state.consecutive_failures >= session["budget"]["max_consecutive_failures"]:
         return "failure_budget_exhausted"
     return None
@@ -1037,7 +1037,7 @@ def _stop_reason_after_loop(
         state.stop_reason == "queue_exhausted"
         and len(session.get("iterations", [])) >= session["budget"]["max_proposals"]
     ):
-        return "budget_limited"
+        return "proposal_budget_exhausted"
     return state.stop_reason
 
 

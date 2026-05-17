@@ -23,6 +23,7 @@
     "profile",
     "run",
     "run_artifacts",
+    "session_evidence",
     "command_observability",
     "evidence_paths",
     "contract_update",
@@ -118,6 +119,28 @@
         },
         "audit_event_count": { "type": "integer", "minimum": 0 },
         "runner_command_audit_current": { "type": "boolean" }
+      }
+    },
+    "session_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "path",
+        "session_status",
+        "stop_reason",
+        "iteration_count",
+        "successful_iteration_count",
+        "has_success_then_followup"
+      ],
+      "properties": {
+        "status": { "type": "string", "enum": ["clean", "incomplete", "missing"] },
+        "path": { "type": "string" },
+        "session_status": { "type": "string" },
+        "stop_reason": { "type": "string" },
+        "iteration_count": { "type": "integer", "minimum": 0 },
+        "successful_iteration_count": { "type": "integer", "minimum": 0 },
+        "has_success_then_followup": { "type": "boolean" }
       }
     },
     "command_observability": {

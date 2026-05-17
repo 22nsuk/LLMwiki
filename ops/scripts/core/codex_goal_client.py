@@ -296,7 +296,7 @@ def build_auto_improve_goal_contract(
     storage_path: str = DEFAULT_CONTRACT_PATH,
     current_profile: str = "30m_trial",
     max_unattended_seconds: int = 1800,
-    max_proposals: int = 1,
+    max_proposals: int = 10000,
     max_consecutive_failures: int = 1,
     heartbeat_interval_seconds: int = 300,
     checkpoint_interval_seconds: int = 1800,
@@ -348,19 +348,31 @@ def build_auto_improve_goal_contract(
             "profile_ladder": [
                 {
                     "profile": "30m_trial",
-                    "required_before_next_profile": "status, audit, checkpoint, heartbeat, and no promotion claim",
+                    "required_before_next_profile": (
+                        "30m wall-clock session evidence with repeated improvement iterations, "
+                        "status, audit, checkpoint, heartbeat, and no promotion claim"
+                    ),
                 },
                 {
                     "profile": "6h_ramp",
-                    "required_before_next_profile": "30m trial evidence plus current release/readiness blockers",
+                    "required_before_next_profile": (
+                        "30m trial evidence plus 6h repeated improvement session evidence "
+                        "and current release/readiness blockers"
+                    ),
                 },
                 {
                     "profile": "2d_candidate",
-                    "required_before_next_profile": "6h ramp evidence plus resume and backoff evidence",
+                    "required_before_next_profile": (
+                        "6h ramp evidence plus 2d repeated improvement session evidence, "
+                        "resume, and backoff evidence"
+                    ),
                 },
                 {
                     "profile": "5d_sustained",
-                    "required_before_next_profile": "2d candidate evidence plus sealed authority clean pass",
+                    "required_before_next_profile": (
+                        "2d candidate evidence plus 5d repeated improvement session evidence "
+                        "and sealed authority clean pass"
+                    ),
                 },
             ],
         },
@@ -633,7 +645,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--created-by", default="codex")
     parser.add_argument("--current-profile", default="30m_trial")
     parser.add_argument("--max-unattended-seconds", type=int, default=1800)
-    parser.add_argument("--max-proposals", type=int, default=1)
+    parser.add_argument("--max-proposals", type=int, default=10000)
     parser.add_argument("--max-consecutive-failures", type=int, default=1)
     parser.add_argument("--heartbeat-interval-seconds", type=int, default=300)
     parser.add_argument("--checkpoint-interval-seconds", type=int, default=1800)

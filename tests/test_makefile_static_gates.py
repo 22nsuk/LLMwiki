@@ -2575,7 +2575,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             ("GOAL_MAX_UNATTENDED_SECONDS", "1800"),
             ("GOAL_RUNNER_TIMEOUT_SECONDS", "1860"),
             ("GOAL_MAX_MINUTES", "30"),
-            ("GOAL_MAX_PROPOSALS", "1"),
+            ("GOAL_MAX_PROPOSALS", "10000"),
             ("GOAL_MAX_CONSECUTIVE_FAILURES", "1"),
             ("GOAL_EXECUTOR", "codex_exec"),
             ("GOAL_ARTIFACT_CLASS", "system_mechanism"),

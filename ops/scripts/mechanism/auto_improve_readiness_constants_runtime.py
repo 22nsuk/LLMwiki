@@ -52,7 +52,7 @@ AUTO_IMPROVE_LOOP_COMMAND = (
     ".venv/bin/python -m ops.scripts.mechanism.auto_improve_loop "
     "--vault . "
     "--policy ops/policies/wiki-maintainer-policy.yaml "
-    "--max-proposals 1 "
+    "--max-proposals 10000 "
     "--max-minutes 30 "
     "--max-consecutive-failures 1 "
     "--executor codex_exec"

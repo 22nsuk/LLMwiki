@@ -423,6 +423,98 @@ def _command_observability_blockers(
     return blockers
 
 
+def _session_report_rel_path(status_report: Mapping[str, Any]) -> str:
+    run_id = str(_mapping_value(status_report, "run").get("run_id", "")).strip()
+    return f"ops/reports/auto-improve-sessions/{run_id}.json" if run_id else ""
+
+
+def _successful_iteration(iteration: Mapping[str, Any]) -> bool:
+    return (
+        str(iteration.get("decision", "")).strip() == "PROMOTE"
+        or str(iteration.get("outcome", "")).strip() == "promoted"
+        or str(iteration.get("status", "")).strip() == "promoted"
+    )
+
+
+def _session_iterations(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    iterations = payload.get("iterations")
+    if not isinstance(iterations, list):
+        return []
+    return [item for item in iterations if isinstance(item, Mapping)]
+
+
+def _has_success_then_followup(iterations: list[Mapping[str, Any]]) -> bool:
+    for iteration in iterations[:-1]:
+        if _successful_iteration(iteration):
+            return True
+    return False
+
+
+def _session_evidence(vault: Path, status_report: Mapping[str, Any]) -> dict[str, Any]:
+    rel_path = _session_report_rel_path(status_report)
+    if not rel_path:
+        return {
+            "status": "missing",
+            "path": "",
+            "session_status": "",
+            "stop_reason": "",
+            "iteration_count": 0,
+            "successful_iteration_count": 0,
+            "has_success_then_followup": False,
+        }
+    payload = load_optional_json_object(vault / rel_path)
+    if not payload:
+        return {
+            "status": "missing",
+            "path": rel_path,
+            "session_status": "",
+            "stop_reason": "",
+            "iteration_count": 0,
+            "successful_iteration_count": 0,
+            "has_success_then_followup": False,
+        }
+    iterations = _session_iterations(payload)
+    successful_count = sum(1 for iteration in iterations if _successful_iteration(iteration))
+    has_success_then_followup = _has_success_then_followup(iterations)
+    stop_reason = str(payload.get("stop_reason", "")).strip()
+    session_status = str(payload.get("status", "")).strip()
+    clean = (
+        session_status == "complete"
+        and stop_reason == "time_budget_exhausted"
+        and len(iterations) >= 2
+        and successful_count >= 1
+        and has_success_then_followup
+    )
+    return {
+        "status": "clean" if clean else "incomplete",
+        "path": rel_path,
+        "session_status": session_status,
+        "stop_reason": stop_reason,
+        "iteration_count": len(iterations),
+        "successful_iteration_count": successful_count,
+        "has_success_then_followup": has_success_then_followup,
+    }
+
+
+def _session_evidence_blockers(session_evidence: Mapping[str, Any]) -> list[str]:
+    if session_evidence.get("status") == "clean":
+        return []
+    if session_evidence.get("status") == "missing":
+        return ["auto-improve session evidence missing"]
+    blockers: list[str] = []
+    if session_evidence.get("session_status") != "complete":
+        blockers.append("auto-improve session did not complete")
+    if session_evidence.get("stop_reason") != "time_budget_exhausted":
+        blockers.append("auto-improve session did not run until time budget")
+    if _integer_value(session_evidence.get("iteration_count")) < 2:
+        blockers.append("auto-improve session did not repeat improvement iterations")
+    if _integer_value(session_evidence.get("successful_iteration_count")) < 1:
+        blockers.append("auto-improve session has no successful improvement iteration")
+    if not _bool_value(session_evidence.get("has_success_then_followup")):
+        blockers.append("auto-improve session did not continue after a successful improvement")
+    return blockers
+
+
 def _observability_blockers(
     *,
     vault: Path,
@@ -498,6 +590,7 @@ def _verification_blockers(
     profile: str,
     verified_profiles: list[str],
     run_artifacts: Mapping[str, Any],
+    session_evidence: Mapping[str, Any],
 ) -> list[str]:
     blockers: list[str] = []
     if profile not in PROFILE_REQUIREMENTS:
@@ -520,6 +613,7 @@ def _verification_blockers(
         blockers.append("profile minimum elapsed time not met")
     if run_artifacts.get("status") != "clean":
         blockers.append("goal run artifacts are not clean")
+    blockers.extend(_session_evidence_blockers(session_evidence))
     blockers.extend(
         _observability_blockers(
             vault=vault,
@@ -585,6 +679,15 @@ def build_report(request: GoalProfileVerificationRequest) -> dict[str, Any]:
         "audit_event_count": 0,
         "runner_command_audit_current": False,
     }
+    session_evidence = _session_evidence(vault, status_report) if status_report else {
+        "status": "missing",
+        "path": "",
+        "session_status": "",
+        "stop_reason": "",
+        "iteration_count": 0,
+        "successful_iteration_count": 0,
+        "has_success_then_followup": False,
+    }
     blockers: list[str] = []
     if target_profile == "none":
         verification_status = "already_complete"
@@ -598,6 +701,7 @@ def build_report(request: GoalProfileVerificationRequest) -> dict[str, Any]:
             profile=target_profile,
             verified_profiles=verified_profiles_before,
             run_artifacts=run_artifacts,
+            session_evidence=session_evidence,
         )
         verification_status = "eligible" if not blockers else "blocked"
 
@@ -645,6 +749,14 @@ def build_report(request: GoalProfileVerificationRequest) -> dict[str, Any]:
         else "incomplete"
     )
     evidence_paths = _evidence_paths(vault, target_profile) if target_profile in PROFILE_REQUIREMENTS else []
+    file_inputs = {
+        "goal_contract": request.goal_contract_path,
+        "goal_run_status": request.status_report_path,
+        **_run_artifact_file_inputs(run_artifacts),
+    }
+    session_evidence_path = str(session_evidence.get("path", "")).strip()
+    if session_evidence_path:
+        file_inputs["auto_improve_session"] = session_evidence_path
     return {
         **build_canonical_report_envelope(
             vault,
@@ -663,11 +775,7 @@ def build_report(request: GoalProfileVerificationRequest) -> dict[str, Any]:
                 "ops/schemas/codex-goal-contract.schema.json",
                 "ops/schemas/goal-run-status.schema.json",
             ],
-            file_inputs={
-                "goal_contract": request.goal_contract_path,
-                "goal_run_status": request.status_report_path,
-                **_run_artifact_file_inputs(run_artifacts),
-            },
+            file_inputs=file_inputs,
             source_tree_excluded_files=(DEFAULT_OUT,),
         ),
         "vault": display_path(vault, vault),
@@ -694,6 +802,7 @@ def build_report(request: GoalProfileVerificationRequest) -> dict[str, Any]:
             "completed_at": str(run.get("completed_at", "")).strip(),
         },
         "run_artifacts": run_artifacts,
+        "session_evidence": session_evidence,
         "command_observability": command_observability,
         "evidence_paths": evidence_paths,
         "contract_update": {

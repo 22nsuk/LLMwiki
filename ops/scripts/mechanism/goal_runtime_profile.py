@@ -15,7 +15,10 @@ PROFILE_REQUIREMENTS: dict[str, dict[str, Any]] = {
             "ops/reports/session-synopsis.json",
             "ops/reports/auto-improve-readiness.json",
         ],
-        "required_before_next_profile": "bounded trial status, audit, synopsis, readiness, and no promotion claim",
+        "required_before_next_profile": (
+            "bounded 30m repeated-improvement session, status, audit, synopsis, readiness, "
+            "and no promotion claim"
+        ),
     },
     "6h_ramp": {
         "minimum_elapsed_seconds": 21600,
@@ -25,7 +28,10 @@ PROFILE_REQUIREMENTS: dict[str, dict[str, Any]] = {
             "ops/reports/auto-improve-readiness.json",
             "ops/reports/source-package-clean-extract.json",
         ],
-        "required_before_next_profile": "30m trial evidence plus periodic 6h checkpoint and source package replay",
+        "required_before_next_profile": (
+            "30m trial evidence plus repeated 6h improvement session, periodic checkpoint, "
+            "and source package replay"
+        ),
     },
     "2d_candidate": {
         "minimum_elapsed_seconds": 172800,
@@ -35,7 +41,10 @@ PROFILE_REQUIREMENTS: dict[str, dict[str, Any]] = {
             "ops/reports/source-package-clean-extract.json",
             "ops/reports/public-check-summary.json",
         ],
-        "required_before_next_profile": "6h ramp evidence plus resume, backoff, repeated-blocker, and public replay evidence",
+        "required_before_next_profile": (
+            "6h ramp evidence plus repeated 2d improvement session, resume, backoff, "
+            "repeated-blocker, and public replay evidence"
+        ),
     },
     "5d_sustained": {
         "minimum_elapsed_seconds": 432000,
@@ -45,7 +54,9 @@ PROFILE_REQUIREMENTS: dict[str, dict[str, Any]] = {
             "ops/reports/release-closeout-summary.json",
             "ops/reports/release-closeout-sealed-rehearsal-check.json",
         ],
-        "required_before_next_profile": "2d candidate evidence plus sealed authority clean pass",
+        "required_before_next_profile": (
+            "2d candidate evidence plus repeated 5d improvement session and sealed authority clean pass"
+        ),
     },
 }
 

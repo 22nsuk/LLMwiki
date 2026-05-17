@@ -59,7 +59,7 @@ make auto-improve-readiness
 .venv/bin/python -m ops.scripts.run_mechanism_experiment --vault . --run-id run-YYYYMMDD-slug --proposal-id <proposal-id> --scaffold-only
 .venv/bin/python -m ops.scripts.run_mechanism_experiment --vault . --run-id run-YYYYMMDD-slug --primary-target ops/scripts/example.py --test-file tests/test_example.py --log-summary "Mechanism experiment summary" --mutation-command "python tools/mutate.py" --signoff-status approved --signoff-by human --signoff-ts 2026-04-14T00:00:00Z
 .venv/bin/python -m ops.scripts.improvement_observations --vault . --task-id task-YYYYMMDD-slug
-.venv/bin/python -m ops.scripts.auto_improve_loop --vault . --policy ops/policies/wiki-maintainer-policy.yaml --max-proposals 1 --max-minutes 30 --max-consecutive-failures 1 --executor codex_exec
+.venv/bin/python -m ops.scripts.auto_improve_loop --vault . --policy ops/policies/wiki-maintainer-policy.yaml --max-proposals 10000 --max-minutes 30 --max-consecutive-failures 1 --executor codex_exec
 .venv/bin/python -m ops.scripts.raw_registry_export --vault .
 .venv/bin/python -m ops.scripts.raw_markdown_normalize --vault . --path raw --report-out runs/run-YYYYMMDD-slug/raw-markdown-normalization-report.json
 .venv/bin/python -m ops.scripts.wiki_manifest --vault . --out ops/manifest.json

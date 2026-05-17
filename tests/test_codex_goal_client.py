@@ -113,7 +113,7 @@ class CodexGoalClientTests(unittest.TestCase):
         self.assertIn("non_goals", contract)
         self.assertIn("allowed_roots", contract)
         self.assertEqual(contract["budgets"]["max_wall_clock_seconds"], 1800)
-        self.assertEqual(contract["budgets"]["max_proposals"], 1)
+        self.assertEqual(contract["budgets"]["max_proposals"], 10000)
         self.assertEqual(contract["runtime_profile"]["verified_profiles"], [])
         self.assertEqual(contract["runtime_profile"]["next_profile"], "30m_trial")
         self.assertEqual(contract["promotion_guard"]["can_promote_result"], False)

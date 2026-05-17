@@ -204,7 +204,8 @@ ACTION_CATALOG: list[dict[str, Any]] = [
             r"policy/CLI.*larger budget",
             r"larger budget",
             r"contract digest",
-            r"budget_limited",
+            r"time_budget_exhausted",
+            r"proposal_budget_exhausted",
         ],
         "evidence_paths": [
             "ops/scripts/mechanism/auto_improve_loop.py",
@@ -281,7 +282,7 @@ ACTION_CATALOG: list[dict[str, Any]] = [
             r"last_stderr_at",
             r"last_artifact_touch_at",
             r"quiet_seconds",
-            r"budget_limited",
+            r"time_budget_exhausted",
         ],
         "evidence_paths": [
             "ops/scripts/core/command_runtime.py",
