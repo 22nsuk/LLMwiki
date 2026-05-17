@@ -188,6 +188,55 @@ class GoalRuntimeRunnerTests(unittest.TestCase):
         self.assertEqual([event["run_status"] for event in audit_events], ["running", "failed"])
         self.assertEqual(audit_events[-1]["writer"], "ops.scripts.goal_runtime_runner")
 
+    def test_runner_sustains_successful_short_command_until_profile_minimum(self) -> None:
+        process = FakeProcess(communicate_side_effect=[('{"ok": true}\n', "")])
+        process.returncode = 0
+        sleep_calls: list[float] = []
+
+        exit_code = run_goal_runtime_command(
+            GoalRuntimeRunnerRequest(
+                vault=self.vault,
+                command_argv=["python", "-m", "ops.scripts.auto_improve_loop"],
+                run_id="20260517-trial",
+                goal_contract_path="ops/reports/codex-goal-contract.json",
+                result_out="tmp/session-result.json",
+                heartbeat_interval_seconds=1,
+                checkpoint_interval_seconds=99,
+                timeout_seconds=5,
+                profile_minimum_elapsed_seconds=3,
+                context=fixed_context(),
+                backend=FakeProcessBackend(process),
+                monotonic_clock=SteppedClock([0.0, 0.0, 0.0, 0.0]),
+                sleeper=sleep_calls.append,
+            )
+        )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(sleep_calls, [1.0, 1.0, 1.0])
+        status = json.loads(
+            (self.vault / "ops" / "reports" / "goal-run-status.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(status["run"]["status"], "completed")
+        self.assertEqual(status["run"]["started_at"], "2026-05-17T12:00:00Z")
+        self.assertEqual(status["run"]["completed_at"], "2026-05-17T12:00:03Z")
+        self.assertEqual(status["observability"]["command_heartbeat_count"], 3)
+        self.assertEqual(
+            status["observability"]["last_command_heartbeat_at"],
+            "2026-05-17T12:00:03Z",
+        )
+        audit_events = [
+            json.loads(line)
+            for line in (
+                self.vault / "runs" / "goal-20260517-trial" / "audit-log.jsonl"
+            ).read_text(encoding="utf-8").splitlines()
+        ]
+        self.assertEqual(
+            [event["run_status"] for event in audit_events],
+            ["running", "running", "running", "running", "completed"],
+        )
+        self.assertEqual(audit_events[-1]["command_heartbeat_count"], 3)
+        self.assertEqual(audit_events[-1]["writer"], "ops.scripts.goal_runtime_runner")
+
     def test_runner_executes_due_periodic_checkpoint_commands_before_status_write(self) -> None:
         process = FakeProcess(
             communicate_side_effect=[
