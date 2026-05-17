@@ -50,6 +50,80 @@
       },
       "additionalProperties": false
     },
+    "goal_contract": {
+      "type": "object",
+      "required": [
+        "path",
+        "requested_path",
+        "contract_sha256",
+        "contract_id",
+        "status",
+        "current_profile",
+        "max_wall_clock_seconds",
+        "max_unattended_seconds",
+        "max_proposals",
+        "max_consecutive_failures",
+        "can_promote_result",
+        "promotion_blockers"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "requested_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contract_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "contract_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "current_profile": {
+          "type": "string",
+          "enum": [
+            "30m_trial",
+            "6h_ramp",
+            "2d_candidate",
+            "5d_sustained"
+          ]
+        },
+        "max_wall_clock_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_unattended_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_proposals": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_consecutive_failures": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "can_promote_result": {
+          "type": "boolean"
+        },
+        "promotion_blockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "status": {
       "type": "string",
       "enum": [
@@ -250,6 +324,10 @@
         "last_decision",
         "last_run_id",
         "last_blocking_reason",
+        "blocking_reason_counts",
+        "repeated_blocker_stop",
+        "repeated_blocker_reason",
+        "remediation_backlog_path",
         "updated_at"
       ],
       "properties": {
@@ -268,6 +346,23 @@
         },
         "last_blocking_reason": {
           "type": "string"
+        },
+        "blocking_reason_counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "repeated_blocker_stop": {
+          "type": "boolean"
+        },
+        "repeated_blocker_reason": {
+          "type": "string"
+        },
+        "remediation_backlog_path": {
+          "type": "string",
+          "minLength": 1
         },
         "updated_at": {
           "type": "string",

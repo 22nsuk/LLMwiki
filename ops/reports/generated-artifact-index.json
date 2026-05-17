@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-15T19:08:32Z",
+  "generated_at": "2026-05-17T19:45:47Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
+  "source_tree_fingerprint": "0ef4d3e76f63c1b8e47e3674744767d9972137cf2eb92e8e4c95a3bac9d57e4a",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "834eb6cfec958f35d3989a742cfd58414bb50bb75040ab9283e4c90ed61f1657",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "5f5b11d14ee66b47c2e0a9f55184eb94306e9ffcdbd9f42b18a4a01abd4f9f3f",
+    "source_paths": "d73c10a0fea855c13cb91f0e5105655b6a2532e135e78155c17b8bae22039986",
     "run_promotion_reports": "47308e6ead45e6366547bffe91c993d0d224544c2a4fb589d598b124c76a0a5f",
-    "external_report_inventory": "5362d8dd6b0fd3e965d0048e6cdd108abeceb722b6126bca15a5ad0fdc71634c",
+    "external_report_inventory": "af4123132bc65c39b81a2bd406e4867e40c55695efe12aff35d9311f042d6506",
     "operator_report_inventory": "0479590a186415fa72ba934ab4431828124b8ca576b06322a6eae193e9627721",
-    "ops_report_inventory": "ab1e0e62704f4bbce806d8dbafd6e7bed473571ae2180c2f39fc58e7e9e23e58",
-    "task_improvement_observation_inventory": "e990c59c1c80ac09b3ca6423303757b25d7819c3b9dc4716adb30f69105edc79"
+    "ops_report_inventory": "8582b9bd4a2c825c100165d4b3f735afc7a3f58e9c38d00b6e147cd56acd3793",
+    "task_improvement_observation_inventory": "e5afbe277de7c757caecfe465586864c6e6839f5792c4af9a9ee9004bdef7702"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,14 +23,14 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T19:08:32Z"
+    "checked_at": "2026-05-17T19:45:47Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "status": "pass",
+  "status": "attention",
   "archive_rules": [
     {
       "surface": "ops_reports",
@@ -58,23 +58,25 @@
     }
   ],
   "now": [
-    "88 canonical artifact(s) are currently indexed.",
-    "0 archive candidate(s) remain in active namespaces."
+    "89 canonical artifact(s) are currently indexed.",
+    "1 archive candidate(s) remain in active namespaces."
   ],
   "next": [
-    "No archive hygiene action is currently recommended."
+    "Archive the root-level candidates after confirming their content lifecycle decision and linked replacement evidence."
   ],
-  "why_blocked": [],
+  "why_blocked": [
+    "All structured action themes from this external report are implemented in canonical evidence."
+  ],
   "summary": {
-    "ops_reports_root_file_count": 69,
-    "task_improvement_observation_count": 59,
+    "ops_reports_root_file_count": 70,
+    "task_improvement_observation_count": 62,
     "operator_reports_root_file_count": 2,
     "external_reports_root_file_count": 3,
     "external_reports_archive_file_count": 66,
-    "run_directory_count": 14,
+    "run_directory_count": 15,
     "run_archive_directory_count": 4,
-    "canonical_report_count": 88,
-    "archive_candidate_count": 0
+    "canonical_report_count": 89,
+    "archive_candidate_count": 1
   },
   "canonical_reports": [
     {
@@ -180,6 +182,17 @@
       "surface": "ops_reports",
       "family": "goal_audit_log",
       "path": "ops/reports/goal-audit-log.jsonl",
+      "role": "current_stable_report",
+      "date": "",
+      "reason": "Top-level ops/reports files with stable names are current operational reports.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "operator_preflight"
+    },
+    {
+      "surface": "ops_reports",
+      "family": "goal_profile_verification",
+      "path": "ops/reports/goal-profile-verification.json",
       "role": "current_stable_report",
       "date": "",
       "reason": "Top-level ops/reports files with stable names are current operational reports.",
@@ -871,17 +884,6 @@
     },
     {
       "surface": "external_reports",
-      "family": "llmwiki_review_reconciled_improvement_report",
-      "path": "external-reports/llmwiki_review_reconciled_improvement_report.md",
-      "role": "current_review_report",
-      "date": "",
-      "reason": "External report still carries unique unresolved action themes not covered by another active report.",
-      "supersedes": [],
-      "superseded_by": [],
-      "decision_relevance": "review_context"
-    },
-    {
-      "surface": "external_reports",
       "family": "report_reference_manifest",
       "path": "external-reports/report-reference-manifest.json",
       "role": "current_review_report",
@@ -897,6 +899,17 @@
       "path": "runs/auto-improve-2026-05-15t11-44-03z-run-01-mutation-proposal-runtime",
       "role": "run_history_record",
       "date": "2026-05-15",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary. Load issues: promotion-report.json:missing, run-ledger.json:missing.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/goal-auto-improve-trial",
+      "role": "run_history_record",
+      "date": "",
       "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary. Load issues: promotion-report.json:missing, run-ledger.json:missing.",
       "supersedes": [],
       "superseded_by": [],
@@ -1046,5 +1059,17 @@
       "decision_relevance": "run_history"
     }
   ],
-  "archive_candidates": []
+  "archive_candidates": [
+    {
+      "surface": "external_reports",
+      "family": "llmwiki_review_reconciled_improvement_report",
+      "path": "external-reports/llmwiki_review_reconciled_improvement_report.md",
+      "suggested_archive_path": "external-reports/archive/llmwiki_review_reconciled_improvement_report.md",
+      "date": "",
+      "reason": "All structured action themes from this external report are implemented in canonical evidence.",
+      "superseded_by": [],
+      "supersedes": [],
+      "decision_relevance": "review_context"
+    }
+  ]
 }

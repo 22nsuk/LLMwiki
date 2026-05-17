@@ -1,95 +1,215 @@
 from __future__ import annotations
 
 import datetime as dt
-import shutil
-import subprocess
+import json
 from pathlib import Path
+import tempfile
+import unittest
 
 import pytest
 
-from ops.scripts.goal_worktree_guard import build_report
+from ops.scripts.goal_worktree_guard import (
+    GitCommandResult,
+    GoalWorktreeGuardRequest,
+    build_report,
+    write_report,
+)
 from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.schema_runtime import load_schema, validate_with_schema
+from tests.minimal_vault_runtime import seed_minimal_vault
 
 
 pytestmark = pytest.mark.public
-GOAL_BRANCH = "goal/5day-auto-improve-runtime"
 
-
-def _run_git(cwd: Path, *args: str) -> None:
-    subprocess.run(
-        ["git", *args],
-        cwd=cwd,
-        check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-
-
-def _seed_repo(tmp_path: Path) -> Path:
-    if shutil.which("git") is None:
-        pytest.skip("git is required for worktree guard tests")
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    _run_git(repo, "init", "-q", "-b", "main")
-    _run_git(repo, "config", "user.name", "Test User")
-    _run_git(repo, "config", "user.email", "test@example.com")
-    (repo / "README.md").write_text("demo\n", encoding="utf-8")
-    _run_git(repo, "add", "README.md")
-    _run_git(repo, "commit", "-q", "-m", "initial")
-    _run_git(repo, "remote", "add", "origin", "https://github.com/22nsuk/LLMwiki.git")
-    return repo
-
-
-def _seed_repo_with_worktree(tmp_path: Path) -> Path:
-    repo = _seed_repo(tmp_path)
-    worktree = tmp_path / "goal-worktree"
-    _run_git(repo, "worktree", "add", "-q", "-b", GOAL_BRANCH, worktree, "main")
-    return worktree
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "goal-worktree-guard.schema.json"
 
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
         display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 15, 0, 0, tzinfo=dt.timezone.utc),
+        clock=lambda: dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.timezone.utc),
     )
 
 
-def test_goal_worktree_guard_passes_only_for_linked_expected_branch(tmp_path: Path) -> None:
-    worktree = _seed_repo_with_worktree(tmp_path)
+class FakeGit:
+    def __init__(self, responses: dict[tuple[str, ...], GitCommandResult]) -> None:
+        self.responses = responses
 
-    report = build_report(worktree, expected_branch=GOAL_BRANCH, context=fixed_context())
-
-    assert report["status"] == "pass"
-    assert report["mode"] == "git_worktree"
-    assert report["branch"] == GOAL_BRANCH
-    assert report["remote_url"] == "https://github.com/22nsuk/LLMwiki.git"
-    assert report["reason"] == "git linked worktree on expected branch"
-    assert report["long_run_allowed"] is True
-    assert report["allowed_operation"] == "long_run"
-    assert report["blocked_operation_reason"] == ""
+    def __call__(self, args):
+        return self.responses.get(tuple(args), GitCommandResult(1, "", "unexpected git command"))
 
 
-def test_goal_worktree_guard_rejects_zip_or_report_only_directory(tmp_path: Path) -> None:
-    report = build_report(tmp_path, expected_branch=GOAL_BRANCH, context=fixed_context())
+class GoalWorktreeGuardTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.vault = Path(self.temp_dir.name) / "vault"
+        self.vault.mkdir()
+        seed_minimal_vault(self.vault)
+        self._copy_support_file("ops/schemas/goal-worktree-guard.schema.json")
+        self._copy_support_file("ops/scripts/mechanism/goal_worktree_guard.py")
 
-    assert report["status"] == "fail"
-    assert report["mode"] == "zip_or_report_only"
-    assert report["branch"] == ""
-    assert report["long_run_allowed"] is False
-    assert report["allowed_operation"] == "trial_or_report_only"
-    assert "Long-run goal execution requires a linked Git worktree" in report[
-        "blocked_operation_reason"
-    ]
+    def tearDown(self) -> None:
+        self.temp_dir.cleanup()
+
+    def _copy_support_file(self, rel_path: str) -> None:
+        destination = self.vault / rel_path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text((REPO_ROOT / rel_path).read_text(encoding="utf-8"), encoding="utf-8")
+
+    def _write_public_layout(self) -> None:
+        for rel_path in ("ops", "tests", "mk"):
+            (self.vault / rel_path).mkdir(exist_ok=True)
+        for rel_path in ("README.md", "Makefile"):
+            (self.vault / rel_path).write_text("placeholder\n", encoding="utf-8")
+
+    def test_git_worktree_report_passes_when_clean(self) -> None:
+        fake_git = FakeGit(
+            {
+                ("--version",): GitCommandResult(0, "git version 2.0", ""),
+                ("rev-parse", "--is-inside-work-tree"): GitCommandResult(0, "true", ""),
+                ("rev-parse", "--show-toplevel"): GitCommandResult(0, str(self.vault), ""),
+                ("rev-parse", "--verify", "HEAD"): GitCommandResult(0, "a" * 40, ""),
+                ("branch", "--show-current"): GitCommandResult(0, "main", ""),
+                ("status", "--porcelain=v1", "--untracked-files=normal"): GitCommandResult(0, "", ""),
+            }
+        )
+
+        report = build_report(
+            GoalWorktreeGuardRequest(
+                vault=self.vault,
+                requested_mode="git",
+                git_runner=fake_git,
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(report["artifact_kind"], "goal_worktree_guard")
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["detected_mode"], "git_worktree")
+        self.assertEqual(report["git"]["worktree_root"], ".")
+        self.assertEqual(report["git"]["dirty_entry_count"], 0)
+        self.assertEqual(report["decisions"]["can_execute_goal_runtime"], True)
+        self.assertEqual(report["decisions"]["can_promote_result"], True)
+        self.assertEqual(report["blockers"], [])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_dirty_git_worktree_blocks_promotion_but_not_execution(self) -> None:
+        fake_git = FakeGit(
+            {
+                ("--version",): GitCommandResult(0, "git version 2.0", ""),
+                ("rev-parse", "--is-inside-work-tree"): GitCommandResult(0, "true", ""),
+                ("rev-parse", "--show-toplevel"): GitCommandResult(0, str(self.vault), ""),
+                ("rev-parse", "--verify", "HEAD"): GitCommandResult(0, "b" * 40, ""),
+                ("branch", "--show-current"): GitCommandResult(0, "main", ""),
+                ("status", "--porcelain=v1", "--untracked-files=normal"): GitCommandResult(
+                    0,
+                    " M ops/scripts/example.py\n?? tests/test_example.py",
+                    "",
+                ),
+            }
+        )
+
+        report = build_report(
+            GoalWorktreeGuardRequest(
+                vault=self.vault,
+                requested_mode="git",
+                git_runner=fake_git,
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["decisions"]["can_execute_goal_runtime"], True)
+        self.assertEqual(report["decisions"]["can_promote_result"], False)
+        self.assertEqual(report["decisions"]["promotion_blockers"], ["git_worktree_dirty"])
+        self.assertEqual(report["git"]["dirty_entry_count"], 2)
+        self.assertEqual(report["git"]["status_codes"], {"??": 1, "M": 1})
+        self.assertNotIn("ops/scripts/example.py", json.dumps(report))
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_zip_extract_mode_is_distinct_and_non_promotable(self) -> None:
+        self._write_public_layout()
+        fake_git = FakeGit(
+            {
+                ("--version",): GitCommandResult(0, "git version 2.0", ""),
+                ("rev-parse", "--is-inside-work-tree"): GitCommandResult(
+                    128,
+                    "",
+                    "not a git repository",
+                ),
+            }
+        )
+
+        report = build_report(
+            GoalWorktreeGuardRequest(
+                vault=self.vault,
+                requested_mode="auto",
+                git_runner=fake_git,
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["detected_mode"], "zip_extract")
+        self.assertEqual(report["decisions"]["zip_mode_replay_only"], True)
+        self.assertEqual(report["decisions"]["can_execute_goal_runtime"], False)
+        self.assertEqual(report["decisions"]["can_promote_result"], False)
+        self.assertEqual(report["decisions"]["promotion_blockers"], ["zip_mode_non_promotable"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_git_mode_fails_inside_zip_extract(self) -> None:
+        self._write_public_layout()
+        fake_git = FakeGit(
+            {
+                ("--version",): GitCommandResult(0, "git version 2.0", ""),
+                ("rev-parse", "--is-inside-work-tree"): GitCommandResult(
+                    128,
+                    "",
+                    "not a git repository",
+                ),
+            }
+        )
+
+        report = build_report(
+            GoalWorktreeGuardRequest(
+                vault=self.vault,
+                requested_mode="git",
+                git_runner=fake_git,
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(report["status"], "fail")
+        self.assertIn("git_worktree_required", report["decisions"]["fatal_blockers"])
+        self.assertIn("zip_mode_non_promotable", report["decisions"]["promotion_blockers"])
+
+    def test_write_report_uses_tmp_default_without_absolute_path_leak(self) -> None:
+        fake_git = FakeGit(
+            {
+                ("--version",): GitCommandResult(0, "git version 2.0", ""),
+                ("rev-parse", "--is-inside-work-tree"): GitCommandResult(0, "true", ""),
+                ("rev-parse", "--show-toplevel"): GitCommandResult(0, str(self.vault), ""),
+                ("rev-parse", "--verify", "HEAD"): GitCommandResult(0, "c" * 40, ""),
+                ("branch", "--show-current"): GitCommandResult(0, "main", ""),
+                ("status", "--porcelain=v1", "--untracked-files=normal"): GitCommandResult(0, "", ""),
+            }
+        )
+        report = build_report(
+            GoalWorktreeGuardRequest(
+                vault=self.vault,
+                requested_mode="git",
+                git_runner=fake_git,
+                context=fixed_context(),
+            )
+        )
+
+        path = write_report(self.vault, report)
+        payload = path.read_text(encoding="utf-8")
+
+        self.assertEqual(path, self.vault / "tmp" / "goal-worktree-guard.json")
+        self.assertNotIn(str(self.vault), payload)
 
 
-def test_goal_worktree_guard_rejects_main_worktree_as_report_only(tmp_path: Path) -> None:
-    repo = _seed_repo(tmp_path)
-
-    report = build_report(repo, expected_branch=GOAL_BRANCH, context=fixed_context())
-
-    assert report["status"] == "fail"
-    assert report["mode"] == "main_worktree"
-    assert report["long_run_allowed"] is False
-    assert report["allowed_operation"] == "report_only"
-    assert "linked git worktree" in report["reason"].lower()
+if __name__ == "__main__":
+    unittest.main()

@@ -18,7 +18,7 @@ from .artifact_io_runtime import (
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
-from .command_runtime import run_with_timeout
+from .command_runtime import CommandHeartbeat, run_with_timeout
 from .output_runtime import display_path, resolve_vault_path, sanitize_report_text
 from .policy_runtime import load_policy, release_archive_root_name_from_policy, report_path
 from .runtime_context import RuntimeContext
@@ -29,6 +29,7 @@ PRODUCER = "ops.scripts.source_package_clean_extract"
 SCHEMA_PATH = "ops/schemas/source-package-clean-extract.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.source_package_clean_extract --vault ."
 DEFAULT_TIMEOUT_SECONDS = 5400
+DEFAULT_HEARTBEAT_INTERVAL_SECONDS = 30
 ARCHIVE_SELF_DESCRIPTION_PATH = "release-archive-self-description.json"
 
 
@@ -49,6 +50,7 @@ class SourcePackageCleanExtractRequest:
     extract_root: Path | None = None
     extract_parent: Path | None = None
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS
+    heartbeat_interval_seconds: int = DEFAULT_HEARTBEAT_INTERVAL_SECONDS
     context: RuntimeContext | None = None
     policy_path: str | None = None
 
@@ -83,7 +85,9 @@ class _CleanExtractExecution:
     deselection_budget: dict[str, Any]
     zip_smoke: dict[str, Any]
     command_status: str
+    script_output_surfaces_status: str
     source_package_reproducibility_status: str
+    heartbeat_observability: dict[str, Any]
     status: str
 
 
@@ -107,12 +111,28 @@ def _command_payload(
     display_vault: Path,
     temp_roots: Sequence[Path] = (),
     timeout_seconds: int,
+    heartbeat_interval_seconds: int,
 ) -> dict[str, Any]:
     started_at = time.monotonic()
+    heartbeat_events: list[dict[str, Any]] = []
+
+    def record_heartbeat(event: CommandHeartbeat) -> None:
+        heartbeat_events.append(
+            {
+                "heartbeat_index": event.heartbeat_index,
+                "elapsed_seconds": round(event.elapsed_seconds, 3),
+                "timeout_seconds": event.timeout_seconds,
+                "quiet_seconds": event.quiet_seconds,
+                "observation_mode": event.observation_mode,
+            }
+        )
+
     result = run_with_timeout(
         list(command),
         cwd=cwd,
         timeout_seconds=timeout_seconds,
+        heartbeat_interval_seconds=heartbeat_interval_seconds,
+        heartbeat_callback=record_heartbeat,
     )
     return {
         "name": name,
@@ -125,6 +145,11 @@ def _command_payload(
         "timeout_seconds": result.timeout_seconds,
         "termination_reason": result.termination_reason,
         "duration_ms": int(round((time.monotonic() - started_at) * 1000)),
+        "heartbeat_count": result.heartbeat_count,
+        "heartbeat_interval_seconds": result.heartbeat_interval_seconds,
+        "quiet_seconds": result.quiet_seconds,
+        "observation_mode": result.observation_mode,
+        "heartbeat_events": heartbeat_events,
         "stdout_tail": sanitize_report_text(
             display_vault,
             _tail(result.stdout),
@@ -347,6 +372,7 @@ def _clean_extract_commands(
             display_vault=request.vault,
             temp_roots=(paths.extract_parent,),
             timeout_seconds=request.timeout_seconds,
+            heartbeat_interval_seconds=request.heartbeat_interval_seconds,
         )
         for name, command in commands
     ]
@@ -371,6 +397,67 @@ def _source_package_reproducibility_status(
     ):
         return "pass"
     return "fail"
+
+
+def _heartbeat_observability(command_results: list[dict[str, Any]]) -> dict[str, Any]:
+    if not command_results:
+        return {
+            "status": "not_run",
+            "command_count": 0,
+            "heartbeat_enabled_command_count": 0,
+            "heartbeat_event_count": 0,
+            "max_heartbeat_count": 0,
+            "max_quiet_seconds": 0,
+            "quiet_command_names": [],
+            "unobserved_command_names": [],
+            "next_action": "source package commands did not run",
+        }
+
+    heartbeat_enabled = [
+        item
+        for item in command_results
+        if item.get("observation_mode") == "process_heartbeat"
+        and int(item.get("heartbeat_interval_seconds", 0) or 0) > 0
+    ]
+    unobserved = [
+        str(item.get("name", "")).strip()
+        for item in command_results
+        if item not in heartbeat_enabled
+    ]
+    quiet_commands = [
+        str(item.get("name", "")).strip()
+        for item in command_results
+        if int(item.get("quiet_seconds", 0) or 0) > 0
+    ]
+    heartbeat_event_count = sum(
+        len(item.get("heartbeat_events", []))
+        for item in command_results
+        if isinstance(item.get("heartbeat_events"), list)
+    )
+    max_heartbeat_count = max(
+        int(item.get("heartbeat_count", 0) or 0) for item in command_results
+    )
+    max_quiet_seconds = max(
+        int(item.get("quiet_seconds", 0) or 0) for item in command_results
+    )
+    status = "pass" if len(heartbeat_enabled) == len(command_results) else "attention"
+    if status == "attention":
+        next_action = "route all source-package replay commands through heartbeat-enabled command runtime"
+    elif heartbeat_event_count > 0:
+        next_action = "inspect heartbeat_events for long quiet nested replay phases"
+    else:
+        next_action = "none"
+    return {
+        "status": status,
+        "command_count": len(command_results),
+        "heartbeat_enabled_command_count": len(heartbeat_enabled),
+        "heartbeat_event_count": heartbeat_event_count,
+        "max_heartbeat_count": max_heartbeat_count,
+        "max_quiet_seconds": max_quiet_seconds,
+        "quiet_command_names": [name for name in quiet_commands if name],
+        "unobserved_command_names": [name for name in unobserved if name],
+        "next_action": next_action,
+    }
 
 
 def _overall_status(
@@ -408,6 +495,8 @@ def _clean_extract_execution(
     deselection_budget = _deselection_budget_status(test_summary, test_summary_load_status)
     zip_smoke = _zip_smoke_status(request.vault, request.zip_smoke_report)
     command_status = _command_status(command_results)
+    script_output_surfaces_status = _named_command_status(command_results, "script-output-surfaces")
+    heartbeat_observability = _heartbeat_observability(command_results)
     reproducibility_status = _source_package_reproducibility_status(
         zip_smoke=zip_smoke,
         extract_status=extract_status,
@@ -431,7 +520,9 @@ def _clean_extract_execution(
         deselection_budget=deselection_budget,
         zip_smoke=zip_smoke,
         command_status=command_status,
+        script_output_surfaces_status=script_output_surfaces_status,
         source_package_reproducibility_status=reproducibility_status,
+        heartbeat_observability=heartbeat_observability,
         status=status,
     )
 
@@ -454,7 +545,7 @@ def _canonical_envelope(
         source_command=SOURCE_COMMAND,
         resolved_policy_path=build_context.resolved_policy_path,
         schema_path=SCHEMA_PATH,
-        source_paths=["ops/scripts/source_package_clean_extract.py"],
+        source_paths=["ops/scripts/core/source_package_clean_extract.py"],
         file_inputs={
             "source_zip": display_path(request.vault, paths.source_zip),
             "zip_smoke_report": request.zip_smoke_report,
@@ -471,6 +562,8 @@ def _canonical_envelope(
             "pytest_flags": request.pytest_flags,
             "test_summary_out": request.test_summary_out,
             "deselection_policy": request.deselection_policy,
+            "heartbeat_interval_seconds": str(request.heartbeat_interval_seconds),
+            "script_output_surfaces_out": "ops/script-output-surfaces.json",
             "status": execution.status,
         },
     )
@@ -506,7 +599,7 @@ def _render_report(
             "summary": execution.extract_summary,
         },
         "commands": command_results,
-        "script_output_surfaces_status": _named_command_status(command_results, "script-output-surfaces"),
+        "script_output_surfaces_status": execution.script_output_surfaces_status,
         "ruff_status": _named_command_status(command_results, "ruff"),
         "mypy_status": _named_command_status(command_results, "mypy"),
         "test_source_package_status": _named_command_status(command_results, "test-source-package"),
@@ -517,6 +610,7 @@ def _render_report(
         },
         "deselection_budget_status": execution.deselection_budget,
         "source_package_reproducibility_status": execution.source_package_reproducibility_status,
+        "heartbeat_observability": execution.heartbeat_observability,
         "zip_smoke_report": execution.zip_smoke,
     }
 
@@ -571,6 +665,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--pytest-flags", default="")
     parser.add_argument("--zip-smoke-report", required=True)
     parser.add_argument("--timeout-seconds", type=int, default=DEFAULT_TIMEOUT_SECONDS)
+    parser.add_argument(
+        "--heartbeat-interval-seconds",
+        type=int,
+        default=DEFAULT_HEARTBEAT_INTERVAL_SECONDS,
+    )
     return parser.parse_args(argv)
 
 
@@ -595,6 +694,7 @@ def main(argv: list[str] | None = None) -> int:
         pytest_flags=args.pytest_flags,
         zip_smoke_report=args.zip_smoke_report,
         timeout_seconds=args.timeout_seconds,
+        heartbeat_interval_seconds=args.heartbeat_interval_seconds,
         policy_path=args.policy_path,
     )
     path = write_report(vault, report, args.out)

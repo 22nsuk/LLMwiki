@@ -114,6 +114,7 @@ jobs:
             tmp/release-closeout-sealed-dry-run/release-closeout-batch-manifest.json
             tmp/release-closeout-sealed-dry-run/external-report-reference-manifest.json
             tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json
+            ops/reports/release-closeout-sealed-rehearsal-check.json
           if-no-files-found: error
 
       - name: Run artifact-finalization tier

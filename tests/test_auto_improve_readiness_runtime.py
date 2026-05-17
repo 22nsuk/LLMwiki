@@ -101,7 +101,6 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/test-execution-summary.json",
             {
                 "status": "pass",
-                "currentness": {"status": "current"},
                 "deselection_lifecycle": {"status": "pass"},
             },
         )
@@ -159,16 +158,14 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             },
         )
         self._write_report(
-            "tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json",
+            "ops/reports/release-closeout-sealed-rehearsal-check.json",
             {
                 "artifact_kind": "release_closeout_sealed_rehearsal_check",
                 "status": "pass",
                 "preflight_status": "sealed_clean_pass",
-                "preflight_mode": "clean_required",
                 "distribution_binding_status": "pass",
                 "authority_preflight_status": "clean",
                 "expected_blocked_preflight": False,
-                "clean_required_preflight": True,
                 "failures": [],
                 "failure_details": [],
                 "blocking_reason_ids": [],
@@ -176,6 +173,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             },
             enveloped=False,
         )
+        self._write_goal_worktree_guard()
 
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
@@ -209,6 +207,76 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         if enveloped and relative_path in PRIMARY_REPORT_SPECS and "artifact_kind" not in payload:
             payload = self._canonical_report_payload(relative_path, payload)
         path = self.vault / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    def _write_goal_worktree_guard(
+        self,
+        *,
+        status: str = "pass",
+        detected_mode: str = "git_worktree",
+        dirty_entry_count: int = 0,
+        fatal_blockers: list[str] | None = None,
+        promotion_blockers: list[str] | None = None,
+        can_execute: bool = True,
+        can_promote: bool = True,
+    ) -> None:
+        _policy, resolved_policy_path = load_policy(self.vault, "ops/policies/wiki-maintainer-policy.yaml")
+        generated_at = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(seconds=5)).replace(
+            microsecond=0,
+        ).isoformat().replace("+00:00", "Z")
+        fatal_blockers = fatal_blockers or []
+        promotion_blockers = promotion_blockers or []
+        payload = {
+            **build_canonical_report_envelope(
+                self.vault,
+                generated_at=generated_at,
+                artifact_kind="goal_worktree_guard",
+                producer="ops.scripts.goal_worktree_guard",
+                source_command="pytest",
+                resolved_policy_path=resolved_policy_path,
+                schema_path="ops/schemas/goal-worktree-guard.schema.json",
+                source_paths=[],
+            ),
+            "vault": ".",
+            "requested_mode": "git",
+            "detected_mode": detected_mode,
+            "public_source_layout": {
+                "required_paths": ["ops", "tests", "mk", "README.md", "Makefile"],
+                "present": True,
+                "missing_paths": [],
+            },
+            "git": {
+                "available": True,
+                "inside_worktree": detected_mode == "git_worktree",
+                "worktree_root": ".",
+                "head_sha": "0" * 40,
+                "branch": "main",
+                "dirty_entry_count": dirty_entry_count,
+                "status_porcelain_sha256": "0" * 64,
+                "status_codes": {},
+                "error": "",
+            },
+            "decisions": {
+                "can_execute_goal_runtime": can_execute,
+                "can_promote_result": can_promote,
+                "zip_mode_replay_only": detected_mode == "zip_extract",
+                "dirty_worktree_allowed": False,
+                "fatal_blockers": fatal_blockers,
+                "promotion_blockers": promotion_blockers,
+            },
+            "blockers": [
+                {
+                    "blocker_id": blocker_id,
+                    "severity": "fatal" if blocker_id in fatal_blockers else "blocking",
+                    "summary": blocker_id,
+                    "next_action": "clear goal worktree guard blocker",
+                }
+                for blocker_id in [*fatal_blockers, *promotion_blockers]
+            ],
+            "status": status,
+        }
+        path = self.vault / "tmp" / "goal-worktree-guard.json"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -260,6 +328,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                 "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
+                "ops/scripts/mechanism/auto_improve_readiness_worktree_guard_runtime.py",
             ],
         )
         for rel_path in READINESS_SOURCE_PATHS:
@@ -484,17 +553,69 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/source-package-clean-extract.json",
         )
         self.assertEqual(
+            persisted["inputs"]["goal_worktree_guard_report"],
+            "tmp/goal-worktree-guard.json",
+        )
+        self.assertEqual(
+            persisted["diagnostics"]["goal_worktree_guard_summary"]["status"],
+            "pass",
+        )
+        self.assertEqual(
             persisted["inputs"]["release_evidence_cohort_report"],
             "ops/reports/release-evidence-cohort.json",
         )
         self.assertEqual(persisted["remediations"], [])
-        self.assertIn("auto_improve_loop", persisted["next_action"])
+        self.assertEqual(persisted["fallback"]["auto_improve_command"], "make auto-improve-goal-run")
+        self.assertIn("auto-improve-goal-run", persisted["next_action"])
+        self.assertNotIn("auto_improve_loop", persisted["next_action"])
         self.assertNotIn("status", persisted)
         self.assertNotIn("combined_state", persisted)
         self.assertNotIn("learnability_shadow_gate", persisted["diagnostics"])
         self.assertEqual(
             persisted["diagnostics"]["release_evidence_cohort_summary"]["status"],
             "pass",
+        )
+
+    def test_missing_goal_worktree_guard_blocks_promotion_not_trial(self) -> None:
+        (self.vault / "tmp" / "goal-worktree-guard.json").unlink()
+        self._write_ready_queue_reports()
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        self.assertTrue(report["can_execute_trial"])
+        self.assertFalse(report["can_promote_result"])
+        blockers = {item["id"]: item for item in report["promotion_blockers"]}
+        self.assertIn("promotion_blocked_by_goal_worktree_guard_failure", blockers)
+        self.assertEqual(
+            blockers["promotion_blocked_by_goal_worktree_guard_failure"]["scope"],
+            "worktree_guard",
+        )
+        self.assertEqual(
+            report["diagnostics"]["goal_worktree_guard_summary"]["status"],
+            "not_run",
+        )
+        self.assertIn("Trial only; do not promote.", report["next_action"])
+
+    def test_dirty_goal_worktree_guard_blocks_promotion_not_trial(self) -> None:
+        self._write_goal_worktree_guard(
+            status="attention",
+            dirty_entry_count=1,
+            promotion_blockers=["git_worktree_dirty"],
+            can_promote=False,
+        )
+        self._write_ready_queue_reports()
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        self.assertTrue(report["can_execute_trial"])
+        self.assertFalse(report["can_promote_result"])
+        blockers = {item["id"]: item for item in report["promotion_blockers"]}
+        blocker = blockers["promotion_blocked_by_goal_worktree_guard_failure"]
+        self.assertEqual(blocker["source_status"], "attention")
+        self.assertIn("git_worktree_dirty", blocker["signal_ids"])
+        self.assertEqual(
+            report["diagnostics"]["goal_worktree_guard_summary"]["dirty_entry_count"],
+            1,
         )
 
     def test_artifact_freshness_failure_blocks_promotion_without_blocking_execution(self) -> None:
@@ -568,82 +689,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(artifact_blocker["scope"], "artifact_contract")
         self.assertIn("ops/reports/example.json", artifact_blocker["reason"])
 
-    def test_artifact_freshness_operational_attention_blocks_promotion(self) -> None:
-        self._write_report(
-            "ops/reports/outcome-metrics.json",
-            {
-                "summary": {
-                    "attempts_considered": 12,
-                    "recent_window": 20,
-                    "recent_attempt_count": 12,
-                    "session_reports_considered": 2,
-                }
-            },
-        )
-        self._write_report(
-            "ops/reports/mechanism-review-candidates.json",
-            {
-                "summary": {"candidates_emitted": 1},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
-            },
-        )
-        self._write_report(
-            "ops/reports/mutation-proposals.json",
-            {
-                "summary": {
-                    "source_candidates_read": 1,
-                    "proposals_emitted": 1,
-                    "blocked_proposals": 0,
-                    "queue_pressure_summary": "ready",
-                },
-                "diagnostics": {"evidence_gaps": []},
-                "proposals": [
-                    {
-                        "proposal_id": "proposal-ready",
-                        "blocked_by": [],
-                        "priority": 55,
-                    }
-                ],
-            },
-        )
-        self._write_report(
-            "ops/reports/artifact-freshness-report.json",
-            {
-                "status": "pass",
-                "summary": {
-                    "schema_invalid_artifact_count": 0,
-                    "stable_contract_debt_issue_count": 0,
-                    "operational_attention_artifact_count": 1,
-                    "operational_attention_issue_count": 1,
-                },
-                "artifact_records": [
-                    {
-                        "path": "ops/reports/example-operational-attention.json",
-                        "schema_validation_status": "pass",
-                        "schema_validation_errors": [],
-                        "issues": [
-                            "test_target_fingerprint_mismatch:tests/test_makefile_static_gates.py"
-                        ],
-                    }
-                ],
-            },
-        )
-
-        report = build_readiness_report(self.vault, context=fixed_context())
-
-        self.assertTrue(report["can_execute_trial"])
-        self.assertFalse(report["can_promote_result"])
-        artifact_blocker = next(
-            item
-            for item in report["promotion_blockers"]
-            if item["id"] == "promotion_blocked_by_artifact_contract_failure"
-        )
-        self.assertEqual(artifact_blocker["scope"], "artifact_contract")
-        self.assertEqual(artifact_blocker["signal_ids"], ["artifact_freshness_operational_attention"])
-        self.assertIn("ops/reports/example-operational-attention.json", artifact_blocker["reason"])
-        self.assertIn("operational_attention_issue_count=0", artifact_blocker["required_evidence"][1])
-
-    def test_selected_contract_operational_attention_uses_selected_contract_blocker(self) -> None:
+    def test_selected_contract_operational_attention_blocks_promotion(self) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -706,15 +752,20 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
 
         report = build_readiness_report(self.vault, context=fixed_context())
 
-        blockers = {item["id"]: item for item in report["promotion_blockers"]}
-        self.assertNotIn("promotion_blocked_by_artifact_contract_failure", blockers)
+        self.assertTrue(report["can_execute_trial"])
+        self.assertFalse(report["can_promote_result"])
+        selected_contract_blocker = next(
+            item
+            for item in report["promotion_blockers"]
+            if item["id"] == "promotion_blocked_by_selected_contract_failure"
+        )
+        self.assertEqual(selected_contract_blocker["scope"], "release_gate")
         self.assertEqual(
-            blockers["promotion_blocked_by_selected_contract_failure"]["signal_ids"],
+            selected_contract_blocker["signal_ids"],
             ["selected_contract_currentness_not_current"],
         )
-        selected_summary = report["diagnostics"]["selected_contract_summary"]
-        self.assertEqual(selected_summary["source_status"], "currentness_operational_attention")
-        self.assertIn("operational_attention=", selected_summary["summary"])
+        self.assertIn("selected_contract release gate is not pass", selected_contract_blocker["reason"])
+        self.assertIn("operational_attention=", selected_contract_blocker["reason"])
 
     def test_selected_contract_and_source_package_failures_block_promotion(self) -> None:
         self._write_report(
@@ -835,16 +886,14 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             },
         )
         self._write_report(
-            "tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json",
+            "ops/reports/release-closeout-sealed-rehearsal-check.json",
             {
                 "artifact_kind": "release_closeout_sealed_rehearsal_check",
                 "status": "fail",
                 "preflight_status": "binding_pass_authority_blocked",
-                "preflight_mode": "expected_blocked",
                 "distribution_binding_status": "pass",
                 "authority_preflight_status": "blocked",
                 "expected_blocked_preflight": True,
-                "clean_required_preflight": False,
                 "failures": [
                     "batch_release_authority_not_clean_pass",
                     "batch_sealed_release_not_clean_pass",
@@ -920,10 +969,8 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         )
         preflight = report["diagnostics"]["release_authority_preflight_summary"]
         self.assertEqual(preflight["preflight_status"], "binding_pass_authority_blocked")
-        self.assertEqual(preflight["preflight_mode"], "expected_blocked")
         self.assertEqual(preflight["distribution_binding_status"], "pass")
         self.assertTrue(preflight["expected_blocked_preflight"])
-        self.assertFalse(preflight["clean_required_preflight"])
         self.assertEqual(
             preflight["linked_promotion_blocker_ids"],
             [
@@ -975,7 +1022,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
     ) -> None:
         (
             self.vault
-            / "tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json"
+            / "ops/reports/release-closeout-sealed-rehearsal-check.json"
         ).unlink()
         self._write_report(
             "ops/reports/outcome-metrics.json",
@@ -1028,51 +1075,6 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(
             report["diagnostics"]["release_authority_preflight_summary"]["preflight_status"],
             "not_run",
-        )
-
-    def test_release_authority_preflight_prefers_canonical_release_evidence(self) -> None:
-        self._write_ready_queue_reports()
-        (
-            self.vault
-            / "tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json"
-        ).unlink()
-        self._write_report(
-            "build/release/release-closeout-sealed-rehearsal-check.json",
-            {
-                "artifact_kind": "release_closeout_sealed_rehearsal_check",
-                "status": "pass",
-                "preflight_status": "sealed_clean_pass",
-                "preflight_mode": "clean_required",
-                "distribution_binding_status": "pass",
-                "authority_preflight_status": "clean",
-                "expected_blocked_preflight": False,
-                "clean_required_preflight": True,
-                "failures": [],
-                "failure_details": [],
-                "blocking_reason_ids": [],
-                "summary": "canonical sealed release evidence clean",
-            },
-            enveloped=False,
-        )
-
-        report = build_readiness_report(self.vault, context=fixed_context())
-
-        self.assertTrue(report["can_execute_trial"])
-        self.assertTrue(report["can_promote_result"])
-        promotion_blocker_ids = {item["id"] for item in report["promotion_blockers"]}
-        self.assertNotIn(
-            "promotion_blocked_by_release_authority_preflight_failure",
-            promotion_blocker_ids,
-        )
-        preflight = report["diagnostics"]["release_authority_preflight_summary"]
-        self.assertEqual(
-            preflight["path"],
-            "build/release/release-closeout-sealed-rehearsal-check.json",
-        )
-        self.assertEqual(preflight["preflight_status"], "sealed_clean_pass")
-        self.assertIn(
-            "release_authority_preflight_report_candidates",
-            report["input_fingerprints"],
         )
 
     def test_release_lineage_mismatch_blocks_promotion(self) -> None:
@@ -1149,10 +1151,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         )
 
     def test_selected_contract_partial_pass_bootstrap_does_not_self_block_promotion(self) -> None:
-        self._write_report(
-            "ops/reports/test-execution-summary.json",
-            {"status": "partial-pass", "currentness": {"status": "current"}},
-        )
+        self._write_report("ops/reports/test-execution-summary.json", {"status": "partial-pass"})
 
         report = build_readiness_report(self.vault, context=fixed_context())
 
@@ -1178,24 +1177,6 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertIn("release closeout finality attestation passed", artifact_finalization["summary"])
         blocker_ids = {item["id"] for item in report["promotion_blockers"]}
         self.assertNotIn("promotion_blocked_by_selected_contract_failure", blocker_ids)
-
-    def test_selected_contract_stale_currentness_uses_named_blocker_signal(self) -> None:
-        self._write_report(
-            "ops/reports/test-execution-summary.json",
-            {"status": "pass", "currentness": {"status": "stale"}},
-        )
-
-        report = build_readiness_report(self.vault, context=fixed_context())
-
-        summary = report["diagnostics"]["selected_contract_summary"]
-        self.assertEqual(summary["status"], "fail")
-        self.assertEqual(summary["source_status"], "currentness_stale")
-        self.assertEqual(summary["signal_ids"], ["selected_contract_currentness_not_current"])
-        blockers = {item["id"]: item for item in report["promotion_blockers"]}
-        self.assertEqual(
-            blockers["promotion_blocked_by_selected_contract_failure"]["signal_ids"],
-            ["selected_contract_currentness_not_current"],
-        )
 
     def test_clean_authority_unsealed_batch_manifest_does_not_block_promotion(self) -> None:
         self._write_report(
@@ -1511,11 +1492,11 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                         "rollback_signal_count": 99,
                         "defect_escape_count": 99,
                         "finalized_run_count": 99,
-                        "executor_failure_count": 99,
-                        "routing_report_parse_gap_count": 99,
-                        "executor_report_parse_gap_count": 99,
-                        "coverage_ratios": {"telemetry": 0.0},
-                        "health_flags": ["missing_telemetry_coverage"],
+                        "executor_failure_count": 0,
+                        "routing_report_parse_gap_count": 0,
+                        "executor_report_parse_gap_count": 0,
+                        "coverage_ratios": {"telemetry": 0.01},
+                        "health_flags": ["partial_telemetry_coverage"],
                     }
                 },
             },

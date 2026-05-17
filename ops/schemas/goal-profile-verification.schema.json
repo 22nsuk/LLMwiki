@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/goal-profile-verification.schema.json",
+  "title": "Goal profile verification report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "goal",
+    "profile",
+    "run",
+    "run_artifacts",
+    "command_observability",
+    "evidence_paths",
+    "contract_update",
+    "blockers",
+    "status"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "const": "ops/schemas/goal-profile-verification.schema.json" },
+    "artifact_kind": { "type": "string", "const": "goal_profile_verification" },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": { "type": "string", "const": "ops.scripts.goal_profile_verification" },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string" },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": { "type": "object" },
+    "schema_version": { "type": "integer", "const": 1 },
+    "artifact_status": { "type": "string" },
+    "retention_policy": { "type": "string" },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": { "type": "object" },
+    "vault": { "type": "string" },
+    "goal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_path",
+        "contract_id",
+        "contract_sha256_before",
+        "contract_sha256_after"
+      ],
+      "properties": {
+        "contract_path": { "type": "string", "minLength": 1 },
+        "contract_id": { "type": "string", "minLength": 1 },
+        "contract_sha256_before": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "contract_sha256_after": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_profile",
+        "verification_status",
+        "minimum_elapsed_seconds",
+        "observed_elapsed_seconds",
+        "already_verified",
+        "eligible"
+      ],
+      "properties": {
+        "target_profile": {
+          "type": "string",
+          "enum": ["30m_trial", "6h_ramp", "2d_candidate", "5d_sustained", "none"]
+        },
+        "verification_status": {
+          "type": "string",
+          "enum": ["blocked", "eligible", "already_verified", "already_complete"]
+        },
+        "minimum_elapsed_seconds": { "type": "integer", "minimum": 0 },
+        "observed_elapsed_seconds": { "type": "integer", "minimum": 0 },
+        "already_verified": { "type": "boolean" },
+        "eligible": { "type": "boolean" }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status_report_path",
+        "run_id",
+        "run_status",
+        "run_profile",
+        "started_at",
+        "completed_at"
+      ],
+      "properties": {
+        "status_report_path": { "type": "string", "minLength": 1 },
+        "run_id": { "type": "string" },
+        "run_status": { "type": "string" },
+        "run_profile": { "type": "string" },
+        "started_at": { "type": "string" },
+        "completed_at": { "type": "string" }
+      }
+    },
+    "run_artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checks", "audit_event_count", "runner_command_audit_current"],
+      "properties": {
+        "status": { "type": "string", "enum": ["clean", "incomplete", "missing"] },
+        "checks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/artifact_check" }
+        },
+        "audit_event_count": { "type": "integer", "minimum": 0 },
+        "runner_command_audit_current": { "type": "boolean" }
+      }
+    },
+    "command_observability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "heartbeat_count",
+        "expected_min_heartbeat_count",
+        "timeout_seconds",
+        "last_command_returncode",
+        "last_command_timed_out",
+        "last_command_termination_reason",
+        "last_command_heartbeat_at",
+        "runner_audit_current",
+        "status"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["", "communicate", "process_heartbeat", "process_poll"]
+        },
+        "heartbeat_count": { "type": "integer", "minimum": 0 },
+        "expected_min_heartbeat_count": { "type": "integer", "minimum": 0 },
+        "timeout_seconds": { "type": "integer", "minimum": 0 },
+        "last_command_returncode": { "type": "integer", "minimum": -1 },
+        "last_command_timed_out": { "type": "boolean" },
+        "last_command_termination_reason": { "type": "string" },
+        "last_command_heartbeat_at": { "type": "string" },
+        "runner_audit_current": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["clean", "incomplete"] }
+      }
+    },
+    "evidence_paths": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/evidence_path" }
+    },
+    "contract_update": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apply_requested",
+        "apply_allowed",
+        "applied",
+        "verified_profiles_before",
+        "verified_profiles_after",
+        "profile_verified_before",
+        "profile_verified_after",
+        "next_profile_before",
+        "next_profile_after"
+      ],
+      "properties": {
+        "apply_requested": { "type": "boolean" },
+        "apply_allowed": { "type": "boolean" },
+        "applied": { "type": "boolean" },
+        "verified_profiles_before": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/profile_name" },
+          "uniqueItems": true
+        },
+        "verified_profiles_after": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/profile_name" },
+          "uniqueItems": true
+        },
+        "profile_verified_before": { "$ref": "#/$defs/profile_or_unverified" },
+        "profile_verified_after": { "$ref": "#/$defs/profile_or_unverified" },
+        "next_profile_before": { "$ref": "#/$defs/profile_or_none" },
+        "next_profile_after": { "$ref": "#/$defs/profile_or_none" }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "status": { "type": "string", "enum": ["pass", "attention"] }
+  },
+  "$defs": {
+    "profile_name": {
+      "type": "string",
+      "enum": ["30m_trial", "6h_ramp", "2d_candidate", "5d_sustained"]
+    },
+    "profile_or_unverified": {
+      "type": "string",
+      "enum": ["unverified", "30m_trial", "6h_ramp", "2d_candidate", "5d_sustained"]
+    },
+    "profile_or_none": {
+      "type": "string",
+      "enum": ["30m_trial", "6h_ramp", "2d_candidate", "5d_sustained", "none"]
+    },
+    "artifact_check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact", "path", "status"],
+      "properties": {
+        "artifact": { "type": "string", "minLength": 1 },
+        "path": { "type": "string" },
+        "status": { "type": "string", "enum": ["present", "missing", "pass", "fail"] }
+      }
+    },
+    "evidence_path": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "status"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["present", "missing"] },
+        "report_status": { "type": "string" },
+        "preflight_status": { "type": "string" },
+        "distribution_binding_status": { "type": "string" },
+        "authority_preflight_status": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,128 +1,336 @@
 {
   "$schema": "ops/schemas/goal-run-status.schema.json",
   "artifact_kind": "goal_run_status",
-  "schema_version": 1,
-  "generated_at": "2026-05-15T10:19:34Z",
+  "generated_at": "2026-05-17T17:37:50Z",
   "producer": "ops.scripts.goal_run_status",
-  "goal_id": "goal-20260515-5day-auto-improve-runtime",
-  "objective": "Build and operate a five-day bounded auto-improve goal runtime with clean release evidence, private GitHub baseline, resumable audit trail, heartbeats, checkpoints, and no promotion until sealed authority is clean.",
-  "status": "running",
-  "active_profile": "5-day-sustained",
-  "repo": {
-    "repo_url": "https://github.com/22nsuk/LLMwiki",
-    "visibility": "PRIVATE",
-    "baseline_commit": "6c3ca7c46c6369ad043d78da5114c84173a14973",
-    "branch": "goal/5day-auto-improve-runtime",
-    "worktree_path": "../LLMwiki-worktrees/goal-5day-auto-improve-runtime",
-    "worktree_guard": {
-      "status": "pass",
-      "mode": "git_worktree",
-      "reason": "git linked worktree on expected branch"
-    }
-  },
-  "budget": {
-    "max_minutes": 7200,
-    "max_proposals": 60,
-    "max_consecutive_failures": 1
-  },
-  "progress": {
-    "iterations_completed": 0,
-    "proposals_attempted": 0,
-    "consecutive_failures": 0,
-    "elapsed_minutes": 0
-  },
-  "heartbeat": {
-    "interval_minutes": 5,
-    "last_heartbeat_at": "2026-05-15T10:19:34Z",
-    "stale_after_minutes": 10,
-    "status": "fresh"
-  },
-  "promotion_policy": {
-    "can_promote_result": true,
-    "requires_sealed_authority_clean_pass": true,
-    "promotion_ban_active": false,
-    "promotion_ban_reason": "Promotion gate is open because auto-improve readiness can_promote_result=true and sealed authority clean pass is current."
-  },
-  "artifacts": {
-    "status_json": "ops/reports/goal-run-status.json",
-    "status_markdown": "ops/reports/goal-status.md",
-    "audit_log": "ops/reports/goal-audit-log.jsonl",
-    "checkpoints_dir": "ops/reports/goal-checkpoints",
-    "resume_metadata": "ops/reports/goal-resume-metadata.json"
-  },
-  "checkpoints": [
-    {
-      "path": "ops/reports/goal-checkpoints/checkpoint-20260515T072337Z.json",
-      "created_at": "2026-05-15T07:23:37Z",
-      "reason": "dry-run profile verification: 30-minute-trial"
-    },
-    {
-      "path": "ops/reports/goal-checkpoints/checkpoint-20260515T092204Z.json",
-      "created_at": "2026-05-15T09:22:04Z",
-      "reason": "dry-run profile verification: 6-hour-ramp"
-    },
-    {
-      "path": "ops/reports/goal-checkpoints/checkpoint-20260515T092215Z.json",
-      "created_at": "2026-05-15T09:22:15Z",
-      "reason": "dry-run profile verification: 2-day-candidate"
-    },
-    {
-      "path": "ops/reports/goal-checkpoints/checkpoint-20260515T092224Z.json",
-      "created_at": "2026-05-15T09:22:24Z",
-      "reason": "dry-run profile verification: 5-day-sustained"
-    },
-    {
-      "path": "ops/reports/goal-checkpoints/checkpoint-20260515T095115Z.json",
-      "created_at": "2026-05-15T09:51:15Z",
-      "reason": "post-sealed-closeout clean evidence checkpoint"
-    },
-    {
-      "path": "ops/reports/goal-checkpoints/checkpoint-20260515T101934Z.json",
-      "created_at": "2026-05-15T10:19:34Z",
-      "reason": "post-final-sealed-closeout clean evidence checkpoint"
-    }
-  ],
-  "resume": {
-    "resume_supported": true,
-    "resume_metadata": "ops/reports/goal-resume-metadata.json",
-    "last_checkpoint": "ops/reports/goal-checkpoints/checkpoint-20260515T101934Z.json"
-  },
-  "stop_conditions": [
-    "allowed-root violation",
-    "repeated blocker cannot be converted to remediation backlog",
-    "status, audit, or heartbeat write failure",
-    "sealed authority or readiness regression",
-    "any need to bypass release, promotion, or learning-claim gates"
-  ],
-  "last_event": {
-    "at": "2026-05-15T10:19:34Z",
-    "event": "checkpoint",
-    "reason": "post-final-sealed-closeout clean evidence checkpoint"
-  },
-  "source_command": "python -m ops.scripts.goal_run_status checkpoint",
+  "source_command": "python -m ops.scripts.goal_run_status --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "17b2ceadf48e508e81cef28ba9c60bd259419e9214727bbea22971e41d986dae",
+  "source_tree_fingerprint": "ca6c31ed02532b9ba941fc251797e0fe78d487e64a127d8fd38ed8bca20dcdeb",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
-    "schema": "d9cb44e37d5e1a86d39dd494ccf904d4549687239fd88f3fe2fa68116978a956",
+    "schema": "a0076b65caa987558a05bd5653b0a7df5eb16b0e26cd3185bc1dd64c06030a41",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "2da960f24d224d2ed763bdc011153725722ff2d81ee8aebeafc362c79068aaf0",
-    "auto_improve_readiness": "a5325e66c4eaba8f37de9c305eb8d0555c4502c4aa5405d5eaf32bfe4b51352f",
-    "goal_contract": "f374bee05e9be09685659fb7651c75cc4aaad4cb4008e85df6dac36cc2528bd2",
-    "active_profile": "378ef337af55e50387985acbdd8ac30f471a68295e1c01cf91498d0f299beafc",
-    "baseline_commit": "9b991cc65612a682e508185c9374692f04758bfe41123a7463683e96c0bac3d1",
-    "branch": "e4410a50f1dfc09ec1e813e3b514e4a2ebea38f5525fc2e952d887f6160801d9",
-    "event": "47320987f9a49d5b00119b960f247a956773f57543982b8bfcb6da5bb3afd9ef",
-    "goal_id": "e4a44b736df2b23145e0d73c83d2f60e510a8ca025f63c44a84b00dd028d0f38",
-    "repo_url": "681f9058c57f621647361263ce7f3f4a11f63c769259f752be9a8157ee01aeff",
-    "visibility": "7109ec0807d8f2bd40aa93347ea112977e316242f2d457864041f59dfb684fc0",
-    "worktree_path": "d2bd4e15a6cafb639cb5fab712465e08c5f7ba6571ed7f51e959a503be5a32ba"
+    "source_paths": "c85103e56a1c9268f9950d5596270ab286dda3bef529982619c15bdc0acd1f76",
+    "goal_contract": "4d6247bb5d30aac1fc0838fad8a57fc85383fdfa1452c5a4af98d231c87ea5bd",
+    "session_synopsis_link": "7cbf10072f9b38b0b7b209442fe7e61976148ae82e700c307dc8c735ff054848"
   },
+  "schema_version": 1,
   "artifact_status": "current",
   "retention_policy": "canonical_report",
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T10:19:34Z"
-  }
+    "checked_at": "2026-05-17T17:37:50Z"
+  },
+  "goal": {
+    "contract_path": "ops/reports/codex-goal-contract.json",
+    "contract_sha256": "950295740320df3dae23179f49990f7703ad2a33ad2730dd5a6168bd1b001d21",
+    "contract_status": "loaded",
+    "contract_id": "auto-improve-goal",
+    "objective": "Build a bounded auto-improve goal runtime only after profile-ladder evidence, release authority, and promotion guards are current.",
+    "goal_status": "active",
+    "backend": {
+      "name": "file",
+      "process_persistent": true
+    }
+  },
+  "run": {
+    "run_id": "auto-improve-trial",
+    "status": "blocked",
+    "profile": "30m_trial",
+    "started_at": "2026-05-17T17:37:50Z",
+    "updated_at": "2026-05-17T17:37:50Z",
+    "completed_at": ""
+  },
+  "observability": {
+    "heartbeat_interval_seconds": 300,
+    "checkpoint_interval_seconds": 1800,
+    "last_heartbeat_at": "2026-05-17T17:37:50Z",
+    "last_checkpoint_at": "2026-05-17T17:37:50Z",
+    "last_command_heartbeat_at": "",
+    "quiet_seconds": 0,
+    "command_observation_mode": "",
+    "command_heartbeat_count": 0,
+    "command_timeout_seconds": 0,
+    "last_stdout_at": "",
+    "last_stderr_at": "",
+    "last_artifact_touch_at": "",
+    "last_command_returncode": -1,
+    "last_command_timed_out": false,
+    "last_command_termination_reason": "",
+    "last_backoff_until": "",
+    "backoff_reason": "",
+    "resume_from_checkpoint": false,
+    "resume_command": ""
+  },
+  "health": {
+    "heartbeat_status": "current",
+    "checkpoint_status": "current",
+    "command_heartbeat_status": "not_recorded",
+    "backoff_status": "inactive",
+    "resume_status": "not_requested",
+    "promotion_status": "blocked",
+    "can_promote_result": false
+  },
+  "profile_ladder": {
+    "status": "incomplete",
+    "current_profile": "30m_trial",
+    "run_profile": "30m_trial",
+    "verified_profiles": [],
+    "highest_verified_profile": "unverified",
+    "next_profile_required": "30m_trial",
+    "profile_verified_by_promotion_guard": "unverified",
+    "profile_guard_consistent": true,
+    "sustained_claim_allowed": false,
+    "profiles": [
+      {
+        "profile": "30m_trial",
+        "minimum_elapsed_seconds": 1800,
+        "verified": false,
+        "active": true,
+        "required_before_next_profile": "status, audit, checkpoint, heartbeat, and no promotion claim",
+        "evidence_paths": [
+          {
+            "path": "ops/reports/goal-run-status.json",
+            "status": "present",
+            "report_status": "running"
+          },
+          {
+            "path": "ops/reports/session-synopsis.json",
+            "status": "present",
+            "report_status": "attention"
+          },
+          {
+            "path": "ops/reports/auto-improve-readiness.json",
+            "status": "present"
+          }
+        ]
+      },
+      {
+        "profile": "6h_ramp",
+        "minimum_elapsed_seconds": 21600,
+        "verified": false,
+        "active": false,
+        "required_before_next_profile": "30m trial evidence plus current release/readiness blockers",
+        "evidence_paths": [
+          {
+            "path": "ops/reports/goal-run-status.json",
+            "status": "present",
+            "report_status": "running"
+          },
+          {
+            "path": "ops/reports/session-synopsis.json",
+            "status": "present",
+            "report_status": "attention"
+          },
+          {
+            "path": "ops/reports/auto-improve-readiness.json",
+            "status": "present"
+          },
+          {
+            "path": "ops/reports/source-package-clean-extract.json",
+            "status": "present",
+            "report_status": "pass"
+          }
+        ]
+      },
+      {
+        "profile": "2d_candidate",
+        "minimum_elapsed_seconds": 172800,
+        "verified": false,
+        "active": false,
+        "required_before_next_profile": "6h ramp evidence plus resume and backoff evidence",
+        "evidence_paths": [
+          {
+            "path": "ops/reports/goal-run-status.json",
+            "status": "present",
+            "report_status": "running"
+          },
+          {
+            "path": "ops/reports/remediation-backlog.json",
+            "status": "present",
+            "report_status": "pass"
+          },
+          {
+            "path": "ops/reports/source-package-clean-extract.json",
+            "status": "present",
+            "report_status": "pass"
+          },
+          {
+            "path": "ops/reports/public-check-summary.json",
+            "status": "present",
+            "report_status": "pass"
+          }
+        ]
+      },
+      {
+        "profile": "5d_sustained",
+        "minimum_elapsed_seconds": 432000,
+        "verified": false,
+        "active": false,
+        "required_before_next_profile": "2d candidate evidence plus sealed authority clean pass",
+        "evidence_paths": [
+          {
+            "path": "ops/reports/goal-run-status.json",
+            "status": "present",
+            "report_status": "running"
+          },
+          {
+            "path": "ops/reports/public-check-summary.json",
+            "status": "present",
+            "report_status": "pass"
+          },
+          {
+            "path": "ops/reports/release-closeout-summary.json",
+            "status": "present",
+            "report_status": "pass"
+          },
+          {
+            "path": "ops/reports/release-closeout-sealed-rehearsal-check.json",
+            "status": "missing"
+          }
+        ]
+      }
+    ]
+  },
+  "periodic_evidence": {
+    "status": "not_due",
+    "schedule": "6h_12h_24h",
+    "observed_checkpoint_count": 0,
+    "due_checkpoint_count": 0,
+    "missing_due_checkpoint_ids": [],
+    "next_checkpoint_id": "checkpoint_6h",
+    "checkpoints": [
+      {
+        "checkpoint_id": "checkpoint_6h",
+        "due_after_seconds": 21600,
+        "due_at": "2026-05-17T23:37:50Z",
+        "due": false,
+        "status": "pending",
+        "commands": [
+          "make auto-improve-readiness-report-body",
+          "make session-synopsis",
+          "make static"
+        ],
+        "command_run": {
+          "status": "not_due",
+          "last_event_at": "",
+          "command_count": 3,
+          "failed_command_count": 0,
+          "log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl"
+        },
+        "evidence_paths": [
+          {
+            "path": "ops/reports/auto-improve-readiness.json",
+            "status": "present",
+            "generated_at": "2026-05-17T17:23:45Z",
+            "freshness_status": "not_due"
+          },
+          {
+            "path": "ops/reports/session-synopsis.json",
+            "status": "present",
+            "generated_at": "2026-05-15T19:08:19Z",
+            "freshness_status": "not_due"
+          }
+        ]
+      },
+      {
+        "checkpoint_id": "checkpoint_12h",
+        "due_after_seconds": 43200,
+        "due_at": "2026-05-18T05:37:50Z",
+        "due": false,
+        "status": "pending",
+        "commands": [
+          "make test-execution-summary-report-contract",
+          "make release-source-package-check"
+        ],
+        "command_run": {
+          "status": "not_due",
+          "last_event_at": "",
+          "command_count": 2,
+          "failed_command_count": 0,
+          "log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl"
+        },
+        "evidence_paths": [
+          {
+            "path": "ops/reports/test-execution-summary.json",
+            "status": "present",
+            "generated_at": "2026-05-15T19:07:04Z",
+            "freshness_status": "not_due"
+          },
+          {
+            "path": "ops/reports/source-package-clean-extract.json",
+            "status": "present",
+            "generated_at": "2026-05-16T10:05:09Z",
+            "freshness_status": "not_due"
+          }
+        ]
+      },
+      {
+        "checkpoint_id": "checkpoint_24h",
+        "due_after_seconds": 86400,
+        "due_at": "2026-05-18T17:37:50Z",
+        "due": false,
+        "status": "pending",
+        "commands": [
+          "make public-check",
+          "make release-authority-sealed-preflight"
+        ],
+        "command_run": {
+          "status": "not_due",
+          "last_event_at": "",
+          "command_count": 2,
+          "failed_command_count": 0,
+          "log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl"
+        },
+        "evidence_paths": [
+          {
+            "path": "ops/reports/public-check-summary.json",
+            "status": "present",
+            "generated_at": "2026-05-15T19:08:14Z",
+            "freshness_status": "not_due"
+          },
+          {
+            "path": "ops/reports/release-closeout-sealed-rehearsal-check.json",
+            "status": "missing",
+            "generated_at": "",
+            "freshness_status": "missing"
+          }
+        ]
+      }
+    ]
+  },
+  "session_synopsis": {
+    "link_status": "linked",
+    "report_path": "ops/reports/session-synopsis.json",
+    "status": "attention",
+    "generated_at": "2026-05-15T19:08:19Z",
+    "recent_blocker_count": 0,
+    "evidence_gap_count": 1,
+    "next_action": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded live auto-improve with `.venv/bin/python -m ops.scripts.mechanism.auto_improve_loop --vault . --policy ops/policies/wiki-maintainer-policy.yaml --max-proposals 1 --max-minutes 30 --max-consecutive-failures 1 --executor codex_exec`."
+  },
+  "artifacts": {
+    "status_report_path": "ops/reports/goal-run-status.json",
+    "status_markdown_path": "runs/goal-auto-improve-trial/status.md",
+    "audit_log_path": "runs/goal-auto-improve-trial/audit-log.jsonl",
+    "resume_metadata_path": "runs/goal-auto-improve-trial/resume-metadata.json",
+    "checkpoint_command_log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl"
+  },
+  "promotion_guard": {
+    "can_promote_result": false,
+    "promotion_blockers": [
+      "promotion_blocked_by_goal_worktree_guard_failure",
+      "git_worktree_dirty"
+    ],
+    "sealed_authority_clean": true,
+    "profile_verified": "unverified",
+    "sustained_runtime_claimed": false,
+    "no_sustained_claim_before_profile_verified": true
+  },
+  "blockers": [
+    "promotion_blocked_by_goal_worktree_guard_failure",
+    "git_worktree_dirty",
+    "profile ladder incomplete"
+  ],
+  "status": "attention"
 }

@@ -187,7 +187,8 @@
         "release_closeout_finality_attestation_report",
         "release_evidence_cohort_report",
         "release_closeout_post_check_finalizer_report",
-        "release_authority_preflight_report"
+        "release_authority_preflight_report",
+        "goal_worktree_guard_report"
       ],
       "properties": {
         "refresh_generated_target": {
@@ -228,6 +229,9 @@
       },
       "release_authority_preflight_report": {
         "type": "string"
+      },
+      "goal_worktree_guard_report": {
+        "type": "string"
       }
     }
   },
@@ -245,7 +249,8 @@
         "release_closeout_finality_summary",
         "release_evidence_cohort_summary",
         "artifact_finalization_summary",
-        "release_authority_preflight_summary"
+        "release_authority_preflight_summary",
+        "goal_worktree_guard_summary"
       ],
       "properties": {
         "loop_health_summary": {
@@ -280,6 +285,9 @@
       },
       "release_authority_preflight_summary": {
         "$ref": "#/$defs/release_authority_preflight_summary"
+      },
+      "goal_worktree_guard_summary": {
+        "$ref": "#/$defs/goal_worktree_guard_summary"
       }
     }
   },
@@ -923,7 +931,8 @@
             "learning_readiness",
             "execution_readiness",
             "artifact_contract",
-            "release_gate"
+            "release_gate",
+            "worktree_guard"
           ]
         },
         "status": {
@@ -1156,6 +1165,57 @@
           "items": {
             "$ref": "https://llmwiki/schemas/learning-readiness-vocabulary#/$defs/release_blocker_id"
           }
+        },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "goal_worktree_guard_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "artifact_kind",
+        "status",
+        "requested_mode",
+        "detected_mode",
+        "can_execute_goal_runtime",
+        "can_promote_result",
+        "zip_mode_replay_only",
+        "dirty_worktree_allowed",
+        "dirty_entry_count",
+        "fatal_blockers",
+        "promotion_blockers",
+        "summary"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "artifact_kind": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["pass", "attention", "fail", "not_run", "unknown"]
+        },
+        "requested_mode": {
+          "type": "string",
+          "enum": ["auto", "git", "zip", "unknown"]
+        },
+        "detected_mode": {
+          "type": "string",
+          "enum": ["git_worktree", "zip_extract", "unknown"]
+        },
+        "can_execute_goal_runtime": { "type": "boolean" },
+        "can_promote_result": { "type": "boolean" },
+        "zip_mode_replay_only": { "type": "boolean" },
+        "dirty_worktree_allowed": { "type": "boolean" },
+        "dirty_entry_count": { "type": "integer", "minimum": 0 },
+        "fatal_blockers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "promotion_blockers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
         },
         "summary": { "type": "string", "minLength": 1 }
       }

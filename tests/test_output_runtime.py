@@ -9,6 +9,7 @@ from ops.scripts.output_runtime import (
     resolve_output_path,
     resolve_repo_output_path,
     resolve_vault_path,
+    sanitize_report_text,
     write_output_text,
 )
 
@@ -70,6 +71,16 @@ class OutputRuntimeTest(unittest.TestCase):
 
             self.assertEqual(display_path(vault, inside), "nested/report.json")
             self.assertEqual(display_path(vault, outside), outside.resolve().as_posix())
+
+    def test_sanitize_report_text_redacts_already_home_sanitized_vault_paths(self) -> None:
+        vault = Path("/home/example/code/LLMwiki-worktrees/goal-runtime")
+
+        text = "'<home>/code/LLMwiki-worktrees/goal-runtime/.venv/bin/python' -m pytest"
+
+        self.assertEqual(
+            sanitize_report_text(vault, text),
+            "'.venv/bin/python' -m pytest",
+        )
 
     def test_write_output_text_returns_written_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

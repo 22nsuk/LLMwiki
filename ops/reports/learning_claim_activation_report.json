@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-claim-activation-report.schema.json",
   "artifact_kind": "learning_claim_activation_report",
-  "generated_at": "2026-05-15T19:08:18Z",
+  "generated_at": "2026-05-17T18:45:24Z",
   "producer": "ops.scripts.learning_claim_activation_report",
   "source_command": "python -m ops.scripts.learning_claim_activation_report --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
+  "source_tree_fingerprint": "70fe90baadf78ba04dbba966814d451cf33e2723daa41fcd06c3b454bbf40742",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "d366a06d6c9fbade9f99a3a702f7e88409d8e793328122ab6b196c4d7d670305",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "ca60bd6e7fc4a4f6e31aa8e1983ea001202cc8ca0fbf2554d546b9a0d766bb00",
-    "learning_claim_activation_inputs": "ee53e45254fbf7802d9df1d1c437a04f442b968af844f3d42cfffeb670ab326d"
+    "source_paths": "b07eab6c0997284ce26fad16b3bd7bbf373e916a726d3ee1372dcd463b8d2c8e",
+    "learning_claim_activation_inputs": "d2446bb043c47edb9e389314788bc89d06bc40d463a538e396e05dd272bcc532"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T19:08:18Z"
+    "checked_at": "2026-05-17T18:45:24Z"
   },
   "vault": ".",
   "policy": {
@@ -28,57 +28,100 @@
   },
   "status": "pass",
   "summary": {
-    "activation_status": "open",
-    "claim_level": "confirmed_learning_improvement",
-    "claim_wording_allowed": true,
-    "blocked_predicate_count": 0,
+    "activation_status": "blocked",
+    "claim_level": "none",
+    "claim_wording_allowed": false,
+    "blocked_predicate_count": 2,
     "anti_slop_preview_status": "attention",
     "negative_learning_pattern_count": 5,
     "gate_effect": "none"
   },
   "claim_candidate": {
-    "status": "open",
+    "status": "blocked",
     "candidate": true,
     "current": {
-      "claim_level": "confirmed_learning_improvement",
+      "claim_level": "none",
       "learning_likely": true,
-      "claims_learning_improved": true,
-      "learning_claim_allowed": true,
-      "bounded_learning_claim_allowed": true,
-      "confirmed_learning_improvement_allowed": true,
-      "claim_wording_allowed": true,
-      "claim_wording_policy_status": "pre_seal_ready",
+      "claims_learning_improved": false,
+      "learning_claim_allowed": false,
+      "bounded_learning_claim_allowed": false,
+      "confirmed_learning_improvement_allowed": false,
+      "claim_wording_allowed": false,
+      "claim_wording_policy_status": "blocked",
       "learning_claim_evidence_complete": true
     },
     "required": {
       "bounded_learning_likely": "learning_claim_allowed == true with full same-eval reason, strict-secondary, behavior-delta digest, placeholder-free external report, and approved unlock review",
       "confirmed_learning_improvement": "confirmed evidence cohort, active evidence bundle, clean full/public/revalidation evidence, no learning blockers, and post-seal attestation authority"
     },
-    "repair_target": "Keep claim_level=none until learning readiness, unlock review, and post-seal authority all pass.",
+    "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean.",
     "evidence_digest": {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "f2f6d879019ebe3191111ea3cf5b6e2b6c2d2860b6045556c4b563fab91d58a1",
+      "sha256": "265eec1c3d29da383823966c239003e4fc8ec9d939a3facc6a0387ccea9078c9",
       "status": "present"
     },
     "post_seal_linkage": {
       "path": "build/release/release-post-seal-attestation.json",
-      "sha256": "56065ebf6f226af197da2903691a27fb5cf3d65f017a29e023e15dcd35b89ef5",
-      "post_seal_verified": true
+      "sha256": "",
+      "post_seal_verified": false
     }
   },
-  "blocked_predicates": [],
+  "blocked_predicates": [
+    {
+      "id": "learning_claim_unlock_review_not_approved",
+      "status": "stale",
+      "source": "learning_delta_scoreboard.learning_claim_unlock_review",
+      "source_path": "ops/reports/learning-delta-scoreboard.json",
+      "current": "approved=False; status=stale",
+      "required": "learning_claim_unlock_review.approved == true",
+      "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean.",
+      "summary": "learning claim auto approval is no longer active for the current evidence bundle: learning claim evidence bundle digest no longer matches current evidence",
+      "evidence_digest": {
+        "path": "ops/reports/learning-delta-scoreboard.json",
+        "exists": true,
+        "sha256": "265eec1c3d29da383823966c239003e4fc8ec9d939a3facc6a0387ccea9078c9",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "",
+        "linked": false
+      }
+    },
+    {
+      "id": "post_seal_learning_claim_linkage",
+      "status": "fail",
+      "source": "release_post_seal_attestation",
+      "source_path": "build/release/release-post-seal-attestation.json",
+      "current": "post_seal_verified=False",
+      "required": "release_post_seal_attestation.status == pass",
+      "repair_target": "Run release-post-seal-attestation after the candidate evidence is sealed and verify the learning claim authority binding.",
+      "summary": "Post-seal learning claim authority is not verified for the current evidence set.",
+      "evidence_digest": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "exists": false,
+        "sha256": "",
+        "status": "missing"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "",
+        "linked": false
+      }
+    }
+  ],
   "evidence_digests": [
     {
       "path": "ops/reports/auto-improve-readiness.json",
       "exists": true,
-      "sha256": "ed82f5a96a0c6c096c8aca7c36ce2084f357a65841417c62abddc853013a0ca6",
+      "sha256": "0baca18a3d49a5754f0cf90b80363d85487df561c067646399f8b320516328c8",
       "status": "present"
     },
     {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "f2f6d879019ebe3191111ea3cf5b6e2b6c2d2860b6045556c4b563fab91d58a1",
+      "sha256": "265eec1c3d29da383823966c239003e4fc8ec9d939a3facc6a0387ccea9078c9",
       "status": "present"
     },
     {
@@ -96,31 +139,31 @@
     {
       "path": "ops/reports/release-clean-blocker-ledger.json",
       "exists": true,
-      "sha256": "c88d6e1936c1e15b2bf3855457dd95659a55c6d7fd087f2b1fddecf2a1f9ea3c",
+      "sha256": "21607147e6fbbe69e7ebf8d32c13c4b0e82ff2757bda0b00c0005f29ac5f8854",
       "status": "present"
     },
     {
       "path": "ops/reports/source-package-clean-extract.json",
       "exists": true,
-      "sha256": "2abf2285095f037cae52f590f18507f8549bb1f135bfdb1182fb49f17a2de7a5",
+      "sha256": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
       "status": "present"
     },
     {
       "path": "build/release/release-post-seal-attestation.json",
-      "exists": true,
-      "sha256": "56065ebf6f226af197da2903691a27fb5cf3d65f017a29e023e15dcd35b89ef5",
-      "status": "present"
+      "exists": false,
+      "sha256": "",
+      "status": "missing"
     }
   ],
   "post_seal_linkage": {
     "path": "build/release/release-post-seal-attestation.json",
-    "exists": true,
-    "sha256": "56065ebf6f226af197da2903691a27fb5cf3d65f017a29e023e15dcd35b89ef5",
-    "status": "present",
-    "attestation_status": "pass",
-    "claim_level": "confirmed_learning_improvement",
-    "learning_claim_evidence_bundle_sha256": "63ce1a1ab770bb269ada39293fb1c8f8563cf7f335927d7f181018e10a3ef637",
-    "post_seal_verified": true
+    "exists": false,
+    "sha256": "",
+    "status": "missing",
+    "attestation_status": "missing",
+    "claim_level": "",
+    "learning_claim_evidence_bundle_sha256": "",
+    "post_seal_verified": false
   },
   "anti_slop_preview_ledger": {
     "mode": "preview",
@@ -132,7 +175,7 @@
       {
         "axis": "claim_hygiene",
         "status": "pass",
-        "current": "claim_level=confirmed_learning_improvement; claim_wording_allowed=True",
+        "current": "claim_level=none; claim_wording_allowed=False",
         "required": "No learning-improvement wording unless the claim model allows it.",
         "repair_target": "Keep claim_level=none or complete the unlock and confirmed-claim predicates.",
         "gate_effect": "none"
@@ -198,7 +241,27 @@
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "exists": true,
-            "sha256": "ed82f5a96a0c6c096c8aca7c36ce2084f357a65841417c62abddc853013a0ca6",
+            "sha256": "0baca18a3d49a5754f0cf90b80363d85487df561c067646399f8b320516328c8",
+            "status": "present"
+          }
+        ]
+      },
+      {
+        "pattern_id": "discard_behavior_delta_before_after_evidence_missing",
+        "decisions": [
+          "DISCARD"
+        ],
+        "run_ids": [
+          "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+        ],
+        "occurrence_count": 1,
+        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+        "repair_target": "Repair the rejected confirmed-evidence run before using it as learning proof.",
+        "evidence_digests": [
+          {
+            "path": "ops/reports/learning-delta-scoreboard.json",
+            "exists": true,
+            "sha256": "265eec1c3d29da383823966c239003e4fc8ec9d939a3facc6a0387ccea9078c9",
             "status": "present"
           }
         ]
@@ -219,27 +282,6 @@
             "path": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/run-telemetry.json",
             "exists": true,
             "sha256": "9048eb29f9df2973099c992e7d5f5f920d21fbc05f258ce3625499e5dd26e7a6",
-            "status": "present"
-          }
-        ]
-      },
-      {
-        "pattern_id": "discard_decision_discard",
-        "decisions": [
-          "DISCARD"
-        ],
-        "run_ids": [
-          "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
-          "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
-        ],
-        "occurrence_count": 2,
-        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
-        "repair_target": "Repair the rejected confirmed-evidence run before using it as learning proof.",
-        "evidence_digests": [
-          {
-            "path": "ops/reports/learning-delta-scoreboard.json",
-            "exists": true,
-            "sha256": "f2f6d879019ebe3191111ea3cf5b6e2b6c2d2860b6045556c4b563fab91d58a1",
             "status": "present"
           }
         ]

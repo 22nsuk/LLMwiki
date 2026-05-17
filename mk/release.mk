@@ -35,6 +35,7 @@ SOURCE_PACKAGE_EXTRACT_PARENT ?= $(SOURCE_PACKAGE_CHECK_ROOT)/extract
 SOURCE_PACKAGE_PYTHON ?= $(PUBLIC_PYTHON)
 SOURCE_PACKAGE_CLEAN_EXTRACT_OUT ?= ops/reports/source-package-clean-extract.json
 SOURCE_PACKAGE_CLEAN_EXTRACT_CANDIDATE_OUT ?= tmp/source-package-clean-extract.candidate.json
+SOURCE_PACKAGE_HEARTBEAT_INTERVAL_SECONDS ?= 30
 RELEASE_CLOSEOUT_SUMMARY_OUT ?= ops/reports/release-closeout-summary.json
 RELEASE_CLOSEOUT_SUMMARY_CANDIDATE_OUT ?= tmp/release-closeout-summary.candidate.json
 RELEASE_CLEAN_LANE_EVIDENCE_REVIEW_OUT ?= tmp/release-clean-lane-evidence-review.json
@@ -65,6 +66,7 @@ RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT ?= tmp/release-distribution-zip-smoke.json
 RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP ?= $(if $(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),$(RELEASE_DISTRIBUTION_ZIP_OUT))
 RELEASE_CLOSEOUT_SEALED_ZIP_METADATA ?= $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA),$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA),$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP))
 RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_OUT ?= tmp/release-closeout-sealed-rehearsal-check.json
+RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_CANONICAL_OUT ?= ops/reports/release-closeout-sealed-rehearsal-check.json
 RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_RELEASE_OUT ?= build/release/release-closeout-sealed-rehearsal-check.json
 RELEASE_CLOSEOUT_SEALED_DRY_RUN_ROOT ?= tmp/release-closeout-sealed-dry-run
 RELEASE_CLOSEOUT_SEALED_DRY_RUN_DISTRIBUTION_ZIP ?= $(RELEASE_CLOSEOUT_SEALED_DRY_RUN_ROOT)/LLMwiki-source.zip
@@ -117,8 +119,12 @@ LEARNING_CLAIM_ACTIVATION_REPORT_OUT ?= ops/reports/learning_claim_activation_re
 LEARNING_CLAIM_ACTIVATION_REPORT_CANDIDATE_OUT ?= tmp/learning-claim-activation-report.candidate.json
 SESSION_SYNOPSIS_OUT ?= ops/reports/session-synopsis.json
 SESSION_SYNOPSIS_CANDIDATE_OUT ?= tmp/session-synopsis.candidate.json
+SELF_IMPROVEMENT_NEGATIVE_LESSONS_OUT ?= ops/reports/self-improvement-negative-lessons.json
+SELF_IMPROVEMENT_NEGATIVE_LESSONS_CANDIDATE_OUT ?= tmp/self-improvement-negative-lessons.candidate.json
+REMEDIATION_BACKLOG_OUT ?= ops/reports/remediation-backlog.json
+REMEDIATION_BACKLOG_CANDIDATE_OUT ?= tmp/remediation-backlog.candidate.json
 
-.PHONY: release-evidence-closeout release-evidence-closeout-lane-guard release-evidence-closeout-phase-1 release-evidence-closeout-phase-2 release-evidence-closeout-phase-3 release-distribution-zip release-distribution-zip-lane-guard test-source-package release-source-package-check release-evidence-closeout-sealed release-evidence-closeout-sealed-check release-evidence-closeout-sealed-dry-run release-evidence-closeout-sealed-dry-run-check release-authority-sealed-preflight release-evidence-refresh-fast release-builder-full release-builder-full-lane-guard release-smoke release-smoke-lane-guard release-smoke-full release-smoke-full-reuse release-smoke-fast release-closeout-summary release-closeout-summary-report release-closeout-summary-conditional release-clean-lane-evidence-review release-evidence-cohort release-evidence-cohort-check learning-readiness-signoff learning-readiness-signoff-check learning-readiness-signoff-revalidation learning-readiness-signoff-revalidation-check release-evidence-dashboard release-evidence-dashboard-report release-lane-summary release-clean-blocker-ledger operator-release-summary learning-readiness-signoff-template learning-confirmed-legacy-reconstruction learning-claim-evidence-bundle learning-confirmed-evidence-cohort learning-claim-unlock-review learning-delta-scoreboard learning-claim-activation-report session-synopsis review-archive external-report-reference-manifest external-report-reference-manifest-strict external-report-reference-manifest-release-check external-report-reference-manifest-settle external-report-action-matrix external-report-lifecycle-refresh release-check release-conditional release-clean release-provenance-clean release-sbom-clean release-closeout-fixed-point release-closeout-post-check-finalizer-dry-run release-closeout-post-check-finalizer-ci-artifact release-closeout-fixed-point-cost-trend release-closeout-finality-attestation release-closeout-finality-verify release-closeout-batch-manifest-promote release-closeout-batch-manifest-replay-verify release-closeout-batch-manifest-verify release-audit-pack release-post-seal-attestation release-evidence-closeout-self-check 
+.PHONY: release-evidence-closeout release-evidence-closeout-lane-guard release-evidence-closeout-phase-1 release-evidence-closeout-phase-2 release-evidence-closeout-phase-3 release-distribution-zip release-distribution-zip-lane-guard test-source-package release-source-package-check release-evidence-closeout-sealed release-evidence-closeout-sealed-check release-evidence-closeout-sealed-dry-run release-evidence-closeout-sealed-dry-run-check release-authority-sealed-preflight release-evidence-refresh-fast release-builder-full release-builder-full-lane-guard release-smoke release-smoke-lane-guard release-smoke-full release-smoke-full-reuse release-smoke-fast release-closeout-summary release-closeout-summary-report release-closeout-summary-conditional release-clean-lane-evidence-review release-evidence-cohort release-evidence-cohort-check learning-readiness-signoff learning-readiness-signoff-check learning-readiness-signoff-revalidation learning-readiness-signoff-revalidation-check release-evidence-dashboard release-evidence-dashboard-report release-lane-summary release-clean-blocker-ledger operator-release-summary learning-readiness-signoff-template learning-confirmed-legacy-reconstruction learning-claim-evidence-bundle learning-confirmed-evidence-cohort learning-claim-unlock-review learning-delta-scoreboard learning-claim-activation-report session-synopsis self-improvement-negative-lessons remediation-backlog review-archive external-report-reference-manifest external-report-reference-manifest-strict external-report-reference-manifest-release-check external-report-reference-manifest-settle external-report-action-matrix external-report-lifecycle-refresh release-check release-conditional release-clean release-provenance-clean release-sbom-clean release-closeout-fixed-point release-closeout-post-check-finalizer-dry-run release-closeout-post-check-finalizer-ci-artifact release-closeout-fixed-point-cost-trend release-closeout-finality-attestation release-closeout-finality-verify release-closeout-batch-manifest-promote release-closeout-batch-manifest-replay-verify release-closeout-batch-manifest-verify release-audit-pack release-post-seal-attestation release-evidence-closeout-self-check
 
 release-evidence-closeout: release-evidence-closeout-phase-3
 
@@ -164,6 +170,8 @@ release-evidence-closeout-phase-2: release-evidence-closeout-phase-1
 	$(MAKE) learning-delta-scoreboard
 	$(MAKE) learning-claim-activation-report
 	$(MAKE) session-synopsis
+	$(MAKE) self-improvement-negative-lessons
+	$(MAKE) remediation-backlog
 	$(MAKE) release-closeout-summary
 	$(MAKE) learning-readiness-signoff-revalidation
 	$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint
@@ -193,7 +201,7 @@ test-source-package:
 release-source-package-check:
 	rm -rf "$(SOURCE_PACKAGE_CHECK_ROOT)"
 	$(MAKE) release-distribution-zip RELEASE_DISTRIBUTION_ZIP_OUT="$(SOURCE_PACKAGE_ZIP_OUT)" RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT="$(SOURCE_PACKAGE_ZIP_SMOKE_OUT)"
-	@status=0; $(PYTHON) -m ops.scripts.source_package_clean_extract --vault "$(VAULT)" --source-zip "$(SOURCE_PACKAGE_ZIP_OUT)" --extract-parent "$(SOURCE_PACKAGE_EXTRACT_PARENT)" --source-python "$(SOURCE_PACKAGE_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --test-summary-out "$(SOURCE_PACKAGE_TEST_SUMMARY_OUT)" --deselection-policy "$(SOURCE_PACKAGE_TEST_DESELECT_POLICY)" --pytest-mark-expr "$(SOURCE_PACKAGE_TEST_MARK_EXPR)" --tests "$(SOURCE_PACKAGE_TESTS)" --deselects="$(SOURCE_PACKAGE_TEST_DESELECTS)" --pytest-flags="$(PYTEST_SERIAL_FLAGS)" --zip-smoke-report "$(SOURCE_PACKAGE_ZIP_SMOKE_OUT)" --out "$(SOURCE_PACKAGE_CLEAN_EXTRACT_CANDIDATE_OUT)" || status=$$?; if [ ! -f "$(SOURCE_PACKAGE_CLEAN_EXTRACT_CANDIDATE_OUT)" ]; then exit $$status; fi; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(SOURCE_PACKAGE_CLEAN_EXTRACT_CANDIDATE_OUT)" --out "$(SOURCE_PACKAGE_CLEAN_EXTRACT_OUT)" --schema ops/schemas/source-package-clean-extract.schema.json --expected-artifact-kind source_package_clean_extract --expected-producer ops.scripts.source_package_clean_extract; exit $$status
+	@status=0; $(PYTHON) -m ops.scripts.source_package_clean_extract --vault "$(VAULT)" --source-zip "$(SOURCE_PACKAGE_ZIP_OUT)" --extract-parent "$(SOURCE_PACKAGE_EXTRACT_PARENT)" --source-python "$(SOURCE_PACKAGE_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --test-summary-out "$(SOURCE_PACKAGE_TEST_SUMMARY_OUT)" --deselection-policy "$(SOURCE_PACKAGE_TEST_DESELECT_POLICY)" --pytest-mark-expr "$(SOURCE_PACKAGE_TEST_MARK_EXPR)" --tests "$(SOURCE_PACKAGE_TESTS)" --deselects="$(SOURCE_PACKAGE_TEST_DESELECTS)" --pytest-flags="$(PYTEST_SERIAL_FLAGS)" --zip-smoke-report "$(SOURCE_PACKAGE_ZIP_SMOKE_OUT)" --heartbeat-interval-seconds "$(SOURCE_PACKAGE_HEARTBEAT_INTERVAL_SECONDS)" --out "$(SOURCE_PACKAGE_CLEAN_EXTRACT_CANDIDATE_OUT)" || status=$$?; if [ ! -f "$(SOURCE_PACKAGE_CLEAN_EXTRACT_CANDIDATE_OUT)" ]; then exit $$status; fi; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(SOURCE_PACKAGE_CLEAN_EXTRACT_CANDIDATE_OUT)" --out "$(SOURCE_PACKAGE_CLEAN_EXTRACT_OUT)" --schema ops/schemas/source-package-clean-extract.schema.json --expected-artifact-kind source_package_clean_extract --expected-producer ops.scripts.source_package_clean_extract; exit $$status
 
 release-evidence-closeout-sealed:
 	$(MAKE) release-distribution-zip RELEASE_DISTRIBUTION_ZIP_OUT="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"
@@ -219,6 +227,7 @@ release-evidence-closeout-sealed-dry-run-check:
 
 release-authority-sealed-preflight:
 	$(MAKE) release-evidence-closeout-sealed-dry-run RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_FLAGS=--allow-blocked-preflight
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_OUT)" --out "$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_CANONICAL_OUT)" --schema ops/schemas/release-closeout-sealed-rehearsal-check.schema.json --expected-artifact-kind release_closeout_sealed_rehearsal_check
 
 release-evidence-refresh-fast:
 	$(MAKE) bootstrap-preflight
@@ -342,6 +351,14 @@ learning-claim-activation-report: learning-delta-scoreboard
 session-synopsis: learning-claim-activation-report
 	$(PYTHON) -m ops.scripts.session_synopsis --vault "$(VAULT)" --out "$(SESSION_SYNOPSIS_CANDIDATE_OUT)"
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(SESSION_SYNOPSIS_CANDIDATE_OUT)" --out "$(SESSION_SYNOPSIS_OUT)" --schema ops/schemas/session-synopsis.schema.json --expected-artifact-kind session_synopsis --expected-producer ops.scripts.session_synopsis
+
+self-improvement-negative-lessons: session-synopsis
+	$(PYTHON) -m ops.scripts.self_improvement_negative_lessons --vault "$(VAULT)" --out "$(SELF_IMPROVEMENT_NEGATIVE_LESSONS_CANDIDATE_OUT)"
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(SELF_IMPROVEMENT_NEGATIVE_LESSONS_CANDIDATE_OUT)" --out "$(SELF_IMPROVEMENT_NEGATIVE_LESSONS_OUT)" --schema ops/schemas/self-improvement-negative-lessons.schema.json --expected-artifact-kind self_improvement_negative_lessons --expected-producer ops.scripts.self_improvement_negative_lessons
+
+remediation-backlog: self-improvement-negative-lessons session-synopsis
+	$(PYTHON) -m ops.scripts.remediation_backlog --vault "$(VAULT)" --out "$(REMEDIATION_BACKLOG_CANDIDATE_OUT)"
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(REMEDIATION_BACKLOG_CANDIDATE_OUT)" --out "$(REMEDIATION_BACKLOG_OUT)" --schema ops/schemas/remediation-backlog.schema.json --expected-artifact-kind remediation_backlog --expected-producer ops.scripts.remediation_backlog
 
 review-archive:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m ops.scripts.review_archive --vault "$(VAULT)" --archive-out "$(REVIEW_ARCHIVE_OUT)" --out "$(REVIEW_ARCHIVE_REPORT_OUT)" --profile "$(REVIEW_ARCHIVE_PROFILE)"

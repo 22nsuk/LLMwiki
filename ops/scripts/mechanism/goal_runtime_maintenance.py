@@ -1,292 +1,362 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 import datetime as dt
-import subprocess
-import sys
-import time
-from dataclasses import dataclass
+import json
 from pathlib import Path
-from threading import Event, Thread
-from typing import Any, Callable
+from typing import Any
 
-from ops.scripts.artifact_io_runtime import read_json_object
-from ops.scripts.runtime_context import RuntimeContext
-
-from .goal_run_status import _heartbeat_status, write_checkpoint, write_goal_status
-from .goal_runtime_request import GoalAutoImproveRequest
+from .goal_runtime_backoff import backoff_status, freshness_status, parse_iso_z
+from .goal_runtime_resume import resume_status
 
 
-RefreshCommand = Callable[[Path, str], None]
+PERIODIC_EVIDENCE_CHECKPOINTS: list[dict[str, Any]] = [
+    {
+        "checkpoint_id": "checkpoint_6h",
+        "due_after_seconds": 21600,
+        "commands": [
+            "make auto-improve-readiness-report-body",
+            "make session-synopsis",
+            "make static",
+        ],
+        "evidence_paths": [
+            "ops/reports/auto-improve-readiness.json",
+            "ops/reports/session-synopsis.json",
+        ],
+    },
+    {
+        "checkpoint_id": "checkpoint_12h",
+        "due_after_seconds": 43200,
+        "commands": [
+            "make test-execution-summary-report-contract",
+            "make release-source-package-check",
+        ],
+        "evidence_paths": [
+            "ops/reports/test-execution-summary.json",
+            "ops/reports/source-package-clean-extract.json",
+        ],
+    },
+    {
+        "checkpoint_id": "checkpoint_24h",
+        "due_after_seconds": 86400,
+        "commands": [
+            "make public-check",
+            "make release-authority-sealed-preflight",
+        ],
+        "evidence_paths": [
+            "ops/reports/public-check-summary.json",
+            "ops/reports/release-closeout-sealed-rehearsal-check.json",
+        ],
+    },
+]
+
+PERIODIC_CHECKPOINT_COMMAND_EVENT = "goal_periodic_checkpoint_commands_completed"
 
 
-@dataclass(frozen=True)
-class GoalMaintenanceSchedule:
-    heartbeat_interval_seconds: float | None
-    checkpoint_interval_seconds: float | None
-    readiness_interval_seconds: float | None
-    session_synopsis_interval_seconds: float | None
+def iso_z(value: dt.datetime) -> str:
+    return value.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def positive_interval_seconds(value: float | int | None) -> float | None:
-    if value is None:
-        return None
-    resolved = float(value)
-    if resolved <= 0:
-        return None
-    return resolved
+def periodic_checkpoint_status(*, due: bool, observed: bool) -> str:
+    if not due:
+        return "pending"
+    if observed:
+        return "observed"
+    return "missing"
 
 
-def build_maintenance_schedule(
-    request: GoalAutoImproveRequest,
-    profile: dict[str, int | str],
-) -> GoalMaintenanceSchedule:
-    if request.heartbeat_interval_seconds is not None:
-        heartbeat_interval = positive_interval_seconds(request.heartbeat_interval_seconds)
-    else:
-        heartbeat_interval = positive_interval_seconds(
-            int(request.heartbeat_interval_minutes or profile["heartbeat_interval_minutes"]) * 60
-        )
-    if request.checkpoint_interval_seconds is not None:
-        checkpoint_interval = positive_interval_seconds(request.checkpoint_interval_seconds)
-    else:
-        checkpoint_interval = positive_interval_seconds(
-            int(request.checkpoint_interval_minutes or profile["checkpoint_interval_minutes"]) * 60
-        )
-    readiness_interval = request.readiness_interval_seconds
-    if readiness_interval is None:
-        readiness_interval = int(profile["readiness_interval_hours"]) * 3600
-    session_synopsis_interval = request.session_synopsis_interval_seconds
-    if session_synopsis_interval is None:
-        session_synopsis_interval = int(profile["session_synopsis_interval_hours"]) * 3600
-    return GoalMaintenanceSchedule(
-        heartbeat_interval_seconds=heartbeat_interval,
-        checkpoint_interval_seconds=checkpoint_interval,
-        readiness_interval_seconds=positive_interval_seconds(readiness_interval),
-        session_synopsis_interval_seconds=positive_interval_seconds(session_synopsis_interval),
-    )
+def periodic_evidence_status(checkpoints: Sequence[Mapping[str, Any]]) -> str:
+    due = [item for item in checkpoints if item["due"]]
+    if not due:
+        return "not_due"
+    if all(item["status"] == "observed" for item in due):
+        return "current"
+    return "missing_due_evidence"
 
 
-def next_due(now: float, interval: float | None) -> float | None:
-    if interval is None:
-        return None
-    return now + interval
+def _json_generated_at(path: Path) -> str:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    if not isinstance(payload, Mapping):
+        return ""
+    return str(payload.get("generated_at", "")).strip()
 
 
-def wait_seconds(now: float, due_times: list[float | None]) -> float:
-    active_due_times = [due for due in due_times if due is not None]
-    if not active_due_times:
-        return 0
-    return max(0.0, min(active_due_times) - now)
+def _evidence_freshness_status(*, due: bool, due_at: dt.datetime | None, generated_at: str) -> str:
+    if not due:
+        return "not_due"
+    generated = parse_iso_z(generated_at)
+    if due_at is not None and generated is not None and generated >= due_at:
+        return "fresh"
+    return "stale"
 
 
-def run_periodic_refresh_command(vault: Path, target: str) -> None:
-    completed = subprocess.run(
-        ["make", target, f"PYTHON={sys.executable}"],
-        cwd=vault,
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    if completed.returncode != 0:
-        detail = (completed.stderr or completed.stdout).strip().splitlines()
-        suffix = f": {detail[-1]}" if detail else ""
-        raise RuntimeError(f"{target} failed with exit code {completed.returncode}{suffix}")
-
-
-def readiness_continuation_blocker(vault: Path) -> str | None:
-    readiness_path = vault / "ops/reports/auto-improve-readiness.json"
-    if not readiness_path.is_file():
-        return "auto-improve readiness report is missing"
-    readiness = read_json_object(readiness_path)
-    for blocker_field in (
-        "blockers",
-        "release_blockers",
-        "promotion_blockers",
-        "learning_blockers",
-    ):
-        blockers = readiness.get(blocker_field)
-        if blockers:
-            return f"auto-improve readiness blockers are present: {blocker_field}"
-    if not bool(readiness.get("can_execute_trial", False)):
-        return "auto-improve readiness regression: can_execute_trial=false"
-    if not bool(readiness.get("can_promote_result", False)):
-        return "sealed authority/readiness regression: can_promote_result=false"
-    diagnostics = readiness.get("diagnostics")
-    if not isinstance(diagnostics, dict):
-        return "sealed authority/readiness regression: missing diagnostics"
-    preflight = diagnostics.get("release_authority_preflight_summary")
-    if not isinstance(preflight, dict):
-        return "sealed authority/readiness regression: missing release authority preflight summary"
-    if (
-        preflight.get("status") != "pass"
-        or preflight.get("preflight_status") != "sealed_clean_pass"
-        or bool(preflight.get("clean_required_preflight")) is not True
-        or bool(preflight.get("expected_blocked_preflight")) is not False
-    ):
-        return "sealed authority/readiness regression: clean-required sealed pass is not current"
-    return None
-
-
-def assert_readiness_allows_continuation(vault: Path) -> None:
-    blocker = readiness_continuation_blocker(vault)
-    if blocker is not None:
-        raise RuntimeError(blocker)
-
-
-def read_status_for_periodic_update(
+def _evidence_path_status(
     vault: Path,
-    status_path: str,
-    context: RuntimeContext,
+    path: str,
+    *,
+    due: bool,
+    due_at: dt.datetime | None,
 ) -> dict[str, Any]:
-    status = read_json_object(vault / status_path)
-    status["generated_at"] = context.isoformat_z()
-    status["heartbeat"] = _heartbeat_status(
-        {
-            "budgets": {
-                "heartbeat_interval_minutes": status["heartbeat"]["interval_minutes"],
-            }
-        },
-        context,
-    )
-    return status
+    evidence_path = vault / path
+    if not evidence_path.is_file():
+        return {
+            "path": path,
+            "status": "missing",
+            "generated_at": "",
+            "freshness_status": "missing",
+        }
+    generated_at = _json_generated_at(evidence_path)
+    return {
+        "path": path,
+        "status": "present",
+        "generated_at": generated_at,
+        "freshness_status": _evidence_freshness_status(
+            due=due,
+            due_at=due_at,
+            generated_at=generated_at,
+        ),
+    }
 
 
-def maintenance_loop(
-    vault: Path,
-    status_path: str,
-    *,
-    profile_name: str,
-    schedule: GoalMaintenanceSchedule,
-    stop_event: Event,
-    errors: list[str],
-    refresh_command: RefreshCommand,
-) -> None:
-    now = time.monotonic()
-    next_heartbeat = next_due(now, schedule.heartbeat_interval_seconds)
-    next_checkpoint = next_due(now, schedule.checkpoint_interval_seconds)
-    next_readiness = next_due(now, schedule.readiness_interval_seconds)
-    next_session_synopsis = next_due(now, schedule.session_synopsis_interval_seconds)
-    if not any(
-        due is not None
-        for due in (next_heartbeat, next_checkpoint, next_readiness, next_session_synopsis)
-    ):
-        return
-    while True:
-        now = time.monotonic()
-        interval_wait = wait_seconds(
-            now,
-            [next_heartbeat, next_checkpoint, next_readiness, next_session_synopsis],
-        )
-        if stop_event.wait(interval_wait):
-            return
+def _load_checkpoint_command_events(vault: Path, path: str) -> list[dict[str, Any]]:
+    if not path:
+        return []
+    event_path = vault / path
+    if not event_path.is_file():
+        return []
+    events: list[dict[str, Any]] = []
+    for raw_line in event_path.read_text(encoding="utf-8").splitlines():
+        if not raw_line.strip():
+            continue
         try:
-            context = RuntimeContext(display_timezone=dt.timezone.utc)
-            now = time.monotonic()
-            if next_readiness is not None and now >= next_readiness:
-                refresh_command(vault, "auto-improve-readiness-report-body")
-                assert_readiness_allows_continuation(vault)
-                status = read_status_for_periodic_update(vault, status_path, context)
-                status["last_event"] = {
-                    "at": context.isoformat_z(),
-                    "event": "periodic_readiness_refresh",
-                    "reason": f"profile={profile_name}; target=auto-improve-readiness-report-body",
-                }
-                write_goal_status(
-                    vault,
-                    status,
-                    event="periodic_readiness_refresh",
-                    reason=f"profile={profile_name}; target=auto-improve-readiness-report-body",
-                )
-                next_readiness = next_due(now, schedule.readiness_interval_seconds)
-            if next_session_synopsis is not None and now >= next_session_synopsis:
-                refresh_command(vault, "session-synopsis")
-                status = read_status_for_periodic_update(vault, status_path, context)
-                status["last_event"] = {
-                    "at": context.isoformat_z(),
-                    "event": "periodic_session_synopsis",
-                    "reason": f"profile={profile_name}; target=session-synopsis",
-                }
-                write_goal_status(
-                    vault,
-                    status,
-                    event="periodic_session_synopsis",
-                    reason=f"profile={profile_name}; target=session-synopsis",
-                )
-                next_session_synopsis = next_due(now, schedule.session_synopsis_interval_seconds)
-            if next_checkpoint is not None and now >= next_checkpoint:
-                status = read_status_for_periodic_update(vault, status_path, context)
-                status["last_event"] = {
-                    "at": context.isoformat_z(),
-                    "event": "checkpoint",
-                    "reason": f"periodic checkpoint for goal profile: {profile_name}",
-                }
-                status = write_checkpoint(
-                    vault,
-                    status,
-                    reason=f"periodic checkpoint for goal profile: {profile_name}",
-                )
-                write_goal_status(
-                    vault,
-                    status,
-                    event="checkpoint",
-                    reason=f"periodic checkpoint for goal profile: {profile_name}",
-                )
-                next_checkpoint = next_due(now, schedule.checkpoint_interval_seconds)
-                next_heartbeat = next_due(now, schedule.heartbeat_interval_seconds)
-                continue
-            if next_heartbeat is not None and now >= next_heartbeat:
-                status = read_status_for_periodic_update(vault, status_path, context)
-                status["last_event"] = {
-                    "at": context.isoformat_z(),
-                    "event": "heartbeat",
-                    "reason": f"auto-improve goal profile heartbeat: {profile_name}",
-                }
-                write_goal_status(
-                    vault,
-                    status,
-                    event="heartbeat",
-                    reason=f"auto-improve goal profile heartbeat: {profile_name}",
-                )
-                next_heartbeat = next_due(now, schedule.heartbeat_interval_seconds)
-        except (OSError, RuntimeError, ValueError, KeyError, TypeError) as exc:
-            errors.append(str(exc))
-            stop_event.set()
-            return
+            payload = json.loads(raw_line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            events.append(payload)
+    return events
 
 
-def start_maintenance_thread(
-    vault: Path,
-    request: GoalAutoImproveRequest,
-    profile: dict[str, int | str],
+def append_checkpoint_command_event(vault: Path, path: str, event: Mapping[str, Any]) -> None:
+    event_path = vault / path
+    event_path.parent.mkdir(parents=True, exist_ok=True)
+    with event_path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(dict(event), ensure_ascii=False, sort_keys=True) + "\n")
+
+
+def _checkpoint_command_run_summary(
     *,
-    refresh_command: RefreshCommand = run_periodic_refresh_command,
-) -> tuple[Event, Thread | None, list[str]]:
-    schedule = build_maintenance_schedule(request, profile)
-    errors: list[str] = []
-    stop_event = Event()
-    if not any(
-        interval is not None
-        for interval in (
-            schedule.heartbeat_interval_seconds,
-            schedule.checkpoint_interval_seconds,
-            schedule.readiness_interval_seconds,
-            schedule.session_synopsis_interval_seconds,
+    checkpoint_id: str,
+    due: bool,
+    due_at: dt.datetime | None,
+    commands: Sequence[str],
+    checkpoint_command_log_path: str,
+    command_events: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    base = {
+        "status": "not_due" if not due else "not_run",
+        "last_event_at": "",
+        "command_count": len(commands),
+        "failed_command_count": 0,
+        "log_path": checkpoint_command_log_path,
+    }
+    if not due or due_at is None:
+        return base
+
+    matching_events: list[tuple[dt.datetime, Mapping[str, Any]]] = []
+    for event in command_events:
+        if str(event.get("event", "")).strip() != PERIODIC_CHECKPOINT_COMMAND_EVENT:
+            continue
+        if str(event.get("checkpoint_id", "")).strip() != checkpoint_id:
+            continue
+        generated = parse_iso_z(str(event.get("generated_at", "")).strip())
+        if generated is None or generated < due_at:
+            continue
+        matching_events.append((generated, event))
+    if not matching_events:
+        return base
+
+    generated, latest = sorted(matching_events, key=lambda item: item[0])[-1]
+    failed_count = int(latest.get("failed_command_count", 0) or 0)
+    status = "pass" if str(latest.get("status", "")).strip() == "pass" else "fail"
+    return {
+        **base,
+        "status": status,
+        "last_event_at": iso_z(generated),
+        "command_count": int(latest.get("command_count", len(commands)) or len(commands)),
+        "failed_command_count": failed_count,
+    }
+
+
+def checkpoint_command_retry_due(
+    *,
+    generated_at: str,
+    command_run: Mapping[str, Any],
+    retry_after_seconds: int,
+) -> bool:
+    if command_run.get("status") in {"not_due", "pass"}:
+        return False
+    last_event_at = parse_iso_z(str(command_run.get("last_event_at", "")).strip())
+    now = parse_iso_z(generated_at)
+    if last_event_at is None or now is None:
+        return True
+    return (now - last_event_at).total_seconds() >= retry_after_seconds
+
+
+def build_periodic_evidence(
+    vault: Path,
+    *,
+    generated_at: str,
+    started_at: str,
+    last_checkpoint_at: str,
+    checkpoint_command_log_path: str = "",
+    checkpoints_config: Sequence[Mapping[str, Any]] = PERIODIC_EVIDENCE_CHECKPOINTS,
+) -> dict[str, Any]:
+    started = parse_iso_z(started_at)
+    now = parse_iso_z(generated_at)
+    last_checkpoint = parse_iso_z(last_checkpoint_at)
+    command_events = _load_checkpoint_command_events(vault, checkpoint_command_log_path)
+    checkpoints: list[dict[str, Any]] = []
+    for checkpoint in checkpoints_config:
+        due_after_seconds = int(checkpoint["due_after_seconds"])
+        commands = [str(command) for command in checkpoint["commands"]]
+        due_at = started + dt.timedelta(seconds=due_after_seconds) if started else None
+        due = bool(due_at is not None and now is not None and now >= due_at)
+        evidence_paths = [
+            _evidence_path_status(
+                vault,
+                str(path),
+                due=due,
+                due_at=due_at,
+            )
+            for path in checkpoint["evidence_paths"]
+        ]
+        command_run = _checkpoint_command_run_summary(
+            checkpoint_id=str(checkpoint["checkpoint_id"]),
+            due=due,
+            due_at=due_at,
+            commands=commands,
+            checkpoint_command_log_path=checkpoint_command_log_path,
+            command_events=command_events,
         )
-    ):
-        return stop_event, None, errors
-    thread = Thread(
-        target=maintenance_loop,
-        kwargs={
-            "vault": vault,
-            "status_path": request.status_out,
-            "profile_name": str(profile["profile"]),
-            "schedule": schedule,
-            "stop_event": stop_event,
-            "errors": errors,
-            "refresh_command": refresh_command,
-        },
-        daemon=True,
-    )
-    thread.start()
-    return stop_event, thread, errors
+        evidence_complete = all(
+            item["status"] == "present"
+            and (not due or item["freshness_status"] == "fresh")
+            for item in evidence_paths
+        )
+        checkpoint_observed = bool(
+            due
+            and last_checkpoint is not None
+            and due_at is not None
+            and last_checkpoint >= due_at
+            and evidence_complete
+            and command_run["status"] == "pass"
+        )
+        checkpoints.append(
+            {
+                "checkpoint_id": checkpoint["checkpoint_id"],
+                "due_after_seconds": due_after_seconds,
+                "due_at": iso_z(due_at) if due_at else "",
+                "due": due,
+                "status": periodic_checkpoint_status(
+                    due=due,
+                    observed=checkpoint_observed,
+                ),
+                "commands": list(checkpoint["commands"]),
+                "command_run": command_run,
+                "evidence_paths": evidence_paths,
+            }
+        )
+    missing_due_ids = [
+        str(item["checkpoint_id"])
+        for item in checkpoints
+        if item["due"] and item["status"] != "observed"
+    ]
+    next_checkpoint_id = ""
+    for item in checkpoints:
+        if not item["due"]:
+            next_checkpoint_id = str(item["checkpoint_id"])
+            break
+    return {
+        "status": periodic_evidence_status(checkpoints),
+        "schedule": "6h_12h_24h",
+        "observed_checkpoint_count": sum(1 for item in checkpoints if item["status"] == "observed"),
+        "due_checkpoint_count": sum(1 for item in checkpoints if item["due"]),
+        "missing_due_checkpoint_ids": missing_due_ids,
+        "next_checkpoint_id": next_checkpoint_id,
+        "checkpoints": checkpoints,
+    }
+
+
+def promotion_status(promotion_guard: Mapping[str, Any]) -> str:
+    if bool(promotion_guard.get("can_promote_result", False)):
+        return "allowed"
+    return "blocked"
+
+
+def build_goal_health(
+    *,
+    generated_at: str,
+    promotion_guard: Mapping[str, Any],
+    heartbeat_interval_seconds: int,
+    checkpoint_interval_seconds: int,
+    last_heartbeat_at: str,
+    last_checkpoint_at: str,
+    last_command_heartbeat_at: str,
+    last_backoff_until: str,
+    resume_from_checkpoint: bool,
+    resume_command: str,
+) -> dict[str, Any]:
+    return {
+        "heartbeat_status": freshness_status(
+            now_iso=generated_at,
+            observed_iso=last_heartbeat_at,
+            interval_seconds=heartbeat_interval_seconds,
+        ),
+        "checkpoint_status": freshness_status(
+            now_iso=generated_at,
+            observed_iso=last_checkpoint_at,
+            interval_seconds=checkpoint_interval_seconds,
+        ),
+        "command_heartbeat_status": freshness_status(
+            now_iso=generated_at,
+            observed_iso=last_command_heartbeat_at,
+            interval_seconds=heartbeat_interval_seconds,
+            allow_not_recorded=True,
+        ),
+        "backoff_status": backoff_status(generated_at, last_backoff_until),
+        "resume_status": resume_status(
+            resume_from_checkpoint=resume_from_checkpoint,
+            resume_command=resume_command,
+        ),
+        "promotion_status": promotion_status(promotion_guard),
+        "can_promote_result": bool(promotion_guard.get("can_promote_result", False)),
+    }
+
+
+def health_blockers(
+    health: Mapping[str, Any],
+    *,
+    run_status: str,
+    periodic_evidence: Mapping[str, Any],
+) -> list[str]:
+    blockers: list[str] = []
+    if health.get("heartbeat_status") in {"stale", "unknown"}:
+        blockers.append(f"heartbeat {health['heartbeat_status']}")
+    if health.get("checkpoint_status") in {"stale", "unknown"}:
+        blockers.append(f"checkpoint {health['checkpoint_status']}")
+    if run_status == "running" and health.get("command_heartbeat_status") in {
+        "stale",
+        "unknown",
+        "not_recorded",
+    }:
+        blockers.append(f"command heartbeat {health['command_heartbeat_status']}")
+    if health.get("resume_status") == "missing_resume_command":
+        blockers.append("resume command missing")
+    missing_due = periodic_evidence.get("missing_due_checkpoint_ids")
+    if isinstance(missing_due, list) and missing_due:
+        blockers.append("periodic evidence checkpoint missing")
+    return blockers

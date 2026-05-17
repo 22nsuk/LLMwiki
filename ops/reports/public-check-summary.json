@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/public-check-summary.schema.json",
   "artifact_kind": "public_check_summary",
-  "generated_at": "2026-05-15T19:08:14Z",
+  "generated_at": "2026-05-17T19:45:37Z",
   "producer": "ops.scripts.public_check_summary",
   "source_command": "python -m ops.scripts.public_check_summary --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
+  "source_tree_fingerprint": "0ef4d3e76f63c1b8e47e3674744767d9972137cf2eb92e8e4c95a3bac9d57e4a",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "60e44cd49ca6321888bbf40d808c7be70d89d5e19a3a35154a4e235efca7c7fc",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T19:08:14Z"
+    "checked_at": "2026-05-17T19:45:37Z"
   },
   "vault": ".",
   "policy": {
@@ -30,14 +30,14 @@
   "summary": {
     "public_export_status": "pass",
     "public_check_status": "pass",
-    "export_file_count": 641,
-    "export_source_file_count": 640,
-    "export_root_fingerprint": "f9b3ccf884610afb8f973e2797ade79df01ae62e1334de86e0b4bd32b1724580",
-    "public_export_manifest_sha256": "a87feebeb96af2d853cb47f8d271e231012745bb984142ac78bd09ec4218e70e",
+    "export_file_count": 656,
+    "export_source_file_count": 655,
+    "export_root_fingerprint": "582da163ee9f11267479f569ffa6b2df57bf4d9c5ddaab9b3554a7c33c5c158b",
+    "public_export_manifest_sha256": "cf03bbc2d0e70b381ec607ed0b1eab4b1a8f101528c6c8bb94d9acbe64f8b29f",
     "public_surface_policy_sha256": "6551a09d14ab4961d949b71777f6320f4ffed0d2ec50bc4ab6ab109521590dcf",
     "command_count": 3,
     "command_fail_count": 0,
-    "pytest_passed": 356,
+    "pytest_passed": 395,
     "pytest_failed": 0,
     "pytest_errors": 0,
     "pytest_skipped": 5
@@ -45,54 +45,54 @@
   "public_export": {
     "output_dir": "<tmp>/llm-wiki-public-repo",
     "manifest_file": "PUBLIC-EXPORT-MANIFEST.json",
-    "file_count": 641,
-    "source_file_count": 640,
-    "export_root_fingerprint": "f9b3ccf884610afb8f973e2797ade79df01ae62e1334de86e0b4bd32b1724580",
-    "manifest_sha256": "a87feebeb96af2d853cb47f8d271e231012745bb984142ac78bd09ec4218e70e"
+    "file_count": 656,
+    "source_file_count": 655,
+    "export_root_fingerprint": "582da163ee9f11267479f569ffa6b2df57bf4d9c5ddaab9b3554a7c33c5c158b",
+    "manifest_sha256": "cf03bbc2d0e70b381ec607ed0b1eab4b1a8f101528c6c8bb94d9acbe64f8b29f"
   },
   "commands": [
     {
       "id": "ruff",
-      "command": "'<home>/code/LLMwiki/.venv/bin/python' -m ruff check ops/scripts tests tools",
+      "command": ".venv/bin/python -m ruff check ops/scripts tests tools",
       "cwd": ".",
       "status": "pass",
       "returncode": 0,
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 40,
+      "duration_ms": 39,
       "stdout_tail": "All checks passed!\n",
       "stderr_tail": "",
       "pytest_counts": {}
     },
     {
       "id": "mypy",
-      "command": "'<home>/code/LLMwiki/.venv/bin/python' -m mypy @ops/mypy-allowlist.txt",
+      "command": ".venv/bin/python -m mypy @ops/mypy-allowlist.txt",
       "cwd": ".",
       "status": "pass",
       "returncode": 0,
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 2913,
-      "stdout_tail": "Success: no issues found in 232 source files\n",
+      "duration_ms": 3033,
+      "stdout_tail": "Success: no issues found in 238 source files\n",
       "stderr_tail": "",
       "pytest_counts": {}
     },
     {
       "id": "pytest_public",
-      "command": "'<home>/code/LLMwiki/.venv/bin/python' -m pytest -m public -p xdist.plugin -n auto --dist=loadfile",
+      "command": ".venv/bin/python -m pytest -m public -p xdist.plugin -n auto --dist=loadfile",
       "cwd": ".",
       "status": "pass",
       "returncode": 0,
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 55191,
-      "stdout_tail": "bringing up nodes...\nbringing up nodes...\n\n................ssss...............s.................................... [ 19%]\n........................................................................ [ 39%]\n........................................................................ [ 59%]\n........................................................................ [ 79%]\n........................................................................ [ 99%]\n.                                                                        [100%]\n356 passed, 5 skipped in 54.97s\n",
+      "duration_ms": 54925,
+      "stdout_tail": "bringing up nodes...\nbringing up nodes...\n\n...............................sss.s.s.................................. [ 18%]\n........................................................................ [ 36%]\n........................................................................ [ 54%]\n........................................................................ [ 72%]\n........................................................................ [ 90%]\n........................................                                 [100%]\n395 passed, 5 skipped in 54.73s\n",
       "stderr_tail": "",
       "pytest_counts": {
-        "passed": 356,
+        "passed": 395,
         "failed": 0,
         "errors": 0,
         "skipped": 5,

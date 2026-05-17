@@ -16,6 +16,8 @@ from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.public
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-closeout-sealed-rehearsal-check.schema.json"
 
 
 def fixed_context() -> RuntimeContext:
@@ -101,6 +103,16 @@ class ReleaseCloseoutSealedRehearsalCheckTests(unittest.TestCase):
         )
 
         self.assertEqual(report["status"], "pass")
+        self.assertEqual(
+            report["$schema"],
+            "ops/schemas/release-closeout-sealed-rehearsal-check.schema.json",
+        )
+        self.assertEqual(
+            report["producer"],
+            "ops.scripts.release_closeout_sealed_rehearsal_check",
+        )
+        self.assertEqual(report["artifact_status"], "current")
+        self.assertEqual(report["currentness"]["status"], "current")
         self.assertEqual(report["preflight_status"], "sealed_clean_pass")
         self.assertEqual(report["preflight_mode"], "clean_required")
         self.assertEqual(report["distribution_binding_status"], "pass")
@@ -117,6 +129,7 @@ class ReleaseCloseoutSealedRehearsalCheckTests(unittest.TestCase):
             report["external_report_reference_manifest"]["mode"],
             "strict_review_release",
         )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_sealed_rehearsal_check_default_context_is_utc(self) -> None:
         zip_path = self._write_inputs()
@@ -239,6 +252,7 @@ class ReleaseCloseoutSealedRehearsalCheckTests(unittest.TestCase):
             report["summary"],
             "distribution binding pass; release authority blocked",
         )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_allow_blocked_preflight_exits_success_for_authority_only_blocker(
         self,

@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest import mock
 
 from ops.scripts import auto_improve_runtime
+from ops.scripts.codex_goal_client import set_goal
 from ops.scripts.auto_improve_execute_runtime import (
     ExecuteEvaluateDependencies,
     ExecuteEvaluateRequest,
@@ -25,6 +26,7 @@ from ops.scripts.runtime_context import RuntimeContext
 
 from tests.minimal_vault_runtime import seed_subagent_profiles
 from tests.run_mechanism_experiment_test_utils import mutation_proposal_report, seed_wrapper_vault
+from tests.test_codex_goal_contract import sample_goal_contract
 
 
 def _expected_timeout_summary(
@@ -475,7 +477,7 @@ def _assert_successful_runtime_events_and_learning(case: unittest.TestCase, arti
     case.assertEqual(run_events[0]["component"], "auto_improve_session")
     case.assertEqual(run_events[0]["policy_version"], 4)
     case.assertEqual(session_events[-1]["phase"], "complete")
-    case.assertEqual(session_events[-1]["decision"], "queue_exhausted")
+    case.assertEqual(session_events[-1]["decision"], "budget_limited")
     case.assertEqual(
         session["learning_mode"],
         {
@@ -823,6 +825,96 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                     session_id="auto-session-zero-budget",
                     max_proposals=0,
                 )
+
+    def test_goal_contract_rejects_policy_and_cli_budgets_above_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            set_goal(sample_goal_contract(), vault=vault)
+
+            with self.assertRaisesRegex(
+                AutoImproveUsageError,
+                "max_proposals exceeds goal contract budget",
+            ):
+                run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    session_id="auto-session-policy-contract-budget",
+                    goal_contract_path="ops/reports/codex-goal-contract.json",
+                    executor_name="codex_exec",
+                )
+
+            with self.assertRaisesRegex(
+                AutoImproveUsageError,
+                "max_proposals exceeds goal contract budget",
+            ):
+                run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    session_id="auto-session-cli-contract-budget",
+                    goal_contract_path="ops/reports/codex-goal-contract.json",
+                    max_proposals=2,
+                    max_minutes=30,
+                    max_consecutive_failures=1,
+                    executor_name="codex_exec",
+                )
+
+    def test_budget_limited_resume_keeps_same_goal_contract_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            seed_subagent_profiles(vault, ["worker", "validator"])
+            set_goal(sample_goal_contract(), vault=vault)
+            proposal = mutation_proposal_report("ops/scripts/example.py")["proposals"][0]
+
+            def fake_refresh_reports(*_: object, **__: object) -> tuple[dict, dict]:
+                return {}, {"proposals": [proposal]}
+
+            with (
+                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    side_effect=_fake_successful_mechanism_experiment,
+                ),
+            ):
+                first = run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    session_id="auto-session-contract-budget-limited",
+                    goal_contract_path="ops/reports/codex-goal-contract.json",
+                    max_proposals=1,
+                    max_minutes=30,
+                    max_consecutive_failures=1,
+                    executor_name="codex_exec",
+                    allow_learning_uncertain=True,
+                )
+
+            first_session = json.loads((vault / first["session_report"]).read_text(encoding="utf-8"))
+            contract_digest = first_session["goal_contract"]["contract_sha256"]
+            self.assertEqual(first["stop_reason"], "budget_limited")
+
+            with mock.patch(
+                "ops.scripts.auto_improve_runtime._refresh_reports",
+                side_effect=AssertionError("budget-limited resume should not refresh proposals"),
+            ):
+                resumed = run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    resume_session="auto-session-contract-budget-limited",
+                    goal_contract_path="ops/reports/codex-goal-contract.json",
+                    max_proposals=1,
+                    max_minutes=30,
+                    max_consecutive_failures=1,
+                    executor_name="codex_exec",
+                    allow_learning_uncertain=True,
+                )
+
+            resumed_session = json.loads((vault / resumed["session_report"]).read_text(encoding="utf-8"))
+            self.assertEqual(resumed["stop_reason"], "budget_limited")
+            self.assertEqual(resumed["iterations"], 1)
+            self.assertEqual(resumed_session["goal_contract"]["contract_sha256"], contract_digest)
 
     def test_resume_restores_failure_streak_before_selecting_next_proposal(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1278,6 +1370,131 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertEqual(session["iterations"][0]["decision"], "HOLD")
             self.assertEqual(session["quarantined_proposal_ids"], [])
             self.assertEqual(session["rollups"]["iterations"]["outcome_counts"], {"hold": 1})
+
+    def test_run_auto_improve_session_stops_repeated_blocker_before_third_try(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            seed_subagent_profiles(vault, ["worker", "validator"])
+            proposal_a = mutation_proposal_report("ops/scripts/example.py")["proposals"][0]
+            proposal_b = {
+                **proposal_a,
+                "proposal_id": f"{proposal_a['proposal_id']}-second",
+                "source_candidate_id": "candidate-second",
+            }
+
+            def fake_refresh_reports(*_: object, **__: object) -> tuple[dict, dict]:
+                return {}, {"proposals": [proposal_a, proposal_b]}
+
+            def fake_run_mechanism_experiment(
+                vault_path: Path,
+                *,
+                run_id: str,
+                scaffold_only: bool,
+                **_: object,
+            ) -> dict:
+                if scaffold_only:
+                    _seed_scaffolded_run(vault_path, run_id)
+                    return {"run_id": run_id, "scaffold_only": True}
+                return {
+                    "run_id": run_id,
+                    "decision": "HOLD",
+                    "finalized": False,
+                    "finalize_result": {},
+                    "repo_health": {"passed": True},
+                }
+
+            with (
+                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.auto_improve_runtime.run_mechanism_experiment", side_effect=fake_run_mechanism_experiment),
+            ):
+                result = run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    session_id="auto-session-repeated-blocker",
+                    max_proposals=3,
+                    max_minutes=90,
+                    max_consecutive_failures=3,
+                    executor_name="codex_exec",
+                    allow_learning_uncertain=True,
+                )
+
+            session = json.loads((vault / result["session_report"]).read_text(encoding="utf-8"))
+            self.assertEqual(result["stop_reason"], "repeated_blocker_backlog_required")
+            self.assertEqual(len(session["iterations"]), 2)
+            self.assertEqual(session["loop_state"]["blocking_reason_counts"], {"hold": 2})
+            self.assertTrue(session["loop_state"]["repeated_blocker_stop"])
+            self.assertEqual(session["loop_state"]["repeated_blocker_reason"], "hold")
+            self.assertEqual(
+                session["loop_state"]["remediation_backlog_path"],
+                "ops/reports/remediation-backlog.json",
+            )
+
+    def test_run_auto_improve_session_stops_when_repeat_backlog_is_open(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            backlog_path = vault / "ops" / "reports" / "remediation-backlog.json"
+            backlog_path.parent.mkdir(parents=True, exist_ok=True)
+            backlog_path.write_text(
+                json.dumps(
+                    {
+                        "status": "attention",
+                        "items": [
+                            {
+                                "item_id": "negative_lesson_discard_decision_discard",
+                                "blocker_id": "discard_decision_discard",
+                                "source": "self_improvement_negative_lessons.lessons",
+                                "item_type": "repeated_negative_lesson",
+                                "status": "open",
+                                "severity": "blocks_repeat",
+                                "occurrence_count": 2,
+                                "evidence_paths": [
+                                    "ops/reports/self-improvement-negative-lessons.json"
+                                ],
+                                "repair_target": "Resolve repeated DISCARD decision shape.",
+                                "next_action": "Close the repair target before retrying this blocker.",
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            with (
+                mock.patch("ops.scripts.auto_improve_runtime._preflight_learning_gate") as preflight,
+                mock.patch("ops.scripts.auto_improve_runtime._run_auto_improve_iteration") as iteration,
+            ):
+                result = run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    session_id="auto-session-open-repeat-backlog",
+                    max_proposals=3,
+                    max_minutes=90,
+                    max_consecutive_failures=3,
+                    executor_name="codex_exec",
+                    allow_learning_uncertain=True,
+                )
+
+            preflight.assert_not_called()
+            iteration.assert_not_called()
+            session = json.loads((vault / result["session_report"]).read_text(encoding="utf-8"))
+            self.assertEqual(result["stop_reason"], "repeated_blocker_backlog_required")
+            self.assertEqual(result["iterations"], 0)
+            self.assertEqual(session["iterations"], [])
+            self.assertTrue(session["loop_state"]["repeated_blocker_stop"])
+            self.assertEqual(
+                session["loop_state"]["repeated_blocker_reason"],
+                "discard_decision_discard",
+            )
+            self.assertEqual(
+                session["loop_state"]["blocking_reason_counts"],
+                {"discard_decision_discard": 2},
+            )
 
     def test_run_auto_improve_session_uses_injected_context_for_generated_timestamps(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

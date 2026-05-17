@@ -462,7 +462,7 @@
       "pack_id": "source_package",
       "authority": "derived",
       "status": "derived_from_registry",
-    "semantics": "Source-package validation slice layered on top of persistent lanes with explicit exclusions for checked-in generated artifacts and external report roots omitted from source packages. Clean extract regenerates ops/script-output-surfaces.json before running the source-package pytest lane.",
+    "semantics": "Source-package validation slice layered on top of persistent lanes with explicit exclusions for checked-in generated report artifacts and external report roots omitted from source packages.",
       "backing_targets": [
         "test-source-package",
         "release-source-package-check"

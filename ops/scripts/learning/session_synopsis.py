@@ -20,8 +20,10 @@ PRODUCER = "ops.scripts.session_synopsis"
 SCHEMA_PATH = "ops/schemas/session-synopsis.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.session_synopsis --vault ."
 SOURCE_PATHS = ["ops/scripts/learning/session_synopsis.py"]
+GOAL_RUN_STATUS_PATH = "ops/reports/goal-run-status.json"
 INPUT_PATHS = {
     "auto_improve_readiness": "ops/reports/auto-improve-readiness.json",
+    "goal_run_status": GOAL_RUN_STATUS_PATH,
     "learning_delta_scoreboard": "ops/reports/learning-delta-scoreboard.json",
     "learning_claim_activation": "ops/reports/learning_claim_activation_report.json",
     "source_package_clean_extract": "ops/reports/source-package-clean-extract.json",
@@ -48,10 +50,152 @@ def _load_inputs(vault: Path) -> dict[str, dict[str, Any]]:
     }
 
 
+def _goal_profile_ladder(status_report: dict[str, Any]) -> dict[str, Any]:
+    profile_ladder = status_report.get("profile_ladder")
+    if not isinstance(profile_ladder, dict):
+        return {
+            "status": "missing",
+            "current_profile": "",
+            "run_profile": "",
+            "verified_profiles": [],
+            "highest_verified_profile": "unverified",
+            "next_profile_required": "",
+            "profile_verified_by_promotion_guard": "unverified",
+            "profile_guard_consistent": False,
+            "sustained_claim_allowed": False,
+            "missing_evidence": [],
+        }
+
+    missing_evidence: list[dict[str, Any]] = []
+    for profile in _dict_list(profile_ladder.get("profiles")):
+        profile_name = str(profile.get("profile", "")).strip()
+        for evidence in _dict_list(profile.get("evidence_paths")):
+            evidence_status = str(evidence.get("status", "")).strip()
+            if evidence_status == "present":
+                continue
+            evidence_path = str(evidence.get("path", "")).strip()
+            if not evidence_path:
+                continue
+            missing_evidence.append(
+                {
+                    "profile": profile_name,
+                    "path": evidence_path,
+                    "status": evidence_status or "missing",
+                }
+            )
+
+    return {
+        "status": str(profile_ladder.get("status", "missing")).strip() or "missing",
+        "current_profile": str(profile_ladder.get("current_profile", "")).strip(),
+        "run_profile": str(profile_ladder.get("run_profile", "")).strip(),
+        "verified_profiles": _string_list(profile_ladder.get("verified_profiles")),
+        "highest_verified_profile": str(
+            profile_ladder.get("highest_verified_profile", "unverified")
+        ).strip()
+        or "unverified",
+        "next_profile_required": str(profile_ladder.get("next_profile_required", "")).strip(),
+        "profile_verified_by_promotion_guard": str(
+            profile_ladder.get("profile_verified_by_promotion_guard", "unverified")
+        ).strip()
+        or "unverified",
+        "profile_guard_consistent": bool(
+            profile_ladder.get("profile_guard_consistent", False)
+        ),
+        "sustained_claim_allowed": bool(
+            profile_ladder.get("sustained_claim_allowed", False)
+        ),
+        "missing_evidence": missing_evidence[:8],
+    }
+
+
+def _goal_status_blockers(
+    status_report: dict[str, Any],
+    profile_ladder: dict[str, Any],
+) -> list[dict[str, Any]]:
+    blockers: list[dict[str, Any]] = []
+    next_profile = str(profile_ladder.get("next_profile_required", "")).strip()
+    for blocker in _string_list(status_report.get("blockers")):
+        blocker_id = "goal_status_" + "_".join(
+            blocker.lower().replace("-", " ").replace("/", " ").split()
+        )
+        if not blocker_id.strip("_"):
+            continue
+        repair_target = "Refresh goal run status and close the active blocker before resuming."
+        if blocker == "profile ladder incomplete":
+            repair_target = (
+                f"Collect bounded runtime evidence for next_profile_required={next_profile}."
+                if next_profile
+                else "Collect bounded runtime evidence for the next profile."
+            )
+        elif "sealed authority" in blocker:
+            repair_target = "Refresh sealed authority preflight evidence before promotion."
+        blockers.append(
+            {
+                "id": blocker_id,
+                "source": "goal_run_status.blockers",
+                "status": "open",
+                "reason": blocker,
+                "repair_target": repair_target,
+            }
+        )
+    return blockers
+
+
+def _active_goal_link(status_report: dict[str, Any]) -> dict[str, Any]:
+    if not status_report:
+        return {
+            "link_status": "missing",
+            "report_path": GOAL_RUN_STATUS_PATH,
+            "contract_id": "",
+            "run_id": "",
+            "run_status": "",
+            "profile": "",
+            "promotion_status": "",
+            "can_promote_result": False,
+            "checkpoint_status": "",
+            "periodic_evidence_status": "",
+            "audit_log_path": "",
+            "resume_metadata_path": "",
+            "next_action": "Run make auto-improve-goal-status before resuming a goal run.",
+        }
+    goal = status_report.get("goal")
+    goal = goal if isinstance(goal, dict) else {}
+    run = status_report.get("run")
+    run = run if isinstance(run, dict) else {}
+    health = status_report.get("health")
+    health = health if isinstance(health, dict) else {}
+    artifacts = status_report.get("artifacts")
+    artifacts = artifacts if isinstance(artifacts, dict) else {}
+    periodic_evidence = status_report.get("periodic_evidence")
+    periodic_evidence = periodic_evidence if isinstance(periodic_evidence, dict) else {}
+    return {
+        "link_status": "linked",
+        "report_path": GOAL_RUN_STATUS_PATH,
+        "contract_id": str(goal.get("contract_id", "")).strip(),
+        "run_id": str(run.get("run_id", "")).strip(),
+        "run_status": str(run.get("status", "")).strip(),
+        "profile": str(run.get("profile", "")).strip(),
+        "promotion_status": str(health.get("promotion_status", "")).strip(),
+        "can_promote_result": bool(health.get("can_promote_result", False)),
+        "checkpoint_status": str(health.get("checkpoint_status", "")).strip(),
+        "periodic_evidence_status": str(periodic_evidence.get("status", "")).strip(),
+        "audit_log_path": str(artifacts.get("audit_log_path", "")).strip(),
+        "resume_metadata_path": str(artifacts.get("resume_metadata_path", "")).strip(),
+        "next_action": (
+            "Resume via the linked goal status artifacts before starting a separate session."
+            if str(run.get("status", "")).strip() in {"running", "paused", "blocked"}
+            else "Refresh goal status before starting or resuming a goal run."
+        ),
+    }
+
+
 def _recent_blockers(inputs: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     blockers: list[dict[str, Any]] = []
     readiness = inputs["auto_improve_readiness"]
     activation = inputs["learning_claim_activation"]
+    goal_status = inputs["goal_run_status"]
+    goal_profile_ladder = _goal_profile_ladder(goal_status)
+    blockers.extend(_goal_status_blockers(goal_status, goal_profile_ladder))
     for blocker in _dict_list(readiness.get("promotion_blockers")):
         blocker_id = str(blocker.get("id", "")).strip()
         if not blocker_id:
@@ -212,6 +356,7 @@ def _next_session_entrypoint(
     blockers: list[dict[str, Any]],
     forbidden_patterns: list[dict[str, Any]],
     evidence_gaps: list[dict[str, Any]],
+    profile_ladder: dict[str, Any],
 ) -> dict[str, Any]:
     readiness = inputs["auto_improve_readiness"]
     activation = inputs["learning_claim_activation"]
@@ -227,15 +372,25 @@ def _next_session_entrypoint(
         ),
         "recommended_next_action": next_action,
         "first_commands": [
+            "make auto-improve-goal-status",
             "make session-synopsis",
+            "make remediation-backlog",
             "make static",
             "make test-public",
+            "make auto-improve-goal-preflight",
+            "make auto-improve-goal-run",
+            "make goal-profile-verification",
         ],
         "stop_conditions": [
             "Do not promote while promotion_allowed is false.",
             "Do not claim learning improvement while claim_wording_allowed is false.",
+            "Do not claim 5d sustained runtime while sustained_claim_allowed is false.",
+            "Do not advance beyond next_profile_required without elapsed runtime evidence for that profile.",
             "Do not repeat forbidden patterns until their repair_target is closed.",
         ],
+        "target_profile": str(profile_ladder.get("next_profile_required", "")).strip(),
+        "profile_ladder_status": str(profile_ladder.get("status", "")).strip(),
+        "sustained_claim_allowed": bool(profile_ladder.get("sustained_claim_allowed", False)),
         "open_blocker_count": len(blockers),
         "forbidden_pattern_count": len(forbidden_patterns),
         "evidence_gap_count": len(evidence_gaps),
@@ -257,13 +412,24 @@ def build_report(
     seed_runs = _recommended_seed_runs(inputs)
     evidence_gaps = _evidence_gaps(inputs)
     source_package_replay = _source_package_replay(inputs)
+    goal_profile_ladder = _goal_profile_ladder(inputs["goal_run_status"])
+    active_goal = _active_goal_link(inputs["goal_run_status"])
     next_session = _next_session_entrypoint(
         inputs,
         blockers=blockers,
         forbidden_patterns=forbidden_patterns,
         evidence_gaps=evidence_gaps,
+        profile_ladder=goal_profile_ladder,
     )
-    status = "pass" if not blockers and not evidence_gaps else "attention"
+    profile_ladder_clear = (
+        goal_profile_ladder["status"] == "complete"
+        and goal_profile_ladder["sustained_claim_allowed"]
+    )
+    status = (
+        "pass"
+        if not blockers and not evidence_gaps and profile_ladder_clear
+        else "attention"
+    )
     return {
         **build_canonical_report_envelope(
             vault,
@@ -289,6 +455,12 @@ def build_report(
             "recommended_seed_run_count": len(seed_runs),
             "evidence_gap_count": len(evidence_gaps),
             "source_package_replay_status": source_package_replay["status"],
+            "active_goal_id": active_goal["contract_id"],
+            "active_goal_run_id": active_goal["run_id"],
+            "active_goal_link_status": active_goal["link_status"],
+            "goal_profile_ladder_status": goal_profile_ladder["status"],
+            "goal_next_profile_required": goal_profile_ladder["next_profile_required"],
+            "sustained_claim_allowed": goal_profile_ladder["sustained_claim_allowed"],
             "next_action": next_session["recommended_next_action"],
         },
         "recent_blockers": blockers,
@@ -297,6 +469,8 @@ def build_report(
         "recommended_seed_runs": seed_runs,
         "evidence_gaps": evidence_gaps,
         "source_package_replay": source_package_replay,
+        "active_goal": active_goal,
+        "goal_profile_ladder": goal_profile_ladder,
         "next_session_entrypoint": next_session,
         "inputs": INPUT_PATHS,
     }

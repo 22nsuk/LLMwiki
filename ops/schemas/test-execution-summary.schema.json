@@ -622,6 +622,21 @@
         "source": {
           "type": "string",
           "minLength": 1
+        },
+        "consistency_status": {
+          "type": "string",
+          "enum": ["pass", "attention", "skipped"]
+        },
+        "observed_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expected_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "consistency_reason": {
+          "type": "string"
         }
       }
     },

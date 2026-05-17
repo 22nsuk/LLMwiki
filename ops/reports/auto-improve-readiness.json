@@ -1,29 +1,30 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-15T19:08:21Z",
+  "generated_at": "2026-05-17T17:54:26Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
+  "source_tree_fingerprint": "4d8c5f4ee54bb6f4131e9016befdfd25a6f83e17269958a2ad7147913e7b21e1",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
-    "schema": "e4bbee62a954a9f8b869630b9b6ce9cd27c5dbe7faeadc7e8af48b1d35474533",
+    "schema": "11c67d4080d38f63d41641a6a5911b0ec8a50b7aa7a4fc791039a94945178b11",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "559d97ccf4254557da60555ec99fddde7a726b098edc3f0e069218516d110cdc",
-    "artifact_freshness_report": "af5ccac4cc62f4bfd2eb69da24a8d395d219719f70d152dc83eb84a9aa8789d7",
+    "source_paths": "4ec5600edb2a3287b26597a42e268746b9883b4832aeb15091e2d526a965e1b7",
+    "artifact_freshness_report": "8ebe547e7d8156a38a8d19890efc38faf41ac70e1537f57e5b186a62a0aa47dd",
+    "goal_worktree_guard_report": "6c5a83af092dbfa0be8fd941a11f4140d828bc7ce8bec00d65e5e74ef1990995",
     "mechanism_review_report": "485f21b4ec5ee0348268d79dc6864d78fe160c6283ac53571b5db303a8c732b9",
     "mutation_proposal_report": "eaaa1eaa518afd5bdcc88d54e003e885143b2cb6004a3e6de9c7b94e2d1c6784",
-    "outcome_metrics_report": "10018db8d4bada3e06119d46d6f12cb723552dcd34dde80eae29423f4a4f2d60",
-    "release_authority_preflight_report": "5edd017bc03b52910fba10b3745fac5abdf1e3ccd143bce21793821da100b432",
-    "release_closeout_batch_manifest_report": "57542083e286f93304adc6036c577d893d30e0ad9b5c601e661a099e2da5d5ee",
-    "release_closeout_finality_attestation_report": "d1a7870f4303d5c2dd6e5caf15d881025baf9c63fa5de10bfdd97d69ac935961",
+    "outcome_metrics_report": "119ad29bd7c07c7f82eecffda136098ab5e7251599d33a2f3a3334a972fa9276",
+    "release_authority_preflight_report": "missing",
+    "release_closeout_batch_manifest_report": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
+    "release_closeout_finality_attestation_report": "7dd3b5e276deee3a02a3e664f5e2c8e28adf36ed7e19eacedd884942521c03ea",
     "release_closeout_post_check_finalizer_report": "missing",
-    "release_closeout_summary_report": "9b4ab12051ef1602554630c3ab49ad43cca7502d52a93d9253c08b4f1a4892c4",
+    "release_closeout_summary_report": "44a45b6591a17a02b77fe5ce3f9f6b292b6e82b9163125a9436d119f476c2ad2",
     "release_evidence_cohort_report": "e2d2076c043dbd15cbe06d8c57d6f9b6bc1c854e62f3a6728016f6582f2d184e",
-    "selected_contract_summary_report": "8dd9c713907ae84bbd1e28fd5f4b261a6f5bdf79dabae671950f13ebb02f0875",
-    "source_package_clean_extract_report": "2abf2285095f037cae52f590f18507f8549bb1f135bfdb1182fb49f17a2de7a5",
-    "release_authority_preflight_report_candidates": "ac74047191748583f5c8803284d99e8d36cd568adbbdf482b4b3097323f154cb"
+    "selected_contract_summary_report": "e973d73f3458bd1bcf5201f458de8e96746bb61e24f1871e0862d6fed16a9194",
+    "source_package_clean_extract_report": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
+    "release_authority_preflight_report_candidates": "a4d1b63194621fbadc94c9f6062cb1590f855b1cfdcccfbba24c1de1049063ea"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -31,7 +32,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T19:08:21Z"
+    "checked_at": "2026-05-17T17:54:26Z"
   },
   "vault": ".",
   "policy": {
@@ -39,7 +40,7 @@
     "version": 4
   },
   "can_execute_trial": true,
-  "can_promote_result": true,
+  "can_promote_result": false,
   "execution_readiness": {
     "status": "pass",
     "gate_effect": "active",
@@ -49,7 +50,7 @@
     ],
     "runnable_proposal_count": 1,
     "blocked_proposal_count": 1,
-    "recommended_next_step": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded live auto-improve with `.venv/bin/python -m ops.scripts.mechanism.auto_improve_loop --vault . --policy ops/policies/wiki-maintainer-policy.yaml --max-proposals 1 --max-minutes 30 --max-consecutive-failures 1 --executor codex_exec`."
+    "recommended_next_step": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured."
   },
   "learning_readiness": {
     "status": "learning_likely",
@@ -79,7 +80,28 @@
     "recommended_next_step": "Learning readiness is clean enough for bounded live auto-improve; keep the run narrow and continue monitoring the shadow signals."
   },
   "learning_blockers": [],
-  "promotion_blockers": [],
+  "promotion_blockers": [
+    {
+      "id": "promotion_blocked_by_goal_worktree_guard_failure",
+      "scope": "worktree_guard",
+      "status": "open",
+      "severity": "blocker",
+      "release_blocker": true,
+      "accepted_risk": false,
+      "gate_effect": "active",
+      "source_status": "attention",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=125",
+      "signal_ids": [
+        "git_worktree_dirty"
+      ],
+      "required_evidence": [
+        "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
+        "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
+        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal."
+      ],
+      "recommended_next_step": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
+    }
+  ],
   "release_blockers": [],
   "inputs": {
     "refresh_generated_target": "make refresh-generated-core",
@@ -94,7 +116,8 @@
     "release_closeout_finality_attestation_report": "ops/reports/release-closeout-finality-attestation.json",
     "release_evidence_cohort_report": "ops/reports/release-evidence-cohort.json",
     "release_closeout_post_check_finalizer_report": "tmp/release-closeout-post-check-finalizer.json",
-    "release_authority_preflight_report": "build/release/release-closeout-sealed-rehearsal-check.json"
+    "release_authority_preflight_report": "ops/reports/release-closeout-sealed-rehearsal-check.json",
+    "goal_worktree_guard_report": "tmp/goal-worktree-guard.json"
   },
   "diagnostics": {
     "loop_health_summary": {
@@ -241,6 +264,23 @@
       "blocker_reason_ids": [],
       "linked_promotion_blocker_ids": [],
       "summary": "sealed closeout rehearsal passed: batch sealed clean pass and external strict manifest bind the distribution ZIP"
+    },
+    "goal_worktree_guard_summary": {
+      "path": "tmp/goal-worktree-guard.json",
+      "artifact_kind": "goal_worktree_guard",
+      "status": "attention",
+      "requested_mode": "git",
+      "detected_mode": "git_worktree",
+      "can_execute_goal_runtime": true,
+      "can_promote_result": false,
+      "zip_mode_replay_only": false,
+      "dirty_worktree_allowed": false,
+      "dirty_entry_count": 125,
+      "fatal_blockers": [],
+      "promotion_blockers": [
+        "git_worktree_dirty"
+      ],
+      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=125"
     }
   },
   "queue": {
@@ -281,7 +321,7 @@
     "history_requirement": 0,
     "additional_runs_needed": 0,
     "queue_recheck_target": "make auto-improve-readiness",
-    "auto_improve_command": ".venv/bin/python -m ops.scripts.mechanism.auto_improve_loop --vault . --policy ops/policies/wiki-maintainer-policy.yaml --max-proposals 1 --max-minutes 30 --max-consecutive-failures 1 --executor codex_exec"
+    "auto_improve_command": "make auto-improve-goal-run"
   },
   "checks": [
     {
@@ -306,5 +346,5 @@
     }
   ],
   "remediations": [],
-  "next_action": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded live auto-improve with `.venv/bin/python -m ops.scripts.mechanism.auto_improve_loop --vault . --policy ops/policies/wiki-maintainer-policy.yaml --max-proposals 1 --max-minutes 30 --max-consecutive-failures 1 --executor codex_exec`."
+  "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
 }

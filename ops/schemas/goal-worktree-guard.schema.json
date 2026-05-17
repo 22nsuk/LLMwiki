@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/goal-worktree-guard.schema.json",
+  "title": "Goal worktree guard report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "requested_mode",
+    "detected_mode",
+    "public_source_layout",
+    "git",
+    "decisions",
+    "blockers",
+    "status"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "const": "ops/schemas/goal-worktree-guard.schema.json" },
+    "artifact_kind": { "type": "string", "const": "goal_worktree_guard" },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": { "type": "string", "const": "ops.scripts.goal_worktree_guard" },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string" },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": { "type": "object" },
+    "schema_version": { "type": "integer", "const": 1 },
+    "artifact_status": { "type": "string" },
+    "retention_policy": { "type": "string" },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": { "type": "object" },
+    "vault": { "type": "string" },
+    "requested_mode": { "type": "string", "enum": ["auto", "git", "zip"] },
+    "detected_mode": { "type": "string", "enum": ["git_worktree", "zip_extract", "unknown"] },
+    "public_source_layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required_paths", "present", "missing_paths"],
+      "properties": {
+        "required_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "present": { "type": "boolean" },
+        "missing_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "available",
+        "inside_worktree",
+        "worktree_root",
+        "head_sha",
+        "branch",
+        "dirty_entry_count",
+        "status_porcelain_sha256",
+        "status_codes",
+        "error"
+      ],
+      "properties": {
+        "available": { "type": "boolean" },
+        "inside_worktree": { "type": "boolean" },
+        "worktree_root": { "type": "string" },
+        "head_sha": { "type": "string" },
+        "branch": { "type": "string" },
+        "dirty_entry_count": { "type": "integer", "minimum": 0 },
+        "status_porcelain_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "status_codes": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 1 }
+        },
+        "error": { "type": "string" }
+      }
+    },
+    "decisions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "can_execute_goal_runtime",
+        "can_promote_result",
+        "zip_mode_replay_only",
+        "dirty_worktree_allowed",
+        "fatal_blockers",
+        "promotion_blockers"
+      ],
+      "properties": {
+        "can_execute_goal_runtime": { "type": "boolean" },
+        "can_promote_result": { "type": "boolean" },
+        "zip_mode_replay_only": { "type": "boolean" },
+        "dirty_worktree_allowed": { "type": "boolean" },
+        "fatal_blockers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "promotion_blockers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/blocker" }
+    },
+    "status": { "type": "string", "enum": ["pass", "attention", "fail"] }
+  },
+  "$defs": {
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blocker_id", "severity", "summary", "next_action"],
+      "properties": {
+        "blocker_id": { "type": "string", "minLength": 1 },
+        "severity": { "type": "string", "enum": ["fatal", "blocking"] },
+        "summary": { "type": "string", "minLength": 1 },
+        "next_action": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

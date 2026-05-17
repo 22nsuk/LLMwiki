@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
 import tempfile
 import unittest
@@ -23,6 +24,11 @@ def fixed_context() -> RuntimeContext:
         display_timezone=dt.timezone.utc,
         clock=lambda: dt.datetime(2026, 5, 10, 8, 30, tzinfo=dt.timezone.utc),
     )
+
+
+def _canonical_json_digest(payload: dict) -> str:
+    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
 class ExternalReportActionMatrixTests(unittest.TestCase):
@@ -228,26 +234,298 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertEqual(actions["release_writer_dependency_single_source"]["current_status"], "implemented")
         self.assertEqual(report["summary"]["requires_release_run_verification_count"], 0)
 
-    def test_goal_native_long_run_terms_map_to_specific_actions(self) -> None:
-        (self.external / "goal-runtime.md").write_text(
-            "# Goal Runtime\n\n"
-            "Track run id and session_id in goal-run-status, verify the 30-minute trial "
-            "to 6-hour ramp to 2-day candidate to 5-day sustained execution ladder, "
-            "and preserve executor retry-after backoff heartbeat observability.\n",
+    def test_negative_lessons_and_remediation_backlog_are_implementation_artifacts(self) -> None:
+        for rel_path in (
+            "ops/schemas/self-improvement-negative-lessons.schema.json",
+            "ops/schemas/remediation-backlog.schema.json",
+            "tests/test_self_improvement_negative_lessons.py",
+            "tests/test_remediation_backlog.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+        self._write_json(
+            "ops/reports/self-improvement-negative-lessons.json",
+            {
+                "artifact_kind": "self_improvement_negative_lessons",
+                "producer": "ops.scripts.self_improvement_negative_lessons",
+                "status": "attention",
+            },
+        )
+        self._write_json(
+            "ops/reports/remediation-backlog.json",
+            {
+                "artifact_kind": "remediation_backlog",
+                "producer": "ops.scripts.remediation_backlog",
+                "status": "attention",
+            },
+        )
+        (self.external / "learning.md").write_text(
+            "# Learning Review\n\nnegative learning and remediation backlog.\n",
             encoding="utf-8",
         )
 
         report = build_report(self.vault, context=fixed_context())
 
-        coverage = {
-            item["path"]: item["matched_action_ids"]
-            for item in report["active_report_coverage"]
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        self.assertEqual(actions["negative_learning_ledger"]["current_status"], "implemented")
+        self.assertEqual(actions["remediation_backlog"]["current_status"], "implemented")
+
+    def test_command_heartbeat_requires_source_package_heartbeat_evidence(self) -> None:
+        for rel_path in (
+            "ops/scripts/core/command_runtime.py",
+            "ops/schemas/executor-report.schema.json",
+            "ops/scripts/core/source_package_clean_extract.py",
+            "ops/schemas/source-package-clean-extract.schema.json",
+            "tests/test_command_runtime_heartbeat.py",
+            "tests/test_source_package_clean_extract.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+        self._write_json(
+            "ops/reports/source-package-clean-extract.json",
+            {
+                "status": "pass",
+                "heartbeat_observability": {
+                    "status": "pass",
+                    "command_count": 4,
+                    "heartbeat_enabled_command_count": 4,
+                    "heartbeat_event_count": 2,
+                },
+            },
+        )
+        (self.external / "heartbeat.md").write_text(
+            "# Heartbeat Review\n\nquiet_seconds and heartbeat observability.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        self.assertEqual(
+            actions["command_heartbeat_observability"]["current_status"],
+            "implemented",
+        )
+
+    def test_sealed_preflight_canonicalization_requires_canonical_report(self) -> None:
+        for rel_path in (
+            "mk/release.mk",
+            "ops/scripts/mechanism/auto_improve_readiness_constants_runtime.py",
+            "ops/scripts/release/release_closeout_sealed_rehearsal_check.py",
+            "ops/schemas/release-closeout-sealed-rehearsal-check.schema.json",
+            "tests/test_release_closeout_sealed_rehearsal_check.py",
+            "tests/test_auto_improve_readiness_runtime.py",
+            "tests/test_makefile_static_gates.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+        self._write_json(
+            "ops/reports/release-closeout-sealed-rehearsal-check.json",
+            {
+                "artifact_kind": "release_closeout_sealed_rehearsal_check",
+                "status": "fail",
+                "preflight_status": "binding_pass_authority_blocked",
+                "distribution_binding_status": "pass",
+                "authority_preflight_status": "blocked",
+                "expected_blocked_preflight": True,
+                "failures": [
+                    "batch_release_authority_not_clean_pass",
+                    "batch_sealed_release_not_clean_pass",
+                ],
+            },
+        )
+        (self.external / "sealed.md").write_text(
+            "# Sealed Review\n\nsealed preflight and binding_pass_authority_blocked.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        self.assertEqual(
+            actions["sealed_preflight_canonicalization"]["current_status"],
+            "implemented",
+        )
+
+    def test_goal_native_actions_require_current_canonical_runtime_reports(self) -> None:
+        for rel_path in (
+            "ops/schemas/codex-goal-contract.schema.json",
+            "ops/scripts/core/codex_goal_client.py",
+            "ops/scripts/mechanism/codex_goal_prompt.py",
+            "ops/schemas/codex-goal-prompt.schema.json",
+            "ops/scripts/mechanism/auto_improve_loop.py",
+            "ops/scripts/mechanism/auto_improve_runtime.py",
+            "ops/schemas/goal-run-status.schema.json",
+            "ops/scripts/mechanism/goal_run_status.py",
+            "ops/scripts/mechanism/goal_runtime_runner.py",
+            "ops/scripts/mechanism/goal_profile_verification.py",
+            "ops/scripts/mechanism/goal_runtime_profile.py",
+            "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
+            "ops/scripts/mechanism/goal_worktree_guard.py",
+            "ops/schemas/goal-worktree-guard.schema.json",
+            "tests/test_codex_goal_contract.py",
+            "tests/test_codex_goal_client.py",
+            "tests/test_codex_goal_prompt.py",
+            "tests/test_auto_improve_runtime.py",
+            "tests/test_goal_auto_improve_runtime.py",
+            "tests/test_goal_run_status.py",
+            "tests/test_goal_runtime_runner.py",
+            "tests/test_goal_profile_verification.py",
+            "tests/test_auto_improve_readiness_release_authority_runtime.py",
+            "tests/test_goal_worktree_guard.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+        contract = {
+            "$schema": "ops/schemas/codex-goal-contract.schema.json",
+            "schema_version": 1,
+            "contract_id": "auto-improve-goal",
+            "objective": "Run bounded auto-improve only after profile evidence is durable.",
+            "non_goals": ["Do not claim sustained runtime before profile verification."],
+            "allowed_roots": [{"path": "ops/", "purpose": "runtime contracts"}],
+            "budgets": {
+                "max_wall_clock_seconds": 1800,
+                "max_proposals": 1,
+                "max_consecutive_failures": 1,
+                "heartbeat_interval_seconds": 300,
+                "checkpoint_interval_seconds": 1800,
+                "profile_ladder": [{"profile": "30m_trial"}],
+            },
+            "created_at": "2026-05-17T00:00:00Z",
+            "created_by": "codex",
+            "status": "active",
+            "runtime_profile": {
+                "current_profile": "30m_trial",
+                "verified_profiles": [],
+                "next_profile": "6h_ramp",
+                "max_unattended_seconds": 1800,
+            },
+            "goal_backend": {
+                "backend_type": "file",
+                "process_persistent": True,
+                "storage_path": "ops/reports/codex-goal-contract.json",
+            },
+            "stop_conditions": [{"condition_id": "promotion_guard_blocked"}],
+            "required_evidence": [
+                {"path": "ops/reports/auto-improve-readiness.json"},
+                {"path": "ops/reports/goal-run-status.json"},
+            ],
+            "promotion_guard": {
+                "can_promote_result": True,
+                "promotion_blockers": [],
+                "sealed_authority_clean": True,
+                "profile_verified": "unverified",
+                "sustained_runtime_claimed": False,
+                "no_sustained_claim_before_profile_verified": True,
+            },
         }
-        matched = set(coverage["external-reports/goal-runtime.md"])
-        self.assertIn("goal_run_status_audit_resume", matched)
-        self.assertIn("goal_execution_ladder_profiles", matched)
-        self.assertIn("goal_executor_backoff_observability", matched)
-        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+        contract_digest = _canonical_json_digest(contract)
+        self._write_json("ops/reports/codex-goal-contract.json", contract)
+        self._write_json(
+            "ops/reports/codex-goal-prompt.json",
+            {
+                "artifact_kind": "codex_goal_prompt",
+                "producer": "ops.scripts.codex_goal_prompt",
+                "status": "pass",
+                "goal_contract": {
+                    "contract_sha256": contract_digest,
+                    "process_persistent_backend": True,
+                },
+                "promotion_guard": {"sustained_runtime_claimed": False},
+                "prompt": {
+                    "includes_budget_limits": True,
+                    "includes_allowed_roots": True,
+                    "includes_sustained_claim_ban": True,
+                },
+            },
+        )
+        self._write_json(
+            "ops/reports/goal-run-status.json",
+            {
+                "artifact_kind": "goal_run_status",
+                "producer": "ops.scripts.goal_run_status",
+                "status": "attention",
+                "goal": {
+                    "contract_sha256": contract_digest,
+                    "backend": {"process_persistent": True},
+                },
+                "artifacts": {
+                    "status_report_path": "ops/reports/goal-run-status.json",
+                    "status_markdown_path": "runs/goal-auto-improve-trial/status.md",
+                    "audit_log_path": "runs/goal-auto-improve-trial/audit-log.jsonl",
+                    "resume_metadata_path": "runs/goal-auto-improve-trial/resume-metadata.json",
+                    "checkpoint_command_log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl",
+                },
+                "health": {
+                    "heartbeat_status": "current",
+                    "checkpoint_status": "current",
+                    "command_heartbeat_status": "current",
+                    "backoff_status": "inactive",
+                    "resume_status": "not_requested",
+                    "promotion_status": "blocked",
+                    "can_promote_result": False,
+                },
+                "profile_ladder": {
+                    "status": "incomplete",
+                    "sustained_claim_allowed": False,
+                },
+            },
+        )
+        self._write_json(
+            "ops/reports/test-execution-summary.json",
+            {"artifact_kind": "test_execution_summary", "status": "pass"},
+        )
+        self._write_json(
+            "ops/reports/auto-improve-readiness.json",
+            {
+                "artifact_kind": "auto_improve_readiness_report",
+                "diagnostics": {
+                    "selected_contract_summary": {
+                        "path": "ops/reports/test-execution-summary.json",
+                        "status": "pass",
+                    },
+                    "artifact_freshness_summary": {"status": "pass"},
+                },
+                "promotion_blockers": [],
+            },
+        )
+        self._write_json(
+            "tmp/goal-worktree-guard.json",
+            {
+                "artifact_kind": "goal_worktree_guard",
+                "producer": "ops.scripts.goal_worktree_guard",
+                "status": "attention",
+                "requested_mode": "git",
+                "detected_mode": "git_worktree",
+                "decisions": {
+                    "can_execute_goal_runtime": True,
+                    "can_promote_result": False,
+                },
+                "blockers": [{"blocker_id": "git_worktree_dirty"}],
+            },
+        )
+        (self.external / "goal.md").write_text(
+            "# Goal Review\n\ngoal contract, set_goal, codex_goal_prompt, --goal-contract, "
+            "goal-run-status, selected contract, Git worktree.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        for action_id in {
+            "goal_contract_schema",
+            "codex_goal_adapter",
+            "codex_goal_prompt_generator",
+            "auto_improve_goal_contract_input",
+            "goal_run_status_audit_resume",
+            "selected_contract_currentness_gate",
+            "git_worktree_goal_guard",
+        }:
+            self.assertEqual(actions[action_id]["current_status"], "implemented", action_id)
 
     def test_release_verified_actions_accept_conditional_status_v2_authority(self) -> None:
         self._write_release_verification_reports()

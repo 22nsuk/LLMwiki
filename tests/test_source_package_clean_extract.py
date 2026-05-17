@@ -5,12 +5,13 @@ import json
 import tempfile
 import unittest
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-from ops.scripts.command_runtime import TimedProcessResult
+from ops.scripts.command_runtime import CommandHeartbeat, TimedProcessResult
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.source_package_clean_extract import SourcePackageCleanExtractRequest, build_report, write_report
@@ -79,16 +80,35 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
         self._write_zip_smoke()
         calls: list[str] = []
 
-        def fake_run(command: list[str], *, cwd: Path, timeout_seconds: int) -> TimedProcessResult:
+        def fake_run(
+            command: list[str],
+            *,
+            cwd: Path,
+            timeout_seconds: int,
+            heartbeat_interval_seconds: int | None = None,
+            heartbeat_callback: Callable[[CommandHeartbeat], None] | None = None,
+        ) -> TimedProcessResult:
             calls.append(" ".join(command))
+            heartbeat_count = 0
+            quiet_seconds = 0
             if "ops.scripts.script_output_surfaces" in command:
-                registry_path = cwd / "ops" / "script-output-surfaces.json"
-                registry_path.parent.mkdir(parents=True, exist_ok=True)
-                registry_path.write_text(
-                    json.dumps({"artifact_kind": "script_output_surfaces"}, sort_keys=True),
-                    encoding="utf-8",
-                )
+                out_path = cwd / command[command.index("--out") + 1]
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                out_path.write_text("{}", encoding="utf-8")
             if "ops.scripts.test_execution_summary" in command:
+                heartbeat_count = 1
+                quiet_seconds = heartbeat_interval_seconds or 0
+                if heartbeat_callback is not None:
+                    heartbeat_callback(
+                        CommandHeartbeat(
+                            args=command,
+                            heartbeat_index=1,
+                            elapsed_seconds=float(quiet_seconds),
+                            timeout_seconds=timeout_seconds,
+                            quiet_seconds=quiet_seconds,
+                        )
+                    )
+                self.assertTrue((cwd / "ops" / "script-output-surfaces.json").is_file())
                 out_path = cwd / command[command.index("--out") + 1]
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(
@@ -116,6 +136,10 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
                 timed_out=False,
                 timeout_seconds=timeout_seconds,
                 termination_reason="",
+                heartbeat_count=heartbeat_count,
+                heartbeat_interval_seconds=heartbeat_interval_seconds or 0,
+                quiet_seconds=quiet_seconds,
+                observation_mode="process_heartbeat",
             )
 
         with patch("ops.scripts.source_package_clean_extract.run_with_timeout", fake_run):
@@ -130,9 +154,13 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
                 deselection_policy="ops/policies/source-package-test-deselections.json",
                 pytest_mark_expr="not artifact_finalization and not release_sealing",
                 tests="tests",
-                deselects="--deselect=tests/test_writer_output_paths.py",
+                deselects=(
+                    "--deselect=tests/test_generated_report_contracts.py "
+                    "--deselect=tests/test_external_report_lifecycle_static.py"
+                ),
                 pytest_flags="-q",
                 zip_smoke_report="tmp/release-distribution-zip-smoke.json",
+                heartbeat_interval_seconds=30,
                 context=fixed_context(),
             )
 
@@ -143,23 +171,25 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
         self.assertEqual(report["test_source_package_status"], "pass")
         self.assertEqual(report["deselection_budget_status"]["status"], "pass")
         self.assertEqual(report["source_package_reproducibility_status"], "pass")
+        self.assertEqual(report["heartbeat_observability"]["status"], "pass")
+        self.assertEqual(report["heartbeat_observability"]["command_count"], 4)
+        self.assertEqual(report["heartbeat_observability"]["heartbeat_enabled_command_count"], 4)
+        self.assertEqual(report["heartbeat_observability"]["heartbeat_event_count"], 1)
+        self.assertEqual(report["heartbeat_observability"]["max_quiet_seconds"], 30)
+        self.assertEqual(report["heartbeat_observability"]["quiet_command_names"], ["test-source-package"])
         self.assertEqual(report["extract"]["parent"], "tmp/source-package-check/extract")
         self.assertEqual(report["extract"]["root"], "tmp/source-package-check/extract/LLMwiki")
         self.assertEqual(report["extract"]["archive_root_name"], "LLMwiki")
         self.assertEqual(report["extract"]["archive_root_source"], "archive_self_description")
         self.assertEqual(len(report["commands"]), 4)
-        self.assertEqual(
-            [item["name"] for item in report["commands"]],
-            ["script-output-surfaces", "ruff", "mypy", "test-source-package"],
-        )
+        self.assertEqual(report["commands"][0]["name"], "script-output-surfaces")
+        self.assertEqual(report["commands"][0]["observation_mode"], "process_heartbeat")
+        self.assertEqual(report["commands"][0]["heartbeat_interval_seconds"], 30)
+        self.assertEqual(report["commands"][3]["heartbeat_count"], 1)
+        self.assertEqual(report["commands"][3]["quiet_seconds"], 30)
+        self.assertEqual(report["commands"][3]["heartbeat_events"][0]["heartbeat_index"], 1)
         self.assertEqual(len(calls), 4)
-        self.assertTrue((extract_parent / "LLMwiki" / "ops" / "script-output-surfaces.json").is_file())
-        script_output_call = next(index for index, call in enumerate(calls) if "script_output_surfaces" in call)
-        test_source_package_call = next(index for index, call in enumerate(calls) if "test_execution_summary" in call)
-        self.assertLess(
-            script_output_call,
-            test_source_package_call,
-        )
+        self.assertIn("ops.scripts.script_output_surfaces", calls[0])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
         self.assertTrue(write_report(self.vault, report).exists())
 
@@ -168,7 +198,14 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
         source_zip = self._write_source_zip(extract_root.name)
         self._write_zip_smoke(archive_budget_pass=False)
 
-        def fake_run(command: list[str], *, cwd: Path, timeout_seconds: int) -> TimedProcessResult:
+        def fake_run(
+            command: list[str],
+            *,
+            cwd: Path,
+            timeout_seconds: int,
+            heartbeat_interval_seconds: int | None = None,
+            heartbeat_callback: Callable[[CommandHeartbeat], None] | None = None,
+        ) -> TimedProcessResult:
             if "ops.scripts.test_execution_summary" in command:
                 out_path = cwd / command[command.index("--out") + 1]
                 out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -184,6 +221,8 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
                 timed_out=False,
                 timeout_seconds=timeout_seconds,
                 termination_reason="",
+                heartbeat_interval_seconds=heartbeat_interval_seconds or 0,
+                observation_mode="process_heartbeat",
             )
 
         with patch("ops.scripts.source_package_clean_extract.run_with_timeout", fake_run):

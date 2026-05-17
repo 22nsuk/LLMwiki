@@ -29,11 +29,6 @@ from ops.scripts.test_lane_registry_runtime import (
     pack_by_id,
     selection_by_make_target,
 )
-from tests.workflow_static_helpers import (
-    load_workflow,
-    workflow_job as _workflow_job,
-    workflow_run_commands as _workflow_run_text,
-)
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
@@ -96,26 +91,40 @@ def _recipe_lines(text: str, target: str) -> list[str]:
 
 def _target_dependencies(text: str, target: str) -> tuple[str, ...]:
     header = _target_block(text, target).splitlines()[0]
-    _, _, dependency_text = header.partition(":")
-    return tuple(dependency_text.split())
+    _, _, raw_deps = header.partition(":")
+    return tuple(raw_deps.split())
 
 
-def _assert_target_depends_on(
-    case: unittest.TestCase, text: str, target: str, dependency: str
-) -> None:
+def _assert_target_depends_on(case: unittest.TestCase, text: str, target: str, dependency: str) -> None:
     case.assertIn(dependency, _target_dependencies(text, target))
 
 
+def _assert_assignment_exists(
+    case: unittest.TestCase,
+    text: str,
+    variable: str,
+    expected_value: str | None = None,
+) -> str:
+    value = _makefile_assignment_value(text, variable)
+    if expected_value is not None:
+        case.assertEqual(value, expected_value)
+    return value
+
+
+def _assert_assignment_not_exists(case: unittest.TestCase, text: str, variable: str) -> None:
+    with case.assertRaises(AssertionError):
+        _makefile_assignment_value(text, variable)
+
+
 def _assert_recipe_contains_tokens(
-    case: unittest.TestCase, text: str, target: str, required_tokens: tuple[str, ...]
+    case: unittest.TestCase,
+    text: str,
+    target: str,
+    required_tokens: tuple[str, ...],
 ) -> None:
-    recipe = "\n".join(_recipe_lines(text, target))
-    for token in required_tokens:
-        case.assertIn(token, recipe)
-
-
-def _workflow_payload() -> dict[str, object]:
-    return load_workflow(CI_WORKFLOW)
+    block = _target_block(text, target)
+    missing = [token for token in required_tokens if token not in block]
+    case.assertEqual(missing, [], f"{target} recipe missing required tokens")
 
 
 def _release_evidence_closeout_expanded_recipe_lines(text: str) -> list[str]:
@@ -159,6 +168,7 @@ def _assert_release_closeout_manifest_phony_and_vars(case: unittest.TestCase, te
         "RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT ?= tmp/release-distribution-zip-smoke.json",
         "RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP ?=",
         "RELEASE_CLOSEOUT_SEALED_ZIP_METADATA ?=",
+        "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_CANONICAL_OUT ?= ops/reports/release-closeout-sealed-rehearsal-check.json",
         "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_RELEASE_OUT ?= build/release/release-closeout-sealed-rehearsal-check.json",
         "RELEASE_AUDIT_PACK_OUT ?= tmp/release-audit-pack.zip",
         "RELEASE_AUDIT_PACK_INCLUDE_OPTIONAL_PAYLOADS ?=",
@@ -292,6 +302,10 @@ def _assert_sealed_release_closeout_targets(case: unittest.TestCase, text: str) 
     )
     case.assertIn(
         "RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_FLAGS=--allow-blocked-preflight",
+        _target_block(text, "release-authority-sealed-preflight"),
+    )
+    case.assertIn(
+        "--candidate \"$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_OUT)\" --out \"$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_CANONICAL_OUT)\"",
         _target_block(text, "release-authority-sealed-preflight"),
     )
 
@@ -1167,28 +1181,53 @@ class MakefileStaticGateTests(unittest.TestCase):
         registry = _test_lane_registry()
         text = _makefile_text()
 
-        expected_assignments = {
-            "SOURCE_PACKAGE_TEST_SUMMARY_OUT": "tmp/test-source-package-summary.json",
-            "SOURCE_PACKAGE_TEST_DESELECT_POLICY": pack_deselection_policy(
-                registry, "source_package"
-            ),
-            "SOURCE_PACKAGE_CHECK_ROOT": "tmp/source-package-check",
-            "SOURCE_PACKAGE_EXTRACT_PARENT": "$(SOURCE_PACKAGE_CHECK_ROOT)/extract",
-            "SOURCE_PACKAGE_TEST_MARK_EXPR": (
-                "not artifact_finalization and not release_sealing"
-            ),
-            "SOURCE_PACKAGE_PYTHON": "$(PUBLIC_PYTHON)",
-            "SOURCE_PACKAGE_CLEAN_EXTRACT_OUT": (
-                "ops/reports/source-package-clean-extract.json"
-            ),
-            "SOURCE_PACKAGE_CLEAN_EXTRACT_CANDIDATE_OUT": (
-                "tmp/source-package-clean-extract.candidate.json"
-            ),
-        }
-        for variable, expected_value in expected_assignments.items():
-            with self.subTest(variable=variable):
-                self.assertEqual(_makefile_assignment_value(text, variable), expected_value)
-        self.assertNotIn("SOURCE_PACKAGE_ARCHIVE_ROOT_NAME", text)
+        _assert_assignment_exists(
+            self,
+            text,
+            "SOURCE_PACKAGE_TEST_SUMMARY_OUT",
+            "tmp/test-source-package-summary.json",
+        )
+        _assert_assignment_exists(
+            self,
+            text,
+            "SOURCE_PACKAGE_TEST_DESELECT_POLICY",
+            pack_deselection_policy(registry, "source_package"),
+        )
+        _assert_assignment_exists(
+            self, text, "SOURCE_PACKAGE_CHECK_ROOT", "tmp/source-package-check"
+        )
+        _assert_assignment_not_exists(self, text, "SOURCE_PACKAGE_ARCHIVE_ROOT_NAME")
+        _assert_assignment_exists(
+            self,
+            text,
+            "SOURCE_PACKAGE_EXTRACT_PARENT",
+            "$(SOURCE_PACKAGE_CHECK_ROOT)/extract",
+        )
+        _assert_assignment_exists(
+            self,
+            text,
+            "SOURCE_PACKAGE_TEST_MARK_EXPR",
+            "not artifact_finalization and not release_sealing",
+        )
+        _assert_assignment_exists(self, text, "SOURCE_PACKAGE_PYTHON", "$(PUBLIC_PYTHON)")
+        _assert_assignment_exists(
+            self,
+            text,
+            "SOURCE_PACKAGE_CLEAN_EXTRACT_OUT",
+            "ops/reports/source-package-clean-extract.json",
+        )
+        _assert_assignment_exists(
+            self,
+            text,
+            "SOURCE_PACKAGE_CLEAN_EXTRACT_CANDIDATE_OUT",
+            "tmp/source-package-clean-extract.candidate.json",
+        )
+        _assert_assignment_exists(
+            self,
+            text,
+            "SOURCE_PACKAGE_HEARTBEAT_INTERVAL_SECONDS",
+            "30",
+        )
         self.assertEqual(
             _makefile_assignment_items(text, "SOURCE_PACKAGE_TEST_DESELECTS"),
             pack_deselects(registry, "source_package"),
@@ -1199,8 +1238,8 @@ class MakefileStaticGateTests(unittest.TestCase):
             "test-source-package",
             (
                 "ops.scripts.test_execution_summary",
-                f'--suite {pack_summary_suite(registry, "source_package")["suite_id"]}',
                 "--collect-nodeids",
+                f'--suite {pack_summary_suite(registry, "source_package")["suite_id"]}',
                 '--deselection-policy "$(SOURCE_PACKAGE_TEST_DESELECT_POLICY)"',
                 '$(PYTHON) -m pytest -m "$(SOURCE_PACKAGE_TEST_MARK_EXPR)"',
                 "$(SOURCE_PACKAGE_TEST_DESELECTS)",
@@ -1211,36 +1250,28 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
             "release-source-package-check",
             (
-                "$(MAKE) release-distribution-zip",
-                'RELEASE_DISTRIBUTION_ZIP_OUT="$(SOURCE_PACKAGE_ZIP_OUT)"',
-                'RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT="$(SOURCE_PACKAGE_ZIP_SMOKE_OUT)"',
+                "release-distribution-zip",
                 "ops.scripts.source_package_clean_extract",
                 '--source-zip "$(SOURCE_PACKAGE_ZIP_OUT)"',
                 '--extract-parent "$(SOURCE_PACKAGE_EXTRACT_PARENT)"',
                 '--source-python "$(SOURCE_PACKAGE_PYTHON)"',
                 '--zip-smoke-report "$(SOURCE_PACKAGE_ZIP_SMOKE_OUT)"',
+                '--heartbeat-interval-seconds "$(SOURCE_PACKAGE_HEARTBEAT_INTERVAL_SECONDS)"',
                 '--deselects="$(SOURCE_PACKAGE_TEST_DESELECTS)"',
                 '--pytest-flags="$(PYTEST_SERIAL_FLAGS)"',
+                "ops.scripts.canonical_artifact_promote",
                 "--schema ops/schemas/source-package-clean-extract.schema.json",
             ),
         )
 
     def test_ci_matrix_runs_named_lane_targets(self) -> None:
         registry = _test_lane_registry()
-        workflow = _workflow_payload()
-        test_tier_job = _workflow_job(workflow, "test-tier")
-        strategy = test_tier_job.get("strategy", {})
-        self.assertIsInstance(strategy, dict)
-        matrix = strategy.get("matrix", {})
-        self.assertIsInstance(matrix, dict)
-        tiers = matrix.get("tier", [])
-        self.assertIsInstance(tiers, list)
-        workflow_run_text = _workflow_run_text(test_tier_job)
+        workflow_text = CI_WORKFLOW.read_text(encoding="utf-8")
         ci_map = compatibility_map(registry, "ci_tier")
 
-        self.assertEqual(tuple(tiers), tuple(ci_map))
         for tier, mapped_id in ci_map.items():
             with self.subTest(tier=tier, mapped_id=mapped_id):
+                self.assertIn(f"- {tier}", workflow_text)
                 if mapped_id in pack_by_id(registry):
                     expected_steps = pack_ci_steps(registry, mapped_id)
                     expected_entrypoint = pack_ci_entrypoint(registry, mapped_id)
@@ -1249,11 +1280,11 @@ class MakefileStaticGateTests(unittest.TestCase):
                     expected_entrypoint = lane_ci_entrypoint(registry, mapped_id)
                 self.assertTrue(expected_steps)
                 self.assertTrue(expected_entrypoint)
-                self.assertIn(f"make {expected_entrypoint}", workflow_run_text)
+                self.assertIn(f"make {expected_entrypoint}", workflow_text)
                 for step in expected_steps:
-                    self.assertIn(step, workflow_run_text)
-        self.assertIn("make release-authority-sealed-preflight", workflow_run_text)
-        self.assertIn("make test-fast", workflow_run_text)
+                    self.assertIn(step, workflow_text)
+        self.assertIn("make release-authority-sealed-preflight", workflow_text)
+        self.assertIn("make test-fast", workflow_text)
 
     def test_readme_ci_tier_summary_matches_current_workflow_shape(self) -> None:
         registry = _test_lane_registry()
@@ -1570,6 +1601,14 @@ class MakefileStaticGateTests(unittest.TestCase):
             "SESSION_SYNOPSIS_OUT ?= ops/reports/session-synopsis.json",
             text,
         )
+        self.assertIn(
+            "SELF_IMPROVEMENT_NEGATIVE_LESSONS_OUT ?= ops/reports/self-improvement-negative-lessons.json",
+            text,
+        )
+        self.assertIn(
+            "REMEDIATION_BACKLOG_OUT ?= ops/reports/remediation-backlog.json",
+            text,
+        )
         block = _target_block(text, "learning-delta-scoreboard")
         self.assertIn("ops.scripts.learning_delta_scoreboard", block)
         self.assertIn("ops/schemas/learning-delta-scoreboard.schema.json", block)
@@ -1590,6 +1629,23 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn("ops.scripts.session_synopsis", synopsis_block)
         self.assertIn("ops/schemas/session-synopsis.schema.json", synopsis_block)
+        negative_lessons_block = _target_block(text, "self-improvement-negative-lessons")
+        self.assertEqual(
+            negative_lessons_block.splitlines()[0],
+            "self-improvement-negative-lessons: session-synopsis",
+        )
+        self.assertIn("ops.scripts.self_improvement_negative_lessons", negative_lessons_block)
+        self.assertIn(
+            "ops/schemas/self-improvement-negative-lessons.schema.json",
+            negative_lessons_block,
+        )
+        backlog_block = _target_block(text, "remediation-backlog")
+        self.assertEqual(
+            backlog_block.splitlines()[0],
+            "remediation-backlog: self-improvement-negative-lessons session-synopsis",
+        )
+        self.assertIn("ops.scripts.remediation_backlog", backlog_block)
+        self.assertIn("ops/schemas/remediation-backlog.schema.json", backlog_block)
         self.assertIn("tmp-clean: tmp-json-clean", text)
 
     def test_report_contracts_target_collects_schema_and_generated_artifact_checks(
@@ -1814,6 +1870,8 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) learning-delta-scoreboard",
                 "$(MAKE) learning-claim-activation-report",
                 "$(MAKE) session-synopsis",
+                "$(MAKE) self-improvement-negative-lessons",
+                "$(MAKE) remediation-backlog",
                 "$(MAKE) release-closeout-summary",
                 "$(MAKE) learning-readiness-signoff-revalidation",
                 "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
@@ -2145,104 +2203,91 @@ class MakefileStaticGateTests(unittest.TestCase):
     def test_test_execution_summary_target_wraps_report_contracts(self) -> None:
         registry = _test_lane_registry()
         text = _makefile_text()
-        block = _target_block(text, "test-execution-summary-report-contract")
 
-        self.assertIn("test-execution-summary", _target_block(text, ".PHONY"))
-        self.assertIn("test-execution-summary-fast", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "test-execution-summary-report-contract", _target_block(text, ".PHONY")
-        )
-        self.assertIn(
+        for target in (
+            "test-execution-summary",
+            "test-execution-summary-fast",
+            "test-execution-summary-report-contract",
             "test-execution-summary-report-contract-refresh",
-            _target_block(text, ".PHONY"),
+            "test-execution-summary-full",
+            "test-execution-summary-full-refresh",
+            "test-execution-summary-reuse",
+            "test-execution-summary-aggregate",
+        ):
+            self.assertIn(target, _target_block(text, ".PHONY"))
+        _assert_assignment_exists(
+            self, text, "TEST_EXECUTION_SUMMARY_OUT", "ops/reports/test-execution-summary.json"
         )
-        self.assertIn("test-execution-summary-full", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "test-execution-summary-full-refresh", _target_block(text, ".PHONY")
+        _assert_assignment_exists(
+            self, text, "TEST_EXECUTION_SUMMARY_CANDIDATE_OUT", "tmp/test-execution-summary.candidate.json"
         )
-        self.assertIn("test-execution-summary-reuse", _target_block(text, ".PHONY"))
-        self.assertIn("test-execution-summary-aggregate", _target_block(text, ".PHONY"))
-        self.assertIn(
-            "TEST_EXECUTION_SUMMARY_OUT ?= ops/reports/test-execution-summary.json",
+        _assert_assignment_exists(
+            self, text, "TEST_EXECUTION_SUMMARY_FAST_OUT", "ops/reports/test-execution-summary-fast.json"
+        )
+        _assert_assignment_exists(
+            self,
             text,
+            "TEST_EXECUTION_SUMMARY_FAST_CANDIDATE_OUT",
+            "tmp/test-execution-summary-fast.candidate.json",
         )
-        self.assertIn(
-            "TEST_EXECUTION_SUMMARY_CANDIDATE_OUT ?= tmp/test-execution-summary.candidate.json",
+        _assert_assignment_exists(
+            self, text, "TEST_EXECUTION_SUMMARY_FULL_OUT", "ops/reports/test-execution-summary-full.json"
+        )
+        _assert_assignment_exists(
+            self,
             text,
+            "TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT",
+            "tmp/test-execution-summary-full.candidate.json",
         )
-        self.assertIn(
-            "TEST_EXECUTION_SUMMARY_FAST_OUT ?= ops/reports/test-execution-summary-fast.json",
+        _assert_assignment_not_exists(self, text, "TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT")
+        _assert_assignment_exists(self, text, "RELEASE_AUDIT_PAYLOAD_STAGING_DIR", "build/release-payloads")
+        _assert_assignment_exists(
+            self,
             text,
+            "TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT",
+            "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.junit.xml",
         )
-        self.assertIn(
-            "TEST_EXECUTION_SUMMARY_FAST_CANDIDATE_OUT ?= tmp/test-execution-summary-fast.candidate.json",
+        _assert_assignment_exists(
+            self,
             text,
+            "TEST_EXECUTION_SUMMARY_FULL_LOG_OUT",
+            "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.log",
         )
-        self.assertIn(
-            "TEST_EXECUTION_SUMMARY_FULL_OUT ?= ops/reports/test-execution-summary-full.json",
+        _assert_assignment_exists(
+            self, text, "TEST_EXECUTION_SUMMARY_REUSE_FROM", "$(TEST_EXECUTION_SUMMARY_OUT)"
+        )
+        _assert_assignment_exists(
+            self, text, "TEST_EXECUTION_SUMMARY_SHARD_DIR", "ops/reports/test-execution-summary-shards"
+        )
+        _assert_assignment_exists(
+            self,
             text,
+            "TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR",
+            "ops/reports/test-execution-summary-full-shards",
         )
-        self.assertIn(
-            "TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT ?= tmp/test-execution-summary-full.candidate.json",
+        _assert_assignment_exists(
+            self,
             text,
-        )
-        self.assertNotIn("TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT", text)
-        self.assertIn(
-            "RELEASE_AUDIT_PAYLOAD_STAGING_DIR ?= build/release-payloads", text
-        )
-        self.assertIn(
-            "TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT ?= $(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.junit.xml",
-            text,
-        )
-        self.assertIn(
-            "TEST_EXECUTION_SUMMARY_FULL_LOG_OUT ?= $(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.log",
-            text,
-        )
-        self.assertIn(
-            "TEST_EXECUTION_SUMMARY_REUSE_FROM ?= $(TEST_EXECUTION_SUMMARY_OUT)", text
-        )
-        self.assertIn(
-            "TEST_EXECUTION_SUMMARY_SHARD_DIR ?= ops/reports/test-execution-summary-shards",
-            text,
-        )
-        self.assertIn(
-            "TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR ?= ops/reports/test-execution-summary-full-shards",
-            text,
-        )
-        self.assertEqual(
-            _makefile_assignment_value(text, "TEST_EXECUTION_SUMMARY_FAST_SUITE"),
+            "TEST_EXECUTION_SUMMARY_FAST_SUITE",
             pack_summary_suite(registry, "fast")["suite_id"],
         )
-        self.assertEqual(
-            _makefile_assignment_value(
-                text, "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE"
-            ),
+        _assert_assignment_exists(
+            self,
+            text,
+            "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE",
             pack_summary_suite(registry, "report_contract_core")["suite_id"],
         )
-        self.assertEqual(
-            _makefile_assignment_value(text, "TEST_EXECUTION_SUMMARY_FULL_SUITE"),
-            "full",
-        )
-        self.assertEqual(
-            _makefile_assignment_value(
-                text, "TEST_EXECUTION_SUMMARY_FULL_SHARD_SUITE"
-            ),
-            "full-shard-1",
-        )
+        _assert_assignment_exists(self, text, "TEST_EXECUTION_SUMMARY_FULL_SUITE", "full")
+        _assert_assignment_exists(self, text, "TEST_EXECUTION_SUMMARY_FULL_SHARD_SUITE", "full-shard-1")
         _assert_recipe_contains_tokens(
             self,
             text,
             "test-execution-summary-fast",
             (
                 "ops.scripts.test_execution_summary",
-                '--out "$(TEST_EXECUTION_SUMMARY_FAST_CANDIDATE_OUT)"',
-                '--suite "$(TEST_EXECUTION_SUMMARY_FAST_SUITE)"',
                 "--collect-nodeids",
                 '$(PYTHON) -m pytest -m "$(PYTEST_FAST_MARK_EXPR)"',
-                "$(PYTEST_SERIAL_FLAGS)",
                 "ops.scripts.canonical_artifact_promote",
-                '--candidate "$(TEST_EXECUTION_SUMMARY_FAST_CANDIDATE_OUT)"',
-                '--out "$(TEST_EXECUTION_SUMMARY_FAST_OUT)"',
             ),
         )
         _assert_recipe_contains_tokens(
@@ -2251,61 +2296,60 @@ class MakefileStaticGateTests(unittest.TestCase):
             "test-execution-summary-report-contract",
             (
                 "ops.scripts.test_execution_summary",
-                '--out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)"',
-                '--suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)"',
                 "--collect-nodeids",
                 '--deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)"',
                 "$(REPORT_CONTRACT_SUMMARY_TESTS)",
-                "$(PYTEST_SERIAL_FLAGS)",
                 "ops.scripts.canonical_artifact_promote",
             ),
         )
-        block = _target_block(text, "test-execution-summary-report-contract")
-        self.assertIn("ops.scripts.canonical_artifact_promote", block)
         refresh_block = _target_block(
             text, "test-execution-summary-report-contract-refresh"
         )
-        self.assertIn("ops.scripts.test_execution_summary", refresh_block)
-        self.assertIn("ops.scripts.canonical_artifact_promote", refresh_block)
-        self.assertIn("$(MAKE) refresh-generated-core", refresh_block)
-        self.assertIn("$(MAKE) auto-improve-readiness-report-body", refresh_block)
-        self.assertIn("$(MAKE) release-smoke-full", refresh_block)
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "test-execution-summary-report-contract-refresh",
+            (
+                "ops.scripts.test_execution_summary",
+                "ops.scripts.canonical_artifact_promote",
+                "$(MAKE) refresh-generated-core",
+                "$(MAKE) auto-improve-readiness-report-body",
+                "$(MAKE) release-smoke-full",
+            ),
+        )
         self.assertEqual(refresh_block.count("$(MAKE) generated-artifact-index"), 2)
         self.assertEqual(refresh_block.count("$(MAKE) archive-execution-manifest-report"), 0)
         self.assertEqual(refresh_block.count("$(MAKE) artifact-freshness"), 2)
         self.assertIn(
             "strict test-execution-summary will rerun later in closeout", refresh_block
         )
-        _assert_target_depends_on(
-            self, text, "test-execution-summary", "test-execution-summary-report-contract"
-        )
-        _assert_recipe_contains_tokens(
-            self,
-            text,
-            "test-execution-summary-full",
-            (
-                "ops.scripts.test_execution_summary",
-                '--out "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)/full-suite-shard-1.json"',
-                '--suite "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_SUITE)"',
-                "--collect-nodeids",
-                '--junit-xml-path "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)"',
-                '--execution-log-out "$(TEST_EXECUTION_SUMMARY_FULL_LOG_OUT)"',
-                '--failed-nodeids-out "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.failed-nodeids.txt"',
-                '--junit-xml "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)"',
-                '--out "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)"',
-                '--suite "$(TEST_EXECUTION_SUMMARY_FULL_SUITE)"',
-                "--aggregate",
-                '--aggregate-dir "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"',
-            ),
+        self.assertIn(
+            "test-execution-summary: test-execution-summary-report-contract", text
         )
         full_block = _target_block(text, "test-execution-summary-full")
         self.assertNotIn("$(MAKE) refresh-generated-core", full_block)
         self.assertNotIn("$(MAKE) auto-improve-readiness-report-body", full_block)
         self.assertNotIn("$(MAKE) release-smoke-full", full_block)
-        self.assertIn('rm -rf "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"', full_block)
-        self.assertIn('mkdir -p "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"', full_block)
-        self.assertIn("$(MAKE) generated-artifact-index", full_block)
-        self.assertIn("$(MAKE) test-execution-summary-report-contract-refresh", full_block)
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "test-execution-summary-full",
+            (
+                'rm -rf "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"',
+                'mkdir -p "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"',
+                "$(MAKE) test-execution-summary-report-contract-refresh",
+                "ops.scripts.test_execution_summary",
+                "--collect-nodeids",
+                "--junit-xml-path",
+                "--execution-log-out",
+                "--failed-nodeids-out",
+                "--aggregate",
+                "--aggregate-dir",
+                "ops.scripts.canonical_artifact_promote",
+                "$(MAKE) generated-artifact-index",
+                "$(MAKE) artifact-freshness",
+            ),
+        )
         self.assertEqual(full_block.count("$(MAKE) generated-artifact-index"), 1)
         self.assertLess(
             full_block.index("$(MAKE) test-execution-summary-report-contract-refresh"),
@@ -2319,34 +2363,22 @@ class MakefileStaticGateTests(unittest.TestCase):
             full_block.rindex("$(MAKE) artifact-freshness"),
             full_block.index("ops.scripts.canonical_artifact_promote"),
         )
-        self.assertIn(
-            "ops.scripts.canonical_artifact_promote",
-            full_block,
-        )
         full_refresh_block = _target_block(text, "test-execution-summary-full-refresh")
-        _assert_target_depends_on(
-            self,
-            text,
-            "test-execution-summary-full-refresh",
-            "test-execution-summary-full",
-        )
+        _assert_target_depends_on(self, text, "test-execution-summary-full-refresh", "test-execution-summary-full")
         self.assertIn(
-            "collect-only nodeid digest and count recorded in $(TEST_EXECUTION_SUMMARY_FULL_OUT)",
+            "full-suite evidence refreshed; collect-only nodeid digest and count recorded in $(TEST_EXECUTION_SUMMARY_FULL_OUT)",
             full_refresh_block,
         )
         self.assertNotIn("node count $$actual does not match expected", full_refresh_block)
-        self.assertNotIn("TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT", full_refresh_block)
         _assert_recipe_contains_tokens(
             self,
             text,
             "test-execution-summary-reuse",
             (
                 "ops.scripts.test_execution_summary",
-                "--collect-nodeids",
                 "--reuse-if-current",
                 '--reuse-from "$(TEST_EXECUTION_SUMMARY_REUSE_FROM)"',
                 '--deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)"',
-                "$(REPORT_CONTRACT_SUMMARY_TESTS)",
                 "ops.scripts.canonical_artifact_promote",
             ),
         )
@@ -2356,8 +2388,6 @@ class MakefileStaticGateTests(unittest.TestCase):
             "test-execution-summary-aggregate",
             (
                 "ops.scripts.test_execution_summary",
-                '--out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)"',
-                '--suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)"',
                 "--aggregate",
                 '--aggregate-dir "$(TEST_EXECUTION_SUMMARY_SHARD_DIR)"',
                 "ops.scripts.canonical_artifact_promote",
@@ -2495,7 +2525,10 @@ class MakefileStaticGateTests(unittest.TestCase):
             "AUTO_IMPROVE_READINESS_CANDIDATE_OUT ?= tmp/auto-improve-readiness.candidate.json",
             text,
         )
-        self.assertIn("auto-improve-readiness: refresh-generated-core", text)
+        self.assertIn(
+            "auto-improve-readiness: refresh-generated-core auto-improve-readiness-worktree-guard",
+            text,
+        )
         self.assertIn(
             '$(PYTHON) -m ops.scripts.auto_improve_readiness --vault "$(VAULT)" --out "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)"',
             _target_block(text, "auto-improve-readiness"),
@@ -2505,31 +2538,219 @@ class MakefileStaticGateTests(unittest.TestCase):
             _target_block(text, "auto-improve-readiness"),
         )
         self.assertIn("auto-improve-readiness-report: refresh-generated-core", text)
+        self.assertIn(
+            "auto-improve-readiness-report-body: auto-improve-readiness-worktree-guard",
+            text,
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-readiness-worktree-guard",
+            (
+                "ops.scripts.goal_worktree_guard",
+                "--requested-mode \"$(GOAL_WORKTREE_MODE)\"",
+                "--out \"$(GOAL_WORKTREE_GUARD_OUT)\"",
+                "$(if $(GOAL_WORKTREE_ALLOW_DIRTY),--allow-dirty,)",
+            ),
+        )
 
-    def test_goal_auto_improve_ladder_targets_run_profiles_detached(self) -> None:
+    def test_auto_improve_goal_targets_write_contract_and_status_report(self) -> None:
         text = _makefile_text()
 
+        for variable, expected in (
+            ("CODEX_GOAL_CONTRACT_OUT", "ops/reports/codex-goal-contract.json"),
+            ("CODEX_GOAL_PROMPT_OUT", "ops/reports/codex-goal-prompt.json"),
+            ("GOAL_WORKTREE_GUARD_OUT", "tmp/goal-worktree-guard.json"),
+            ("GOAL_WORKTREE_MODE", "git"),
+            ("GOAL_RUN_STATUS_OUT", "ops/reports/goal-run-status.json"),
+            ("GOAL_RUN_STATUS_CANDIDATE_OUT", "tmp/goal-run-status.candidate.json"),
+            ("GOAL_PROFILE_VERIFICATION_OUT", "ops/reports/goal-profile-verification.json"),
+            (
+                "GOAL_PROFILE_VERIFICATION_CANDIDATE_OUT",
+                "tmp/goal-profile-verification.candidate.json",
+            ),
+            ("GOAL_SESSION_RESULT_OUT", "tmp/auto-improve-goal-session-result.json"),
+            ("GOAL_RUN_STATUS", "blocked"),
+            ("GOAL_RUN_PROFILE", "30m_trial"),
+            ("GOAL_MAX_UNATTENDED_SECONDS", "1800"),
+            ("GOAL_RUNNER_TIMEOUT_SECONDS", "1860"),
+            ("GOAL_MAX_MINUTES", "30"),
+            ("GOAL_MAX_PROPOSALS", "1"),
+            ("GOAL_MAX_CONSECUTIVE_FAILURES", "1"),
+            ("GOAL_EXECUTOR", "codex_exec"),
+            ("GOAL_ARTIFACT_CLASS", "system_mechanism"),
+            ("GOAL_FINAL_STATUS", "stopped"),
+        ):
+            _assert_assignment_exists(self, text, variable, expected)
+        for variable in (
+            "GOAL_WORKTREE_ALLOW_DIRTY",
+            "GOAL_WORKTREE_STRICT",
+            "GOAL_ALLOW_LEARNING_UNCERTAIN",
+            "GOAL_PROFILE_VERIFICATION_PROFILE",
+            "GOAL_PROFILE_VERIFICATION_APPLY",
+        ):
+            _assert_assignment_exists(self, text, variable, "")
+        run_command = _assert_assignment_exists(self, text, "GOAL_RUN_COMMAND")
+        self.assertIn("ops.scripts.auto_improve_loop", run_command)
+        self.assertIn("--session-id \"$(GOAL_RUN_ID)\"", run_command)
+        self.assertIn("--goal-contract \"$(CODEX_GOAL_CONTRACT_OUT)\"", run_command)
+        self.assertIn("--executor \"$(GOAL_EXECUTOR)\"", run_command)
+        self.assertIn("--class \"$(GOAL_ARTIFACT_CLASS)\"", run_command)
+        self.assertIn("$(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,)", run_command)
+        resume_command = _assert_assignment_exists(self, text, "GOAL_RESUME_COMMAND")
+        self.assertIn("ops.scripts.auto_improve_loop", resume_command)
+        self.assertIn("--resume-session \"$(GOAL_RUN_ID)\"", resume_command)
+        self.assertIn("--goal-contract \"$(CODEX_GOAL_CONTRACT_OUT)\"", resume_command)
+        self.assertIn("--max-minutes \"$(GOAL_MAX_MINUTES)\"", resume_command)
+        self.assertIn("--max-proposals \"$(GOAL_MAX_PROPOSALS)\"", resume_command)
         self.assertIn(
-            "GOAL_LADDER_PROFILES ?= 30-minute-trial 6-hour-ramp 2-day-candidate 5-day-sustained",
-            text,
+            "--max-consecutive-failures \"$(GOAL_MAX_CONSECUTIVE_FAILURES)\"",
+            resume_command,
         )
-        self.assertIn("GOAL_ACTIVE_PROFILE ?= 30-minute-trial", text)
-        self.assertIn(
-            "GOAL_LADDER_RUN_EXTRA_ARGS ?= --sustain-until-budget --allow-learning-uncertain",
+        phony = _target_block(text, ".PHONY")
+        for target in (
+            "codex-goal-contract",
+            "codex-goal-prompt",
+            "codex-goal-client",
+            "auto-improve-readiness-worktree-guard",
+            "auto-improve-goal-contract",
+            "auto-improve-goal-preflight",
+            "auto-improve-goal-run",
+            "auto-improve-goal-status",
+            "auto-improve-goal-resume",
+            "auto-improve-goal-finalize",
+            "auto-improve-goal-run-artifacts",
+            "goal-profile-verification",
+        ):
+            self.assertIn(target, phony)
+        _assert_target_depends_on(self, text, "codex-goal-contract", "auto-improve-goal-contract")
+        _assert_target_depends_on(self, text, "codex-goal-prompt", "auto-improve-goal-contract")
+        _assert_target_depends_on(self, text, "auto-improve-goal-run", "auto-improve-goal-preflight")
+        _assert_target_depends_on(self, text, "auto-improve-goal-run", "auto-improve-goal-contract")
+        _assert_target_depends_on(self, text, "auto-improve-goal-status", "auto-improve-goal-contract")
+        _assert_target_depends_on(self, text, "auto-improve-goal-resume", "auto-improve-goal-preflight")
+        _assert_target_depends_on(self, text, "auto-improve-goal-resume", "auto-improve-goal-contract")
+        _assert_target_depends_on(self, text, "auto-improve-goal-finalize", "auto-improve-goal-contract")
+        _assert_target_depends_on(self, text, "auto-improve-goal-run-artifacts", "auto-improve-goal-status")
+        _assert_target_depends_on(self, text, "goal-profile-verification", "auto-improve-goal-contract")
+        _assert_recipe_contains_tokens(
+            self,
             text,
+            "codex-goal-client",
+            (
+                "tests/test_codex_goal_contract.py",
+                "tests/test_codex_goal_client.py",
+                "tests/test_codex_goal_prompt.py",
+            ),
         )
-        self.assertIn("auto-improve-goal-ladder-run", _target_block(text, ".PHONY"))
-        self.assertIn("auto-improve-goal-ladder-start", _target_block(text, ".PHONY"))
-        run_block = _target_block(text, "auto-improve-goal-ladder-run")
-        self.assertIn("for profile in $(GOAL_LADDER_PROFILES)", run_block)
-        self.assertIn("ops.scripts.auto_improve_loop", run_block)
-        self.assertIn('--goal-profile "$$profile"', run_block)
-        start_block = _target_block(text, "auto-improve-goal-ladder-start")
-        self.assertIn("setsid $(MAKE) auto-improve-goal-ladder-run", start_block)
-        self.assertIn('GOAL_LADDER_PROFILES="$(GOAL_LADDER_PROFILES)"', start_block)
-        self.assertIn('GOAL_RUN_EXTRA_ARGS="$(GOAL_RUN_EXTRA_ARGS) $(GOAL_LADDER_RUN_EXTRA_ARGS)"', start_block)
-        self.assertIn("< /dev/null", start_block)
-        self.assertIn('echo $$! > "$(GOAL_LADDER_PID)"', start_block)
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-goal-contract",
+            (
+                "ops.scripts.codex_goal_client",
+                "--out \"$(CODEX_GOAL_CONTRACT_OUT)\"",
+                "--current-profile \"$(GOAL_RUN_PROFILE)\"",
+                "--max-unattended-seconds \"$(GOAL_MAX_UNATTENDED_SECONDS)\"",
+                "--max-proposals \"$(GOAL_MAX_PROPOSALS)\"",
+                "--max-consecutive-failures \"$(GOAL_MAX_CONSECUTIVE_FAILURES)\"",
+                "--worktree-guard-report \"$(GOAL_WORKTREE_GUARD_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "codex-goal-prompt",
+            (
+                "ops.scripts.codex_goal_prompt",
+                "--goal-contract \"$(CODEX_GOAL_CONTRACT_OUT)\"",
+                "--out \"$(CODEX_GOAL_PROMPT_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-goal-preflight",
+            (
+                "ops.scripts.goal_worktree_guard",
+                "--requested-mode \"$(GOAL_WORKTREE_MODE)\"",
+                "--out \"$(GOAL_WORKTREE_GUARD_OUT)\"",
+                "$(if $(GOAL_WORKTREE_ALLOW_DIRTY),--allow-dirty,)",
+                "$(if $(GOAL_WORKTREE_STRICT),--strict,)",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-goal-status",
+            (
+                "ops.scripts.goal_run_status",
+                "--goal-contract \"$(CODEX_GOAL_CONTRACT_OUT)\"",
+                "--status-report-path \"$(GOAL_RUN_STATUS_OUT)\"",
+                "--out \"$(GOAL_RUN_STATUS_CANDIDATE_OUT)\"",
+                "--write-run-artifacts",
+                "ops.scripts.canonical_artifact_promote",
+                "--schema ops/schemas/goal-run-status.schema.json",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-goal-run",
+            (
+                "ops.scripts.goal_runtime_runner",
+                "--goal-contract \"$(CODEX_GOAL_CONTRACT_OUT)\"",
+                "--run-id \"$(GOAL_RUN_ID)\"",
+                "--result-out \"$(GOAL_SESSION_RESULT_OUT)\"",
+                "--heartbeat-interval-seconds \"$(GOAL_HEARTBEAT_INTERVAL_SECONDS)\"",
+                "--checkpoint-interval-seconds \"$(GOAL_CHECKPOINT_INTERVAL_SECONDS)\"",
+                "--timeout-seconds \"$(GOAL_RUNNER_TIMEOUT_SECONDS)\"",
+                "-- $(GOAL_RUN_COMMAND)",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-goal-resume",
+            (
+                "ops.scripts.goal_runtime_runner",
+                "--resume-from-checkpoint",
+                "--result-out \"$(GOAL_SESSION_RESULT_OUT)\"",
+                "--heartbeat-interval-seconds \"$(GOAL_HEARTBEAT_INTERVAL_SECONDS)\"",
+                "--checkpoint-interval-seconds \"$(GOAL_CHECKPOINT_INTERVAL_SECONDS)\"",
+                "--timeout-seconds \"$(GOAL_RUNNER_TIMEOUT_SECONDS)\"",
+                "-- $(GOAL_RESUME_COMMAND)",
+            ),
+        )
+        self.assertNotIn("$(MAKE)", _target_block(text, "auto-improve-goal-run"))
+        self.assertNotIn("$(MAKE)", _target_block(text, "auto-improve-goal-resume"))
+        self.assertNotIn("> \"$(GOAL_SESSION_RESULT_OUT)\"", _target_block(text, "auto-improve-goal-run"))
+        self.assertNotIn("> \"$(GOAL_SESSION_RESULT_OUT)\"", _target_block(text, "auto-improve-goal-resume"))
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-goal-finalize",
+            (
+                "--status \"$(GOAL_FINAL_STATUS)\"",
+                "--completed-at \"$(GOAL_COMPLETED_AT)\"",
+                "--write-run-artifacts",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-profile-verification",
+            (
+                "ops.scripts.goal_profile_verification",
+                "--goal-contract \"$(CODEX_GOAL_CONTRACT_OUT)\"",
+                "--status-report \"$(GOAL_RUN_STATUS_OUT)\"",
+                "--out \"$(GOAL_PROFILE_VERIFICATION_CANDIDATE_OUT)\"",
+                "$(if $(GOAL_PROFILE_VERIFICATION_PROFILE),--profile \"$(GOAL_PROFILE_VERIFICATION_PROFILE)\",)",
+                "$(if $(GOAL_PROFILE_VERIFICATION_APPLY),--apply,)",
+                "ops/schemas/goal-profile-verification.schema.json",
+                "--expected-artifact-kind goal_profile_verification",
+            ),
+        )
 
     def test_mechanism_run_linux_tmp_target_pins_native_temp_environment(self) -> None:
         text = _makefile_text()

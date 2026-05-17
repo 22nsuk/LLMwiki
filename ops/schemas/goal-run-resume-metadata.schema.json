@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/goal-run-resume-metadata.schema.json",
+  "title": "Goal run resume metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "run_id",
+    "contract_sha256",
+    "resume_from_checkpoint",
+    "resume_command"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "ops/schemas/goal-run-resume-metadata.schema.json"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "const": "goal_run_resume_metadata"
+    },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": { "type": "string", "minLength": 1 },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string" },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": { "type": "object" },
+    "schema_version": { "type": "integer", "const": 1 },
+    "artifact_status": { "type": "string", "const": "current" },
+    "retention_policy": { "type": "string", "const": "run_local_state" },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "const": "current" },
+        "checked_at": { "type": "string", "minLength": 1 }
+      }
+    },
+    "run_id": { "type": "string", "minLength": 1 },
+    "contract_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "resume_from_checkpoint": { "type": "boolean" },
+    "resume_command": { "type": "string" }
+  }
+}

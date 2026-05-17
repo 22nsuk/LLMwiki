@@ -123,7 +123,7 @@
         "final_state_observed",
         "stdout_received",
         "stderr_received",
-        "heartbeat"
+        "observability"
       ],
       "properties": {
         "returncode": {
@@ -158,37 +158,48 @@
         "stderr_received": {
           "type": "boolean"
         },
-        "heartbeat": {
+        "observability": {
           "type": "object",
+          "additionalProperties": false,
           "required": [
-            "interval_seconds",
-            "emitted_count",
-            "last_elapsed_seconds",
-            "status"
+            "heartbeat_count",
+            "heartbeat_interval_seconds",
+            "quiet_seconds",
+            "last_stdout_at",
+            "last_stderr_at",
+            "last_artifact_touch_at",
+            "observation_mode"
           ],
           "properties": {
-            "interval_seconds": {
+            "heartbeat_count": {
               "type": "integer",
               "minimum": 0
             },
-            "emitted_count": {
+            "heartbeat_interval_seconds": {
               "type": "integer",
               "minimum": 0
             },
-            "last_elapsed_seconds": {
-              "type": "number",
+            "quiet_seconds": {
+              "type": "integer",
               "minimum": 0
             },
-            "status": {
+            "last_stdout_at": {
+              "type": "string"
+            },
+            "last_stderr_at": {
+              "type": "string"
+            },
+            "last_artifact_touch_at": {
+              "type": "string"
+            },
+            "observation_mode": {
               "type": "string",
               "enum": [
-                "disabled",
-                "completed",
-                "timed_out"
+                "communicate",
+                "process_heartbeat"
               ]
             }
-          },
-          "additionalProperties": false
+          }
         }
       },
       "additionalProperties": false

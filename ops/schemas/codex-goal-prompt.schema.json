@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/codex-goal-prompt.schema.json",
+  "title": "Codex goal prompt report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "goal_contract",
+    "budget",
+    "promotion_guard",
+    "prompt",
+    "status"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "ops/schemas/codex-goal-prompt.schema.json"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "const": "codex_goal_prompt"
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer": {
+      "type": "string",
+      "const": "ops.scripts.codex_goal_prompt"
+    },
+    "source_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_tree_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_fingerprints": {
+      "type": "object",
+      "minProperties": 1
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_status": {
+      "type": "string",
+      "const": "current"
+    },
+    "retention_policy": {
+      "type": "string",
+      "const": "canonical_report"
+    },
+    "encoding": {
+      "type": "string",
+      "minLength": 1
+    },
+    "currentness": {
+      "type": "object"
+    },
+    "goal_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "contract_sha256",
+        "contract_id",
+        "status",
+        "objective",
+        "current_profile",
+        "process_persistent_backend"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "contract_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "contract_id": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "minLength": 1 },
+        "objective": { "type": "string", "minLength": 1 },
+        "current_profile": {
+          "type": "string",
+          "enum": ["30m_trial", "6h_ramp", "2d_candidate", "5d_sustained"]
+        },
+        "process_persistent_backend": { "type": "boolean" }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_wall_clock_seconds",
+        "max_unattended_seconds",
+        "max_proposals",
+        "max_consecutive_failures",
+        "heartbeat_interval_seconds",
+        "checkpoint_interval_seconds"
+      ],
+      "properties": {
+        "max_wall_clock_seconds": { "type": "integer", "minimum": 1 },
+        "max_unattended_seconds": { "type": "integer", "minimum": 1 },
+        "max_proposals": { "type": "integer", "minimum": 1 },
+        "max_consecutive_failures": { "type": "integer", "minimum": 1 },
+        "heartbeat_interval_seconds": { "type": "integer", "minimum": 1 },
+        "checkpoint_interval_seconds": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "promotion_guard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "can_promote_result",
+        "promotion_ban_required",
+        "promotion_blockers",
+        "sealed_authority_clean",
+        "profile_verified",
+        "sustained_runtime_claimed"
+      ],
+      "properties": {
+        "can_promote_result": { "type": "boolean" },
+        "promotion_ban_required": { "type": "boolean" },
+        "promotion_blockers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "sealed_authority_clean": { "type": "boolean" },
+        "profile_verified": { "type": "string", "minLength": 1 },
+        "sustained_runtime_claimed": { "type": "boolean" }
+      }
+    },
+    "prompt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "line_count",
+        "includes_promotion_ban",
+        "includes_sustained_claim_ban",
+        "includes_budget_limits",
+        "includes_allowed_roots"
+      ],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "line_count": { "type": "integer", "minimum": 1 },
+        "includes_promotion_ban": { "type": "boolean" },
+        "includes_sustained_claim_ban": { "type": "boolean" },
+        "includes_budget_limits": { "type": "boolean" },
+        "includes_allowed_roots": { "type": "boolean" }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pass", "attention"]
+    }
+  }
+}

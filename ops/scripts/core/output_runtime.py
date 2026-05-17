@@ -79,7 +79,10 @@ def sanitize_report_text(
         sanitized = sanitized.replace(f"{root_text}/", "<tmp>/")
         sanitized = sanitized.replace(root_text, "<tmp>")
     sanitized = TEMP_ROOT_RE.sub("<tmp>", sanitized)
-    return HOME_ROOT_RE.sub("<home>", sanitized)
+    sanitized = HOME_ROOT_RE.sub("<home>", sanitized)
+    home_sanitized_vault = HOME_ROOT_RE.sub("<home>", vault_text)
+    sanitized = sanitized.replace(f"{home_sanitized_vault}/", "")
+    return sanitized.replace(home_sanitized_vault, ".")
 
 
 def write_output_text(path: Path, text: str) -> Path:

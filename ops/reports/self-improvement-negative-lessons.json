@@ -1,17 +1,45 @@
 {
   "$schema": "ops/schemas/self-improvement-negative-lessons.schema.json",
   "artifact_kind": "self_improvement_negative_lessons",
-  "generated_at": "2026-05-15T06:12:46Z",
+  "generated_at": "2026-05-17T18:45:24Z",
   "producer": "ops.scripts.self_improvement_negative_lessons",
-  "status": "attention",
-  "source_activation_report": "ops/reports/learning_claim_activation_report.json",
-  "summary": {
-    "pattern_count": 5,
-    "gate_effect": "none"
+  "source_command": "python -m ops.scripts.self_improvement_negative_lessons --vault .",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "7dac017f5a0c6380e07d1e7da111c813f1469b1dc95af28123acdd05c5014a68",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "47b79b46ef1a89257481eb0fa0b41f96e2765bb833dd8fe9b2f718d71cf470e2",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "18735e7f986786b975aa5d1c70b6f220d7ced3e5f5ed1c4ddf493e680591dbfa",
+    "learning_claim_activation": "faac474a3479e31c4ae338008a52c9df4874cc0d31ced20b41e2805ac077b2e4",
+    "session_synopsis": "48c72e3cdfc9099b4aa36d0d238dc8530a0ed75d617b759aeb576ffb0ee4fd84"
   },
-  "patterns": [
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-17T18:45:24Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "attention",
+  "mode": "advisory",
+  "gate_effect": "blocks_repeat_only",
+  "summary": {
+    "lesson_count": 5,
+    "backlog_candidate_count": 0,
+    "source_activation_status": "pass",
+    "next_action": "Negative lessons are advisory only; no repeated backlog candidates detected."
+  },
+  "lessons": [
     {
-      "pattern_id": "blocked_queue_recent_log_overlap",
+      "lesson_id": "blocked_queue_recent_log_overlap",
+      "source": "learning_claim_activation.negative_learning_ledger+session_synopsis",
       "decisions": [
         "BLOCKED"
       ],
@@ -23,15 +51,39 @@
         {
           "path": "ops/reports/auto-improve-readiness.json",
           "exists": true,
-          "sha256": "50f94d3b47b5fe17862abe582a5fd505ceb99e852fcdd22c806417b087a8cae4",
+          "sha256": "0baca18a3d49a5754f0cf90b80363d85487df561c067646399f8b320516328c8",
           "status": "present"
         }
       ],
-      "id": "blocked_queue_recent_log_overlap",
-      "status": "open"
+      "repeat_policy": "do_not_repeat_until_repaired",
+      "backlog_candidate": false
     },
     {
-      "pattern_id": "discard_behavior_delta_digest_added",
+      "lesson_id": "discard_behavior_delta_before_after_evidence_missing",
+      "source": "learning_claim_activation.negative_learning_ledger+session_synopsis",
+      "decisions": [
+        "DISCARD"
+      ],
+      "run_ids": [
+        "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+      ],
+      "occurrence_count": 1,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Repair the rejected confirmed-evidence run before using it as learning proof.",
+      "evidence_digests": [
+        {
+          "path": "ops/reports/learning-delta-scoreboard.json",
+          "exists": true,
+          "sha256": "265eec1c3d29da383823966c239003e4fc8ec9d939a3facc6a0387ccea9078c9",
+          "status": "present"
+        }
+      ],
+      "repeat_policy": "do_not_repeat_until_repaired",
+      "backlog_candidate": false
+    },
+    {
+      "lesson_id": "discard_behavior_delta_digest_added",
+      "source": "learning_claim_activation.negative_learning_ledger+session_synopsis",
       "decisions": [
         "DISCARD"
       ],
@@ -49,34 +101,12 @@
           "status": "present"
         }
       ],
-      "id": "discard_behavior_delta_digest_added",
-      "status": "open"
+      "repeat_policy": "do_not_repeat_until_repaired",
+      "backlog_candidate": false
     },
     {
-      "pattern_id": "discard_decision_discard",
-      "decisions": [
-        "DISCARD"
-      ],
-      "run_ids": [
-        "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
-        "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
-      ],
-      "occurrence_count": 2,
-      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
-      "repair_target": "Repair the rejected confirmed-evidence run before using it as learning proof.",
-      "evidence_digests": [
-        {
-          "path": "ops/reports/learning-delta-scoreboard.json",
-          "exists": true,
-          "sha256": "3c118380558a3061d9f413520b609ffc7421c8cd6db505d41be71b4c9ffaef38",
-          "status": "present"
-        }
-      ],
-      "id": "discard_decision_discard",
-      "status": "open"
-    },
-    {
-      "pattern_id": "discard_telemetry_discoverability_improved",
+      "lesson_id": "discard_telemetry_discoverability_improved",
+      "source": "learning_claim_activation.negative_learning_ledger+session_synopsis",
       "decisions": [
         "DISCARD"
       ],
@@ -94,11 +124,12 @@
           "status": "present"
         }
       ],
-      "id": "discard_telemetry_discoverability_improved",
-      "status": "open"
+      "repeat_policy": "do_not_repeat_until_repaired",
+      "backlog_candidate": false
     },
     {
-      "pattern_id": "hold_unspecified",
+      "lesson_id": "hold_unspecified",
+      "source": "learning_claim_activation.negative_learning_ledger+session_synopsis",
       "decisions": [
         "HOLD"
       ],
@@ -116,26 +147,12 @@
           "status": "present"
         }
       ],
-      "id": "hold_unspecified",
-      "status": "open"
+      "repeat_policy": "do_not_repeat_until_repaired",
+      "backlog_candidate": false
     }
   ],
-  "source_command": "python -m ops.scripts.self_improvement_negative_lessons",
-  "source_revision": "unknown",
-  "source_tree_fingerprint": "18862af863964421a884f45ce9915b89f09f08b6eae4c2a72a0abdfcca0a4b30",
-  "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
-    "schema": "052ab438993194c1bdbf7c04900d9f2098f899652492ce9d01764067f7ed2074",
-    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "90bad4ce2ec600e3959329e96f824fd6489e47e60024510a8f3cb51b8681a4ba",
-    "activation_report": "99e336b6e84a6c75abb32376a704056f8a45f663e74e342b26e964e0b4064093"
-  },
-  "schema_version": 1,
-  "artifact_status": "current",
-  "retention_policy": "canonical_report",
-  "encoding": "utf-8",
-  "currentness": {
-    "status": "current",
-    "checked_at": "2026-05-15T06:12:46Z"
+  "inputs": {
+    "learning_claim_activation": "ops/reports/learning_claim_activation_report.json",
+    "session_synopsis": "ops/reports/session-synopsis.json"
   }
 }

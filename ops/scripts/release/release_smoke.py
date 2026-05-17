@@ -1321,9 +1321,13 @@ def _release_smoke_execution(
     temp_root: Path,
 ) -> _ReleaseSmokeExecution:
     archive_path = (
-        resolve_output_path(vault, args.archive_out, default_relative_path=f"tmp/{vault.name}-release-smoke.zip")
+        resolve_output_path(
+            vault,
+            args.archive_out,
+            default_relative_path=f"tmp/{archive_root_name}-release-smoke.zip",
+        )
         if args.archive_out
-        else (temp_root / f"{vault.name}-release-smoke.zip").resolve()
+        else (temp_root / f"{archive_root_name}-release-smoke.zip").resolve()
     )
     report_path = resolve_output_path(
         vault,

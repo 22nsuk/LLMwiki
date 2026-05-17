@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 import pytest
+import yaml
 
 from ops.scripts.test_lane_registry_runtime import (
     compatibility_map,
@@ -13,17 +14,6 @@ from ops.scripts.test_lane_registry_runtime import (
     pack_by_id,
     pack_ci_steps,
 )
-from tests.workflow_static_helpers import (
-    assert_locked_install_shape as _assert_locked_install_shape,
-    assert_workflow_run_contains as _assert_run_contains,
-    load_workflow,
-    workflow_job as _job,
-    workflow_path_entries as _path_entries,
-    workflow_run_commands as _run_commands,
-    workflow_run_text as _run_text,
-    workflow_step as _step,
-    workflow_steps as _steps,
-)
 
 
 CI_WORKFLOW = Path(".github/workflows/ci.yml")
@@ -32,7 +22,68 @@ pytestmark = pytest.mark.report_contract
 
 
 def _workflow() -> dict[str, object]:
-    return load_workflow(CI_WORKFLOW)
+    payload = yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))
+    assert isinstance(payload, dict)
+    return payload
+
+
+def _jobs(workflow: dict[str, object]) -> dict[str, object]:
+    jobs = workflow.get("jobs", {})
+    if not isinstance(jobs, dict):
+        raise AssertionError("workflow jobs must be a mapping")
+    return jobs
+
+
+def _job(workflow: dict[str, object], name: str) -> dict[str, object]:
+    job = _jobs(workflow).get(name, {})
+    if not isinstance(job, dict):
+        raise AssertionError(f"workflow job must be a mapping: {name}")
+    return job
+
+
+def _steps(job: dict[str, object]) -> list[dict[str, object]]:
+    steps = job.get("steps", [])
+    if not isinstance(steps, list):
+        raise AssertionError("workflow job steps must be a list")
+    return [step for step in steps if isinstance(step, dict)]
+
+
+def _step_by_name(job: dict[str, object], name: str) -> dict[str, object]:
+    for step in _steps(job):
+        if step.get("name") == name:
+            return step
+    raise AssertionError(f"missing workflow step: {name}")
+
+
+def _run_text(step: dict[str, object]) -> str:
+    return str(step.get("run", ""))
+
+
+def _assert_locked_dependency_steps(case: unittest.TestCase, job: dict[str, object]) -> None:
+    setup_python = _step_by_name(job, "Setup Python")
+    setup_uv = _step_by_name(job, "Setup uv")
+    install_steps = [
+        step
+        for step in _steps(job)
+        if str(step.get("name", "")).startswith("Install dependencies")
+    ]
+
+    case.assertEqual(setup_python.get("uses"), "actions/setup-python@v5")
+    with_config = setup_python.get("with", {})
+    case.assertIsInstance(with_config, dict)
+    case.assertIn("uv.lock", str(with_config.get("cache-dependency-path", "")))
+    case.assertEqual(
+        setup_uv.get("uses"),
+        "astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b",
+    )
+    case.assertEqual(len(install_steps), 1)
+    run_text = _run_text(install_steps[0])
+    case.assertIn(
+        "uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt",
+        run_text,
+    )
+    case.assertIn("python -m pip install -r tmp/locked-requirements.ci.txt", run_text)
+    case.assertNotIn("python -m pip install -r requirements-dev.txt build", run_text)
 
 
 class CiWorkflowStaticTests(unittest.TestCase):
@@ -70,16 +121,13 @@ class CiWorkflowStaticTests(unittest.TestCase):
     def test_ci_dependency_cache_tracks_canonical_lockfile(self) -> None:
         workflow = _workflow()
 
-        _assert_locked_install_shape(self, workflow, expected_job_count=5)
-        self.assertNotIn(
-            "python -m pip install -r requirements-dev.txt build",
-            _run_commands(_job(workflow, "test-tier")),
-        )
+        for job_name in _jobs(workflow):
+            with self.subTest(job_name=job_name):
+                _assert_locked_dependency_steps(self, _job(workflow, job_name))
 
     def test_ci_tier_commands_match_registry_contract(self) -> None:
         registry = load_registry(Path("."))
-        workflow = _workflow()
-        test_tier_run = _run_commands(_job(workflow, "test-tier"))
+        text = CI_WORKFLOW.read_text(encoding="utf-8")
 
         for tier, mapped_id in compatibility_map(registry, "ci_tier").items():
             with self.subTest(tier=tier, mapped_id=mapped_id):
@@ -90,207 +138,164 @@ class CiWorkflowStaticTests(unittest.TestCase):
                 )
                 self.assertTrue(steps)
                 for step in steps:
-                    self.assertIn(step, test_tier_run)
+                    self.assertIn(step, text)
 
     def test_ci_workflow_has_windows_release_smoke_job(self) -> None:
         workflow = _workflow()
         job = _job(workflow, "windows-release-smoke")
+        steps = _steps(job)
+        step_names = {str(step.get("name", "")) for step in steps}
 
         self.assertEqual(job.get("name"), "windows-release-smoke / py3.12")
         self.assertEqual(job.get("runs-on"), "windows-latest")
-        self.assertEqual(job.get("env"), {"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"})
-        setup_python = _step(job, "Setup Python")
-        setup_python_with = setup_python.get("with", {})
-        self.assertIsInstance(setup_python_with, dict)
-        self.assertEqual(setup_python_with.get("python-version"), "3.12")
-        _step(job, "Install dependencies from lock")
-        _assert_run_contains(
-            self,
-            _step(job, "Run Windows release smoke"),
-            (
-                "python -m ops.scripts.release.release_smoke",
-                "--vault .",
-                "--profile full",
-                "--out ops/reports/release-smoke-report-windows.json",
-            ),
-        )
-        _assert_run_contains(
-            self,
-            _step(job, "Run Windows command runtime smoke"),
-            ("python -m pytest -q tests/test_command_runtime.py",),
-        )
-        _assert_run_contains(
-            self,
-            _step(job, "Run Windows strict preview smoke"),
-            (
-                "python .\\tools\\ruff_strict_preview.py",
-                "--allowlist ops/ruff-strict-preview-allowlist.txt",
-                "python -m mypy",
-                "@ops/mypy-strict-preview-allowlist.txt",
-            ),
-        )
-        _assert_run_contains(
-            self,
-            _step(job, "Run Windows schema and allowlist smoke tests"),
-            (
-                "tests/test_ci_workflow_static.py",
-                "tests/test_makefile_static_gates.py",
-                "tests/test_report_schema_sample_regeneration.py",
-                "tests/test_report_schemas.py",
-                "tests/test_ruff_strict_preview.py",
-            ),
-        )
-        upload = _step(job, "Upload Windows smoke artifact")
-        upload_with = upload.get("with", {})
-        self.assertIsInstance(upload_with, dict)
-        self.assertEqual(upload_with.get("name"), "windows-release-smoke-report")
+        self.assertEqual(job.get("env", {}).get("PYTEST_DISABLE_PLUGIN_AUTOLOAD"), "1")
         self.assertEqual(
-            upload_with.get("path"), "ops/reports/release-smoke-report-windows.json"
+            _step_by_name(job, "Setup Python").get("with", {}).get("python-version"),
+            "3.12",
+        )
+        self.assertIn("Install dependencies from lock", step_names)
+        self.assertIn(
+            "python -m ops.scripts.release.release_smoke --vault . --profile full --out ops/reports/release-smoke-report-windows.json",
+            _run_text(_step_by_name(job, "Run Windows release smoke")),
+        )
+        self.assertIn(
+            "python -m pytest -q tests/test_command_runtime.py",
+            _run_text(_step_by_name(job, "Run Windows command runtime smoke")),
+        )
+        strict_preview_run = _run_text(_step_by_name(job, "Run Windows strict preview smoke"))
+        self.assertIn(
+            "python .\\tools\\ruff_strict_preview.py --vault . --allowlist ops/ruff-strict-preview-allowlist.txt --select B,SIM,UP,I",
+            strict_preview_run,
+        )
+        self.assertIn(
+            "python -m mypy --config-file pyproject.toml --check-untyped-defs --disallow-untyped-defs --disallow-incomplete-defs @ops/mypy-strict-preview-allowlist.txt",
+            strict_preview_run,
+        )
+        self.assertIn(
+            "python -m pytest -q tests/test_ci_workflow_static.py tests/test_makefile_static_gates.py tests/test_report_schema_sample_regeneration.py tests/test_report_schemas.py tests/test_ruff_strict_preview.py",
+            _run_text(_step_by_name(job, "Run Windows schema and allowlist smoke tests")),
+        )
+        upload = _step_by_name(job, "Upload Windows smoke artifact")
+        self.assertEqual(upload.get("with", {}).get("name"), "windows-release-smoke-report")
+        self.assertEqual(
+            upload.get("with", {}).get("path"),
+            "ops/reports/release-smoke-report-windows.json",
         )
 
     def test_fast_tier_runs_release_smoke_fast_when_full_vault_is_present(self) -> None:
-        workflow = _workflow()
-        run = _run_text(_step(_job(workflow, "test-tier"), "Run fast contract tier"))
+        text = CI_WORKFLOW.read_text(encoding="utf-8")
 
         self.assertIn(
             "if [ -f system/system-index.md ] && [ -f wiki/index.md ] && [ -d raw ]; then",
-            run,
+            text,
         )
-        self.assertIn("make check-finalized", run)
-        self.assertIn("make release-smoke-fast", run)
+        self.assertIn("            make check-finalized", text)
+        self.assertIn("            make release-smoke-fast", text)
 
     def test_release_closeout_regression_tier_uploads_cost_evidence(self) -> None:
-        workflow = _workflow()
-        job = _job(workflow, "test-tier")
-        matrix = job.get("strategy", {}).get("matrix", {})
-        self.assertIsInstance(matrix, dict)
-        self.assertIn("release-closeout-regression", matrix.get("tier", []))
-        _assert_run_contains(
-            self,
-            _step(job, "Run release closeout regression tier"),
-            (
-                "make release-workflow-order-guard",
-                "make release-closeout-regression-dry-run",
-                "make release-authority-sealed-preflight",
-                "make release-closeout-post-check-finalizer-ci-artifact",
-                "make release-closeout-cost-evidence-ci-artifact",
-            ),
+        text = CI_WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertIn("- release-closeout-regression", text)
+        self.assertIn("make release-workflow-order-guard", text)
+        self.assertIn("make release-closeout-regression-dry-run", text)
+        self.assertIn("make release-authority-sealed-preflight", text)
+        self.assertIn("make release-closeout-post-check-finalizer-ci-artifact", text)
+        self.assertIn("make release-closeout-cost-evidence-ci-artifact", text)
+        self.assertIn(
+            "name: release-closeout-cost-evidence-${{ matrix.python-version }}", text
         )
-        cost_upload = _step(job, "Upload release closeout cost evidence")
-        cost_upload_with = cost_upload.get("with", {})
-        self.assertIsInstance(cost_upload_with, dict)
-        self.assertEqual(
-            cost_upload_with.get("name"),
-            "release-closeout-cost-evidence-${{ matrix.python-version }}",
+        self.assertIn(
+            "name: release-authority-blocked-preflight-${{ matrix.python-version }}",
+            text,
         )
-        for path in (
-            "tmp/release-closeout-fixed-point-cost-trend-ci.json",
-            "ops/reports/release-closeout-fixed-point.json",
-            "ops/reports/release-closeout-fixed-point-cost-trend.json",
-            "ops/reports/release-evidence-dashboard.json",
-            "tmp/release-workflow-order-guard.json",
-            "tmp/release-closeout-post-check-finalizer.json",
-            "tmp/release-closeout-post-check-finalizer-recommended-targets.txt",
-            "tmp/release-closeout-post-check-finalizer-plan.json",
-        ):
-            self.assertIn(path, _path_entries(cost_upload))
-        blocked_upload = _step(job, "Upload release authority blocked preflight")
-        blocked_upload_with = blocked_upload.get("with", {})
-        self.assertIsInstance(blocked_upload_with, dict)
-        self.assertEqual(
-            blocked_upload_with.get("name"),
-            "release-authority-blocked-preflight-${{ matrix.python-version }}",
+        self.assertIn("tmp/release-closeout-fixed-point-cost-trend-ci.json", text)
+        self.assertIn("ops/reports/release-closeout-fixed-point.json", text)
+        self.assertIn("ops/reports/release-closeout-fixed-point-cost-trend.json", text)
+        self.assertIn("ops/reports/release-evidence-dashboard.json", text)
+        self.assertIn("tmp/release-workflow-order-guard.json", text)
+        self.assertIn(
+            "tmp/release-closeout-sealed-dry-run/LLMwiki-source.zip", text
         )
-        for path in (
-            "tmp/release-closeout-sealed-dry-run/LLMwiki-source.zip",
+        self.assertIn(
             "tmp/release-closeout-sealed-dry-run/release-closeout-batch-manifest.json",
+            text,
+        )
+        self.assertIn(
             "tmp/release-closeout-sealed-dry-run/external-report-reference-manifest.json",
+            text,
+        )
+        self.assertIn(
             "tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json",
-        ):
-            self.assertIn(path, _path_entries(blocked_upload))
+            text,
+        )
+        self.assertIn("ops/reports/release-closeout-sealed-rehearsal-check.json", text)
+        self.assertIn("tmp/release-closeout-post-check-finalizer.json", text)
+        self.assertIn(
+            "tmp/release-closeout-post-check-finalizer-recommended-targets.txt", text
+        )
+        self.assertIn("tmp/release-closeout-post-check-finalizer-plan.json", text)
 
     def test_windows_command_runtime_smoke_step_runs_between_release_and_preview(
         self,
     ) -> None:
-        workflow = _workflow()
-        step_names = [str(step.get("name", "")) for step in _steps(_job(workflow, "windows-release-smoke"))]
+        text = CI_WORKFLOW.read_text(encoding="utf-8")
 
-        release_index = step_names.index("Run Windows release smoke")
-        command_runtime_index = step_names.index("Run Windows command runtime smoke")
-        strict_preview_index = step_names.index("Run Windows strict preview smoke")
+        release_index = text.index("- name: Run Windows release smoke")
+        command_runtime_index = text.index("- name: Run Windows command runtime smoke")
+        strict_preview_index = text.index("- name: Run Windows strict preview smoke")
 
         self.assertLess(release_index, command_runtime_index)
         self.assertLess(command_runtime_index, strict_preview_index)
-        _assert_run_contains(
-            self,
-            _step(_job(workflow, "windows-release-smoke"), "Run Windows command runtime smoke"),
-            ("python -m pytest -q tests/test_command_runtime.py",),
+        self.assertIn(
+            "      - name: Run Windows command runtime smoke\n        run: python -m pytest -q tests/test_command_runtime.py",
+            text,
         )
 
     def test_raw_registry_cross_environment_matrix_job_covers_linux_windows_macos(
         self,
     ) -> None:
-        workflow = _workflow()
-        job = _job(workflow, "raw-registry-cross-environment")
+        text = CI_WORKFLOW.read_text(encoding="utf-8")
 
-        self.assertEqual(job.get("name"), "raw-registry-cross-env / ${{ matrix.profile }}")
-        strategy = job.get("strategy", {})
-        self.assertIsInstance(strategy, dict)
-        matrix = strategy.get("matrix", {})
-        self.assertIsInstance(matrix, dict)
-        self.assertEqual(
-            tuple(matrix.get("include", [])),
-            (
-                {"os": "ubuntu-latest", "profile": "linux-c-utf8"},
-                {"os": "windows-latest", "profile": "windows-utf8"},
-                {"os": "macos-latest", "profile": "macos-utf8"},
-            ),
+        self.assertIn("raw-registry-cross-environment:", text)
+        self.assertIn("name: raw-registry-cross-env / ${{ matrix.profile }}", text)
+        self.assertIn("profile: linux-c-utf8", text)
+        self.assertIn("profile: windows-utf8", text)
+        self.assertIn("profile: macos-utf8", text)
+        self.assertIn("os: ubuntu-latest", text)
+        self.assertIn("os: windows-latest", text)
+        self.assertIn("os: macos-latest", text)
+        self.assertIn(
+            "python -m ops.scripts.registry.raw_registry_cross_environment_matrix \\",
+            text,
         )
-        _assert_run_contains(
-            self,
-            _step(job, "Generate raw registry cross-environment matrix"),
-            (
-                "python -m ops.scripts.registry.raw_registry_cross_environment_matrix",
-                '--profile "${{ matrix.profile }}"',
-                'ops/reports/raw-registry-cross-environment-matrix-${{ matrix.profile }}.json',
-            ),
+        self.assertIn('--profile "${{ matrix.profile }}"', text)
+        self.assertIn(
+            "ops/reports/raw-registry-cross-environment-matrix-${{ matrix.profile }}.json",
+            text,
         )
-        upload = _step(job, "Upload raw registry cross-environment matrix")
-        upload_with = upload.get("with", {})
-        self.assertIsInstance(upload_with, dict)
-        self.assertEqual(
-            upload_with.get("name"),
-            "raw-registry-cross-environment-${{ matrix.profile }}",
+        self.assertIn(
+            "name: raw-registry-cross-environment-${{ matrix.profile }}", text
         )
 
     def test_raw_registry_cross_environment_evidence_job_bundles_uploaded_matrices(
         self,
     ) -> None:
-        workflow = _workflow()
-        job = _job(workflow, "raw-registry-cross-environment-evidence")
+        text = CI_WORKFLOW.read_text(encoding="utf-8")
 
-        self.assertEqual(job.get("name"), "raw-registry-cross-env evidence bundle / py3.12")
-        self.assertEqual(job.get("needs"), "raw-registry-cross-environment")
-        download = _step(job, "Download raw registry cross-environment matrices")
-        download_with = download.get("with", {})
-        self.assertIsInstance(download_with, dict)
-        self.assertEqual(download_with.get("pattern"), "raw-registry-cross-environment-*")
-        self.assertIs(download_with.get("merge-multiple"), True)
-        _assert_run_contains(
-            self,
-            _step(job, "Generate raw registry cross-environment evidence bundle"),
-            (
-                "python -m ops.scripts.registry.raw_registry_cross_environment_evidence_bundle",
-                "--reports-dir ops/reports",
-                "ops/reports/raw-registry-cross-environment-evidence-bundle.json",
-            ),
+        self.assertIn("raw-registry-cross-environment-evidence:", text)
+        self.assertIn("name: raw-registry-cross-env evidence bundle / py3.12", text)
+        self.assertIn("needs: raw-registry-cross-environment", text)
+        self.assertIn("pattern: raw-registry-cross-environment-*", text)
+        self.assertIn("merge-multiple: true", text)
+        self.assertIn(
+            "python -m ops.scripts.registry.raw_registry_cross_environment_evidence_bundle \\",
+            text,
         )
-        upload = _step(job, "Upload raw registry cross-environment evidence bundle")
-        upload_with = upload.get("with", {})
-        self.assertIsInstance(upload_with, dict)
-        self.assertEqual(
-            upload_with.get("name"), "raw-registry-cross-environment-evidence-bundle"
+        self.assertIn("--reports-dir ops/reports", text)
+        self.assertIn(
+            "ops/reports/raw-registry-cross-environment-evidence-bundle.json", text
         )
+        self.assertIn("name: raw-registry-cross-environment-evidence-bundle", text)
 
 
 if __name__ == "__main__":

@@ -11,7 +11,6 @@ ops/scripts/mechanism/auto_improve_readiness_constants_runtime.py
 ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py
 ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py
 ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py
-ops/scripts/mechanism/auto_improve_goal_runtime.py
 ops/scripts/mechanism/auto_improve_loop.py
 ops/scripts/mechanism/auto_improve_execute_runtime.py
 ops/scripts/mechanism/auto_improve_execution_runtime.py
@@ -50,11 +49,8 @@ ops/scripts/mechanism/finalize_run_runtime.py
 ops/scripts/mechanism/finalize_run_state_runtime.py
 ops/scripts/eval/function_budget_refactor_proposals.py
 ops/scripts/mechanism/finalize_run_write_runtime.py
-ops/scripts/mechanism/goal_prompt.py
 ops/scripts/mechanism/goal_runtime_backoff.py
-ops/scripts/mechanism/goal_runtime_ladder.py
 ops/scripts/mechanism/goal_runtime_maintenance.py
-ops/scripts/mechanism/goal_runtime_request.py
 ops/scripts/mechanism/goal_run_status.py
 ops/scripts/mechanism/goal_worktree_guard.py
 ops/scripts/core/frontmatter_runtime.py
@@ -147,7 +143,6 @@ ops/scripts/registry/raw_registry_cross_environment_matrix.py
 ops/scripts/registry/raw_registry_export.py
 ops/scripts/registry/raw_registry_preflight.py
 ops/scripts/registry/raw_registry_runtime.py
-ops/scripts/mechanism/remediation_backlog.py
 ops/scripts/core/registry_alignment_passes_runtime.py
 ops/scripts/core/registry_diagnostics_runtime.py
 ops/scripts/core/registry_exceptions_runtime.py
@@ -198,7 +193,6 @@ ops/scripts/core/schema_runtime.py
 ops/scripts/core/script_output_surfaces.py
 ops/scripts/core/select_subagent_rung.py
 ops/scripts/mechanism/set_mechanism_run_history.py
-ops/scripts/mechanism/self_improvement_negative_lessons.py
 ops/scripts/core/source_page_naming_runtime.py
 ops/scripts/core/source_package_clean_extract.py
 ops/scripts/core/source_tree_fingerprint_runtime.py
@@ -234,3 +228,11 @@ ops/scripts/eval/wiki_stage2_eval.py
 ops/scripts/eval/wiki_stage2_runtime.py
 ops/scripts/eval/wikilink_runtime.py
 ops/scripts/core/yaml_runtime.py
+ops/scripts/mechanism/auto_improve_readiness_worktree_guard_runtime.py
+ops/scripts/mechanism/codex_goal_prompt.py
+ops/scripts/mechanism/goal_profile_verification.py
+ops/scripts/mechanism/goal_runtime_profile.py
+ops/scripts/mechanism/goal_runtime_resume.py
+ops/scripts/mechanism/goal_runtime_runner.py
+ops/scripts/learning/remediation_backlog.py
+ops/scripts/learning/self_improvement_negative_lessons.py

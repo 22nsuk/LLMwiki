@@ -150,6 +150,7 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         ],
         "evidence_paths": [
             "ops/schemas/codex-goal-contract.schema.json",
+            "ops/reports/codex-goal-contract.json",
             "tests/test_codex_goal_contract.py",
         ],
         "recommended_target": "codex-goal-contract",
@@ -169,7 +170,47 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         ],
         "evidence_paths": [
             "ops/scripts/core/codex_goal_client.py",
+            "ops/reports/codex-goal-contract.json",
             "tests/test_codex_goal_client.py",
+        ],
+        "recommended_target": "codex-goal-client",
+    },
+    {
+        "action_id": "codex_goal_prompt_generator",
+        "priority": "P0",
+        "theme": "goal prompt generator with promotion ban wording",
+        "patterns": [
+            r"goal prompt",
+            r"codex_goal_prompt",
+            r"can_promote_result=false",
+            r"promotion forbidden",
+            r"promotion ban",
+        ],
+        "evidence_paths": [
+            "ops/scripts/mechanism/codex_goal_prompt.py",
+            "ops/schemas/codex-goal-prompt.schema.json",
+            "ops/reports/codex-goal-prompt.json",
+            "tests/test_codex_goal_prompt.py",
+        ],
+        "recommended_target": "codex-goal-prompt",
+    },
+    {
+        "action_id": "auto_improve_goal_contract_input",
+        "priority": "P0",
+        "theme": "auto-improve loop goal contract input and budget ceiling",
+        "patterns": [
+            r"--goal-contract",
+            r"auto_improve_loop",
+            r"policy/CLI.*larger budget",
+            r"larger budget",
+            r"contract digest",
+            r"budget_limited",
+        ],
+        "evidence_paths": [
+            "ops/scripts/mechanism/auto_improve_loop.py",
+            "ops/scripts/mechanism/auto_improve_runtime.py",
+            "ops/reports/codex-goal-contract.json",
+            "tests/test_auto_improve_runtime.py",
         ],
         "recommended_target": "codex-goal-client",
     },
@@ -193,12 +234,13 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         ],
         "evidence_paths": [
             "ops/schemas/goal-run-status.schema.json",
-            "ops/scripts/mechanism/auto_improve_goal_runtime.py",
             "ops/scripts/mechanism/auto_improve_loop.py",
             "ops/scripts/mechanism/goal_run_status.py",
+            "ops/scripts/mechanism/goal_runtime_runner.py",
             "ops/reports/goal-run-status.json",
             "tests/test_goal_auto_improve_runtime.py",
             "tests/test_goal_run_status.py",
+            "tests/test_goal_runtime_runner.py",
         ],
         "recommended_target": "auto-improve-goal-run",
     },
@@ -222,7 +264,10 @@ ACTION_CATALOG: list[dict[str, Any]] = [
             "mk/mechanism.mk",
             "ops/schemas/codex-goal-contract.schema.json",
             "ops/scripts/mechanism/goal_run_status.py",
-            "tests/test_goal_auto_improve_runtime.py",
+            "ops/scripts/mechanism/goal_profile_verification.py",
+            "ops/scripts/mechanism/goal_runtime_profile.py",
+            "tests/test_goal_profile_verification.py",
+            "tests/test_goal_run_status.py",
         ],
         "recommended_target": "auto-improve-goal-ladder-run",
     },
@@ -241,7 +286,11 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         "evidence_paths": [
             "ops/scripts/core/command_runtime.py",
             "ops/schemas/executor-report.schema.json",
+            "ops/scripts/core/source_package_clean_extract.py",
+            "ops/schemas/source-package-clean-extract.schema.json",
+            "ops/reports/source-package-clean-extract.json",
             "tests/test_command_runtime_heartbeat.py",
+            "tests/test_source_package_clean_extract.py",
         ],
         "recommended_target": "test-subprocess",
     },
@@ -259,9 +308,10 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         ],
         "evidence_paths": [
             "ops/scripts/mechanism/goal_runtime_backoff.py",
-            "ops/scripts/mechanism/auto_improve_goal_runtime.py",
+            "ops/scripts/mechanism/goal_runtime_runner.py",
             "ops/schemas/goal-run-status.schema.json",
-            "tests/test_goal_auto_improve_runtime.py",
+            "tests/test_goal_runtime_runner.py",
+            "tests/test_goal_run_status.py",
         ],
         "recommended_target": "auto-improve-goal-run",
     },
@@ -278,6 +328,8 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         ],
         "evidence_paths": [
             "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
+            "ops/reports/auto-improve-readiness.json",
+            "ops/reports/test-execution-summary.json",
             "tests/test_auto_improve_readiness_release_authority_runtime.py",
         ],
         "recommended_target": "auto-improve-readiness-report",
@@ -295,9 +347,14 @@ ACTION_CATALOG: list[dict[str, Any]] = [
             r"binding_pass_authority_blocked",
         ],
         "evidence_paths": [
+            "mk/release.mk",
+            "ops/scripts/mechanism/auto_improve_readiness_constants_runtime.py",
+            "ops/reports/release-closeout-sealed-rehearsal-check.json",
             "ops/scripts/release/release_closeout_sealed_rehearsal_check.py",
             "ops/schemas/release-closeout-sealed-rehearsal-check.schema.json",
             "tests/test_release_closeout_sealed_rehearsal_check.py",
+            "tests/test_auto_improve_readiness_runtime.py",
+            "tests/test_makefile_static_gates.py",
         ],
         "recommended_target": "release-authority-sealed-preflight",
     },
@@ -351,6 +408,8 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         ],
         "evidence_paths": [
             "ops/scripts/mechanism/goal_worktree_guard.py",
+            "ops/schemas/goal-worktree-guard.schema.json",
+            "tmp/goal-worktree-guard.json",
             "tests/test_goal_worktree_guard.py",
         ],
         "recommended_target": "auto-improve-goal-preflight",
@@ -555,6 +614,232 @@ def json_report_status(path: Path) -> str:
     return "requires_release_run_verification"
 
 
+def _implemented_artifact_report(vault: Path, rel_path: str, artifact_kind: str) -> bool:
+    payload = load_json_object(vault / rel_path)
+    return payload.get("artifact_kind") == artifact_kind and bool(payload.get("producer"))
+
+
+def _canonical_json_digest(payload: dict[str, Any]) -> str:
+    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(data.encode("utf-8")).hexdigest()
+
+
+def _current_contract_digest(vault: Path) -> str:
+    contract = load_json_object(vault / "ops/reports/codex-goal-contract.json")
+    return _canonical_json_digest(contract) if contract else ""
+
+
+def _all_evidence_status(existing_count: int, expected_count: int) -> str | None:
+    if existing_count == 0:
+        return "planned"
+    if existing_count < expected_count:
+        return "partially_automated"
+    return None
+
+
+def _goal_contract_is_bounded(contract: dict[str, Any]) -> bool:
+    budgets = as_dict(contract.get("budgets"))
+    runtime_profile = as_dict(contract.get("runtime_profile"))
+    goal_backend = as_dict(contract.get("goal_backend"))
+    promotion_guard = as_dict(contract.get("promotion_guard"))
+    return bool(
+        contract.get("$schema") == "ops/schemas/codex-goal-contract.schema.json"
+        and contract.get("schema_version") == 1
+        and contract.get("status") == "active"
+        and as_int(budgets.get("max_wall_clock_seconds")) > 0
+        and as_int(budgets.get("max_proposals")) > 0
+        and as_int(budgets.get("max_consecutive_failures")) > 0
+        and as_int(budgets.get("heartbeat_interval_seconds")) > 0
+        and as_int(budgets.get("checkpoint_interval_seconds")) > 0
+        and as_list(budgets.get("profile_ladder"))
+        and runtime_profile.get("current_profile")
+        and bool(goal_backend.get("process_persistent"))
+        and goal_backend.get("backend_type") == "file"
+        and as_list(contract.get("stop_conditions"))
+        and as_list(contract.get("required_evidence"))
+        and bool(promotion_guard.get("no_sustained_claim_before_profile_verified"))
+        and not bool(promotion_guard.get("sustained_runtime_claimed"))
+    )
+
+
+def goal_contract_schema_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    status = _all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    contract = load_json_object(vault / "ops/reports/codex-goal-contract.json")
+    if _goal_contract_is_bounded(contract):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
+def codex_goal_adapter_status(vault: Path, existing_count: int, expected_count: int) -> str:
+    status = _all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    contract = load_json_object(vault / "ops/reports/codex-goal-contract.json")
+    goal_backend = as_dict(contract.get("goal_backend"))
+    if (
+        _goal_contract_is_bounded(contract)
+        and goal_backend.get("storage_path") == "ops/reports/codex-goal-contract.json"
+    ):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
+def codex_goal_prompt_generator_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    status = _all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    report = load_json_object(vault / "ops/reports/codex-goal-prompt.json")
+    goal_contract = as_dict(report.get("goal_contract"))
+    prompt = as_dict(report.get("prompt"))
+    promotion_guard = as_dict(report.get("promotion_guard"))
+    contract_digest = _current_contract_digest(vault)
+    if (
+        report.get("artifact_kind") == "codex_goal_prompt"
+        and report.get("producer") == "ops.scripts.codex_goal_prompt"
+        and report.get("status") in {"pass", "attention"}
+        and bool(goal_contract.get("process_persistent_backend"))
+        and goal_contract.get("contract_sha256") == contract_digest
+        and bool(prompt.get("includes_budget_limits"))
+        and bool(prompt.get("includes_allowed_roots"))
+        and bool(prompt.get("includes_sustained_claim_ban"))
+        and not bool(promotion_guard.get("sustained_runtime_claimed"))
+    ):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
+def auto_improve_goal_contract_input_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    status = _all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    contract = load_json_object(vault / "ops/reports/codex-goal-contract.json")
+    budgets = as_dict(contract.get("budgets"))
+    required_evidence = as_list(contract.get("required_evidence"))
+    required_paths = {
+        str(item.get("path", "")).strip()
+        for item in required_evidence
+        if isinstance(item, dict)
+    }
+    if (
+        _goal_contract_is_bounded(contract)
+        and as_int(budgets.get("max_wall_clock_seconds")) == 1800
+        and as_int(budgets.get("max_proposals")) == 1
+        and as_int(budgets.get("max_consecutive_failures")) == 1
+        and "ops/reports/goal-run-status.json" in required_paths
+    ):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
+def goal_run_status_audit_resume_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    status = _all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    report = load_json_object(vault / "ops/reports/goal-run-status.json")
+    goal = as_dict(report.get("goal"))
+    backend = as_dict(goal.get("backend"))
+    artifacts = as_dict(report.get("artifacts"))
+    health = as_dict(report.get("health"))
+    profile_ladder = as_dict(report.get("profile_ladder"))
+    contract_digest = _current_contract_digest(vault)
+    artifact_paths = {
+        "status_report_path": "ops/reports/goal-run-status.json",
+        "status_markdown_path": "runs/goal-",
+        "audit_log_path": "runs/goal-",
+        "resume_metadata_path": "runs/goal-",
+        "checkpoint_command_log_path": "runs/goal-",
+    }
+    paths_valid = all(
+        str(artifacts.get(key, "")).startswith(prefix)
+        if prefix.endswith("-")
+        else artifacts.get(key) == prefix
+        for key, prefix in artifact_paths.items()
+    )
+    if (
+        report.get("artifact_kind") == "goal_run_status"
+        and report.get("producer") == "ops.scripts.goal_run_status"
+        and report.get("status") in {"pass", "attention"}
+        and bool(backend.get("process_persistent"))
+        and goal.get("contract_sha256") == contract_digest
+        and paths_valid
+        and health.get("heartbeat_status") in {"current", "stale"}
+        and health.get("checkpoint_status") in {"current", "stale"}
+        and health.get("command_heartbeat_status") in {"current", "stale"}
+        and health.get("backoff_status") in {"inactive", "active", "expired"}
+        and health.get("resume_status") in {"not_requested", "ready"}
+        and health.get("promotion_status") == "blocked"
+        and health.get("can_promote_result") is False
+        and profile_ladder.get("status") in {"incomplete", "complete"}
+        and profile_ladder.get("sustained_claim_allowed") is False
+    ):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
+def selected_contract_currentness_gate_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    status = _all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    readiness = load_json_object(vault / "ops/reports/auto-improve-readiness.json")
+    selected_contract = as_dict(as_dict(readiness.get("diagnostics")).get("selected_contract_summary"))
+    artifact_freshness = as_dict(as_dict(readiness.get("diagnostics")).get("artifact_freshness_summary"))
+    test_summary = load_json_object(vault / "ops/reports/test-execution-summary.json")
+    blockers = as_list(readiness.get("promotion_blockers"))
+    blocker_ids = {
+        str(item.get("id", "")).strip()
+        for item in blockers
+        if isinstance(item, dict)
+    }
+    selected_status = str(selected_contract.get("status", "")).strip()
+    selected_gate_active = selected_status == "pass" or (
+        selected_status == "fail"
+        and "promotion_blocked_by_selected_contract_failure" in blocker_ids
+    )
+    if (
+        readiness.get("artifact_kind") == "auto_improve_readiness_report"
+        and test_summary.get("artifact_kind") == "test_execution_summary"
+        and selected_contract.get("path") == "ops/reports/test-execution-summary.json"
+        and selected_gate_active
+        and artifact_freshness.get("status") in {"pass", "fail"}
+    ):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
+def git_worktree_goal_guard_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    status = _all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    report = load_json_object(vault / "tmp/goal-worktree-guard.json")
+    decisions = as_dict(report.get("decisions"))
+    if (
+        report.get("artifact_kind") == "goal_worktree_guard"
+        and report.get("producer") == "ops.scripts.goal_worktree_guard"
+        and report.get("status") in {"pass", "attention", "fail"}
+        and report.get("requested_mode") in {"auto", "git", "zip"}
+        and report.get("detected_mode") in {"git_worktree", "zip_extract", "unknown"}
+        and isinstance(decisions.get("can_execute_goal_runtime"), bool)
+        and isinstance(decisions.get("can_promote_result"), bool)
+        and isinstance(report.get("blockers"), list)
+    ):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
 def single_source_status(vault: Path) -> str:
     planner_path = vault / "tmp" / "workflow-dependency-planner.json"
     guard_path = vault / "tmp" / "release-workflow-order-guard.json"
@@ -603,6 +888,44 @@ def authoritative_live_rerun_not_run_count(dashboard: dict[str, Any]) -> int:
     return count
 
 
+def command_heartbeat_observability_status(vault: Path, existing_count: int, expected_count: int) -> str:
+    if existing_count == 0:
+        return "planned"
+    if existing_count < expected_count:
+        return "partially_automated"
+    source_package = load_json_object(vault / "ops/reports/source-package-clean-extract.json")
+    heartbeat = as_dict(source_package.get("heartbeat_observability"))
+    if (
+        source_package.get("status") == "pass"
+        and heartbeat.get("status") == "pass"
+        and as_int(heartbeat.get("heartbeat_event_count")) > 0
+        and as_int(heartbeat.get("heartbeat_enabled_command_count"))
+        == as_int(heartbeat.get("command_count"))
+    ):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
+def sealed_preflight_canonicalization_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    if existing_count == 0:
+        return "planned"
+    report = load_json_object(vault / "ops/reports/release-closeout-sealed-rehearsal-check.json")
+    if (
+        report.get("artifact_kind") == "release_closeout_sealed_rehearsal_check"
+        and str(report.get("preflight_status", "")).strip()
+        in {"sealed_clean_pass", "binding_pass_authority_blocked"}
+        and str(report.get("distribution_binding_status", "")).strip() == "pass"
+        and str(report.get("authority_preflight_status", "")).strip()
+        in {"clean", "blocked"}
+    ):
+        return "implemented"
+    if existing_count < expected_count:
+        return "partially_automated"
+    return "requires_release_run_verification"
+
+
 def status_from_evidence(vault: Path, action: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
     evidence = []
     existing_count = 0
@@ -638,6 +961,86 @@ def status_from_evidence(vault: Path, action: dict[str, Any]) -> tuple[str, list
         "windows_path_and_archive_alias_parity",
     }:
         status = "implemented" if existing_count == len(action["evidence_paths"]) else "planned"
+    elif action_id == "negative_learning_ledger":
+        status = (
+            "implemented"
+            if existing_count == len(action["evidence_paths"])
+            and _implemented_artifact_report(
+                vault,
+                "ops/reports/self-improvement-negative-lessons.json",
+                "self_improvement_negative_lessons",
+            )
+            else "partially_automated"
+            if existing_count
+            else "planned"
+        )
+    elif action_id == "remediation_backlog":
+        status = (
+            "implemented"
+            if existing_count == len(action["evidence_paths"])
+            and _implemented_artifact_report(
+                vault,
+                "ops/reports/remediation-backlog.json",
+                "remediation_backlog",
+            )
+            else "partially_automated"
+            if existing_count
+            else "planned"
+        )
+    elif action_id == "command_heartbeat_observability":
+        status = command_heartbeat_observability_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "sealed_preflight_canonicalization":
+        status = sealed_preflight_canonicalization_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "goal_contract_schema":
+        status = goal_contract_schema_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "codex_goal_adapter":
+        status = codex_goal_adapter_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "codex_goal_prompt_generator":
+        status = codex_goal_prompt_generator_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "auto_improve_goal_contract_input":
+        status = auto_improve_goal_contract_input_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "goal_run_status_audit_resume":
+        status = goal_run_status_audit_resume_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "selected_contract_currentness_gate":
+        status = selected_contract_currentness_gate_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "git_worktree_goal_guard":
+        status = git_worktree_goal_guard_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
     elif action_id in RELEASE_VERIFIED_ACTION_IDS and existing_count == len(action["evidence_paths"]):
         status = "implemented" if release_run_verified(vault) else "requires_release_run_verification"
     elif existing_count == len(action["evidence_paths"]):

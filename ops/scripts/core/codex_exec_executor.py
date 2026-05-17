@@ -62,6 +62,16 @@ class ExecutorArtifactsPayload(TypedDict):
     timeout_failure: str | None
 
 
+class ExecutorObservabilityPayload(TypedDict):
+    heartbeat_count: int
+    heartbeat_interval_seconds: int
+    quiet_seconds: int
+    last_stdout_at: str
+    last_stderr_at: str
+    last_artifact_touch_at: str
+    observation_mode: str
+
+
 class ExecutorResultPayload(TypedDict):
     returncode: int
     timed_out: bool
@@ -72,7 +82,7 @@ class ExecutorResultPayload(TypedDict):
     final_state_observed: str
     stdout_received: bool
     stderr_received: bool
-    heartbeat: dict[str, Any]
+    observability: ExecutorObservabilityPayload
 
 
 class ExecutorDiagnosticsPayload(TypedDict):
@@ -212,45 +222,29 @@ def _completed_stderr_received(completed: object) -> bool:
     return bool(getattr(completed, "stderr_received", False))
 
 
-def _completed_int_attr(completed: object, name: str, default: int = 0) -> int:
-    value = getattr(completed, name, default)
-    if isinstance(value, bool):
-        return int(value)
+def _completed_int_attr(completed: object, name: str) -> int:
+    value = getattr(completed, name, 0)
     if isinstance(value, int):
         return value
-    if isinstance(value, float | str):
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return default
-    return default
+    return 0
 
 
-def _completed_float_attr(completed: object, name: str, default: float = 0.0) -> float:
+def _completed_str_attr(completed: object, name: str, default: str = "") -> str:
     value = getattr(completed, name, default)
-    if isinstance(value, bool):
-        return float(value)
-    if isinstance(value, int | float):
-        return float(value)
     if isinstance(value, str):
-        try:
-            return float(value)
-        except ValueError:
-            return default
+        return value.strip()
     return default
 
 
-def _completed_heartbeat(completed: object) -> dict[str, Any]:
-    interval = _completed_int_attr(completed, "heartbeat_interval_seconds")
-    count = _completed_int_attr(completed, "heartbeat_emitted_count")
-    elapsed = _completed_float_attr(completed, "last_heartbeat_elapsed_seconds")
-    raw_status = getattr(completed, "heartbeat_status", "disabled")
-    status = raw_status if isinstance(raw_status, str) and raw_status else "disabled"
+def _completed_observability(completed: object) -> ExecutorObservabilityPayload:
     return {
-        "interval_seconds": interval,
-        "emitted_count": count,
-        "last_elapsed_seconds": round(elapsed, 3),
-        "status": status,
+        "heartbeat_count": _completed_int_attr(completed, "heartbeat_count"),
+        "heartbeat_interval_seconds": _completed_int_attr(completed, "heartbeat_interval_seconds"),
+        "quiet_seconds": _completed_int_attr(completed, "quiet_seconds"),
+        "last_stdout_at": _completed_str_attr(completed, "last_stdout_at"),
+        "last_stderr_at": _completed_str_attr(completed, "last_stderr_at"),
+        "last_artifact_touch_at": _completed_str_attr(completed, "last_artifact_touch_at"),
+        "observation_mode": _completed_str_attr(completed, "observation_mode", "communicate"),
     }
 
 
@@ -349,11 +343,14 @@ def _materialize_prompt(request: PromptMaterializationRequest) -> Path:
             "final_state_observed": "communicate",
             "stdout_received": True,
             "stderr_received": True,
-            "heartbeat": {
-                "interval_seconds": 300,
-                "emitted_count": 0,
-                "last_elapsed_seconds": 0.0,
-                "status": "completed"
+            "observability": {
+                "heartbeat_count": 0,
+                "heartbeat_interval_seconds": 0,
+                "quiet_seconds": 0,
+                "last_stdout_at": "",
+                "last_stderr_at": "",
+                "last_artifact_touch_at": "",
+                "observation_mode": "communicate"
             }
         },
         "diagnostics": {
@@ -448,7 +445,6 @@ def _codex_exec_argv(
     argv = [
         "codex",
         "exec",
-        "--skip-git-repo-check",
         "--cd",
         str(workspace_root),
         "-m",
@@ -463,8 +459,9 @@ def _codex_exec_argv(
     ]
     if sandbox_mode == "workspace-write":
         argv.insert(2, "--full-auto")
+        argv.insert(3, "--skip-git-repo-check")
     else:
-        argv[2:2] = ["-s", sandbox_mode]
+        argv[2:2] = ["-s", sandbox_mode, "--skip-git-repo-check"]
     return argv
 
 
@@ -523,9 +520,9 @@ def _summarize_execution(
             notes.append(f"codex exec timed out after {timeout_seconds} seconds")
         else:
             notes.append(f"codex exec exited with {returncode}")
-            usage_limit_note = _codex_usage_limit_note(str(getattr(completed, "stderr", "")))
-            if usage_limit_note:
-                notes.append(usage_limit_note)
+        usage_limit_note = _codex_usage_limit_note(str(getattr(completed, "stderr", "")))
+        if usage_limit_note:
+            notes.append(usage_limit_note)
     elif isinstance(model_output, dict):
         returned_status = str(model_output.get("status", "pass"))
         if returned_status != "pass":
@@ -588,7 +585,7 @@ def _build_executor_report(
             "final_state_observed": _completed_final_state_observed(completed),
             "stdout_received": _completed_stdout_received(completed),
             "stderr_received": _completed_stderr_received(completed),
-            "heartbeat": _completed_heartbeat(completed),
+            "observability": _completed_observability(completed),
         },
         "diagnostics": {
             "routing_report": routing_report_rel,
@@ -609,9 +606,9 @@ def _attach_timeout_failure(
     completed: object,
     summary: _ExecutionSummary,
     context: RuntimeContext,
-) -> str:
+) -> str | None:
     if not summary.timed_out:
-        return ""
+        return None
     run_id = str(report["run_id"])
     role = str(report["role"])
     timeout_failure_rel = write_timeout_failure_artifact(
@@ -665,7 +662,7 @@ def _write_executor_report_and_ledger(
     routing_report_rel: str,
     scope_freeze_rel: str,
     prompt_rel: str,
-    timeout_failure_rel: str,
+    timeout_failure_rel: str | None,
     summary: _ExecutionSummary,
     context: RuntimeContext,
 ) -> None:
@@ -791,7 +788,6 @@ def launch_execution(request: _ExecutionRequest) -> object:
         cwd=request.workspace_root,
         input_text=request.prompt_path.read_text(encoding="utf-8"),
         timeout_seconds=request.timeout_seconds,
-        heartbeat_interval_seconds=300,
     )
 
 

@@ -12,16 +12,15 @@ RELEASE_CLOSEOUT_BATCH_MANIFEST_REPORT_REL_PATH = "ops/reports/release-closeout-
 RELEASE_CLOSEOUT_FINALITY_ATTESTATION_REPORT_REL_PATH = "ops/reports/release-closeout-finality-attestation.json"
 RELEASE_EVIDENCE_COHORT_REPORT_REL_PATH = "ops/reports/release-evidence-cohort.json"
 RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH = "tmp/release-closeout-post-check-finalizer.json"
-RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH = (
-    "build/release/release-closeout-sealed-rehearsal-check.json"
-)
-RELEASE_AUTHORITY_PREFLIGHT_FALLBACK_REPORT_REL_PATH = (
-    "tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json"
-)
+RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH = "ops/reports/release-closeout-sealed-rehearsal-check.json"
+RELEASE_AUTHORITY_PREFLIGHT_RELEASE_REPORT_REL_PATH = "build/release/release-closeout-sealed-rehearsal-check.json"
+RELEASE_AUTHORITY_PREFLIGHT_FALLBACK_REPORT_REL_PATH = "tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json"
 RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATHS = (
     RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
+    RELEASE_AUTHORITY_PREFLIGHT_RELEASE_REPORT_REL_PATH,
     RELEASE_AUTHORITY_PREFLIGHT_FALLBACK_REPORT_REL_PATH,
 )
+GOAL_WORKTREE_GUARD_REPORT_REL_PATH = "tmp/goal-worktree-guard.json"
 ROUTING_PROVENANCE_AGGREGATE_DIR = "ops/reports/routing-provenance-aggregates"
 READINESS_REPORT_PRODUCER = "ops.scripts.auto_improve_readiness_runtime"
 READINESS_REPORT_SOURCE_COMMAND = (
@@ -35,6 +34,7 @@ READINESS_SOURCE_PATHS = [
     "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py",
     "ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py",
     "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
+    "ops/scripts/mechanism/auto_improve_readiness_worktree_guard_runtime.py",
 ]
 FALLBACK_PRIMARY_TARGETS = [
     "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
@@ -47,6 +47,7 @@ DEFAULT_HIGH_REWORK_COUNT = 1
 DEFAULT_DEFECT_ESCAPE_PAIR_COUNT = 1
 REFRESH_GENERATED_TARGET = "make refresh-generated-core"
 READINESS_TARGET = "make auto-improve-readiness"
+AUTO_IMPROVE_GOAL_RUN_COMMAND = "make auto-improve-goal-run"
 AUTO_IMPROVE_LOOP_COMMAND = (
     ".venv/bin/python -m ops.scripts.mechanism.auto_improve_loop "
     "--vault . "

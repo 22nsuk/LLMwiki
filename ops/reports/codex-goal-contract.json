@@ -1,104 +1,148 @@
 {
   "$schema": "ops/schemas/codex-goal-contract.schema.json",
-  "artifact_kind": "codex_goal_contract",
   "schema_version": 1,
-  "goal_id": "goal-20260515-5day-auto-improve-runtime",
-  "objective": "Build and operate a five-day bounded auto-improve goal runtime with clean release evidence, private GitHub baseline, resumable audit trail, heartbeats, checkpoints, and no promotion until sealed authority is clean.",
-  "status": "running",
-  "created_at": "2026-05-15T06:08:36Z",
-  "duration": {
-    "min_sustained_days": 5,
-    "max_minutes": 7200
-  },
-  "budgets": {
-    "max_proposals": 60,
-    "max_consecutive_failures": 1,
-    "heartbeat_interval_minutes": 5,
-    "checkpoint_interval_minutes": 30,
-    "readiness_interval_hours": 6,
-    "session_synopsis_interval_hours": 6
-  },
-  "promotion_policy": {
-    "can_promote_result": false,
-    "requires_sealed_authority_clean_pass": true,
-    "promotion_ban_reason": "Promotion remains forbidden until can_promote_result=true and sealed authority clean pass are both current."
-  },
-  "github": {
-    "repo_url": "https://github.com/22nsuk/LLMwiki",
-    "visibility": "PRIVATE",
-    "baseline_commit": "6c3ca7c46c6369ad043d78da5114c84173a14973",
-    "branch": "goal/5day-auto-improve-runtime",
-    "worktree_path": "../LLMwiki-worktrees/goal-5day-auto-improve-runtime"
-  },
-  "artifacts": {
-    "status_json": "ops/reports/goal-run-status.json",
-    "status_markdown": "ops/reports/goal-status.md",
-    "audit_log": "ops/reports/goal-audit-log.jsonl",
-    "checkpoints_dir": "ops/reports/goal-checkpoints",
-    "resume_metadata": "ops/reports/goal-resume-metadata.json"
-  },
-  "execution_ladder": [
+  "contract_id": "auto-improve-goal",
+  "objective": "Build a bounded auto-improve goal runtime only after profile-ladder evidence, release authority, and promotion guards are current.",
+  "non_goals": [
+    "Do not claim 5-day sustained operation before the 5d_sustained profile is verified.",
+    "Do not promote release, learning, or improvement claims while promotion blockers remain.",
+    "Do not mutate private corpus surfaces from a public/runtime maintenance goal."
+  ],
+  "allowed_roots": [
     {
-      "profile": "30-minute-trial",
-      "max_minutes": 30,
-      "max_proposals": 1,
-      "max_consecutive_failures": 1,
-      "checkpoint_interval_minutes": 30
+      "path": "ops/",
+      "purpose": "runtime, schemas, policies, reports, and scripts"
     },
     {
-      "profile": "6-hour-ramp",
-      "max_minutes": 360,
-      "max_proposals": 6,
-      "checkpoint_interval_minutes": 30
+      "path": "tests/",
+      "purpose": "deterministic regression coverage"
     },
     {
-      "profile": "2-day-candidate",
-      "max_minutes": 2880,
-      "max_proposals": 24,
-      "checkpoint_interval_minutes": 30,
-      "readiness_interval_hours": 6,
-      "session_synopsis_interval_hours": 6
+      "path": "mk/",
+      "purpose": "Make target orchestration"
     },
     {
-      "profile": "5-day-sustained",
-      "max_minutes": 7200,
-      "max_proposals": 60,
-      "max_consecutive_failures": 1,
-      "heartbeat_interval_minutes": 5,
-      "checkpoint_interval_minutes": 30,
-      "readiness_interval_hours": 6,
-      "session_synopsis_interval_hours": 6
+      "path": ".github/",
+      "purpose": "CI workflow contract"
+    },
+    {
+      "path": ".codex/agents/",
+      "purpose": "shared subagent profile surface"
+    },
+    {
+      "path": "README.md",
+      "purpose": "operator-facing runtime contract"
+    },
+    {
+      "path": "ops/README.md",
+      "purpose": "ops-layer runtime contract"
     }
   ],
-  "stop_conditions": [
-    "allowed-root violation",
-    "repeated blocker cannot be converted to remediation backlog",
-    "status, audit, or heartbeat write failure",
-    "sealed authority or readiness regression",
-    "any need to bypass release, promotion, or learning-claim gates"
-  ],
-  "generated_at": "2026-05-15T06:08:36Z",
-  "producer": "ops.scripts.goal_run_status",
-  "source_command": "python -m ops.scripts.goal_run_status init",
-  "source_revision": "unknown",
-  "source_tree_fingerprint": "5d18b4a180b0765b694d330916639ae25e779cc32a69eedb67b9fa893a78fe6f",
-  "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
-    "schema": "c9bc37a838f0cad90d88482b5f23be28500821d739f7df37de89f22d26eb3dc5",
-    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "41f213b95ffd7a99643897f4f0c668e795964eb33b9051f4d43c0858ae522133",
-    "baseline_commit": "9b991cc65612a682e508185c9374692f04758bfe41123a7463683e96c0bac3d1",
-    "branch": "e4410a50f1dfc09ec1e813e3b514e4a2ebea38f5525fc2e952d887f6160801d9",
-    "goal_id": "e4a44b736df2b23145e0d73c83d2f60e510a8ca025f63c44a84b00dd028d0f38",
-    "repo_url": "681f9058c57f621647361263ce7f3f4a11f63c769259f752be9a8157ee01aeff",
-    "visibility": "7109ec0807d8f2bd40aa93347ea112977e316242f2d457864041f59dfb684fc0",
-    "worktree_path": "d2bd4e15a6cafb639cb5fab712465e08c5f7ba6571ed7f51e959a503be5a32ba"
+  "budgets": {
+    "max_wall_clock_seconds": 1800,
+    "max_proposals": 1,
+    "max_consecutive_failures": 1,
+    "heartbeat_interval_seconds": 300,
+    "checkpoint_interval_seconds": 1800,
+    "profile_ladder": [
+      {
+        "profile": "30m_trial",
+        "required_before_next_profile": "status, audit, checkpoint, heartbeat, and no promotion claim"
+      },
+      {
+        "profile": "6h_ramp",
+        "required_before_next_profile": "30m trial evidence plus current release/readiness blockers"
+      },
+      {
+        "profile": "2d_candidate",
+        "required_before_next_profile": "6h ramp evidence plus resume and backoff evidence"
+      },
+      {
+        "profile": "5d_sustained",
+        "required_before_next_profile": "2d candidate evidence plus sealed authority clean pass"
+      }
+    ]
   },
-  "artifact_status": "current",
-  "retention_policy": "canonical_report",
-  "encoding": "utf-8",
-  "currentness": {
-    "status": "current",
-    "checked_at": "2026-05-15T06:08:36Z"
+  "created_at": "2026-05-17T17:37:50Z",
+  "created_by": "codex",
+  "status": "active",
+  "runtime_profile": {
+    "current_profile": "30m_trial",
+    "verified_profiles": [],
+    "next_profile": "30m_trial",
+    "max_unattended_seconds": 1800
+  },
+  "goal_backend": {
+    "backend_type": "file",
+    "process_persistent": true,
+    "storage_path": "ops/reports/codex-goal-contract.json"
+  },
+  "stop_conditions": [
+    {
+      "condition_id": "promotion_guard_blocked",
+      "description": "Stop before any promotion or learning claim while blockers remain.",
+      "severity": "stop"
+    },
+    {
+      "condition_id": "profile_budget_exhausted",
+      "description": "Pause when the active profile wall-clock or proposal budget is exhausted.",
+      "severity": "pause"
+    },
+    {
+      "condition_id": "sealed_authority_not_clean",
+      "description": "Require review when sealed authority or can_promote_result is not clean.",
+      "severity": "require_review"
+    }
+  ],
+  "required_evidence": [
+    {
+      "evidence_id": "auto_improve_readiness",
+      "path": "ops/reports/auto-improve-readiness.json",
+      "description": "Readiness separates trial execution from result promotion.",
+      "freshness": "current_source_tree",
+      "required_for_promotion": true
+    },
+    {
+      "evidence_id": "goal_run_status",
+      "path": "ops/reports/goal-run-status.json",
+      "description": "Goal status records heartbeat, checkpoint, resume, and promotion blockers.",
+      "freshness": "current_run",
+      "required_for_promotion": true
+    },
+    {
+      "evidence_id": "release_authority",
+      "path": "ops/reports/release-closeout-summary.json",
+      "description": "Release authority blocks promotion until machine release is allowed.",
+      "freshness": "current_source_tree",
+      "required_for_promotion": true
+    },
+    {
+      "evidence_id": "goal_worktree_guard",
+      "path": "tmp/goal-worktree-guard.json",
+      "description": "Git/ZIP preflight blocks promotion from dirty, non-Git, or replay-only trees.",
+      "freshness": "current_source_tree",
+      "required_for_promotion": true
+    }
+  ],
+  "promotion_guard": {
+    "can_promote_result": false,
+    "promotion_blockers": [
+      "promotion_blocked_by_goal_worktree_guard_failure",
+      "git_worktree_dirty"
+    ],
+    "sealed_authority_clean": true,
+    "profile_verified": "unverified",
+    "sustained_runtime_claimed": false,
+    "no_sustained_claim_before_profile_verified": true
+  },
+  "metadata": {
+    "contract_family": "bounded_auto_improve",
+    "claim_policy": "trial_only_until_profile_and_release_authority_are_clean",
+    "properties": [
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/codex-goal-contract.schema.json\", \"artifact_kind\": \"codex_goal_contract\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-17T19:42:02Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-17T19:42:02Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"auto_improve_readiness\": \"0baca18a3d49a5754f0cf90b80363d85487df561c067646399f8b320516328c8\", \"contract_id\": \"d6dee5d74cf954a24559fc821001ef3dc5c693b768134ad20fe8924060b7adfe\", \"goal_worktree_guard_report\": \"bef90e27e0b0430658e0a24ab22a447d0b428339fd8a96b9dbc48f1fdc970e1e\", \"policy\": \"ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f\", \"schema\": \"bcbdc855cd8f6a6ae17ff4602eaa29572a086d5fc345f4990cb8bb246e014500\", \"source_paths\": \"919fbcda8364a71b814146db5438e2dbd03632628ac06c3de1432953a4c78973\"}, \"producer\": \"ops.scripts.codex_goal_client\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.codex_goal_client --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"988937360a25b2796d0074708f152e623d5d43d1f50aa8fb3044c954d4d93424\"}"
+      }
+    ]
   }
 }

@@ -399,6 +399,16 @@
         "advisory_lifecycle_effect": "not_applicable"
       }
     },
+    "promotion_blocked_by_goal_worktree_guard_failure": {
+      "description": "Auto-improve promotion is blocked because the Git/ZIP worktree guard is missing, dirty, replay-only, or fatal; this operational guard must not self-block the source closeout clean lane.",
+      "surface": "auto-improve worktree guard",
+      "effects": {
+        "clean_lane_effect": "does_not_block_clean_lane",
+        "conditional_lane_effect": "operator_review_required",
+        "learning_lane_effect": "blocks_learning_claim",
+        "advisory_lifecycle_effect": "not_applicable"
+      }
+    },
     "execution_blocked_by_no_runnable_proposal": {
       "description": "Auto-improve execution is blocked because no runnable proposal is available.",
       "surface": "auto-improve readiness",

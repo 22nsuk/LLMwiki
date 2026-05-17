@@ -18,10 +18,30 @@ TIMEOUT_TERMINATION_REASONS = {
     "timeout_after_output",
     "startup_timeout",
 }
+CommandHeartbeatCallback = Callable[["CommandHeartbeat"], None]
 
 
 class _SyntheticKillSignal(int):
     """Sentinel used by FakeProcessBackend when SIGKILL is unavailable."""
+
+
+@dataclass(frozen=True)
+class CommandHeartbeat:
+    args: list[str]
+    heartbeat_index: int
+    elapsed_seconds: float
+    timeout_seconds: int
+    quiet_seconds: int
+    last_stdout_at: str = ""
+    last_stderr_at: str = ""
+    last_artifact_touch_at: str = ""
+    observation_mode: str = "process_poll"
+
+
+@dataclass
+class _HeartbeatState:
+    heartbeat_count: int = 0
+    quiet_seconds: int = 0
 
 
 @dataclass(frozen=True)
@@ -39,10 +59,13 @@ class TimedProcessResult:
     stdout_received: bool = False
     stderr_received: bool = False
     launch_latency_seconds: float = 0.0
+    heartbeat_count: int = 0
     heartbeat_interval_seconds: int = 0
-    heartbeat_emitted_count: int = 0
-    last_heartbeat_elapsed_seconds: float = 0.0
-    heartbeat_status: str = "disabled"
+    quiet_seconds: int = 0
+    last_stdout_at: str = ""
+    last_stderr_at: str = ""
+    last_artifact_touch_at: str = ""
+    observation_mode: str = "communicate"
 
 
 class ProcessHandle(Protocol):
@@ -305,13 +328,19 @@ def _result_from_completed_process(
     signal_sent: str,
     final_state_observed: str,
     launch_latency_seconds: float = 0.0,
+    heartbeat_count: int = 0,
     heartbeat_interval_seconds: int = 0,
-    heartbeat_emitted_count: int = 0,
-    last_heartbeat_elapsed_seconds: float = 0.0,
-    heartbeat_status: str = "disabled",
+    quiet_seconds: int = 0,
+    last_stdout_at: str = "",
+    last_stderr_at: str = "",
+    last_artifact_touch_at: str = "",
+    observation_mode: str = "communicate",
 ) -> TimedProcessResult:
     normalized_stdout = _normalize_output(stdout)
     normalized_stderr = _normalize_output(stderr)
+    normalized_quiet_seconds = quiet_seconds
+    if normalized_quiet_seconds == 0 and timed_out and not normalized_stdout and not normalized_stderr:
+        normalized_quiet_seconds = timeout_seconds
     return TimedProcessResult(
         args=argv_list,
         returncode=process.returncode if process.returncode is not None else -1,
@@ -326,11 +355,69 @@ def _result_from_completed_process(
         stdout_received=stdout is not None,
         stderr_received=stderr is not None,
         launch_latency_seconds=launch_latency_seconds,
+        heartbeat_count=heartbeat_count,
         heartbeat_interval_seconds=heartbeat_interval_seconds,
-        heartbeat_emitted_count=heartbeat_emitted_count,
-        last_heartbeat_elapsed_seconds=last_heartbeat_elapsed_seconds,
-        heartbeat_status=heartbeat_status,
+        quiet_seconds=normalized_quiet_seconds,
+        last_stdout_at=last_stdout_at,
+        last_stderr_at=last_stderr_at,
+        last_artifact_touch_at=last_artifact_touch_at,
+        observation_mode=observation_mode,
     )
+
+
+def _communicate_with_optional_heartbeats(
+    *,
+    process: ProcessHandle,
+    argv_list: list[str],
+    input_text: str | None,
+    timeout_seconds: int,
+    heartbeat_interval_seconds: int | None,
+    heartbeat_callback: CommandHeartbeatCallback | None,
+    monotonic: Callable[[], float],
+    heartbeat_state: _HeartbeatState,
+) -> tuple[str, str]:
+    if heartbeat_callback is None or heartbeat_interval_seconds is None:
+        return process.communicate(input=input_text, timeout=timeout_seconds)
+
+    start = monotonic()
+    deadline = start + timeout_seconds
+    next_heartbeat_at = start + heartbeat_interval_seconds
+    pending_input = input_text
+    while True:
+        now = monotonic()
+        remaining_seconds = deadline - now
+        if remaining_seconds <= 0:
+            raise subprocess.TimeoutExpired(cmd=argv_list, timeout=timeout_seconds)
+        wait_seconds = min(remaining_seconds, max(0.0, next_heartbeat_at - now))
+        if wait_seconds <= 0:
+            wait_seconds = min(remaining_seconds, float(heartbeat_interval_seconds))
+        try:
+            stdout, stderr = process.communicate(
+                input=pending_input,
+                timeout=wait_seconds,
+            )
+            if not _normalize_output(stdout) and not _normalize_output(stderr):
+                heartbeat_state.quiet_seconds = int(max(0.0, monotonic() - start))
+            return stdout, stderr
+        except subprocess.TimeoutExpired:
+            pending_input = None
+            now = monotonic()
+            if now >= next_heartbeat_at:
+                heartbeat_state.heartbeat_count += 1
+                heartbeat_state.quiet_seconds = int(max(0.0, now - start))
+                heartbeat_callback(
+                    CommandHeartbeat(
+                        args=argv_list,
+                        heartbeat_index=heartbeat_state.heartbeat_count,
+                        elapsed_seconds=now - start,
+                        timeout_seconds=timeout_seconds,
+                        quiet_seconds=heartbeat_state.quiet_seconds,
+                    )
+                )
+                while next_heartbeat_at <= now:
+                    next_heartbeat_at += heartbeat_interval_seconds
+            if now >= deadline:
+                raise
 
 
 def _signal_process(
@@ -414,19 +501,6 @@ def _timeout_termination_reason(
     return "execution_timeout"
 
 
-def _heartbeat_snapshot(
-    *,
-    interval_seconds: int,
-    elapsed_seconds: float,
-    timed_out: bool,
-) -> tuple[int, float, str]:
-    if interval_seconds == 0:
-        return 0, 0.0, "disabled"
-    emitted_count = int(elapsed_seconds // interval_seconds)
-    last_elapsed = elapsed_seconds if emitted_count else 0.0
-    return emitted_count, last_elapsed, "timed_out" if timed_out else "completed"
-
-
 def run_with_timeout(
     argv: Sequence[str],
     *,
@@ -437,7 +511,9 @@ def run_with_timeout(
     grace_seconds: float = TIMEOUT_GRACE_SECONDS,
     env: Mapping[str, str] | None = None,
     hermetic: bool = False,
-    heartbeat_interval_seconds: int = 0,
+    heartbeat_interval_seconds: int | None = None,
+    heartbeat_callback: CommandHeartbeatCallback | None = None,
+    monotonic_clock: Callable[[], float] | None = None,
 ) -> TimedProcessResult:
     """Run a command with a timeout, measuring launch latency separately.
 
@@ -449,10 +525,16 @@ def run_with_timeout(
     """
     if timeout_seconds < 1:
         raise ValueError("timeout_seconds must be >= 1")
-    if heartbeat_interval_seconds < 0:
-        raise ValueError("heartbeat_interval_seconds must be >= 0")
+    if heartbeat_interval_seconds is not None and heartbeat_interval_seconds < 1:
+        raise ValueError("heartbeat_interval_seconds must be >= 1")
 
     argv_list = [str(item) for item in argv]
+    observation_mode = "process_heartbeat" if heartbeat_callback is not None else "communicate"
+    active_heartbeat_interval = heartbeat_interval_seconds
+    if heartbeat_callback is not None and active_heartbeat_interval is None:
+        active_heartbeat_interval = timeout_seconds
+    heartbeat_state = _HeartbeatState()
+    monotonic = monotonic_clock or time.perf_counter
     subprocess_env: Mapping[str, str] | None
     if hermetic:
         argv_list = _python_minus_s_command(argv_list)
@@ -460,24 +542,24 @@ def run_with_timeout(
     else:
         subprocess_env = env
     active_backend = backend or _default_backend()
-    launch_start = time.perf_counter()
+    launch_start = monotonic()
     process = active_backend.start(
         argv_list,
         cwd=cwd,
         input_text=input_text,
         env=subprocess_env,
     )
-    launch_latency_seconds = time.perf_counter() - launch_start
+    launch_latency_seconds = monotonic() - launch_start
     try:
-        stdout, stderr = process.communicate(
-            input=input_text,
-            timeout=timeout_seconds,
-        )
-        elapsed_seconds = time.perf_counter() - launch_start
-        heartbeat_count, last_heartbeat_elapsed, heartbeat_status = _heartbeat_snapshot(
-            interval_seconds=heartbeat_interval_seconds,
-            elapsed_seconds=elapsed_seconds,
-            timed_out=False,
+        stdout, stderr = _communicate_with_optional_heartbeats(
+            process=process,
+            argv_list=argv_list,
+            input_text=input_text,
+            timeout_seconds=timeout_seconds,
+            heartbeat_interval_seconds=active_heartbeat_interval,
+            heartbeat_callback=heartbeat_callback,
+            monotonic=monotonic,
+            heartbeat_state=heartbeat_state,
         )
         return _result_from_completed_process(
             argv_list=argv_list,
@@ -490,25 +572,15 @@ def run_with_timeout(
             signal_sent="none",
             final_state_observed="communicate",
             launch_latency_seconds=launch_latency_seconds,
-            heartbeat_interval_seconds=heartbeat_interval_seconds,
-            heartbeat_emitted_count=heartbeat_count,
-            last_heartbeat_elapsed_seconds=last_heartbeat_elapsed,
-            heartbeat_status=heartbeat_status,
+            heartbeat_count=heartbeat_state.heartbeat_count,
+            heartbeat_interval_seconds=active_heartbeat_interval or 0,
+            quiet_seconds=heartbeat_state.quiet_seconds,
+            observation_mode=observation_mode,
         )
     except subprocess.TimeoutExpired:
         returncode = _poll_returncode(process)
         if returncode is not None:
             stdout, stderr = process.communicate()
-            elapsed_seconds = time.perf_counter() - launch_start
-            (
-                heartbeat_count,
-                last_heartbeat_elapsed,
-                heartbeat_status,
-            ) = _heartbeat_snapshot(
-                interval_seconds=heartbeat_interval_seconds,
-                elapsed_seconds=elapsed_seconds,
-                timed_out=False,
-            )
             return _result_from_completed_process(
                 argv_list=argv_list,
                 process=process,
@@ -520,10 +592,10 @@ def run_with_timeout(
                 signal_sent="none",
                 final_state_observed="poll_before_signal",
                 launch_latency_seconds=launch_latency_seconds,
-                heartbeat_interval_seconds=heartbeat_interval_seconds,
-                heartbeat_emitted_count=heartbeat_count,
-                last_heartbeat_elapsed_seconds=last_heartbeat_elapsed,
-                heartbeat_status=heartbeat_status,
+                heartbeat_count=heartbeat_state.heartbeat_count,
+                heartbeat_interval_seconds=active_heartbeat_interval or 0,
+                quiet_seconds=heartbeat_state.quiet_seconds,
+                observation_mode=observation_mode,
             )
         stdout, stderr, signal_sent, final_state_observed = _finalize_timed_out_process(
             process,
@@ -531,12 +603,6 @@ def run_with_timeout(
             grace_seconds=grace_seconds,
         )
         timed_out = final_state_observed not in TIMEOUT_RECOVERY_STATES
-        elapsed_seconds = time.perf_counter() - launch_start
-        heartbeat_count, last_heartbeat_elapsed, heartbeat_status = _heartbeat_snapshot(
-            interval_seconds=heartbeat_interval_seconds,
-            elapsed_seconds=elapsed_seconds,
-            timed_out=timed_out,
-        )
         termination_reason = _timeout_termination_reason(
             timed_out=timed_out,
             final_state_observed=final_state_observed,
@@ -556,8 +622,8 @@ def run_with_timeout(
             signal_sent=signal_sent,
             final_state_observed=final_state_observed,
             launch_latency_seconds=launch_latency_seconds,
-            heartbeat_interval_seconds=heartbeat_interval_seconds,
-            heartbeat_emitted_count=heartbeat_count,
-            last_heartbeat_elapsed_seconds=last_heartbeat_elapsed,
-            heartbeat_status=heartbeat_status,
+            heartbeat_count=heartbeat_state.heartbeat_count,
+            heartbeat_interval_seconds=active_heartbeat_interval or 0,
+            quiet_seconds=heartbeat_state.quiet_seconds,
+            observation_mode=observation_mode,
         )

@@ -31,6 +31,7 @@
     "test_source_package_summary",
     "deselection_budget_status",
     "source_package_reproducibility_status",
+    "heartbeat_observability",
     "zip_smoke_report"
   ],
   "properties": {
@@ -148,6 +149,38 @@
       }
     },
     "source_package_reproducibility_status": { "$ref": "#/$defs/status" },
+    "heartbeat_observability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "command_count",
+        "heartbeat_enabled_command_count",
+        "heartbeat_event_count",
+        "max_heartbeat_count",
+        "max_quiet_seconds",
+        "quiet_command_names",
+        "unobserved_command_names",
+        "next_action"
+      ],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "attention", "not_run"] },
+        "command_count": { "type": "integer", "minimum": 0 },
+        "heartbeat_enabled_command_count": { "type": "integer", "minimum": 0 },
+        "heartbeat_event_count": { "type": "integer", "minimum": 0 },
+        "max_heartbeat_count": { "type": "integer", "minimum": 0 },
+        "max_quiet_seconds": { "type": "integer", "minimum": 0 },
+        "quiet_command_names": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "unobserved_command_names": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "next_action": { "type": "string", "minLength": 1 }
+      }
+    },
     "zip_smoke_report": {
       "type": "object",
       "additionalProperties": false,
@@ -181,6 +214,11 @@
         "timeout_seconds",
         "termination_reason",
         "duration_ms",
+        "heartbeat_count",
+        "heartbeat_interval_seconds",
+        "quiet_seconds",
+        "observation_mode",
+        "heartbeat_events",
         "stdout_tail",
         "stderr_tail",
         "status"
@@ -196,9 +234,41 @@
         "timeout_seconds": { "type": "integer", "minimum": 1 },
         "termination_reason": { "type": "string" },
         "duration_ms": { "type": "integer", "minimum": 0 },
+        "heartbeat_count": { "type": "integer", "minimum": 0 },
+        "heartbeat_interval_seconds": { "type": "integer", "minimum": 0 },
+        "quiet_seconds": { "type": "integer", "minimum": 0 },
+        "observation_mode": {
+          "type": "string",
+          "enum": ["communicate", "process_heartbeat"]
+        },
+        "heartbeat_events": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/heartbeat_event" }
+        },
         "stdout_tail": { "type": "string" },
         "stderr_tail": { "type": "string" },
         "status": { "$ref": "#/$defs/status" }
+      }
+    },
+    "heartbeat_event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "heartbeat_index",
+        "elapsed_seconds",
+        "timeout_seconds",
+        "quiet_seconds",
+        "observation_mode"
+      ],
+      "properties": {
+        "heartbeat_index": { "type": "integer", "minimum": 1 },
+        "elapsed_seconds": { "type": "number", "minimum": 0 },
+        "timeout_seconds": { "type": "integer", "minimum": 1 },
+        "quiet_seconds": { "type": "integer", "minimum": 0 },
+        "observation_mode": {
+          "type": "string",
+          "enum": ["process_poll"]
+        }
       }
     }
   }

@@ -1,6 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "LLM Wiki Remediation Backlog",
+  "$id": "https://llmwiki.local/schemas/remediation-backlog.schema.json",
+  "title": "Remediation backlog report",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -8,84 +9,129 @@
     "artifact_kind",
     "generated_at",
     "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
     "status",
-    "source_readiness_report",
     "summary",
-    "items"
+    "items",
+    "inputs"
   ],
   "properties": {
-    "$schema": { "type": "string", "enum": ["ops/schemas/remediation-backlog.schema.json"] },
-    "artifact_kind": { "type": "string", "enum": ["remediation_backlog"] },
-    "schema_version": { "type": "integer", "minimum": 1 },
+    "$schema": { "type": "string", "const": "ops/schemas/remediation-backlog.schema.json" },
+    "artifact_kind": { "type": "string", "const": "remediation_backlog" },
     "generated_at": { "type": "string", "minLength": 1 },
-    "producer": { "type": "string", "minLength": 1 },
+    "producer": { "type": "string", "const": "ops.scripts.remediation_backlog" },
     "source_command": { "type": "string", "minLength": 1 },
-    "source_revision": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string" },
     "source_tree_fingerprint": { "type": "string", "minLength": 1 },
-    "input_fingerprints": {
-      "type": "object",
-      "additionalProperties": { "type": "string", "minLength": 1 }
-    },
-    "artifact_status": {
-      "type": "string",
-      "enum": ["current", "archived", "stale", "unknown"]
-    },
-    "retention_policy": {
-      "type": "string",
-      "enum": ["ephemeral", "canonical_report", "archive"]
-    },
-    "encoding": { "type": "string", "enum": ["utf-8"] },
-    "currentness": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["status", "checked_at"],
-      "properties": {
-        "status": {
-          "type": "string",
-          "enum": ["current", "stale", "unknown", "invalid"]
-        },
-        "checked_at": { "type": "string", "minLength": 1 }
-      }
-    },
+    "input_fingerprints": { "type": "object" },
+    "schema_version": { "type": "integer", "const": 1 },
+    "artifact_status": { "type": "string" },
+    "retention_policy": { "type": "string" },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": { "type": "object" },
+    "vault": { "type": "string" },
+    "policy": { "$ref": "#/$defs/policy" },
     "status": { "type": "string", "enum": ["pass", "attention"] },
-    "source_readiness_report": { "type": "string" },
     "summary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["open_item_count", "repeated_blocker_count"],
+      "required": [
+        "backlog_item_count",
+        "repeated_blocker_count",
+        "active_blocker_count",
+        "open_item_count",
+        "promotion_policy",
+        "next_action"
+      ],
       "properties": {
+        "backlog_item_count": { "type": "integer", "minimum": 0 },
+        "repeated_blocker_count": { "type": "integer", "minimum": 0 },
+        "active_blocker_count": { "type": "integer", "minimum": 0 },
         "open_item_count": { "type": "integer", "minimum": 0 },
-        "repeated_blocker_count": { "type": "integer", "minimum": 0 }
+        "promotion_policy": {
+          "type": "string",
+          "const": "do_not_retry_repeated_blockers_until_backlog_item_closed"
+        },
+        "next_action": { "type": "string", "minLength": 1 }
       }
     },
     "items": {
       "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "source",
-          "blocker",
-          "blocker_kind",
-          "status",
-          "remediation_code",
-          "recommended_next_step",
-          "minimum_evidence"
-        ],
-        "properties": {
-          "id": { "type": "string", "minLength": 1 },
-          "source": { "type": "string" },
-          "blocker": { "type": "string" },
-          "blocker_kind": { "type": "string" },
-          "status": { "type": "string", "enum": ["open", "closed"] },
-          "remediation_code": { "type": "string" },
-          "recommended_next_step": { "type": "string" },
-          "minimum_evidence": {
-            "type": "array",
-            "items": { "type": "string" }
-          }
-        }
+      "items": { "$ref": "#/$defs/backlog_item" }
+    },
+    "inputs": { "$ref": "#/$defs/inputs" }
+  },
+  "$defs": {
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string" },
+        "version": { "type": ["integer", "string", "null"] }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "self_improvement_negative_lessons",
+        "session_synopsis",
+        "learning_claim_activation",
+        "auto_improve_sessions",
+        "status_overrides"
+      ],
+      "properties": {
+        "self_improvement_negative_lessons": { "type": "string", "minLength": 1 },
+        "session_synopsis": { "type": "string", "minLength": 1 },
+        "learning_claim_activation": { "type": "string", "minLength": 1 },
+        "auto_improve_sessions": { "type": "string", "minLength": 1 },
+        "status_overrides": { "type": "string", "minLength": 1 }
+      }
+    },
+    "backlog_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item_id",
+        "blocker_id",
+        "source",
+        "item_type",
+        "status",
+        "severity",
+        "occurrence_count",
+        "evidence_paths",
+        "repair_target",
+        "next_action"
+      ],
+      "properties": {
+        "item_id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "blocker_id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "source": { "type": "string", "minLength": 1 },
+        "item_type": {
+          "type": "string",
+          "enum": ["repeated_negative_lesson", "active_blocker", "repeated_auto_improve_blocker"]
+        },
+        "status": { "type": "string", "enum": ["open", "closed", "deferred"] },
+        "severity": { "type": "string", "enum": ["blocks_repeat", "blocks_promotion"] },
+        "occurrence_count": { "type": "integer", "minimum": 1 },
+        "evidence_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "repair_target": { "type": "string" },
+        "next_action": { "type": "string", "minLength": 1 }
       }
     }
   }

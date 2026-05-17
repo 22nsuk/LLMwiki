@@ -2,204 +2,574 @@ from __future__ import annotations
 
 import datetime as dt
 import json
-import shutil
-import subprocess
 from pathlib import Path
+import tempfile
+import unittest
 
 import pytest
 
-from ops.scripts.goal_run_status import initialize_goal_runtime, main as goal_run_status_main
+from ops.scripts.codex_goal_client import set_goal
+from ops.scripts.goal_run_status import (
+    DEFAULT_STATUS_PATH,
+    GoalRunStatusRequest,
+    build_report,
+    write_report,
+    write_run_artifacts,
+)
+from ops.scripts.goal_runtime_backoff import backoff_status, freshness_status
+from ops.scripts.goal_runtime_maintenance import (
+    PERIODIC_CHECKPOINT_COMMAND_EVENT,
+    append_checkpoint_command_event,
+    build_periodic_evidence,
+)
+from ops.scripts.goal_runtime_profile import build_profile_ladder
+from ops.scripts.goal_runtime_resume import resume_metadata_from_report, resume_status
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-
+from tests.minimal_vault_runtime import seed_minimal_vault
+from tests.test_codex_goal_contract import sample_goal_contract
 
 pytestmark = pytest.mark.public
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
-GOAL_BRANCH = "goal/5day-auto-improve-runtime"
-
-
-def _run_git(cwd: Path, *args: str) -> str:
-    completed = subprocess.run(
-        ["git", *args],
-        cwd=cwd,
-        check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    return completed.stdout.strip()
-
-
-def _seed_repo_with_worktree(tmp_path: Path) -> Path:
-    if shutil.which("git") is None:
-        pytest.skip("git is required for goal run status tests")
-    repo = tmp_path / "repo"
-    worktree = tmp_path / "goal-worktree"
-    repo.mkdir()
-    _run_git(repo, "init", "-q", "-b", "main")
-    _run_git(repo, "config", "user.name", "Test User")
-    _run_git(repo, "config", "user.email", "test@example.com")
-    (repo / "README.md").write_text("demo\n", encoding="utf-8")
-    _run_git(repo, "add", "README.md")
-    _run_git(repo, "commit", "-q", "-m", "initial")
-    _run_git(repo, "remote", "add", "origin", "https://github.com/22nsuk/LLMwiki.git")
-    _run_git(repo, "worktree", "add", "-q", "-b", GOAL_BRANCH, worktree, "main")
-    return worktree
-
-
-def _copy_goal_schemas(vault: Path) -> None:
-    schema_dir = vault / "ops" / "schemas"
-    policy_dir = vault / "ops" / "policies"
-    schema_dir.mkdir(parents=True, exist_ok=True)
-    policy_dir.mkdir(parents=True, exist_ok=True)
-    for name in (
-        "artifact-envelope.schema.json",
-        "codex-goal-contract.schema.json",
-        "goal-run-status.schema.json",
-        "goal-resume-metadata.schema.json",
-    ):
-        shutil.copyfile(REPO_ROOT / "ops" / "schemas" / name, schema_dir / name)
-    shutil.copyfile(
-        REPO_ROOT / "ops" / "policies" / "wiki-maintainer-policy.yaml",
-        policy_dir / "wiki-maintainer-policy.yaml",
-    )
+SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "goal-run-status.schema.json"
+RESUME_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "goal-run-resume-metadata.schema.json"
 
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
         display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 15, 0, 0, tzinfo=dt.timezone.utc),
+        clock=lambda: dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.timezone.utc),
     )
 
 
-def test_initialize_goal_runtime_records_private_github_worktree_and_resume_artifacts(
-    tmp_path: Path,
-) -> None:
-    vault = _seed_repo_with_worktree(tmp_path)
-    _copy_goal_schemas(vault)
-
-    status = initialize_goal_runtime(
-        vault,
-        repo_url="https://github.com/22nsuk/LLMwiki",
-        visibility="PRIVATE",
-        baseline_commit="6c3ca7c46c6369ad043d78da5114c84173a14973",
-        branch=GOAL_BRANCH,
-        worktree_path="../LLMwiki-worktrees/goal-5day-auto-improve-runtime",
-        context=fixed_context(),
+def context_at(hour: int, minute: int) -> RuntimeContext:
+    return RuntimeContext(
+        display_timezone=dt.timezone.utc,
+        clock=lambda: dt.datetime(2026, 5, 17, hour, minute, tzinfo=dt.timezone.utc),
     )
 
-    status_path = vault / "ops" / "reports" / "goal-run-status.json"
-    contract_path = vault / "ops" / "reports" / "codex-goal-contract.json"
-    status_schema = load_schema(vault / "ops" / "schemas" / "goal-run-status.schema.json")
-    contract_schema = load_schema(vault / "ops" / "schemas" / "codex-goal-contract.schema.json")
-    persisted_status = json.loads(status_path.read_text(encoding="utf-8"))
-    persisted_contract = json.loads(contract_path.read_text(encoding="utf-8"))
 
-    assert validate_with_schema(persisted_status, status_schema) == []
-    assert validate_with_schema(persisted_contract, contract_schema) == []
-    assert persisted_status == status
-    assert status["repo"]["visibility"] == "PRIVATE"
-    assert status["execution"] == {
-        "requested_session_id": "",
-        "resume_session": "",
-        "current_session_id": "",
-        "session_report": "",
-        "run_ids": [],
-    }
-    assert status["repo"]["worktree_guard"]["status"] == "pass"
-    assert status["repo"]["worktree_guard"]["long_run_allowed"] is True
-    assert status["repo"]["worktree_guard"]["allowed_operation"] == "long_run"
-    assert status["promotion_policy"]["promotion_ban_active"] is True
-    assert status["active_profile"] == "30-minute-trial"
-    assert status["budget"]["max_minutes"] == 30
-    assert status["profile_verification"]["required_predecessors_verified"] is True
-    assert status["profile_verification"]["sustained_profile"] == "5-day-sustained"
-    assert status["profile_verification"]["sustained_profile_verified"] is False
-    assert status["profile_verification"]["sustainability_claim_allowed"] is False
-    assert status["resume"]["resume_supported"] is True
-    assert status["resume"]["last_checkpoint"].startswith("ops/reports/goal-checkpoints/")
-    assert (vault / status["resume"]["last_checkpoint"]).is_file()
-    assert (vault / "ops" / "reports" / "goal-status.md").is_file()
-    assert (vault / "ops" / "reports" / "goal-resume-metadata.json").is_file()
-    audit_events = (vault / "ops" / "reports" / "goal-audit-log.jsonl").read_text(
-        encoding="utf-8"
-    )
-    assert '"event": "initialized"' in audit_events
+class GoalRunStatusTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.vault = Path(self.temp_dir.name) / "vault"
+        self.vault.mkdir()
+        seed_minimal_vault(self.vault)
+        self._copy_support_file("ops/schemas/codex-goal-contract.schema.json")
+        self._copy_support_file("ops/schemas/goal-run-status.schema.json")
+        self._copy_support_file("ops/scripts/core/codex_goal_client.py")
+        self._copy_support_file("ops/scripts/mechanism/goal_run_status.py")
+        self._copy_support_file("ops/scripts/mechanism/goal_runtime_backoff.py")
+        self._copy_support_file("ops/scripts/mechanism/goal_runtime_maintenance.py")
+        self._copy_support_file("ops/scripts/mechanism/goal_runtime_profile.py")
+        self._copy_support_file("ops/scripts/mechanism/goal_runtime_resume.py")
 
+    def tearDown(self) -> None:
+        self.temp_dir.cleanup()
 
-def test_initialize_goal_runtime_blocks_zip_mode_but_writes_report_artifacts(
-    tmp_path: Path,
-) -> None:
-    vault = tmp_path
-    _copy_goal_schemas(vault)
+    def _copy_support_file(self, rel_path: str) -> None:
+        destination = self.vault / rel_path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text((REPO_ROOT / rel_path).read_text(encoding="utf-8"), encoding="utf-8")
 
-    status = initialize_goal_runtime(
-        vault,
-        repo_url="https://github.com/22nsuk/LLMwiki",
-        visibility="PRIVATE",
-        baseline_commit="6c3ca7c46c6369ad043d78da5114c84173a14973",
-        branch=GOAL_BRANCH,
-        worktree_path="../LLMwiki-worktrees/goal-5day-auto-improve-runtime",
-        context=fixed_context(),
-    )
+    def _seed_goal_contract(self) -> None:
+        set_goal(sample_goal_contract(), vault=self.vault)
 
-    status_path = vault / "ops" / "reports" / "goal-run-status.json"
-    status_schema = load_schema(vault / "ops" / "schemas" / "goal-run-status.schema.json")
-    persisted_status = json.loads(status_path.read_text(encoding="utf-8"))
+    def _seed_session_synopsis(self) -> None:
+        path = self.vault / "ops" / "reports" / "session-synopsis.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(
+                {
+                    "status": "attention",
+                    "generated_at": "2026-05-17T11:45:00Z",
+                    "summary": {
+                        "recent_blocker_count": 2,
+                        "evidence_gap_count": 1,
+                        "next_action": "Trial only; do not promote.",
+                    },
+                },
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
 
-    assert validate_with_schema(persisted_status, status_schema) == []
-    assert persisted_status == status
-    guard = status["repo"]["worktree_guard"]
-    assert status["status"] == "blocked"
-    assert guard["status"] == "fail"
-    assert guard["mode"] == "zip_or_report_only"
-    assert guard["long_run_allowed"] is False
-    assert guard["allowed_operation"] == "trial_or_report_only"
-    assert status["last_event"]["event"] == "goal_runtime_init_blocked_by_worktree_guard"
-    assert "Long-run goal execution requires a linked Git worktree" in guard[
-        "blocked_operation_reason"
-    ]
-    audit_events = (vault / "ops" / "reports" / "goal-audit-log.jsonl").read_text(
-        encoding="utf-8"
-    )
-    assert '"event": "goal_runtime_init_blocked_by_worktree_guard"' in audit_events
+    def _seed_checkpoint_command_event(
+        self,
+        *,
+        run_id: str = "20260517-ramp",
+        checkpoint_id: str = "checkpoint_6h",
+        generated_at: str = "2026-05-17T11:30:00Z",
+        status: str = "pass",
+    ) -> None:
+        append_checkpoint_command_event(
+            self.vault,
+            f"runs/goal-{run_id}/checkpoint-command-events.jsonl",
+            {
+                "event": PERIODIC_CHECKPOINT_COMMAND_EVENT,
+                "generated_at": generated_at,
+                "run_id": run_id,
+                "checkpoint_id": checkpoint_id,
+                "status": status,
+                "command_count": 3,
+                "failed_command_count": 0 if status == "pass" else 1,
+                "commands": [],
+            },
+        )
 
+    def test_goal_run_status_report_links_contract_and_observability(self) -> None:
+        self._seed_goal_contract()
+        self._seed_session_synopsis()
 
-def test_goal_run_status_heartbeat_syncs_promotion_policy_from_readiness(
-    tmp_path: Path,
-) -> None:
-    vault = _seed_repo_with_worktree(tmp_path)
-    _copy_goal_schemas(vault)
-    initialize_goal_runtime(
-        vault,
-        repo_url="https://github.com/22nsuk/LLMwiki",
-        visibility="PRIVATE",
-        baseline_commit="6c3ca7c46c6369ad043d78da5114c84173a14973",
-        branch=GOAL_BRANCH,
-        worktree_path="../LLMwiki-worktrees/goal-5day-auto-improve-runtime",
-        context=fixed_context(),
-    )
-    readiness_path = vault / "ops" / "reports" / "auto-improve-readiness.json"
-    readiness_path.write_text(
-        json.dumps(
+        report = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                last_heartbeat_at="2026-05-17T11:55:00Z",
+                last_checkpoint_at="2026-05-17T11:30:00Z",
+                last_command_heartbeat_at="2026-05-17T11:54:00Z",
+                quiet_seconds=60,
+                command_observation_mode="process_heartbeat",
+                command_heartbeat_count=3,
+                command_timeout_seconds=1800,
+                last_stdout_at="2026-05-17T11:53:00Z",
+                last_command_returncode=-1,
+                last_command_timed_out=False,
+                last_command_termination_reason="",
+                last_backoff_until="2026-05-17T12:05:00Z",
+                backoff_reason="rate_limit_retry_after",
+                resume_from_checkpoint=True,
+                resume_command="python -m ops.scripts.auto_improve_loop --resume",
+                status_report_path="ops/reports/goal-run-status.json",
+                out_path="tmp/goal-run-status.candidate.json",
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(report["artifact_kind"], "goal_run_status")
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["goal"]["backend"]["process_persistent"], True)
+        self.assertEqual(report["goal"]["contract_id"], "goal-20260517-auto-improve-runtime")
+        self.assertRegex(report["goal"]["contract_sha256"], r"^[0-9a-f]{64}$")
+        self.assertEqual(report["observability"]["command_observation_mode"], "process_heartbeat")
+        self.assertEqual(report["observability"]["command_heartbeat_count"], 3)
+        self.assertEqual(report["observability"]["command_timeout_seconds"], 1800)
+        self.assertEqual(report["observability"]["last_stdout_at"], "2026-05-17T11:53:00Z")
+        self.assertEqual(report["observability"]["last_command_returncode"], -1)
+        self.assertEqual(report["observability"]["last_backoff_until"], "2026-05-17T12:05:00Z")
+        self.assertEqual(report["observability"]["resume_from_checkpoint"], True)
+        self.assertEqual(report["health"]["heartbeat_status"], "current")
+        self.assertEqual(report["health"]["checkpoint_status"], "current")
+        self.assertEqual(report["health"]["command_heartbeat_status"], "current")
+        self.assertEqual(report["health"]["backoff_status"], "active")
+        self.assertEqual(report["health"]["resume_status"], "ready")
+        self.assertEqual(report["health"]["promotion_status"], "blocked")
+        self.assertEqual(report["health"]["can_promote_result"], False)
+        self.assertEqual(report["profile_ladder"]["status"], "incomplete")
+        self.assertEqual(report["profile_ladder"]["highest_verified_profile"], "unverified")
+        self.assertEqual(report["profile_ladder"]["next_profile_required"], "30m_trial")
+        self.assertEqual(report["profile_ladder"]["sustained_claim_allowed"], False)
+        self.assertEqual(len(report["profile_ladder"]["profiles"]), 4)
+        self.assertEqual(report["periodic_evidence"]["status"], "not_due")
+        self.assertEqual(report["periodic_evidence"]["next_checkpoint_id"], "checkpoint_6h")
+        self.assertEqual(report["session_synopsis"]["link_status"], "linked")
+        self.assertEqual(report["session_synopsis"]["recent_blocker_count"], 2)
+        self.assertEqual(report["session_synopsis"]["next_action"], "Trial only; do not promote.")
+        self.assertEqual(report["artifacts"]["status_report_path"], "ops/reports/goal-run-status.json")
+        self.assertEqual(
+            report["artifacts"]["checkpoint_command_log_path"],
+            "runs/goal-20260517-trial/checkpoint-command-events.jsonl",
+        )
+        self.assertEqual(report["blockers"], ["profile ladder incomplete"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_goal_run_status_marks_stale_command_heartbeat_as_attention_blocker(self) -> None:
+        self._seed_goal_contract()
+
+        report = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                last_heartbeat_at="2026-05-17T11:30:00Z",
+                last_checkpoint_at="2026-05-17T10:00:00Z",
+                last_command_heartbeat_at="",
+                status="running",
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(report["health"]["heartbeat_status"], "stale")
+        self.assertEqual(report["health"]["checkpoint_status"], "stale")
+        self.assertEqual(report["health"]["command_heartbeat_status"], "not_recorded")
+        self.assertIn("heartbeat stale", report["blockers"])
+        self.assertIn("checkpoint stale", report["blockers"])
+        self.assertIn("command heartbeat not_recorded", report["blockers"])
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_goal_run_status_marks_due_periodic_evidence_as_attention_blocker(self) -> None:
+        self._seed_goal_contract()
+
+        report = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-ramp",
+                profile="6h_ramp",
+                started_at="2026-05-17T05:00:00Z",
+                last_heartbeat_at="2026-05-17T11:59:00Z",
+                last_checkpoint_at="2026-05-17T10:30:00Z",
+                last_command_heartbeat_at="2026-05-17T11:58:00Z",
+                status="running",
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(report["periodic_evidence"]["status"], "missing_due_evidence")
+        self.assertEqual(report["periodic_evidence"]["due_checkpoint_count"], 1)
+        self.assertEqual(
+            report["periodic_evidence"]["missing_due_checkpoint_ids"],
+            ["checkpoint_6h"],
+        )
+        self.assertIn("periodic evidence checkpoint missing", report["blockers"])
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_goal_run_status_rejects_stale_due_periodic_evidence(self) -> None:
+        self._seed_goal_contract()
+        reports = self.vault / "ops" / "reports"
+        reports.mkdir(parents=True, exist_ok=True)
+        for report_name in ("auto-improve-readiness.json", "session-synopsis.json"):
+            (reports / report_name).write_text(
+                json.dumps({"generated_at": "2026-05-17T10:59:00Z"}, sort_keys=True),
+                encoding="utf-8",
+            )
+
+        report = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-ramp",
+                profile="6h_ramp",
+                started_at="2026-05-17T05:00:00Z",
+                last_heartbeat_at="2026-05-17T11:59:00Z",
+                last_checkpoint_at="2026-05-17T11:30:00Z",
+                last_command_heartbeat_at="2026-05-17T11:58:00Z",
+                status="running",
+                context=fixed_context(),
+            )
+        )
+
+        checkpoint_6h = report["periodic_evidence"]["checkpoints"][0]
+        self.assertEqual(report["periodic_evidence"]["status"], "missing_due_evidence")
+        self.assertEqual(checkpoint_6h["status"], "missing")
+        self.assertEqual(
+            {item["freshness_status"] for item in checkpoint_6h["evidence_paths"]},
+            {"stale"},
+        )
+        self.assertIn("periodic evidence checkpoint missing", report["blockers"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_goal_run_status_requires_checkpoint_command_event_for_due_periodic_evidence(self) -> None:
+        self._seed_goal_contract()
+        reports = self.vault / "ops" / "reports"
+        reports.mkdir(parents=True, exist_ok=True)
+        for report_name in ("auto-improve-readiness.json", "session-synopsis.json"):
+            (reports / report_name).write_text(
+                json.dumps({"generated_at": "2026-05-17T11:20:00Z"}, sort_keys=True),
+                encoding="utf-8",
+            )
+
+        report = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-ramp",
+                profile="6h_ramp",
+                started_at="2026-05-17T05:00:00Z",
+                last_heartbeat_at="2026-05-17T11:59:00Z",
+                last_checkpoint_at="2026-05-17T11:30:00Z",
+                last_command_heartbeat_at="2026-05-17T11:58:00Z",
+                status="running",
+                context=fixed_context(),
+            )
+        )
+
+        checkpoint_6h = report["periodic_evidence"]["checkpoints"][0]
+        self.assertEqual(report["periodic_evidence"]["status"], "missing_due_evidence")
+        self.assertEqual(checkpoint_6h["command_run"]["status"], "not_run")
+        self.assertEqual(checkpoint_6h["status"], "missing")
+        self.assertIn("periodic evidence checkpoint missing", report["blockers"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_goal_run_status_can_observe_12h_checkpoint_with_fresh_report_evidence(self) -> None:
+        self._seed_goal_contract()
+        reports = self.vault / "ops" / "reports"
+        reports.mkdir(parents=True, exist_ok=True)
+        for report_name in (
+            "auto-improve-readiness.json",
+            "session-synopsis.json",
+            "test-execution-summary.json",
+            "source-package-clean-extract.json",
+        ):
+            (reports / report_name).write_text(
+                json.dumps({"generated_at": "2026-05-17T17:30:00Z"}, sort_keys=True),
+                encoding="utf-8",
+            )
+        self._seed_checkpoint_command_event(generated_at="2026-05-17T11:30:00Z")
+        self._seed_checkpoint_command_event(
+            checkpoint_id="checkpoint_12h",
+            generated_at="2026-05-17T17:30:00Z",
+        )
+
+        report = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-ramp",
+                profile="6h_ramp",
+                started_at="2026-05-17T05:00:00Z",
+                last_heartbeat_at="2026-05-17T17:59:00Z",
+                last_checkpoint_at="2026-05-17T17:30:00Z",
+                last_command_heartbeat_at="2026-05-17T17:58:00Z",
+                status="running",
+                context=context_at(18, 0),
+            )
+        )
+
+        checkpoint_12h = report["periodic_evidence"]["checkpoints"][1]
+        self.assertEqual(report["periodic_evidence"]["status"], "current")
+        self.assertEqual(report["periodic_evidence"]["observed_checkpoint_count"], 2)
+        self.assertEqual(checkpoint_12h["status"], "observed")
+        self.assertEqual(checkpoint_12h["command_run"]["status"], "pass")
+        self.assertEqual(
+            [item["path"] for item in checkpoint_12h["evidence_paths"]],
+            [
+                "ops/reports/test-execution-summary.json",
+                "ops/reports/source-package-clean-extract.json",
+            ],
+        )
+        self.assertNotIn("periodic evidence checkpoint missing", report["blockers"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_goal_run_status_writes_report_and_run_artifacts(self) -> None:
+        self._seed_goal_contract()
+        report = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                context=fixed_context(),
+            )
+        )
+
+        report_path = write_report(self.vault, report)
+        written_paths = write_run_artifacts(self.vault, report)
+
+        self.assertEqual(report_path, self.vault / DEFAULT_STATUS_PATH)
+        self.assertTrue((self.vault / "runs" / "goal-20260517-trial" / "status.md").is_file())
+        self.assertEqual(len(written_paths), 3)
+        resume_metadata = json.loads(
+            (self.vault / "runs" / "goal-20260517-trial" / "resume-metadata.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(
+            resume_metadata["$schema"],
+            "ops/schemas/goal-run-resume-metadata.schema.json",
+        )
+        self.assertEqual(resume_metadata["artifact_kind"], "goal_run_resume_metadata")
+        self.assertEqual(resume_metadata["contract_sha256"], report["goal"]["contract_sha256"])
+        self.assertEqual(validate_with_schema(resume_metadata, load_schema(RESUME_SCHEMA_PATH)), [])
+        audit_lines = (
+            self.vault / "runs" / "goal-20260517-trial" / "audit-log.jsonl"
+        ).read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(audit_lines), 1)
+        audit_event = json.loads(audit_lines[0])
+        self.assertEqual(audit_event["event"], "goal_run_status_written")
+        self.assertEqual(audit_event["writer"], "ops.scripts.goal_run_status")
+
+    def test_goal_run_status_finalization_preserves_prior_run_clock(self) -> None:
+        self._seed_goal_contract()
+        initial = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="running",
+                last_heartbeat_at="2026-05-17T11:30:00Z",
+                last_checkpoint_at="2026-05-17T11:30:00Z",
+                last_command_heartbeat_at="2026-05-17T11:30:00Z",
+                context=context_at(11, 30),
+            )
+        )
+        write_report(self.vault, initial)
+        write_run_artifacts(self.vault, initial)
+
+        final = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="completed",
+                completed_at="2026-05-17T12:00:00Z",
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(final["run"]["started_at"], "2026-05-17T11:30:00Z")
+        self.assertEqual(final["run"]["completed_at"], "2026-05-17T12:00:00Z")
+        self.assertEqual(final["observability"]["last_heartbeat_at"], "2026-05-17T11:30:00Z")
+        self.assertEqual(
+            final["observability"]["last_command_heartbeat_at"],
+            "2026-05-17T11:30:00Z",
+        )
+        self.assertEqual(final["health"]["heartbeat_status"], "stale")
+        self.assertEqual(validate_with_schema(final, load_schema(SCHEMA_PATH)), [])
+
+    def test_goal_run_status_requires_existing_persistent_goal_contract(self) -> None:
+        with self.assertRaises(Exception):
+            build_report(
+                GoalRunStatusRequest(
+                    vault=self.vault,
+                    run_id="20260517-trial",
+                    context=fixed_context(),
+                )
+            )
+
+    def test_goal_runtime_decomposition_helpers_cover_backoff_resume_and_checkpoint(self) -> None:
+        (self.vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
+        (self.vault / "ops" / "reports" / "auto-improve-readiness.json").write_text(
+            json.dumps({"generated_at": "2026-05-17T11:15:00Z"}, sort_keys=True),
+            encoding="utf-8",
+        )
+        (self.vault / "ops" / "reports" / "session-synopsis.json").write_text(
+            json.dumps({"generated_at": "2026-05-17T11:20:00Z"}, sort_keys=True),
+            encoding="utf-8",
+        )
+        (
+            self.vault
+            / "ops"
+            / "reports"
+            / "release-closeout-sealed-rehearsal-check.json"
+        ).write_text(
+            json.dumps(
+                {
+                    "status": "fail",
+                    "generated_at": "2026-05-17T11:25:00Z",
+                    "preflight_status": "binding_pass_authority_blocked",
+                    "distribution_binding_status": "pass",
+                    "authority_preflight_status": "blocked",
+                }
+            ),
+            encoding="utf-8",
+        )
+        self._seed_checkpoint_command_event()
+
+        periodic = build_periodic_evidence(
+            self.vault,
+            generated_at="2026-05-17T12:00:00Z",
+            started_at="2026-05-17T05:00:00Z",
+            last_checkpoint_at="2026-05-17T11:30:00Z",
+            checkpoint_command_log_path="runs/goal-20260517-ramp/checkpoint-command-events.jsonl",
+        )
+
+        self.assertEqual(periodic["status"], "current")
+        self.assertEqual(periodic["observed_checkpoint_count"], 1)
+        self.assertEqual(periodic["missing_due_checkpoint_ids"], [])
+        self.assertEqual(periodic["checkpoints"][0]["command_run"]["status"], "pass")
+        self.assertEqual(
+            {item["freshness_status"] for item in periodic["checkpoints"][0]["evidence_paths"]},
+            {"fresh"},
+        )
+        self.assertEqual(
+            freshness_status(
+                now_iso="2026-05-17T12:00:00Z",
+                observed_iso="2026-05-17T11:52:00Z",
+                interval_seconds=300,
+            ),
+            "current",
+        )
+        self.assertEqual(
+            backoff_status("2026-05-17T12:00:00Z", "2026-05-17T12:03:00Z"),
+            "active",
+        )
+        self.assertEqual(
+            resume_status(resume_from_checkpoint=True, resume_command=""),
+            "missing_resume_command",
+        )
+        profile_ladder = build_profile_ladder(
+            self.vault,
+            contract=sample_goal_contract(),
+            run_profile="30m_trial",
+        )
+        self.assertEqual(profile_ladder["status"], "incomplete")
+        self.assertEqual(profile_ladder["profiles"][0]["profile"], "30m_trial")
+        sealed_evidence = next(
+            item
+            for item in profile_ladder["profiles"][3]["evidence_paths"]
+            if item["path"] == "ops/reports/release-closeout-sealed-rehearsal-check.json"
+        )
+        self.assertEqual(sealed_evidence["status"], "present")
+        self.assertEqual(sealed_evidence["report_status"], "fail")
+        self.assertEqual(
+            sealed_evidence["preflight_status"],
+            "binding_pass_authority_blocked",
+        )
+        self.assertEqual(
+            resume_metadata_from_report(
+                {
+                    "run": {"run_id": "trial"},
+                    "goal": {"contract_sha256": "a" * 64},
+                    "observability": {
+                        "resume_from_checkpoint": True,
+                        "resume_command": "python -m ops.scripts.auto_improve_loop --resume",
+                    },
+                }
+            )["resume_command"],
+            "python -m ops.scripts.auto_improve_loop --resume",
+        )
+
+    def test_goal_run_status_allows_sustained_claim_only_after_full_ladder_and_clean_guard(self) -> None:
+        contract = sample_goal_contract()
+        contract["runtime_profile"].update(
+            {
+                "current_profile": "5d_sustained",
+                "verified_profiles": [
+                    "30m_trial",
+                    "6h_ramp",
+                    "2d_candidate",
+                    "5d_sustained",
+                ],
+                "next_profile": "none",
+            }
+        )
+        contract["promotion_guard"].update(
             {
                 "can_promote_result": True,
-                "diagnostics": {
-                    "release_authority_preflight_summary": {
-                        "status": "pass",
-                        "preflight_status": "sealed_clean_pass",
-                        "clean_required_preflight": True,
-                        "expected_blocked_preflight": False,
-                    }
-                },
+                "promotion_blockers": [],
+                "sealed_authority_clean": True,
+                "profile_verified": "5d_sustained",
+                "sustained_runtime_claimed": True,
             }
-        ),
-        encoding="utf-8",
-    )
+        )
+        set_goal(contract, vault=self.vault)
 
-    assert goal_run_status_main(["heartbeat", "--vault", str(vault), "--reason", "sync"]) == 0
+        report = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260522-sustained",
+                profile="5d_sustained",
+                status="completed",
+                last_heartbeat_at="2026-05-17T11:59:00Z",
+                last_checkpoint_at="2026-05-17T11:59:00Z",
+                last_command_heartbeat_at="2026-05-17T11:59:00Z",
+                context=fixed_context(),
+            )
+        )
 
-    status = json.loads((vault / "ops" / "reports" / "goal-run-status.json").read_text())
-    assert status["promotion_policy"]["can_promote_result"] is True
-    assert status["promotion_policy"]["promotion_ban_active"] is False
-    assert "Promotion gate is open" in status["promotion_policy"]["promotion_ban_reason"]
+        self.assertEqual(report["profile_ladder"]["status"], "complete")
+        self.assertEqual(report["profile_ladder"]["highest_verified_profile"], "5d_sustained")
+        self.assertEqual(report["profile_ladder"]["next_profile_required"], "none")
+        self.assertEqual(report["profile_ladder"]["sustained_claim_allowed"], True)
+        self.assertEqual(report["blockers"], [])
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+
+if __name__ == "__main__":
+    unittest.main()

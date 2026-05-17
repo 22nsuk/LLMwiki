@@ -1,21 +1,22 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-15T19:08:19Z",
+  "generated_at": "2026-05-17T18:45:24Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
+  "source_tree_fingerprint": "70fe90baadf78ba04dbba966814d451cf33e2723daa41fcd06c3b454bbf40742",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
-    "schema": "0b78062aa1e1d5397e3e6a796019bf61428ea78599033f9a278327a93e887134",
+    "schema": "8c91343f30427af06d94db468c972889a09ff0185c7db529c93733a70f373b82",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "3250b1bd42b6f1307d7b6116b5365f34d13933c71ff24eb9b607b1c68272a525",
-    "auto_improve_readiness": "ed82f5a96a0c6c096c8aca7c36ce2084f357a65841417c62abddc853013a0ca6",
-    "learning_claim_activation": "ca21e31bdd08898854a72242f2d2116f5b86cc1b24ad4284d53c1eca8d59a479",
-    "learning_delta_scoreboard": "f2f6d879019ebe3191111ea3cf5b6e2b6c2d2860b6045556c4b563fab91d58a1",
-    "source_package_clean_extract": "2abf2285095f037cae52f590f18507f8549bb1f135bfdb1182fb49f17a2de7a5",
-    "task_observations": "de50b3e9d034fac6257d8f0dd900c1fbf54d71a429a79d82833ccc12f5e75d09"
+    "source_paths": "ecc4dbcaef48646f6c4fbb0b3c222945cb7ae1a7949c28ebd65c82b1fc6190f2",
+    "auto_improve_readiness": "0baca18a3d49a5754f0cf90b80363d85487df561c067646399f8b320516328c8",
+    "goal_run_status": "04658f7e1f6891246c88680ac43272537a8afd745c8096a2339a98f6345b0d29",
+    "learning_claim_activation": "faac474a3479e31c4ae338008a52c9df4874cc0d31ced20b41e2805ac077b2e4",
+    "learning_delta_scoreboard": "265eec1c3d29da383823966c239003e4fc8ec9d939a3facc6a0387ccea9078c9",
+    "source_package_clean_extract": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
+    "task_observations": "71013a0efaa510f93ecdb4cb6a3cbc18ff61d60d8fc093c6521a4aea80829677"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T19:08:19Z"
+    "checked_at": "2026-05-17T18:45:24Z"
   },
   "vault": ".",
   "policy": {
@@ -32,46 +33,88 @@
   },
   "status": "attention",
   "summary": {
-    "recent_blocker_count": 0,
+    "recent_blocker_count": 5,
     "last_success_pattern_count": 5,
     "forbidden_repeat_pattern_count": 5,
     "recommended_seed_run_count": 3,
-    "evidence_gap_count": 1,
+    "evidence_gap_count": 3,
     "source_package_replay_status": "pass",
-    "next_action": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded live auto-improve with `.venv/bin/python -m ops.scripts.mechanism.auto_improve_loop --vault . --policy ops/policies/wiki-maintainer-policy.yaml --max-proposals 1 --max-minutes 30 --max-consecutive-failures 1 --executor codex_exec`."
+    "active_goal_id": "auto-improve-goal",
+    "active_goal_run_id": "auto-improve-trial",
+    "active_goal_link_status": "linked",
+    "goal_profile_ladder_status": "incomplete",
+    "goal_next_profile_required": "30m_trial",
+    "sustained_claim_allowed": false,
+    "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
   },
-  "recent_blockers": [],
+  "recent_blockers": [
+    {
+      "id": "goal_status_promotion_blocked_by_goal_worktree_guard_failure",
+      "source": "goal_run_status.blockers",
+      "status": "open",
+      "reason": "promotion_blocked_by_goal_worktree_guard_failure",
+      "repair_target": "Refresh goal run status and close the active blocker before resuming."
+    },
+    {
+      "id": "goal_status_git_worktree_dirty",
+      "source": "goal_run_status.blockers",
+      "status": "open",
+      "reason": "git_worktree_dirty",
+      "repair_target": "Refresh goal run status and close the active blocker before resuming."
+    },
+    {
+      "id": "goal_status_profile_ladder_incomplete",
+      "source": "goal_run_status.blockers",
+      "status": "open",
+      "reason": "profile ladder incomplete",
+      "repair_target": "Collect bounded runtime evidence for next_profile_required=30m_trial."
+    },
+    {
+      "id": "promotion_blocked_by_goal_worktree_guard_failure",
+      "source": "auto_improve_readiness.promotion_blockers",
+      "status": "open",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=125",
+      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
+    },
+    {
+      "id": "learning_claim_unlock_review_not_approved",
+      "source": "learning_claim_activation.blocked_predicates",
+      "status": "stale",
+      "reason": "",
+      "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean."
+    }
+  ],
   "last_success_patterns": [
     {
-      "id": "auto_improve_readiness_orchestrator_decomposition",
+      "id": "goal_periodic_checkpoint_command_scheduler",
       "source": "task_improvement_observations",
-      "summary": "Automated in Day 3. auto_improve_readiness_runtime.py now holds the orchestration/render surface at 631 nonempty lines, with queue, learning, release-authority, and constants modules tracked in READINESS_SOURCE_PATHS. Focused readiness tests passed 30 cases, and touched complexity passed for all five split files with zero attention targets.",
+      "summary": "Automated in the goal-runtime runner: due periodic checkpoints now execute the configured bounded command bundle, append a run-local checkpoint-command event, and are only observed when that pass event and fresh generated_at evidence are both present. Keep profile verification blocked until a real completed 30m trial and the later 6h/2d/5d ladder evidence exist.",
       "evidence": [
-        "ops/scripts/mechanism/auto_improve_readiness_runtime.py, ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py, ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py, ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py, ops/scripts/mechanism/auto_improve_readiness_constants_runtime.py, tests/test_auto_improve_readiness_runtime.py"
+        "ops/scripts/mechanism/goal_runtime_runner.py, ops/scripts/mechanism/goal_runtime_maintenance.py, ops/reports/goal-run-status.json"
       ]
     },
     {
-      "id": "learning_delta_scoreboard_claim_unlock_decomposition",
+      "id": "goal_status_run_artifact_persistence",
       "source": "task_improvement_observations",
-      "summary": "Automated in Day 3. learning_delta_scoreboard.py is now 696 nonempty lines under the touched budget, helper modules are tracked in SCOREBOARD_SOURCE_PATHS, focused scoreboard tests passed 20 cases, and touched complexity passed for all four split files with zero attention targets.",
+      "summary": "Automated on 2026-05-18 by adding --write-run-artifacts to auto-improve-goal-status and auto-improve-goal-finalize. Focused Makefile, goal status, and profile verification tests passed; make auto-improve-goal-status goal-profile-verification now leaves run_artifacts.status=clean while correctly preserving blockers for incomplete elapsed runtime and missing process heartbeat command evidence.",
       "evidence": [
-        "ops/scripts/learning/learning_delta_scoreboard.py, ops/scripts/learning/learning_delta_scoreboard_constants.py, ops/scripts/learning/learning_delta_scoreboard_unlock_runtime.py, ops/scripts/learning/learning_delta_scoreboard_anti_slop_runtime.py, tests/test_learning_delta_scoreboard.py"
+        "mk/mechanism.mk, tests/test_makefile_static_gates.py, ops/reports/goal-run-status.json, ops/reports/goal-profile-verification.json, runs/goal-auto-improve-trial/status.md, runs/goal-auto-improve-trial/resume-metadata.json, runs/goal-auto-improve-trial/audit-log.jsonl"
       ]
     },
     {
-      "id": "canonical_session_synopsis_entrypoint",
+      "id": "goal_profile_runner_origin_command_evidence",
       "source": "task_improvement_observations",
-      "summary": "Automated in Day 4+. make session-synopsis now promotes ops/reports/session-synopsis.json through a candidate path, release phase 2 refreshes it after learning-claim activation, and the current synopsis records promotion_allowed=false, claim_wording_allowed=false, five recent blockers, five forbidden repeat patterns, source-package replay status=pass, and first commands for the next session.",
+      "summary": "Automated on 2026-05-18 by adding writer provenance to goal-run audit events and making goal-profile-verification report runner_audit_current=false for status-only artifacts. Report-only artifacts can remain run_artifacts.status=clean, but profile command observability now blocks until runner-origin command evidence exists.",
       "evidence": [
-        "ops/scripts/learning/session_synopsis.py, ops/schemas/session-synopsis.schema.json, mk/release.mk, tests/test_session_synopsis.py, ops/reports/session-synopsis.json"
+        "ops/scripts/mechanism/goal_runtime_runner.py, ops/scripts/mechanism/goal_run_status.py, ops/scripts/mechanism/goal_profile_verification.py, ops/schemas/goal-profile-verification.schema.json"
       ]
     },
     {
-      "id": "source_package_schema_sample_replay_guard",
+      "id": "template_runtime_event_side_effect_isolation",
       "source": "task_improvement_observations",
-      "summary": "Automated during final closeout by regenerating tests/fixtures/report_schema_samples.json with tools/regenerate_report_schema_samples.py, passing tests/test_report_schema_sample_regeneration.py, and rerunning make release-source-package-check to a pass with ruff, mypy, and test-source-package all clean.",
+      "summary": "Automated on 2026-05-17 by making starter-bundle planning validation skip runtime-event appends for placeholder run ids and adding a regression that default starter-bundle validation emits no JSONL runtime events. Focused planning/template tests passed and git diff -- runs stayed clean after validation.",
       "evidence": [
-        "tests/fixtures/report_schema_samples.json, tools/regenerate_report_schema_samples.py, tests/test_report_schema_sample_regeneration.py, ops/reports/source-package-clean-extract.json"
+        "ops/scripts/mechanism/planning_gate_report_runtime.py, tests/test_planning_gate_validate_runtime.py, tests/test_run_templates.py, runs/run-YYYYMMDD-slug/runtime-events.jsonl, runs/run-YYYYMMDD-mechanism-slug/runtime-events.jsonl"
       ]
     },
     {
@@ -95,6 +138,18 @@
       "repair_target": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane."
     },
     {
+      "id": "discard_behavior_delta_before_after_evidence_missing",
+      "decisions": [
+        "DISCARD"
+      ],
+      "run_ids": [
+        "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+      ],
+      "occurrence_count": 1,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Repair the rejected confirmed-evidence run before using it as learning proof."
+    },
+    {
       "id": "discard_behavior_delta_digest_added",
       "decisions": [
         "DISCARD"
@@ -105,19 +160,6 @@
       "occurrence_count": 1,
       "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
       "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=behavior_delta_digest_added."
-    },
-    {
-      "id": "discard_decision_discard",
-      "decisions": [
-        "DISCARD"
-      ],
-      "run_ids": [
-        "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
-        "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
-      ],
-      "occurrence_count": 2,
-      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
-      "repair_target": "Repair the rejected confirmed-evidence run before using it as learning proof."
     },
     {
       "id": "discard_telemetry_discoverability_improved",
@@ -168,6 +210,20 @@
       "current": "no dedicated context-efficiency telemetry is bound to the learning claim lane",
       "required": "Claim activation should expose context budget or synopsis reuse pressure before promotion authority uses it.",
       "repair_target": "Add context budget telemetry or a session synopsis digest before making this axis gating."
+    },
+    {
+      "id": "learning_claim_unlock_review_not_approved",
+      "source": "learning_claim_activation.blocked_predicates",
+      "current": "",
+      "required": "",
+      "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean."
+    },
+    {
+      "id": "post_seal_learning_claim_linkage",
+      "source": "learning_claim_activation.blocked_predicates",
+      "current": "",
+      "required": "",
+      "repair_target": "Run release-post-seal-attestation after the candidate evidence is sealed and verify the learning claim authority binding."
     }
   ],
   "source_package_replay": {
@@ -177,26 +233,70 @@
     "replay_command": "make release-source-package-check",
     "summary": "Use the profile-aware source package check before treating distribution evidence as replayable."
   },
+  "active_goal": {
+    "link_status": "linked",
+    "report_path": "ops/reports/goal-run-status.json",
+    "contract_id": "auto-improve-goal",
+    "run_id": "auto-improve-trial",
+    "run_status": "blocked",
+    "profile": "30m_trial",
+    "promotion_status": "blocked",
+    "can_promote_result": false,
+    "checkpoint_status": "current",
+    "periodic_evidence_status": "not_due",
+    "audit_log_path": "runs/goal-auto-improve-trial/audit-log.jsonl",
+    "resume_metadata_path": "runs/goal-auto-improve-trial/resume-metadata.json",
+    "next_action": "Resume via the linked goal status artifacts before starting a separate session."
+  },
+  "goal_profile_ladder": {
+    "status": "incomplete",
+    "current_profile": "30m_trial",
+    "run_profile": "30m_trial",
+    "verified_profiles": [],
+    "highest_verified_profile": "unverified",
+    "next_profile_required": "30m_trial",
+    "profile_verified_by_promotion_guard": "unverified",
+    "profile_guard_consistent": true,
+    "sustained_claim_allowed": false,
+    "missing_evidence": [
+      {
+        "profile": "5d_sustained",
+        "path": "ops/reports/release-closeout-sealed-rehearsal-check.json",
+        "status": "missing"
+      }
+    ]
+  },
   "next_session_entrypoint": {
-    "promotion_allowed": true,
-    "claim_wording_allowed": true,
-    "recommended_next_action": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded live auto-improve with `.venv/bin/python -m ops.scripts.mechanism.auto_improve_loop --vault . --policy ops/policies/wiki-maintainer-policy.yaml --max-proposals 1 --max-minutes 30 --max-consecutive-failures 1 --executor codex_exec`.",
+    "promotion_allowed": false,
+    "claim_wording_allowed": false,
+    "recommended_next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness.",
     "first_commands": [
+      "make auto-improve-goal-status",
       "make session-synopsis",
+      "make remediation-backlog",
       "make static",
-      "make test-public"
+      "make test-public",
+      "make auto-improve-goal-preflight",
+      "make auto-improve-goal-run",
+      "make goal-profile-verification"
     ],
     "stop_conditions": [
       "Do not promote while promotion_allowed is false.",
       "Do not claim learning improvement while claim_wording_allowed is false.",
+      "Do not claim 5d sustained runtime while sustained_claim_allowed is false.",
+      "Do not advance beyond next_profile_required without elapsed runtime evidence for that profile.",
       "Do not repeat forbidden patterns until their repair_target is closed."
     ],
-    "open_blocker_count": 0,
+    "target_profile": "30m_trial",
+    "profile_ladder_status": "incomplete",
+    "sustained_claim_allowed": false,
+    "open_blocker_count": 5,
     "forbidden_pattern_count": 5,
-    "evidence_gap_count": 1
+    "evidence_gap_count": 3
   },
   "inputs": {
     "auto_improve_readiness": "ops/reports/auto-improve-readiness.json",
+    "goal_run_status": "ops/reports/goal-run-status.json",
     "learning_delta_scoreboard": "ops/reports/learning-delta-scoreboard.json",
     "learning_claim_activation": "ops/reports/learning_claim_activation_report.json",
     "source_package_clean_extract": "ops/reports/source-package-clean-extract.json",

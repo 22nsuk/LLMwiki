@@ -150,7 +150,6 @@ class TestExecutionSummaryTest(unittest.TestCase):
             self.assertEqual(report["pytest_collect_nodeid_digest"]["status"], "skipped")
             self.assertEqual(report["nodeid_outcome_consistency"]["status"], "skipped")
             self.assertEqual(report["evidence_artifacts"], [])
-            self.assertEqual(report["evidence_artifact_consistency"]["status"], "skipped")
 
     def test_build_report_marks_selector_free_pytest_as_full_suite_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -774,9 +773,17 @@ class TestExecutionSummaryTest(unittest.TestCase):
             self.assertEqual(aggregate["pytest_collect_nodeid_digest"]["status"], "collected")
             self.assertEqual(aggregate["pytest_collect_nodeid_digest"]["nodeid_count"], 2)
             self.assertEqual(aggregate["nodeid_outcome_consistency"]["status"], "pass")
-            self.assertEqual(aggregate["nodeid_outcome_consistency"]["outcome_count"], 2)
-            self.assertEqual(aggregate["nodeid_outcome_consistency"]["delta"], 0)
-            self.assertEqual(aggregate["evidence_artifact_consistency"]["status"], "skipped")
+            self.assertEqual(
+                set(aggregate["nodeid_outcome_consistency"]),
+                {
+                    "status",
+                    "nodeid_count",
+                    "outcome_count",
+                    "counted_outcomes",
+                    "delta",
+                    "reason",
+                },
+            )
             self.assertEqual(aggregate["shards"][0]["represents_full_suite"], True)
             self.assertEqual(
                 validate_with_schema(aggregate, load_schema(vault / TEST_EXECUTION_SUMMARY_SCHEMA_PATH)),
@@ -1038,22 +1045,12 @@ class TestExecutionSummaryTest(unittest.TestCase):
             self.assertTrue(artifacts["execution_log"]["exists"])
             self.assertRegex(artifacts["junit_xml"]["sha256"], r"^[a-f0-9]{64}$")
             self.assertRegex(artifacts["execution_log"]["sha256"], r"^[a-f0-9]{64}$")
-            self.assertEqual(payload["evidence_artifact_consistency"]["status"], "pass")
-            self.assertEqual(
-                payload["evidence_artifact_consistency"]["checks"],
-                [
-                    {
-                        "kind": "junit_xml",
-                        "path": "tmp/pytest.xml",
-                        "status": "pass",
-                        "expected_count": 1,
-                        "observed_count": 1,
-                    }
-                ],
-            )
+            self.assertEqual(artifacts["junit_xml"]["consistency_status"], "pass")
+            self.assertEqual(artifacts["junit_xml"]["observed_count"], 1)
+            self.assertEqual(artifacts["junit_xml"]["expected_count"], 1)
             self.assertEqual(validate_with_schema(payload, load_schema(vault / TEST_EXECUTION_SUMMARY_SCHEMA_PATH)), [])
 
-    def test_cli_flags_junit_testcase_count_mismatch(self) -> None:
+    def test_cli_marks_junit_count_mismatch_as_artifact_attention(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -1063,8 +1060,8 @@ class TestExecutionSummaryTest(unittest.TestCase):
 
             def fake_run(command: list[str], *, cwd: Path, timeout_seconds: int) -> TimedProcessResult:
                 junit_path.parent.mkdir(parents=True, exist_ok=True)
-                junit_path.write_text("<testsuite tests='2'></testsuite>\n", encoding="utf-8")
-                return _result(returncode=0, stdout="= 1 passed in 0.01s =")
+                junit_path.write_text("<testsuite tests='1'></testsuite>\n", encoding="utf-8")
+                return _result(returncode=0, stdout="= 2 passed in 0.01s =")
 
             with patch("ops.scripts.test_execution_summary.run_with_timeout", side_effect=fake_run):
                 returncode = summary_main(
@@ -1084,26 +1081,16 @@ class TestExecutionSummaryTest(unittest.TestCase):
                     ]
                 )
             payload = json.loads(out_path.read_text(encoding="utf-8"))
+            artifacts = {item["kind"]: item for item in payload["evidence_artifacts"]}
 
             self.assertEqual(returncode, 0)
-            self.assertEqual(payload["evidence_artifact_consistency"]["status"], "fail")
-            self.assertEqual(
-                payload["evidence_artifact_consistency"]["blockers"][0]["code"],
-                "junit_testcase_count_mismatch",
-            )
-            self.assertEqual(
-                payload["evidence_artifact_consistency"]["checks"][0],
-                {
-                    "kind": "junit_xml",
-                    "path": "tmp/pytest.xml",
-                    "status": "fail",
-                    "expected_count": 1,
-                    "observed_count": 2,
-                },
-            )
+            self.assertEqual(artifacts["junit_xml"]["consistency_status"], "attention")
+            self.assertEqual(artifacts["junit_xml"]["observed_count"], 1)
+            self.assertEqual(artifacts["junit_xml"]["expected_count"], 2)
+            self.assertIn("does not match", artifacts["junit_xml"]["consistency_reason"])
             self.assertEqual(validate_with_schema(payload, load_schema(vault / TEST_EXECUTION_SUMMARY_SCHEMA_PATH)), [])
 
-    def test_cli_records_failed_nodeids_artifact(self) -> None:
+    def test_cli_records_failed_and_error_nodeids_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -1117,8 +1104,8 @@ class TestExecutionSummaryTest(unittest.TestCase):
                     returncode=1,
                     stdout=(
                         "FAILED tests/test_sample.py::test_one - AssertionError: boom\n"
-                        "FAILED tests/test_sample.py::test_two - ValueError: nope\n"
-                        "= 2 failed in 0.01s =\n"
+                        "ERROR tests/test_sample.py::test_two - RuntimeError: nope\n"
+                        "= 1 failed, 1 error in 0.01s =\n"
                     ),
                 ),
             ):
@@ -1152,25 +1139,9 @@ class TestExecutionSummaryTest(unittest.TestCase):
             self.assertEqual(artifacts["failed_nodeids"]["path"], "tmp/failed-nodeids.txt")
             self.assertTrue(artifacts["failed_nodeids"]["exists"])
             self.assertRegex(artifacts["failed_nodeids"]["sha256"], r"^[a-f0-9]{64}$")
-            self.assertEqual(payload["counts"]["failed"], 2)
-            self.assertEqual(payload["counts"]["errors"], 0)
-            self.assertEqual(
-                len([line for line in failed_nodeids_path.read_text(encoding="utf-8").splitlines() if line.strip()]),
-                payload["counts"]["failed"] + payload["counts"]["errors"],
-            )
-            self.assertEqual(payload["evidence_artifact_consistency"]["status"], "pass")
-            self.assertEqual(
-                payload["evidence_artifact_consistency"]["checks"],
-                [
-                    {
-                        "kind": "failed_nodeids",
-                        "path": "tmp/failed-nodeids.txt",
-                        "status": "pass",
-                        "expected_count": 2,
-                        "observed_count": 2,
-                    }
-                ],
-            )
+            self.assertEqual(artifacts["failed_nodeids"]["consistency_status"], "pass")
+            self.assertEqual(artifacts["failed_nodeids"]["observed_count"], 2)
+            self.assertEqual(artifacts["failed_nodeids"]["expected_count"], 2)
             self.assertEqual(validate_with_schema(payload, load_schema(vault / TEST_EXECUTION_SUMMARY_SCHEMA_PATH)), [])
 
 

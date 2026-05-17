@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/remediation-backlog-status-overrides.schema.json",
+  "title": "Remediation backlog status overrides",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "overrides"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "ops/schemas/remediation-backlog-status-overrides.schema.json"
+    },
+    "overrides": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/override" },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "override": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["item_id", "status", "reason", "evidence_paths"],
+      "properties": {
+        "item_id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "status": { "type": "string", "enum": ["closed", "deferred"] },
+        "reason": { "type": "string", "minLength": 1 },
+        "evidence_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

@@ -64,6 +64,12 @@
     "last_decision": "",
     "last_run_id": "auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime",
     "last_blocking_reason": "scope_blocked",
+    "blocking_reason_counts": {
+      "scope_blocked": 1
+    },
+    "repeated_blocker_stop": false,
+    "repeated_blocker_reason": "",
+    "remediation_backlog_path": "ops/reports/remediation-backlog.json",
     "updated_at": "2026-05-02T03:27:34Z"
   },
   "queue_snapshot": [

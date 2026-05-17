@@ -1,98 +1,119 @@
 OUTCOME_METRICS_OUT ?= ops/reports/outcome-metrics.json
 OUTCOME_PROVENANCE_GATE_POLICY_OUT ?= ops/reports/outcome-provenance-gate-policy.json
 OUTCOME_PROVENANCE_GATE_POLICY_CANDIDATE_OUT ?= tmp/outcome-provenance-gate-policy.candidate.json
-POLICY ?= ops/policies/wiki-maintainer-policy.yaml
 AUTO_IMPROVE_READINESS_OUT ?= ops/reports/auto-improve-readiness.json
 AUTO_IMPROVE_READINESS_CANDIDATE_OUT ?= tmp/auto-improve-readiness.candidate.json
-GOAL_REPO_URL ?=
-GOAL_REPO_VISIBILITY ?= UNKNOWN
-GOAL_BASELINE_COMMIT ?=
-GOAL_BRANCH ?= goal/5day-auto-improve-runtime
-GOAL_WORKTREE_PATH ?= ../LLMwiki-worktrees/goal-5day-auto-improve-runtime
-GOAL_ACTIVE_PROFILE ?= 30-minute-trial
-GOAL_CONTRACT ?= ops/reports/codex-goal-contract.json
-GOAL_STATUS_OUT ?= ops/reports/goal-run-status.json
-GOAL_AUDIT_JSONL ?= ops/reports/goal-audit-log.jsonl
-GOAL_PROMPT_OUT ?= ops/reports/goal-prompt.md
-GOAL_HEARTBEAT_REASON ?= heartbeat
-GOAL_CHECKPOINT_REASON ?= checkpoint
-GOAL_HEARTBEAT_INTERVAL ?= 5
-GOAL_CHECKPOINT_INTERVAL ?= 30
+CODEX_GOAL_CONTRACT_OUT ?= ops/reports/codex-goal-contract.json
+CODEX_GOAL_CONTRACT_ID ?= auto-improve-goal
+CODEX_GOAL_PROMPT_OUT ?= ops/reports/codex-goal-prompt.json
+GOAL_WORKTREE_GUARD_OUT ?= tmp/goal-worktree-guard.json
+GOAL_WORKTREE_MODE ?= git
+GOAL_WORKTREE_ALLOW_DIRTY ?=
+GOAL_WORKTREE_STRICT ?=
+GOAL_RUN_STATUS_OUT ?= ops/reports/goal-run-status.json
+GOAL_RUN_STATUS_CANDIDATE_OUT ?= tmp/goal-run-status.candidate.json
+GOAL_PROFILE_VERIFICATION_OUT ?= ops/reports/goal-profile-verification.json
+GOAL_PROFILE_VERIFICATION_CANDIDATE_OUT ?= tmp/goal-profile-verification.candidate.json
+GOAL_PROFILE_VERIFICATION_PROFILE ?=
+GOAL_PROFILE_VERIFICATION_APPLY ?=
+GOAL_SESSION_RESULT_OUT ?= tmp/auto-improve-goal-session-result.json
+GOAL_RUN_ID ?= auto-improve-trial
+GOAL_RUN_STATUS ?= blocked
+GOAL_RUN_PROFILE ?= 30m_trial
+GOAL_MAX_UNATTENDED_SECONDS ?= 1800
+GOAL_RUNNER_TIMEOUT_SECONDS ?= 1860
+GOAL_MAX_MINUTES ?= 30
+GOAL_MAX_PROPOSALS ?= 1
+GOAL_MAX_CONSECUTIVE_FAILURES ?= 1
+GOAL_HEARTBEAT_INTERVAL_SECONDS ?= 300
+GOAL_CHECKPOINT_INTERVAL_SECONDS ?= 1800
+GOAL_CHECKPOINT_COMMAND_TIMEOUT_SECONDS ?= 900
 GOAL_EXECUTOR ?= codex_exec
-GOAL_LADDER_PROFILES ?= 30-minute-trial 6-hour-ramp 2-day-candidate 5-day-sustained
-GOAL_LADDER_RUN_EXTRA_ARGS ?= --sustain-until-budget --allow-learning-uncertain
+GOAL_ARTIFACT_CLASS ?= system_mechanism
+GOAL_ALLOW_LEARNING_UNCERTAIN ?=
+GOAL_RUN_COMMAND ?= $(PYTHON) -m ops.scripts.auto_improve_loop --vault "$(VAULT)" --session-id "$(GOAL_RUN_ID)" --goal-contract "$(CODEX_GOAL_CONTRACT_OUT)" --max-minutes "$(GOAL_MAX_MINUTES)" --max-proposals "$(GOAL_MAX_PROPOSALS)" --max-consecutive-failures "$(GOAL_MAX_CONSECUTIVE_FAILURES)" --executor "$(GOAL_EXECUTOR)" --class "$(GOAL_ARTIFACT_CLASS)" $(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,)
+GOAL_RESUME_COMMAND ?= $(PYTHON) -m ops.scripts.auto_improve_loop --vault "$(VAULT)" --resume-session "$(GOAL_RUN_ID)" --goal-contract "$(CODEX_GOAL_CONTRACT_OUT)" --max-minutes "$(GOAL_MAX_MINUTES)" --max-proposals "$(GOAL_MAX_PROPOSALS)" --max-consecutive-failures "$(GOAL_MAX_CONSECUTIVE_FAILURES)" --executor "$(GOAL_EXECUTOR)" --class "$(GOAL_ARTIFACT_CLASS)" $(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,)
+GOAL_FINAL_STATUS ?= stopped
+GOAL_COMPLETED_AT ?=
+GOAL_LADDER_PROFILES ?= 30m_trial 6h_ramp 2d_candidate 5d_sustained
 GOAL_RUN_LOG_DIR ?= build/goal-runs
 GOAL_LADDER_RUN_ID ?= goal-ladder-$(shell date -u +%Y%m%dT%H%M%SZ)
 GOAL_LADDER_LOG ?= $(GOAL_RUN_LOG_DIR)/$(GOAL_LADDER_RUN_ID).log
 GOAL_LADDER_PID ?= $(GOAL_RUN_LOG_DIR)/$(GOAL_LADDER_RUN_ID).pid
-GOAL_SESSION_ID ?=
-GOAL_RESUME_SESSION ?=
-GOAL_RESUME_FROM_CHECKPOINT ?=
-GOAL_RUN_EXTRA_ARGS ?=
-REMEDIATION_BACKLOG_OUT ?= ops/reports/remediation-backlog.json
-SELF_IMPROVEMENT_NEGATIVE_LESSONS_OUT ?= ops/reports/self-improvement-negative-lessons.json
 MECHANISM_RUN_ARGS ?=
-GOAL_SESSION_ARG = $(if $(GOAL_SESSION_ID),--session-id "$(GOAL_SESSION_ID)",)
-GOAL_RESUME_SESSION_ARG = $(if $(GOAL_RESUME_SESSION),--resume-session "$(GOAL_RESUME_SESSION)",)
-GOAL_RESUME_CHECKPOINT_ARG = $(if $(GOAL_RESUME_FROM_CHECKPOINT),--resume-from-checkpoint "$(GOAL_RESUME_FROM_CHECKPOINT)",)
 
-.PHONY: auto-improve-goal-finalize auto-improve-goal-ladder-run auto-improve-goal-ladder-start auto-improve-goal-preflight auto-improve-goal-resume auto-improve-goal-run auto-improve-goal-status auto-improve-readiness auto-improve-readiness-report auto-improve-readiness-report-body codex-goal-contract goal-prompt goal-run-status-checkpoint goal-run-status-heartbeat goal-run-status-init goal-worktree-guard mechanism-review mutation-proposal remediation-backlog run-mechanism-experiment-linux-tmp outcome-metrics routing-provenance-aggregate outcome-provenance-gate-policy self-improvement-negative-lessons
+.PHONY: auto-improve-readiness auto-improve-readiness-report auto-improve-readiness-report-body auto-improve-readiness-worktree-guard codex-goal-contract codex-goal-prompt codex-goal-client goal-prompt auto-improve-goal-contract auto-improve-goal-preflight auto-improve-goal-run auto-improve-goal-status auto-improve-goal-resume auto-improve-goal-finalize auto-improve-goal-run-artifacts auto-improve-goal-ladder-run auto-improve-goal-ladder-start goal-profile-verification goal-worktree-guard mechanism-review mutation-proposal run-mechanism-experiment-linux-tmp outcome-metrics routing-provenance-aggregate outcome-provenance-gate-policy
 
-auto-improve-readiness: refresh-generated-core
+auto-improve-readiness: refresh-generated-core auto-improve-readiness-worktree-guard
 	@status=0; $(PYTHON) -m ops.scripts.auto_improve_readiness --vault "$(VAULT)" --out "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" --out "$(AUTO_IMPROVE_READINESS_OUT)" --schema ops/schemas/auto-improve-readiness-report.schema.json --expected-artifact-kind auto_improve_readiness_report --expected-producer ops.scripts.auto_improve_readiness_runtime; exit $$status
 
 auto-improve-readiness-report: refresh-generated-core auto-improve-readiness-report-body
 
-auto-improve-readiness-report-body:
+auto-improve-readiness-report-body: auto-improve-readiness-worktree-guard
 	@status=0; $(PYTHON) -m ops.scripts.auto_improve_readiness --vault "$(VAULT)" --out "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" --out "$(AUTO_IMPROVE_READINESS_OUT)" --schema ops/schemas/auto-improve-readiness-report.schema.json --expected-artifact-kind auto_improve_readiness_report --expected-producer ops.scripts.auto_improve_readiness_runtime; exit 0
 
-goal-worktree-guard:
-	$(PYTHON) -m ops.scripts.goal_worktree_guard --vault "$(VAULT)" --expected-branch "$(GOAL_BRANCH)"
+auto-improve-readiness-worktree-guard:
+	-$(PYTHON) -m ops.scripts.goal_worktree_guard --vault "$(VAULT)" --requested-mode "$(GOAL_WORKTREE_MODE)" --out "$(GOAL_WORKTREE_GUARD_OUT)" $(if $(GOAL_WORKTREE_ALLOW_DIRTY),--allow-dirty,)
 
-auto-improve-goal-preflight: goal-worktree-guard
+auto-improve-goal-contract:
+	$(PYTHON) -m ops.scripts.codex_goal_client --vault "$(VAULT)" --out "$(CODEX_GOAL_CONTRACT_OUT)" --contract-id "$(CODEX_GOAL_CONTRACT_ID)" --current-profile "$(GOAL_RUN_PROFILE)" --max-unattended-seconds "$(GOAL_MAX_UNATTENDED_SECONDS)" --max-proposals "$(GOAL_MAX_PROPOSALS)" --max-consecutive-failures "$(GOAL_MAX_CONSECUTIVE_FAILURES)" --heartbeat-interval-seconds "$(GOAL_HEARTBEAT_INTERVAL_SECONDS)" --checkpoint-interval-seconds "$(GOAL_CHECKPOINT_INTERVAL_SECONDS)" --worktree-guard-report "$(GOAL_WORKTREE_GUARD_OUT)"
 
-goal-run-status-init: goal-worktree-guard
-	$(PYTHON) -m ops.scripts.goal_run_status init --vault "$(VAULT)" --repo-url "$(GOAL_REPO_URL)" --visibility "$(GOAL_REPO_VISIBILITY)" --baseline-commit "$(GOAL_BASELINE_COMMIT)" --branch "$(GOAL_BRANCH)" --worktree-path "$(GOAL_WORKTREE_PATH)" --active-profile "$(GOAL_ACTIVE_PROFILE)"
+codex-goal-contract: auto-improve-goal-contract
 
-codex-goal-contract: goal-run-status-init
+codex-goal-prompt: auto-improve-goal-contract
+	$(PYTHON) -m ops.scripts.codex_goal_prompt --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_CONTRACT_OUT)" --out "$(CODEX_GOAL_PROMPT_OUT)"
 
-auto-improve-goal-status: goal-run-status-init
+codex-goal-client:
+	$(PYTHON) -m pytest tests/test_codex_goal_contract.py tests/test_codex_goal_client.py tests/test_codex_goal_prompt.py $(PYTEST_SERIAL_FLAGS)
 
-goal-run-status-heartbeat:
-	$(PYTHON) -m ops.scripts.goal_run_status heartbeat --vault "$(VAULT)" --reason "$(GOAL_HEARTBEAT_REASON)"
+auto-improve-goal-preflight:
+	$(PYTHON) -m ops.scripts.goal_worktree_guard --vault "$(VAULT)" --requested-mode "$(GOAL_WORKTREE_MODE)" --out "$(GOAL_WORKTREE_GUARD_OUT)" $(if $(GOAL_WORKTREE_ALLOW_DIRTY),--allow-dirty,) $(if $(GOAL_WORKTREE_STRICT),--strict,)
 
-goal-run-status-checkpoint:
-	$(PYTHON) -m ops.scripts.goal_run_status checkpoint --vault "$(VAULT)" --reason "$(GOAL_CHECKPOINT_REASON)"
+goal-worktree-guard: auto-improve-goal-preflight
 
-auto-improve-goal-run: auto-improve-goal-preflight
-	$(PYTHON) -m ops.scripts.auto_improve_loop --vault "$(VAULT)" --policy "$(POLICY)" --goal-contract "$(GOAL_CONTRACT)" --goal-profile "$(GOAL_ACTIVE_PROFILE)" --status-out "$(GOAL_STATUS_OUT)" --audit-jsonl "$(GOAL_AUDIT_JSONL)" --heartbeat-interval "$(GOAL_HEARTBEAT_INTERVAL)" --checkpoint-interval "$(GOAL_CHECKPOINT_INTERVAL)" --executor "$(GOAL_EXECUTOR)" $(GOAL_SESSION_ARG) $(GOAL_RUN_EXTRA_ARGS)
+auto-improve-goal-run: auto-improve-goal-preflight auto-improve-goal-contract
+	$(PYTHON) -m ops.scripts.goal_runtime_runner --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_CONTRACT_OUT)" --run-id "$(GOAL_RUN_ID)" --profile "$(GOAL_RUN_PROFILE)" --status-report-path "$(GOAL_RUN_STATUS_OUT)" --result-out "$(GOAL_SESSION_RESULT_OUT)" --heartbeat-interval-seconds "$(GOAL_HEARTBEAT_INTERVAL_SECONDS)" --checkpoint-interval-seconds "$(GOAL_CHECKPOINT_INTERVAL_SECONDS)" --checkpoint-command-timeout-seconds "$(GOAL_CHECKPOINT_COMMAND_TIMEOUT_SECONDS)" --timeout-seconds "$(GOAL_RUNNER_TIMEOUT_SECONDS)" -- $(GOAL_RUN_COMMAND)
 
-auto-improve-goal-resume: auto-improve-goal-preflight
-	$(PYTHON) -m ops.scripts.auto_improve_loop --vault "$(VAULT)" --policy "$(POLICY)" --goal-contract "$(GOAL_CONTRACT)" --goal-profile "$(GOAL_ACTIVE_PROFILE)" --status-out "$(GOAL_STATUS_OUT)" --audit-jsonl "$(GOAL_AUDIT_JSONL)" --heartbeat-interval "$(GOAL_HEARTBEAT_INTERVAL)" --checkpoint-interval "$(GOAL_CHECKPOINT_INTERVAL)" --executor "$(GOAL_EXECUTOR)" $(GOAL_RESUME_CHECKPOINT_ARG) $(GOAL_RESUME_SESSION_ARG) $(GOAL_RUN_EXTRA_ARGS)
+auto-improve-goal-status: auto-improve-goal-contract
+	@status=0; $(PYTHON) -m ops.scripts.goal_run_status --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_CONTRACT_OUT)" --run-id "$(GOAL_RUN_ID)" --status "$(GOAL_RUN_STATUS)" --profile "$(GOAL_RUN_PROFILE)" --heartbeat-interval-seconds "$(GOAL_HEARTBEAT_INTERVAL_SECONDS)" --checkpoint-interval-seconds "$(GOAL_CHECKPOINT_INTERVAL_SECONDS)" --status-report-path "$(GOAL_RUN_STATUS_OUT)" --out "$(GOAL_RUN_STATUS_CANDIDATE_OUT)" --write-run-artifacts || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_RUN_STATUS_CANDIDATE_OUT)" --out "$(GOAL_RUN_STATUS_OUT)" --schema ops/schemas/goal-run-status.schema.json --expected-artifact-kind goal_run_status --expected-producer ops.scripts.goal_run_status; exit $$status
+
+auto-improve-goal-resume: auto-improve-goal-preflight auto-improve-goal-contract
+	$(PYTHON) -m ops.scripts.goal_runtime_runner --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_CONTRACT_OUT)" --run-id "$(GOAL_RUN_ID)" --profile "$(GOAL_RUN_PROFILE)" --status-report-path "$(GOAL_RUN_STATUS_OUT)" --result-out "$(GOAL_SESSION_RESULT_OUT)" --heartbeat-interval-seconds "$(GOAL_HEARTBEAT_INTERVAL_SECONDS)" --checkpoint-interval-seconds "$(GOAL_CHECKPOINT_INTERVAL_SECONDS)" --checkpoint-command-timeout-seconds "$(GOAL_CHECKPOINT_COMMAND_TIMEOUT_SECONDS)" --timeout-seconds "$(GOAL_RUNNER_TIMEOUT_SECONDS)" --resume-from-checkpoint -- $(GOAL_RESUME_COMMAND)
+
+auto-improve-goal-finalize: auto-improve-goal-contract
+	@status=0; $(PYTHON) -m ops.scripts.goal_run_status --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_CONTRACT_OUT)" --run-id "$(GOAL_RUN_ID)" --status "$(GOAL_FINAL_STATUS)" --profile "$(GOAL_RUN_PROFILE)" --completed-at "$(GOAL_COMPLETED_AT)" --heartbeat-interval-seconds "$(GOAL_HEARTBEAT_INTERVAL_SECONDS)" --checkpoint-interval-seconds "$(GOAL_CHECKPOINT_INTERVAL_SECONDS)" --status-report-path "$(GOAL_RUN_STATUS_OUT)" --out "$(GOAL_RUN_STATUS_CANDIDATE_OUT)" --write-run-artifacts || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_RUN_STATUS_CANDIDATE_OUT)" --out "$(GOAL_RUN_STATUS_OUT)" --schema ops/schemas/goal-run-status.schema.json --expected-artifact-kind goal_run_status --expected-producer ops.scripts.goal_run_status; exit $$status
+
+auto-improve-goal-run-artifacts: auto-improve-goal-status
+	$(PYTHON) -m ops.scripts.goal_run_status --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_CONTRACT_OUT)" --run-id "$(GOAL_RUN_ID)" --status "$(GOAL_RUN_STATUS)" --profile "$(GOAL_RUN_PROFILE)" --heartbeat-interval-seconds "$(GOAL_HEARTBEAT_INTERVAL_SECONDS)" --checkpoint-interval-seconds "$(GOAL_CHECKPOINT_INTERVAL_SECONDS)" --status-report-path "$(GOAL_RUN_STATUS_OUT)" --out "$(GOAL_RUN_STATUS_OUT)" --write-run-artifacts
+
+goal-profile-verification: auto-improve-goal-contract
+	@status=0; $(PYTHON) -m ops.scripts.goal_profile_verification --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_CONTRACT_OUT)" --status-report "$(GOAL_RUN_STATUS_OUT)" --out "$(GOAL_PROFILE_VERIFICATION_CANDIDATE_OUT)" $(if $(GOAL_PROFILE_VERIFICATION_PROFILE),--profile "$(GOAL_PROFILE_VERIFICATION_PROFILE)",) $(if $(GOAL_PROFILE_VERIFICATION_APPLY),--apply,) || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_PROFILE_VERIFICATION_CANDIDATE_OUT)" --out "$(GOAL_PROFILE_VERIFICATION_OUT)" --schema ops/schemas/goal-profile-verification.schema.json --expected-artifact-kind goal_profile_verification --expected-producer ops.scripts.goal_profile_verification || status=$$?; exit $$status
 
 auto-improve-goal-ladder-run: auto-improve-goal-preflight
 	@set -e; for profile in $(GOAL_LADDER_PROFILES); do \
+		case "$$profile" in \
+			30m_trial) profile_seconds=1800; profile_minutes=30; runner_timeout=1860 ;; \
+			6h_ramp) profile_seconds=21600; profile_minutes=360; runner_timeout=21660 ;; \
+			2d_candidate) profile_seconds=172800; profile_minutes=2880; runner_timeout=172860 ;; \
+			5d_sustained) profile_seconds=432000; profile_minutes=7200; runner_timeout=432060 ;; \
+			*) echo "unsupported goal profile: $$profile" >&2; exit 2 ;; \
+		esac; \
 		echo "Starting goal auto-improve profile: $$profile"; \
-		$(PYTHON) -m ops.scripts.auto_improve_loop --vault "$(VAULT)" --policy "$(POLICY)" --goal-contract "$(GOAL_CONTRACT)" --goal-profile "$$profile" --status-out "$(GOAL_STATUS_OUT)" --audit-jsonl "$(GOAL_AUDIT_JSONL)" --heartbeat-interval "$(GOAL_HEARTBEAT_INTERVAL)" --checkpoint-interval "$(GOAL_CHECKPOINT_INTERVAL)" --executor "$(GOAL_EXECUTOR)" $(GOAL_RUN_EXTRA_ARGS); \
+		$(MAKE) auto-improve-goal-run \
+			GOAL_RUN_PROFILE="$$profile" \
+			GOAL_RUN_ID="$(GOAL_RUN_ID)-$$profile" \
+			GOAL_MAX_UNATTENDED_SECONDS="$$profile_seconds" \
+			GOAL_MAX_MINUTES="$$profile_minutes" \
+			GOAL_RUNNER_TIMEOUT_SECONDS="$$runner_timeout"; \
+		$(MAKE) goal-profile-verification GOAL_PROFILE_VERIFICATION_PROFILE="$$profile"; \
 	done
 
 auto-improve-goal-ladder-start: auto-improve-goal-preflight
 	@mkdir -p "$(GOAL_RUN_LOG_DIR)"
-	@setsid $(MAKE) auto-improve-goal-ladder-run PYTHON=$(PYTHON) VAULT="$(VAULT)" POLICY="$(POLICY)" GOAL_CONTRACT="$(GOAL_CONTRACT)" GOAL_STATUS_OUT="$(GOAL_STATUS_OUT)" GOAL_AUDIT_JSONL="$(GOAL_AUDIT_JSONL)" GOAL_HEARTBEAT_INTERVAL="$(GOAL_HEARTBEAT_INTERVAL)" GOAL_CHECKPOINT_INTERVAL="$(GOAL_CHECKPOINT_INTERVAL)" GOAL_EXECUTOR="$(GOAL_EXECUTOR)" GOAL_LADDER_PROFILES="$(GOAL_LADDER_PROFILES)" GOAL_RUN_EXTRA_ARGS="$(GOAL_RUN_EXTRA_ARGS) $(GOAL_LADDER_RUN_EXTRA_ARGS)" > "$(GOAL_LADDER_LOG)" 2>&1 < /dev/null & echo $$! > "$(GOAL_LADDER_PID)"
+	@setsid $(MAKE) auto-improve-goal-ladder-run PYTHON=$(PYTHON) VAULT="$(VAULT)" GOAL_LADDER_PROFILES="$(GOAL_LADDER_PROFILES)" GOAL_RUN_ID="$(GOAL_LADDER_RUN_ID)" > "$(GOAL_LADDER_LOG)" 2>&1 < /dev/null & echo $$! > "$(GOAL_LADDER_PID)"
 	@printf 'started goal ladder pid=%s log=%s\n' "$$(cat "$(GOAL_LADDER_PID)")" "$(GOAL_LADDER_LOG)"
 
-auto-improve-goal-finalize:
-	$(PYTHON) -m ops.scripts.goal_run_status checkpoint --vault "$(VAULT)" --reason "profile closeout checkpoint; goal remains active until sustained profile completion is verified"
-	$(MAKE) auto-improve-readiness-report-body session-synopsis artifact-freshness-check
-
-goal-prompt:
-	$(PYTHON) -m ops.scripts.goal_prompt --contract ops/reports/codex-goal-contract.json --out "$(GOAL_PROMPT_OUT)"
-
-remediation-backlog:
-	$(PYTHON) -m ops.scripts.remediation_backlog --vault "$(VAULT)" --out "$(REMEDIATION_BACKLOG_OUT)"
-
-self-improvement-negative-lessons:
-	$(PYTHON) -m ops.scripts.self_improvement_negative_lessons --vault "$(VAULT)" --out "$(SELF_IMPROVEMENT_NEGATIVE_LESSONS_OUT)"
+goal-prompt: codex-goal-prompt
 
 mechanism-review:
 	$(PYTHON) -m ops.scripts.mechanism_review --vault "$(VAULT)"

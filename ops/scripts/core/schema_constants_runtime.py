@@ -33,6 +33,9 @@ RELEASE_CLOSEOUT_SUMMARY_SCHEMA_PATH = "ops/schemas/release-closeout-summary.sch
 RELEASE_CLOSEOUT_FINALITY_ATTESTATION_SCHEMA_PATH = (
     "ops/schemas/release-closeout-finality-attestation.schema.json"
 )
+RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_SCHEMA_PATH = (
+    "ops/schemas/release-closeout-sealed-rehearsal-check.schema.json"
+)
 SOURCE_PACKAGE_CLEAN_EXTRACT_SCHEMA_PATH = "ops/schemas/source-package-clean-extract.schema.json"
 RELEASE_EVIDENCE_COHORT_SCHEMA_PATH = "ops/schemas/release-evidence-cohort.schema.json"
 RELEASE_EVIDENCE_DASHBOARD_SCHEMA_PATH = "ops/schemas/release-evidence-dashboard.schema.json"
@@ -51,6 +54,13 @@ LEARNING_CONFIRMED_EVIDENCE_COHORT_SCHEMA_PATH = (
     "ops/schemas/learning-confirmed-evidence-cohort.schema.json"
 )
 LEARNING_DELTA_SCOREBOARD_SCHEMA_PATH = "ops/schemas/learning-delta-scoreboard.schema.json"
+SELF_IMPROVEMENT_NEGATIVE_LESSONS_SCHEMA_PATH = (
+    "ops/schemas/self-improvement-negative-lessons.schema.json"
+)
+REMEDIATION_BACKLOG_SCHEMA_PATH = "ops/schemas/remediation-backlog.schema.json"
+REMEDIATION_BACKLOG_STATUS_OVERRIDES_SCHEMA_PATH = (
+    "ops/schemas/remediation-backlog-status-overrides.schema.json"
+)
 RAW_REGISTRY_PREFLIGHT_REPORT_SCHEMA_PATH = "ops/schemas/raw-registry-preflight-report.schema.json"
 RAW_REGISTRY_EXPORT_SCHEMA_PATH = "ops/schemas/raw-registry-export.schema.json"
 RAW_REGISTRY_PREFLIGHT_REPRODUCIBILITY_SCHEMA_PATH = (
@@ -63,6 +73,11 @@ RAW_REGISTRY_CROSS_ENVIRONMENT_EVIDENCE_BUNDLE_SCHEMA_PATH = (
     "ops/schemas/raw-registry-cross-environment-evidence-bundle.schema.json"
 )
 TEST_EXECUTION_SUMMARY_SCHEMA_PATH = "ops/schemas/test-execution-summary.schema.json"
+CODEX_GOAL_CONTRACT_SCHEMA_PATH = "ops/schemas/codex-goal-contract.schema.json"
+CODEX_GOAL_PROMPT_SCHEMA_PATH = "ops/schemas/codex-goal-prompt.schema.json"
+GOAL_PROFILE_VERIFICATION_SCHEMA_PATH = "ops/schemas/goal-profile-verification.schema.json"
+GOAL_RUN_STATUS_SCHEMA_PATH = "ops/schemas/goal-run-status.schema.json"
+GOAL_WORKTREE_GUARD_SCHEMA_PATH = "ops/schemas/goal-worktree-guard.schema.json"
 TEST_DESELECTION_POLICY_SCHEMA_PATH = "ops/schemas/test-deselection-policy.schema.json"
 RAW_MARKDOWN_NORMALIZATION_REPORT_SCHEMA_PATH = "ops/schemas/raw-markdown-normalization-report.schema.json"
 RAW_INTAKE_ABSORPTION_MATRIX_SCHEMA_PATH = "ops/schemas/raw-intake-absorption-matrix.schema.json"

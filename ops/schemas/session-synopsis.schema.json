@@ -27,6 +27,8 @@
     "recommended_seed_runs",
     "evidence_gaps",
     "source_package_replay",
+    "active_goal",
+    "goal_profile_ladder",
     "next_session_entrypoint",
     "inputs"
   ],
@@ -84,6 +86,12 @@
         "recommended_seed_run_count",
         "evidence_gap_count",
         "source_package_replay_status",
+        "active_goal_id",
+        "active_goal_run_id",
+        "active_goal_link_status",
+        "goal_profile_ladder_status",
+        "goal_next_profile_required",
+        "sustained_claim_allowed",
         "next_action"
       ],
       "properties": {
@@ -93,6 +101,18 @@
         "recommended_seed_run_count": { "type": "integer", "minimum": 0 },
         "evidence_gap_count": { "type": "integer", "minimum": 0 },
         "source_package_replay_status": { "type": "string" },
+        "active_goal_id": { "type": "string" },
+        "active_goal_run_id": { "type": "string" },
+        "active_goal_link_status": {
+          "type": "string",
+          "enum": ["linked", "missing"]
+        },
+        "goal_profile_ladder_status": {
+          "type": "string",
+          "enum": ["missing", "incomplete", "complete", "inconsistent"]
+        },
+        "goal_next_profile_required": { "type": "string" },
+        "sustained_claim_allowed": { "type": "boolean" },
         "next_action": { "type": "string" }
       }
     },
@@ -117,6 +137,8 @@
       "items": { "$ref": "#/$defs/evidence_gap" }
     },
     "source_package_replay": { "$ref": "#/$defs/source_package_replay" },
+    "active_goal": { "$ref": "#/$defs/active_goal" },
+    "goal_profile_ladder": { "$ref": "#/$defs/goal_profile_ladder" },
     "next_session_entrypoint": { "$ref": "#/$defs/next_session_entrypoint" },
     "inputs": {
       "type": "object",
@@ -234,6 +256,90 @@
         "summary": { "type": "string" }
       }
     },
+    "goal_profile_ladder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "current_profile",
+        "run_profile",
+        "verified_profiles",
+        "highest_verified_profile",
+        "next_profile_required",
+        "profile_verified_by_promotion_guard",
+        "profile_guard_consistent",
+        "sustained_claim_allowed",
+        "missing_evidence"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["missing", "incomplete", "complete", "inconsistent"]
+        },
+        "current_profile": { "type": "string" },
+        "run_profile": { "type": "string" },
+        "verified_profiles": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "highest_verified_profile": { "type": "string" },
+        "next_profile_required": { "type": "string" },
+        "profile_verified_by_promotion_guard": { "type": "string" },
+        "profile_guard_consistent": { "type": "boolean" },
+        "sustained_claim_allowed": { "type": "boolean" },
+        "missing_evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/profile_missing_evidence" }
+        }
+      }
+    },
+    "profile_missing_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "path", "status"],
+      "properties": {
+        "profile": { "type": "string" },
+        "path": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "minLength": 1 }
+      }
+    },
+    "active_goal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "link_status",
+        "report_path",
+        "contract_id",
+        "run_id",
+        "run_status",
+        "profile",
+        "promotion_status",
+        "can_promote_result",
+        "checkpoint_status",
+        "periodic_evidence_status",
+        "audit_log_path",
+        "resume_metadata_path",
+        "next_action"
+      ],
+      "properties": {
+        "link_status": {
+          "type": "string",
+          "enum": ["linked", "missing"]
+        },
+        "report_path": { "type": "string", "minLength": 1 },
+        "contract_id": { "type": "string" },
+        "run_id": { "type": "string" },
+        "run_status": { "type": "string" },
+        "profile": { "type": "string" },
+        "promotion_status": { "type": "string" },
+        "can_promote_result": { "type": "boolean" },
+        "checkpoint_status": { "type": "string" },
+        "periodic_evidence_status": { "type": "string" },
+        "audit_log_path": { "type": "string" },
+        "resume_metadata_path": { "type": "string" },
+        "next_action": { "type": "string", "minLength": 1 }
+      }
+    },
     "next_session_entrypoint": {
       "type": "object",
       "additionalProperties": false,
@@ -243,6 +349,9 @@
         "recommended_next_action",
         "first_commands",
         "stop_conditions",
+        "target_profile",
+        "profile_ladder_status",
+        "sustained_claim_allowed",
         "open_blocker_count",
         "forbidden_pattern_count",
         "evidence_gap_count"
@@ -259,6 +368,12 @@
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         },
+        "target_profile": { "type": "string" },
+        "profile_ladder_status": {
+          "type": "string",
+          "enum": ["missing", "incomplete", "complete", "inconsistent"]
+        },
+        "sustained_claim_allowed": { "type": "boolean" },
         "open_blocker_count": { "type": "integer", "minimum": 0 },
         "forbidden_pattern_count": { "type": "integer", "minimum": 0 },
         "evidence_gap_count": { "type": "integer", "minimum": 0 }

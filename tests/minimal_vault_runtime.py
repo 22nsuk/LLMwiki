@@ -74,10 +74,6 @@ SCHEMA_PATHS = {
     / "ops"
     / "schemas"
     / "self-improvement-negative-lessons.schema.json",
-    "release-closeout-sealed-rehearsal-check.schema.json": REPO_ROOT
-    / "ops"
-    / "schemas"
-    / "release-closeout-sealed-rehearsal-check.schema.json",
     "run-telemetry.schema.json": REPO_ROOT / "ops" / "schemas" / "run-telemetry.schema.json",
     "run-artifact-fingerprint.schema.json": REPO_ROOT / "ops" / "schemas" / "run-artifact-fingerprint.schema.json",
     "timeout-failure.schema.json": REPO_ROOT / "ops" / "schemas" / "timeout-failure.schema.json",
@@ -130,6 +126,10 @@ SCHEMA_PATHS = {
     / "ops"
     / "schemas"
     / "release-closeout-summary.schema.json",
+    "release-closeout-sealed-rehearsal-check.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "release-closeout-sealed-rehearsal-check.schema.json",
     "release-risk-taxonomy.schema.json": REPO_ROOT
     / "ops"
     / "schemas"
@@ -190,6 +190,10 @@ SCHEMA_PATHS = {
     / "ops"
     / "schemas"
     / "learning-delta-scoreboard.schema.json",
+    "remediation-backlog-status-overrides.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "remediation-backlog-status-overrides.schema.json",
     "learning-claim-activation-report.schema.json": REPO_ROOT
     / "ops"
     / "schemas"
@@ -216,6 +220,12 @@ SCHEMA_PATHS = {
     / "ops"
     / "schemas"
     / "test-execution-summary.schema.json",
+    "codex-goal-prompt.schema.json": REPO_ROOT / "ops" / "schemas" / "codex-goal-prompt.schema.json",
+    "goal-profile-verification.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "goal-profile-verification.schema.json",
+    "goal-worktree-guard.schema.json": REPO_ROOT / "ops" / "schemas" / "goal-worktree-guard.schema.json",
     "test-deselection-policy.schema.json": REPO_ROOT
     / "ops"
     / "schemas"

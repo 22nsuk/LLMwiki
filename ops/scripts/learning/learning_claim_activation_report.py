@@ -493,8 +493,33 @@ def _add_pattern(
             row["evidence_digests"].append({"path": evidence_path, "exists": False, "sha256": "", "status": "pending"})
 
 
+def _is_outcome_only_rejection_reason(reason: str, decision: str) -> bool:
+    normalized = reason.strip().lower()
+    decision_value = decision.strip().lower()
+    return normalized in {
+        f"decision={decision_value}",
+        f"decision = {decision_value}",
+        decision_value,
+    }
+
+
+def _confirmed_rejection_pattern_suffix(
+    *,
+    decision: str,
+    reasons: list[str],
+    telemetry_reason: str | None,
+) -> str | None:
+    for reason in reasons:
+        if not _is_outcome_only_rejection_reason(reason, decision):
+            return reason
+    if telemetry_reason:
+        return None
+    return "confirmed_evidence_rejected_without_specific_reason"
+
+
 def _negative_learning_ledger(vault: Path, inputs: ActivationInputs) -> dict[str, Any]:
     patterns: dict[str, dict[str, Any]] = {}
+    telemetry_reason_by_run_id: dict[str, str] = {}
     for telemetry_path in sorted((vault / "runs").glob("**/run-telemetry.json")):
         telemetry = load_optional_json_object(telemetry_path)
         decision = str(telemetry.get("decision", "")).strip()
@@ -502,6 +527,8 @@ def _negative_learning_ledger(vault: Path, inputs: ActivationInputs) -> dict[str
             continue
         run_id = str(telemetry.get("run_id", telemetry_path.parent.name)).strip()
         reason = str(telemetry.get("same_eval_reason_code", "unspecified")).strip() or "unspecified"
+        if run_id:
+            telemetry_reason_by_run_id[run_id] = reason
         rel_path = report_path(vault, telemetry_path)
         _add_pattern(
             patterns,
@@ -523,7 +550,13 @@ def _negative_learning_ledger(vault: Path, inputs: ActivationInputs) -> dict[str
             continue
         run_id = str(diagnostic.get("run_id", "")).strip()
         reasons = _string_list(diagnostic.get("reasons"))
-        pattern_suffix = reasons[0] if reasons else "confirmed_evidence_rejected"
+        pattern_suffix = _confirmed_rejection_pattern_suffix(
+            decision=decision,
+            reasons=reasons,
+            telemetry_reason=telemetry_reason_by_run_id.get(run_id),
+        )
+        if pattern_suffix is None:
+            continue
         _add_pattern(
             patterns,
             pattern_id=f"{decision}_{pattern_suffix}",

@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/improvement-observations.schema.json",
   "artifact_kind": "task_improvement_observations",
-  "generated_at": "2026-05-14T19:00:00Z",
+  "generated_at": "2026-05-17T18:22:12Z",
   "producer": "ops.scripts.improvement_observations_runtime",
   "source_command": "python -m ops.scripts.improvement_observations",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "eebbc5c928075ad1ab8c87fffaacf8c5d2244709ab73104842971f6e3193e43c",
+  "source_tree_fingerprint": "2a60c1f2a674296ea1da7a01d2269a2d8e8afce07128a44126e0175c6612019b",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "1bd2ac2d021a7e2ff32e1732141ab12b6b72a3f11b4b0d7a5f70e00e9965c273",
-    "observations": "a3c14b569a7d58193faf6a87fc97ca4f6dd54c1e7d3d1afde41966c9a9ae07f4",
+    "observations": "471092ed42b3ad8b28388e0377ff16a1e79f95c3a7748a49dc00bf68d16e7355",
     "record_id": "04828890301dac597dca8a93572311effdceed86dc29ecbaa70eb93b0c9e3d89",
     "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
     "summary": "19dfa58655db44f649b761bc4355e49266ee2dea94b4c74604c9dd2df4f62dfe"
@@ -22,7 +22,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-14T19:00:00Z"
+    "checked_at": "2026-05-17T18:22:12Z"
   },
   "record_id": "task-20260515-reconciled-improvement-plan",
   "captured_at": "2026-05-14T19:00:00Z",
@@ -107,7 +107,16 @@
       "problem": "Long-running self-improvement work previously relied on scattered readiness, activation, scoreboard, source-package, and observation artifacts to reconstruct the next session entrypoint.",
       "why_it_matters": "A 4-day-plus plan should not depend on conversational memory. The next agent needs compact blocker, success-pattern, forbidden-repeat, seed-run, and evidence-gap state with explicit stop conditions.",
       "automation_candidate": "Generate a schema-backed session_synopsis artifact that compresses current long-run state without changing promotion or claim gates.",
-      "suggested_followup": "Automated in Day 4+. make session-synopsis now promotes ops/reports/session-synopsis.json through a candidate path, release phase 2 refreshes it after learning-claim activation, and the current synopsis records promotion_allowed=false, claim_wording_allowed=false, five recent blockers, five forbidden repeat patterns, source-package replay status=pass, and first commands for the next session.",
+      "suggested_followup": "Automated in Day 4+. make session-synopsis now promotes ops/reports/session-synopsis.json through a candidate path, release phase 2 refreshes it after learning-claim activation, and the current synopsis records promotion_allowed=false, claim_wording_allowed=false, five recent blockers, five forbidden repeat patterns, source-package replay status=pass, goal_profile_ladder.status=incomplete, next_profile_required=30m_trial, sustained_claim_allowed=false, and first commands for the next session.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "source_package_nested_replay_heartbeat_gap",
+      "surface": "mk/release.mk, ops/scripts/core/source_package_clean_extract.py, ops/scripts/core/command_runtime.py, ops/reports/source-package-clean-extract.json",
+      "problem": "release-source-package-check can spend a long quiet interval inside clean-extract replay before the final source-package report is promoted.",
+      "why_it_matters": "The long-run goal depends on distinguishing a healthy silent command from a wedged unattended run. Operators should not need to infer liveness from the absence of terminal output.",
+      "automation_candidate": "Route nested source-package replay commands through the command heartbeat/quiet-run observability surface, or add structured per-phase heartbeat fields to source-package-clean-extract.",
+      "suggested_followup": "Automated after the 2026-05-17 profile-ladder handoff slice. source-package-clean-extract now routes nested replay commands through command_runtime heartbeat observation and reports heartbeat_observability plus per-command heartbeat_events; current release-source-package-check passed with heartbeat_event_count=10 and max_quiet_seconds=300 without changing release pass criteria.",
       "status": "automated"
     },
     {
@@ -117,6 +126,42 @@
       "why_it_matters": "Source packages run a broader contract profile. Frozen report samples must track source-path fingerprints from decomposed modules, or replayability fails late in the release lane with a fixture mismatch instead of a mechanism regression.",
       "automation_candidate": "Treat report schema sample regeneration as part of any source-fingerprinted orchestrator split, then rerun release-source-package-check before closeout.",
       "suggested_followup": "Automated during final closeout by regenerating tests/fixtures/report_schema_samples.json with tools/regenerate_report_schema_samples.py, passing tests/test_report_schema_sample_regeneration.py, and rerunning make release-source-package-check to a pass with ruff, mypy, and test-source-package all clean.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "goal_periodic_checkpoint_command_scheduler",
+      "surface": "ops/scripts/mechanism/goal_runtime_runner.py, ops/scripts/mechanism/goal_runtime_maintenance.py, ops/reports/goal-run-status.json",
+      "problem": "Goal periodic checkpoints now reject stale due evidence, but the runner still records heartbeat/status checkpoints rather than executing the configured periodic maintenance command bundles.",
+      "why_it_matters": "The 6h, 12h, 24h, and 5d profiles should not depend on a human remembering to refresh readiness, synopsis, report-contract, source-package, public-check, and sealed-authority evidence during an unattended run.",
+      "automation_candidate": "Add a bounded checkpoint scheduler that runs or delegates the configured periodic checkpoint commands at due intervals and records command results separately from heartbeat liveness.",
+      "suggested_followup": "Automated in the goal-runtime runner: due periodic checkpoints now execute the configured bounded command bundle, append a run-local checkpoint-command event, and are only observed when that pass event and fresh generated_at evidence are both present. Keep profile verification blocked until a real completed 30m trial and the later 6h/2d/5d ladder evidence exist.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "goal_status_run_artifact_persistence",
+      "surface": "mk/mechanism.mk, tests/test_makefile_static_gates.py, ops/reports/goal-run-status.json, ops/reports/goal-profile-verification.json, runs/goal-auto-improve-trial/status.md, runs/goal-auto-improve-trial/resume-metadata.json, runs/goal-auto-improve-trial/audit-log.jsonl",
+      "problem": "The goal status target refreshed the canonical status report but did not persist the run-local status, resume metadata, and audit log artifacts that profile verification treats as required runtime evidence.",
+      "why_it_matters": "A 30m trial should fail only on real runtime evidence gaps, not because the preflight/status refresh path forgot to materialize its own audit artifacts.",
+      "automation_candidate": "Make goal status/finalize targets write run artifacts whenever they promote a goal-run-status report, and keep profile verification checking those artifacts independently of elapsed-time eligibility.",
+      "suggested_followup": "Automated on 2026-05-18 by adding --write-run-artifacts to auto-improve-goal-status and auto-improve-goal-finalize. Focused Makefile, goal status, and profile verification tests passed; make auto-improve-goal-status goal-profile-verification now leaves run_artifacts.status=clean while correctly preserving blockers for incomplete elapsed runtime and missing process heartbeat command evidence.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "goal_profile_runner_origin_command_evidence",
+      "surface": "ops/scripts/mechanism/goal_runtime_runner.py, ops/scripts/mechanism/goal_run_status.py, ops/scripts/mechanism/goal_profile_verification.py, ops/schemas/goal-profile-verification.schema.json",
+      "problem": "Once report-only status/finalize targets persist run-local artifacts, those artifacts can be clean for resume purposes even though they were not written by the command runner.",
+      "why_it_matters": "Profile verification should keep 30m/6h/2d/5d progression tied to observed runner command execution, not to a report-only status refresh that can keep breadcrumbs current.",
+      "automation_candidate": "Stamp run-local audit events with their writer and require a current ops.scripts.goal_runtime_runner command audit before command observability can be clean.",
+      "suggested_followup": "Automated on 2026-05-18 by adding writer provenance to goal-run audit events and making goal-profile-verification report runner_audit_current=false for status-only artifacts. Report-only artifacts can remain run_artifacts.status=clean, but profile command observability now blocks until runner-origin command evidence exists.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "template_runtime_event_side_effect_isolation",
+      "surface": "ops/scripts/mechanism/planning_gate_report_runtime.py, tests/test_planning_gate_validate_runtime.py, tests/test_run_templates.py, runs/run-YYYYMMDD-slug/runtime-events.jsonl, runs/run-YYYYMMDD-mechanism-slug/runtime-events.jsonl",
+      "problem": "Report-contract and release-smoke validation append planning_gate_validate pass events to template run JSONL files, leaving generated private/full-vault drift after otherwise clean validation.",
+      "why_it_matters": "Long-run closeout should be able to rerun contract and release checks without manual cleanup under runs/. A validation target that mutates template runtime artifacts makes public/private boundary hygiene depend on operator memory.",
+      "automation_candidate": "Run template planning-gate validation against copied temp artifacts or a no-op runtime-event sink, then add a regression asserting the relevant validation targets leave git diff -- runs clean.",
+      "suggested_followup": "Automated on 2026-05-17 by making starter-bundle planning validation skip runtime-event appends for placeholder run ids and adding a regression that default starter-bundle validation emits no JSONL runtime events. Focused planning/template tests passed and git diff -- runs stayed clean after validation.",
       "status": "automated"
     },
     {

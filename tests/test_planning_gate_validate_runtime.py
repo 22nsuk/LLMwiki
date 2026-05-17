@@ -21,12 +21,13 @@ from ops.scripts.planning_gate_phase_state_runtime import (
 )
 from ops.scripts.planning_gate_report_runtime import validate_run_dir
 from ops.scripts.planning_gate_report_runtime import artifact_dir_report_path
+from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import PLANNING_GATE_VALIDATION_REPORT_SCHEMA_PATH
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.starter_bundle_runtime import StarterBundleDefinition
+from ops.scripts.starter_bundle_runtime import DEFAULT_STARTER_BUNDLE, StarterBundleDefinition, starter_bundle_path
 
-from tests.minimal_vault_runtime import seed_minimal_vault
+from tests.minimal_vault_runtime import seed_minimal_vault, seed_planning_artifacts
 from tests.test_planning_gate_validate import seed_mechanism_run_artifacts
 
 
@@ -158,6 +159,23 @@ class PlanningGateValidateRuntimeTest(unittest.TestCase):
             self.assertEqual(events[0]["phase"], "mechanism_evaluated")
             self.assertEqual(events[0]["decision"], "pass")
             self.assertEqual(events[0]["policy_version"], 4)
+
+    def test_validate_starter_bundle_does_not_append_placeholder_runtime_event(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            policy, _ = load_policy(vault)
+            artifact_dir = starter_bundle_path(vault, policy, DEFAULT_STARTER_BUNDLE)
+            seed_planning_artifacts(vault, "run-YYYYMMDD-slug", artifact_dir=artifact_dir)
+
+            report = validate_run_dir(vault, artifact_dir, policy=policy, context=fixed_context())
+
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(
+                sorted(path.relative_to(vault).as_posix() for path in vault.rglob("*.jsonl")),
+                [],
+            )
 
     def test_artifact_dir_report_path_normalizes_windows_separator_relative_paths(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

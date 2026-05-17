@@ -191,6 +191,54 @@ def _write_readiness_sample_report(vault: Path, relative_path: str, payload: dic
     path.write_text(json.dumps(enveloped, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _write_goal_worktree_guard_sample_report(vault: Path) -> None:
+    _policy, resolved_policy_path = load_policy(vault, "ops/policies/wiki-maintainer-policy.yaml")
+    payload = {
+        **build_canonical_report_envelope(
+            vault,
+            generated_at=fixed_context().isoformat_z(),
+            artifact_kind="goal_worktree_guard",
+            producer="tools.regenerate_report_schema_samples",
+            source_command="python tools/regenerate_report_schema_samples.py",
+            resolved_policy_path=resolved_policy_path,
+            schema_path="ops/schemas/goal-worktree-guard.schema.json",
+            source_paths=[],
+        ),
+        "vault": ".",
+        "requested_mode": "git",
+        "detected_mode": "git_worktree",
+        "public_source_layout": {
+            "required_paths": ["ops", "tests", "mk", "README.md", "Makefile"],
+            "present": True,
+            "missing_paths": [],
+        },
+        "git": {
+            "available": True,
+            "inside_worktree": True,
+            "worktree_root": ".",
+            "head_sha": "0" * 40,
+            "branch": "main",
+            "dirty_entry_count": 0,
+            "status_porcelain_sha256": "0" * 64,
+            "status_codes": {},
+            "error": "",
+        },
+        "decisions": {
+            "can_execute_goal_runtime": True,
+            "can_promote_result": True,
+            "zip_mode_replay_only": False,
+            "dirty_worktree_allowed": False,
+            "fatal_blockers": [],
+            "promotion_blockers": [],
+        },
+        "blockers": [],
+        "status": "pass",
+    }
+    path = vault / "tmp" / "goal-worktree-guard.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def _seed_readiness_release_contract_reports(vault: Path) -> None:
     _write_readiness_sample_report(
         vault,
@@ -344,6 +392,7 @@ def build_auto_improve_readiness_schema_sample() -> dict:
         seed_minimal_vault(vault)
         _seed_readiness_release_contract_reports(vault)
         _seed_readiness_queue_reports(vault)
+        _write_goal_worktree_guard_sample_report(vault)
 
         report = build_readiness_report(vault, context=fixed_context())
         _align_readiness_sample_blocker_next_steps(report)

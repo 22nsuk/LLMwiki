@@ -37,6 +37,10 @@
     "last_decision": "",
     "last_run_id": "",
     "last_blocking_reason": "",
+    "blocking_reason_counts": {},
+    "repeated_blocker_stop": false,
+    "repeated_blocker_reason": "",
+    "remediation_backlog_path": "ops/reports/remediation-backlog.json",
     "updated_at": "2026-04-27T15:30:33Z"
   },
   "queue_snapshot": [

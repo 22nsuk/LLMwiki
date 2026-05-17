@@ -1,24 +1,21 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-15T06:12:46Z",
+  "generated_at": "2026-05-17T18:45:25Z",
   "producer": "ops.scripts.remediation_backlog",
-  "status": "pass",
-  "source_readiness_report": "ops/reports/auto-improve-readiness.json",
-  "summary": {
-    "open_item_count": 0,
-    "repeated_blocker_count": 0
-  },
-  "items": [],
-  "source_command": "python -m ops.scripts.remediation_backlog",
+  "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "18862af863964421a884f45ce9915b89f09f08b6eae4c2a72a0abdfcca0a4b30",
+  "source_tree_fingerprint": "d12c3281a63fdd8e48d932925ea00affe22246e66559ffd23bfe07b8303eceaf",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
-    "schema": "31965fe82a1b7f44914c190a82d35894f9ccf190f267ec71fe9b881784af37f4",
+    "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "d6d82770dbb1805b1c216bb3087a0fbc1b8c0b93a10fa029b8f737e5b14603c6",
-    "readiness_report": "50f94d3b47b5fe17862abe582a5fd505ceb99e852fcdd22c806417b087a8cae4"
+    "source_paths": "4fc3b1931508752484bf34aff49424112a3e7f0540bb7c373764dadb93a96ed9",
+    "learning_claim_activation": "faac474a3479e31c4ae338008a52c9df4874cc0d31ced20b41e2805ac077b2e4",
+    "self_improvement_negative_lessons": "d6e39bfc8ea3806b6c2764d6220116fa8306a202a9f7da4dbad82e009318d5c9",
+    "session_synopsis": "48c72e3cdfc9099b4aa36d0d238dc8530a0ed75d617b759aeb576ffb0ee4fd84",
+    "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
+    "auto_improve_sessions": "cbadc7d0bcddab9b729c5133dcf68731cc4f3a452bf1e25868eebafaec9095cf"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -26,6 +23,99 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T06:12:46Z"
+    "checked_at": "2026-05-17T18:45:25Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "attention",
+  "summary": {
+    "backlog_item_count": 5,
+    "repeated_blocker_count": 0,
+    "active_blocker_count": 5,
+    "open_item_count": 5,
+    "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
+    "next_action": "Close or explicitly defer remediation backlog items before promotion."
+  },
+  "items": [
+    {
+      "item_id": "active_blocker_goal_status_git_worktree_dirty",
+      "blocker_id": "goal_status_git_worktree_dirty",
+      "source": "goal_run_status.blockers",
+      "item_type": "active_blocker",
+      "status": "open",
+      "severity": "blocks_promotion",
+      "occurrence_count": 1,
+      "evidence_paths": [
+        "ops/reports/session-synopsis.json"
+      ],
+      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
+      "next_action": "Refresh goal run status and close the active blocker before resuming."
+    },
+    {
+      "item_id": "active_blocker_goal_status_profile_ladder_incomplete",
+      "blocker_id": "goal_status_profile_ladder_incomplete",
+      "source": "goal_run_status.blockers",
+      "item_type": "active_blocker",
+      "status": "open",
+      "severity": "blocks_promotion",
+      "occurrence_count": 1,
+      "evidence_paths": [
+        "ops/reports/session-synopsis.json"
+      ],
+      "repair_target": "Collect bounded runtime evidence for next_profile_required=30m_trial.",
+      "next_action": "Collect bounded runtime evidence for next_profile_required=30m_trial."
+    },
+    {
+      "item_id": "active_blocker_goal_status_promotion_blocked_by_goal_worktree_guard_failure",
+      "blocker_id": "goal_status_promotion_blocked_by_goal_worktree_guard_failure",
+      "source": "goal_run_status.blockers",
+      "item_type": "active_blocker",
+      "status": "open",
+      "severity": "blocks_promotion",
+      "occurrence_count": 1,
+      "evidence_paths": [
+        "ops/reports/session-synopsis.json"
+      ],
+      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
+      "next_action": "Refresh goal run status and close the active blocker before resuming."
+    },
+    {
+      "item_id": "active_blocker_learning_claim_unlock_review_not_approved",
+      "blocker_id": "learning_claim_unlock_review_not_approved",
+      "source": "learning_claim_activation.blocked_predicates",
+      "item_type": "active_blocker",
+      "status": "open",
+      "severity": "blocks_promotion",
+      "occurrence_count": 1,
+      "evidence_paths": [
+        "ops/reports/session-synopsis.json"
+      ],
+      "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean.",
+      "next_action": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean."
+    },
+    {
+      "item_id": "active_blocker_promotion_blocked_by_goal_worktree_guard_failure",
+      "blocker_id": "promotion_blocked_by_goal_worktree_guard_failure",
+      "source": "auto_improve_readiness.promotion_blockers",
+      "item_type": "active_blocker",
+      "status": "open",
+      "severity": "blocks_promotion",
+      "occurrence_count": 1,
+      "evidence_paths": [
+        "ops/reports/session-synopsis.json"
+      ],
+      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness.",
+      "next_action": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
+    }
+  ],
+  "inputs": {
+    "self_improvement_negative_lessons": "ops/reports/self-improvement-negative-lessons.json",
+    "session_synopsis": "ops/reports/session-synopsis.json",
+    "learning_claim_activation": "ops/reports/learning_claim_activation_report.json",
+    "auto_improve_sessions": "ops/reports/auto-improve-sessions",
+    "status_overrides": "ops/policies/remediation-backlog-status-overrides.json"
   }
 }

@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
+import json
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,13 +13,13 @@ from typing import Any
 from ops.scripts.artifact_io_runtime import (
     load_optional_json_object_with_diagnostics,
     resolve_repo_artifact_path,
-    write_schema_validated_json,
 )
+from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.output_runtime import display_path
+from ops.scripts.policy_runtime import load_policy
 from .release_authority_vocabulary import legacy_sealed_rehearsal_reason_id
 from .release_status_v2 import release_status_v2_view
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema_with_vault_override
 
 
 BATCH_MANIFEST_PATH = "ops/reports/release-closeout-batch-manifest.json"
@@ -27,6 +28,8 @@ EXTERNAL_REPORT_REFERENCE_MANIFEST_PATH = (
 )
 DEFAULT_OUT = "tmp/release-closeout-sealed-rehearsal-check.json"
 SCHEMA_PATH = "ops/schemas/release-closeout-sealed-rehearsal-check.schema.json"
+PRODUCER = "ops.scripts.release_closeout_sealed_rehearsal_check"
+SOURCE_COMMAND = "python -m ops.scripts.release_closeout_sealed_rehearsal_check --vault ."
 AUTHORITY_FAILURE_IDS = {
     "batch_release_authority_not_clean_pass",
     "batch_sealed_release_not_clean_pass",
@@ -232,22 +235,26 @@ def _preflight_status(
     if status == "pass":
         preflight_status = "sealed_clean_pass"
         authority_preflight_status = "clean"
+        preflight_mode = "clean_required"
     elif distribution_binding_status == "pass" and authority_blocked:
         preflight_status = "binding_pass_authority_blocked"
         authority_preflight_status = "blocked"
+        preflight_mode = "expected_blocked"
     elif distribution_binding_status == "fail":
         preflight_status = "binding_failed"
         authority_preflight_status = "blocked" if authority_blocked else "unknown"
+        preflight_mode = "binding_failed"
     else:
         preflight_status = "unexpected_failure"
         authority_preflight_status = "unknown"
+        preflight_mode = "unexpected_failure"
     return {
         "preflight_status": preflight_status,
-        "preflight_mode": "expected_blocked" if preflight_status == "binding_pass_authority_blocked" else "clean_required",
+        "preflight_mode": preflight_mode,
         "distribution_binding_status": distribution_binding_status,
         "authority_preflight_status": authority_preflight_status,
         "expected_blocked_preflight": preflight_status == "binding_pass_authority_blocked",
-        "clean_required_preflight": preflight_status != "binding_pass_authority_blocked",
+        "clean_required_preflight": preflight_status == "sealed_clean_pass",
         "blocking_reason_ids": _vocabulary_reason_ids(failures, batch),
         "unexpected_failure_ids": binding_failures
         if preflight_status != "binding_pass_authority_blocked"
@@ -461,6 +468,7 @@ def _render_report(
 ) -> dict[str, Any]:
     preflight = decision.preflight
     return {
+        "$schema": SCHEMA_PATH,
         "artifact_kind": "release_closeout_sealed_rehearsal_check",
         "generated_at": inputs.generated_at,
         "status": decision.status,
@@ -483,6 +491,7 @@ def build_report(
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
     runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
+    _policy, resolved_policy_path = load_policy(vault)
     inputs = _sealed_rehearsal_inputs(
         vault,
         generated_at=runtime_context.isoformat_z(),
@@ -491,20 +500,42 @@ def build_report(
         external_manifest=external_manifest,
     )
     decision = _sealed_rehearsal_decision(inputs)
-    return _render_report(inputs, decision)
+    return {
+        **build_canonical_report_envelope(
+            vault,
+            generated_at=inputs.generated_at,
+            artifact_kind="release_closeout_sealed_rehearsal_check",
+            producer=PRODUCER,
+            source_command=SOURCE_COMMAND,
+            resolved_policy_path=resolved_policy_path,
+            schema_path=SCHEMA_PATH,
+            source_paths=[
+                "ops/scripts/release/release_closeout_sealed_rehearsal_check.py",
+                "ops/scripts/release/release_status_v2.py",
+                "ops/scripts/release/release_authority_vocabulary.py",
+                "ops/schemas/release-closeout-sealed-rehearsal-check.schema.json",
+            ],
+            file_inputs={
+                "batch_manifest": batch_manifest,
+                "external_manifest": external_manifest,
+            },
+            text_inputs={"distribution_zip": distribution_zip},
+            source_tree_excluded_files=(DEFAULT_OUT,),
+        ),
+        **_render_report(inputs, decision),
+    }
 
 
 def write_report(vault: Path, report: dict[str, Any], out_path: str | None) -> Path:
     destination = resolve_repo_artifact_path(
         vault, out_path, default_relative_path=DEFAULT_OUT
     )
-    return write_schema_validated_json(
-        destination,
-        report,
-        load_schema_with_vault_override(vault, SCHEMA_PATH),
-        context="release closeout sealed rehearsal check schema validation failed",
-        trailing_newline=True,
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
     )
+    return destination
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

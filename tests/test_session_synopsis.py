@@ -113,6 +113,67 @@ def seed_synopsis_inputs(vault: Path) -> None:
             ]
         },
     )
+    write_json(
+        vault,
+        "ops/reports/goal-run-status.json",
+        {
+            "status": "attention",
+            "goal": {
+                "contract_id": "goal-20260517-auto-improve-runtime",
+                "contract_sha256": "a" * 64,
+            },
+            "run": {
+                "run_id": "20260517-trial",
+                "status": "blocked",
+                "profile": "30m_trial",
+            },
+            "health": {
+                "promotion_status": "blocked",
+                "can_promote_result": False,
+                "checkpoint_status": "current",
+            },
+            "blockers": [
+                "profile ladder incomplete",
+                "sealed authority clean pass not verified",
+            ],
+            "profile_ladder": {
+                "status": "incomplete",
+                "current_profile": "30m_trial",
+                "run_profile": "30m_trial",
+                "verified_profiles": [],
+                "highest_verified_profile": "unverified",
+                "next_profile_required": "30m_trial",
+                "profile_verified_by_promotion_guard": "unverified",
+                "profile_guard_consistent": True,
+                "sustained_claim_allowed": False,
+                "profiles": [
+                    {
+                        "profile": "30m_trial",
+                        "evidence_paths": [
+                            {
+                                "path": "ops/reports/goal-run-status.json",
+                                "status": "present",
+                            }
+                        ],
+                    },
+                    {
+                        "profile": "5d_sustained",
+                        "evidence_paths": [
+                            {
+                                "path": "ops/reports/release-closeout-sealed-rehearsal-check.json",
+                                "status": "missing",
+                            }
+                        ],
+                    },
+                ],
+            },
+            "periodic_evidence": {"status": "not_due"},
+            "artifacts": {
+                "audit_log_path": "runs/goal-20260517-trial/audit-log.jsonl",
+                "resume_metadata_path": "runs/goal-20260517-trial/resume-metadata.json",
+            },
+        },
+    )
 
 
 class SessionSynopsisTests(unittest.TestCase):
@@ -129,13 +190,49 @@ class SessionSynopsisTests(unittest.TestCase):
             self.assertEqual(validate_with_schema(report, schema), [])
             self.assertEqual(report["artifact_kind"], "session_synopsis")
             self.assertEqual(report["status"], "attention")
-            self.assertEqual(report["summary"]["recent_blocker_count"], 2)
+            self.assertEqual(report["summary"]["recent_blocker_count"], 4)
             self.assertEqual(report["summary"]["forbidden_repeat_pattern_count"], 1)
             self.assertEqual(report["summary"]["recommended_seed_run_count"], 1)
+            self.assertEqual(
+                report["summary"]["active_goal_id"],
+                "goal-20260517-auto-improve-runtime",
+            )
+            self.assertEqual(report["summary"]["active_goal_run_id"], "20260517-trial")
+            self.assertEqual(report["active_goal"]["link_status"], "linked")
+            self.assertEqual(report["active_goal"]["checkpoint_status"], "current")
+            self.assertEqual(report["active_goal"]["periodic_evidence_status"], "not_due")
             self.assertEqual(report["source_package_replay"]["replay_command"], "make release-source-package-check")
+            self.assertEqual(report["summary"]["goal_profile_ladder_status"], "incomplete")
+            self.assertEqual(report["summary"]["goal_next_profile_required"], "30m_trial")
+            self.assertFalse(report["summary"]["sustained_claim_allowed"])
+            self.assertEqual(report["goal_profile_ladder"]["status"], "incomplete")
+            self.assertEqual(
+                report["goal_profile_ladder"]["missing_evidence"][0]["path"],
+                "ops/reports/release-closeout-sealed-rehearsal-check.json",
+            )
             self.assertFalse(report["next_session_entrypoint"]["promotion_allowed"])
             self.assertFalse(report["next_session_entrypoint"]["claim_wording_allowed"])
+            self.assertEqual(
+                report["next_session_entrypoint"]["target_profile"],
+                "30m_trial",
+            )
+            self.assertEqual(
+                report["next_session_entrypoint"]["profile_ladder_status"],
+                "incomplete",
+            )
+            self.assertFalse(report["next_session_entrypoint"]["sustained_claim_allowed"])
+            self.assertIn("make auto-improve-goal-status", report["next_session_entrypoint"]["first_commands"])
+            self.assertIn("make auto-improve-goal-preflight", report["next_session_entrypoint"]["first_commands"])
+            self.assertIn("make auto-improve-goal-run", report["next_session_entrypoint"]["first_commands"])
+            self.assertIn("make goal-profile-verification", report["next_session_entrypoint"]["first_commands"])
             self.assertIn("make session-synopsis", report["next_session_entrypoint"]["first_commands"])
+            self.assertIn("make remediation-backlog", report["next_session_entrypoint"]["first_commands"])
+            self.assertTrue(
+                any(
+                    blocker["source"] == "goal_run_status.blockers"
+                    for blocker in report["recent_blockers"]
+                )
+            )
             self.assertEqual(report["recommended_seed_runs"][0]["run_id"], "run-seed-a")
 
     def test_write_report_validates_schema(self) -> None:

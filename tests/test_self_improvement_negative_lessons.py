@@ -3,6 +3,8 @@ from __future__ import annotations
 import datetime as dt
 import json
 from pathlib import Path
+import tempfile
+import unittest
 
 import pytest
 
@@ -14,111 +16,141 @@ from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.public
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "self-improvement-negative-lessons.schema.json"
+
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
         display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 15, 0, 0, tzinfo=dt.timezone.utc),
+        clock=lambda: dt.datetime(2026, 5, 17, 13, 0, tzinfo=dt.timezone.utc),
     )
 
 
-def test_negative_learning_ledger_is_extracted_as_schema_backed_report(
-    tmp_path: Path,
-) -> None:
-    vault = tmp_path / "vault"
-    vault.mkdir()
-    seed_minimal_vault(vault)
-    activation_path = vault / "ops" / "reports" / "learning_claim_activation_report.json"
-    activation_path.parent.mkdir(parents=True, exist_ok=True)
-    activation_path.write_text(
-        json.dumps(
-            {
-                "negative_learning_ledger": {
-                    "patterns": [
-                        {
-                            "id": "same_failure_repeated",
-                            "status": "open",
-                            "summary": "same failure repeated without promotion evidence",
-                        }
-                    ]
-                }
-            },
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
-    )
-
-    report = build_report(vault, context=fixed_context())
-    out_path = write_report(vault, report)
-    persisted = json.loads(out_path.read_text(encoding="utf-8"))
-    schema = load_schema(
-        vault / "ops" / "schemas" / "self-improvement-negative-lessons.schema.json"
-    )
-
-    assert validate_with_schema(persisted, schema) == []
-    assert persisted["status"] == "attention"
-    assert persisted["summary"]["pattern_count"] == 1
-    assert persisted["patterns"][0]["id"] == "same_failure_repeated"
+def write_json(vault: Path, rel_path: str, payload: dict) -> None:
+    path = vault / rel_path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, sort_keys=True), encoding="utf-8")
 
 
-def test_repeated_goal_backlog_item_becomes_negative_lesson(
-    tmp_path: Path,
-) -> None:
-    vault = tmp_path / "vault"
-    vault.mkdir()
-    seed_minimal_vault(vault)
-    reports_dir = vault / "ops" / "reports"
-    reports_dir.mkdir(parents=True, exist_ok=True)
-    (reports_dir / "learning_claim_activation_report.json").write_text(
-        json.dumps({"negative_learning_ledger": {"patterns": []}}),
-        encoding="utf-8",
-    )
-    (reports_dir / "remediation-backlog.json").write_text(
-        json.dumps(
-            {
-                "$schema": "ops/schemas/remediation-backlog.schema.json",
-                "artifact_kind": "remediation_backlog",
-                "status": "attention",
-                "source_readiness_report": "ops/reports/auto-improve-readiness.json",
-                "summary": {"open_item_count": 1, "repeated_blocker_count": 1},
-                "items": [
+def seed_negative_lesson_inputs(vault: Path) -> None:
+    write_json(
+        vault,
+        "ops/reports/learning_claim_activation_report.json",
+        {
+            "status": "pass",
+            "negative_learning_ledger": {
+                "patterns": [
                     {
-                        "id": "goal-audit-repeated-executor_usage_limited",
-                        "source": "goal_audit_log.repeated_blocker",
-                        "blocker": "executor_usage_limited",
-                        "blocker_kind": "goal_runtime_audit",
-                        "status": "open",
-                        "remediation_code": "convert_repeated_goal_runtime_blocker",
-                        "recommended_next_step": (
-                            "Convert the repeated goal runtime blocker into explicit "
-                            "remediation evidence before resuming the sustained profile."
-                        ),
-                        "minimum_evidence": [
-                            "ops/reports/goal-audit-log.jsonl",
-                            "ops/reports/remediation-backlog.json",
+                        "pattern_id": "blocked_queue_recent_log_overlap",
+                        "decisions": ["BLOCKED"],
+                        "run_ids": [],
+                        "occurrence_count": 2,
+                        "forbidden_repeat": "Do not repeat this run shape.",
+                        "repair_target": "Resolve queue blocked reason recent_log_overlap.",
+                        "evidence_digests": [
+                            {
+                                "path": "ops/reports/auto-improve-readiness.json",
+                                "exists": True,
+                                "sha256": "a" * 64,
+                                "status": "present",
+                            }
                         ],
                     }
-                ],
+                ]
             },
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
+        },
+    )
+    write_json(
+        vault,
+        "ops/reports/session-synopsis.json",
+        {
+            "forbidden_repeat_patterns": [
+                {
+                    "id": "blocked_queue_recent_log_overlap",
+                    "decisions": ["BLOCKED"],
+                    "run_ids": [],
+                    "occurrence_count": 2,
+                    "forbidden_repeat": "Do not repeat this run shape.",
+                    "repair_target": "Resolve queue blocked reason recent_log_overlap.",
+                }
+            ]
+        },
     )
 
-    report = build_report(vault, context=fixed_context())
-    out_path = write_report(vault, report)
-    persisted = json.loads(out_path.read_text(encoding="utf-8"))
-    schema = load_schema(
-        vault / "ops" / "schemas" / "self-improvement-negative-lessons.schema.json"
-    )
 
-    assert validate_with_schema(persisted, schema) == []
-    assert persisted["status"] == "attention"
-    assert persisted["summary"]["pattern_count"] == 1
-    assert persisted["patterns"][0]["id"] == "remediation-backlog-executor_usage_limited"
-    assert persisted["patterns"][0]["source"] == "remediation_backlog"
-    assert persisted["patterns"][0]["evidence_paths"] == [
-        "ops/reports/goal-audit-log.jsonl",
-        "ops/reports/remediation-backlog.json",
-    ]
-    assert "remediation_backlog" in persisted["input_fingerprints"]
+class SelfImprovementNegativeLessonsTests(unittest.TestCase):
+    def test_report_promotes_embedded_negative_learning_to_standalone_lessons(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_negative_lesson_inputs(vault)
+
+            report = build_report(vault, context=fixed_context())
+            lesson = report["lessons"][0]
+
+            self.assertEqual(report["artifact_kind"], "self_improvement_negative_lessons")
+            self.assertEqual(report["status"], "attention")
+            self.assertEqual(report["summary"]["lesson_count"], 1)
+            self.assertEqual(report["summary"]["backlog_candidate_count"], 1)
+            self.assertEqual(lesson["lesson_id"], "blocked_queue_recent_log_overlap")
+            self.assertEqual(lesson["source"], "learning_claim_activation.negative_learning_ledger+session_synopsis")
+            self.assertEqual(lesson["repeat_policy"], "do_not_repeat_until_repaired")
+            self.assertTrue(lesson["backlog_candidate"])
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_write_report_validates_and_uses_canonical_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_negative_lesson_inputs(vault)
+
+            report = build_report(vault, context=fixed_context())
+            destination = write_report(vault, report)
+
+            self.assertEqual(
+                destination,
+                vault / "ops" / "reports" / "self-improvement-negative-lessons.json",
+            )
+            self.assertTrue(destination.exists())
+
+    def test_next_action_distinguishes_advisory_lessons_from_empty_report(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            write_json(
+                vault,
+                "ops/reports/learning_claim_activation_report.json",
+                {
+                    "status": "pass",
+                    "negative_learning_ledger": {
+                        "patterns": [
+                            {
+                                "pattern_id": "discard_specific_single",
+                                "decisions": ["DISCARD"],
+                                "run_ids": ["run-discard"],
+                                "occurrence_count": 1,
+                                "forbidden_repeat": "Do not repeat this run shape.",
+                                "repair_target": "Change the evidence predicate.",
+                                "evidence_digests": [],
+                            }
+                        ]
+                    },
+                },
+            )
+            write_json(vault, "ops/reports/session-synopsis.json", {})
+
+            report = build_report(vault, context=fixed_context())
+
+            self.assertEqual(report["summary"]["backlog_candidate_count"], 0)
+            self.assertEqual(
+                report["summary"]["next_action"],
+                "Negative lessons are advisory only; no repeated backlog candidates detected.",
+            )
+
+
+if __name__ == "__main__":
+    unittest.main()

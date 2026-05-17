@@ -1,11 +1,11 @@
 # Release Risk Taxonomy Matrix
 
-- Generated at: 2026-05-15T19:08:32Z
+- Generated at: 2026-05-17T19:45:46Z
 - Taxonomy: ops/policies/release-risk-taxonomy.json
 - Taxonomy version: 1
-- Risk codes: 43
+- Risk codes: 44
 - Clean-lane blockers: 30
-- Learning-claim blockers: 14
+- Learning-claim blockers: 15
 - Advisory lifecycle backlog: 2
 
 | Risk code | Primary lane | Clean | Conditional | Learning | Advisory | Surface |
@@ -29,6 +29,7 @@
 | live_make_check_toolchain_not_eligible | clean_lane_blocker | blocks_clean_lane | operator_review_required | not_applicable | not_applicable | live full-suite release gate |
 | promotion_blocked_by_artifact_contract_failure | clean_lane_blocker | blocks_clean_lane | operator_review_required | blocks_learning_claim | not_applicable | auto-improve release gate |
 | promotion_blocked_by_artifact_finalization_failure | learning_claim_blocker | does_not_block_clean_lane | operator_review_required | blocks_learning_claim | not_applicable | auto-improve release gate |
+| promotion_blocked_by_goal_worktree_guard_failure | learning_claim_blocker | does_not_block_clean_lane | operator_review_required | blocks_learning_claim | not_applicable | auto-improve worktree guard |
 | promotion_blocked_by_release_authority_preflight_failure | learning_claim_blocker | does_not_block_clean_lane | operator_review_required | blocks_learning_claim | not_applicable | auto-improve release gate |
 | promotion_blocked_by_release_batch_manifest_failure | learning_claim_blocker | does_not_block_clean_lane | operator_review_required | blocks_learning_claim | not_applicable | auto-improve release gate |
 | promotion_blocked_by_release_closeout_summary_failure | learning_claim_blocker | does_not_block_clean_lane | operator_review_required | blocks_learning_claim | not_applicable | auto-improve release gate |

@@ -7,7 +7,7 @@ from typing import Any
 from ops.scripts.artifact_io_runtime import load_optional_json_object
 from .auto_improve_queue_runtime import build_proposal_queue
 from .auto_improve_readiness_constants_runtime import (
-    AUTO_IMPROVE_LOOP_COMMAND,
+    AUTO_IMPROVE_GOAL_RUN_COMMAND,
     FALLBACK_PRIMARY_TARGETS,
     READINESS_TARGET,
     RECENT_LOG_OVERLAP_REMEDIATION,
@@ -560,7 +560,8 @@ def _readiness_next_action(
     if queue_ready:
         return (
             "Queue is non-empty. After `make check-serial` and `make public-check-serial`, "
-            f"start bounded live auto-improve with `{AUTO_IMPROVE_LOOP_COMMAND}`."
+            f"start bounded goal-native auto-improve with `{AUTO_IMPROVE_GOAL_RUN_COMMAND}` "
+            "so runner heartbeat, checkpoint, resume, and timeout evidence is captured."
         )
     if proposals_emitted > 0:
         blocked_suffix = (

@@ -243,14 +243,17 @@ def validate_run_dir(
         cross_checks=cross_checks,
         phase_checks=phase_checks,
     )
-    append_planning_validation_event(
-        vault,
-        context=runtime_context,
-        phase=phase,
-        decision=report["status"],
-        artifact_dir_report=artifact_dir_report,
-        duration_ms=int(round((time.monotonic() - started_at) * 1000)),
-        run_ids=run_ids,
-        policy_version=active_policy.get("version"),
-    )
+    if starter_bundle is None:
+        # Starter bundles carry placeholder run ids; validating templates must not
+        # append audit events to tracked placeholder run logs.
+        append_planning_validation_event(
+            vault,
+            context=runtime_context,
+            phase=phase,
+            decision=report["status"],
+            artifact_dir_report=artifact_dir_report,
+            duration_ms=int(round((time.monotonic() - started_at) * 1000)),
+            run_ids=run_ids,
+            policy_version=active_policy.get("version"),
+        )
     return report

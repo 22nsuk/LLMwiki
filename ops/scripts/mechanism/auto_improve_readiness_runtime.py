@@ -20,11 +20,12 @@ from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import AUTO_IMPROVE_READINESS_REPORT_SCHEMA_PATH
 
 from .auto_improve_readiness_constants_runtime import (
-    AUTO_IMPROVE_LOOP_COMMAND,
+    AUTO_IMPROVE_GOAL_RUN_COMMAND,
     ARTIFACT_FRESHNESS_REPORT_REL_PATH,
     FALLBACK_PRIMARY_TARGETS,
     FALLBACK_SUPPORTING_TARGETS,
     FALLBACK_TEST_FILES,
+    GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
     MECHANISM_REVIEW_REPORT_REL_PATH,
     MUTATION_PROPOSAL_REPORT_REL_PATH,
     OUTCOME_METRICS_REPORT_REL_PATH,
@@ -71,6 +72,10 @@ from .auto_improve_readiness_release_authority_runtime import (
     _release_gate_promotion_blockers,
     _release_gate_summaries,
 )
+from .auto_improve_readiness_worktree_guard_runtime import (
+    _goal_worktree_guard_promotion_blockers,
+    _goal_worktree_guard_summary,
+)
 
 
 READINESS_REPORT_SCHEMA_PATH = AUTO_IMPROVE_READINESS_REPORT_SCHEMA_PATH
@@ -93,6 +98,7 @@ class ReadinessInputs:
     active_release_evidence_cohort: dict[str, Any]
     active_artifact_finalization: dict[str, Any]
     active_release_authority_preflight: dict[str, Any]
+    active_goal_worktree_guard: dict[str, Any]
     artifact_freshness_summary: dict[str, Any]
     selected_contract_summary: dict[str, Any]
     source_package_clean_extract_summary: dict[str, Any]
@@ -102,6 +108,7 @@ class ReadinessInputs:
     release_evidence_cohort_summary: dict[str, Any]
     artifact_finalization_summary: dict[str, Any]
     release_authority_preflight_summary: dict[str, Any]
+    goal_worktree_guard_summary: dict[str, Any]
     loop_health_summary: dict[str, Any]
     same_eval_telemetry_summary: dict[str, Any]
     reports_present: bool
@@ -260,6 +267,7 @@ def _load_readiness_report_payloads(
         "release_evidence_cohort": _load_json(vault / RELEASE_EVIDENCE_COHORT_REPORT_REL_PATH),
         "artifact_finalization": _load_json(vault / RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH),
         "release_authority_preflight": _load_release_authority_preflight_json(vault),
+        "goal_worktree_guard": _load_optional_json(vault / GOAL_WORKTREE_GUARD_REPORT_REL_PATH),
     }
 
 
@@ -361,6 +369,7 @@ def load_readiness_inputs(
         active_release_evidence_cohort=reports["release_evidence_cohort"],
         active_artifact_finalization=reports["artifact_finalization"],
         active_release_authority_preflight=reports["release_authority_preflight"],
+        active_goal_worktree_guard=reports["goal_worktree_guard"],
         artifact_freshness_summary=release_summaries["artifact_freshness"],
         selected_contract_summary=release_summaries["selected_contract"],
         source_package_clean_extract_summary=release_summaries["source_package"],
@@ -372,6 +381,7 @@ def load_readiness_inputs(
         release_authority_preflight_summary=release_summaries[
             "release_authority_preflight"
         ],
+        goal_worktree_guard_summary=_goal_worktree_guard_summary(reports["goal_worktree_guard"]),
         loop_health_summary=loop_health_summary,
         same_eval_telemetry_summary=same_eval_telemetry_summary,
         reports_present=reports_present,
@@ -520,6 +530,9 @@ def _readiness_promotion_blockers(
             inputs.artifact_freshness_summary,
             inputs.active_artifact_freshness,
         ),
+        *_goal_worktree_guard_promotion_blockers(
+            inputs.goal_worktree_guard_summary,
+        ),
     ]
     return learning_blockers, promotion_blockers
 
@@ -539,6 +552,7 @@ def _readiness_inputs_payload() -> dict[str, str]:
         "release_evidence_cohort_report": RELEASE_EVIDENCE_COHORT_REPORT_REL_PATH,
         "release_closeout_post_check_finalizer_report": RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH,
         "release_authority_preflight_report": RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
+        "goal_worktree_guard_report": GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
     }
 
 
@@ -555,6 +569,7 @@ def _readiness_diagnostics_payload(inputs: ReadinessInputs) -> dict[str, Any]:
         "release_evidence_cohort_summary": inputs.release_evidence_cohort_summary,
         "artifact_finalization_summary": inputs.artifact_finalization_summary,
         "release_authority_preflight_summary": inputs.release_authority_preflight_summary,
+        "goal_worktree_guard_summary": inputs.goal_worktree_guard_summary,
     }
 
 
@@ -569,7 +584,7 @@ def _readiness_fallback_payload(inputs: ReadinessInputs, fallback_status: str) -
         "history_requirement": inputs.history_requirement,
         "additional_runs_needed": inputs.additional_runs_needed,
         "queue_recheck_target": READINESS_TARGET,
-        "auto_improve_command": AUTO_IMPROVE_LOOP_COMMAND,
+        "auto_improve_command": AUTO_IMPROVE_GOAL_RUN_COMMAND,
     }
 
 
@@ -642,6 +657,7 @@ def render_readiness_report(
                 "release_evidence_cohort_report": RELEASE_EVIDENCE_COHORT_REPORT_REL_PATH,
                 "release_closeout_post_check_finalizer_report": RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH,
                 "release_authority_preflight_report": RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
+                "goal_worktree_guard_report": GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
             },
             path_group_inputs={
                 "release_authority_preflight_report_candidates": list(

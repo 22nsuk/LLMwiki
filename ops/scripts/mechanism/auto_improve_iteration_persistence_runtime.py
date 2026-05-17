@@ -253,12 +253,32 @@ def _update_session_loop_state(
     outcome_text = str(getattr(outcome, "outcome", "")).strip()
     decision_text = str(getattr(outcome, "decision", "")).strip()
     terminal_success = bool(getattr(outcome, "is_terminal_success", False))
+    existing_state = session.get("loop_state")
+    existing_state = existing_state if isinstance(existing_state, dict) else {}
+    raw_counts = existing_state.get("blocking_reason_counts")
+    blocking_reason_counts: dict[str, int] = {}
+    if isinstance(raw_counts, dict):
+        for key, value in raw_counts.items():
+            reason = str(key).strip()
+            if not reason:
+                continue
+            if isinstance(value, int) and not isinstance(value, bool):
+                blocking_reason_counts[reason] = max(0, value)
+    if outcome_text and not terminal_success:
+        blocking_reason_counts[outcome_text] = blocking_reason_counts.get(outcome_text, 0) + 1
     session["loop_state"] = {
         "consecutive_failures": max(0, consecutive_failures),
         "last_outcome": outcome_text,
         "last_decision": decision_text,
         "last_run_id": run_id,
         "last_blocking_reason": "" if terminal_success else outcome_text,
+        "blocking_reason_counts": blocking_reason_counts,
+        "repeated_blocker_stop": bool(existing_state.get("repeated_blocker_stop", False)),
+        "repeated_blocker_reason": str(existing_state.get("repeated_blocker_reason", "")).strip(),
+        "remediation_backlog_path": str(
+            existing_state.get("remediation_backlog_path", "ops/reports/remediation-backlog.json")
+        ).strip()
+        or "ops/reports/remediation-backlog.json",
         "updated_at": context.isoformat_z(),
     }
 

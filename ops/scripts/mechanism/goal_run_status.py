@@ -1,766 +1,596 @@
 from __future__ import annotations
 
 import argparse
-import copy
-import datetime as dt
+from collections.abc import Mapping
+from dataclasses import dataclass
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
 
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import read_json_object, write_schema_validated_json
-from ops.scripts.output_runtime import write_output_text
+from ops.scripts.artifact_io_runtime import (
+    SchemaBackedReportWriteRequest,
+    load_optional_json_object,
+    write_json_object,
+    write_schema_backed_report,
+)
+from ops.scripts.codex_goal_client import DEFAULT_CONTRACT_PATH, FileGoalBackend
+from ops.scripts.filesystem_runtime import atomic_write_text
+from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema
 
-from .goal_runtime_ladder import attach_pending_checkpoint, build_profile_verification
-from .goal_worktree_guard import build_report as build_worktree_guard
+from .goal_runtime_maintenance import (
+    PERIODIC_EVIDENCE_CHECKPOINTS,
+    build_goal_health,
+    build_periodic_evidence,
+    health_blockers,
+)
+from .goal_runtime_profile import build_profile_ladder, profile_ladder_blockers
+from .goal_runtime_resume import mapping_field, resume_metadata_from_report
 
 
-GOAL_CONTRACT_SCHEMA = "ops/schemas/codex-goal-contract.schema.json"
-GOAL_RUN_STATUS_SCHEMA = "ops/schemas/goal-run-status.schema.json"
-GOAL_RESUME_METADATA_SCHEMA = "ops/schemas/goal-resume-metadata.schema.json"
-DEFAULT_CONTRACT_PATH = "ops/reports/codex-goal-contract.json"
 DEFAULT_STATUS_PATH = "ops/reports/goal-run-status.json"
-DEFAULT_STATUS_MD_PATH = "ops/reports/goal-status.md"
-DEFAULT_AUDIT_LOG_PATH = "ops/reports/goal-audit-log.jsonl"
-DEFAULT_CHECKPOINTS_DIR = "ops/reports/goal-checkpoints"
-DEFAULT_RESUME_METADATA_PATH = "ops/reports/goal-resume-metadata.json"
-AUTO_IMPROVE_READINESS_PATH = "ops/reports/auto-improve-readiness.json"
+DEFAULT_RUN_ROOT_TEMPLATE = "runs/goal-{run_id}"
+SESSION_SYNOPSIS_PATH = "ops/reports/session-synopsis.json"
 PRODUCER = "ops.scripts.goal_run_status"
-POLICY_PATH = "ops/policies/wiki-maintainer-policy.yaml"
+SCHEMA_PATH = "ops/schemas/goal-run-status.schema.json"
+SOURCE_COMMAND = "python -m ops.scripts.goal_run_status --vault ."
 
 
-def _canonical_envelope(
-    vault: Path,
-    *,
-    generated_at: str,
-    artifact_kind: str,
-    schema_path: str,
-    source_command: str,
-    source_paths: list[str],
-    file_inputs: dict[str, str | Path] | None = None,
-    text_inputs: dict[str, str] | None = None,
-) -> dict[str, Any]:
-    _policy, resolved_policy_path = load_policy(vault, POLICY_PATH)
-    return build_canonical_report_envelope(
-        vault,
-        generated_at=generated_at,
-        artifact_kind=artifact_kind,
-        producer=PRODUCER,
-        source_command=source_command,
-        resolved_policy_path=resolved_policy_path,
-        schema_path=schema_path,
-        source_paths=source_paths,
-        file_inputs=file_inputs,
-        text_inputs=text_inputs,
+@dataclass(frozen=True)
+class GoalRunStatusRequest:
+    vault: Path
+    run_id: str
+    goal_contract_path: str = DEFAULT_CONTRACT_PATH
+    status: str = "running"
+    profile: str = "30m_trial"
+    started_at: str = ""
+    completed_at: str = ""
+    heartbeat_interval_seconds: int = 300
+    checkpoint_interval_seconds: int = 1800
+    last_heartbeat_at: str = ""
+    last_checkpoint_at: str = ""
+    last_command_heartbeat_at: str = ""
+    quiet_seconds: int = 0
+    command_observation_mode: str = ""
+    command_heartbeat_count: int = 0
+    command_timeout_seconds: int = 0
+    last_stdout_at: str = ""
+    last_stderr_at: str = ""
+    last_artifact_touch_at: str = ""
+    last_command_returncode: int = -1
+    last_command_timed_out: bool = False
+    last_command_termination_reason: str = ""
+    last_backoff_until: str = ""
+    backoff_reason: str = ""
+    resume_from_checkpoint: bool = False
+    resume_command: str = ""
+    status_report_path: str = DEFAULT_STATUS_PATH
+    out_path: str | None = None
+    policy_path: str | None = None
+    context: RuntimeContext | None = None
+
+
+@dataclass(frozen=True)
+class GoalRunArtifactPaths:
+    status_report_path: str
+    status_markdown_path: str
+    audit_log_path: str
+    resume_metadata_path: str
+    checkpoint_command_log_path: str
+
+
+def _canonical_json_digest(payload: Mapping[str, Any]) -> str:
+    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(data.encode("utf-8")).hexdigest()
+
+
+def goal_run_artifact_paths(run_id: str, *, status_report_path: str = DEFAULT_STATUS_PATH) -> GoalRunArtifactPaths:
+    run_root = DEFAULT_RUN_ROOT_TEMPLATE.format(run_id=run_id)
+    return GoalRunArtifactPaths(
+        status_report_path=status_report_path,
+        status_markdown_path=f"{run_root}/status.md",
+        audit_log_path=f"{run_root}/audit-log.jsonl",
+        resume_metadata_path=f"{run_root}/resume-metadata.json",
+        checkpoint_command_log_path=f"{run_root}/checkpoint-command-events.jsonl",
     )
 
 
-def _goal_contract_envelope(vault: Path, contract: dict[str, Any]) -> dict[str, Any]:
-    return _canonical_envelope(
-        vault,
-        generated_at=str(contract["created_at"]),
-        artifact_kind="codex_goal_contract",
-        schema_path=GOAL_CONTRACT_SCHEMA,
-        source_command="python -m ops.scripts.goal_run_status init",
-        source_paths=[
-            "ops/scripts/mechanism/goal_run_status.py",
-            "ops/scripts/mechanism/goal_worktree_guard.py",
-            GOAL_CONTRACT_SCHEMA,
-        ],
-        text_inputs={
-            "goal_id": str(contract["goal_id"]),
-            "repo_url": str(contract["github"]["repo_url"]),
-            "visibility": str(contract["github"]["visibility"]),
-            "baseline_commit": str(contract["github"]["baseline_commit"]),
-            "branch": str(contract["github"]["branch"]),
-            "worktree_path": str(contract["github"]["worktree_path"]),
-        },
-    )
+def _status_from_blockers(run_status: str, blockers: list[str]) -> str:
+    if run_status in {"failed", "stopped"}:
+        return "fail"
+    if blockers or run_status in {"blocked", "paused"}:
+        return "attention"
+    return "pass"
 
 
-def _status_source_command(event: str) -> str:
-    if event in {"heartbeat", "checkpoint"}:
-        return f"python -m ops.scripts.goal_run_status {event}"
-    if event.startswith("goal_run_"):
-        return "python -m ops.scripts.mechanism.auto_improve_loop --goal-contract"
-    return "python -m ops.scripts.goal_run_status init"
+def _integer_value(value: object) -> int:
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return 0
+    return 0
 
 
-def _goal_status_envelope(vault: Path, status: dict[str, Any], *, event: str) -> dict[str, Any]:
-    file_inputs: dict[str, str | Path] = {"goal_contract": DEFAULT_CONTRACT_PATH}
-    if (vault / AUTO_IMPROVE_READINESS_PATH).is_file():
-        file_inputs["auto_improve_readiness"] = AUTO_IMPROVE_READINESS_PATH
-    return _canonical_envelope(
-        vault,
-        generated_at=str(status["generated_at"]),
-        artifact_kind="goal_run_status",
-        schema_path=GOAL_RUN_STATUS_SCHEMA,
-        source_command=_status_source_command(event),
-        source_paths=[
-            "ops/scripts/mechanism/goal_run_status.py",
-            "ops/scripts/mechanism/goal_worktree_guard.py",
-            GOAL_RUN_STATUS_SCHEMA,
-        ],
-        file_inputs=file_inputs,
-        text_inputs={
-            "event": event,
-            "goal_id": str(status["goal_id"]),
-            "active_profile": str(status["active_profile"]),
-            "repo_url": str(status["repo"]["repo_url"]),
-            "visibility": str(status["repo"]["visibility"]),
-            "baseline_commit": str(status["repo"]["baseline_commit"]),
-            "branch": str(status["repo"]["branch"]),
-            "worktree_path": str(status["repo"]["worktree_path"]),
-        },
-    )
-
-
-def _resume_metadata_envelope(
-    vault: Path,
-    metadata: dict[str, Any],
-    *,
-    generated_at: str,
-    event: str,
-) -> dict[str, Any]:
-    return _canonical_envelope(
-        vault,
-        generated_at=generated_at,
-        artifact_kind="goal_resume_metadata",
-        schema_path=GOAL_RESUME_METADATA_SCHEMA,
-        source_command=_status_source_command(event),
-        source_paths=[
-            "ops/scripts/mechanism/goal_run_status.py",
-            GOAL_RESUME_METADATA_SCHEMA,
-        ],
-        file_inputs={"goal_status": str(metadata["status_json"])},
-        text_inputs={
-            "event": event,
-            "goal_id": str(metadata["goal_id"]),
-            "active_profile": str(metadata["active_profile"]),
-            "last_checkpoint": str(metadata["last_checkpoint"]),
-        },
-    )
-
-
-def default_goal_contract(
-    *,
-    context: RuntimeContext,
-    repo_url: str,
-    visibility: str,
-    baseline_commit: str,
-    branch: str,
-    worktree_path: str,
-) -> dict[str, Any]:
-    return {
-        "$schema": GOAL_CONTRACT_SCHEMA,
-        "artifact_kind": "codex_goal_contract",
-        "schema_version": 1,
-        "goal_id": "goal-20260515-5day-auto-improve-runtime",
-        "objective": (
-            "Build and operate a five-day bounded auto-improve goal runtime with "
-            "clean release evidence, private GitHub baseline, resumable audit trail, "
-            "heartbeats, checkpoints, and no promotion until sealed authority is clean."
-        ),
-        "status": "running",
-        "created_at": context.isoformat_z(),
-        "duration": {
-            "min_sustained_days": 5,
-            "max_minutes": 7200,
-        },
-        "budgets": {
-            "max_proposals": 60,
-            "max_consecutive_failures": 1,
-            "heartbeat_interval_minutes": 5,
-            "checkpoint_interval_minutes": 30,
-            "readiness_interval_hours": 6,
-            "session_synopsis_interval_hours": 6,
-        },
-        "promotion_policy": {
-            "can_promote_result": False,
-            "requires_sealed_authority_clean_pass": True,
-            "promotion_ban_reason": (
-                "Promotion remains forbidden until can_promote_result=true and "
-                "sealed authority clean pass are both current."
-            ),
-        },
-        "github": {
-            "repo_url": repo_url,
-            "visibility": visibility,
-            "baseline_commit": baseline_commit,
-            "branch": branch,
-            "worktree_path": worktree_path,
-        },
-        "artifacts": {
-            "status_json": DEFAULT_STATUS_PATH,
-            "status_markdown": DEFAULT_STATUS_MD_PATH,
-            "audit_log": DEFAULT_AUDIT_LOG_PATH,
-            "checkpoints_dir": DEFAULT_CHECKPOINTS_DIR,
-            "resume_metadata": DEFAULT_RESUME_METADATA_PATH,
-        },
-        "execution_ladder": [
-            {
-                "profile": "30-minute-trial",
-                "max_minutes": 30,
-                "max_proposals": 1,
-                "max_consecutive_failures": 1,
-                "checkpoint_interval_minutes": 30,
-            },
-            {
-                "profile": "6-hour-ramp",
-                "max_minutes": 360,
-                "max_proposals": 6,
-                "checkpoint_interval_minutes": 30,
-            },
-            {
-                "profile": "2-day-candidate",
-                "max_minutes": 2880,
-                "max_proposals": 24,
-                "checkpoint_interval_minutes": 30,
-                "readiness_interval_hours": 6,
-                "session_synopsis_interval_hours": 6,
-            },
-            {
-                "profile": "5-day-sustained",
-                "max_minutes": 7200,
-                "max_proposals": 60,
-                "max_consecutive_failures": 1,
-                "heartbeat_interval_minutes": 5,
-                "checkpoint_interval_minutes": 30,
-                "readiness_interval_hours": 6,
-                "session_synopsis_interval_hours": 6,
-            },
-        ],
-        "stop_conditions": [
-            "allowed-root violation",
-            "repeated blocker cannot be converted to remediation backlog",
-            "status, audit, or heartbeat write failure",
-            "sealed authority or readiness regression",
-            "any need to bypass release, promotion, or learning-claim gates",
-        ],
-    }
-
-
-def _profile_budget(contract: dict[str, Any], active_profile: str) -> dict[str, int]:
-    profile = resolve_execution_profile(contract, active_profile, strict=False)
-    return {
-        "max_minutes": int(profile["max_minutes"]),
-        "max_proposals": int(profile["max_proposals"]),
-        "max_consecutive_failures": int(profile["max_consecutive_failures"]),
-    }
-
-
-def resolve_execution_profile(
-    contract: dict[str, Any],
-    active_profile: str,
-    *,
-    strict: bool = True,
-) -> dict[str, int | str]:
-    defaults: dict[str, int | str] = {
-        "profile": active_profile,
-        "max_minutes": int(contract["duration"]["max_minutes"]),
-        "max_proposals": int(contract["budgets"]["max_proposals"]),
-        "max_consecutive_failures": int(contract["budgets"]["max_consecutive_failures"]),
-        "heartbeat_interval_minutes": int(contract["budgets"]["heartbeat_interval_minutes"]),
-        "checkpoint_interval_minutes": int(contract["budgets"]["checkpoint_interval_minutes"]),
-        "readiness_interval_hours": int(contract["budgets"]["readiness_interval_hours"]),
-        "session_synopsis_interval_hours": int(contract["budgets"]["session_synopsis_interval_hours"]),
-    }
-    for item in contract.get("execution_ladder", []):
-        if isinstance(item, dict) and item.get("profile") == active_profile:
-            merged: dict[str, Any] = {**defaults, **item}
-            return {
-                "profile": str(merged["profile"]),
-                "max_minutes": int(merged["max_minutes"]),
-                "max_proposals": int(merged["max_proposals"]),
-                "max_consecutive_failures": int(merged["max_consecutive_failures"]),
-                "heartbeat_interval_minutes": int(merged["heartbeat_interval_minutes"]),
-                "checkpoint_interval_minutes": int(merged["checkpoint_interval_minutes"]),
-                "readiness_interval_hours": int(merged["readiness_interval_hours"]),
-                "session_synopsis_interval_hours": int(merged["session_synopsis_interval_hours"]),
-            }
-    if strict:
-        raise ValueError(f"unknown goal execution profile: {active_profile}")
-    return defaults
-
-
-def _heartbeat_status(contract: dict[str, Any], context: RuntimeContext) -> dict[str, Any]:
-    interval = int(contract["budgets"]["heartbeat_interval_minutes"])
-    return {
-        "interval_minutes": interval,
-        "last_heartbeat_at": context.isoformat_z(),
-        "stale_after_minutes": interval * 2,
-        "status": "fresh",
-    }
-
-
-def _string_list(value: object) -> list[str]:
-    if not isinstance(value, list):
-        return []
-    return [str(item).strip() for item in value if str(item).strip()]
-
-
-def _default_execution_identity() -> dict[str, Any]:
-    return {
-        "requested_session_id": "",
-        "resume_session": "",
-        "current_session_id": "",
-        "session_report": "",
-        "run_ids": [],
-    }
-
-
-def _ensure_execution_identity(status: dict[str, Any]) -> dict[str, Any]:
-    execution = status.get("execution")
-    if not isinstance(execution, dict):
-        execution = {}
-    normalized = _default_execution_identity()
-    normalized.update(
-        {
-            "requested_session_id": str(execution.get("requested_session_id", "")).strip(),
-            "resume_session": str(execution.get("resume_session", "")).strip(),
-            "current_session_id": str(execution.get("current_session_id", "")).strip(),
-            "session_report": str(execution.get("session_report", "")).strip(),
-            "run_ids": _string_list(execution.get("run_ids")),
+def _session_synopsis_link(vault: Path) -> dict[str, Any]:
+    synopsis = load_optional_json_object(vault / SESSION_SYNOPSIS_PATH)
+    if not synopsis:
+        return {
+            "link_status": "missing",
+            "report_path": SESSION_SYNOPSIS_PATH,
+            "status": "",
+            "generated_at": "",
+            "recent_blocker_count": 0,
+            "evidence_gap_count": 0,
+            "next_action": "Run make session-synopsis to refresh next-session context.",
         }
-    )
-    status["execution"] = normalized
-    return status
-
-
-def _sealed_authority_clean_pass_current(readiness: dict[str, Any]) -> bool:
-    diagnostics = readiness.get("diagnostics")
-    if not isinstance(diagnostics, dict):
-        return False
-    summary = diagnostics.get("release_authority_preflight_summary")
-    if not isinstance(summary, dict):
-        return False
-    return (
-        summary.get("status") == "pass"
-        and summary.get("preflight_status") == "sealed_clean_pass"
-        and bool(summary.get("clean_required_preflight")) is True
-        and bool(summary.get("expected_blocked_preflight")) is False
-    )
-
-
-def _promotion_policy_from_readiness(
-    vault: Path,
-    current_policy: dict[str, Any],
-) -> dict[str, Any]:
-    policy = dict(current_policy)
-    readiness_path = vault / AUTO_IMPROVE_READINESS_PATH
-    if not readiness_path.is_file():
-        policy["can_promote_result"] = bool(policy.get("can_promote_result", False))
-        policy["requires_sealed_authority_clean_pass"] = bool(
-            policy.get("requires_sealed_authority_clean_pass", True)
-        )
-        policy["promotion_ban_active"] = not bool(policy["can_promote_result"])
-        policy["promotion_ban_reason"] = str(
-            policy.get(
-                "promotion_ban_reason",
-                "Promotion remains forbidden until can_promote_result=true and sealed authority clean pass are both current.",
-            )
-        )
-        return policy
-    readiness = read_json_object(readiness_path)
-    readiness_can_promote = bool(readiness.get("can_promote_result", False))
-    requires_clean = bool(policy.get("requires_sealed_authority_clean_pass", True))
-    sealed_clean_current = _sealed_authority_clean_pass_current(readiness)
-    can_promote = readiness_can_promote and (sealed_clean_current or not requires_clean)
-    policy["can_promote_result"] = can_promote
-    policy["requires_sealed_authority_clean_pass"] = requires_clean
-    policy["promotion_ban_active"] = not can_promote
-    if can_promote:
-        policy["promotion_ban_reason"] = (
-            "Promotion gate is open because auto-improve readiness can_promote_result=true "
-            "and sealed authority clean pass is current."
-        )
-    elif readiness_can_promote and requires_clean:
-        policy["promotion_ban_reason"] = (
-            "Promotion remains forbidden because sealed authority clean pass is not current."
-        )
-    else:
-        policy["promotion_ban_reason"] = (
-            "Promotion remains forbidden until can_promote_result=true and sealed authority clean pass are both current."
-        )
-    return policy
-
-
-def _worktree_guard_summary(vault: Path, contract: dict[str, Any]) -> dict[str, Any]:
-    report = build_worktree_guard(
-        vault,
-        expected_branch=str(contract["github"]["branch"]),
-    )
-    status = str(report.get("status", "fail"))
-    mode = str(report.get("mode", "unknown"))
-    reason = str(report.get("reason", ""))
-    long_run_allowed = report.get("long_run_allowed")
-    if not isinstance(long_run_allowed, bool):
-        long_run_allowed = status == "pass" and mode == "git_worktree"
-    allowed_operation = str(
-        report.get(
-            "allowed_operation",
-            "long_run"
-            if long_run_allowed
-            else "trial_or_report_only"
-            if mode == "zip_or_report_only"
-            else "report_only",
-        )
-    )
-    if allowed_operation not in {
-        "long_run",
-        "trial_or_report_only",
-        "report_only",
-    }:
-        allowed_operation = "report_only"
-    blocked_operation_reason = str(report.get("blocked_operation_reason", ""))
-    if not long_run_allowed and not blocked_operation_reason:
-        blocked_operation_reason = reason
+    summary = synopsis.get("summary")
+    summary = summary if isinstance(summary, Mapping) else {}
     return {
-        "status": status,
-        "mode": mode,
-        "reason": reason,
-        "long_run_allowed": long_run_allowed,
-        "allowed_operation": allowed_operation,
-        "blocked_operation_reason": blocked_operation_reason,
+        "link_status": "linked",
+        "report_path": SESSION_SYNOPSIS_PATH,
+        "status": str(synopsis.get("status", "")).strip(),
+        "generated_at": str(synopsis.get("generated_at", "")).strip(),
+        "recent_blocker_count": _integer_value(summary.get("recent_blocker_count")),
+        "evidence_gap_count": _integer_value(summary.get("evidence_gap_count")),
+        "next_action": str(summary.get("next_action", "")).strip(),
     }
 
 
-def _build_status_from_contract(
-    vault: Path,
-    contract: dict[str, Any],
+def _request_from_legacy(
+    vault_or_request: Path | GoalRunStatusRequest,
+    legacy_fields: dict[str, Any],
+) -> GoalRunStatusRequest:
+    if isinstance(vault_or_request, GoalRunStatusRequest):
+        if legacy_fields:
+            raise TypeError("build_report accepts either a request object or legacy keyword fields")
+        return vault_or_request
+    return GoalRunStatusRequest(vault=Path(vault_or_request), **legacy_fields)
+
+
+def _prior_status_for_run(vault: Path, request: GoalRunStatusRequest) -> Mapping[str, Any]:
+    prior_report = load_optional_json_object(vault / request.status_report_path)
+    prior_run = mapping_field(prior_report, "run")
+    prior_status = str(prior_run.get("status", "")).strip()
+    same_run = str(prior_run.get("run_id", "")).strip() == request.run_id
+    if same_run and prior_status in {"running", "paused"}:
+        return prior_report
+    return {}
+
+
+def _prior_text_field(prior_report: Mapping[str, Any], section: str, field: str) -> str:
+    return str(mapping_field(prior_report, section).get(field, "")).strip()
+
+
+def _prior_int_field(
+    prior_report: Mapping[str, Any],
+    section: str,
+    field: str,
     *,
-    context: RuntimeContext,
-    active_profile: str = "30-minute-trial",
-    status: str = "initialized",
-    last_event: str = "initialized",
-    reason: str = "goal runtime status initialized",
+    default: int = 0,
+) -> int:
+    section_payload = mapping_field(prior_report, section)
+    if field not in section_payload:
+        return default
+    return _integer_value(section_payload.get(field))
+
+
+def _prior_bool_field(prior_report: Mapping[str, Any], section: str, field: str) -> bool:
+    value = mapping_field(prior_report, section).get(field)
+    return bool(value) if isinstance(value, bool) else False
+
+
+def build_report(
+    vault_or_request: Path | GoalRunStatusRequest,
+    **legacy_fields: Any,
 ) -> dict[str, Any]:
-    policy = contract["promotion_policy"]
-    return {
-        "$schema": GOAL_RUN_STATUS_SCHEMA,
-        "artifact_kind": "goal_run_status",
-        "schema_version": 1,
-        "generated_at": context.isoformat_z(),
-        "producer": PRODUCER,
-        "goal_id": contract["goal_id"],
-        "objective": contract["objective"],
-        "status": status,
-        "active_profile": active_profile,
-        "profile_verification": build_profile_verification(
-            contract,
-            active_profile=active_profile,
-        ),
-        "execution": _default_execution_identity(),
-        "repo": {
-            **contract["github"],
-            "worktree_guard": _worktree_guard_summary(vault, contract),
-        },
-        "budget": _profile_budget(contract, active_profile),
-        "progress": {
-            "iterations_completed": 0,
-            "proposals_attempted": 0,
-            "consecutive_failures": 0,
-            "elapsed_minutes": 0,
-        },
-        "heartbeat": _heartbeat_status(contract, context),
-        "promotion_policy": {
-            "can_promote_result": bool(policy["can_promote_result"]),
-            "requires_sealed_authority_clean_pass": bool(
-                policy["requires_sealed_authority_clean_pass"]
-            ),
-            "promotion_ban_active": not bool(policy["can_promote_result"]),
-            "promotion_ban_reason": str(policy["promotion_ban_reason"]),
-        },
-        "artifacts": contract["artifacts"],
-        "checkpoints": [],
-        "resume": {
-            "resume_supported": True,
-            "resume_metadata": contract["artifacts"]["resume_metadata"],
-            "last_checkpoint": "",
-        },
-        "stop_conditions": list(contract["stop_conditions"]),
-        "last_event": {
-            "at": context.isoformat_z(),
-            "event": last_event,
-            "reason": reason,
-        },
-    }
-
-
-def _write_status_markdown(vault: Path, status: dict[str, Any]) -> None:
-    path = vault / status["artifacts"]["status_markdown"]
-    repo = status["repo"]
-    progress = status["progress"]
-    profile_verification = status["profile_verification"]
-    lines = [
-        f"# {status['goal_id']}",
-        "",
-        f"- status: `{status['status']}`",
-        f"- active_profile: `{status['active_profile']}`",
-        f"- current_session_id: `{status['execution']['current_session_id']}`",
-        f"- run_ids: `{len(status['execution']['run_ids'])}`",
-        f"- repo: `{repo['repo_url']}`",
-        f"- visibility: `{repo['visibility']}`",
-        f"- branch: `{repo['branch']}`",
-        f"- baseline_commit: `{repo['baseline_commit']}`",
-        f"- worktree_path: `{repo['worktree_path']}`",
-        f"- worktree_guard: `{repo['worktree_guard']['status']}` / `{repo['worktree_guard']['mode']}`",
-        f"- long_run_allowed: `{repo['worktree_guard']['long_run_allowed']}`",
-        f"- allowed_operation: `{repo['worktree_guard']['allowed_operation']}`",
-        f"- required_predecessors_verified: `{profile_verification['required_predecessors_verified']}`",
-        f"- sustained_profile_verified: `{profile_verification['sustained_profile_verified']}`",
-        f"- sustainability_claim_allowed: `{profile_verification['sustainability_claim_allowed']}`",
-        f"- proposals_attempted: `{progress['proposals_attempted']}`",
-        f"- consecutive_failures: `{progress['consecutive_failures']}`",
-        f"- promotion_ban_active: `{status['promotion_policy']['promotion_ban_active']}`",
-    ]
-    backoff = status.get("executor_backoff")
-    if isinstance(backoff, dict) and bool(backoff.get("active", False)):
-        retry_after = backoff.get("retry_after_utc") or backoff.get("retry_after")
-        lines.append(
-            f"- executor_backoff: `{backoff.get('reason')}` until `{retry_after}`"
+    request = _request_from_legacy(vault_or_request, legacy_fields)
+    vault = request.vault.resolve()
+    policy, resolved_policy_path = load_policy(vault, request.policy_path)
+    runtime_context = request.context or RuntimeContext.from_policy(policy)
+    generated_at = runtime_context.isoformat_z()
+    prior_report = _prior_status_for_run(vault, request)
+    started_at = request.started_at or _prior_text_field(prior_report, "run", "started_at") or generated_at
+    last_heartbeat_at = (
+        request.last_heartbeat_at
+        or _prior_text_field(prior_report, "observability", "last_heartbeat_at")
+        or generated_at
+    )
+    last_checkpoint_at = (
+        request.last_checkpoint_at
+        or _prior_text_field(prior_report, "observability", "last_checkpoint_at")
+        or generated_at
+    )
+    last_command_heartbeat_at = (
+        request.last_command_heartbeat_at
+        or _prior_text_field(prior_report, "observability", "last_command_heartbeat_at")
+    )
+    command_observation_mode = (
+        request.command_observation_mode
+        or _prior_text_field(prior_report, "observability", "command_observation_mode")
+    )
+    command_heartbeat_count = request.command_heartbeat_count or _prior_int_field(
+        prior_report,
+        "observability",
+        "command_heartbeat_count",
+    )
+    command_timeout_seconds = request.command_timeout_seconds or _prior_int_field(
+        prior_report,
+        "observability",
+        "command_timeout_seconds",
+    )
+    last_stdout_at = request.last_stdout_at or _prior_text_field(
+        prior_report,
+        "observability",
+        "last_stdout_at",
+    )
+    last_stderr_at = request.last_stderr_at or _prior_text_field(
+        prior_report,
+        "observability",
+        "last_stderr_at",
+    )
+    last_artifact_touch_at = request.last_artifact_touch_at or _prior_text_field(
+        prior_report,
+        "observability",
+        "last_artifact_touch_at",
+    )
+    last_command_returncode = (
+        request.last_command_returncode
+        if request.last_command_returncode != -1
+        else _prior_int_field(
+            prior_report,
+            "observability",
+            "last_command_returncode",
+            default=-1,
         )
-    lines.append("")
-    text = "\n".join(lines)
-    write_output_text(path, text)
-
-
-def _append_audit_event(vault: Path, status: dict[str, Any], event: str, reason: str) -> None:
-    audit_path = vault / status["artifacts"]["audit_log"]
-    audit_path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "ts": status["generated_at"],
-        "goal_id": status["goal_id"],
-        "event": event,
-        "reason": reason,
-        "status": status["status"],
-        "active_profile": status["active_profile"],
-        "execution": dict(status.get("execution", _default_execution_identity())),
-        "profile_verification": {
-            "required_predecessors_verified": bool(
-                status["profile_verification"]["required_predecessors_verified"]
-            ),
-            "sustained_profile_verified": bool(
-                status["profile_verification"]["sustained_profile_verified"]
-            ),
-            "sustainability_claim_allowed": bool(
-                status["profile_verification"]["sustainability_claim_allowed"]
-            ),
-            "verified_profiles": list(status["profile_verification"]["verified_profiles"]),
-        },
-    }
-    with audit_path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
-
-
-def _write_resume_metadata(vault: Path, status: dict[str, Any], *, event: str) -> None:
-    path = vault / status["artifacts"]["resume_metadata"]
-    metadata = {
-        "goal_id": status["goal_id"],
-        "resume_supported": True,
-        "status_json": status["artifacts"]["status_json"],
-        "last_checkpoint": status["resume"]["last_checkpoint"],
-        "active_profile": status["active_profile"],
-    }
-    metadata.update(
-        _resume_metadata_envelope(
+    )
+    last_command_timed_out = request.last_command_timed_out or _prior_bool_field(
+        prior_report,
+        "observability",
+        "last_command_timed_out",
+    )
+    last_command_termination_reason = (
+        request.last_command_termination_reason
+        or _prior_text_field(prior_report, "observability", "last_command_termination_reason")
+    )
+    last_backoff_until = (
+        request.last_backoff_until
+        or _prior_text_field(prior_report, "observability", "last_backoff_until")
+    )
+    backoff_reason = request.backoff_reason or _prior_text_field(
+        prior_report,
+        "observability",
+        "backoff_reason",
+    )
+    resume_command = request.resume_command or _prior_text_field(
+        prior_report,
+        "observability",
+        "resume_command",
+    )
+    resume_from_checkpoint = request.resume_from_checkpoint or bool(
+        mapping_field(prior_report, "observability").get("resume_from_checkpoint", False)
+    )
+    backend = FileGoalBackend(vault=vault, contract_path=request.goal_contract_path)
+    contract = backend.get_goal()
+    promotion_guard = contract.get("promotion_guard")
+    if not isinstance(promotion_guard, dict):
+        promotion_guard = {}
+    raw_blockers = promotion_guard.get("promotion_blockers")
+    promotion_blockers = [str(item) for item in raw_blockers] if isinstance(raw_blockers, list) else []
+    health = build_goal_health(
+        generated_at=generated_at,
+        promotion_guard=promotion_guard,
+        heartbeat_interval_seconds=request.heartbeat_interval_seconds,
+        checkpoint_interval_seconds=request.checkpoint_interval_seconds,
+        last_heartbeat_at=last_heartbeat_at,
+        last_checkpoint_at=last_checkpoint_at,
+        last_command_heartbeat_at=last_command_heartbeat_at,
+        last_backoff_until=last_backoff_until,
+        resume_from_checkpoint=resume_from_checkpoint,
+        resume_command=resume_command,
+    )
+    paths = goal_run_artifact_paths(
+        request.run_id,
+        status_report_path=request.status_report_path,
+    )
+    periodic_evidence = build_periodic_evidence(
+        vault,
+        generated_at=generated_at,
+        started_at=started_at,
+        last_checkpoint_at=last_checkpoint_at,
+        checkpoint_command_log_path=paths.checkpoint_command_log_path,
+        checkpoints_config=PERIODIC_EVIDENCE_CHECKPOINTS,
+    )
+    profile_ladder = build_profile_ladder(
+        vault,
+        contract=contract,
+        run_profile=request.profile,
+    )
+    session_synopsis = _session_synopsis_link(vault)
+    blockers = list(
+        dict.fromkeys(
+            [
+                *promotion_blockers,
+                *profile_ladder_blockers(profile_ladder),
+                *health_blockers(
+                    health,
+                    run_status=request.status,
+                    periodic_evidence=periodic_evidence,
+                ),
+            ]
+        )
+    )
+    return {
+        **build_canonical_report_envelope(
             vault,
-            metadata,
-            generated_at=str(status["generated_at"]),
-            event=event,
-        )
-    )
-    write_schema_validated_json(
-        path,
-        metadata,
-        load_schema(vault / GOAL_RESUME_METADATA_SCHEMA),
-        context="goal resume metadata schema validation failed",
-        trailing_newline=True,
-    )
-
-
-def write_goal_status(vault: Path, status: dict[str, Any], *, event: str, reason: str) -> Path:
-    _ensure_execution_identity(status)
-    schema = load_schema(vault / GOAL_RUN_STATUS_SCHEMA)
-    out = vault / status["artifacts"]["status_json"]
-    status["promotion_policy"] = _promotion_policy_from_readiness(
-        vault,
-        status["promotion_policy"],
-    )
-    status.update(_goal_status_envelope(vault, status, event=event))
-    write_schema_validated_json(out, status, schema, context="goal run status schema validation failed")
-    _write_status_markdown(vault, status)
-    _append_audit_event(vault, status, event, reason)
-    _write_resume_metadata(vault, status, event=event)
-    return out
-
-
-def write_checkpoint(vault: Path, status: dict[str, Any], *, reason: str) -> dict[str, Any]:
-    _ensure_execution_identity(status)
-    checkpoint_dir = vault / status["artifacts"]["checkpoints_dir"]
-    checkpoint_dir.mkdir(parents=True, exist_ok=True)
-    checkpoint_stem = f"checkpoint-{status['generated_at'].replace(':', '').replace('-', '')}"
-    checkpoint_name = f"{checkpoint_stem}.json"
-    suffix = 1
-    while (checkpoint_dir / checkpoint_name).exists():
-        checkpoint_name = f"{checkpoint_stem}-{suffix:02d}.json"
-        suffix += 1
-    checkpoint_rel = f"{status['artifacts']['checkpoints_dir'].rstrip('/')}/{checkpoint_name}"
-    profile_verification = status.get("profile_verification")
-    if isinstance(profile_verification, dict):
-        attach_pending_checkpoint(profile_verification, checkpoint_rel)
-    status["checkpoints"].append(
-        {
-            "path": checkpoint_rel,
-            "created_at": status["generated_at"],
-            "reason": reason,
-        }
-    )
-    status["resume"]["last_checkpoint"] = checkpoint_rel
-    checkpoint = copy.deepcopy(status)
-    checkpoint.update(_goal_status_envelope(vault, checkpoint, event="checkpoint"))
-    checkpoint["last_event"] = {
-        "at": status["generated_at"],
-        "event": "checkpoint",
-        "reason": reason,
+            generated_at=generated_at,
+            artifact_kind="goal_run_status",
+            producer=PRODUCER,
+            source_command=SOURCE_COMMAND,
+            resolved_policy_path=resolved_policy_path,
+            schema_path=SCHEMA_PATH,
+            source_paths=[
+                "ops/scripts/mechanism/goal_run_status.py",
+                "ops/scripts/mechanism/goal_runtime_backoff.py",
+                "ops/scripts/mechanism/goal_runtime_maintenance.py",
+                "ops/scripts/mechanism/goal_runtime_profile.py",
+                "ops/scripts/mechanism/goal_runtime_resume.py",
+                "ops/scripts/core/codex_goal_client.py",
+                "ops/schemas/goal-run-status.schema.json",
+                "ops/schemas/codex-goal-contract.schema.json",
+            ],
+            file_inputs={"goal_contract": request.goal_contract_path},
+            text_inputs={"session_synopsis_link": SESSION_SYNOPSIS_PATH},
+            source_tree_excluded_files=(DEFAULT_STATUS_PATH,),
+        ),
+        "goal": {
+            "contract_path": request.goal_contract_path,
+            "contract_sha256": _canonical_json_digest(contract),
+            "contract_status": "loaded",
+            "contract_id": str(contract.get("contract_id", "")).strip(),
+            "objective": str(contract.get("objective", "")).strip(),
+            "goal_status": str(contract.get("status", "")).strip(),
+            "backend": {
+                "name": backend.name,
+                "process_persistent": backend.process_persistent,
+            },
+        },
+        "run": {
+            "run_id": request.run_id,
+            "status": request.status,
+            "profile": request.profile,
+            "started_at": started_at,
+            "updated_at": generated_at,
+            "completed_at": request.completed_at,
+        },
+        "observability": {
+            "heartbeat_interval_seconds": request.heartbeat_interval_seconds,
+            "checkpoint_interval_seconds": request.checkpoint_interval_seconds,
+            "last_heartbeat_at": last_heartbeat_at,
+            "last_checkpoint_at": last_checkpoint_at,
+            "last_command_heartbeat_at": last_command_heartbeat_at,
+            "quiet_seconds": request.quiet_seconds,
+            "command_observation_mode": command_observation_mode,
+            "command_heartbeat_count": command_heartbeat_count,
+            "command_timeout_seconds": command_timeout_seconds,
+            "last_stdout_at": last_stdout_at,
+            "last_stderr_at": last_stderr_at,
+            "last_artifact_touch_at": last_artifact_touch_at,
+            "last_command_returncode": last_command_returncode,
+            "last_command_timed_out": last_command_timed_out,
+            "last_command_termination_reason": last_command_termination_reason,
+            "last_backoff_until": last_backoff_until,
+            "backoff_reason": backoff_reason,
+            "resume_from_checkpoint": resume_from_checkpoint,
+            "resume_command": resume_command,
+        },
+        "health": health,
+        "profile_ladder": profile_ladder,
+        "periodic_evidence": periodic_evidence,
+        "session_synopsis": session_synopsis,
+        "artifacts": {
+            "status_report_path": paths.status_report_path,
+            "status_markdown_path": paths.status_markdown_path,
+            "audit_log_path": paths.audit_log_path,
+            "resume_metadata_path": paths.resume_metadata_path,
+            "checkpoint_command_log_path": paths.checkpoint_command_log_path,
+        },
+        "promotion_guard": promotion_guard,
+        "blockers": blockers,
+        "status": _status_from_blockers(request.status, blockers),
     }
-    write_schema_validated_json(
-        vault / checkpoint_rel,
-        checkpoint,
-        load_schema(vault / GOAL_RUN_STATUS_SCHEMA),
-        context="goal run checkpoint schema validation failed",
-        trailing_newline=True,
-    )
-    return status
 
 
-def initialize_goal_runtime(
-    vault: Path,
-    *,
-    repo_url: str,
-    visibility: str,
-    baseline_commit: str,
-    branch: str,
-    worktree_path: str,
-    context: RuntimeContext | None = None,
-    active_profile: str = "30-minute-trial",
-) -> dict[str, Any]:
-    runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
-    contract = default_goal_contract(
-        context=runtime_context,
-        repo_url=repo_url,
-        visibility=visibility,
-        baseline_commit=baseline_commit,
-        branch=branch,
-        worktree_path=worktree_path,
-    )
-    contract.update(_goal_contract_envelope(vault, contract))
-    write_schema_validated_json(
-        vault / DEFAULT_CONTRACT_PATH,
-        contract,
-        load_schema(vault / GOAL_CONTRACT_SCHEMA),
-        context="codex goal contract schema validation failed",
-        trailing_newline=True,
-    )
-    status = _build_status_from_contract(
-        vault,
-        contract,
-        context=runtime_context,
-        active_profile=active_profile,
-        status="initialized",
-    )
-    event = "initialized"
-    reason = "goal runtime initialized"
-    checkpoint_reason = "initial GitHub worktree registration"
-    guard = status["repo"]["worktree_guard"]
-    if (
-        guard["status"] != "pass"
-        or guard["mode"] != "git_worktree"
-        or guard["long_run_allowed"] is not True
-    ):
-        status["status"] = "blocked"
-        event = "goal_runtime_init_blocked_by_worktree_guard"
-        reason = str(
-            guard.get("blocked_operation_reason")
-            or guard.get("reason")
-            or "goal runtime requires a linked Git worktree for long-run execution"
+def write_report(vault: Path, report: Mapping[str, Any], out_path: str | None = None) -> Path:
+    return write_schema_backed_report(
+        SchemaBackedReportWriteRequest(
+            vault=vault,
+            payload=report,
+            schema_path=SCHEMA_PATH,
+            out_path=out_path,
+            default_relative_path=DEFAULT_STATUS_PATH,
+            context="goal run status schema validation failed",
+            trailing_newline=True,
         )
-        checkpoint_reason = reason
-        status["last_event"] = {
-            "at": runtime_context.isoformat_z(),
-            "event": event,
-            "reason": reason,
-        }
-    status = write_checkpoint(vault, status, reason=checkpoint_reason)
-    write_goal_status(vault, status, event=event, reason=reason)
-    return status
+    )
+
+
+def build_status_markdown(report: Mapping[str, Any]) -> str:
+    goal = mapping_field(report, "goal")
+    run = mapping_field(report, "run")
+    observability = mapping_field(report, "observability")
+    health = mapping_field(report, "health")
+    profile_ladder = mapping_field(report, "profile_ladder")
+    periodic_evidence = mapping_field(report, "periodic_evidence")
+    session_synopsis = mapping_field(report, "session_synopsis")
+    blockers = report.get("blockers") if isinstance(report.get("blockers"), list) else []
+    blocker_text = "\n".join(f"- {item}" for item in blockers) if blockers else "- none"
+    missing_due = periodic_evidence.get("missing_due_checkpoint_ids", [])
+    missing_due_text = ", ".join(str(item) for item in missing_due) if missing_due else "none"
+    checkpoint_command_log = mapping_field(report, "artifacts").get(
+        "checkpoint_command_log_path",
+        "",
+    )
+    return "\n".join(
+        [
+            f"# Goal Run {run.get('run_id', '')}",
+            "",
+            f"- status: {run.get('status', '')}",
+            f"- profile: {run.get('profile', '')}",
+            f"- goal: {goal.get('contract_id', '')}",
+            f"- contract_sha256: {goal.get('contract_sha256', '')}",
+            f"- last_heartbeat_at: {observability.get('last_heartbeat_at', '')}",
+            f"- last_checkpoint_at: {observability.get('last_checkpoint_at', '')}",
+            f"- last_command_heartbeat_at: {observability.get('last_command_heartbeat_at', '')}",
+            f"- command_observation_mode: {observability.get('command_observation_mode', '')}",
+            f"- command_heartbeat_count: {observability.get('command_heartbeat_count', 0)}",
+            f"- command_timeout_seconds: {observability.get('command_timeout_seconds', 0)}",
+            f"- last_command_termination_reason: {observability.get('last_command_termination_reason', '')}",
+            f"- last_backoff_until: {observability.get('last_backoff_until', '')}",
+            f"- resume_from_checkpoint: {observability.get('resume_from_checkpoint', False)}",
+            f"- heartbeat_status: {health.get('heartbeat_status', '')}",
+            f"- checkpoint_status: {health.get('checkpoint_status', '')}",
+            f"- command_heartbeat_status: {health.get('command_heartbeat_status', '')}",
+            f"- backoff_status: {health.get('backoff_status', '')}",
+            f"- resume_status: {health.get('resume_status', '')}",
+            f"- promotion_status: {health.get('promotion_status', '')}",
+            f"- profile_ladder_status: {profile_ladder.get('status', '')}",
+            f"- highest_verified_profile: {profile_ladder.get('highest_verified_profile', '')}",
+            f"- next_profile_required: {profile_ladder.get('next_profile_required', '')}",
+            f"- sustained_claim_allowed: {profile_ladder.get('sustained_claim_allowed', False)}",
+            f"- periodic_evidence_status: {periodic_evidence.get('status', '')}",
+            f"- missing_due_checkpoints: {missing_due_text}",
+            f"- checkpoint_command_log: {checkpoint_command_log}",
+            f"- session_synopsis: {session_synopsis.get('report_path', '')}",
+            f"- session_synopsis_status: {session_synopsis.get('status', '')}",
+            "",
+            "## Promotion Blockers",
+            blocker_text,
+            "",
+        ]
+    )
+
+
+def write_run_artifacts(
+    vault: Path,
+    report: Mapping[str, Any],
+    *,
+    writer: str = PRODUCER,
+) -> list[Path]:
+    artifacts = report.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("goal run status report missing artifacts")
+    status_markdown = vault / str(artifacts["status_markdown_path"])
+    resume_metadata = vault / str(artifacts["resume_metadata_path"])
+    audit_log = vault / str(artifacts["audit_log_path"])
+    atomic_write_text(status_markdown, build_status_markdown(report))
+    write_json_object(
+        resume_metadata,
+        resume_metadata_from_report(report),
+        trailing_newline=True,
+    )
+    audit_log.parent.mkdir(parents=True, exist_ok=True)
+    event = {
+        "event": "goal_run_status_written",
+        "writer": writer,
+        "generated_at": str(report.get("generated_at", "")),
+        "run_id": mapping_field(report, "run").get("run_id", ""),
+        "run_status": mapping_field(report, "run").get("status", ""),
+        "status": report.get("status", ""),
+        "heartbeat_status": mapping_field(report, "health").get("heartbeat_status", ""),
+        "checkpoint_status": mapping_field(report, "health").get("checkpoint_status", ""),
+        "command_heartbeat_status": mapping_field(report, "health").get("command_heartbeat_status", ""),
+        "command_observation_mode": mapping_field(report, "observability").get(
+            "command_observation_mode",
+            "",
+        ),
+        "command_heartbeat_count": mapping_field(report, "observability").get(
+            "command_heartbeat_count",
+            0,
+        ),
+        "quiet_seconds": mapping_field(report, "observability").get("quiet_seconds", 0),
+        "last_command_returncode": mapping_field(report, "observability").get(
+            "last_command_returncode",
+            -1,
+        ),
+        "last_command_timed_out": mapping_field(report, "observability").get(
+            "last_command_timed_out",
+            False,
+        ),
+        "last_command_termination_reason": mapping_field(report, "observability").get(
+            "last_command_termination_reason",
+            "",
+        ),
+    }
+    with audit_log.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
+    return [status_markdown, resume_metadata, audit_log]
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Initialize or update goal runtime status artifacts.")
-    sub = parser.add_subparsers(dest="command", required=True)
-    init = sub.add_parser("init")
-    init.add_argument("--vault", default=".")
-    init.add_argument("--repo-url", required=True)
-    init.add_argument("--visibility", required=True, choices=["PRIVATE", "PUBLIC", "UNKNOWN"])
-    init.add_argument("--baseline-commit", required=True)
-    init.add_argument("--branch", required=True)
-    init.add_argument("--worktree-path", required=True)
-    init.add_argument("--active-profile", default="30-minute-trial")
-
-    heartbeat = sub.add_parser("heartbeat")
-    heartbeat.add_argument("--vault", default=".")
-    heartbeat.add_argument("--status", default=DEFAULT_STATUS_PATH)
-    heartbeat.add_argument("--reason", default="heartbeat")
-
-    checkpoint = sub.add_parser("checkpoint")
-    checkpoint.add_argument("--vault", default=".")
-    checkpoint.add_argument("--status", default=DEFAULT_STATUS_PATH)
-    checkpoint.add_argument("--reason", default="checkpoint")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--vault", default=".", help="Repository/vault root.")
+    parser.add_argument("--goal-contract", default=DEFAULT_CONTRACT_PATH)
+    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--status", default="running")
+    parser.add_argument("--profile", default="30m_trial")
+    parser.add_argument("--started-at", default="")
+    parser.add_argument("--completed-at", default="")
+    parser.add_argument("--heartbeat-interval-seconds", type=int, default=300)
+    parser.add_argument("--checkpoint-interval-seconds", type=int, default=1800)
+    parser.add_argument("--last-heartbeat-at", default="")
+    parser.add_argument("--last-checkpoint-at", default="")
+    parser.add_argument("--last-command-heartbeat-at", default="")
+    parser.add_argument("--quiet-seconds", type=int, default=0)
+    parser.add_argument("--last-backoff-until", default="")
+    parser.add_argument("--backoff-reason", default="")
+    parser.add_argument("--resume-from-checkpoint", action="store_true")
+    parser.add_argument("--resume-command", default="")
+    parser.add_argument("--status-report-path", default=DEFAULT_STATUS_PATH)
+    parser.add_argument("--out", default=DEFAULT_STATUS_PATH)
+    parser.add_argument("--write-run-artifacts", action="store_true")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
-    context = RuntimeContext(display_timezone=dt.timezone.utc)
-    if args.command == "init":
-        status = initialize_goal_runtime(
-            vault,
-            repo_url=args.repo_url,
-            visibility=args.visibility,
-            baseline_commit=args.baseline_commit,
-            branch=args.branch,
-            worktree_path=args.worktree_path,
-            context=context,
-            active_profile=args.active_profile,
+    report = build_report(
+        GoalRunStatusRequest(
+            vault=vault,
+            run_id=args.run_id,
+            goal_contract_path=args.goal_contract,
+            status=args.status,
+            profile=args.profile,
+            started_at=args.started_at,
+            completed_at=args.completed_at,
+            heartbeat_interval_seconds=args.heartbeat_interval_seconds,
+            checkpoint_interval_seconds=args.checkpoint_interval_seconds,
+            last_heartbeat_at=args.last_heartbeat_at,
+            last_checkpoint_at=args.last_checkpoint_at,
+            last_command_heartbeat_at=args.last_command_heartbeat_at,
+            quiet_seconds=args.quiet_seconds,
+            last_backoff_until=args.last_backoff_until,
+            backoff_reason=args.backoff_reason,
+            resume_from_checkpoint=args.resume_from_checkpoint,
+            resume_command=args.resume_command,
+            status_report_path=args.status_report_path,
+            out_path=args.out,
         )
-        print(json.dumps(status, ensure_ascii=False, indent=2))
-        return 0
-    status = read_json_object(vault / args.status)
-    status["generated_at"] = context.isoformat_z()
-    status["heartbeat"] = _heartbeat_status(
-        {
-            "budgets": {
-                "heartbeat_interval_minutes": status["heartbeat"]["interval_minutes"],
-            }
-        },
-        context,
     )
-    if args.command == "checkpoint":
-        status = write_checkpoint(vault, status, reason=args.reason)
-    status["last_event"] = {
-        "at": context.isoformat_z(),
-        "event": args.command,
-        "reason": args.reason,
-    }
-    write_goal_status(vault, status, event=args.command, reason=args.reason)
-    print(json.dumps(status, ensure_ascii=False, indent=2))
+    destination = write_report(vault, report, args.out)
+    if args.write_run_artifacts:
+        write_run_artifacts(vault, report)
+    print(display_path(vault, destination))
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())

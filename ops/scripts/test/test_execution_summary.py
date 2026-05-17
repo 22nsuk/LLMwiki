@@ -789,15 +789,52 @@ def _artifact_identity(vault: Path, path_value: str | Path, *, kind: str, source
     }
 
 
+def _pytest_outcome_total(counts: dict[str, int]) -> int:
+    return sum(
+        int(counts.get(label, 0) or 0)
+        for label in ("passed", "failed", "errors", "skipped", "xfailed", "xpassed")
+    )
+
+
+def _count_consistency(
+    *,
+    expected_count: int,
+    observed_count: int | None,
+    subject: str,
+) -> dict[str, Any]:
+    if observed_count is None:
+        return {
+            "consistency_status": "attention",
+            "observed_count": 0,
+            "expected_count": expected_count,
+            "consistency_reason": f"{subject} count could not be read",
+        }
+    if observed_count == expected_count:
+        return {
+            "consistency_status": "pass",
+            "observed_count": observed_count,
+            "expected_count": expected_count,
+            "consistency_reason": f"{subject} count matches pytest summary",
+        }
+    return {
+        "consistency_status": "attention",
+        "observed_count": observed_count,
+        "expected_count": expected_count,
+        "consistency_reason": f"{subject} count does not match pytest summary",
+    }
+
+
 def _failed_nodeids(stdout: str) -> list[str]:
     failed: set[str] = set()
     for line in stdout.splitlines():
         stripped = line.strip()
-        if not stripped.startswith("FAILED "):
-            continue
-        nodeid = stripped.removeprefix("FAILED ").split(" - ", 1)[0].strip()
-        if nodeid:
-            failed.add(nodeid)
+        for prefix in ("FAILED ", "ERROR "):
+            if not stripped.startswith(prefix):
+                continue
+            nodeid = stripped.removeprefix(prefix).split(" - ", 1)[0].strip()
+            if nodeid:
+                failed.add(nodeid)
+            break
     return sorted(failed)
 
 
@@ -814,11 +851,42 @@ def write_execution_log(vault: Path, out_path: str | Path, result: TimedProcessR
     return _artifact_identity(vault, path, kind="execution_log", source="captured_pytest_stdout_stderr")
 
 
+def junit_artifact_identity(
+    vault: Path,
+    path_value: str | Path,
+    *,
+    counts: dict[str, int],
+) -> dict[str, Any]:
+    path = Path(path_value)
+    if not path.is_absolute():
+        path = vault / path
+    artifact = _artifact_identity(vault, path, kind="junit_xml", source="pytest_junit_xml")
+    if not artifact["exists"]:
+        artifact.update(
+            {
+                "consistency_status": "skipped",
+                "observed_count": 0,
+                "expected_count": _pytest_outcome_total(counts),
+                "consistency_reason": "junit_xml artifact was not written",
+            }
+        )
+        return artifact
+    artifact.update(
+        _count_consistency(
+            expected_count=_pytest_outcome_total(counts),
+            observed_count=_junit_testcase_count(path),
+            subject="junit testcase",
+        )
+    )
+    return artifact
+
+
 def write_failed_nodeids_artifact(
     vault: Path,
     out_path: str | Path,
     *,
     failed_nodeids: list[str],
+    expected_count: int | None = None,
 ) -> dict[str, Any]:
     path = Path(out_path)
     if not path.is_absolute():
@@ -828,7 +896,16 @@ def write_failed_nodeids_artifact(
     if payload:
         payload = f"{payload}\n"
     path.write_text(payload, encoding="utf-8")
-    return _artifact_identity(vault, path, kind="failed_nodeids", source="pytest_failure_nodeids")
+    artifact = _artifact_identity(vault, path, kind="failed_nodeids", source="pytest_failed_and_error_nodeids")
+    if expected_count is not None:
+        artifact.update(
+            _count_consistency(
+                expected_count=expected_count,
+                observed_count=len(failed_nodeids),
+                subject="failed/error nodeid artifact",
+            )
+        )
+    return artifact
 
 
 def _artifact_path(vault: Path, artifact: dict[str, Any]) -> Path:
@@ -1906,15 +1983,15 @@ def _evidence_artifacts_for_args(
     result: TimedProcessResult,
 ) -> list[dict[str, Any]]:
     evidence_artifacts: list[dict[str, Any]] = []
+    counts = parse_pytest_counts(result.stdout, result.stderr)
     if args.execution_log_out:
         evidence_artifacts.append(write_execution_log(vault, args.execution_log_out, result))
     if args.junit_xml_path:
         evidence_artifacts.append(
-            _artifact_identity(
+            junit_artifact_identity(
                 vault,
                 args.junit_xml_path,
-                kind="junit_xml",
-                source="pytest_junit_xml",
+                counts=counts,
             )
         )
     if args.failed_nodeids_out:
@@ -1923,6 +2000,7 @@ def _evidence_artifacts_for_args(
                 vault,
                 args.failed_nodeids_out,
                 failed_nodeids=_failed_nodeids(result.stdout),
+                expected_count=int(counts.get("failed", 0) or 0) + int(counts.get("errors", 0) or 0),
             )
         )
     return evidence_artifacts

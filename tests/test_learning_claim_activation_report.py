@@ -80,6 +80,14 @@ def seed_activation_inputs(vault: Path) -> None:
                             "run_id": "run-discard",
                             "decision": "DISCARD",
                             "reasons": ["decision=DISCARD"],
+                        },
+                        {
+                            "run_id": "run-diagnostic-only",
+                            "decision": "DISCARD",
+                            "reasons": [
+                                "decision=DISCARD",
+                                "behavior delta before/after evidence missing",
+                            ],
                         }
                     ]
                 },
@@ -223,6 +231,8 @@ class LearningClaimActivationReportTests(unittest.TestCase):
             self.assertEqual(report["negative_learning_ledger"]["gate_effect"], "none")
             self.assertIn("hold_same_eval_no_secondary_improvement", patterns)
             self.assertIn("discard_unknown", patterns)
+            self.assertIn("discard_behavior_delta_before_after_evidence_missing", patterns)
+            self.assertNotIn("discard_decision_discard", patterns)
             self.assertIn("blocked_queue_recent_log_overlap", patterns)
             self.assertIn("BLOCKED", patterns["blocked_queue_recent_log_overlap"]["decisions"])
 

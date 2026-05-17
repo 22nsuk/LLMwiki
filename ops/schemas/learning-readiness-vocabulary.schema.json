@@ -32,7 +32,8 @@
         "promotion_blocked_by_release_finality_failure",
         "promotion_blocked_by_release_authority_preflight_failure",
         "promotion_blocked_by_release_lineage_mismatch",
-        "promotion_blocked_by_artifact_finalization_failure"
+        "promotion_blocked_by_artifact_finalization_failure",
+        "promotion_blocked_by_goal_worktree_guard_failure"
       ]
     },
     "learning_source_status": {
@@ -48,6 +49,7 @@
         "warn",
         "fail",
         "not_run",
+        "attention",
         "missing",
         "unknown",
         "learning_uncertain",

@@ -3,11 +3,19 @@ from __future__ import annotations
 import re
 import time
 from dataclasses import dataclass
+import hashlib
+import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
-from ops.scripts.artifact_io_runtime import read_json_object, write_json_object, write_schema_validated_json
+from ops.scripts.artifact_io_runtime import (
+    load_optional_json_object,
+    read_json_object,
+    write_json_object,
+    write_schema_validated_json,
+)
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope, embed_artifact_envelope_metadata
+from ops.scripts.codex_goal_client import FileGoalBackend
 from .auto_improve_readiness_runtime import (
     build_readiness_report,
     learning_review_required,
@@ -84,6 +92,14 @@ from ops.scripts.subagent_routing_runtime import run_selector
 AUTO_IMPROVE_SESSION_SCHEMA = AUTO_IMPROVE_SESSION_SCHEMA_PATH
 DEFAULT_MECHANISM_REVIEW_REPORT = "ops/reports/mechanism-review-candidates.json"
 DEFAULT_MUTATION_PROPOSAL_REPORT = "ops/reports/mutation-proposals.json"
+REPEATED_BLOCKER_THRESHOLD = 2
+REMEDIATION_BACKLOG_REPORT = "ops/reports/remediation-backlog.json"
+REPEAT_BACKLOG_ITEM_TYPES = frozenset(
+    {
+        "repeated_auto_improve_blocker",
+        "repeated_negative_lesson",
+    }
+)
 
 
 class AutoImproveError(Exception):
@@ -135,6 +151,7 @@ class AutoImproveSessionRequest:
     policy_path: str | None
     session_id: str | None = None
     resume_session: str | None = None
+    goal_contract_path: str | None = None
     max_proposals: int | None = None
     max_minutes: int | None = None
     max_consecutive_failures: int | None = None
@@ -149,6 +166,7 @@ class AutoImproveSessionRequest:
             policy_path=self.policy_path,
             session_id=self.session_id,
             resume_session=self.resume_session,
+            goal_contract_path=self.goal_contract_path,
             max_proposals=self.max_proposals,
             max_minutes=self.max_minutes,
             max_consecutive_failures=self.max_consecutive_failures,
@@ -176,6 +194,7 @@ def _coerce_auto_improve_session_request(
         "policy_path",
         "session_id",
         "resume_session",
+        "goal_contract_path",
         "max_proposals",
         "max_minutes",
         "max_consecutive_failures",
@@ -193,6 +212,7 @@ def _coerce_auto_improve_session_request(
         policy_path=legacy_kwargs["policy_path"],
         session_id=legacy_kwargs.get("session_id"),
         resume_session=legacy_kwargs.get("resume_session"),
+        goal_contract_path=legacy_kwargs.get("goal_contract_path"),
         max_proposals=legacy_kwargs.get("max_proposals"),
         max_minutes=legacy_kwargs.get("max_minutes"),
         max_consecutive_failures=legacy_kwargs.get("max_consecutive_failures"),
@@ -236,6 +256,185 @@ def _resolve_budget_value(name: str, value: int | None, default: int) -> int:
     return resolved
 
 
+def _canonical_json_digest(payload: Mapping[str, Any]) -> str:
+    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(data.encode("utf-8")).hexdigest()
+
+
+def _mapping_value(payload: Mapping[str, Any], key: str) -> Mapping[str, Any]:
+    value = payload.get(key)
+    return value if isinstance(value, Mapping) else {}
+
+
+def _list_text(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _dict_items(value: object) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _is_open_repeat_backlog_item(item: Mapping[str, Any]) -> bool:
+    status = str(item.get("status", "")).strip().lower()
+    if status != "open":
+        return False
+    severity = str(item.get("severity", "")).strip()
+    item_type = str(item.get("item_type", "")).strip()
+    return severity == "blocks_repeat" or item_type in REPEAT_BACKLOG_ITEM_TYPES
+
+
+def _open_repeat_backlog_items(vault: Path) -> list[dict[str, Any]]:
+    report = load_optional_json_object(vault / REMEDIATION_BACKLOG_REPORT)
+    items = [
+        item
+        for item in _dict_items(report.get("items"))
+        if _is_open_repeat_backlog_item(item)
+    ]
+    return sorted(
+        items,
+        key=lambda item: (
+            str(item.get("item_id", "")).strip(),
+            str(item.get("blocker_id", "")).strip(),
+        ),
+    )
+
+
+def _open_repeat_backlog_blocker_reason(vault: Path) -> str:
+    for item in _open_repeat_backlog_items(vault):
+        for key in ("blocker_id", "item_id", "item_type"):
+            reason = str(item.get(key, "")).strip()
+            if reason:
+                return reason
+    return ""
+
+
+def _positive_contract_int(payload: Mapping[str, Any], key: str, *, context: str) -> int:
+    value = payload.get(key)
+    if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+        raise AutoImproveUsageError(f"goal contract {context}.{key} must be an integer >= 1")
+    return value
+
+
+def _goal_contract_snapshot(
+    vault: Path,
+    *,
+    contract_path: str,
+    contract: Mapping[str, Any],
+    resolved_contract_path: Path,
+) -> dict[str, Any]:
+    budgets = _mapping_value(contract, "budgets")
+    runtime_profile = _mapping_value(contract, "runtime_profile")
+    promotion_guard = _mapping_value(contract, "promotion_guard")
+    max_wall_clock_seconds = _positive_contract_int(
+        budgets,
+        "max_wall_clock_seconds",
+        context="budgets",
+    )
+    max_unattended_seconds = _positive_contract_int(
+        runtime_profile,
+        "max_unattended_seconds",
+        context="runtime_profile",
+    )
+    return {
+        "path": report_path(vault, resolved_contract_path),
+        "requested_path": contract_path,
+        "contract_sha256": _canonical_json_digest(contract),
+        "contract_id": str(contract.get("contract_id", "")).strip(),
+        "status": str(contract.get("status", "")).strip(),
+        "current_profile": str(runtime_profile.get("current_profile", "")).strip(),
+        "max_wall_clock_seconds": max_wall_clock_seconds,
+        "max_unattended_seconds": max_unattended_seconds,
+        "max_proposals": _positive_contract_int(
+            budgets,
+            "max_proposals",
+            context="budgets",
+        ),
+        "max_consecutive_failures": _positive_contract_int(
+            budgets,
+            "max_consecutive_failures",
+            context="budgets",
+        ),
+        "can_promote_result": bool(promotion_guard.get("can_promote_result", False)),
+        "promotion_blockers": _list_text(promotion_guard.get("promotion_blockers")),
+    }
+
+
+def _load_goal_contract_snapshot(vault: Path, goal_contract_path: str) -> dict[str, Any]:
+    backend = FileGoalBackend(vault=vault, contract_path=goal_contract_path)
+    contract = backend.get_goal()
+    return _goal_contract_snapshot(
+        vault,
+        contract_path=goal_contract_path,
+        contract=contract,
+        resolved_contract_path=backend.destination,
+    )
+
+
+def _validate_goal_contract_budget(session: Mapping[str, Any], snapshot: Mapping[str, Any]) -> None:
+    budget = _mapping_value(session, "budget")
+    max_proposals = _positive_contract_int(budget, "max_proposals", context="session.budget")
+    max_minutes = _positive_contract_int(budget, "max_minutes", context="session.budget")
+    max_consecutive_failures = _positive_contract_int(
+        budget,
+        "max_consecutive_failures",
+        context="session.budget",
+    )
+    contract_max_proposals = _positive_contract_int(snapshot, "max_proposals", context="snapshot")
+    contract_max_failures = _positive_contract_int(
+        snapshot,
+        "max_consecutive_failures",
+        context="snapshot",
+    )
+    contract_wall_seconds = min(
+        _positive_contract_int(snapshot, "max_wall_clock_seconds", context="snapshot"),
+        _positive_contract_int(snapshot, "max_unattended_seconds", context="snapshot"),
+    )
+    if max_proposals > contract_max_proposals:
+        raise AutoImproveUsageError(
+            "max_proposals exceeds goal contract budget: "
+            f"requested {max_proposals}, contract allows {contract_max_proposals}"
+        )
+    if max_consecutive_failures > contract_max_failures:
+        raise AutoImproveUsageError(
+            "max_consecutive_failures exceeds goal contract budget: "
+            f"requested {max_consecutive_failures}, contract allows {contract_max_failures}"
+        )
+    if max_minutes * 60 > contract_wall_seconds:
+        allowed_minutes = contract_wall_seconds // 60
+        raise AutoImproveUsageError(
+            "max_minutes exceeds goal contract budget: "
+            f"requested {max_minutes}m, contract allows {allowed_minutes}m "
+            f"({contract_wall_seconds}s)"
+        )
+
+
+def _session_goal_contract_path(session: Mapping[str, Any]) -> str:
+    goal_contract = _mapping_value(session, "goal_contract")
+    return str(goal_contract.get("requested_path") or goal_contract.get("path") or "").strip()
+
+
+def _attach_goal_contract_snapshot(
+    vault: Path,
+    session: dict,
+    *,
+    goal_contract_path: str,
+) -> None:
+    snapshot = _load_goal_contract_snapshot(vault, goal_contract_path)
+    _validate_goal_contract_budget(session, snapshot)
+    existing = _mapping_value(session, "goal_contract")
+    existing_digest = str(existing.get("contract_sha256", "")).strip()
+    if existing_digest and existing_digest != snapshot["contract_sha256"]:
+        raise AutoImproveUsageError(
+            "resume goal contract digest mismatch: "
+            f"{existing_digest} != {snapshot['contract_sha256']}"
+        )
+    session["goal_contract"] = snapshot
+
+
 def _empty_loop_state(context: RuntimeContext) -> dict:
     return {
         "consecutive_failures": 0,
@@ -243,13 +442,42 @@ def _empty_loop_state(context: RuntimeContext) -> dict:
         "last_decision": "",
         "last_run_id": "",
         "last_blocking_reason": "",
+        "blocking_reason_counts": {},
+        "repeated_blocker_stop": False,
+        "repeated_blocker_reason": "",
+        "remediation_backlog_path": REMEDIATION_BACKLOG_REPORT,
         "updated_at": context.isoformat_z(),
     }
+
+
+def _blocking_reason_counts_from_iterations(session: Mapping[str, Any]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for iteration in session.get("iterations", []):
+        if not isinstance(iteration, Mapping):
+            continue
+        outcome = str(iteration.get("outcome", "")).strip()
+        if not outcome or outcome in TERMINAL_SUCCESS_OUTCOMES:
+            continue
+        counts[outcome] = counts.get(outcome, 0) + 1
+    return counts
+
+
+def _normalize_blocking_reason_counts(value: object) -> dict[str, int]:
+    if not isinstance(value, Mapping):
+        return {}
+    normalized: dict[str, int] = {}
+    for key, count in value.items():
+        reason = str(key).strip()
+        if not reason:
+            continue
+        normalized[reason] = max(0, _int_value(count, 0))
+    return normalized
 
 
 def _reconstructed_loop_state(session: dict, *, context: RuntimeContext) -> dict:
     state = _empty_loop_state(context)
     consecutive_failures = 0
+    blocking_reason_counts: dict[str, int] = {}
     for iteration in session.get("iterations", []):
         if not isinstance(iteration, dict):
             continue
@@ -258,12 +486,17 @@ def _reconstructed_loop_state(session: dict, *, context: RuntimeContext) -> dict
             consecutive_failures = 0
         elif outcome:
             consecutive_failures += 1
+            blocking_reason_counts[outcome] = blocking_reason_counts.get(outcome, 0) + 1
         state = {
             "consecutive_failures": consecutive_failures,
             "last_outcome": outcome,
             "last_decision": str(iteration.get("decision", "")).strip(),
             "last_run_id": str(iteration.get("run_id", "")).strip(),
             "last_blocking_reason": "" if outcome in TERMINAL_SUCCESS_OUTCOMES else outcome,
+            "blocking_reason_counts": dict(blocking_reason_counts),
+            "repeated_blocker_stop": False,
+            "repeated_blocker_reason": "",
+            "remediation_backlog_path": REMEDIATION_BACKLOG_REPORT,
             "updated_at": context.isoformat_z(),
         }
     return state
@@ -273,6 +506,9 @@ def _normalize_loop_state(session: dict, *, context: RuntimeContext) -> dict:
     existing = session.get("loop_state")
     if not isinstance(existing, dict):
         return _reconstructed_loop_state(session, context=context)
+    reconstructed_counts = _blocking_reason_counts_from_iterations(session)
+    existing_counts = _normalize_blocking_reason_counts(existing.get("blocking_reason_counts"))
+    blocking_reason_counts = existing_counts or reconstructed_counts
     normalized = _empty_loop_state(context)
     normalized.update(
         {
@@ -284,6 +520,15 @@ def _normalize_loop_state(session: dict, *, context: RuntimeContext) -> dict:
             "last_decision": str(existing.get("last_decision", "")).strip(),
             "last_run_id": str(existing.get("last_run_id", "")).strip(),
             "last_blocking_reason": str(existing.get("last_blocking_reason", "")).strip(),
+            "blocking_reason_counts": blocking_reason_counts,
+            "repeated_blocker_stop": bool(existing.get("repeated_blocker_stop", False)),
+            "repeated_blocker_reason": str(
+                existing.get("repeated_blocker_reason", "")
+            ).strip(),
+            "remediation_backlog_path": str(
+                existing.get("remediation_backlog_path", REMEDIATION_BACKLOG_REPORT)
+            ).strip()
+            or REMEDIATION_BACKLOG_REPORT,
             "updated_at": str(existing.get("updated_at", "")).strip() or context.isoformat_z(),
         }
     )
@@ -310,9 +555,9 @@ def _write_session_report(vault: Path, session: dict, *, context: RuntimeContext
         resolved_policy_path=resolved_policy_path,
         schema_path=AUTO_IMPROVE_SESSION_SCHEMA,
         source_paths=[
-            "ops/scripts/auto_improve_runtime.py",
-            "ops/scripts/auto_improve_session_runtime.py",
-            "ops/scripts/artifact_freshness_runtime.py",
+            "ops/scripts/mechanism/auto_improve_runtime.py",
+            "ops/scripts/mechanism/auto_improve_session_runtime.py",
+            "ops/scripts/core/artifact_freshness_runtime.py",
         ],
         text_inputs={
             "session_id": str(session.get("session_id", "")),
@@ -459,6 +704,7 @@ def _start_auto_improve_session(request: AutoImproveSessionRequest) -> AutoImpro
     )
     base_context = request.context or RuntimeContext.from_policy(policy, executor_id=requested_executor)
 
+    goal_contract_path: str | None
     if request.resume_session:
         session = _load_session_report(request.vault, request.resume_session)
         _ensure_session_loop_state(session, context=base_context)
@@ -468,6 +714,7 @@ def _start_auto_improve_session(request: AutoImproveSessionRequest) -> AutoImpro
             executor_name=request.executor_name,
             allowed_executors=set(auto_policy["allowed_executors"]),
         )
+        goal_contract_path = request.goal_contract_path or _session_goal_contract_path(session)
     else:
         current_session_id = request.session_id or _new_session_id(base_context)
         session = _new_auto_improve_session(
@@ -481,6 +728,14 @@ def _start_auto_improve_session(request: AutoImproveSessionRequest) -> AutoImpro
             max_consecutive_failures=request.max_consecutive_failures,
             requested_executor=requested_executor,
             context=base_context,
+        )
+        goal_contract_path = request.goal_contract_path
+
+    if goal_contract_path:
+        _attach_goal_contract_snapshot(
+            request.vault,
+            session,
+            goal_contract_path=goal_contract_path,
         )
 
     return AutoImproveSessionStart(
@@ -718,12 +973,72 @@ def _initial_auto_improve_loop_state(auto_policy: dict, session: dict) -> AutoIm
     )
 
 
-def _stop_reason_before_iteration(session: dict, state: AutoImproveLoopState) -> str | None:
+def _repeated_blocker_reason(session: Mapping[str, Any]) -> str:
+    loop_state = _mapping_value(session, "loop_state")
+    counts = _normalize_blocking_reason_counts(loop_state.get("blocking_reason_counts"))
+    if not counts:
+        counts = _blocking_reason_counts_from_iterations(session)
+    for reason, count in sorted(counts.items()):
+        if count >= REPEATED_BLOCKER_THRESHOLD:
+            return reason
+    return ""
+
+
+def _mark_repeated_blocker_stop(session: dict, reason: str, *, context: RuntimeContext) -> None:
+    loop_state = _ensure_session_loop_state(session, context=context)
+    counts = _normalize_blocking_reason_counts(loop_state.get("blocking_reason_counts"))
+    counts[reason] = max(counts.get(reason, 0), REPEATED_BLOCKER_THRESHOLD)
+    loop_state["blocking_reason_counts"] = counts
+    loop_state["repeated_blocker_stop"] = True
+    loop_state["repeated_blocker_reason"] = reason
+    loop_state["remediation_backlog_path"] = REMEDIATION_BACKLOG_REPORT
+
+
+def _stop_reason_before_iteration(
+    vault: Path,
+    session: dict,
+    state: AutoImproveLoopState,
+    *,
+    context: RuntimeContext,
+) -> str | None:
+    repeated_blocker_reason = _repeated_blocker_reason(session)
+    if repeated_blocker_reason:
+        _mark_repeated_blocker_stop(session, repeated_blocker_reason, context=context)
+        return "repeated_blocker_backlog_required"
+    open_backlog_reason = _open_repeat_backlog_blocker_reason(vault)
+    if open_backlog_reason:
+        _mark_repeated_blocker_stop(session, open_backlog_reason, context=context)
+        return "repeated_blocker_backlog_required"
+    if len(session.get("iterations", [])) >= session["budget"]["max_proposals"]:
+        return "budget_limited"
     if time.monotonic() - state.start_monotonic > session["budget"]["max_minutes"] * 60:
-        return "budget_exhausted"
+        return "budget_limited"
     if state.consecutive_failures >= session["budget"]["max_consecutive_failures"]:
         return "failure_budget_exhausted"
     return None
+
+
+def _stop_reason_after_loop(
+    vault: Path,
+    session: dict,
+    state: AutoImproveLoopState,
+    *,
+    context: RuntimeContext,
+) -> str:
+    repeated_blocker_reason = _repeated_blocker_reason(session)
+    if repeated_blocker_reason:
+        _mark_repeated_blocker_stop(session, repeated_blocker_reason, context=context)
+        return "repeated_blocker_backlog_required"
+    open_backlog_reason = _open_repeat_backlog_blocker_reason(vault)
+    if open_backlog_reason:
+        _mark_repeated_blocker_stop(session, open_backlog_reason, context=context)
+        return "repeated_blocker_backlog_required"
+    if (
+        state.stop_reason == "queue_exhausted"
+        and len(session.get("iterations", [])) >= session["budget"]["max_proposals"]
+    ):
+        return "budget_limited"
+    return state.stop_reason
 
 
 def _run_auto_improve_iteration(
@@ -808,7 +1123,12 @@ def run_auto_improve_session(
     request = _coerce_auto_improve_session_request(vault, legacy_kwargs)
     start = _start_auto_improve_session(request)
     loop_state = _initial_auto_improve_loop_state(start.auto_policy, start.session)
-    initial_stop_reason = _stop_reason_before_iteration(start.session, loop_state)
+    initial_stop_reason = _stop_reason_before_iteration(
+        request.vault,
+        start.session,
+        loop_state,
+        context=start.context,
+    )
     if initial_stop_reason is None:
         _preflight_learning_gate(
             request.vault,
@@ -820,13 +1140,24 @@ def run_auto_improve_session(
 
     first_iteration = len(start.session["iterations"]) + 1
     for iteration in range(first_iteration, start.session["budget"]["max_proposals"] + 1):
-        stop_reason = _stop_reason_before_iteration(start.session, loop_state)
+        stop_reason = _stop_reason_before_iteration(
+            request.vault,
+            start.session,
+            loop_state,
+            context=start.context,
+        )
         if stop_reason is not None:
             loop_state.stop_reason = stop_reason
             break
         if not _run_auto_improve_iteration(request.vault, start, loop_state, iteration):
             break
 
+    loop_state.stop_reason = _stop_reason_after_loop(
+        request.vault,
+        start.session,
+        loop_state,
+        context=start.context,
+    )
     result = _complete_auto_improve_session(request.vault, start, loop_state)
     append_runtime_event(
         request.vault,
