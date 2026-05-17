@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/public-check-summary.schema.json",
   "artifact_kind": "public_check_summary",
-  "generated_at": "2026-05-17T19:45:37Z",
+  "generated_at": "2026-05-17T20:05:38Z",
   "producer": "ops.scripts.public_check_summary",
   "source_command": "python -m ops.scripts.public_check_summary --vault .",
   "source_revision": "unknown",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T19:45:37Z"
+    "checked_at": "2026-05-17T20:05:38Z"
   },
   "vault": ".",
   "policy": {
@@ -32,7 +32,7 @@
     "public_check_status": "pass",
     "export_file_count": 656,
     "export_source_file_count": 655,
-    "export_root_fingerprint": "582da163ee9f11267479f569ffa6b2df57bf4d9c5ddaab9b3554a7c33c5c158b",
+    "export_root_fingerprint": "8e034559f80d025dfd9a64196f7dc0b324f7b73488be628e25882a5cd6a2fe55",
     "public_export_manifest_sha256": "cf03bbc2d0e70b381ec607ed0b1eab4b1a8f101528c6c8bb94d9acbe64f8b29f",
     "public_surface_policy_sha256": "6551a09d14ab4961d949b71777f6320f4ffed0d2ec50bc4ab6ab109521590dcf",
     "command_count": 3,
@@ -47,7 +47,7 @@
     "manifest_file": "PUBLIC-EXPORT-MANIFEST.json",
     "file_count": 656,
     "source_file_count": 655,
-    "export_root_fingerprint": "582da163ee9f11267479f569ffa6b2df57bf4d9c5ddaab9b3554a7c33c5c158b",
+    "export_root_fingerprint": "8e034559f80d025dfd9a64196f7dc0b324f7b73488be628e25882a5cd6a2fe55",
     "manifest_sha256": "cf03bbc2d0e70b381ec607ed0b1eab4b1a8f101528c6c8bb94d9acbe64f8b29f"
   },
   "commands": [
@@ -60,7 +60,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 39,
+      "duration_ms": 41,
       "stdout_tail": "All checks passed!\n",
       "stderr_tail": "",
       "pytest_counts": {}
@@ -74,22 +74,22 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 3033,
+      "duration_ms": 3122,
       "stdout_tail": "Success: no issues found in 238 source files\n",
       "stderr_tail": "",
       "pytest_counts": {}
     },
     {
       "id": "pytest_public",
-      "command": ".venv/bin/python -m pytest -m public -p xdist.plugin -n auto --dist=loadfile",
+      "command": ".venv/bin/python -m pytest -m public",
       "cwd": ".",
       "status": "pass",
       "returncode": 0,
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 54925,
-      "stdout_tail": "bringing up nodes...\nbringing up nodes...\n\n...............................sss.s.s.................................. [ 18%]\n........................................................................ [ 36%]\n........................................................................ [ 54%]\n........................................................................ [ 72%]\n........................................................................ [ 90%]\n........................................                                 [100%]\n395 passed, 5 skipped in 54.73s\n",
+      "duration_ms": 123814,
+      "stdout_tail": "........................................sssss........................... [ 18%]\n........................................................................ [ 36%]\n........................................................................ [ 54%]\n........................................................................ [ 72%]\n........................................................................ [ 90%]\n........................................                                 [100%]\n395 passed, 5 skipped, 909 deselected in 123.33s (0:02:03)\n",
       "stderr_tail": "",
       "pytest_counts": {
         "passed": 395,
