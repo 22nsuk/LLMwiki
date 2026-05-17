@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-17T20:10:37Z",
+  "generated_at": "2026-05-17T20:18:37Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "0ef4d3e76f63c1b8e47e3674744767d9972137cf2eb92e8e4c95a3bac9d57e4a",
+  "source_tree_fingerprint": "be2bf475a7772cd578fcdb82f563086e762cda4bc79ffb23fad4012db94bbafb",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "834eb6cfec958f35d3989a742cfd58414bb50bb75040ab9283e4c90ed61f1657",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "d73c10a0fea855c13cb91f0e5105655b6a2532e135e78155c17b8bae22039986",
-    "run_promotion_reports": "47308e6ead45e6366547bffe91c993d0d224544c2a4fb589d598b124c76a0a5f",
+    "run_promotion_reports": "11be872277d3d3022cf27949a47e5185c5d0e8e0e05cef3d125bfe4df3ce3a6e",
     "external_report_inventory": "af4123132bc65c39b81a2bd406e4867e40c55695efe12aff35d9311f042d6506",
     "operator_report_inventory": "0479590a186415fa72ba934ab4431828124b8ca576b06322a6eae193e9627721",
     "ops_report_inventory": "779ebd78e34aa60638daa0c27b33a99df58dd73b1cb38218a8831faf28588343",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T20:10:37Z"
+    "checked_at": "2026-05-17T20:18:37Z"
   },
   "vault": ".",
   "policy": {
@@ -58,7 +58,7 @@
     }
   ],
   "now": [
-    "90 canonical artifact(s) are currently indexed.",
+    "91 canonical artifact(s) are currently indexed.",
     "1 archive candidate(s) remain in active namespaces."
   ],
   "next": [
@@ -73,9 +73,9 @@
     "operator_reports_root_file_count": 2,
     "external_reports_root_file_count": 3,
     "external_reports_archive_file_count": 66,
-    "run_directory_count": 15,
+    "run_directory_count": 16,
     "run_archive_directory_count": 4,
-    "canonical_report_count": 90,
+    "canonical_report_count": 91,
     "archive_candidate_count": 1
   },
   "canonical_reports": [
@@ -911,6 +911,17 @@
       "role": "run_history_record",
       "date": "2026-05-15",
       "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary. Load issues: promotion-report.json:missing, run-ledger.json:missing.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/auto-improve-trial-run-01-mutation-proposal-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
       "supersedes": [],
       "superseded_by": [],
       "decision_relevance": "run_history"

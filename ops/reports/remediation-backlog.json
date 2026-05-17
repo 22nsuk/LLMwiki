@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-17T20:10:33Z",
+  "generated_at": "2026-05-17T20:18:33Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "b92ec6928c1780019ad3c872a9375e60c359c12764870821ec2d8b37c53a7966",
+  "source_tree_fingerprint": "a2b0aa79804611796e93d355c6e6e12d062aca8a5de2ebaec96b6696d7e53c70",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "4fc3b1931508752484bf34aff49424112a3e7f0540bb7c373764dadb93a96ed9",
-    "learning_claim_activation": "c450a6348a5d168934fb2a948f6d08f0ac33af10b91fef380f546805368ca050",
-    "self_improvement_negative_lessons": "8555aa3093c4aafba3ccc5c9afa92bc6f4cac67e6dc1c768c087f26434dced68",
-    "session_synopsis": "f342ec0db41574b93637c1f1e5b9124401f1b6b9770730dd5d421dca63fe15c4",
+    "learning_claim_activation": "ebc736464096627dfdb8e0278ec3a706a3b6a47dc8c027338dae439268267bb6",
+    "self_improvement_negative_lessons": "471baff1947560c9907c015b1a2f6fcbcb46183bbcf4e1c2c6d9ae2c857a80d7",
+    "session_synopsis": "9223db6e1f6fdb6357246e0979d70d11e3133a9b369ed2e30348013cd942b53c",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
-    "auto_improve_sessions": "cbadc7d0bcddab9b729c5133dcf68731cc4f3a452bf1e25868eebafaec9095cf"
+    "auto_improve_sessions": "1148292a853242da3046f7fa7bba9d885fefc261fc4b5dcf1726c1a2f9f63102"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T20:10:33Z"
+    "checked_at": "2026-05-17T20:18:33Z"
   },
   "vault": ".",
   "policy": {
