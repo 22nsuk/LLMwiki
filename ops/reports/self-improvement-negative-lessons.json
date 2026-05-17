@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/self-improvement-negative-lessons.schema.json",
   "artifact_kind": "self_improvement_negative_lessons",
-  "generated_at": "2026-05-17T18:45:24Z",
+  "generated_at": "2026-05-17T19:54:33Z",
   "producer": "ops.scripts.self_improvement_negative_lessons",
   "source_command": "python -m ops.scripts.self_improvement_negative_lessons --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "7dac017f5a0c6380e07d1e7da111c813f1469b1dc95af28123acdd05c5014a68",
+  "source_tree_fingerprint": "3128a9ec8919c81229285752858c3dff469123980f6c2dd0cc5da4dfc2fbe756",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "47b79b46ef1a89257481eb0fa0b41f96e2765bb833dd8fe9b2f718d71cf470e2",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "18735e7f986786b975aa5d1c70b6f220d7ced3e5f5ed1c4ddf493e680591dbfa",
-    "learning_claim_activation": "faac474a3479e31c4ae338008a52c9df4874cc0d31ced20b41e2805ac077b2e4",
-    "session_synopsis": "48c72e3cdfc9099b4aa36d0d238dc8530a0ed75d617b759aeb576ffb0ee4fd84"
+    "learning_claim_activation": "aa373dd7d2e968ba28a1e0592018d30e0fffec2af31d82b67ad721663cad6012",
+    "session_synopsis": "831e091f232f60232d3e60ec2c74a3d210cbc1877d8ea6e988590cd1a554bfc8"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T18:45:24Z"
+    "checked_at": "2026-05-17T19:54:33Z"
   },
   "vault": ".",
   "policy": {
@@ -51,7 +51,7 @@
         {
           "path": "ops/reports/auto-improve-readiness.json",
           "exists": true,
-          "sha256": "0baca18a3d49a5754f0cf90b80363d85487df561c067646399f8b320516328c8",
+          "sha256": "acf578c92aca419feab5faf433b8f1b072f036c90d2f53a6a9cff1ecfd247c45",
           "status": "present"
         }
       ],
@@ -74,7 +74,7 @@
         {
           "path": "ops/reports/learning-delta-scoreboard.json",
           "exists": true,
-          "sha256": "265eec1c3d29da383823966c239003e4fc8ec9d939a3facc6a0387ccea9078c9",
+          "sha256": "0c0bda4d9a6d3216b37a9792b713459aeae5af72baf2b9634bb9661c0cf9df60",
           "status": "present"
         }
       ],

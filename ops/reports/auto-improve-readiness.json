@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-17T17:54:26Z",
+  "generated_at": "2026-05-17T19:54:30Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "4d8c5f4ee54bb6f4131e9016befdfd25a6f83e17269958a2ad7147913e7b21e1",
+  "source_tree_fingerprint": "0ef4d3e76f63c1b8e47e3674744767d9972137cf2eb92e8e4c95a3bac9d57e4a",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "11c67d4080d38f63d41641a6a5911b0ec8a50b7aa7a4fc791039a94945178b11",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "4ec5600edb2a3287b26597a42e268746b9883b4832aeb15091e2d526a965e1b7",
-    "artifact_freshness_report": "8ebe547e7d8156a38a8d19890efc38faf41ac70e1537f57e5b186a62a0aa47dd",
-    "goal_worktree_guard_report": "6c5a83af092dbfa0be8fd941a11f4140d828bc7ce8bec00d65e5e74ef1990995",
+    "artifact_freshness_report": "dbdf106c17df14935bad887af30cc29c2cb4fd39670e1462f92db8df1c6bffea",
+    "goal_worktree_guard_report": "85a71073c375b8c735ad6647c438992e8b6c225b7644f877ed80b153b26a6aad",
     "mechanism_review_report": "485f21b4ec5ee0348268d79dc6864d78fe160c6283ac53571b5db303a8c732b9",
     "mutation_proposal_report": "eaaa1eaa518afd5bdcc88d54e003e885143b2cb6004a3e6de9c7b94e2d1c6784",
     "outcome_metrics_report": "119ad29bd7c07c7f82eecffda136098ab5e7251599d33a2f3a3334a972fa9276",
@@ -24,7 +24,7 @@
     "release_evidence_cohort_report": "e2d2076c043dbd15cbe06d8c57d6f9b6bc1c854e62f3a6728016f6582f2d184e",
     "selected_contract_summary_report": "e973d73f3458bd1bcf5201f458de8e96746bb61e24f1871e0862d6fed16a9194",
     "source_package_clean_extract_report": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
-    "release_authority_preflight_report_candidates": "a4d1b63194621fbadc94c9f6062cb1590f855b1cfdcccfbba24c1de1049063ea"
+    "release_authority_preflight_report_candidates": "520f91ef6ae26d42fff25f02b8a513451588bae917ecbbb4ae88f8d31371a743"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -32,7 +32,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T17:54:26Z"
+    "checked_at": "2026-05-17T19:54:30Z"
   },
   "vault": ".",
   "policy": {
@@ -82,24 +82,24 @@
   "learning_blockers": [],
   "promotion_blockers": [
     {
-      "id": "promotion_blocked_by_goal_worktree_guard_failure",
-      "scope": "worktree_guard",
+      "id": "promotion_blocked_by_release_authority_preflight_failure",
+      "scope": "release_gate",
       "status": "open",
       "severity": "blocker",
       "release_blocker": true,
       "accepted_risk": false,
       "gate_effect": "active",
-      "source_status": "attention",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=125",
+      "source_status": "not_run",
+      "reason": "release authority sealed preflight is not clean: release authority sealed preflight report is missing or unusable",
       "signal_ids": [
-        "git_worktree_dirty"
+        "release_authority_preflight_not_clean"
       ],
       "required_evidence": [
-        "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
-        "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
-        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal."
+        "Run make release-authority-sealed-preflight for operator handoff.",
+        "Run make release-evidence-closeout-sealed-dry-run-check or the sealed release lane before promoting.",
+        "can_promote_result must stay false until sealed authority preflight is clean."
       ],
-      "recommended_next_step": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
+      "recommended_next_step": "Refresh sealed authority preflight evidence, then rerun make auto-improve-readiness."
     }
   ],
   "release_blockers": [],
@@ -250,37 +250,35 @@
       "summary": "artifact finalization post-check finalizer report was cleaned from tmp, but release closeout finality attestation passed so the final artifact set is treated as finalized"
     },
     "release_authority_preflight_summary": {
-      "path": "build/release/release-closeout-sealed-rehearsal-check.json",
-      "artifact_kind": "release_closeout_sealed_rehearsal_check",
-      "status": "pass",
-      "preflight_status": "sealed_clean_pass",
+      "path": "ops/reports/release-closeout-sealed-rehearsal-check.json",
+      "artifact_kind": "",
+      "status": "not_run",
+      "preflight_status": "not_run",
       "preflight_mode": "clean_required",
-      "distribution_binding_status": "pass",
-      "authority_preflight_status": "clean",
+      "distribution_binding_status": "unknown",
+      "authority_preflight_status": "unknown",
       "expected_blocked_preflight": false,
       "clean_required_preflight": true,
       "failure_ids": [],
       "failure_details": [],
       "blocker_reason_ids": [],
       "linked_promotion_blocker_ids": [],
-      "summary": "sealed closeout rehearsal passed: batch sealed clean pass and external strict manifest bind the distribution ZIP"
+      "summary": "release authority sealed preflight report is missing or unusable"
     },
     "goal_worktree_guard_summary": {
       "path": "tmp/goal-worktree-guard.json",
       "artifact_kind": "goal_worktree_guard",
-      "status": "attention",
+      "status": "pass",
       "requested_mode": "git",
       "detected_mode": "git_worktree",
       "can_execute_goal_runtime": true,
-      "can_promote_result": false,
+      "can_promote_result": true,
       "zip_mode_replay_only": false,
       "dirty_worktree_allowed": false,
-      "dirty_entry_count": 125,
+      "dirty_entry_count": 0,
       "fatal_blockers": [],
-      "promotion_blockers": [
-        "git_worktree_dirty"
-      ],
-      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=125"
+      "promotion_blockers": [],
+      "summary": "goal worktree guard status=pass; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=true; dirty_entry_count=0"
     }
   },
   "queue": {
@@ -346,5 +344,5 @@
     }
   ],
   "remediations": [],
-  "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
+  "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Refresh sealed authority preflight evidence, then rerun make auto-improve-readiness."
 }

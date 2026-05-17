@@ -1,19 +1,19 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-17T18:45:25Z",
+  "generated_at": "2026-05-17T19:54:33Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "d12c3281a63fdd8e48d932925ea00affe22246e66559ffd23bfe07b8303eceaf",
+  "source_tree_fingerprint": "b92ec6928c1780019ad3c872a9375e60c359c12764870821ec2d8b37c53a7966",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "4fc3b1931508752484bf34aff49424112a3e7f0540bb7c373764dadb93a96ed9",
-    "learning_claim_activation": "faac474a3479e31c4ae338008a52c9df4874cc0d31ced20b41e2805ac077b2e4",
-    "self_improvement_negative_lessons": "d6e39bfc8ea3806b6c2764d6220116fa8306a202a9f7da4dbad82e009318d5c9",
-    "session_synopsis": "48c72e3cdfc9099b4aa36d0d238dc8530a0ed75d617b759aeb576ffb0ee4fd84",
+    "learning_claim_activation": "aa373dd7d2e968ba28a1e0592018d30e0fffec2af31d82b67ad721663cad6012",
+    "self_improvement_negative_lessons": "d45c20c9be02a2f6dba059bdb2040a68cbaf5d2923343e98b7f56eacb8d5e10a",
+    "session_synopsis": "831e091f232f60232d3e60ec2c74a3d210cbc1877d8ea6e988590cd1a554bfc8",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
     "auto_improve_sessions": "cbadc7d0bcddab9b729c5133dcf68731cc4f3a452bf1e25868eebafaec9095cf"
   },
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T18:45:25Z"
+    "checked_at": "2026-05-17T19:54:33Z"
   },
   "vault": ".",
   "policy": {
@@ -41,20 +41,6 @@
   },
   "items": [
     {
-      "item_id": "active_blocker_goal_status_git_worktree_dirty",
-      "blocker_id": "goal_status_git_worktree_dirty",
-      "source": "goal_run_status.blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
-      "next_action": "Refresh goal run status and close the active blocker before resuming."
-    },
-    {
       "item_id": "active_blocker_goal_status_profile_ladder_incomplete",
       "blocker_id": "goal_status_profile_ladder_incomplete",
       "source": "goal_run_status.blockers",
@@ -69,8 +55,8 @@
       "next_action": "Collect bounded runtime evidence for next_profile_required=30m_trial."
     },
     {
-      "item_id": "active_blocker_goal_status_promotion_blocked_by_goal_worktree_guard_failure",
-      "blocker_id": "goal_status_promotion_blocked_by_goal_worktree_guard_failure",
+      "item_id": "active_blocker_goal_status_promotion_blocked_by_release_authority_preflight_failure",
+      "blocker_id": "goal_status_promotion_blocked_by_release_authority_preflight_failure",
       "source": "goal_run_status.blockers",
       "item_type": "active_blocker",
       "status": "open",
@@ -97,8 +83,22 @@
       "next_action": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean."
     },
     {
-      "item_id": "active_blocker_promotion_blocked_by_goal_worktree_guard_failure",
-      "blocker_id": "promotion_blocked_by_goal_worktree_guard_failure",
+      "item_id": "active_blocker_post_seal_learning_claim_linkage",
+      "blocker_id": "post_seal_learning_claim_linkage",
+      "source": "learning_claim_activation.blocked_predicates",
+      "item_type": "active_blocker",
+      "status": "open",
+      "severity": "blocks_promotion",
+      "occurrence_count": 1,
+      "evidence_paths": [
+        "ops/reports/session-synopsis.json"
+      ],
+      "repair_target": "Run release-post-seal-attestation after the candidate evidence is sealed and verify the learning claim authority binding.",
+      "next_action": "Run release-post-seal-attestation after the candidate evidence is sealed and verify the learning claim authority binding."
+    },
+    {
+      "item_id": "active_blocker_promotion_blocked_by_release_authority_preflight_failure",
+      "blocker_id": "promotion_blocked_by_release_authority_preflight_failure",
       "source": "auto_improve_readiness.promotion_blockers",
       "item_type": "active_blocker",
       "status": "open",
@@ -107,8 +107,8 @@
       "evidence_paths": [
         "ops/reports/session-synopsis.json"
       ],
-      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness.",
-      "next_action": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
+      "repair_target": "Refresh sealed authority preflight evidence, then rerun make auto-improve-readiness.",
+      "next_action": "Refresh sealed authority preflight evidence, then rerun make auto-improve-readiness."
     }
   ],
   "inputs": {
