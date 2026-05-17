@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-17T21:44:49Z",
+  "generated_at": "2026-05-17T22:14:50Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "32130413f0fc5564a199bcb6b45cef4001dd11ba1272aed63095090d4e031e5b",
+  "source_tree_fingerprint": "9bda2bdcfa1f1c1a3230b3d2bf58c61b0e81cca07bb7b5c682fbed6a964d0738",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "09aa482bf2f16dd87d7ed82c35092960a5ce14e4e5c907db45b5a6a71f8a4716",
-    "learning_claim_activation": "bfcf69e86aaec8615b9c3375e7cf3d42be1346ee98909480743b5508eb65a513",
-    "self_improvement_negative_lessons": "e9041474079b8170aa21359438b938a63ed1dbe653158af68164157e5e389571",
-    "session_synopsis": "6506b29ca9a7d81841b2a61e521c830edf9bbb6817d69acbb05f05f621869f3d",
+    "source_paths": "a4799bf90c603af119663bdc5158e55774f030b6d59bf194b8d7aff61501dcdc",
+    "learning_claim_activation": "ea85dc9156973bb4a6a75fce3b2a70e61ae45bfe516cf544b4dae690fbf456c2",
+    "self_improvement_negative_lessons": "1ef3c0e996cdca6e99070c81dc3817aa2bc78eba15fa4761ebbe1526b61a8a0c",
+    "session_synopsis": "5b1bac7cde8c9657487fc625ba8f14e52240e8d215ff01af6083d54547d2bc58",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
-    "auto_improve_sessions": "5dc099113fb7062ae6140f6183103b21608cea82dc4fea5e9d85cd370c0cf9d2"
+    "auto_improve_sessions": "cb37a69dac01fafbf58ea3f8f71f2132da1656c2d65bfdf047d1d56864b120c4"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T21:44:49Z"
+    "checked_at": "2026-05-17T22:14:50Z"
   },
   "vault": ".",
   "policy": {

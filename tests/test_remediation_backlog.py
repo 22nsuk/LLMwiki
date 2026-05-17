@@ -77,6 +77,13 @@ def seed_backlog_inputs(vault: Path) -> None:
                     "status": "open",
                     "reason": "sealed preflight not clean",
                     "repair_target": "Refresh sealed authority preflight evidence.",
+                },
+                {
+                    "id": "promotion_blocked_by_remediation_backlog_open",
+                    "source": "auto_improve_readiness.promotion_blockers",
+                    "status": "open",
+                    "reason": "remediation backlog is not clear for promotion",
+                    "repair_target": "Close remediation backlog items.",
                 }
             ]
         },

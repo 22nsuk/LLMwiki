@@ -69,6 +69,10 @@ PRIMARY_REPORT_SPECS = {
         "schema_path": "ops/schemas/release-closeout-post-check-finalizer.schema.json",
         "artifact_kind": "release_closeout_post_check_finalizer",
     },
+    "ops/reports/remediation-backlog.json": {
+        "schema_path": "ops/schemas/remediation-backlog.schema.json",
+        "artifact_kind": "remediation_backlog",
+    },
 }
 
 
@@ -172,6 +176,28 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                 "summary": "sealed release evidence clean",
             },
             enveloped=False,
+        )
+        self._write_report(
+            "ops/reports/remediation-backlog.json",
+            {
+                "status": "pass",
+                "summary": {
+                    "backlog_item_count": 0,
+                    "repeated_blocker_count": 0,
+                    "active_blocker_count": 0,
+                    "open_item_count": 0,
+                    "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
+                    "next_action": "none",
+                },
+                "items": [],
+                "inputs": {
+                    "self_improvement_negative_lessons": "ops/reports/self-improvement-negative-lessons.json",
+                    "session_synopsis": "ops/reports/session-synopsis.json",
+                    "learning_claim_activation": "ops/reports/learning_claim_activation_report.json",
+                    "auto_improve_sessions": "ops/reports/auto-improve-sessions",
+                    "status_overrides": "ops/policies/remediation-backlog-status-overrides.json",
+                },
+            },
         )
         self._write_goal_worktree_guard()
 
@@ -557,7 +583,15 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "tmp/goal-worktree-guard.json",
         )
         self.assertEqual(
+            persisted["inputs"]["remediation_backlog_report"],
+            "ops/reports/remediation-backlog.json",
+        )
+        self.assertEqual(
             persisted["diagnostics"]["goal_worktree_guard_summary"]["status"],
+            "pass",
+        )
+        self.assertEqual(
+            persisted["diagnostics"]["remediation_backlog_summary"]["status"],
             "pass",
         )
         self.assertEqual(
@@ -575,6 +609,57 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             persisted["diagnostics"]["release_evidence_cohort_summary"]["status"],
             "pass",
         )
+
+    def test_open_remediation_backlog_blocks_promotion_not_trial(self) -> None:
+        self._write_ready_queue_reports()
+        self._write_report(
+            "ops/reports/remediation-backlog.json",
+            {
+                "status": "attention",
+                "summary": {
+                    "backlog_item_count": 1,
+                    "repeated_blocker_count": 0,
+                    "active_blocker_count": 1,
+                    "open_item_count": 1,
+                    "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
+                    "next_action": "Close or explicitly defer remediation backlog items before promotion.",
+                },
+                "items": [
+                    {
+                        "item_id": "active_blocker_goal_status_profile_ladder_incomplete",
+                        "blocker_id": "goal_status_profile_ladder_incomplete",
+                        "source": "goal_run_status.blockers",
+                        "item_type": "active_blocker",
+                        "status": "open",
+                        "severity": "blocks_promotion",
+                        "occurrence_count": 1,
+                        "evidence_paths": ["ops/reports/session-synopsis.json"],
+                        "repair_target": "Collect bounded runtime evidence for next_profile_required=30m_trial.",
+                        "next_action": "Collect bounded runtime evidence for next_profile_required=30m_trial.",
+                    }
+                ],
+                "inputs": {
+                    "self_improvement_negative_lessons": "ops/reports/self-improvement-negative-lessons.json",
+                    "session_synopsis": "ops/reports/session-synopsis.json",
+                    "learning_claim_activation": "ops/reports/learning_claim_activation_report.json",
+                    "auto_improve_sessions": "ops/reports/auto-improve-sessions",
+                    "status_overrides": "ops/policies/remediation-backlog-status-overrides.json",
+                },
+            },
+        )
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        self.assertTrue(report["can_execute_trial"])
+        self.assertFalse(report["can_promote_result"])
+        blockers = {item["id"]: item for item in report["promotion_blockers"]}
+        blocker = blockers["promotion_blocked_by_remediation_backlog_open"]
+        self.assertEqual(blocker["scope"], "remediation_backlog")
+        self.assertEqual(blocker["signal_ids"], ["goal_status_profile_ladder_incomplete"])
+        self.assertIn("open_item_count=1", blocker["reason"])
+        self.assertEqual(report["diagnostics"]["remediation_backlog_summary"]["status"], "fail")
+        self.assertTrue(report["diagnostics"]["remediation_backlog_summary"]["release_blocking"])
+        self.assertIn("Trial only; do not promote.", report["next_action"])
 
     def test_missing_goal_worktree_guard_blocks_promotion_not_trial(self) -> None:
         (self.vault / "tmp" / "goal-worktree-guard.json").unlink()

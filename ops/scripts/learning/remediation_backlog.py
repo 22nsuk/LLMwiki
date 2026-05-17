@@ -35,6 +35,9 @@ SOURCE_PATHS = [
     "ops/scripts/mechanism/auto_improve_runtime.py",
 ]
 SAFE_ID_RE = re.compile(r"[^a-z0-9_]+")
+DERIVED_REMEDIATION_BACKLOG_BLOCKER_IDS = {
+    "promotion_blocked_by_remediation_backlog_open",
+}
 
 
 def _safe_id(value: str) -> str:
@@ -126,6 +129,8 @@ def _item_from_lesson(lesson: dict[str, Any]) -> dict[str, Any] | None:
 def _item_from_blocker(blocker: dict[str, Any]) -> dict[str, Any] | None:
     blocker_id = str(blocker.get("id", "")).strip()
     if not blocker_id:
+        return None
+    if blocker_id in DERIVED_REMEDIATION_BACKLOG_BLOCKER_IDS:
         return None
     repair_target = str(blocker.get("repair_target", "")).strip()
     return {

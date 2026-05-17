@@ -237,8 +237,8 @@
     },
     {
       "path": "ops/policies/release-risk-taxonomy.json",
-      "sha256": "748473b341e334db356942c51cc8c5cf80504e4f581b6d2db01b3a21d957124a",
-      "size_bytes": 21840
+      "sha256": "03e1c9015389ebac078be42f611e672a1f922d96552bd16980f9900f78d6b2e6",
+      "size_bytes": 22381
     },
     {
       "path": "ops/policies/release-status-v2-consumers.json",
@@ -307,8 +307,8 @@
     },
     {
       "path": "ops/schemas/auto-improve-readiness-report.schema.json",
-      "sha256": "11c67d4080d38f63d41641a6a5911b0ec8a50b7aa7a4fc791039a94945178b11",
-      "size_bytes": 31848
+      "sha256": "b07ea4db25e1e00c9ecce8026872b299d5f6df21f7edd396dce9af266ed48c42",
+      "size_bytes": 33545
     },
     {
       "path": "ops/schemas/auto-improve-session.schema.json",
@@ -467,8 +467,8 @@
     },
     {
       "path": "ops/schemas/learning-readiness-vocabulary.schema.json",
-      "sha256": "64601d2698c3f52cda453f9ef3830cab66dc07aa4e40d22d66b3806d67db6cf7",
-      "size_bytes": 1919
+      "sha256": "10a86def603436e7990d2ab192ea16df53fa4d10e92335bdcd2790d648822b55",
+      "size_bytes": 1976
     },
     {
       "path": "ops/schemas/lint-report.schema.json",
@@ -1427,8 +1427,8 @@
     },
     {
       "path": "ops/scripts/learning/remediation_backlog.py",
-      "sha256": "021e41d79e3ba7c6fef43a412d99dce0e109e4465bf11f48d0d17cdb71996a92",
-      "size_bytes": 12753
+      "sha256": "b5d30cf5702a52a30fe54a3c726bfe30c5a8de229461fb07081846a918c09f1d",
+      "size_bytes": 12934
     },
     {
       "path": "ops/scripts/learning/self_improvement_negative_lessons.py",
@@ -1437,8 +1437,8 @@
     },
     {
       "path": "ops/scripts/learning/session_synopsis.py",
-      "sha256": "85d16bb3c5035cf8fb3287424db11033297ca03114fd05e9e69eba76abab3fb4",
-      "size_bytes": 21677
+      "sha256": "6cc4c6fc9843d8c85d3fa70258b0d241b73a4f1a560a8fa1cf0470ea88042019",
+      "size_bytes": 21863
     },
     {
       "path": "ops/scripts/mechanism/__init__.py",
@@ -1492,8 +1492,8 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_readiness_constants_runtime.py",
-      "sha256": "8fc5313b0200f4e0257e28d6a93f9b9f4b91a0b6bfce19dabd48b736290f5f67",
-      "size_bytes": 4404
+      "sha256": "41a585cb274404c8ee6f32b06ced5f1fab02419532eed561ea7bc8d31c7cc7e6",
+      "size_bytes": 4481
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py",
@@ -1512,8 +1512,8 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_readiness_runtime.py",
-      "sha256": "60dd24e73791143c1ec2ab055baec71021ea90d7b373fbfea471045d97fdd77c",
-      "size_bytes": 30811
+      "sha256": "504ce272fb60583f33b46e08fef435b97b21a8dc860b20b7463e6d21c860954d",
+      "size_bytes": 35701
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_readiness_worktree_guard_runtime.py",
@@ -4882,8 +4882,8 @@
     },
     {
       "path": "tests/fixtures/report_schema_samples.json",
-      "sha256": "9d650a1d7b71a4a006604d1fd15fbc90b4234ac7dcdd0a5e3466a9c92e651393",
-      "size_bytes": 134850
+      "sha256": "dfef4d7300a6f705f08543a0d12febc81f91e1e9b9e902b7d29afeb5b58a7d68",
+      "size_bytes": 136454
     },
     {
       "path": "tests/fixtures/yaml/block-scalar.yaml",
@@ -4962,8 +4962,8 @@
     },
     {
       "path": "tests/test_auto_improve_readiness_runtime.py",
-      "sha256": "be15f6c11a50e26cb364981de00ea810ef9d539fd93c4c4d1d6900c2cd854d39",
-      "size_bytes": 100479
+      "sha256": "ceeb0f02229413a3fc6bcecb010ee149160800a4593273365dba29419f1e9374",
+      "size_bytes": 104907
     },
     {
       "path": "tests/test_auto_improve_route_scaffold_runtime.py",
@@ -5532,8 +5532,8 @@
     },
     {
       "path": "tests/test_remediation_backlog.py",
-      "sha256": "5efd7bcfd0300ddd4d6c4e8d10f8261052a2847c27a31df4b6b93c268ad2e594",
-      "size_bytes": 9346
+      "sha256": "d2a55857beb5647ff2deb6a12901ef6700e86e919578f0ec19f5934f753c1583",
+      "size_bytes": 9724
     },
     {
       "path": "tests/test_report_generation_smoke.py",
@@ -5617,8 +5617,8 @@
     },
     {
       "path": "tests/test_session_synopsis.py",
-      "sha256": "5a66da058c9db2b69e62a5e2bbe2292afaa47032cd42ab24094c6d28c60d4dfb",
-      "size_bytes": 10569
+      "sha256": "d934036b4103446672336f0162fba15973ce231dcafbb8c74e7d42d3138ba443",
+      "size_bytes": 11063
     },
     {
       "path": "tests/test_set_mechanism_run_history.py",

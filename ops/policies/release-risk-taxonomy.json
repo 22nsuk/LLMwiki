@@ -409,6 +409,16 @@
         "advisory_lifecycle_effect": "not_applicable"
       }
     },
+    "promotion_blocked_by_remediation_backlog_open": {
+      "description": "Auto-improve promotion is blocked because remediation backlog items are still open and must be closed or explicitly deferred before promotion.",
+      "surface": "auto-improve remediation backlog",
+      "effects": {
+        "clean_lane_effect": "does_not_block_clean_lane",
+        "conditional_lane_effect": "operator_review_required",
+        "learning_lane_effect": "blocks_learning_claim",
+        "advisory_lifecycle_effect": "review_backlog"
+      }
+    },
     "execution_blocked_by_no_runnable_proposal": {
       "description": "Auto-improve execution is blocked because no runnable proposal is available.",
       "surface": "auto-improve readiness",

@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/release-risk-taxonomy-matrix.schema.json",
   "artifact_kind": "release_risk_taxonomy_matrix",
-  "generated_at": "2026-05-17T20:59:35Z",
+  "generated_at": "2026-05-17T22:14:41Z",
   "producer": "ops.scripts.release_risk_taxonomy_matrix",
   "source_command": "python -m ops.scripts.release_risk_taxonomy_matrix --vault . --out ops/reports/release-risk-taxonomy-matrix.json --markdown-out ops/reports/release-risk-taxonomy-matrix.md",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "9350e520a440ddc94e56598481494dc5eab93760012b772a58bdd0a0aa8bd207",
+  "source_tree_fingerprint": "e362b1f99c00851970afef15992d799a3fdc1e4eca29177c243e681e1c0bc52a",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "1a517122bf180c5a239dde84a93cb066bd2286d27387177f907c195b72b47901",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "0fa59c800a3182e389aae1085c8aa9ebdc95c559dc5860e1f15ec1903b2f6730",
-    "release_risk_taxonomy": "748473b341e334db356942c51cc8c5cf80504e4f581b6d2db01b3a21d957124a"
+    "source_paths": "81c8ea13f7f6fcaaf653f4163b81cd76f293fea536c223950bba5e35bb0ac230",
+    "release_risk_taxonomy": "03e1c9015389ebac078be42f611e672a1f922d96552bd16980f9900f78d6b2e6"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T20:59:35Z"
+    "checked_at": "2026-05-17T22:14:41Z"
   },
   "vault": ".",
   "policy": {
@@ -33,12 +33,12 @@
     "description": "Lane-scoped release risk taxonomy. Clean lane only counts risks that directly invalidate source/package/freshness/schema/full-suite/source-tree release meaning; learning and advisory lifecycle risks remain visible on their own lanes."
   },
   "summary": {
-    "risk_code_count": 44,
+    "risk_code_count": 45,
     "clean_lane_blocking_count": 30,
-    "clean_lane_non_blocking_count": 14,
-    "conditional_operator_review_count": 39,
-    "learning_claim_blocking_count": 15,
-    "advisory_lifecycle_backlog_count": 2
+    "clean_lane_non_blocking_count": 15,
+    "conditional_operator_review_count": 40,
+    "learning_claim_blocking_count": 16,
+    "advisory_lifecycle_backlog_count": 3
   },
   "matrix": [
     {
@@ -390,6 +390,20 @@
       "conditional_operator_review_required": true,
       "learning_claim_blocks": true,
       "advisory_lifecycle_backlog": false
+    },
+    {
+      "code": "promotion_blocked_by_remediation_backlog_open",
+      "surface": "auto-improve remediation backlog",
+      "description": "Auto-improve promotion is blocked because remediation backlog items are still open and must be closed or explicitly deferred before promotion.",
+      "clean_lane_effect": "does_not_block_clean_lane",
+      "conditional_lane_effect": "operator_review_required",
+      "learning_lane_effect": "blocks_learning_claim",
+      "advisory_lifecycle_effect": "review_backlog",
+      "primary_lane": "learning_claim_blocker",
+      "clean_lane_blocks": false,
+      "conditional_operator_review_required": true,
+      "learning_claim_blocks": true,
+      "advisory_lifecycle_backlog": true
     },
     {
       "code": "promotion_blocked_by_selected_contract_failure",

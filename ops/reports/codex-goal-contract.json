@@ -125,8 +125,10 @@
     }
   ],
   "promotion_guard": {
-    "can_promote_result": true,
-    "promotion_blockers": [],
+    "can_promote_result": false,
+    "promotion_blockers": [
+      "promotion_blocked_by_remediation_backlog_open"
+    ],
     "sealed_authority_clean": true,
     "profile_verified": "unverified",
     "sustained_runtime_claimed": false,
@@ -138,7 +140,7 @@
     "properties": [
       {
         "name": "urn:openai:artifact-envelope",
-        "value": "{\"$schema\": \"ops/schemas/codex-goal-contract.schema.json\", \"artifact_kind\": \"codex_goal_contract\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-17T21:44:46Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-17T21:44:46Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"auto_improve_readiness\": \"74cd23e1ee0972c664a8a2b270c3b409204197a1d75eab8a7b59683f825baadd\", \"contract_id\": \"d6dee5d74cf954a24559fc821001ef3dc5c693b768134ad20fe8924060b7adfe\", \"goal_worktree_guard_report\": \"22588d62b0c08b3af64ee02d879c7120fe7ddc1006188b4e8e719cf1ea25ecaf\", \"policy\": \"ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f\", \"schema\": \"bcbdc855cd8f6a6ae17ff4602eaa29572a086d5fc345f4990cb8bb246e014500\", \"source_paths\": \"d986cdff9a5d45e81d000a7250140bc2fe9daf9cf6901d08d4f963f64b54379d\"}, \"producer\": \"ops.scripts.codex_goal_client\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.codex_goal_client --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"f1c724f7b2bbe2265b76639182a377aeeeee5e75559dacc296b3f77abd660165\"}"
+        "value": "{\"$schema\": \"ops/schemas/codex-goal-contract.schema.json\", \"artifact_kind\": \"codex_goal_contract\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-17T22:15:02Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-17T22:15:02Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"auto_improve_readiness\": \"d3132678597cd7768facd51670f26448fd734a18147bd07d3f9d91ef6527c492\", \"contract_id\": \"d6dee5d74cf954a24559fc821001ef3dc5c693b768134ad20fe8924060b7adfe\", \"goal_worktree_guard_report\": \"d95d290fd03334dac7ddead097cf8be069a2c74dd1495ff97bf1b563d8586f6e\", \"policy\": \"ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f\", \"schema\": \"bcbdc855cd8f6a6ae17ff4602eaa29572a086d5fc345f4990cb8bb246e014500\", \"source_paths\": \"d986cdff9a5d45e81d000a7250140bc2fe9daf9cf6901d08d4f963f64b54379d\"}, \"producer\": \"ops.scripts.codex_goal_client\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.codex_goal_client --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"f96b2016261775873192dba9700a8aedd38698e689fe6b3b8285226c9e3b75c9\"}"
       }
     ]
   }

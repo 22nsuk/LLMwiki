@@ -29,6 +29,9 @@ INPUT_PATHS = {
     "source_package_clean_extract": "ops/reports/source-package-clean-extract.json",
     "task_observations": "ops/reports/task-improvement-observations/task-20260515-reconciled-improvement-plan/improvement-observations.json",
 }
+DERIVED_REMEDIATION_BACKLOG_BLOCKER_IDS = {
+    "promotion_blocked_by_remediation_backlog_open",
+}
 
 
 def _dict_list(value: object) -> list[dict[str, Any]]:
@@ -199,6 +202,8 @@ def _recent_blockers(inputs: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     for blocker in _dict_list(readiness.get("promotion_blockers")):
         blocker_id = str(blocker.get("id", "")).strip()
         if not blocker_id:
+            continue
+        if blocker_id in DERIVED_REMEDIATION_BACKLOG_BLOCKER_IDS:
             continue
         blockers.append(
             {

@@ -43,6 +43,12 @@ def seed_synopsis_inputs(vault: Path) -> None:
                     "status": "open",
                     "reason": "sealed preflight not clean",
                     "recommended_next_step": "Refresh sealed authority preflight evidence.",
+                },
+                {
+                    "id": "promotion_blocked_by_remediation_backlog_open",
+                    "status": "open",
+                    "reason": "remediation backlog is not clear for promotion",
+                    "recommended_next_step": "Close remediation backlog items.",
                 }
             ],
             "fallback": {"seed_runs": ["run-seed-a"]},
@@ -191,6 +197,10 @@ class SessionSynopsisTests(unittest.TestCase):
             self.assertEqual(report["artifact_kind"], "session_synopsis")
             self.assertEqual(report["status"], "attention")
             self.assertEqual(report["summary"]["recent_blocker_count"], 4)
+            self.assertNotIn(
+                "promotion_blocked_by_remediation_backlog_open",
+                {blocker["id"] for blocker in report["recent_blockers"]},
+            )
             self.assertEqual(report["summary"]["forbidden_repeat_pattern_count"], 1)
             self.assertEqual(report["summary"]["recommended_seed_run_count"], 1)
             self.assertEqual(

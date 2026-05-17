@@ -1,28 +1,29 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-17T21:44:40Z",
+  "generated_at": "2026-05-17T22:15:00Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "5a6751298ace4c939c560d4df5ad3c12e49af3d2800712af9a35df6d1faa4d56",
+  "source_tree_fingerprint": "e362b1f99c00851970afef15992d799a3fdc1e4eca29177c243e681e1c0bc52a",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
-    "schema": "11c67d4080d38f63d41641a6a5911b0ec8a50b7aa7a4fc791039a94945178b11",
+    "schema": "b07ea4db25e1e00c9ecce8026872b299d5f6df21f7edd396dce9af266ed48c42",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "ae3feb7c49dbcaebebfccc2ddf960c1d459475b8f77b0718ddbd09347642b7a8",
-    "artifact_freshness_report": "88a795f2b311574fee67f0ff1a19f89e0c64f2729a86963dd586d756949aa36b",
-    "goal_worktree_guard_report": "22588d62b0c08b3af64ee02d879c7120fe7ddc1006188b4e8e719cf1ea25ecaf",
-    "mechanism_review_report": "da7b774ea58f95caa8c9f84e14366b86e836d4de19c6773a09471f6391326981",
-    "mutation_proposal_report": "2e19e135999ec2606a53d65f08bd59c0919615cc03d66cca452260665285219d",
-    "outcome_metrics_report": "779064b7346ae273ee43f197acfac7625de66bddbb17e52bcaaedfb3baa4a1e6",
+    "source_paths": "73af758db31c682822f1d2b8ec8f03788aa192e71e8db171ae7e36631968c779",
+    "artifact_freshness_report": "7a2f1a23677d100851652b81b2c01a8398a5180260ebeb59ff8c4ddf41136c9a",
+    "goal_worktree_guard_report": "d95d290fd03334dac7ddead097cf8be069a2c74dd1495ff97bf1b563d8586f6e",
+    "mechanism_review_report": "a37ddff04eb722ee75aab840038d28fa231c00d240bacb450a13b688de181da2",
+    "mutation_proposal_report": "b1e5205f2cba927412c703f8805c7a4b28b270712a566cbd1cd7a9e99102c9c0",
+    "outcome_metrics_report": "184a3b80870e60be07e7645f5d366594fb83defb4228fa6f3b52f82897b9dd2d",
     "release_authority_preflight_report": "8771a6022db09e525cf4c8a22c99725d1e3539f340aca5db6445f8d675705b8e",
     "release_closeout_batch_manifest_report": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
     "release_closeout_finality_attestation_report": "7dd3b5e276deee3a02a3e664f5e2c8e28adf36ed7e19eacedd884942521c03ea",
     "release_closeout_post_check_finalizer_report": "missing",
     "release_closeout_summary_report": "44a45b6591a17a02b77fe5ce3f9f6b292b6e82b9163125a9436d119f476c2ad2",
     "release_evidence_cohort_report": "e2d2076c043dbd15cbe06d8c57d6f9b6bc1c854e62f3a6728016f6582f2d184e",
-    "selected_contract_summary_report": "cc7fba76fd14055ee9d9c72027a0c5349c28464abbad6af0f9263b0e33fb6723",
+    "remediation_backlog_report": "8c46cccccb4ede00454847c3371314c2955939399086a6a19433765225e98d75",
+    "selected_contract_summary_report": "1351faf8b46ac2a81851e8f5e7dc3e2aaa8c2d972d28612e39214267bdbda2cf",
     "source_package_clean_extract_report": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "release_authority_preflight_report_candidates": "e1eb0bbb5af243aed3ae00753b501b0fc2476ca0bed0d1804f95d0d35bb4e18c"
   },
@@ -32,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T21:44:40Z"
+    "checked_at": "2026-05-17T22:15:00Z"
   },
   "vault": ".",
   "policy": {
@@ -40,7 +41,7 @@
     "version": 4
   },
   "can_execute_trial": true,
-  "can_promote_result": true,
+  "can_promote_result": false,
   "execution_readiness": {
     "status": "pass",
     "gate_effect": "active",
@@ -80,7 +81,30 @@
     "recommended_next_step": "Learning readiness is clean enough for bounded live auto-improve; keep the run narrow and continue monitoring the shadow signals."
   },
   "learning_blockers": [],
-  "promotion_blockers": [],
+  "promotion_blockers": [
+    {
+      "id": "promotion_blocked_by_remediation_backlog_open",
+      "scope": "remediation_backlog",
+      "status": "open",
+      "severity": "blocker",
+      "release_blocker": true,
+      "accepted_risk": false,
+      "gate_effect": "active",
+      "source_status": "attention",
+      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=3; active_blocker_count=3; blocking_item_count=3",
+      "signal_ids": [
+        "goal_status_profile_ladder_incomplete",
+        "learning_claim_unlock_review_not_approved",
+        "post_seal_learning_claim_linkage"
+      ],
+      "required_evidence": [
+        "Run make remediation-backlog and confirm status=pass with open_item_count=0.",
+        "Close or explicitly defer blocks_promotion backlog items before promotion.",
+        "can_promote_result must stay false while remediation backlog items are open."
+      ],
+      "recommended_next_step": "Close or explicitly defer remediation backlog items, rerun make remediation-backlog, then rerun make auto-improve-readiness."
+    }
+  ],
   "release_blockers": [],
   "inputs": {
     "refresh_generated_target": "make refresh-generated-core",
@@ -96,7 +120,8 @@
     "release_evidence_cohort_report": "ops/reports/release-evidence-cohort.json",
     "release_closeout_post_check_finalizer_report": "tmp/release-closeout-post-check-finalizer.json",
     "release_authority_preflight_report": "ops/reports/release-closeout-sealed-rehearsal-check.json",
-    "goal_worktree_guard_report": "tmp/goal-worktree-guard.json"
+    "goal_worktree_guard_report": "tmp/goal-worktree-guard.json",
+    "remediation_backlog_report": "ops/reports/remediation-backlog.json"
   },
   "diagnostics": {
     "loop_health_summary": {
@@ -258,6 +283,24 @@
       "fatal_blockers": [],
       "promotion_blockers": [],
       "summary": "goal worktree guard status=pass; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=true; dirty_entry_count=0"
+    },
+    "remediation_backlog_summary": {
+      "path": "ops/reports/remediation-backlog.json",
+      "expected_artifact_kind": "remediation_backlog",
+      "artifact_kind": "remediation_backlog",
+      "status": "fail",
+      "source_status": "attention",
+      "release_blocking": true,
+      "open_item_count": 3,
+      "active_blocker_count": 3,
+      "blocking_item_count": 3,
+      "signal_ids": [
+        "goal_status_profile_ladder_incomplete",
+        "learning_claim_unlock_review_not_approved",
+        "post_seal_learning_claim_linkage"
+      ],
+      "currentness_status": "current",
+      "summary": "remediation backlog status=attention; open_item_count=3; active_blocker_count=3; blocking_item_count=3"
     }
   },
   "queue": {
@@ -323,5 +366,5 @@
     }
   ],
   "remediations": [],
-  "next_action": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured."
+  "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Close or explicitly defer remediation backlog items, rerun make remediation-backlog, then rerun make auto-improve-readiness."
 }

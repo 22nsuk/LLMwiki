@@ -12,6 +12,7 @@ RELEASE_CLOSEOUT_BATCH_MANIFEST_REPORT_REL_PATH = "ops/reports/release-closeout-
 RELEASE_CLOSEOUT_FINALITY_ATTESTATION_REPORT_REL_PATH = "ops/reports/release-closeout-finality-attestation.json"
 RELEASE_EVIDENCE_COHORT_REPORT_REL_PATH = "ops/reports/release-evidence-cohort.json"
 RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH = "tmp/release-closeout-post-check-finalizer.json"
+REMEDIATION_BACKLOG_REPORT_REL_PATH = "ops/reports/remediation-backlog.json"
 RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH = "ops/reports/release-closeout-sealed-rehearsal-check.json"
 RELEASE_AUTHORITY_PREFLIGHT_RELEASE_REPORT_REL_PATH = "build/release/release-closeout-sealed-rehearsal-check.json"
 RELEASE_AUTHORITY_PREFLIGHT_FALLBACK_REPORT_REL_PATH = "tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json"

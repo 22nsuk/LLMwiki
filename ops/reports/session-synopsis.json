@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-17T21:44:48Z",
+  "generated_at": "2026-05-17T22:14:49Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "5a6751298ace4c939c560d4df5ad3c12e49af3d2800712af9a35df6d1faa4d56",
+  "source_tree_fingerprint": "e362b1f99c00851970afef15992d799a3fdc1e4eca29177c243e681e1c0bc52a",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "8c91343f30427af06d94db468c972889a09ff0185c7db529c93733a70f373b82",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "ecc4dbcaef48646f6c4fbb0b3c222945cb7ae1a7949c28ebd65c82b1fc6190f2",
-    "auto_improve_readiness": "74cd23e1ee0972c664a8a2b270c3b409204197a1d75eab8a7b59683f825baadd",
+    "source_paths": "8d307c1262a15070808b32970d1af75931810793876521e5e4287904c2eea3d3",
+    "auto_improve_readiness": "b129c8ba4521551fb6a313f1bb8c2c1de338e4f8cf950f25a5e07debedf3d9e6",
     "goal_run_status": "c2e38a0ecedccc3b308f6134935b8c1c480ec2d7ec4e63a0bef8324b61e52ff5",
-    "learning_claim_activation": "bfcf69e86aaec8615b9c3375e7cf3d42be1346ee98909480743b5508eb65a513",
-    "learning_delta_scoreboard": "0d47a71db7bcbe67ac01a9f68ca7b79080006b420363dd3dcc7068eafdac79aa",
+    "learning_claim_activation": "ea85dc9156973bb4a6a75fce3b2a70e61ae45bfe516cf544b4dae690fbf456c2",
+    "learning_delta_scoreboard": "fc02559254cd8d19c0463760078be99787a150557f526ce010c0330bf0a4b30e",
     "source_package_clean_extract": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "task_observations": "71013a0efaa510f93ecdb4cb6a3cbc18ff61d60d8fc093c6521a4aea80829677"
   },
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T21:44:48Z"
+    "checked_at": "2026-05-17T22:14:49Z"
   },
   "vault": ".",
   "policy": {
@@ -37,7 +37,7 @@
     "last_success_pattern_count": 5,
     "forbidden_repeat_pattern_count": 5,
     "recommended_seed_run_count": 3,
-    "evidence_gap_count": 4,
+    "evidence_gap_count": 3,
     "source_package_replay_status": "pass",
     "active_goal_id": "auto-improve-goal",
     "active_goal_run_id": "auto-improve-trial",
@@ -45,7 +45,7 @@
     "goal_profile_ladder_status": "incomplete",
     "goal_next_profile_required": "30m_trial",
     "sustained_claim_allowed": false,
-    "next_action": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured."
+    "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Close or explicitly defer remediation backlog items, rerun make remediation-backlog, then rerun make auto-improve-readiness."
   },
   "recent_blockers": [
     {
@@ -191,13 +191,6 @@
   ],
   "evidence_gaps": [
     {
-      "id": "claim_hygiene",
-      "source": "learning_claim_activation.anti_slop_preview_ledger",
-      "current": "claim_level=learning_likely; claim_wording_allowed=False",
-      "required": "No learning-improvement wording unless the claim model allows it.",
-      "repair_target": "Keep claim_level=none or complete the unlock and confirmed-claim predicates."
-    },
-    {
       "id": "context_efficiency",
       "source": "learning_claim_activation.anti_slop_preview_ledger",
       "current": "no dedicated context-efficiency telemetry is bound to the learning claim lane",
@@ -254,9 +247,9 @@
     "missing_evidence": []
   },
   "next_session_entrypoint": {
-    "promotion_allowed": true,
+    "promotion_allowed": false,
     "claim_wording_allowed": false,
-    "recommended_next_action": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured.",
+    "recommended_next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Close or explicitly defer remediation backlog items, rerun make remediation-backlog, then rerun make auto-improve-readiness.",
     "first_commands": [
       "make auto-improve-goal-status",
       "make session-synopsis",
@@ -279,7 +272,7 @@
     "sustained_claim_allowed": false,
     "open_blocker_count": 3,
     "forbidden_pattern_count": 5,
-    "evidence_gap_count": 4
+    "evidence_gap_count": 3
   },
   "inputs": {
     "auto_improve_readiness": "ops/reports/auto-improve-readiness.json",

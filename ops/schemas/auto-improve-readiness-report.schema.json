@@ -188,7 +188,8 @@
         "release_evidence_cohort_report",
         "release_closeout_post_check_finalizer_report",
         "release_authority_preflight_report",
-        "goal_worktree_guard_report"
+        "goal_worktree_guard_report",
+        "remediation_backlog_report"
       ],
       "properties": {
         "refresh_generated_target": {
@@ -230,11 +231,14 @@
       "release_authority_preflight_report": {
         "type": "string"
       },
-      "goal_worktree_guard_report": {
-        "type": "string"
+        "goal_worktree_guard_report": {
+          "type": "string"
+        },
+        "remediation_backlog_report": {
+          "type": "string"
+        }
       }
-    }
-  },
+    },
     "diagnostics": {
       "type": "object",
       "additionalProperties": false,
@@ -250,7 +254,8 @@
         "release_evidence_cohort_summary",
         "artifact_finalization_summary",
         "release_authority_preflight_summary",
-        "goal_worktree_guard_summary"
+        "goal_worktree_guard_summary",
+        "remediation_backlog_summary"
       ],
       "properties": {
         "loop_health_summary": {
@@ -288,6 +293,9 @@
       },
       "goal_worktree_guard_summary": {
         "$ref": "#/$defs/goal_worktree_guard_summary"
+      },
+      "remediation_backlog_summary": {
+        "$ref": "#/$defs/remediation_backlog_summary"
       }
     }
   },
@@ -932,7 +940,8 @@
             "execution_readiness",
             "artifact_contract",
             "release_gate",
-            "worktree_guard"
+            "worktree_guard",
+            "remediation_backlog"
           ]
         },
         "status": {
@@ -1098,6 +1107,52 @@
           "type": "string",
           "minLength": 1
         }
+      }
+    },
+    "remediation_backlog_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "expected_artifact_kind",
+        "artifact_kind",
+        "status",
+        "source_status",
+        "release_blocking",
+        "open_item_count",
+        "active_blocker_count",
+        "blocking_item_count",
+        "signal_ids",
+        "summary"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "expected_artifact_kind": {
+          "type": "string",
+          "const": "remediation_backlog"
+        },
+        "artifact_kind": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail"]
+        },
+        "source_status": {
+          "type": "string",
+          "enum": ["pass", "attention", "missing"]
+        },
+        "release_blocking": { "type": "boolean" },
+        "open_item_count": { "type": "integer", "minimum": 0 },
+        "active_blocker_count": { "type": "integer", "minimum": 0 },
+        "blocking_item_count": { "type": "integer", "minimum": 0 },
+        "signal_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "currentness_status": {
+          "type": "string"
+        },
+        "summary": { "type": "string", "minLength": 1 }
       }
     },
     "release_authority_preflight_summary": {

@@ -35,6 +35,7 @@ from .auto_improve_readiness_constants_runtime import (
     READINESS_SOURCE_PATHS,
     READINESS_TARGET,
     REFRESH_GENERATED_TARGET,
+    REMEDIATION_BACKLOG_REPORT_REL_PATH,
     RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
     RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATHS,
     RELEASE_CLOSEOUT_BATCH_MANIFEST_REPORT_REL_PATH,
@@ -99,6 +100,7 @@ class ReadinessInputs:
     active_artifact_finalization: dict[str, Any]
     active_release_authority_preflight: dict[str, Any]
     active_goal_worktree_guard: dict[str, Any]
+    active_remediation_backlog: dict[str, Any]
     artifact_freshness_summary: dict[str, Any]
     selected_contract_summary: dict[str, Any]
     source_package_clean_extract_summary: dict[str, Any]
@@ -109,6 +111,7 @@ class ReadinessInputs:
     artifact_finalization_summary: dict[str, Any]
     release_authority_preflight_summary: dict[str, Any]
     goal_worktree_guard_summary: dict[str, Any]
+    remediation_backlog_summary: dict[str, Any]
     loop_health_summary: dict[str, Any]
     same_eval_telemetry_summary: dict[str, Any]
     reports_present: bool
@@ -268,6 +271,7 @@ def _load_readiness_report_payloads(
         "artifact_finalization": _load_json(vault / RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH),
         "release_authority_preflight": _load_release_authority_preflight_json(vault),
         "goal_worktree_guard": _load_optional_json(vault / GOAL_WORKTREE_GUARD_REPORT_REL_PATH),
+        "remediation_backlog": _load_json(vault / REMEDIATION_BACKLOG_REPORT_REL_PATH),
     }
 
 
@@ -299,6 +303,71 @@ def _queue_evidence_gaps(
         else "all emitted proposals are currently blocked"
     )
     return [*evidence_gaps, blocked_detail]
+
+
+def _remediation_backlog_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    if not payload:
+        return {
+            "path": REMEDIATION_BACKLOG_REPORT_REL_PATH,
+            "expected_artifact_kind": "remediation_backlog",
+            "artifact_kind": "",
+            "status": "fail",
+            "source_status": "missing",
+            "release_blocking": True,
+            "open_item_count": 0,
+            "active_blocker_count": 0,
+            "blocking_item_count": 0,
+            "signal_ids": ["remediation_backlog_missing"],
+            "summary": "remediation backlog report is missing",
+        }
+
+    summary = _dict_field(payload, "summary")
+    open_item_count = int(summary.get("open_item_count", 0) or 0)
+    active_blocker_count = int(summary.get("active_blocker_count", 0) or 0)
+    blocking_signal_ids: list[str] = []
+    items = payload.get("items", [])
+    if isinstance(items, list):
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("status", "")).strip() != "open":
+                continue
+            if str(item.get("severity", "")).strip() != "blocks_promotion":
+                continue
+            blocker_id = str(item.get("blocker_id", "")).strip()
+            if blocker_id:
+                blocking_signal_ids.append(blocker_id)
+
+    blocking_signal_ids = list(dict.fromkeys(blocking_signal_ids))
+    report_status = str(payload.get("status", "")).strip() or "unknown"
+    release_blocking = (
+        report_status != "pass"
+        or open_item_count > 0
+        or active_blocker_count > 0
+        or bool(blocking_signal_ids)
+    )
+    signal_ids = blocking_signal_ids or (
+        ["remediation_backlog_open"] if release_blocking else []
+    )
+    return {
+        "path": REMEDIATION_BACKLOG_REPORT_REL_PATH,
+        "expected_artifact_kind": "remediation_backlog",
+        "artifact_kind": str(payload.get("artifact_kind", "")).strip(),
+        "status": "fail" if release_blocking else "pass",
+        "source_status": "attention" if release_blocking else "pass",
+        "release_blocking": release_blocking,
+        "open_item_count": open_item_count,
+        "active_blocker_count": active_blocker_count,
+        "blocking_item_count": len(blocking_signal_ids),
+        "signal_ids": signal_ids,
+        "currentness_status": str(_dict_field(payload, "currentness").get("status", "")).strip(),
+        "summary": (
+            "remediation backlog "
+            f"status={report_status}; open_item_count={open_item_count}; "
+            f"active_blocker_count={active_blocker_count}; "
+            f"blocking_item_count={len(blocking_signal_ids)}"
+        ),
+    }
 
 
 def load_readiness_inputs(
@@ -370,6 +439,7 @@ def load_readiness_inputs(
         active_artifact_finalization=reports["artifact_finalization"],
         active_release_authority_preflight=reports["release_authority_preflight"],
         active_goal_worktree_guard=reports["goal_worktree_guard"],
+        active_remediation_backlog=reports["remediation_backlog"],
         artifact_freshness_summary=release_summaries["artifact_freshness"],
         selected_contract_summary=release_summaries["selected_contract"],
         source_package_clean_extract_summary=release_summaries["source_package"],
@@ -382,6 +452,7 @@ def load_readiness_inputs(
             "release_authority_preflight"
         ],
         goal_worktree_guard_summary=_goal_worktree_guard_summary(reports["goal_worktree_guard"]),
+        remediation_backlog_summary=_remediation_backlog_summary(reports["remediation_backlog"]),
         loop_health_summary=loop_health_summary,
         same_eval_telemetry_summary=same_eval_telemetry_summary,
         reports_present=reports_present,
@@ -505,6 +576,40 @@ def _execution_blockers(execution: ExecutionReadinessAssessment) -> list[dict[st
     ]
 
 
+def _remediation_backlog_promotion_blockers(
+    summary: dict[str, Any],
+) -> list[dict[str, Any]]:
+    if not bool(summary.get("release_blocking", False)):
+        return []
+    signal_ids = _string_list(summary.get("signal_ids")) or ["remediation_backlog_not_clear"]
+    return [
+        {
+            "id": "promotion_blocked_by_remediation_backlog_open",
+            "scope": "remediation_backlog",
+            "status": "open",
+            "severity": "blocker",
+            "release_blocker": True,
+            "accepted_risk": False,
+            "gate_effect": "active",
+            "source_status": str(summary.get("source_status", "")).strip() or "open",
+            "reason": (
+                "remediation backlog is not clear for promotion: "
+                f"{str(summary.get('summary', '')).strip() or 'summary unavailable'}"
+            ),
+            "signal_ids": signal_ids,
+            "required_evidence": [
+                "Run make remediation-backlog and confirm status=pass with open_item_count=0.",
+                "Close or explicitly defer blocks_promotion backlog items before promotion.",
+                "can_promote_result must stay false while remediation backlog items are open.",
+            ],
+            "recommended_next_step": (
+                "Close or explicitly defer remediation backlog items, rerun make remediation-backlog, "
+                "then rerun make auto-improve-readiness."
+            ),
+        }
+    ]
+
+
 def _readiness_promotion_blockers(
     inputs: ReadinessInputs,
     execution: ExecutionReadinessAssessment,
@@ -533,6 +638,9 @@ def _readiness_promotion_blockers(
         *_goal_worktree_guard_promotion_blockers(
             inputs.goal_worktree_guard_summary,
         ),
+        *_remediation_backlog_promotion_blockers(
+            inputs.remediation_backlog_summary,
+        ),
     ]
     return learning_blockers, promotion_blockers
 
@@ -553,6 +661,7 @@ def _readiness_inputs_payload() -> dict[str, str]:
         "release_closeout_post_check_finalizer_report": RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH,
         "release_authority_preflight_report": RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
         "goal_worktree_guard_report": GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
+        "remediation_backlog_report": REMEDIATION_BACKLOG_REPORT_REL_PATH,
     }
 
 
@@ -570,6 +679,7 @@ def _readiness_diagnostics_payload(inputs: ReadinessInputs) -> dict[str, Any]:
         "artifact_finalization_summary": inputs.artifact_finalization_summary,
         "release_authority_preflight_summary": inputs.release_authority_preflight_summary,
         "goal_worktree_guard_summary": inputs.goal_worktree_guard_summary,
+        "remediation_backlog_summary": inputs.remediation_backlog_summary,
     }
 
 
@@ -658,6 +768,7 @@ def render_readiness_report(
                 "release_closeout_post_check_finalizer_report": RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH,
                 "release_authority_preflight_report": RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
                 "goal_worktree_guard_report": GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
+                "remediation_backlog_report": REMEDIATION_BACKLOG_REPORT_REL_PATH,
             },
             path_group_inputs={
                 "release_authority_preflight_report_candidates": list(

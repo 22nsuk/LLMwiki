@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/self-improvement-negative-lessons.schema.json",
   "artifact_kind": "self_improvement_negative_lessons",
-  "generated_at": "2026-05-17T21:44:48Z",
+  "generated_at": "2026-05-17T22:14:50Z",
   "producer": "ops.scripts.self_improvement_negative_lessons",
   "source_command": "python -m ops.scripts.self_improvement_negative_lessons --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "5f5ab27f66bccae45073fbabbe2a10dbfcf6b8b2b30aa78c38eda6eaf24ed3d3",
+  "source_tree_fingerprint": "8cbd9c9b2c41573dfb03889beb5bc879b5ba3219e0daa5dc735e96da12c7f772",
   "input_fingerprints": {
     "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
     "schema": "47b79b46ef1a89257481eb0fa0b41f96e2765bb833dd8fe9b2f718d71cf470e2",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "18735e7f986786b975aa5d1c70b6f220d7ced3e5f5ed1c4ddf493e680591dbfa",
-    "learning_claim_activation": "bfcf69e86aaec8615b9c3375e7cf3d42be1346ee98909480743b5508eb65a513",
-    "session_synopsis": "6506b29ca9a7d81841b2a61e521c830edf9bbb6817d69acbb05f05f621869f3d"
+    "source_paths": "81dfe5afa1e0191f2ed2b247a12773ad963e2af6b7606f1ec144becbffdb378e",
+    "learning_claim_activation": "ea85dc9156973bb4a6a75fce3b2a70e61ae45bfe516cf544b4dae690fbf456c2",
+    "session_synopsis": "5b1bac7cde8c9657487fc625ba8f14e52240e8d215ff01af6083d54547d2bc58"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T21:44:48Z"
+    "checked_at": "2026-05-17T22:14:50Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
   "summary": {
     "lesson_count": 5,
     "backlog_candidate_count": 0,
-    "source_activation_status": "attention",
+    "source_activation_status": "pass",
     "next_action": "Negative lessons are advisory only; no repeated backlog candidates detected."
   },
   "lessons": [
@@ -51,7 +51,7 @@
         {
           "path": "ops/reports/auto-improve-readiness.json",
           "exists": true,
-          "sha256": "74cd23e1ee0972c664a8a2b270c3b409204197a1d75eab8a7b59683f825baadd",
+          "sha256": "b129c8ba4521551fb6a313f1bb8c2c1de338e4f8cf950f25a5e07debedf3d9e6",
           "status": "present"
         }
       ],
@@ -74,7 +74,7 @@
         {
           "path": "ops/reports/learning-delta-scoreboard.json",
           "exists": true,
-          "sha256": "0d47a71db7bcbe67ac01a9f68ca7b79080006b420363dd3dcc7068eafdac79aa",
+          "sha256": "fc02559254cd8d19c0463760078be99787a150557f526ce010c0330bf0a4b30e",
           "status": "present"
         }
       ],
