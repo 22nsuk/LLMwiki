@@ -1,0 +1,61 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-19T21:13:54Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "607290458796684e94ce743b6505911314a98e5650fdf4ec4c612228a60d0263",
+  "input_fingerprints": {
+    "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "1bd2ac2d021a7e2ff32e1732141ab12b6b72a3f11b4b0d7a5f70e00e9965c273",
+    "observations": "2ea9e4467367541baf2c66d60e8f1735df7dc1cd76e73e730fe678620b883d60",
+    "record_id": "11ea8a9f1babfeb9767032fb19786e149c7c2313ca3bddf28454f4548c1d626a",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "6ce4ce8860115e5e412fa2a3a560e771b90149e604878752dbebc3d5578ca1bb"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-19T21:13:54Z"
+  },
+  "record_id": "task-20260520-goal-5day-runtime-set-goal",
+  "captured_at": "2026-05-19T20:09:52Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Goal contract was set from the 2026-05-19 external comparison report; branch/runtime reconciliation is closed for 30m trial execution, while promotion remains blocked by learning review and remediation backlog evidence.",
+  "observations": [
+    {
+      "observation_id": "goal_runtime_reconciliation_preflight_target",
+      "surface": "goal runtime contract, worktree guard, auto-improve readiness, branch-only safety guard files",
+      "problem": "The external report shows that the current workspace is a dirty main checkout with zip-derived/local runtime state, while the canonical goal branch adds fixed-point, transient cleanup, clean fixture regeneration, and workflow helper guard files that are absent here.",
+      "why_it_matters": "A 5-day goal runtime launched from this state could produce plausible-looking artifacts without the branch safety checks that prove the artifacts agree, stale transients are cleaned, fixture regeneration is not contaminated, and promotion remains blocked while evidence is dirty.",
+      "automation_candidate": "Add a narrow reconciliation target that checks out or verifies the canonical goal branch, asserts the branch-only guard file set exists, refreshes goal worktree guard and readiness, and refuses long-run execution until the fixed-point, cleanup, and fixture guards pass.",
+      "suggested_followup": "Closed in this task: local main now contains the goal runtime guard set, the checked-in goal/readiness snapshots are refreshed, goal-runtime fixed-point and cleanup guards pass, and readiness has one runnable proposal for a bounded 30m trial. Keep promotion blocked until the learning review and remediation backlog are cleared.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "goal_runtime_python_backend_resolution",
+      "surface": "Makefile goal runtime targets and local Python interpreter selection",
+      "problem": "The repo default python executable lacks jsonschema/PyYAML in this workspace, while .venv/bin/python has the required dependencies and successfully runs the goal client tests.",
+      "why_it_matters": "Goal preflight and set_goal operations can fail before producing evidence if an operator uses the ambient python instead of the repo dependency environment.",
+      "automation_candidate": "Teach the goal runtime preflight or Make defaults to prefer the repo venv when present, or emit a targeted dependency diagnostic before invoking schema-backed goal scripts.",
+      "suggested_followup": "Keep using .venv/bin/python for this workspace until the broader Python/toolchain contract is reconciled; consider a small guard that prints the chosen interpreter and dependency availability before long-run start.",
+      "status": "planned"
+    },
+    {
+      "observation_id": "auto_improve_readiness_refresh_generated_core_local_manifest_churn",
+      "surface": "make auto-improve-readiness, refresh-generated-core, ops/manifest.json, goal worktree guard",
+      "problem": "The full auto-improve-readiness target refreshes core generated artifacts before the readiness body, and in a full-vault checkout this rewrites ops/manifest.json plus runtime reports before the embedded worktree guard runs.",
+      "why_it_matters": "The target can create its own dirty worktree evidence and then report promotion blocked by git_worktree_dirty even when the operator started from a clean checkout; committing the refreshed manifest can also risk carrying local-only inventory into a public-safe surface.",
+      "automation_candidate": "Split auto-improve-readiness into a preflight-safe mode that writes refresh-generated-core outputs to tmp or runs the worktree guard before tracked refreshes, then only promotes canonical reports after public/private boundary checks pass.",
+      "suggested_followup": "Keep using auto-improve-readiness-report-body for canonical readiness refresh after curated core evidence is committed or restored; add a small regression test that full auto-improve-readiness cannot self-introduce a dirty worktree blocker through ops/manifest.json.",
+      "status": "open"
+    }
+  ],
+  "task_id": "task-20260520-goal-5day-runtime-set-goal"
+}
