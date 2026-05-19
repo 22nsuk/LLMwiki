@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-19T16:10:29Z",
+  "generated_at": "2026-05-19T20:45:52Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "81d6acebfae87091e9e60a9ee0042c2398a7159a5bd603b84b77b14fe4c10533",
+  "source_tree_fingerprint": "7b3ccfa9e257862df5a402d14944e2c87925c6d809cf34bbbc82f269450211fc",
   "input_fingerprints": {
     "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "b07ea4db25e1e00c9ecce8026872b299d5f6df21f7edd396dce9af266ed48c42",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "fbec8d2540f7bfdd887c5750efa39eb9a0f4192cd8402ffd7859676e07b85ae6",
-    "artifact_freshness_report": "55b1b777a2ca21bbdd593b0500b52099efc53eea90ea72848039a531cbd35512",
-    "goal_worktree_guard_report": "6df9b4f86fb0960c6aa6ad14645e0085de1ee05fcd890e2881b8bfd94c573129",
+    "artifact_freshness_report": "ef05ce0d4e63d092dc12226a4ea2fda7deb0a0082ff15c18caefb35b0898d913",
+    "goal_worktree_guard_report": "2c5a2a1ab3fb0459ae58ab9b21986fc3bbab1d0081de7cd49c9e227a7fd0d7a6",
     "mechanism_review_report": "64561bdd6dc2d8b573125b5f0aeed17decc44190b5ce43e63a686fe290d4f21d",
-    "mutation_proposal_report": "23abc62ad0f9a0b754cc826195fe4cf893d60483346327bad33ef1ec367955ff",
+    "mutation_proposal_report": "354eb3a46b7b2dfd3726a67f5f9c8cd4cd84572e604316f4e766a2402b01b072",
     "outcome_metrics_report": "b806956fae85996d7ef66e28c63e4ede38d114d1d5279b02c4365ec71b559ef3",
     "release_authority_preflight_report": "8771a6022db09e525cf4c8a22c99725d1e3539f340aca5db6445f8d675705b8e",
     "release_closeout_batch_manifest_report": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
@@ -25,7 +25,7 @@
     "remediation_backlog_report": "005d00982eb9a1dbc6bbe9351093a492d9f61961157e20d222e243803a2a5fd4",
     "selected_contract_summary_report": "a26f12921ce79e4f7525db2161b3667a977ce59ecae50e207bf9752ca907deaa",
     "source_package_clean_extract_report": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
-    "release_authority_preflight_report_candidates": "4a5a685ef7727e28c3509ffe4c0b9fe94013ac67b6880799f4a15b48ed17dee3"
+    "release_authority_preflight_report_candidates": "145f23a10e25dfcf0b9eb8875753adc591ca775e5c55cdea7926a32a5e51bebd"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -33,36 +33,34 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-19T16:10:29Z"
+    "checked_at": "2026-05-19T20:45:52Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "can_execute_trial": false,
+  "can_execute_trial": true,
   "can_promote_result": false,
   "execution_readiness": {
-    "status": "warn",
+    "status": "pass",
     "gate_effect": "active",
-    "can_run": false,
+    "can_run": true,
     "reasons": [
-      "no runnable proposal is available",
-      "mutation_proposal.status=attention (contract_regression_signals 1 proposal, 1 blocked; queue_unblock 1 proposal, 1 blocked; proposals_emitted=2)",
-      "proposal blockers active: recent_log_overlap"
+      "runnable proposal queue is non-empty"
     ],
-    "runnable_proposal_count": 0,
-    "blocked_proposal_count": 2,
-    "recommended_next_step": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
+    "runnable_proposal_count": 1,
+    "blocked_proposal_count": 1,
+    "recommended_next_step": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured."
   },
   "learning_readiness": {
-    "status": "not_runnable",
-    "gate_effect": "shadow",
-    "can_run": false,
+    "status": "learning_uncertain",
+    "gate_effect": "review_required",
+    "can_run": true,
     "likely_to_learn": false,
     "reasons": [
-      "no runnable proposal is available",
-      "no runnable proposal is available, so learning likelihood is not evaluated as ready"
+      "runnable proposal queue is non-empty",
+      "shadow learning signals require operator review before this run can count as confirmed learning"
     ],
     "metrics": {
       "attempts_considered": 29,
@@ -120,69 +118,52 @@
         "closure_strategy": "run narrower mechanism experiments until repeated rework drops below threshold."
       }
     ],
-    "recommended_next_step": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty."
+    "recommended_next_step": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
   },
   "learning_blockers": [
     {
-      "id": "learning_blocked_by_execution_not_runnable",
+      "id": "learning_blocked_by_review_required",
       "scope": "learning_readiness",
       "status": "open",
       "severity": "blocker",
       "release_blocker": true,
       "accepted_risk": false,
-      "gate_effect": "shadow",
-      "source_status": "not_runnable",
-      "reason": "no runnable proposal is available; no runnable proposal is available, so learning likelihood is not evaluated as ready; learning signals: recent_hold_moving_average, recent_discard_moving_average, high_rework",
+      "gate_effect": "review_required",
+      "source_status": "learning_uncertain",
+      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: recent_hold_moving_average, recent_discard_moving_average, high_rework",
       "signal_ids": [
         "recent_hold_moving_average",
         "recent_discard_moving_average",
         "high_rework"
       ],
       "required_evidence": [
-        "execution_readiness.can_run must be true before learning readiness can pass",
-        "restore a non-empty runnable proposal queue; learning-readiness signoff cannot accept not_runnable execution blockers"
+        "learning_readiness.likely_to_learn must be true before release readiness can pass",
+        "or an operator must record accepted risk for this named learning review blocker"
       ],
-      "recommended_next_step": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty."
+      "recommended_next_step": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
     }
   ],
   "promotion_blockers": [
     {
-      "id": "execution_blocked_by_no_runnable_proposal",
-      "scope": "execution_readiness",
-      "status": "open",
-      "severity": "blocker",
-      "release_blocker": true,
-      "accepted_risk": false,
-      "gate_effect": "active",
-      "source_status": "warn",
-      "reason": "no runnable proposal is available; mutation_proposal.status=attention (contract_regression_signals 1 proposal, 1 blocked; queue_unblock 1 proposal, 1 blocked; proposals_emitted=2); proposal blockers active: recent_log_overlap",
-      "signal_ids": [],
-      "required_evidence": [
-        "execution_readiness.can_run must be true before an auto-improve trial can execute",
-        "refresh generated proposal queue evidence or seed a runnable fallback mechanism"
-      ],
-      "recommended_next_step": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
-    },
-    {
-      "id": "learning_blocked_by_execution_not_runnable",
+      "id": "learning_blocked_by_review_required",
       "scope": "learning_readiness",
       "status": "open",
       "severity": "blocker",
       "release_blocker": true,
       "accepted_risk": false,
-      "gate_effect": "shadow",
-      "source_status": "not_runnable",
-      "reason": "no runnable proposal is available; no runnable proposal is available, so learning likelihood is not evaluated as ready; learning signals: recent_hold_moving_average, recent_discard_moving_average, high_rework",
+      "gate_effect": "review_required",
+      "source_status": "learning_uncertain",
+      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: recent_hold_moving_average, recent_discard_moving_average, high_rework",
       "signal_ids": [
         "recent_hold_moving_average",
         "recent_discard_moving_average",
         "high_rework"
       ],
       "required_evidence": [
-        "execution_readiness.can_run must be true before learning readiness can pass",
-        "restore a non-empty runnable proposal queue; learning-readiness signoff cannot accept not_runnable execution blockers"
+        "learning_readiness.likely_to_learn must be true before release readiness can pass",
+        "or an operator must record accepted risk for this named learning review blocker"
       ],
-      "recommended_next_step": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty."
+      "recommended_next_step": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
     },
     {
       "id": "promotion_blocked_by_remediation_backlog_open",
@@ -211,25 +192,25 @@
   ],
   "release_blockers": [
     {
-      "id": "learning_blocked_by_execution_not_runnable",
+      "id": "learning_blocked_by_review_required",
       "scope": "learning_readiness",
       "status": "open",
       "severity": "blocker",
       "release_blocker": true,
       "accepted_risk": false,
-      "gate_effect": "shadow",
-      "source_status": "not_runnable",
-      "reason": "no runnable proposal is available; no runnable proposal is available, so learning likelihood is not evaluated as ready; learning signals: recent_hold_moving_average, recent_discard_moving_average, high_rework",
+      "gate_effect": "review_required",
+      "source_status": "learning_uncertain",
+      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: recent_hold_moving_average, recent_discard_moving_average, high_rework",
       "signal_ids": [
         "recent_hold_moving_average",
         "recent_discard_moving_average",
         "high_rework"
       ],
       "required_evidence": [
-        "execution_readiness.can_run must be true before learning readiness can pass",
-        "restore a non-empty runnable proposal queue; learning-readiness signoff cannot accept not_runnable execution blockers"
+        "learning_readiness.likely_to_learn must be true before release readiness can pass",
+        "or an operator must record accepted risk for this named learning review blocker"
       ],
-      "recommended_next_step": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty."
+      "recommended_next_step": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
     }
   ],
   "inputs": {
@@ -253,13 +234,13 @@
     "loop_health_summary": {
       "status": "available",
       "gate_effect": "none",
-      "source_report": "ops/reports/routing-provenance-aggregates/auto-improve-remediation-p1e-20260519T142130Z.json",
-      "source_generated_at": "2026-05-19T16:07:02Z",
-      "session_id": "auto-improve-remediation-p1e-20260519T142130Z",
-      "summary": "attempts=1, finalized=0, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=1.00 | alerts: unfinalized runs present, recent DISCARD trend",
+      "source_report": "ops/reports/routing-provenance-aggregates/auto-improve-2026-05-02t03-27-31z.json",
+      "source_generated_at": "2026-05-15T11:37:48Z",
+      "session_id": "auto-improve-2026-05-02t03-27-31z",
+      "summary": "attempts=1, finalized=0, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=1.00 | alerts: unfinalized runs present, recent HOLD trend",
       "health_flags": [
         "unfinalized_runs_present",
-        "recent_discard_present"
+        "recent_hold_present"
       ],
       "attempt_count": 1,
       "finalized_run_count": 0,
@@ -404,11 +385,11 @@
       "can_execute_goal_runtime": true,
       "can_promote_result": true,
       "zip_mode_replay_only": false,
-      "dirty_worktree_allowed": true,
-      "dirty_entry_count": 115,
+      "dirty_worktree_allowed": false,
+      "dirty_entry_count": 0,
       "fatal_blockers": [],
       "promotion_blockers": [],
-      "summary": "goal worktree guard status=pass; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=true; dirty_entry_count=115"
+      "summary": "goal worktree guard status=pass; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=true; dirty_entry_count=0"
     },
     "remediation_backlog_summary": {
       "path": "ops/reports/remediation-backlog.json",
@@ -432,30 +413,29 @@
     }
   },
   "queue": {
-    "ready": false,
+    "ready": true,
     "proposals_emitted": 2,
-    "runnable_proposal_count": 0,
-    "runnable_proposal_ids": [],
-    "blocked_proposal_count": 2,
+    "runnable_proposal_count": 1,
+    "runnable_proposal_ids": [
+      "recent_log_overlap_queue_blocked__auto-improve-readiness-queue-runtime"
+    ],
+    "blocked_proposal_count": 1,
     "blocked_reason_counts": [
       {
         "reason": "recent_log_overlap",
-        "count": 2
+        "count": 1
       }
     ],
     "source_candidates_read": 1,
     "candidates_emitted": 1,
     "attempts_considered": 29,
     "session_reports_considered": 14,
-    "queue_pressure_summary": "contract_regression_signals 1 proposal, 1 blocked; queue_unblock 1 proposal, 1 blocked",
+    "queue_pressure_summary": "contract_regression_signals 1 proposal, 1 blocked; queue_unblock 1 proposal",
     "review_bootstrap_summary": "comparable mechanism run history는 trend-based candidate를 평가할 수 있을 만큼 확보됐다.",
-    "evidence_gaps": [
-      "mutation_proposal.status=attention (contract_regression_signals 1 proposal, 1 blocked; queue_unblock 1 proposal, 1 blocked; proposals_emitted=2)",
-      "proposal blockers active: recent_log_overlap"
-    ]
+    "evidence_gaps": []
   },
   "fallback": {
-    "status": "blocked_queue",
+    "status": "not_needed",
     "primary_targets": [
       "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
     ],
@@ -480,8 +460,8 @@
     },
     {
       "id": "proposal_queue_nonempty",
-      "pass": false,
-      "detail": "proposals_emitted=2 but runnable_proposal_count=0, so auto-improve should stay paused."
+      "pass": true,
+      "detail": "runnable_proposal_count=1 (proposals_emitted=2)"
     },
     {
       "id": "outcome_metrics_session_rollup_present",
@@ -494,24 +474,6 @@
       "detail": "queue is already non-empty, so fallback history depth is not needed."
     }
   ],
-  "remediations": [
-    {
-      "blocker": "recent_log_overlap",
-      "remediation_code": "wait_for_recent_log_overlap_to_clear",
-      "blocker_kind": "hard",
-      "unblock_action_type": "chronology_advance_or_target_rotation",
-      "minimum_evidence": [
-        "A refreshed mutation proposal report no longer lists recent_log_overlap in blocked_by for every emitted proposal.",
-        "auto-improve readiness reports queue.runnable_proposal_count greater than 0.",
-        "The recent overlapping target chronology has advanced, the max-age window has expired, or the proposal target set no longer overlaps the recent run log."
-      ],
-      "retry_condition": "Rerun make auto-improve-readiness after make refresh-generated-core observes a newer chronology after the max-age window expires, or after a non-overlapping runnable proposal appears.",
-      "affected_proposal_count": 2,
-      "proposal_ids": [
-        "recent_log_overlap_queue_blocked__mutation-proposal-runtime",
-        "repeated_discard_runs__auto-improve-iteration-persistence-runtime"
-      ]
-    }
-  ],
-  "next_action": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
+  "remediations": [],
+  "next_action": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
 }
