@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-17T22:14:49Z",
+  "generated_at": "2026-05-19T16:10:27Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e362b1f99c00851970afef15992d799a3fdc1e4eca29177c243e681e1c0bc52a",
+  "source_tree_fingerprint": "81d6acebfae87091e9e60a9ee0042c2398a7159a5bd603b84b77b14fe4c10533",
   "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "8c91343f30427af06d94db468c972889a09ff0185c7db529c93733a70f373b82",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "8d307c1262a15070808b32970d1af75931810793876521e5e4287904c2eea3d3",
-    "auto_improve_readiness": "b129c8ba4521551fb6a313f1bb8c2c1de338e4f8cf950f25a5e07debedf3d9e6",
-    "goal_run_status": "c2e38a0ecedccc3b308f6134935b8c1c480ec2d7ec4e63a0bef8324b61e52ff5",
-    "learning_claim_activation": "ea85dc9156973bb4a6a75fce3b2a70e61ae45bfe516cf544b4dae690fbf456c2",
-    "learning_delta_scoreboard": "fc02559254cd8d19c0463760078be99787a150557f526ce010c0330bf0a4b30e",
+    "source_paths": "1b3dc9e7a915a19253d410de18eaaaf886a7ff3ed065da0c66c496fb7e0f9ae4",
+    "auto_improve_readiness": "574c910f932f253f1281f397580e57699d7288aceae04d74487dcc51dc0b0998",
+    "goal_run_status": "2c8f7afd6bbfd924c469fff750365c51da32a3815d2079d934b716e8cbc2fd1c",
+    "learning_claim_activation": "d66aefe4d3c2b5c4cf94f0b40ff9902ad4345c5ddbc0bb76528cbd2f00a6cf35",
+    "learning_delta_scoreboard": "cb59687ced9e17b25c1c2cec469ca74c2b5fb6ba27a2010d22c45224ebcc7aff",
     "source_package_clean_extract": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "task_observations": "71013a0efaa510f93ecdb4cb6a3cbc18ff61d60d8fc093c6521a4aea80829677"
   },
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T22:14:49Z"
+    "checked_at": "2026-05-19T16:10:27Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
   },
   "status": "attention",
   "summary": {
-    "recent_blocker_count": 3,
+    "recent_blocker_count": 5,
     "last_success_pattern_count": 5,
     "forbidden_repeat_pattern_count": 5,
     "recommended_seed_run_count": 3,
@@ -45,7 +45,7 @@
     "goal_profile_ladder_status": "incomplete",
     "goal_next_profile_required": "30m_trial",
     "sustained_claim_allowed": false,
-    "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Close or explicitly defer remediation backlog items, rerun make remediation-backlog, then rerun make auto-improve-readiness."
+    "next_action": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
   },
   "recent_blockers": [
     {
@@ -54,6 +54,20 @@
       "status": "open",
       "reason": "profile ladder incomplete",
       "repair_target": "Collect bounded runtime evidence for next_profile_required=30m_trial."
+    },
+    {
+      "id": "execution_blocked_by_no_runnable_proposal",
+      "source": "auto_improve_readiness.promotion_blockers",
+      "status": "open",
+      "reason": "no runnable proposal is available; mutation_proposal.status=attention (contract_regression_signals 1 proposal, 1 blocked; queue_unblock 1 proposal, 1 blocked; proposals_emitted=2); proposal blockers active: recent_log_overlap",
+      "repair_target": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
+    },
+    {
+      "id": "learning_blocked_by_execution_not_runnable",
+      "source": "auto_improve_readiness.promotion_blockers",
+      "status": "open",
+      "reason": "no runnable proposal is available; no runnable proposal is available, so learning likelihood is not evaluated as ready; learning signals: recent_hold_moving_average, recent_discard_moving_average, high_rework",
+      "repair_target": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty."
     },
     {
       "id": "learning_claim_unlock_review_not_approved",
@@ -119,7 +133,7 @@
         "BLOCKED"
       ],
       "run_ids": [],
-      "occurrence_count": 1,
+      "occurrence_count": 2,
       "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
       "repair_target": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane."
     },
@@ -148,28 +162,29 @@
       "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=behavior_delta_digest_added."
     },
     {
-      "id": "discard_telemetry_discoverability_improved",
+      "id": "discard_changed_files_manifest_primary_targets_touched",
       "decisions": [
         "DISCARD"
       ],
       "run_ids": [
-        "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp"
+        "auto-improve-trial-maintenance-rerun-4-run-01-mutation-proposal-runtime",
+        "auto-improve-remediation-p1e-20260519T142130Z-run-01-auto-improve-iteration-persistence-runtime"
       ],
-      "occurrence_count": 1,
+      "occurrence_count": 2,
       "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
-      "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=telemetry_discoverability_improved."
+      "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=changed_files_manifest_primary_targets_touched."
     },
     {
-      "id": "hold_unspecified",
+      "id": "discard_changed_files_manifest_scope",
       "decisions": [
-        "HOLD"
+        "DISCARD"
       ],
       "run_ids": [
-        "run-20260422-auto-improve-decision-record-fallback-retry2"
+        "auto-improve-remediation-p1b-20260519T124442Z-run-01-auto-improve-iteration-persistence-runtime"
       ],
       "occurrence_count": 1,
       "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
-      "repair_target": "Change the mechanism or evidence predicate before rerunning another HOLD attempt with same_eval_reason_code=unspecified."
+      "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=changed_files_manifest_scope."
     }
   ],
   "recommended_seed_runs": [
@@ -226,12 +241,12 @@
     "run_id": "auto-improve-trial",
     "run_status": "blocked",
     "profile": "30m_trial",
-    "promotion_status": "allowed",
-    "can_promote_result": true,
+    "promotion_status": "blocked",
+    "can_promote_result": false,
     "checkpoint_status": "current",
     "periodic_evidence_status": "not_due",
-    "audit_log_path": "runs/goal-auto-improve-trial/audit-log.jsonl",
-    "resume_metadata_path": "runs/goal-auto-improve-trial/resume-metadata.json",
+    "audit_log_path": "runs/goal-auto-improve-trial/state/audit-log.jsonl",
+    "resume_metadata_path": "runs/goal-auto-improve-trial/state/resume-metadata.json",
     "next_action": "Resume via the linked goal status artifacts before starting a separate session."
   },
   "goal_profile_ladder": {
@@ -249,7 +264,7 @@
   "next_session_entrypoint": {
     "promotion_allowed": false,
     "claim_wording_allowed": false,
-    "recommended_next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Close or explicitly defer remediation backlog items, rerun make remediation-backlog, then rerun make auto-improve-readiness.",
+    "recommended_next_action": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap.",
     "first_commands": [
       "make auto-improve-goal-status",
       "make session-synopsis",
@@ -270,7 +285,7 @@
     "target_profile": "30m_trial",
     "profile_ladder_status": "incomplete",
     "sustained_claim_allowed": false,
-    "open_blocker_count": 3,
+    "open_blocker_count": 5,
     "forbidden_pattern_count": 5,
     "evidence_gap_count": 3
   },

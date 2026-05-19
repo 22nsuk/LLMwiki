@@ -34,6 +34,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--executor", default="codex_exec")
     ap.add_argument("--class", dest="artifact_class", default="system_mechanism")
     ap.add_argument("--allow-learning-uncertain", action="store_true")
+    ap.add_argument("--maintain-until-budget", action="store_true")
+    ap.add_argument("--maintenance-interval-seconds", type=int)
     ap.add_argument("--goal-profile")
     ap.add_argument("--status-out")
     ap.add_argument("--audit-jsonl")
@@ -82,6 +84,8 @@ def main(argv: list[str] | None = None) -> None:
                 executor_name=args.executor,
                 artifact_class=args.artifact_class,
                 allow_learning_uncertain=args.allow_learning_uncertain,
+                maintain_until_budget=args.maintain_until_budget,
+                maintenance_interval_seconds=args.maintenance_interval_seconds,
             )
     except AutoImproveError as exc:
         print(str(exc), file=sys.stderr)

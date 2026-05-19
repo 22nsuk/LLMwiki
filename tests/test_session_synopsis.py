@@ -141,6 +141,7 @@ def seed_synopsis_inputs(vault: Path) -> None:
             "blockers": [
                 "profile ladder incomplete",
                 "sealed authority clean pass not verified",
+                "promotion_blocked_by_remediation_backlog_open",
             ],
             "profile_ladder": {
                 "status": "incomplete",
@@ -201,6 +202,10 @@ class SessionSynopsisTests(unittest.TestCase):
                 "promotion_blocked_by_remediation_backlog_open",
                 {blocker["id"] for blocker in report["recent_blockers"]},
             )
+            self.assertNotIn(
+                "goal_status_promotion_blocked_by_remediation_backlog_open",
+                {blocker["id"] for blocker in report["recent_blockers"]},
+            )
             self.assertEqual(report["summary"]["forbidden_repeat_pattern_count"], 1)
             self.assertEqual(report["summary"]["recommended_seed_run_count"], 1)
             self.assertEqual(
@@ -244,6 +249,46 @@ class SessionSynopsisTests(unittest.TestCase):
                 )
             )
             self.assertEqual(report["recommended_seed_runs"][0]["run_id"], "run-seed-a")
+
+    def test_readiness_blocker_supersedes_goal_status_echo(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_synopsis_inputs(vault)
+            write_json(
+                vault,
+                "ops/reports/auto-improve-readiness.json",
+                {
+                    "can_promote_result": False,
+                    "next_action": "Trial only; do not promote.",
+                    "promotion_blockers": [
+                        {
+                            "id": "learning_blocked_by_review_required",
+                            "status": "open",
+                            "reason": "operator review required",
+                            "recommended_next_step": "Review bounded learning evidence.",
+                        }
+                    ],
+                    "fallback": {"seed_runs": []},
+                },
+            )
+            goal_status = json.loads(
+                (vault / "ops/reports/goal-run-status.json").read_text(encoding="utf-8")
+            )
+            goal_status["blockers"] = [
+                "learning_blocked_by_review_required",
+                "profile ladder incomplete",
+            ]
+            write_json(vault, "ops/reports/goal-run-status.json", goal_status)
+
+            report = build_report(vault, context=fixed_context())
+            blocker_ids = [blocker["id"] for blocker in report["recent_blockers"]]
+
+            self.assertIn("learning_blocked_by_review_required", blocker_ids)
+            self.assertNotIn("goal_status_learning_blocked_by_review_required", blocker_ids)
+            self.assertIn("goal_status_profile_ladder_incomplete", blocker_ids)
+            self.assertEqual(blocker_ids.count("learning_blocked_by_review_required"), 1)
 
     def test_write_report_validates_schema(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

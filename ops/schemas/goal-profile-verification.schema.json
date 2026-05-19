@@ -131,7 +131,17 @@
         "stop_reason",
         "iteration_count",
         "successful_iteration_count",
-        "has_success_then_followup"
+        "has_success_then_followup",
+        "accepted_stop_reasons",
+        "minimum_iteration_count",
+        "minimum_successful_iteration_count",
+        "requires_success_then_followup",
+        "requires_meaningful_maintenance",
+        "maintenance_status",
+        "maintenance_cycle_count",
+        "meaningful_maintenance_cycle_count",
+        "expected_min_maintenance_cycle_count",
+        "maintenance_last_cycle_elapsed_seconds"
       ],
       "properties": {
         "status": { "type": "string", "enum": ["clean", "incomplete", "missing"] },
@@ -140,7 +150,24 @@
         "stop_reason": { "type": "string" },
         "iteration_count": { "type": "integer", "minimum": 0 },
         "successful_iteration_count": { "type": "integer", "minimum": 0 },
-        "has_success_then_followup": { "type": "boolean" }
+        "has_success_then_followup": { "type": "boolean" },
+        "accepted_stop_reasons": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "minimum_iteration_count": { "type": "integer", "minimum": 0 },
+        "minimum_successful_iteration_count": { "type": "integer", "minimum": 0 },
+        "requires_success_then_followup": { "type": "boolean" },
+        "requires_meaningful_maintenance": { "type": "boolean" },
+        "maintenance_status": {
+          "type": "string",
+          "enum": ["clean", "incomplete", "missing"]
+        },
+        "maintenance_cycle_count": { "type": "integer", "minimum": 0 },
+        "meaningful_maintenance_cycle_count": { "type": "integer", "minimum": 0 },
+        "expected_min_maintenance_cycle_count": { "type": "integer", "minimum": 0 },
+        "maintenance_last_cycle_elapsed_seconds": { "type": "integer", "minimum": 0 }
       }
     },
     "command_observability": {

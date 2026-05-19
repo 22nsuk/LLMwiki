@@ -46,6 +46,7 @@ ITERATION_TELEMETRY_WRITTEN_FIELDS = frozenset(
 ITERATION_TELEMETRY_MERGED_FIELDS = frozenset(
     {
         "decision_record",
+        "discard_non_regression_evidence",
         "command_timeouts",
         "timeout_failure_artifacts",
         "behavior_delta",
@@ -96,6 +97,13 @@ class IterationTelemetryRequest:
     outcome: str
     result: dict | None
     context: RuntimeContext
+
+
+@dataclass(frozen=True)
+class LoadedPromotionReport:
+    payload: dict[str, Any]
+    source_kind: str
+    source_path: str
 
 
 def _normalize_timeout_result(value: object) -> dict | None:
@@ -190,18 +198,55 @@ def _load_repo_relative_json(vault: Path, rel_path: object) -> dict | None:
     return payload if isinstance(payload, dict) else None
 
 
+def _load_promotion_report_from_rel(
+    vault: Path,
+    rel_path: object,
+    *,
+    source_kind: str,
+) -> LoadedPromotionReport | None:
+    payload = _load_repo_relative_json(vault, rel_path)
+    if payload is None:
+        return None
+    return LoadedPromotionReport(
+        payload=payload,
+        source_kind=source_kind,
+        source_path=str(rel_path).strip(),
+    )
+
+
+def _promotion_report_from_source(vault: Path, source: object) -> LoadedPromotionReport | None:
+    if not isinstance(source, dict):
+        return None
+    promotion_report = source.get("promotion_report")
+    if isinstance(promotion_report, dict):
+        return LoadedPromotionReport(
+            payload=promotion_report,
+            source_kind="inline",
+            source_path="",
+        )
+    return _load_promotion_report_from_rel(vault, promotion_report, source_kind="path")
+
+
+def _iteration_promotion_report(
+    vault: Path,
+    run_id: str,
+    result: dict | None,
+    existing_report: dict,
+) -> LoadedPromotionReport | None:
+    for source in (result, existing_report):
+        promotion_report = _promotion_report_from_source(vault, source)
+        if promotion_report is not None:
+            return promotion_report
+    return _load_promotion_report_from_rel(
+        vault,
+        run_rel(run_id, "promotion-report.json"),
+        source_kind="default_path",
+    )
+
+
 def _decision_record_from_source(vault: Path, source: object) -> dict | None:
     if not isinstance(source, dict):
         return None
-    decision_record = source.get("decision_record")
-    if isinstance(decision_record, dict):
-        try:
-            return decision_record_from_payload(
-                {"decision_record": decision_record},
-                require_record=True,
-            )
-        except PromotionDecisionRegistryError:
-            pass
     promotion_report = source.get("promotion_report")
     if isinstance(promotion_report, dict):
         try:
@@ -214,7 +259,90 @@ def _decision_record_from_source(vault: Path, source: object) -> dict | None:
             return decision_record_from_report(promotion_payload, require_record=False)
         except PromotionDecisionRegistryError:
             pass
+    decision_record = source.get("decision_record")
+    if isinstance(decision_record, dict):
+        try:
+            return decision_record_from_payload(
+                {"decision_record": decision_record},
+                require_record=True,
+            )
+        except PromotionDecisionRegistryError:
+            pass
     return None
+
+
+def _decision_from_record(decision_record: dict[str, Any] | None) -> str:
+    if not isinstance(decision_record, dict):
+        return ""
+    return str(decision_record.get("decision", "")).strip().upper()
+
+
+def _promotion_check_statuses(promotion_report: dict[str, Any]) -> dict[str, str]:
+    checks = promotion_report.get("checks")
+    if not isinstance(checks, list):
+        return {}
+    statuses: dict[str, str] = {}
+    for check in checks:
+        if not isinstance(check, dict):
+            continue
+        check_id = str(check.get("id", "")).strip()
+        if not check_id:
+            continue
+        statuses[check_id] = str(check.get("status", "")).strip().upper()
+    return statuses
+
+
+def _blocking_promotion_check_ids(
+    statuses: dict[str, str],
+    decision_record: dict[str, Any] | None,
+) -> list[str]:
+    blocking_ids = {check_id for check_id, status in statuses.items() if status == "FAIL"}
+    if isinstance(decision_record, dict):
+        evidence_refs = decision_record.get("evidence_refs")
+        if isinstance(evidence_refs, list):
+            blocking_ids.update(str(item).strip() for item in evidence_refs if str(item).strip())
+    return sorted(blocking_ids)
+
+
+def _discard_non_regression_evidence(
+    vault: Path,
+    run_id: str,
+    result: dict | None,
+    existing_report: dict,
+) -> dict[str, Any] | None:
+    promotion_report = _iteration_promotion_report(vault, run_id, result, existing_report)
+    if promotion_report is None:
+        return None
+    decision_record: dict[str, Any] | None = None
+    try:
+        decision_record = decision_record_from_report(promotion_report.payload, require_record=False)
+    except PromotionDecisionRegistryError:
+        if isinstance(promotion_report.payload.get("decision_record"), dict):
+            return None
+        decision_record = None
+    report_decision = _decision_from_record(decision_record)
+    if not report_decision:
+        report_decision = str(promotion_report.payload.get("decision", "")).strip().upper()
+    if report_decision != "DISCARD":
+        return None
+    statuses = _promotion_check_statuses(promotion_report.payload)
+    evidence: dict[str, Any] = {
+        "promotion_report_source": promotion_report.source_kind,
+        "candidate_eval_pass": statuses.get("candidate_eval_pass") == "PASS",
+        "eval_score_improves": statuses.get("eval_score_improves") == "PASS",
+        "lint_non_regression": statuses.get("lint_non_regression") == "PASS",
+        "structural_complexity_non_regression": (
+            statuses.get("structural_complexity_non_regression") == "PASS"
+        ),
+        "tests_non_regression": statuses.get("tests_non_regression") == "PASS",
+        "blocking_check_ids": _blocking_promotion_check_ids(statuses, decision_record),
+        "decision_record_reason_code": str(
+            (decision_record or {}).get("reason_code", "")
+        ).strip(),
+    }
+    if promotion_report.source_path:
+        evidence["promotion_report"] = promotion_report.source_path
+    return evidence
 
 
 def _iteration_decision_record(
@@ -306,7 +434,7 @@ def write_iteration_telemetry(
         "routing_reports": request.routing_report_rels,
         "executor_reports": [role_report_path(request.run_id, role) for role in request.roles],
         "phase_durations": request.phase_durations,
-        "failure_taxonomy": request.outcome if request.outcome not in {"promoted", "discarded"} else "",
+        "failure_taxonomy": request.outcome if request.outcome != "promoted" else "",
         "decision": (request.result or {}).get("decision", ""),
         "finalized": bool((request.result or {}).get("finalized")),
         "finalize_result": (request.result or {}).get("finalize_result", {}),
@@ -320,6 +448,15 @@ def write_iteration_telemetry(
     )
     if isinstance(decision_record, dict):
         payload["decision_record"] = decision_record
+        payload["decision"] = _decision_from_record(decision_record)
+    discard_evidence = _discard_non_regression_evidence(
+        request.vault,
+        request.run_id,
+        request.result,
+        existing_report,
+    )
+    if discard_evidence is not None:
+        payload["discard_non_regression_evidence"] = discard_evidence
     command_timeouts = _iteration_command_timeouts(request.vault, request.run_id, request.result)
     if command_timeouts is not None:
         payload["command_timeouts"] = command_timeouts

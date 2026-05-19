@@ -46,7 +46,10 @@ REPORT_CONTRACT_CORE_TESTS ?= \
 	tests/test_report_schemas.py \
 	tests/test_report_schema_sample_regeneration.py \
 	tests/test_workflow_dependency_planner.py \
+	tests/test_clean_fixture_regeneration_guard.py \
 	tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface \
+	tests/test_goal_runtime_clean_transient.py \
+	tests/test_goal_runtime_fixed_point_check.py \
 	tests/test_run_templates.py
 REPORT_CONTRACT_EXTENDED_TESTS ?= \
 	tests/test_improvement_observations_runtime.py \
@@ -106,7 +109,7 @@ RELEASE_CLOSEOUT_REGRESSION_TESTS ?= tests/test_release_closeout_finality_attest
 RELEASE_CLOSEOUT_REGRESSION_FRESHNESS_CHECK_OUT ?= tmp/release-closeout-regression-artifact-freshness-check.json
 RELEASE_CLOSEOUT_COST_EVIDENCE_CI_OUT ?= tmp/release-closeout-fixed-point-cost-trend-ci.json
 
-.PHONY: fast-smoke report-contracts report-contracts-extended test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact test-report-contract report-contract-summary test-artifact-finalization test-artifact-finalization-lane-guard report-contract-finalization test-release-sealing test-subprocess report-schema-samples-check report-contract-closeout-precheck report-contract-closeout test-execution-summary-fast test-execution-summary-report-contract test-execution-summary-report-contract-refresh test-execution-summary test-execution-summary-full test-execution-summary-full-refresh test-execution-summary-reuse test-execution-summary-aggregate test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial 
+.PHONY: fast-smoke report-contracts report-contracts-extended test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact test-report-contract report-contract-summary test-artifact-finalization test-artifact-finalization-lane-guard report-contract-finalization test-release-sealing test-subprocess report-schema-samples-check report-schema-samples-regenerate report-contract-closeout-precheck report-contract-closeout test-execution-summary-fast test-execution-summary-report-contract test-execution-summary-report-contract-refresh test-execution-summary test-execution-summary-full test-execution-summary-full-refresh test-execution-summary-reuse test-execution-summary-aggregate test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
 
 fast-smoke:
 	$(PYTHON) -m pytest -m "$(PYTEST_FAST_SMOKE_MARK_EXPR)" $(FAST_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)
@@ -149,6 +152,9 @@ test-subprocess:
 
 report-schema-samples-check:
 	$(PYTHON) tools/regenerate_report_schema_samples.py --check
+
+report-schema-samples-regenerate: clean-fixture-regeneration-guard
+	$(PYTHON) tools/regenerate_report_schema_samples.py
 
 report-contract-closeout-precheck:
 	@for target in $$($(PYTHON) -m ops.scripts.report_contract_closeout_runtime --vault "$(VAULT)"); do \

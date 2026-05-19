@@ -158,6 +158,8 @@ class AutoImproveSessionRequest:
     executor_name: str | None = None
     artifact_class: str = "system_mechanism"
     allow_learning_uncertain: bool = False
+    maintain_until_budget: bool = False
+    maintenance_interval_seconds: int | None = None
     context: RuntimeContext | None = None
 
     def resolved(self) -> "AutoImproveSessionRequest":
@@ -173,6 +175,8 @@ class AutoImproveSessionRequest:
             executor_name=self.executor_name,
             artifact_class=self.artifact_class,
             allow_learning_uncertain=self.allow_learning_uncertain,
+            maintain_until_budget=self.maintain_until_budget,
+            maintenance_interval_seconds=self.maintenance_interval_seconds,
             context=self.context,
         )
 
@@ -201,6 +205,8 @@ def _coerce_auto_improve_session_request(
         "executor_name",
         "artifact_class",
         "allow_learning_uncertain",
+        "maintain_until_budget",
+        "maintenance_interval_seconds",
         "context",
     }
     unexpected_keys = sorted(set(legacy_kwargs) - allowed_keys)
@@ -219,6 +225,8 @@ def _coerce_auto_improve_session_request(
         executor_name=legacy_kwargs.get("executor_name"),
         artifact_class=legacy_kwargs.get("artifact_class", "system_mechanism"),
         allow_learning_uncertain=bool(legacy_kwargs.get("allow_learning_uncertain", False)),
+        maintain_until_budget=bool(legacy_kwargs.get("maintain_until_budget", False)),
+        maintenance_interval_seconds=legacy_kwargs.get("maintenance_interval_seconds"),
         context=legacy_kwargs.get("context"),
     )
 
@@ -233,7 +241,13 @@ class AutoImproveLoopState:
     pre_promotion_failure_outcomes: set[str]
 
 
-TERMINAL_SUCCESS_OUTCOMES = frozenset({"promoted", "discarded"})
+TERMINAL_SUCCESS_OUTCOMES = frozenset({"promoted"})
+MAINTENANCE_WORK_ITEMS = (
+    "mechanism_review_report",
+    "mutation_proposal_report",
+    "auto_improve_readiness_report",
+    "auto_improve_session_report",
+)
 
 
 def _int_value(value: object, default: int = 0) -> int:
@@ -253,6 +267,15 @@ def _resolve_budget_value(name: str, value: int | None, default: int) -> int:
     resolved = default if value is None else value
     if not isinstance(resolved, int) or isinstance(resolved, bool) or resolved < 1:
         raise AutoImproveUsageError(f"{name} must be an integer greater than or equal to 1")
+    return resolved
+
+
+def _resolve_maintenance_interval(value: int | None) -> int:
+    resolved = 300 if value is None else value
+    if not isinstance(resolved, int) or isinstance(resolved, bool) or resolved < 1:
+        raise AutoImproveUsageError(
+            "maintenance_interval_seconds must be an integer greater than or equal to 1"
+        )
     return resolved
 
 
@@ -776,6 +799,20 @@ def _pre_run_readiness_snapshot(
     }
 
 
+def _readiness_queue_snapshot(readiness_report: Mapping[str, Any]) -> list[str]:
+    queue = readiness_report.get("queue")
+    if not isinstance(queue, Mapping):
+        return []
+    return _list_text(queue.get("runnable_proposal_ids"))
+
+
+def _readiness_runnable_proposal_count(readiness_report: Mapping[str, Any]) -> int:
+    queue = readiness_report.get("queue")
+    if not isinstance(queue, Mapping):
+        return 0
+    return _int_value(queue.get("runnable_proposal_count"))
+
+
 def _preflight_learning_gate(
     vault: Path,
     start: AutoImproveSessionStart,
@@ -796,14 +833,7 @@ def _preflight_learning_gate(
         mutation_proposal_report=proposals,
     )
     readiness_destination = write_readiness_report(vault, readiness_report)
-    queue = readiness_report.get("queue")
-    runnable_proposal_ids: list[str] = []
-    if isinstance(queue, dict):
-        runnable_proposal_ids = [
-            str(item).strip()
-            for item in queue.get("runnable_proposal_ids", [])
-            if str(item).strip()
-        ]
+    runnable_proposal_ids = _readiness_queue_snapshot(readiness_report)
     review_required = learning_review_required(readiness_report)
     start.session["status"] = "running"
     start.session["stop_reason"] = "running"
@@ -1116,6 +1146,213 @@ def _complete_auto_improve_session(
     )
 
 
+def _successful_improvement_count(session: Mapping[str, Any]) -> int:
+    count = 0
+    for iteration in session.get("iterations", []):
+        if not isinstance(iteration, Mapping):
+            continue
+        if (
+            str(iteration.get("decision", "")).strip() == "PROMOTE"
+            or str(iteration.get("outcome", "")).strip() == "promoted"
+            or str(iteration.get("status", "")).strip() == "promoted"
+        ):
+            count += 1
+    return count
+
+
+def _last_iteration_outcome(session: Mapping[str, Any]) -> str:
+    iterations = session.get("iterations", [])
+    if not isinstance(iterations, list):
+        return ""
+    for iteration in reversed(iterations):
+        if not isinstance(iteration, Mapping):
+            continue
+        return str(iteration.get("outcome", "")).strip()
+    return ""
+
+
+def _expected_maintenance_cycle_count(
+    *,
+    start_elapsed_seconds: int,
+    target_elapsed_seconds: int,
+    interval_seconds: int,
+) -> int:
+    if start_elapsed_seconds >= target_elapsed_seconds:
+        return 0
+    remaining = target_elapsed_seconds - start_elapsed_seconds
+    return (remaining + interval_seconds - 1) // interval_seconds + 1
+
+
+def _maintenance_cycle_count(session: Mapping[str, Any]) -> int:
+    maintenance = _mapping_value(session, "maintenance")
+    return _int_value(maintenance.get("cycle_count"))
+
+
+def _record_maintenance_cycle(
+    vault: Path,
+    start: AutoImproveSessionStart,
+    state: AutoImproveLoopState,
+    *,
+    index: int,
+    cycle_started_elapsed_seconds: int,
+) -> None:
+    cycle_started_monotonic = time.monotonic()
+    mechanism_review, proposals = _refresh_reports(
+        vault,
+        start.policy,
+        start.resolved_policy_path,
+        context=start.context,
+    )
+    readiness_report = build_readiness_report(
+        vault,
+        policy_path=str(start.resolved_policy_path),
+        context=start.context,
+        mechanism_review_report=mechanism_review,
+        mutation_proposal_report=proposals,
+    )
+    readiness_destination = write_readiness_report(vault, readiness_report)
+    queue_snapshot = _readiness_queue_snapshot(readiness_report)
+    start.session["queue_snapshot"] = queue_snapshot
+    loop_state = _ensure_session_loop_state(start.session, context=start.context)
+    loop_state["updated_at"] = start.context.isoformat_z()
+    maintenance = _mapping_value(start.session, "maintenance")
+    cycles = maintenance.get("cycles")
+    if not isinstance(cycles, list):
+        cycles = []
+    session_report = start.session.get("path", "")
+    cycle_completed_elapsed_seconds = int(time.monotonic() - state.start_monotonic)
+    cycles.append(
+        {
+            "index": index,
+            "observed_at": start.context.isoformat_z(),
+            "cycle_started_elapsed_seconds": cycle_started_elapsed_seconds,
+            "elapsed_seconds": cycle_completed_elapsed_seconds,
+            "duration_ms": int(round((time.monotonic() - cycle_started_monotonic) * 1000)),
+            "status": "pass",
+            "work_items": list(MAINTENANCE_WORK_ITEMS),
+            "mechanism_review_report": DEFAULT_MECHANISM_REVIEW_REPORT,
+            "mutation_proposal_report": DEFAULT_MUTATION_PROPOSAL_REPORT,
+            "readiness_report": report_path(vault, readiness_destination),
+            "session_report": str(session_report),
+            "runnable_proposal_count": _readiness_runnable_proposal_count(readiness_report),
+            "queue_snapshot": queue_snapshot,
+        }
+    )
+    start.session["maintenance"] = {
+        **dict(maintenance),
+        "status": "running",
+        "cycles": cycles,
+        "cycle_count": len(cycles),
+        "meaningful_cycle_count": len(
+            [
+                cycle
+                for cycle in cycles
+                if isinstance(cycle, Mapping)
+                and cycle.get("status") == "pass"
+                and set(_list_text(cycle.get("work_items"))) >= set(MAINTENANCE_WORK_ITEMS)
+            ]
+        ),
+        "completed_at": start.context.isoformat_z(),
+        "last_cycle_elapsed_seconds": cycle_completed_elapsed_seconds,
+    }
+    _write_session_report(vault, start.session, context=start.context)
+    append_runtime_event(
+        vault,
+        context=start.context,
+        component="auto_improve_session",
+        phase="proposal_budget_maintenance",
+        decision="cycle_pass",
+        artifact_path=str(session_report),
+        duration_ms=int(round((time.monotonic() - cycle_started_monotonic) * 1000)),
+        session_id=start.session_id,
+        policy_version=start.policy.get("version"),
+    )
+
+
+def _run_proposal_budget_maintenance(
+    vault: Path,
+    start: AutoImproveSessionStart,
+    state: AutoImproveLoopState,
+    *,
+    interval_seconds: int,
+) -> None:
+    target_elapsed_seconds = start.session["budget"]["max_minutes"] * 60
+    start_elapsed_seconds = int(time.monotonic() - state.start_monotonic)
+    expected_min_cycle_count = _expected_maintenance_cycle_count(
+        start_elapsed_seconds=start_elapsed_seconds,
+        target_elapsed_seconds=target_elapsed_seconds,
+        interval_seconds=interval_seconds,
+    )
+    start.session["maintenance"] = {
+        "mode": "proposal_budget_runtime_maintenance",
+        "status": "running",
+        "started_at": start.context.isoformat_z(),
+        "completed_at": "",
+        "target_elapsed_seconds": target_elapsed_seconds,
+        "started_elapsed_seconds": start_elapsed_seconds,
+        "interval_seconds": interval_seconds,
+        "expected_min_cycle_count": expected_min_cycle_count,
+        "cycle_count": 0,
+        "meaningful_cycle_count": 0,
+        "last_cycle_elapsed_seconds": 0,
+        "stop_reason": "running",
+        "cycles": [],
+    }
+    _write_session_report(vault, start.session, context=start.context)
+    if expected_min_cycle_count == 0:
+        start.session["maintenance"]["status"] = "complete"
+        start.session["maintenance"]["completed_at"] = start.context.isoformat_z()
+        start.session["maintenance"]["stop_reason"] = "time_budget_already_reached"
+        _write_session_report(vault, start.session, context=start.context)
+        return
+
+    while True:
+        cycle_started_elapsed_seconds = int(time.monotonic() - state.start_monotonic)
+        _record_maintenance_cycle(
+            vault,
+            start,
+            state,
+            index=_maintenance_cycle_count(start.session) + 1,
+            cycle_started_elapsed_seconds=cycle_started_elapsed_seconds,
+        )
+        elapsed_seconds = int(time.monotonic() - state.start_monotonic)
+        if elapsed_seconds >= target_elapsed_seconds:
+            break
+        time.sleep(min(interval_seconds, target_elapsed_seconds - elapsed_seconds))
+
+    maintenance = dict(_mapping_value(start.session, "maintenance"))
+    maintenance["status"] = "complete"
+    maintenance["completed_at"] = start.context.isoformat_z()
+    maintenance["stop_reason"] = "time_budget_reached"
+    maintenance["last_cycle_elapsed_seconds"] = int(time.monotonic() - state.start_monotonic)
+    start.session["maintenance"] = maintenance
+    state.stop_reason = "time_budget_exhausted"
+    _write_session_report(vault, start.session, context=start.context)
+
+
+def _maybe_run_proposal_budget_maintenance(
+    vault: Path,
+    request: AutoImproveSessionRequest,
+    start: AutoImproveSessionStart,
+    state: AutoImproveLoopState,
+) -> None:
+    if not request.maintain_until_budget:
+        return
+    if state.stop_reason != "proposal_budget_exhausted":
+        return
+    if _last_iteration_outcome(start.session) != "promoted":
+        return
+    if int(time.monotonic() - state.start_monotonic) >= start.session["budget"]["max_minutes"] * 60:
+        state.stop_reason = "time_budget_exhausted"
+        return
+    _run_proposal_budget_maintenance(
+        vault,
+        start,
+        state,
+        interval_seconds=_resolve_maintenance_interval(request.maintenance_interval_seconds),
+    )
+
+
 def run_auto_improve_session(
     vault: AutoImproveSessionRequest | Path | None = None,
     **legacy_kwargs: Any,
@@ -1158,6 +1395,7 @@ def run_auto_improve_session(
         loop_state,
         context=start.context,
     )
+    _maybe_run_proposal_budget_maintenance(request.vault, request, start, loop_state)
     result = _complete_auto_improve_session(request.vault, start, loop_state)
     append_runtime_event(
         request.vault,

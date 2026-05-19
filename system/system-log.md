@@ -5854,3 +5854,44 @@ Finalize schema drift manifest-based follow-up run to reduce hold/discard pressu
 - Decision: `PROMOTE`
 - Promotion report log status is now recorded.
 - This run is available as historical input for mechanism review and mutation proposal.
+---
+
+## [2026-05-19 23:56 KST] improve | Diagnose p1e no-op DISCARD and add worker primary-target gate
+
+### Summary
+`auto-improve-remediation-p1e-20260519T142130Z` ran the repeated_discard_runs proposal for `ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py`, but the promotion gate discarded it because the candidate changed only `ops/script-output-surfaces.json` and did not touch any declared primary target.
+
+The remediation is an executor-pipeline guard: after the worker role reports pass, the runtime now checks whether at least one declared primary target changed before dispatching reviewer, validator, or auditor roles. If the worker produced a no-op/supporting-only candidate, the run fails early as a mutation failure instead of spending the remaining trial budget on validation that the promotion gate will later discard.
+
+### Artifacts
+- `runs/auto-improve-remediation-p1e-20260519T142130Z-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json`
+- `runs/auto-improve-remediation-p1e-20260519T142130Z-run-01-auto-improve-iteration-persistence-runtime/changed-files-manifest.json`
+- `ops/scripts/core/executor_runtime.py`
+- `tests/test_executor_runtime.py`
+- `system/system-log.md`
+
+### Consequence
+- The p1e DISCARD remains evidence that the selected proposal had become a stale/no-op candidate in the current workspace.
+- Future auto-improve attempts on the same target should stop after worker if no primary target changes, rather than filling the 30m profile with predictable downstream checks.
+- The current chronology intentionally overlaps `mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime` and `ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py`, so mutation proposal selection can rotate away from this just-handled target until the configured recent-log window advances.
+
+---
+
+## [2026-05-20 00:14 KST] improve | Resolve archived queue-unblock rework counting
+
+### Summary
+The `recent_outcome_rework` blocker for the mutation proposal queue-unblock candidate was counting archived or quarantined promotion reports as still-unresolved HOLD/DISCARD attempts. That made readiness pause on historical remediation attempts that had already been moved out of active mechanism history.
+
+The remediation keeps unresolved repeated outcomes blocked when no promotion report evidence exists, but treats a recent attempt as resolved when its referenced promotion report has `history.status` of `archived` or `quarantined`. Archive-renamed run directories are accepted only when the promotion report path itself is under the attempt run directory, preserving source fidelity without requiring the archived directory name to match `promotion_report.run_id`.
+
+### Artifacts
+- `ops/scripts/mechanism/mutation_proposal_runtime.py`
+- `tests/test_mutation_proposal.py`
+- `ops/reports/mutation-proposals.json`
+- `ops/reports/auto-improve-readiness.json`
+- `system/system-log.md`
+
+### Consequence
+- Closed remediation-history attempts no longer keep `recent_outcome_rework` active for the queue-unblock candidate.
+- Attempts without usable promotion report history still count as unresolved rework, so the guardrail remains active for genuinely repeated HOLD/DISCARD loops.
+- The current chronology now intentionally overlaps `ops/scripts/mechanism/mutation_proposal_runtime.py`, so a goal-native trial should not immediately rerun this just-handled queue-unblock target merely to fill a profile window.

@@ -1,26 +1,26 @@
 {
   "$schema": "ops/schemas/test-execution-summary.schema.json",
   "artifact_kind": "test_execution_summary",
-  "generated_at": "2026-05-17T22:13:26Z",
+  "generated_at": "2026-05-19T16:08:01Z",
   "producer": "ops.scripts.test_execution_summary",
-  "source_command": "python -m ops.scripts.test_execution_summary --vault . --suite report-contract-summary --collect-nodeids --deselection-policy ops/policies/report-contract-deselections.json -- .venv/bin/python -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py",
+  "source_command": "python -m ops.scripts.test_execution_summary --vault . --suite report-contract-summary --collect-nodeids --deselection-policy ops/policies/report-contract-deselections.json -- .venv/bin/python -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_clean_fixture_regeneration_guard.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_goal_runtime_clean_transient.py tests/test_goal_runtime_fixed_point_check.py tests/test_run_templates.py",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e362b1f99c00851970afef15992d799a3fdc1e4eca29177c243e681e1c0bc52a",
+  "source_tree_fingerprint": "81d6acebfae87091e9e60a9ee0042c2398a7159a5bd603b84b77b14fe4c10533",
   "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "9723184baf2c03d63eb746bd49cfab746f2a29e2b29f05ee97b2a3a802dae4bf",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b6a7530898be27f1c114dc37c64bb35558dff83186584c7cbfa96f0c4a181cd2",
     "deselection_policy": "304ab09b5d5d34ab1992a9b2ce54aa5a5f4e0b73f928db808de6e6df372fba91",
-    "test_targets": "c1e2e53014365ccf4fe416bb283d5d68c7f387ebc201e68fc6a8ead5cae4fb64",
+    "test_targets": "6f5f60ace1490749769f3922160258c6bc96f18e2b329d836f00348cb9ed6e83",
     "deselected_tests": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-    "deselection_lifecycle": "5c2c1446b1113323fa6e1d19ee5f346e129764102382cecb1e4725aa2b640d9e",
+    "deselection_lifecycle": "988d750c5f9c2d16afa5786ca7298aafaa0c64b7db8e2b7d7029d288b8c800b4",
     "evidence_artifact_consistency": "c05eee63c53707bc9495a70f7106f4f5382246ee11f9b76770a1c94d8eb8ffb9",
     "evidence_artifacts": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-    "nodeid_outcome_consistency": "d951243e41aa687512816bd3a8f318b59361894fe90b6ba6372417df9ca37635",
+    "nodeid_outcome_consistency": "b637816abef301c33058f9adef8db2b203c08366839be2a545dbb6caf8b6dfaa",
     "suite": "e8806087007f73940192067c46554732289adb000251e116b8eda2437a0ff078",
     "suite_coverage": "b77ace30e3859d15a04208659cffabca258e1fcdfda97192c160769a041b2b7e",
-    "wrapped_command": "e85e3f18039eee8432b2cb9f259da23f3fb3f3cd31e95f42439315a5f7a35853"
+    "wrapped_command": "21c46c78c967c47e76eb351081269d094e92a6e63557468d1b4024290913ce41"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -28,7 +28,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T22:13:26Z"
+    "checked_at": "2026-05-19T16:08:01Z"
   },
   "vault": ".",
   "policy": {
@@ -46,14 +46,14 @@
     "reason": "report-contract-summary is a targeted report-contract subset; use full release-builder evidence before treating this as full-suite proof."
   },
   "status": "pass",
-  "command": ".venv/bin/python -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py",
+  "command": ".venv/bin/python -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_clean_fixture_regeneration_guard.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_goal_runtime_clean_transient.py tests/test_goal_runtime_fixed_point_check.py tests/test_run_templates.py",
   "returncode": 0,
   "timed_out": false,
   "timeout_seconds": 5400,
   "termination_reason": "completed",
-  "duration_ms": 23178,
+  "duration_ms": 26411,
   "counts": {
-    "passed": 173,
+    "passed": 186,
     "failed": 0,
     "errors": 0,
     "skipped": 0,
@@ -89,19 +89,31 @@
   "test_target_fingerprints": [
     {
       "path": "tests/test_auto_improve_iteration_runtime.py",
-      "sha256": "a5c6223f3042896ac4eab574fe7dcdbc4ad4a858ebcd5b35c3822558f73600f3"
+      "sha256": "483abb6f4b5746c1443c56e1af47564e820f7620e9f8c02478f1e9643adc8fad"
     },
     {
       "path": "tests/test_ci_workflow_static.py",
       "sha256": "0b6e00d4a3d7bcc94a4c86d8a6226f502c0bf1dd0bfb361bf2c2211939ff10a0"
     },
     {
+      "path": "tests/test_clean_fixture_regeneration_guard.py",
+      "sha256": "521a72a0fae530fd582e9ae0ff39da6f3c67a8ed4663c7800577e92f058cffb1"
+    },
+    {
       "path": "tests/test_generated_report_contracts.py",
-      "sha256": "df37c84422f3421c9834acbdb56a3168b687cbdea2be386d57b25b25aa02d816"
+      "sha256": "fbdad9b5bddc0c9f8b37275c80f408b39aca6c463278ea1eec6b0e8fb1f2e89b"
+    },
+    {
+      "path": "tests/test_goal_runtime_clean_transient.py",
+      "sha256": "3b35f01c872f3b6d19466fe51f5c83d2e3822b0f124c36590f4759f674fdc35f"
+    },
+    {
+      "path": "tests/test_goal_runtime_fixed_point_check.py",
+      "sha256": "fb3a2a55ffbf2bdc886521cfaf6ad1a3d25f67f9b57a5f772a42f1fd404d2fe0"
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "1b688b59606ef52e8af5ecb362c845547c0387f4770fd10afce467e9f99e2bb7"
+      "sha256": "3815082e46e0e4e10e58eed53e19b9daa8eb9d340172aceef9edfa31701f06c7"
     },
     {
       "path": "tests/test_pytest_entrypoint_guidance.py",
@@ -113,7 +125,7 @@
     },
     {
       "path": "tests/test_report_schemas.py",
-      "sha256": "3072cc878f6517bf02dd4b59c0f4b05b10df976bdc0572f13479ef7770c1a170"
+      "sha256": "e56c972d2cfee75927419475cdcc0a3c4ec2ebdff307f7bc669dcc4dcfe9ddc7"
     },
     {
       "path": "tests/test_run_templates.py",
@@ -131,7 +143,7 @@
   "deselected_tests": [],
   "deselection_lifecycle": {
     "status": "pass",
-    "checked_at": "2026-05-17T22:13:26Z",
+    "checked_at": "2026-05-19T16:08:01Z",
     "actual_deselected_count": 0,
     "max_allowed_deselected_count": 0,
     "over_budget": false,
@@ -151,17 +163,17 @@
   "policy_deselected_count": 0,
   "pytest_collect_nodeid_digest": {
     "status": "collected",
-    "command": ".venv/bin/python -m pytest -o addopts= --collect-only -q --capture=no tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py -m 'report_contract and not artifact_finalization'",
-    "nodeid_count": 173,
-    "sha256": "f0d4c7423d3565c3f679d8f34da4afa89728169abecfc31d78b18ae18d8ba1ad",
+    "command": ".venv/bin/python -m pytest -o addopts= --collect-only -q --capture=no tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_clean_fixture_regeneration_guard.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_goal_runtime_clean_transient.py tests/test_goal_runtime_fixed_point_check.py tests/test_run_templates.py -m 'report_contract and not artifact_finalization'",
+    "nodeid_count": 186,
+    "sha256": "9b446becabc6f713eb385e235d626a7eb7a83d6e81100b87bc7cc92c673096d7",
     "reason": ""
   },
   "nodeid_outcome_consistency": {
     "status": "pass",
-    "nodeid_count": 173,
-    "outcome_count": 173,
+    "nodeid_count": 186,
+    "outcome_count": 186,
     "counted_outcomes": {
-      "passed": 173,
+      "passed": 186,
       "skipped": 0,
       "xfailed": 0,
       "xpassed": 0
@@ -176,16 +188,16 @@
     "checks": [],
     "blockers": []
   },
-  "stdout_tail": "........................................................................ [ 41%]\n........................................................................ [ 83%]\n.............................                                            [100%]\n173 passed, 7 deselected in 22.97s\n",
+  "stdout_tail": "........................................................................ [ 38%]\n........................................................................ [ 77%]\n..........................................                               [100%]\n186 passed, 7 deselected in 26.17s\n",
   "stderr_tail": "",
   "release_contract_diagnosis": [
     {
       "name": "pytest_contract_summary",
       "status": "clean_pass",
       "lane": "clean",
-      "command": ".venv/bin/python -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_run_templates.py",
-      "duration_seconds": 23.18,
-      "checked_at": "2026-05-17T22:13:26Z",
+      "command": ".venv/bin/python -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_clean_fixture_regeneration_guard.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_goal_runtime_clean_transient.py tests/test_goal_runtime_fixed_point_check.py tests/test_run_templates.py",
+      "duration_seconds": 26.41,
+      "checked_at": "2026-05-19T16:08:01Z",
       "blocker_conditions": [],
       "accepted_risk_family": null,
       "risk_acceptance_ref": null,

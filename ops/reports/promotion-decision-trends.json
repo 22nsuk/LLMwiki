@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/promotion-decision-trends.schema.json",
   "artifact_kind": "promotion_decision_trends",
-  "generated_at": "2026-05-15T13:32:51Z",
+  "generated_at": "2026-05-19T14:50:30Z",
   "producer": "ops.scripts.observability_decision_metrics_runtime",
   "source_command": "python -m ops.scripts.run_mechanism_experiment --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "08f6d759d04bf1355de3e8f534bb1f9b46152cb7fb92a153f2f7a86bf9143aac",
+  "source_tree_fingerprint": "ceb0589db889bfb97fc19dd23d63eb13b792f57631922004d0cbd2464ca58f21",
   "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "c0740070a0961037b7e620c138bffb215749f063d8c97be659cfae1391b62399",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "f573cd90bbcac67836d1d4a0c8b0dd8ff4c7ac8856f03a2ba0b075cdd72fffa5",
-    "promotion_reports": "e4b6a26eb560fbaefbb5850cf4f4a96c5fb0c449ca581d244974a6cb8a9910c7",
+    "promotion_reports": "3cad4786e3c6da12bbaa8ef1edc72b4c5b77759d33970de2779c2d3dc5b97706",
     "recent_window": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T13:32:51Z"
+    "checked_at": "2026-05-19T14:50:30Z"
   },
   "vault": ".",
   "policy": {
@@ -28,27 +28,67 @@
     "version": 4
   },
   "summary": {
-    "runs_discovered": 16,
-    "promotion_reports_considered": 10,
+    "runs_discovered": 21,
+    "promotion_reports_considered": 13,
     "finalized_count": 5,
     "recent_window": 20
   },
   "decision_counts": {
-    "HOLD": 2,
-    "PROMOTE": 6,
-    "DISCARD": 2
+    "DISCARD": 4,
+    "HOLD": 3,
+    "PROMOTE": 6
   },
   "artifact_class_counts": {
-    "system_mechanism": 10
+    "system_mechanism": 13
   },
   "recent_runs": [
     {
-      "run_id": "auto-improve-2026-05-15t13-32-43z-run-01-mutation-proposal-runtime",
-      "observed_at": "2026-05-15T13:32:51Z",
+      "run_id": "auto-improve-remediation-p1e-20260519T142130Z-run-01-auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-19T14:50:28Z",
+      "decision": "DISCARD",
+      "decision_record": {
+        "decision_id": "decision:auto-improve-remediation-p1e-20260519T142130Z-run-01-auto-improve-iteration-persistence-runtime:87885c3e394b3f04",
+        "subject_id": "auto-improve-remediation-p1e-20260519T142130Z-run-01-auto-improve-iteration-persistence-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "DISCARD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": true,
+        "policy_version": 4,
+        "source_rule": "changed_files_manifest_primary_targets_touched",
+        "source_pass": "system_mechanism",
+        "actor": "promotion_gate",
+        "reason_code": "changed_files_manifest_primary_targets_touched",
+        "reason_detail": "Changed-files primary-target touch gate emitted FAIL: changed_files_manifest_primary_targets_touched=FAIL: changed files do not touch any primary target; test/report/generated-only changes require a scoped mechanism change",
+        "evidence_refs": [
+          "changed_files_manifest_primary_targets_touched"
+        ],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [
+          "decision:auto-improve-remediation-p1e-20260519T142130Z-run-01-auto-improve-iteration-persistence-runtime:336b28652151df93"
+        ],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0100:DISCARD",
+        "dedupe_key": "auto-improve-remediation-p1e-20260519T142130Z-run-01-auto-improve-iteration-persistence-runtime:promotion_gate",
+        "finalizable": true,
+        "finalize_blockers": [],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "auto-improve-remediation-p1e-20260519T142130Z-run-01-auto-improve-iteration-persistence-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/auto-improve-remediation-p1e-20260519T142130Z-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
+    {
+      "run_id": "auto-improve-remediation-p1d-20260519T140010Z-run-01-auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-19T14:19:22Z",
       "decision": "HOLD",
       "decision_record": {
-        "decision_id": "decision:auto-improve-2026-05-15t13-32-43z-run-01-mutation-proposal-runtime:ac5ffdef4a1a7d48",
-        "subject_id": "auto-improve-2026-05-15t13-32-43z-run-01-mutation-proposal-runtime",
+        "decision_id": "decision:auto-improve-remediation-p1d-20260519T140010Z-run-01-auto-improve-iteration-persistence-runtime:33f9fe8b17351569",
+        "subject_id": "auto-improve-remediation-p1d-20260519T140010Z-run-01-auto-improve-iteration-persistence-runtime",
         "subject_kind": "system_mechanism",
         "decision": "HOLD",
         "decision_stage": "promotion_gate",
@@ -65,21 +105,100 @@
         "supersedes": [],
         "reducer_key": "promotion_decision_registry_v1",
         "precedence_key": "0050:HOLD",
-        "dedupe_key": "auto-improve-2026-05-15t13-32-43z-run-01-mutation-proposal-runtime:promotion_gate",
+        "dedupe_key": "auto-improve-remediation-p1d-20260519T140010Z-run-01-auto-improve-iteration-persistence-runtime:promotion_gate",
         "finalizable": false,
         "finalize_blockers": [
           "decision_not_finalizable",
           "required_signoff_not_approved"
         ],
         "ledger_event_type": "promotion_evaluated",
-        "ledger_partition_key": "auto-improve-2026-05-15t13-32-43z-run-01-mutation-proposal-runtime"
+        "ledger_partition_key": "auto-improve-remediation-p1d-20260519T140010Z-run-01-auto-improve-iteration-persistence-runtime"
       },
       "artifact_class": "system_mechanism",
       "primary_targets": [
-        "ops/scripts/mechanism/mutation_proposal_runtime.py"
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
       ],
       "finalized": false,
-      "promotion_report": "runs/auto-improve-2026-05-15t13-32-43z-run-01-mutation-proposal-runtime/promotion-report.json"
+      "promotion_report": "runs/auto-improve-remediation-p1d-20260519T140010Z-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
+    {
+      "run_id": "auto-improve-remediation-p1c-20260519T132655Z-run-01-auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-19T14:19:22Z",
+      "decision": "HOLD",
+      "decision_record": {
+        "decision_id": "decision:auto-improve-remediation-p1c-20260519T132655Z-run-01-auto-improve-iteration-persistence-runtime:ab48b575323523d1",
+        "subject_id": "auto-improve-remediation-p1c-20260519T132655Z-run-01-auto-improve-iteration-persistence-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 0,
+        "source_rule": "legacy_top_level_decision",
+        "source_pass": "legacy_promotion_report",
+        "actor": "legacy_promotion_report",
+        "reason_code": "legacy_promotion_report",
+        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+        "evidence_refs": [],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "auto-improve-remediation-p1c-20260519T132655Z-run-01-auto-improve-iteration-persistence-runtime:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "auto-improve-remediation-p1c-20260519T132655Z-run-01-auto-improve-iteration-persistence-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/auto-improve-remediation-p1c-20260519T132655Z-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
+    {
+      "run_id": "auto-improve-remediation-p1b-20260519T124442Z-run-01-auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-19T13:12:39Z",
+      "decision": "DISCARD",
+      "decision_record": {
+        "decision_id": "decision:auto-improve-remediation-p1b-20260519T124442Z-run-01-auto-improve-iteration-persistence-runtime:8cf3829928e90428",
+        "subject_id": "auto-improve-remediation-p1b-20260519T124442Z-run-01-auto-improve-iteration-persistence-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "DISCARD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": true,
+        "policy_version": 4,
+        "source_rule": "changed_files_manifest_scope",
+        "source_pass": "system_mechanism",
+        "actor": "promotion_gate",
+        "reason_code": "changed_files_manifest_scope",
+        "reason_detail": "Changed-files declared-scope gate emitted FAIL: changed_files_manifest_scope=FAIL: out-of-scope changed files: ops/reports/raw-registry-cross-environment-matrix.json, ops/reports/raw-registry-preflight-report.json, ops/reports/raw-registry-preflight-reproducibility.json, ops/script-output-surfaces.json, tmp/artifact-freshness-report-check.json, tmp/script-output-surfaces.candidate.json",
+        "evidence_refs": [
+          "changed_files_manifest_scope"
+        ],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [
+          "decision:auto-improve-remediation-p1b-20260519T124442Z-run-01-auto-improve-iteration-persistence-runtime:73fd97e39c569b30"
+        ],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0100:DISCARD",
+        "dedupe_key": "auto-improve-remediation-p1b-20260519T124442Z-run-01-auto-improve-iteration-persistence-runtime:promotion_gate",
+        "finalizable": true,
+        "finalize_blockers": [],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "auto-improve-remediation-p1b-20260519T124442Z-run-01-auto-improve-iteration-persistence-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/auto-improve-remediation-p1b-20260519T124442Z-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
     },
     {
       "run_id": "run-20260507-schema-drift-manifest-followup-pressure",

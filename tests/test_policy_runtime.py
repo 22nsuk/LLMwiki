@@ -265,6 +265,7 @@ class PolicyRuntimeTest(unittest.TestCase):
             },
         )
         self.assertEqual(policy["mutation_proposal"]["lookback_runs"], 5)
+        self.assertEqual(policy["mutation_proposal"]["recent_log_overlap_max_age_days"], 7)
         self.assertEqual(
             policy["mutation_proposal"]["allowed_failure_modes"],
             [

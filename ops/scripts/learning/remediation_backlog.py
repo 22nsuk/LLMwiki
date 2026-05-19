@@ -36,6 +36,7 @@ SOURCE_PATHS = [
 ]
 SAFE_ID_RE = re.compile(r"[^a-z0-9_]+")
 DERIVED_REMEDIATION_BACKLOG_BLOCKER_IDS = {
+    "goal_status_promotion_blocked_by_remediation_backlog_open",
     "promotion_blocked_by_remediation_backlog_open",
 }
 
@@ -148,7 +149,27 @@ def _item_from_blocker(blocker: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def _item_from_auto_improve_session(session: dict[str, Any], rel_path: str) -> dict[str, Any] | None:
+def _zero_iteration_backlog_guard_is_stale(
+    session: dict[str, Any],
+    *,
+    blocker_reason: str,
+    active_negative_lesson_blocker_ids: set[str],
+) -> bool:
+    if str(session.get("stop_reason", "")).strip() != "repeated_blocker_backlog_required":
+        return False
+    if _dict_list(session.get("iterations")) or _string_list(session.get("run_ids")):
+        return False
+    if _string_list(session.get("attempted_proposal_ids")):
+        return False
+    return _safe_id(blocker_reason) not in active_negative_lesson_blocker_ids
+
+
+def _item_from_auto_improve_session(
+    session: dict[str, Any],
+    rel_path: str,
+    *,
+    active_negative_lesson_blocker_ids: set[str] | None = None,
+) -> dict[str, Any] | None:
     loop_state = session.get("loop_state")
     if not isinstance(loop_state, dict):
         return None
@@ -156,6 +177,13 @@ def _item_from_auto_improve_session(session: dict[str, Any], rel_path: str) -> d
         return None
     blocker_reason = str(loop_state.get("repeated_blocker_reason", "")).strip()
     if not blocker_reason:
+        return None
+    active_ids = active_negative_lesson_blocker_ids or set()
+    if _zero_iteration_backlog_guard_is_stale(
+        session,
+        blocker_reason=blocker_reason,
+        active_negative_lesson_blocker_ids=active_ids,
+    ):
         return None
     counts = loop_state.get("blocking_reason_counts")
     occurrence_count = 2
@@ -179,7 +207,11 @@ def _item_from_auto_improve_session(session: dict[str, Any], rel_path: str) -> d
     }
 
 
-def _auto_improve_session_backlog_items(vault: Path) -> list[dict[str, Any]]:
+def _auto_improve_session_backlog_items(
+    vault: Path,
+    *,
+    active_negative_lesson_blocker_ids: set[str] | None = None,
+) -> list[dict[str, Any]]:
     sessions_dir = vault / AUTO_IMPROVE_SESSIONS_DIR
     if not sessions_dir.is_dir():
         return []
@@ -187,7 +219,11 @@ def _auto_improve_session_backlog_items(vault: Path) -> list[dict[str, Any]]:
     for path in sorted(sessions_dir.glob("*.json")):
         rel_path = path.relative_to(vault).as_posix()
         payload = load_optional_json_object(path)
-        item = _item_from_auto_improve_session(payload, rel_path)
+        item = _item_from_auto_improve_session(
+            payload,
+            rel_path,
+            active_negative_lesson_blocker_ids=active_negative_lesson_blocker_ids,
+        )
         if item is not None:
             items.append(item)
     return items
@@ -205,15 +241,20 @@ def collect_backlog_items(vault: Path) -> list[dict[str, Any]]:
     synopsis = load_optional_json_object(vault / SESSION_SYNOPSIS_PATH)
     status_overrides = _status_overrides(vault)
     items_by_id: dict[str, dict[str, Any]] = {}
+    active_negative_lesson_blocker_ids: set[str] = set()
     for lesson in _dict_list(negative_lessons.get("lessons")):
         item = _item_from_lesson(lesson)
         if item is not None:
             items_by_id[item["item_id"]] = item
+            active_negative_lesson_blocker_ids.add(item["blocker_id"])
     for blocker in _dict_list(synopsis.get("recent_blockers")):
         item = _item_from_blocker(blocker)
         if item is not None:
             items_by_id.setdefault(item["item_id"], item)
-    for item in _auto_improve_session_backlog_items(vault):
+    for item in _auto_improve_session_backlog_items(
+        vault,
+        active_negative_lesson_blocker_ids=active_negative_lesson_blocker_ids,
+    ):
         items_by_id.setdefault(item["item_id"], item)
     items = (
         _apply_status_override(item, status_overrides.get(item["item_id"]))

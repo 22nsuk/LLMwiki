@@ -320,6 +320,32 @@ def _fake_successful_mechanism_experiment(
     }
 
 
+def _fake_discarded_mechanism_experiment(
+    vault_path: Path,
+    *,
+    run_id: str,
+    scaffold_only: bool,
+    **_: object,
+) -> dict:
+    if scaffold_only:
+        _seed_scaffolded_run(vault_path, run_id)
+        return {"run_id": run_id, "scaffold_only": True}
+    _write_successful_run_telemetry(
+        vault_path,
+        run_id,
+        shadow_apply_rel=f"runs/{run_id}/shadow-apply-report.json",
+        rollback_rehearsal_rel=f"runs/{run_id}/rollback-rehearsal-report.json",
+    )
+    _write_successful_executor_reports(vault_path, run_id)
+    return {
+        "run_id": run_id,
+        "decision": "DISCARD",
+        "finalized": True,
+        "finalize_result": {"run_id": run_id},
+        "repo_health": {"passed": True},
+    }
+
+
 def _load_successful_auto_improve_artifacts(vault: Path, result: dict) -> dict:
     session = json.loads((vault / result["session_report"]).read_text(encoding="utf-8"))
     run_id = session["run_ids"][0]
@@ -664,6 +690,132 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             _assert_successful_session_provenance(self, artifacts)
             _assert_successful_run_telemetry(self, artifacts)
             _assert_successful_runtime_events_and_learning(self, artifacts)
+
+    def test_run_auto_improve_session_maintains_after_proposal_budget_until_wall_clock(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            seed_subagent_profiles(vault, ["worker", "validator"])
+            proposal = mutation_proposal_report("ops/scripts/example.py")["proposals"][0]
+            monotonic = {"now": 0.0}
+
+            def fake_refresh_reports(*_: object, **__: object) -> tuple[dict, dict]:
+                return {}, {"proposals": [proposal]}
+
+            def fake_monotonic() -> float:
+                return monotonic["now"]
+
+            def fake_sleep(seconds: float) -> None:
+                monotonic["now"] += seconds
+
+            with (
+                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports) as refresh,
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    side_effect=_fake_successful_mechanism_experiment,
+                ),
+                mock.patch("ops.scripts.auto_improve_runtime.time.monotonic", side_effect=fake_monotonic),
+                mock.patch("ops.scripts.auto_improve_runtime.time.sleep", side_effect=fake_sleep) as sleep,
+            ):
+                result = run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    session_id="auto-session-maintained",
+                    max_proposals=1,
+                    max_minutes=30,
+                    max_consecutive_failures=1,
+                    executor_name="codex_exec",
+                    allow_learning_uncertain=True,
+                    maintain_until_budget=True,
+                    maintenance_interval_seconds=300,
+                )
+
+            session = json.loads((vault / result["session_report"]).read_text(encoding="utf-8"))
+            maintenance = session["maintenance"]
+            self.assertEqual(result["stop_reason"], "time_budget_exhausted")
+            self.assertEqual(monotonic["now"], 1800)
+            self.assertEqual(maintenance["status"], "complete")
+            self.assertEqual(maintenance["mode"], "proposal_budget_runtime_maintenance")
+            self.assertEqual(maintenance["target_elapsed_seconds"], 1800)
+            self.assertEqual(maintenance["expected_min_cycle_count"], 7)
+            self.assertEqual(maintenance["cycle_count"], 7)
+            self.assertEqual(maintenance["meaningful_cycle_count"], 7)
+            self.assertEqual(maintenance["last_cycle_elapsed_seconds"], 1800)
+            self.assertTrue(all(cycle["status"] == "pass" for cycle in maintenance["cycles"]))
+            self.assertTrue(
+                all(
+                    set(cycle["work_items"])
+                    >= {
+                        "mechanism_review_report",
+                        "mutation_proposal_report",
+                        "auto_improve_readiness_report",
+                        "auto_improve_session_report",
+                    }
+                    for cycle in maintenance["cycles"]
+                )
+            )
+            self.assertEqual(refresh.call_count, 9)
+            self.assertEqual(sleep.call_count, 6)
+
+    def test_run_auto_improve_session_stops_after_discard_without_runtime_maintenance(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            seed_subagent_profiles(vault, ["worker", "validator"])
+            proposal = mutation_proposal_report("ops/scripts/example.py")["proposals"][0]
+            monotonic = {"now": 0.0}
+
+            def fake_refresh_reports(*_: object, **__: object) -> tuple[dict, dict]:
+                return {}, {"proposals": [proposal]}
+
+            def fake_monotonic() -> float:
+                return monotonic["now"]
+
+            def fake_sleep(seconds: float) -> None:
+                monotonic["now"] += seconds
+
+            with (
+                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports) as refresh,
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    side_effect=_fake_discarded_mechanism_experiment,
+                ),
+                mock.patch("ops.scripts.auto_improve_runtime.time.monotonic", side_effect=fake_monotonic),
+                mock.patch("ops.scripts.auto_improve_runtime.time.sleep", side_effect=fake_sleep) as sleep,
+            ):
+                result = run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    session_id="auto-session-discard-maintained",
+                    max_proposals=1,
+                    max_minutes=30,
+                    max_consecutive_failures=1,
+                    executor_name="codex_exec",
+                    allow_learning_uncertain=True,
+                    maintain_until_budget=True,
+                    maintenance_interval_seconds=300,
+                )
+
+            session = json.loads((vault / result["session_report"]).read_text(encoding="utf-8"))
+            self.assertEqual(result["stop_reason"], "failure_budget_exhausted")
+            self.assertEqual(monotonic["now"], 0)
+            self.assertEqual(session["iterations"][0]["decision"], "DISCARD")
+            self.assertEqual(session["iterations"][0]["outcome"], "discarded")
+            self.assertEqual(session["iterations"][0]["status"], "blocked")
+            self.assertEqual(session["iterations"][0]["failure_taxonomy"], "discarded")
+            self.assertFalse(any(item.get("decision") == "PROMOTE" for item in session["iterations"]))
+            self.assertNotIn("maintenance", session)
+            self.assertEqual(session["loop_state"]["consecutive_failures"], 1)
+            self.assertEqual(session["loop_state"]["last_blocking_reason"], "discarded")
+            self.assertEqual(session["loop_state"]["blocking_reason_counts"], {"discarded": 1})
+            self.assertEqual(
+                session["rollups"]["telemetry"]["failure_taxonomy_counts"],
+                {"discarded": 1},
+            )
+            self.assertEqual(refresh.call_count, 2)
+            sleep.assert_not_called()
 
     def test_run_auto_improve_session_blocks_learning_uncertain_without_flag(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

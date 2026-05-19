@@ -149,6 +149,7 @@ class SubagentRoutingTest(unittest.TestCase):
             self.assertEqual(report["routing_decision"]["score_band"], "low")
             self.assertEqual(report["routing_decision"]["selected_rung"], 2)
             self.assertEqual(report["routing_decision"]["reasoning_effort"], "high")
+            self.assertEqual(report["routing_decision"]["sandbox_mode"], "workspace-write")
             self.assertEqual(
                 report["routing_decision"]["effort_sufficiency"]["status"],
                 "sufficient_for_complexity",

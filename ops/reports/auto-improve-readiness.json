@@ -1,31 +1,31 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-17T22:15:00Z",
+  "generated_at": "2026-05-19T16:10:29Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e362b1f99c00851970afef15992d799a3fdc1e4eca29177c243e681e1c0bc52a",
+  "source_tree_fingerprint": "81d6acebfae87091e9e60a9ee0042c2398a7159a5bd603b84b77b14fe4c10533",
   "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "b07ea4db25e1e00c9ecce8026872b299d5f6df21f7edd396dce9af266ed48c42",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "73af758db31c682822f1d2b8ec8f03788aa192e71e8db171ae7e36631968c779",
-    "artifact_freshness_report": "7a2f1a23677d100851652b81b2c01a8398a5180260ebeb59ff8c4ddf41136c9a",
-    "goal_worktree_guard_report": "d95d290fd03334dac7ddead097cf8be069a2c74dd1495ff97bf1b563d8586f6e",
-    "mechanism_review_report": "a37ddff04eb722ee75aab840038d28fa231c00d240bacb450a13b688de181da2",
-    "mutation_proposal_report": "b1e5205f2cba927412c703f8805c7a4b28b270712a566cbd1cd7a9e99102c9c0",
-    "outcome_metrics_report": "184a3b80870e60be07e7645f5d366594fb83defb4228fa6f3b52f82897b9dd2d",
+    "source_paths": "fbec8d2540f7bfdd887c5750efa39eb9a0f4192cd8402ffd7859676e07b85ae6",
+    "artifact_freshness_report": "55b1b777a2ca21bbdd593b0500b52099efc53eea90ea72848039a531cbd35512",
+    "goal_worktree_guard_report": "6df9b4f86fb0960c6aa6ad14645e0085de1ee05fcd890e2881b8bfd94c573129",
+    "mechanism_review_report": "64561bdd6dc2d8b573125b5f0aeed17decc44190b5ce43e63a686fe290d4f21d",
+    "mutation_proposal_report": "23abc62ad0f9a0b754cc826195fe4cf893d60483346327bad33ef1ec367955ff",
+    "outcome_metrics_report": "b806956fae85996d7ef66e28c63e4ede38d114d1d5279b02c4365ec71b559ef3",
     "release_authority_preflight_report": "8771a6022db09e525cf4c8a22c99725d1e3539f340aca5db6445f8d675705b8e",
     "release_closeout_batch_manifest_report": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
     "release_closeout_finality_attestation_report": "7dd3b5e276deee3a02a3e664f5e2c8e28adf36ed7e19eacedd884942521c03ea",
     "release_closeout_post_check_finalizer_report": "missing",
     "release_closeout_summary_report": "44a45b6591a17a02b77fe5ce3f9f6b292b6e82b9163125a9436d119f476c2ad2",
     "release_evidence_cohort_report": "e2d2076c043dbd15cbe06d8c57d6f9b6bc1c854e62f3a6728016f6582f2d184e",
-    "remediation_backlog_report": "8c46cccccb4ede00454847c3371314c2955939399086a6a19433765225e98d75",
-    "selected_contract_summary_report": "1351faf8b46ac2a81851e8f5e7dc3e2aaa8c2d972d28612e39214267bdbda2cf",
+    "remediation_backlog_report": "005d00982eb9a1dbc6bbe9351093a492d9f61961157e20d222e243803a2a5fd4",
+    "selected_contract_summary_report": "a26f12921ce79e4f7525db2161b3667a977ce59ecae50e207bf9752ca907deaa",
     "source_package_clean_extract_report": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
-    "release_authority_preflight_report_candidates": "e1eb0bbb5af243aed3ae00753b501b0fc2476ca0bed0d1804f95d0d35bb4e18c"
+    "release_authority_preflight_report_candidates": "4a5a685ef7727e28c3509ffe4c0b9fe94013ac67b6880799f4a15b48ed17dee3"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -33,55 +33,157 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T22:15:00Z"
+    "checked_at": "2026-05-19T16:10:29Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "can_execute_trial": true,
+  "can_execute_trial": false,
   "can_promote_result": false,
   "execution_readiness": {
-    "status": "pass",
+    "status": "warn",
     "gate_effect": "active",
-    "can_run": true,
+    "can_run": false,
     "reasons": [
-      "runnable proposal queue is non-empty"
+      "no runnable proposal is available",
+      "mutation_proposal.status=attention (contract_regression_signals 1 proposal, 1 blocked; queue_unblock 1 proposal, 1 blocked; proposals_emitted=2)",
+      "proposal blockers active: recent_log_overlap"
     ],
-    "runnable_proposal_count": 1,
-    "blocked_proposal_count": 1,
-    "recommended_next_step": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured."
+    "runnable_proposal_count": 0,
+    "blocked_proposal_count": 2,
+    "recommended_next_step": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
   },
   "learning_readiness": {
-    "status": "learning_likely",
-    "gate_effect": "active",
-    "can_run": true,
-    "likely_to_learn": true,
+    "status": "not_runnable",
+    "gate_effect": "shadow",
+    "can_run": false,
+    "likely_to_learn": false,
     "reasons": [
-      "runnable proposal queue is non-empty",
-      "runnable queue has enough outcome/session evidence and no shadow learning warnings"
+      "no runnable proposal is available",
+      "no runnable proposal is available, so learning likelihood is not evaluated as ready"
     ],
     "metrics": {
-      "attempts_considered": 13,
+      "attempts_considered": 29,
       "min_attempts_considered": 10,
-      "session_reports_considered": 3,
+      "session_reports_considered": 14,
       "session_calibration_status": "active",
       "telemetry_coverage_ratio": 1.0,
       "same_eval_run_count": 2,
       "same_eval_reason_code_coverage_ratio": 1.0,
       "strict_secondary_improvement_coverage_ratio": 1.0,
       "behavior_delta_digest_coverage_ratio": 1.0,
-      "rework_count": 0,
-      "hold_moving_average": 0.2308,
-      "discard_moving_average": 0.2308,
+      "rework_count": 14,
+      "hold_moving_average": 0.4,
+      "discard_moving_average": 0.35,
       "defect_escape_pair_count": 0
     },
-    "signals": [],
-    "recommended_next_step": "Learning readiness is clean enough for bounded live auto-improve; keep the run narrow and continue monitoring the shadow signals."
+    "signals": [
+      {
+        "id": "recent_hold_moving_average",
+        "severity": "warn",
+        "detail": "hold_moving_average=0.4000 is at or above threshold=0.2500",
+        "owner": "runtime-maintainer",
+        "required_evidence": [
+          "ops/reports/outcome-metrics.json metrics.moving_averages.hold is below the configured threshold.",
+          "Recent HOLD outcomes are explained or superseded by newer finalized attempts."
+        ],
+        "minimum_sample_size": 10,
+        "next_evaluation_command": "make outcome-metrics auto-improve-readiness",
+        "closure_strategy": "reduce recent HOLD pressure before declaring the loop predictably learnable."
+      },
+      {
+        "id": "recent_discard_moving_average",
+        "severity": "warn",
+        "detail": "discard_moving_average=0.3500 is at or above threshold=0.2500",
+        "owner": "runtime-maintainer",
+        "required_evidence": [
+          "ops/reports/outcome-metrics.json metrics.moving_averages.discard is below the configured threshold.",
+          "Recent DISCARD outcomes are explained or superseded by newer finalized attempts."
+        ],
+        "minimum_sample_size": 10,
+        "next_evaluation_command": "make outcome-metrics auto-improve-readiness",
+        "closure_strategy": "reduce recent DISCARD pressure before declaring the loop predictably learnable."
+      },
+      {
+        "id": "high_rework",
+        "severity": "warn",
+        "detail": "rework_count=14 is at or above threshold=1",
+        "owner": "runtime-maintainer",
+        "required_evidence": [
+          "ops/reports/outcome-metrics.json metrics.rework_count is below the configured high_rework_count threshold.",
+          "Repeated target rework keys are absent or superseded by a narrower successful mechanism run."
+        ],
+        "minimum_sample_size": 10,
+        "next_evaluation_command": "make outcome-metrics mechanism-review auto-improve-readiness",
+        "closure_strategy": "run narrower mechanism experiments until repeated rework drops below threshold."
+      }
+    ],
+    "recommended_next_step": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty."
   },
-  "learning_blockers": [],
+  "learning_blockers": [
+    {
+      "id": "learning_blocked_by_execution_not_runnable",
+      "scope": "learning_readiness",
+      "status": "open",
+      "severity": "blocker",
+      "release_blocker": true,
+      "accepted_risk": false,
+      "gate_effect": "shadow",
+      "source_status": "not_runnable",
+      "reason": "no runnable proposal is available; no runnable proposal is available, so learning likelihood is not evaluated as ready; learning signals: recent_hold_moving_average, recent_discard_moving_average, high_rework",
+      "signal_ids": [
+        "recent_hold_moving_average",
+        "recent_discard_moving_average",
+        "high_rework"
+      ],
+      "required_evidence": [
+        "execution_readiness.can_run must be true before learning readiness can pass",
+        "restore a non-empty runnable proposal queue; learning-readiness signoff cannot accept not_runnable execution blockers"
+      ],
+      "recommended_next_step": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty."
+    }
+  ],
   "promotion_blockers": [
+    {
+      "id": "execution_blocked_by_no_runnable_proposal",
+      "scope": "execution_readiness",
+      "status": "open",
+      "severity": "blocker",
+      "release_blocker": true,
+      "accepted_risk": false,
+      "gate_effect": "active",
+      "source_status": "warn",
+      "reason": "no runnable proposal is available; mutation_proposal.status=attention (contract_regression_signals 1 proposal, 1 blocked; queue_unblock 1 proposal, 1 blocked; proposals_emitted=2); proposal blockers active: recent_log_overlap",
+      "signal_ids": [],
+      "required_evidence": [
+        "execution_readiness.can_run must be true before an auto-improve trial can execute",
+        "refresh generated proposal queue evidence or seed a runnable fallback mechanism"
+      ],
+      "recommended_next_step": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
+    },
+    {
+      "id": "learning_blocked_by_execution_not_runnable",
+      "scope": "learning_readiness",
+      "status": "open",
+      "severity": "blocker",
+      "release_blocker": true,
+      "accepted_risk": false,
+      "gate_effect": "shadow",
+      "source_status": "not_runnable",
+      "reason": "no runnable proposal is available; no runnable proposal is available, so learning likelihood is not evaluated as ready; learning signals: recent_hold_moving_average, recent_discard_moving_average, high_rework",
+      "signal_ids": [
+        "recent_hold_moving_average",
+        "recent_discard_moving_average",
+        "high_rework"
+      ],
+      "required_evidence": [
+        "execution_readiness.can_run must be true before learning readiness can pass",
+        "restore a non-empty runnable proposal queue; learning-readiness signoff cannot accept not_runnable execution blockers"
+      ],
+      "recommended_next_step": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty."
+    },
     {
       "id": "promotion_blocked_by_remediation_backlog_open",
       "scope": "remediation_backlog",
@@ -91,9 +193,11 @@
       "accepted_risk": false,
       "gate_effect": "active",
       "source_status": "attention",
-      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=3; active_blocker_count=3; blocking_item_count=3",
+      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=7; active_blocker_count=5; blocking_item_count=5",
       "signal_ids": [
+        "execution_blocked_by_no_runnable_proposal",
         "goal_status_profile_ladder_incomplete",
+        "learning_blocked_by_execution_not_runnable",
         "learning_claim_unlock_review_not_approved",
         "post_seal_learning_claim_linkage"
       ],
@@ -105,7 +209,29 @@
       "recommended_next_step": "Close or explicitly defer remediation backlog items, rerun make remediation-backlog, then rerun make auto-improve-readiness."
     }
   ],
-  "release_blockers": [],
+  "release_blockers": [
+    {
+      "id": "learning_blocked_by_execution_not_runnable",
+      "scope": "learning_readiness",
+      "status": "open",
+      "severity": "blocker",
+      "release_blocker": true,
+      "accepted_risk": false,
+      "gate_effect": "shadow",
+      "source_status": "not_runnable",
+      "reason": "no runnable proposal is available; no runnable proposal is available, so learning likelihood is not evaluated as ready; learning signals: recent_hold_moving_average, recent_discard_moving_average, high_rework",
+      "signal_ids": [
+        "recent_hold_moving_average",
+        "recent_discard_moving_average",
+        "high_rework"
+      ],
+      "required_evidence": [
+        "execution_readiness.can_run must be true before learning readiness can pass",
+        "restore a non-empty runnable proposal queue; learning-readiness signoff cannot accept not_runnable execution blockers"
+      ],
+      "recommended_next_step": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty."
+    }
+  ],
   "inputs": {
     "refresh_generated_target": "make refresh-generated-core",
     "outcome_metrics_report": "ops/reports/outcome-metrics.json",
@@ -127,13 +253,13 @@
     "loop_health_summary": {
       "status": "available",
       "gate_effect": "none",
-      "source_report": "ops/reports/routing-provenance-aggregates/auto-improve-2026-05-02t03-27-31z.json",
-      "source_generated_at": "2026-05-15T11:37:48Z",
-      "session_id": "auto-improve-2026-05-02t03-27-31z",
-      "summary": "attempts=1, finalized=0, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=1.00 | alerts: unfinalized runs present, recent HOLD trend",
+      "source_report": "ops/reports/routing-provenance-aggregates/auto-improve-remediation-p1e-20260519T142130Z.json",
+      "source_generated_at": "2026-05-19T16:07:02Z",
+      "session_id": "auto-improve-remediation-p1e-20260519T142130Z",
+      "summary": "attempts=1, finalized=0, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=1.00 | alerts: unfinalized runs present, recent DISCARD trend",
       "health_flags": [
         "unfinalized_runs_present",
-        "recent_hold_present"
+        "recent_discard_present"
       ],
       "attempt_count": 1,
       "finalized_run_count": 0,
@@ -278,11 +404,11 @@
       "can_execute_goal_runtime": true,
       "can_promote_result": true,
       "zip_mode_replay_only": false,
-      "dirty_worktree_allowed": false,
-      "dirty_entry_count": 0,
+      "dirty_worktree_allowed": true,
+      "dirty_entry_count": 115,
       "fatal_blockers": [],
       "promotion_blockers": [],
-      "summary": "goal worktree guard status=pass; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=true; dirty_entry_count=0"
+      "summary": "goal worktree guard status=pass; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=true; dirty_entry_count=115"
     },
     "remediation_backlog_summary": {
       "path": "ops/reports/remediation-backlog.json",
@@ -291,42 +417,45 @@
       "status": "fail",
       "source_status": "attention",
       "release_blocking": true,
-      "open_item_count": 3,
-      "active_blocker_count": 3,
-      "blocking_item_count": 3,
+      "open_item_count": 7,
+      "active_blocker_count": 5,
+      "blocking_item_count": 5,
       "signal_ids": [
+        "execution_blocked_by_no_runnable_proposal",
         "goal_status_profile_ladder_incomplete",
+        "learning_blocked_by_execution_not_runnable",
         "learning_claim_unlock_review_not_approved",
         "post_seal_learning_claim_linkage"
       ],
       "currentness_status": "current",
-      "summary": "remediation backlog status=attention; open_item_count=3; active_blocker_count=3; blocking_item_count=3"
+      "summary": "remediation backlog status=attention; open_item_count=7; active_blocker_count=5; blocking_item_count=5"
     }
   },
   "queue": {
-    "ready": true,
+    "ready": false,
     "proposals_emitted": 2,
-    "runnable_proposal_count": 1,
-    "runnable_proposal_ids": [
-      "recent_log_overlap_queue_blocked__mutation-proposal-runtime"
-    ],
-    "blocked_proposal_count": 1,
+    "runnable_proposal_count": 0,
+    "runnable_proposal_ids": [],
+    "blocked_proposal_count": 2,
     "blocked_reason_counts": [
       {
         "reason": "recent_log_overlap",
-        "count": 1
+        "count": 2
       }
     ],
     "source_candidates_read": 1,
     "candidates_emitted": 1,
-    "attempts_considered": 13,
-    "session_reports_considered": 3,
-    "queue_pressure_summary": "contract_regression_signals 1 proposal, 1 blocked; queue_unblock 1 proposal",
+    "attempts_considered": 29,
+    "session_reports_considered": 14,
+    "queue_pressure_summary": "contract_regression_signals 1 proposal, 1 blocked; queue_unblock 1 proposal, 1 blocked",
     "review_bootstrap_summary": "comparable mechanism run history는 trend-based candidate를 평가할 수 있을 만큼 확보됐다.",
-    "evidence_gaps": []
+    "evidence_gaps": [
+      "mutation_proposal.status=attention (contract_regression_signals 1 proposal, 1 blocked; queue_unblock 1 proposal, 1 blocked; proposals_emitted=2)",
+      "proposal blockers active: recent_log_overlap"
+    ]
   },
   "fallback": {
-    "status": "not_needed",
+    "status": "blocked_queue",
     "primary_targets": [
       "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
     ],
@@ -351,13 +480,13 @@
     },
     {
       "id": "proposal_queue_nonempty",
-      "pass": true,
-      "detail": "runnable_proposal_count=1 (proposals_emitted=2)"
+      "pass": false,
+      "detail": "proposals_emitted=2 but runnable_proposal_count=0, so auto-improve should stay paused."
     },
     {
       "id": "outcome_metrics_session_rollup_present",
       "pass": true,
-      "detail": "session_reports_considered=3"
+      "detail": "session_reports_considered=14"
     },
     {
       "id": "fallback_target_history_requirement_met",
@@ -365,6 +494,24 @@
       "detail": "queue is already non-empty, so fallback history depth is not needed."
     }
   ],
-  "remediations": [],
-  "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Close or explicitly defer remediation backlog items, rerun make remediation-backlog, then rerun make auto-improve-readiness."
+  "remediations": [
+    {
+      "blocker": "recent_log_overlap",
+      "remediation_code": "wait_for_recent_log_overlap_to_clear",
+      "blocker_kind": "hard",
+      "unblock_action_type": "chronology_advance_or_target_rotation",
+      "minimum_evidence": [
+        "A refreshed mutation proposal report no longer lists recent_log_overlap in blocked_by for every emitted proposal.",
+        "auto-improve readiness reports queue.runnable_proposal_count greater than 0.",
+        "The recent overlapping target chronology has advanced, the max-age window has expired, or the proposal target set no longer overlaps the recent run log."
+      ],
+      "retry_condition": "Rerun make auto-improve-readiness after make refresh-generated-core observes a newer chronology after the max-age window expires, or after a non-overlapping runnable proposal appears.",
+      "affected_proposal_count": 2,
+      "proposal_ids": [
+        "recent_log_overlap_queue_blocked__mutation-proposal-runtime",
+        "repeated_discard_runs__auto-improve-iteration-persistence-runtime"
+      ]
+    }
+  ],
+  "next_action": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
 }

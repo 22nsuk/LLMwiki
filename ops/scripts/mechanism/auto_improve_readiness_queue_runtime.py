@@ -11,6 +11,7 @@ from .auto_improve_readiness_constants_runtime import (
     FALLBACK_PRIMARY_TARGETS,
     READINESS_TARGET,
     RECENT_LOG_OVERLAP_REMEDIATION,
+    RECENT_OUTCOME_REWORK_REMEDIATION,
     SAME_EVAL_PROPOSAL_FAILURE_MODES,
 )
 from ops.scripts.policy_runtime import report_path
@@ -197,6 +198,8 @@ def _proposal_blocker_remediation(
 ) -> dict[str, Any]:
     if reason == "recent_log_overlap":
         payload = dict(RECENT_LOG_OVERLAP_REMEDIATION)
+    elif reason == "recent_outcome_rework":
+        payload = dict(RECENT_OUTCOME_REWORK_REMEDIATION)
     else:
         blocker_source = "blocked_by for every emitted proposal" if proposal_ids else "diagnostics.empty_queue_blockers"
         payload = {

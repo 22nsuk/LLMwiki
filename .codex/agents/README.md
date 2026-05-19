@@ -6,7 +6,7 @@
 - 프로젝트 공유 프로필은 `.codex/agents/` 아래에 둔다.
 - repo-shared 기본 rung는 승인된 ladder 안에서만 고른다.
 - `worker.toml`은 기본 구현자다.
-- `validator.toml`은 bounded code path의 실행 리스크를 다루는 기본 read-only validator다.
+- `validator.toml`은 bounded code path의 실행 리스크를 다루는 기본 validator다. 실행 sandbox는 temp workspace에서 `workspace-write`일 수 있지만 source/control file contract는 read-only다.
 - specialized add-on은 부모 acceptance, generic review, generic validation을 대체하지 않는다.
 
 ## Curated upstream seeds
@@ -57,6 +57,9 @@ repo-shared defaults는 아래 rung만 사용한다.
 - `ops/reports/auto-improve-sessions/<session-id>.json`은 이 체인을 session-level rollup으로 다시 묶어, role/rung mix와 executor blocking outcome을 한 번에 읽게 한다.
 - `ops/reports/routing-provenance-aggregates/<session-id>.json`은 같은 체인을 audit entrypoint로 고정하고, artifact index와 routing/executor/telemetry `audit_rollup` snapshot을 함께 제공한다.
 - 이때 `.toml`은 여전히 fallback instruction surface이고, 실제 run-local 배정은 `runs/<run-id>/subagent-routing.<role>.json`과 `<role>-executor-report.json`이 canonical trace가 된다.
+- validator는 준비된 workspace의 `.venv/bin/python`을 우선 사용하고, pytest replay에는 `PYTHONDONTWRITEBYTECODE=1` 및 `-p no:cacheprovider`를 붙여 cache/bytecode 쓰기 때문에 blocked로 오판하지 않게 한다.
+- runtime executor는 non-worker role 뒤에 workspace integrity guard를 실행해, validator/reviewer/auditor가 source/control file을 바꾸면 blocking executor report로 전환한다.
+- mechanism workspace 준비는 live repo의 `.venv`를 temp workspace에 symlink로 연결해 network 없이도 동일 dependency set으로 worker/validator checks를 실행하게 한다. `.venv` 자체는 diff/apply universe에서 계속 제외된다.
 
 ## Profiles
 
@@ -67,7 +70,7 @@ repo-shared defaults는 아래 rung만 사용한다.
 | `explorer.toml` | `gpt-5.5` + `medium` | `read-only` | owning path, router entry point, contract boundary를 먼저 맵핑해야 할 때 |
 | `worker.toml` | `gpt-5.5` + `high` | `workspace-write` | bounded implementation or repo edit가 필요할 때 |
 | `reviewer.toml` | `gpt-5.5` + `high` | `read-only` | PR-style risk review, missing tests, source-fidelity drift를 보고 싶을 때 |
-| `validator.toml` | `gpt-5.5` + `high` | `read-only` | bounded validation, command replay planning, executable regression risk를 확인할 때. Routing policy가 schema/policy/security/high-score 신호를 보면 `xhigh`로 승격한다. |
+| `validator.toml` | `gpt-5.5` + `high` | `workspace-write` in temp workspace, source read-only contract | bounded validation, command replay planning, executable regression risk를 확인할 때. Routing policy가 schema/policy/security/high-score 신호를 보면 `xhigh`로 승격한다. |
 
 ### Specialized read-only add-ons
 

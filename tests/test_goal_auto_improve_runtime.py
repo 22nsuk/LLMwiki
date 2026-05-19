@@ -35,6 +35,9 @@ def test_auto_improve_loop_goal_contract_uses_canonical_session_path() -> None:
                     "1",
                     "--max-consecutive-failures",
                     "1",
+                    "--maintain-until-budget",
+                    "--maintenance-interval-seconds",
+                    "300",
                 ]
             )
 
@@ -46,6 +49,8 @@ def test_auto_improve_loop_goal_contract_uses_canonical_session_path() -> None:
     assert kwargs["max_minutes"] == 30
     assert kwargs["max_proposals"] == 1
     assert kwargs["max_consecutive_failures"] == 1
+    assert kwargs["maintain_until_budget"] is True
+    assert kwargs["maintenance_interval_seconds"] == 300
     payload = json.loads(printed.call_args.args[0])
     assert payload["session_id"] == "goal-session"
 

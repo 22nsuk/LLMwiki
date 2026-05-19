@@ -365,6 +365,8 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
             "ops/scripts/mechanism/goal_worktree_guard.py",
             "ops/schemas/goal-worktree-guard.schema.json",
+            "ops/scripts/mechanism/goal_runtime_clean_transient.py",
+            "ops/schemas/goal-runtime-clean-transient.schema.json",
             "tests/test_codex_goal_contract.py",
             "tests/test_codex_goal_client.py",
             "tests/test_codex_goal_prompt.py",
@@ -375,10 +377,19 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "tests/test_goal_profile_verification.py",
             "tests/test_auto_improve_readiness_release_authority_runtime.py",
             "tests/test_goal_worktree_guard.py",
+            "tests/test_goal_runtime_clean_transient.py",
         ):
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+        mechanism_makefile = self.vault / "mk/mechanism.mk"
+        mechanism_makefile.parent.mkdir(parents=True, exist_ok=True)
+        mechanism_makefile.write_text(
+            "goal-runtime-clean-transient:\n"
+            "\tpython -m ops.scripts.goal_runtime_clean_transient\n"
+            "long-run-preflight-clean: goal-runtime-clean-transient auto-improve-goal-preflight\n",
+            encoding="utf-8",
+        )
         contract = {
             "$schema": "ops/schemas/codex-goal-contract.schema.json",
             "schema_version": 1,
@@ -507,9 +518,27 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
                 "blockers": [{"blocker_id": "git_worktree_dirty"}],
             },
         )
+        self._write_json(
+            "tmp/goal-runtime-clean-transient.json",
+            {
+                "artifact_kind": "goal_runtime_clean_transient",
+                "producer": "ops.scripts.goal_runtime_clean_transient",
+                "status": "pass",
+                "summary": {
+                    "apply": True,
+                    "candidate_count": 0,
+                    "removable_count": 0,
+                    "removed_count": 0,
+                    "would_remove_count": 0,
+                    "skipped_protected_count": 0,
+                    "failed_count": 0,
+                },
+            },
+        )
         (self.external / "goal.md").write_text(
             "# Goal Review\n\ngoal contract, set_goal, codex_goal_prompt, --goal-contract, "
-            "goal-run-status, selected contract, Git worktree.\n",
+            "goal-run-status, selected contract, Git worktree, transient artifact cleanup, "
+            "goal-runtime-clean-transient, long-run-preflight-clean.\n",
             encoding="utf-8",
         )
 
@@ -524,6 +553,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "goal_run_status_audit_resume",
             "selected_contract_currentness_gate",
             "git_worktree_goal_guard",
+            "goal_runtime_transient_cleanup_gate",
         }:
             self.assertEqual(actions[action_id]["current_status"], "implemented", action_id)
 

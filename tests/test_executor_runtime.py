@@ -331,7 +331,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertEqual(events[0]["decision"], "ready")
             self.assertEqual(events[0]["policy_version"], 1)
 
-    def test_validator_role_uses_read_only_sandbox(self) -> None:
+    def test_validator_role_uses_workspace_write_sandbox_with_read_only_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -340,7 +340,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             _write_routing_report(
                 vault,
                 "validator",
-                sandbox_mode="read-only",
+                sandbox_mode="workspace-write",
                 model="gpt-5.5",
                 reasoning_effort="xhigh",
                 selected_rung=3,
@@ -367,8 +367,62 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 )
 
             self.assertEqual(report["status"], "pass")
-            self.assertEqual(report["command"]["argv"][2:4], ["-s", "read-only"])
+            self.assertIn("--full-auto", report["command"]["argv"])
             self.assertIn("--skip-git-repo-check", report["command"]["argv"])
+            self.assertEqual(report["executor"]["sandbox_mode"], "workspace-write")
+            prompt = (vault / "runs" / "run-executor" / "validator-prompt.md").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("workspace-local `.venv/bin/python`", prompt)
+            self.assertIn("PYTHONDONTWRITEBYTECODE=1", prompt)
+            self.assertIn("-p no:cacheprovider", prompt)
+            self.assertIn("Executor roles run before repo-health capture", prompt)
+            self.assertIn("candidate-mechanism-assessment.json", prompt)
+
+    def test_non_worker_workspace_write_mutation_is_blocking(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["validator"])
+            _write_routing_report(
+                vault,
+                "validator",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+
+            def fake_run(argv: list[str], **_: object) -> object:
+                out_index = argv.index("-o") + 1
+                Path(argv[out_index]).write_text(
+                    json.dumps({"status": "pass", "diagnostics": {"notes": ["validated"]}}, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+                (vault / "ops" / "scripts" / "example.py").write_text(
+                    "def subject():\n    return 2\n",
+                    encoding="utf-8",
+                )
+                return mock.Mock(returncode=0, stdout="ok\n", stderr="")
+
+            with mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+                report = execute_codex_exec_role(
+                    artifact_root=vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    role="validator",
+                    routing_report_rel="runs/run-executor/subagent-routing.validator.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+            self.assertEqual(report["status"], "fail")
+            self.assertIn(
+                "non-worker workspace mutation guard blocked validator",
+                "\n".join(report["diagnostics"]["notes"]),
+            )
 
     def test_execute_codex_exec_role_raises_domain_error_for_malformed_routing_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -529,6 +583,10 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 if role == "worker":
                     self.assertIn("--full-auto", argv)
                     self.assertIn("--skip-git-repo-check", argv)
+                    (vault / "ops" / "scripts" / "example.py").write_text(
+                        "def subject():\n    return 2\n",
+                        encoding="utf-8",
+                    )
                 if role == "validator":
                     self.assertEqual(argv[2:4], ["-s", "read-only"])
                     self.assertIn("--skip-git-repo-check", argv)
@@ -565,6 +623,61 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 ["executor_completed", "executor_completed"],
             )
 
+    def test_run_executor_pipeline_blocks_worker_pass_without_primary_target_change(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["worker", "validator"])
+            worker_routing = _write_routing_report(
+                vault,
+                "worker",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="high",
+                selected_rung=2,
+            )
+            validator_routing = _write_routing_report(
+                vault,
+                "validator",
+                sandbox_mode="read-only",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+            executed_roles: list[str] = []
+
+            def fake_run(argv: list[str], **_: object) -> object:
+                out_index = argv.index("-o") + 1
+                output_path = Path(argv[out_index])
+                role = output_path.name.replace("-last-message.json", "")
+                executed_roles.append(role)
+                output_path.write_text(
+                    json.dumps({"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}}, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+                return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
+
+            with mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+                with self.assertRaisesRegex(
+                    ExecutorRuntimeExecutionError,
+                    "without modifying any declared primary target",
+                ):
+                    run_executor_pipeline(
+                        vault,
+                        workspace_root=vault,
+                        run_id="run-executor",
+                        policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                        scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                        proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                        roles=["worker", "validator"],
+                        routing_reports=[worker_routing, validator_routing],
+                    )
+
+            self.assertEqual(executed_roles, ["worker"])
+            self.assertTrue((vault / "runs" / "run-executor" / "worker-executor-report.json").exists())
+            self.assertFalse((vault / "runs" / "run-executor" / "validator-executor-report.json").exists())
+
     def test_executor_cli_writes_success_json(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -582,6 +695,13 @@ class ExecutorRuntimeTests(unittest.TestCase):
 
             def fake_run(argv: list[str], **_: object) -> object:
                 out_index = argv.index("-o") + 1
+                output_path = Path(argv[out_index])
+                role = output_path.name.replace("-last-message.json", "")
+                if role == "worker":
+                    (vault / "ops" / "scripts" / "example.py").write_text(
+                        "def subject():\n    return 2\n",
+                        encoding="utf-8",
+                    )
                 Path(argv[out_index]).write_text(
                     json.dumps({"status": "pass", "diagnostics": {"notes": ["cli ok"]}}, ensure_ascii=False),
                     encoding="utf-8",
@@ -645,6 +765,11 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 output_path = Path(argv[out_index])
                 role = output_path.name.replace("-last-message.json", "")
                 payload = {"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}}
+                if role == "worker":
+                    (vault / "ops" / "scripts" / "example.py").write_text(
+                        "def subject():\n    return 2\n",
+                        encoding="utf-8",
+                    )
                 if role == "validator":
                     payload = {"status": "fail", "diagnostics": {"notes": ["validator blocked"]}}
                 output_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
@@ -731,6 +856,11 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 role = output_path.name.replace("-last-message.json", "")
                 payload = {"status": "pass", "diagnostics": {"notes": [f"{role} ok"]}}
                 returncode = 0
+                if role == "worker":
+                    (vault / "ops" / "scripts" / "example.py").write_text(
+                        "def subject():\n    return 2\n",
+                        encoding="utf-8",
+                    )
                 if role == "validator":
                     payload = {"status": "fail", "diagnostics": {"notes": ["validator blocked"]}}
                 output_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")

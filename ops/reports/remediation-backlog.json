@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-17T22:14:50Z",
+  "generated_at": "2026-05-19T16:10:28Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "9bda2bdcfa1f1c1a3230b3d2bf58c61b0e81cca07bb7b5c682fbed6a964d0738",
+  "source_tree_fingerprint": "210451b8c1f4611ce001511da95db683b039fa0c4d7783a8abd7c9622ad2bc04",
   "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "a4799bf90c603af119663bdc5158e55774f030b6d59bf194b8d7aff61501dcdc",
-    "learning_claim_activation": "ea85dc9156973bb4a6a75fce3b2a70e61ae45bfe516cf544b4dae690fbf456c2",
-    "self_improvement_negative_lessons": "1ef3c0e996cdca6e99070c81dc3817aa2bc78eba15fa4761ebbe1526b61a8a0c",
-    "session_synopsis": "5b1bac7cde8c9657487fc625ba8f14e52240e8d215ff01af6083d54547d2bc58",
+    "source_paths": "ac89dead9a209f58ec98e9f5a02446afe66adf70edbba3f94c9c88d59e3386cb",
+    "learning_claim_activation": "d66aefe4d3c2b5c4cf94f0b40ff9902ad4345c5ddbc0bb76528cbd2f00a6cf35",
+    "self_improvement_negative_lessons": "11c5e265caff34b124fcabc8002725ddd6b588c3ba4fa29eb1c49c3ff4a4056c",
+    "session_synopsis": "336bb8383cc5257feb7f5b8b00fe22c0e4ecc72edf1b8ae78e1cc48b8b8a2235",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
-    "auto_improve_sessions": "cb37a69dac01fafbf58ea3f8f71f2132da1656c2d65bfdf047d1d56864b120c4"
+    "auto_improve_sessions": "a70f570088e33229a10994b6875ef0491c5314405811d9b3a3e4e947e36696b8"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T22:14:50Z"
+    "checked_at": "2026-05-19T16:10:28Z"
   },
   "vault": ".",
   "policy": {
@@ -32,14 +32,28 @@
   },
   "status": "attention",
   "summary": {
-    "backlog_item_count": 3,
-    "repeated_blocker_count": 0,
-    "active_blocker_count": 3,
-    "open_item_count": 3,
+    "backlog_item_count": 7,
+    "repeated_blocker_count": 2,
+    "active_blocker_count": 5,
+    "open_item_count": 7,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
     "next_action": "Close or explicitly defer remediation backlog items before promotion."
   },
   "items": [
+    {
+      "item_id": "active_blocker_execution_blocked_by_no_runnable_proposal",
+      "blocker_id": "execution_blocked_by_no_runnable_proposal",
+      "source": "auto_improve_readiness.promotion_blockers",
+      "item_type": "active_blocker",
+      "status": "open",
+      "severity": "blocks_promotion",
+      "occurrence_count": 1,
+      "evidence_paths": [
+        "ops/reports/session-synopsis.json"
+      ],
+      "repair_target": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap.",
+      "next_action": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
+    },
     {
       "item_id": "active_blocker_goal_status_profile_ladder_incomplete",
       "blocker_id": "goal_status_profile_ladder_incomplete",
@@ -53,6 +67,20 @@
       ],
       "repair_target": "Collect bounded runtime evidence for next_profile_required=30m_trial.",
       "next_action": "Collect bounded runtime evidence for next_profile_required=30m_trial."
+    },
+    {
+      "item_id": "active_blocker_learning_blocked_by_execution_not_runnable",
+      "blocker_id": "learning_blocked_by_execution_not_runnable",
+      "source": "auto_improve_readiness.promotion_blockers",
+      "item_type": "active_blocker",
+      "status": "open",
+      "severity": "blocks_promotion",
+      "occurrence_count": 1,
+      "evidence_paths": [
+        "ops/reports/session-synopsis.json"
+      ],
+      "repair_target": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty.",
+      "next_action": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty."
     },
     {
       "item_id": "active_blocker_learning_claim_unlock_review_not_approved",
@@ -81,6 +109,35 @@
       ],
       "repair_target": "Run release-post-seal-attestation after the candidate evidence is sealed and verify the learning claim authority binding.",
       "next_action": "Run release-post-seal-attestation after the candidate evidence is sealed and verify the learning claim authority binding."
+    },
+    {
+      "item_id": "negative_lesson_blocked_queue_recent_log_overlap",
+      "blocker_id": "blocked_queue_recent_log_overlap",
+      "source": "self_improvement_negative_lessons.lessons",
+      "item_type": "repeated_negative_lesson",
+      "status": "open",
+      "severity": "blocks_repeat",
+      "occurrence_count": 2,
+      "evidence_paths": [
+        "ops/reports/auto-improve-readiness.json"
+      ],
+      "repair_target": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane.",
+      "next_action": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane."
+    },
+    {
+      "item_id": "negative_lesson_discard_changed_files_manifest_primary_targets_touched",
+      "blocker_id": "discard_changed_files_manifest_primary_targets_touched",
+      "source": "self_improvement_negative_lessons.lessons",
+      "item_type": "repeated_negative_lesson",
+      "status": "open",
+      "severity": "blocks_repeat",
+      "occurrence_count": 2,
+      "evidence_paths": [
+        "runs/archive/auto-improve-trial-maintenance-rerun-4-run-01-mutation-proposal-runtime-discard-maintenance-redesign-20260519t103553z/run-telemetry.json",
+        "runs/auto-improve-remediation-p1e-20260519T142130Z-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json"
+      ],
+      "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=changed_files_manifest_primary_targets_touched.",
+      "next_action": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=changed_files_manifest_primary_targets_touched."
     }
   ],
   "inputs": {

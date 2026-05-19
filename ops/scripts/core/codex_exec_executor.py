@@ -4,6 +4,7 @@ import json
 import re
 import time
 import tomllib
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypedDict
@@ -25,6 +26,21 @@ from .schema_runtime import load_schema
 
 EXECUTOR_REPORT_SCHEMA = EXECUTOR_REPORT_SCHEMA_PATH
 DEFAULT_CODEX_EXEC_TIMEOUT_SECONDS = 1800
+NON_WORKER_INTEGRITY_IGNORE_NAMES = {
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".hypothesis",
+    ".coverage",
+    ".DS_Store",
+    ".git",
+    ".obsidian",
+    ".venv",
+    ".idea",
+    ".vscode",
+}
+NON_WORKER_INTEGRITY_IGNORE_SUFFIXES = {".pyc", ".pyo"}
 _CODEX_USAGE_LIMIT_RE = re.compile(
     r"(usage limit|try again at|upgrade to pro)",
     flags=re.IGNORECASE,
@@ -306,6 +322,84 @@ def _sanitize_argv(argv: list[str], *, roots: list[Path]) -> list[str]:
     return [_sanitize_path_text(item, roots=roots) for item in argv]
 
 
+def _is_non_worker_integrity_ignored(rel_path: str, *, run_id: str) -> bool:
+    normalized = rel_path.replace("\\", "/")
+    if normalized == f"runs/{run_id}" or normalized.startswith(f"runs/{run_id}/"):
+        return True
+    parts = [part for part in Path(normalized).parts if part not in {".", ""}]
+    return any(part in NON_WORKER_INTEGRITY_IGNORE_NAMES for part in parts)
+
+
+def _file_digest(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _workspace_integrity_digests(workspace_root: Path, *, run_id: str) -> dict[str, str]:
+    digests: dict[str, str] = {}
+    for path in workspace_root.rglob("*"):
+        if not path.is_file():
+            continue
+        rel_path = path.relative_to(workspace_root).as_posix()
+        if _is_non_worker_integrity_ignored(rel_path, run_id=run_id):
+            continue
+        if path.suffix in NON_WORKER_INTEGRITY_IGNORE_SUFFIXES:
+            continue
+        digests[rel_path] = _file_digest(path)
+    return digests
+
+
+def _non_worker_integrity_issues(before: dict[str, str], after: dict[str, str]) -> list[str]:
+    before_paths = set(before)
+    after_paths = set(after)
+    issues: list[str] = []
+    for label, paths in (
+        ("added", sorted(after_paths - before_paths)),
+        ("removed", sorted(before_paths - after_paths)),
+        (
+            "modified",
+            sorted(path for path in before_paths & after_paths if before[path] != after[path]),
+        ),
+    ):
+        if not paths:
+            continue
+        preview = ", ".join(paths[:10])
+        suffix = "" if len(paths) <= 10 else f", ... (+{len(paths) - 10} more)"
+        issues.append(f"{label}: {preview}{suffix}")
+    return issues
+
+
+def _apply_non_worker_integrity_guard(
+    summary: _ExecutionSummary,
+    *,
+    role: str,
+    before: dict[str, str] | None,
+    after: dict[str, str] | None,
+) -> _ExecutionSummary:
+    if role == "worker" or before is None or after is None:
+        return summary
+    issues = _non_worker_integrity_issues(before, after)
+    if not issues:
+        return summary
+    return _ExecutionSummary(
+        status="fail",
+        decision="blocked",
+        notes=[
+            *summary.notes,
+            (
+                f"non-worker workspace mutation guard blocked {role}: "
+                + "; ".join(issues)
+            ),
+        ],
+        timed_out=summary.timed_out,
+        timeout_seconds=summary.timeout_seconds,
+        termination_reason=summary.termination_reason,
+    )
+
+
 def _materialize_prompt(request: PromptMaterializationRequest) -> Path:
     prompt_path = request.artifact_root / request.artifacts.prompt_rel
     sandbox_mode = request.routing_report["routing_decision"]["sandbox_mode"]
@@ -381,6 +475,16 @@ Repository write boundary:
 - reviewer, validator, and auditor roles are read-only.
 - never edit `raw/`, `wiki/`, or non-log `system/` pages.
 - do not rewrite unrelated files or expand scope.
+
+Execution environment guidance:
+- For Python project checks, use workspace-local `.venv/bin/python` when it exists; avoid bare `python` when a repo virtualenv is available.
+- In read-only roles, set `PYTHONDONTWRITEBYTECODE=1` and pass pytest `-p no:cacheprovider` so validation does not fail only because bytecode or cache writes are blocked.
+- If dependencies are genuinely absent and setup would write to the workspace, report the exact blocked command and the missing dependency surface.
+
+Executor phase boundary:
+- Executor roles run before repo-health capture, candidate artifacts, changed-files manifest, behavior delta, final promotion report, and workspace apply.
+- Validator/reviewer/auditor roles should not fail only because post-executor artifacts such as `candidate-mechanism-assessment.json`, `candidate-eval.json`, `candidate-lint.json`, `changed-files-manifest.json`, or finalized `promotion-report.json` are not available yet.
+- Treat those post-executor artifacts as highest-value next checks unless the current prompt explicitly asks you to validate a completed run directory.
 
 Scope freeze summary:
 ```json
@@ -893,12 +997,28 @@ def execute_codex_exec_role(
         context=context,
         timeout_seconds=timeout_seconds,
     )
+    integrity_before = (
+        _workspace_integrity_digests(request.workspace_root, run_id=request.run_id)
+        if role != "worker"
+        else None
+    )
     completed = launch_execution(request)
     model_output = capture_execution_artifacts(request, completed)
     summary = assess_execution_result(
         completed,
         model_output,
         timeout_seconds=timeout_seconds,
+    )
+    integrity_after = (
+        _workspace_integrity_digests(request.workspace_root, run_id=request.run_id)
+        if role != "worker"
+        else None
+    )
+    summary = _apply_non_worker_integrity_guard(
+        summary,
+        role=role,
+        before=integrity_before,
+        after=integrity_after,
     )
     return persist_execution_outcome(
         request=request,

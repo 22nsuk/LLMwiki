@@ -30,6 +30,7 @@ INPUT_PATHS = {
     "task_observations": "ops/reports/task-improvement-observations/task-20260515-reconciled-improvement-plan/improvement-observations.json",
 }
 DERIVED_REMEDIATION_BACKLOG_BLOCKER_IDS = {
+    "goal_status_promotion_blocked_by_remediation_backlog_open",
     "promotion_blocked_by_remediation_backlog_open",
 }
 
@@ -114,14 +115,22 @@ def _goal_profile_ladder(status_report: dict[str, Any]) -> dict[str, Any]:
 def _goal_status_blockers(
     status_report: dict[str, Any],
     profile_ladder: dict[str, Any],
+    *,
+    suppressed_blocker_ids: set[str] | None = None,
 ) -> list[dict[str, Any]]:
     blockers: list[dict[str, Any]] = []
     next_profile = str(profile_ladder.get("next_profile_required", "")).strip()
+    suppressed_ids = suppressed_blocker_ids or set()
     for blocker in _string_list(status_report.get("blockers")):
-        blocker_id = "goal_status_" + "_".join(
+        normalized_blocker_id = "_".join(
             blocker.lower().replace("-", " ").replace("/", " ").split()
         )
+        if normalized_blocker_id in suppressed_ids:
+            continue
+        blocker_id = "goal_status_" + normalized_blocker_id
         if not blocker_id.strip("_"):
+            continue
+        if blocker_id in DERIVED_REMEDIATION_BACKLOG_BLOCKER_IDS:
             continue
         repair_target = "Refresh goal run status and close the active blocker before resuming."
         if blocker == "profile ladder incomplete":
@@ -198,14 +207,16 @@ def _recent_blockers(inputs: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     activation = inputs["learning_claim_activation"]
     goal_status = inputs["goal_run_status"]
     goal_profile_ladder = _goal_profile_ladder(goal_status)
-    blockers.extend(_goal_status_blockers(goal_status, goal_profile_ladder))
+    readiness_blockers: list[dict[str, Any]] = []
+    readiness_blocker_ids: set[str] = set()
     for blocker in _dict_list(readiness.get("promotion_blockers")):
         blocker_id = str(blocker.get("id", "")).strip()
         if not blocker_id:
             continue
         if blocker_id in DERIVED_REMEDIATION_BACKLOG_BLOCKER_IDS:
             continue
-        blockers.append(
+        readiness_blocker_ids.add(blocker_id)
+        readiness_blockers.append(
             {
                 "id": blocker_id,
                 "source": "auto_improve_readiness.promotion_blockers",
@@ -214,6 +225,14 @@ def _recent_blockers(inputs: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
                 "repair_target": str(blocker.get("recommended_next_step", "")).strip(),
             }
         )
+    blockers.extend(
+        _goal_status_blockers(
+            goal_status,
+            goal_profile_ladder,
+            suppressed_blocker_ids=readiness_blocker_ids,
+        )
+    )
+    blockers.extend(readiness_blockers)
     for predicate in _dict_list(activation.get("blocked_predicates")):
         predicate_id = str(predicate.get("id", "")).strip()
         if not predicate_id:

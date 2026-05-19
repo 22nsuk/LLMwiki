@@ -69,6 +69,10 @@ WORKSPACE_IGNORE_NAMES = {
     ".vscode",
 }
 WORKSPACE_IGNORE_SUFFIXES = {".pyc", ".pyo"}
+CHANGED_FILES_MANIFEST_IGNORED_PREFIX_REASONS = {
+    "ops/reports/": "generated_report_surface",
+    "tmp/": "transient_workspace_surface",
+}
 
 
 def _copytree_ignore(_dir: str, names: list[str]) -> set[str]:
@@ -80,6 +84,19 @@ def _copytree_ignore(_dir: str, names: list[str]) -> set[str]:
         if Path(name).suffix in WORKSPACE_IGNORE_SUFFIXES:
             ignored.add(name)
     return ignored
+
+
+def _link_repo_virtualenv(vault: Path, workspace_vault: Path) -> None:
+    source = vault / ".venv"
+    if not source.is_dir() or not (source / "bin" / "python").exists():
+        return
+    destination = workspace_vault / ".venv"
+    if destination.exists() or destination.is_symlink():
+        return
+    try:
+        destination.symlink_to(source.resolve(), target_is_directory=True)
+    except OSError:
+        return
 
 
 def _is_ignored_candidate_surface(rel_path: str, *, run_id: str) -> bool:
@@ -116,6 +133,14 @@ def _snapshot_repo_file_count(root: Path, *, run_id: str) -> int:
             continue
         count += 1
     return count
+
+
+def _changed_files_manifest_ignore_reason(rel_path: str) -> str:
+    normalized = rel_path.replace("\\", "/")
+    for prefix, reason in CHANGED_FILES_MANIFEST_IGNORED_PREFIX_REASONS.items():
+        if normalized.startswith(prefix):
+            return reason
+    return ""
 
 
 def _normalize_sparse_copy_entry(value: str) -> str:
@@ -217,23 +242,46 @@ def _write_changed_files_manifest(
     )
     candidate_files = _snapshot_repo_file_digests(workspace_vault, run_id=run_id)
     changed_files: list[dict] = []
+    ignored_changes: list[dict] = []
     added = 0
     modified = 0
     deleted = 0
+    ignored_added = 0
+    ignored_modified = 0
+    ignored_deleted = 0
     for rel_path in sorted(set(baseline_files) | set(candidate_files)):
         baseline_digest = baseline_files.get(rel_path)
         candidate_digest = candidate_files.get(rel_path)
         if baseline_digest is None:
             change_type = "added"
-            added += 1
         elif candidate_digest is None:
             change_type = "deleted"
-            deleted += 1
         elif baseline_digest != candidate_digest:
             change_type = "modified"
-            modified += 1
         else:
             continue
+        ignore_reason = _changed_files_manifest_ignore_reason(rel_path)
+        if ignore_reason:
+            if change_type == "added":
+                ignored_added += 1
+            elif change_type == "deleted":
+                ignored_deleted += 1
+            elif change_type == "modified":
+                ignored_modified += 1
+            ignored_changes.append(
+                {
+                    "path": rel_path,
+                    "change_type": change_type,
+                    "reason": ignore_reason,
+                }
+            )
+            continue
+        if change_type == "added":
+            added += 1
+        elif change_type == "deleted":
+            deleted += 1
+        elif change_type == "modified":
+            modified += 1
         changed_files.append({"path": rel_path, "change_type": change_type})
 
     payload = {
@@ -258,6 +306,17 @@ def _write_changed_files_manifest(
         },
         "files": changed_files,
     }
+    if ignored_changes:
+        payload["ignored_changes"] = {
+            "summary": {
+                "total_ignored_files": len(ignored_changes),
+                "added": ignored_added,
+                "modified": ignored_modified,
+                "deleted": ignored_deleted,
+            },
+            "ignored_prefixes": sorted(CHANGED_FILES_MANIFEST_IGNORED_PREFIX_REASONS),
+            "files": ignored_changes,
+        }
     manifest_rel = run_rel(run_id, "changed-files-manifest.json")
     write_json(vault, manifest_rel, payload, CHANGED_FILES_MANIFEST_SCHEMA)
     return manifest_rel
@@ -424,6 +483,7 @@ def _prepare_workspace_copy(
     workspace_vault = Path(workspace_root) / "vault"
     copy_started = time.monotonic()
     shutil.copytree(vault, workspace_vault, ignore=_copytree_ignore)
+    _link_repo_virtualenv(vault, workspace_vault)
     copy_seconds = round(time.monotonic() - copy_started, 3)
     copied_file_count = _snapshot_repo_file_count(workspace_vault, run_id=run_id)
     return WorkspacePreparation(
@@ -477,6 +537,7 @@ def _prepare_sparse_workspace_copy(
     copy_started = time.monotonic()
     for rel_path in copy_entries:
         _copy_sparse_entry(vault, workspace_vault, rel_path, run_id=run_id)
+    _link_repo_virtualenv(vault, workspace_vault)
     copy_seconds = round(time.monotonic() - copy_started, 3)
     baseline_file_digests = _snapshot_repo_file_digests(workspace_vault, run_id=run_id)
     copied_file_count = _snapshot_repo_file_count(workspace_vault, run_id=run_id)

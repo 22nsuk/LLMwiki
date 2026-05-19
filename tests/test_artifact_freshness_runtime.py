@@ -505,6 +505,29 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
                 json.dumps({"manifest_families_updated": [], "concept_pages_updated": []}),
                 encoding="utf-8",
             )
+            archived_auxiliary = (
+                vault
+                / "runs"
+                / "archive"
+                / "run-validator-rejected"
+                / "worker-executor-report.json"
+            )
+            archived_auxiliary.parent.mkdir(parents=True, exist_ok=True)
+            archived_auxiliary.write_text(
+                json.dumps({"status": "fail", "diagnostics": {"notes": []}}),
+                encoding="utf-8",
+            )
+            archived_reviewer_routing = (
+                vault
+                / "runs"
+                / "archive"
+                / "run-validator-rejected"
+                / "subagent-routing.reviewer.json"
+            )
+            archived_reviewer_routing.write_text(
+                json.dumps({"role": "reviewer", "selected_rung": "micro"}),
+                encoding="utf-8",
+            )
 
             report = build_report(vault, context=fixed_context())
             bootstrap_record = next(
@@ -521,6 +544,16 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
                 item
                 for item in report["artifact_records"]
                 if item["path"].endswith("concept-continuity-integration-2026-04-22.json")
+            )
+            archived_auxiliary_record = next(
+                item
+                for item in report["artifact_records"]
+                if item["path"].endswith("worker-executor-report.json")
+            )
+            archived_reviewer_routing_record = next(
+                item
+                for item in report["artifact_records"]
+                if item["path"].endswith("subagent-routing.reviewer.json")
             )
 
             self.assertEqual(report["summary"]["missing_schema_count"], 2)
@@ -546,6 +579,18 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             )
             self.assertEqual(one_off_record["contract_issue_class"], "clean")
             self.assertEqual(one_off_record["issues"], [])
+            self.assertEqual(
+                archived_auxiliary_record["schema_contract"]["classification"],
+                "noncanonical_archived_run_note",
+            )
+            self.assertEqual(archived_auxiliary_record["contract_issue_class"], "clean")
+            self.assertEqual(archived_auxiliary_record["issues"], [])
+            self.assertEqual(
+                archived_reviewer_routing_record["schema_contract"]["classification"],
+                "noncanonical_archived_run_note",
+            )
+            self.assertEqual(archived_reviewer_routing_record["contract_issue_class"], "clean")
+            self.assertEqual(archived_reviewer_routing_record["issues"], [])
 
     def test_report_classifies_zero_byte_run_command_logs_as_placeholders(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -620,6 +665,28 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertEqual(record["schema_validation_status"], "schema_unavailable")
             self.assertTrue(record["safe_to_backfill"])
             self.assertNotIn("missing_artifact_envelope", record["issues"])
+
+    def test_active_run_auxiliary_json_is_not_canonical_release_debt(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_dir = vault / "runs" / "run-active"
+            run_dir.mkdir(parents=True)
+            (run_dir / "worker-executor-report.json").write_text(
+                json.dumps({"$schema": "ops/schemas/executor-report.schema.json"}),
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+            record = next(
+                item for item in report["artifact_records"] if item["path"] == "runs/run-active/worker-executor-report.json"
+            )
+
+            self.assertEqual(record["schema_contract"]["classification"], "noncanonical_archived_run_note")
+            self.assertEqual(record["schema_validation_status"], "not_applicable")
+            self.assertEqual(record["issues"], [])
+            self.assertNotIn("missing_artifact_envelope", record["stable_contract_issues"])
 
     def test_archived_artifacts_with_archive_retention_do_not_accumulate_mtime_drift_debt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

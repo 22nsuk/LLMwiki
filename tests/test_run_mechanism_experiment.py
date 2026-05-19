@@ -939,6 +939,20 @@ class RunMechanismExperimentTests(unittest.TestCase):
             (vault / ".obsidian" / "workspace.json").write_text('{"workspace": "live"}\n', encoding="utf-8")
             (vault / ".venv").mkdir(exist_ok=True)
             (vault / ".venv" / "marker.txt").write_text("live env marker\n", encoding="utf-8")
+            (vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
+            (vault / "ops" / "reports" / "raw-registry-preflight-report.json").write_text(
+                '{"status": "live"}\n',
+                encoding="utf-8",
+            )
+            (vault / "tmp").mkdir(exist_ok=True)
+            (vault / "tmp" / "artifact-freshness-report-check.json").write_text(
+                '{"status": "live"}\n',
+                encoding="utf-8",
+            )
+            (vault / "tmp" / "script-output-surfaces.candidate.json").write_text(
+                '{"candidate": true}\n',
+                encoding="utf-8",
+            )
 
             def fake_capture_reports(
                 _vault: Path,
@@ -997,6 +1011,15 @@ class RunMechanismExperimentTests(unittest.TestCase):
                     "sentinel = 1\n",
                     encoding="utf-8",
                 )
+                (cwd / "ops" / "reports" / "raw-registry-preflight-report.json").write_text(
+                    '{"status": "candidate"}\n',
+                    encoding="utf-8",
+                )
+                (cwd / "tmp" / "artifact-freshness-report-check.json").write_text(
+                    '{"status": "candidate"}\n',
+                    encoding="utf-8",
+                )
+                (cwd / "tmp" / "script-output-surfaces.candidate.json").unlink()
                 return successful_command_result(command, stdout="mutation applied\n")
 
             fake_build_promotion_report = forced_promotion_report_builder(
@@ -1065,6 +1088,7 @@ class RunMechanismExperimentTests(unittest.TestCase):
 
             run_dir = vault / "runs" / "run-wrapper-ephemeral-noise"
             promotion_report = json.loads((run_dir / "promotion-report.json").read_text(encoding="utf-8"))
+            changed_manifest = json.loads((run_dir / "changed-files-manifest.json").read_text(encoding="utf-8"))
 
             self.assertEqual(capture_reports.call_count, 2)
             self.assertEqual(run_command.call_count, 2)
@@ -1081,6 +1105,23 @@ class RunMechanismExperimentTests(unittest.TestCase):
                 check for check in promotion_report["checks"] if check["id"] == "changed_files_manifest_scope"
             )
             self.assertEqual(scope_check["status"], "PASS")
+            self.assertEqual(
+                [item["path"] for item in changed_manifest["files"]],
+                ["ops/scripts/example.py", "tests/test_example.py"],
+            )
+            self.assertEqual(changed_manifest["summary"]["total_changed_files"], 2)
+            self.assertEqual(
+                {
+                    item["path"]: item["reason"]
+                    for item in changed_manifest["ignored_changes"]["files"]
+                },
+                {
+                    "ops/reports/raw-registry-preflight-report.json": "generated_report_surface",
+                    "tmp/artifact-freshness-report-check.json": "transient_workspace_surface",
+                    "tmp/script-output-surfaces.candidate.json": "transient_workspace_surface",
+                },
+            )
+            self.assertEqual(changed_manifest["ignored_changes"]["summary"]["total_ignored_files"], 3)
 
 if __name__ == "__main__":
     unittest.main()

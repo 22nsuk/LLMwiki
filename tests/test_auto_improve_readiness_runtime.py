@@ -1477,7 +1477,23 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             report["learning_readiness"]["recommended_next_step"],
         )
         self.assertIn(
-            "--allow-learning-uncertain",
+            "GOAL_ALLOW_LEARNING_UNCERTAIN=1",
+            report["learning_readiness"]["recommended_next_step"],
+        )
+        self.assertIn(
+            "make auto-improve-goal-run",
+            report["learning_readiness"]["recommended_next_step"],
+        )
+        self.assertIn(
+            "runner heartbeat",
+            report["learning_readiness"]["recommended_next_step"],
+        )
+        self.assertNotIn(
+            "auto_improve_loop",
+            report["learning_readiness"]["recommended_next_step"],
+        )
+        self.assertNotIn(
+            "--max-proposals 10000",
             report["learning_readiness"]["recommended_next_step"],
         )
 
@@ -1712,6 +1728,8 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             report["next_action"],
             report["learning_readiness"]["recommended_next_step"],
         )
+        self.assertIn("make auto-improve-goal-run", report["next_action"])
+        self.assertNotIn("auto_improve_loop", report["next_action"])
 
     def test_build_readiness_report_treats_partial_loop_health_telemetry_as_non_blocking(self) -> None:
         self._write_report(
@@ -2163,6 +2181,69 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertIn("make auto-improve-readiness", remediation["retry_condition"])
         self.assertIn("none are runnable yet", report["next_action"])
         self.assertIn("recent_log_overlap", report["next_action"])
+
+    def test_build_readiness_report_surfaces_recent_outcome_rework_remediation(self) -> None:
+        self._write_report(
+            "ops/reports/outcome-metrics.json",
+            {
+                "summary": {
+                    "attempts_considered": 7,
+                    "recent_window": 20,
+                    "recent_attempt_count": 7,
+                    "session_reports_considered": 0,
+                }
+            },
+        )
+        self._write_report(
+            "ops/reports/mechanism-review-candidates.json",
+            {
+                "summary": {"candidates_emitted": 1},
+                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+            },
+        )
+        self._write_report(
+            "ops/reports/mutation-proposals.json",
+            {
+                "summary": {
+                    "source_candidates_read": 1,
+                    "proposals_emitted": 1,
+                    "blocked_proposals": 1,
+                    "queue_pressure_summary": "queue_unblock 1 proposal, 1 blocked",
+                },
+                "diagnostics": {"evidence_gaps": []},
+                "proposals": [
+                    {
+                        "proposal_id": "recent_log_overlap_queue_blocked__mutation-proposal-runtime",
+                        "blocked_by": ["recent_outcome_rework"],
+                        "priority": 91,
+                    }
+                ],
+            },
+        )
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        self.assertFalse(readiness_can_run(report))
+        self.assertEqual(report["queue"]["runnable_proposal_count"], 0)
+        self.assertEqual(
+            report["queue"]["blocked_reason_counts"],
+            [{"reason": "recent_outcome_rework", "count": 1}],
+        )
+        self.assertEqual(len(report["remediations"]), 1)
+        remediation = report["remediations"][0]
+        self.assertEqual(remediation["blocker"], "recent_outcome_rework")
+        self.assertEqual(
+            remediation["remediation_code"],
+            "stop_repeating_unresolved_queue_rotation",
+        )
+        self.assertEqual(
+            remediation["unblock_action_type"],
+            "outcome_rework_repair_or_successful_supersession",
+        )
+        self.assertIn("Do not rerun the same queue-unblock proposal", remediation["retry_condition"])
+        self.assertTrue(
+            any("outcome-metrics" in item for item in remediation["minimum_evidence"])
+        )
 
     def test_build_readiness_report_surfaces_empty_queue_blockers_as_blocked_seeds(self) -> None:
         self._write_report(

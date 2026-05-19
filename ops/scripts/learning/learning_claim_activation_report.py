@@ -526,7 +526,16 @@ def _negative_learning_ledger(vault: Path, inputs: ActivationInputs) -> dict[str
         if decision not in {"HOLD", "DISCARD"}:
             continue
         run_id = str(telemetry.get("run_id", telemetry_path.parent.name)).strip()
-        reason = str(telemetry.get("same_eval_reason_code", "unspecified")).strip() or "unspecified"
+        reason = str(telemetry.get("same_eval_reason_code", "")).strip()
+        if not reason:
+            decision_record = telemetry.get("decision_record")
+            if isinstance(decision_record, dict):
+                reason = str(decision_record.get("reason_code", "")).strip()
+        if not reason:
+            discard_evidence = telemetry.get("discard_non_regression_evidence")
+            if isinstance(discard_evidence, dict):
+                reason = str(discard_evidence.get("decision_record_reason_code", "")).strip()
+        reason = reason or "unspecified"
         if run_id:
             telemetry_reason_by_run_id[run_id] = reason
         rel_path = report_path(vault, telemetry_path)

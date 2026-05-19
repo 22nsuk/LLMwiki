@@ -188,6 +188,73 @@ class GoalRuntimeRunnerTests(unittest.TestCase):
         self.assertEqual([event["run_status"] for event in audit_events], ["running", "failed"])
         self.assertEqual(audit_events[-1]["writer"], "ops.scripts.goal_runtime_runner")
 
+    def test_runner_preserves_usage_limit_retry_after_in_goal_status(self) -> None:
+        run_id = "run-usage-limited"
+        run_dir = self.vault / "runs" / run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / "worker.stderr.txt").write_text(
+            "ERROR: You've hit your usage limit. Try again at May 17th, 2026 12:29 PM.\n",
+            encoding="utf-8",
+        )
+        (run_dir / "worker-executor-report.json").write_text(
+            json.dumps(
+                {
+                    "role": "worker",
+                    "status": "fail",
+                    "artifacts": {"stderr": f"runs/{run_id}/worker.stderr.txt"},
+                    "diagnostics": {
+                        "notes": [
+                            "codex exec blocked by usage limit; "
+                            "retry_after=May 17th, 2026 12:29 PM"
+                        ]
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        process = FakeProcess(
+            communicate_side_effect=[
+                (
+                    json.dumps(
+                        {
+                            "stop_reason": "executor_usage_limited",
+                            "run_ids": [run_id],
+                        }
+                    )
+                    + "\n",
+                    "",
+                )
+            ]
+        )
+        process.returncode = 0
+
+        exit_code = run_goal_runtime_command(
+            GoalRuntimeRunnerRequest(
+                vault=self.vault,
+                command_argv=["python", "-m", "ops.scripts.auto_improve_loop"],
+                run_id="20260517-trial",
+                goal_contract_path="ops/reports/codex-goal-contract.json",
+                result_out="tmp/session-result.json",
+                heartbeat_interval_seconds=1,
+                checkpoint_interval_seconds=2,
+                timeout_seconds=5,
+                context=fixed_context(),
+                backend=FakeProcessBackend(process),
+                monotonic_clock=SteppedClock([0.0, 0.0, 0.0]),
+            )
+        )
+
+        self.assertEqual(exit_code, 0)
+        status = json.loads(
+            (self.vault / "ops" / "reports" / "goal-run-status.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(status["observability"]["last_backoff_until"], "2026-05-17T12:29:00Z")
+        self.assertEqual(status["health"]["backoff_status"], "active")
+        self.assertEqual(
+            status["observability"]["backoff_reason"],
+            "executor_usage_limited; retry_after_source=May 17th, 2026 12:29 PM",
+        )
+
     def test_runner_executes_due_periodic_checkpoint_commands_before_status_write(self) -> None:
         process = FakeProcess(
             communicate_side_effect=[

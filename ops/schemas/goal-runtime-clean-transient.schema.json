@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Goal Runtime Transient Cleanup",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "status",
+    "status_report_path",
+    "protected_paths",
+    "summary",
+    "cleanup_candidates"
+  ],
+  "properties": {
+    "$schema": { "const": "ops/schemas/goal-runtime-clean-transient.schema.json" },
+    "artifact_kind": { "const": "goal_runtime_clean_transient" },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "producer": { "const": "ops.scripts.goal_runtime_clean_transient" },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": {
+      "type": "string",
+      "enum": ["current", "archived", "stale", "unknown"]
+    },
+    "retention_policy": { "const": "canonical_report" },
+    "encoding": { "const": "utf-8" },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown", "invalid"] },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "vault": { "type": "string" },
+    "status": { "type": "string", "enum": ["pass", "attention", "fail"] },
+    "status_report_path": { "type": "string", "minLength": 1 },
+    "protected_paths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apply",
+        "candidate_count",
+        "removable_count",
+        "removed_count",
+        "would_remove_count",
+        "skipped_protected_count",
+        "failed_count"
+      ],
+      "properties": {
+        "apply": { "type": "boolean" },
+        "candidate_count": { "type": "integer", "minimum": 0 },
+        "removable_count": { "type": "integer", "minimum": 0 },
+        "removed_count": { "type": "integer", "minimum": 0 },
+        "would_remove_count": { "type": "integer", "minimum": 0 },
+        "skipped_protected_count": { "type": "integer", "minimum": 0 },
+        "failed_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "cleanup_candidates": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/cleanup_candidate" }
+    }
+  },
+  "$defs": {
+    "cleanup_candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "category",
+        "reason",
+        "path_type",
+        "protected",
+        "existed_before",
+        "exists_after",
+        "action",
+        "error"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "category": {
+          "type": "string",
+          "enum": [
+            "obsolete_tracked_goal_surface",
+            "legacy_runtime_event_log",
+            "stale_goal_session_result",
+            "stale_goal_run_local_tree",
+            "stale_tmp_tree"
+          ]
+        },
+        "reason": { "type": "string", "minLength": 1 },
+        "path_type": { "type": "string", "enum": ["file", "directory", "missing"] },
+        "protected": { "type": "boolean" },
+        "existed_before": { "type": "boolean" },
+        "exists_after": { "type": "boolean" },
+        "action": {
+          "type": "string",
+          "enum": ["would_remove", "removed", "skipped_protected", "failed"]
+        },
+        "error": { "type": "string" }
+      }
+    }
+  }
+}

@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
@@ -89,6 +89,17 @@ def _canonical_json_digest(payload: Mapping[str, Any]) -> str:
 
 def goal_run_artifact_paths(run_id: str, *, status_report_path: str = DEFAULT_STATUS_PATH) -> GoalRunArtifactPaths:
     run_root = DEFAULT_RUN_ROOT_TEMPLATE.format(run_id=run_id)
+    status_path = PurePosixPath(status_report_path)
+    expected_state_prefix = f"{run_root}/state/"
+    if status_report_path.startswith(expected_state_prefix):
+        state_root = status_path.parent.as_posix()
+        return GoalRunArtifactPaths(
+            status_report_path=status_report_path,
+            status_markdown_path=f"{state_root}/status.md",
+            audit_log_path=f"{state_root}/audit-log.jsonl",
+            resume_metadata_path=f"{state_root}/resume-metadata.json",
+            checkpoint_command_log_path=f"{state_root}/checkpoint-command-events.jsonl",
+        )
     return GoalRunArtifactPaths(
         status_report_path=status_report_path,
         status_markdown_path=f"{run_root}/status.md",
@@ -279,6 +290,8 @@ def build_report(
     )
     backend = FileGoalBackend(vault=vault, contract_path=request.goal_contract_path)
     contract = backend.get_goal()
+    contract_backend = mapping_field(contract, "goal_backend")
+    backend_name = str(contract_backend.get("backend_type", "")).strip() or backend.name
     promotion_guard = contract.get("promotion_guard")
     if not isinstance(promotion_guard, dict):
         promotion_guard = {}
@@ -348,7 +361,7 @@ def build_report(
             ],
             file_inputs={"goal_contract": request.goal_contract_path},
             text_inputs={"session_synopsis_link": SESSION_SYNOPSIS_PATH},
-            source_tree_excluded_files=(DEFAULT_STATUS_PATH,),
+            source_tree_excluded_files=(request.status_report_path,),
         ),
         "goal": {
             "contract_path": request.goal_contract_path,
@@ -358,7 +371,7 @@ def build_report(
             "objective": str(contract.get("objective", "")).strip(),
             "goal_status": str(contract.get("status", "")).strip(),
             "backend": {
-                "name": backend.name,
+                "name": backend_name,
                 "process_persistent": backend.process_persistent,
             },
         },

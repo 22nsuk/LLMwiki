@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-15T19:07:11Z",
+  "generated_at": "2026-05-19T16:10:31Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
+  "source_tree_fingerprint": "81d6acebfae87091e9e60a9ee0042c2398a7159a5bd603b84b77b14fe4c10533",
   "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "98e00443d1144a4458b776ed867d959709ccbd8da62963a298681d70251b1db4",
-    "active_external_reports": "38eb5c6ae18c4b3a3af0014919f7f0e05d691306f2583ce961cecbf59584375d",
-    "action_catalog": "a0b1cc538b6d99b4f80501952b02c9e7a65c560cb44c6a4dc3ddfedc61ac022b"
+    "source_paths": "950d52b6d82ae018bbf55e537ed59bfa33da8dab31407b495abe69e2cfe628a2",
+    "active_external_reports": "2ba8d057cedd1da003af3793315f114e269959de3d7fa294f69a51e69c97abfe",
+    "action_catalog": "6cf299a899fcc1b22432c36188c37e05c090b0af5e917e043fd7e739cbe0cf7b"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T19:07:11Z"
+    "checked_at": "2026-05-19T16:10:31Z"
   },
   "vault": ".",
   "status": "attention",
@@ -29,12 +29,12 @@
     "version": 4
   },
   "summary": {
-    "active_report_count": 3,
+    "active_report_count": 5,
     "archived_report_count": 63,
-    "action_item_count": 19,
-    "implemented_count": 10,
+    "action_item_count": 24,
+    "implemented_count": 21,
     "partially_automated_count": 0,
-    "requires_release_run_verification_count": 9,
+    "requires_release_run_verification_count": 3,
     "planned_count": 0,
     "unmatched_active_report_count": 0,
     "reference_manifest_alignment_status": "current",
@@ -44,17 +44,44 @@
   "reference_manifest_alignment": {
     "status": "current",
     "expected_reference_paths": [
+      "external-reports/llmwiki_code_change_implementation_report_20260516.md",
       "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+      "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
       "external-reports/llmwiki_review_reconciled_improvement_report.md"
     ],
     "manifest_reference_paths": [
+      "external-reports/llmwiki_code_change_implementation_report_20260516.md",
       "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+      "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
       "external-reports/llmwiki_review_reconciled_improvement_report.md"
     ],
     "missing_active_report_paths": [],
     "stale_reference_paths": []
   },
   "active_report_coverage": [
+    {
+      "path": "external-reports/llmwiki_code_change_implementation_report_20260516.md",
+      "report_type": "narrative_report",
+      "priority_mentions": {
+        "P0": 0,
+        "P1": 0,
+        "P2": 0
+      },
+      "matched_action_ids": [
+        "script_output_surfaces_currentness",
+        "outcome_provenance_gate_policy",
+        "source_package_distribution_binding",
+        "release_evidence_bundle_and_attestation",
+        "full_suite_evidence_currentness",
+        "goal_contract_schema",
+        "codex_goal_adapter",
+        "goal_run_status_audit_resume",
+        "command_heartbeat_observability",
+        "goal_executor_backoff_observability",
+        "sealed_preflight_canonicalization"
+      ],
+      "matched_action_count": 11
+    },
     {
       "path": "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
       "report_type": "narrative_report",
@@ -72,7 +99,10 @@
         "promotion_truth_ladder",
         "goal_contract_schema",
         "codex_goal_adapter",
+        "codex_goal_prompt_generator",
+        "auto_improve_goal_contract_input",
         "goal_run_status_audit_resume",
+        "goal_execution_ladder_profiles",
         "command_heartbeat_observability",
         "selected_contract_currentness_gate",
         "sealed_preflight_canonicalization",
@@ -80,7 +110,36 @@
         "remediation_backlog",
         "git_worktree_goal_guard"
       ],
-      "matched_action_count": 15
+      "matched_action_count": 18
+    },
+    {
+      "path": "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
+      "report_type": "narrative_report",
+      "priority_mentions": {
+        "P0": 11,
+        "P1": 7,
+        "P2": 4
+      },
+      "matched_action_ids": [
+        "script_output_surfaces_currentness",
+        "external_report_lifecycle",
+        "source_package_distribution_binding",
+        "release_evidence_bundle_and_attestation",
+        "promotion_truth_ladder",
+        "goal_contract_schema",
+        "codex_goal_adapter",
+        "codex_goal_prompt_generator",
+        "auto_improve_goal_contract_input",
+        "goal_run_status_audit_resume",
+        "goal_execution_ladder_profiles",
+        "command_heartbeat_observability",
+        "sealed_preflight_canonicalization",
+        "negative_learning_ledger",
+        "remediation_backlog",
+        "git_worktree_goal_guard",
+        "goal_runtime_transient_cleanup_gate"
+      ],
+      "matched_action_count": 17
     },
     {
       "path": "external-reports/llmwiki_review_reconciled_improvement_report.md",
@@ -123,6 +182,8 @@
       "theme": "writer output surface currentness",
       "current_status": "implemented",
       "source_report_paths": [
+        "external-reports/llmwiki_code_change_implementation_report_20260516.md",
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
         "external-reports/llmwiki_review_reconciled_improvement_report.md"
       ],
       "recommended_target": "script-output-surfaces",
@@ -209,6 +270,7 @@
       "theme": "outcome/provenance policy escalation",
       "current_status": "implemented",
       "source_report_paths": [
+        "external-reports/llmwiki_code_change_implementation_report_20260516.md",
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
         "external-reports/llmwiki_review_reconciled_improvement_report.md"
       ],
@@ -228,6 +290,7 @@
       "theme": "active external report lifecycle",
       "current_status": "implemented",
       "source_report_paths": [
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
         "external-reports/report-reference-manifest.json"
       ],
       "recommended_target": "external-report-action-matrix",
@@ -252,7 +315,9 @@
       "theme": "source package and distribution ZIP binding",
       "current_status": "implemented",
       "source_report_paths": [
+        "external-reports/llmwiki_code_change_implementation_report_20260516.md",
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
         "external-reports/llmwiki_review_reconciled_improvement_report.md"
       ],
       "recommended_target": "release-source-package-check",
@@ -283,7 +348,9 @@
       "theme": "release evidence bundle and attestation",
       "current_status": "implemented",
       "source_report_paths": [
+        "external-reports/llmwiki_code_change_implementation_report_20260516.md",
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
         "external-reports/llmwiki_review_reconciled_improvement_report.md"
       ],
       "recommended_target": "release-evidence-closeout-sealed-dry-run",
@@ -308,6 +375,7 @@
       "theme": "full-suite evidence currentness",
       "current_status": "implemented",
       "source_report_paths": [
+        "external-reports/llmwiki_code_change_implementation_report_20260516.md",
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
         "external-reports/llmwiki_review_reconciled_improvement_report.md"
       ],
@@ -328,6 +396,7 @@
       "current_status": "implemented",
       "source_report_paths": [
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
         "external-reports/llmwiki_review_reconciled_improvement_report.md"
       ],
       "recommended_target": "auto-improve-readiness-report",
@@ -356,9 +425,11 @@
       "action_id": "goal_contract_schema",
       "priority": "P0",
       "theme": "goal contract schema for long-running auto-improve",
-      "current_status": "requires_release_run_verification",
+      "current_status": "implemented",
       "source_report_paths": [
-        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
+        "external-reports/llmwiki_code_change_implementation_report_20260516.md",
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
       ],
       "recommended_target": "codex-goal-contract",
       "evidence": [
@@ -366,6 +437,12 @@
           "path": "ops/schemas/codex-goal-contract.schema.json",
           "exists": true,
           "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/reports/codex-goal-contract.json",
+          "exists": true,
+          "status": "active",
           "producer": ""
         },
         {
@@ -380,9 +457,11 @@
       "action_id": "codex_goal_adapter",
       "priority": "P0",
       "theme": "local set_goal adapter and backend detection",
-      "current_status": "requires_release_run_verification",
+      "current_status": "implemented",
       "source_report_paths": [
-        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
+        "external-reports/llmwiki_code_change_implementation_report_20260516.md",
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
       ],
       "recommended_target": "codex-goal-client",
       "evidence": [
@@ -393,7 +472,87 @@
           "producer": ""
         },
         {
+          "path": "ops/reports/codex-goal-contract.json",
+          "exists": true,
+          "status": "active",
+          "producer": ""
+        },
+        {
           "path": "tests/test_codex_goal_client.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "codex_goal_prompt_generator",
+      "priority": "P0",
+      "theme": "goal prompt generator with promotion ban wording",
+      "current_status": "implemented",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
+      ],
+      "recommended_target": "codex-goal-prompt",
+      "evidence": [
+        {
+          "path": "ops/scripts/mechanism/codex_goal_prompt.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/schemas/codex-goal-prompt.schema.json",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/reports/codex-goal-prompt.json",
+          "exists": true,
+          "status": "attention",
+          "producer": "ops.scripts.codex_goal_prompt"
+        },
+        {
+          "path": "tests/test_codex_goal_prompt.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "auto_improve_goal_contract_input",
+      "priority": "P0",
+      "theme": "auto-improve loop goal contract input and budget ceiling",
+      "current_status": "implemented",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
+      ],
+      "recommended_target": "codex-goal-client",
+      "evidence": [
+        {
+          "path": "ops/scripts/mechanism/auto_improve_loop.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/scripts/mechanism/auto_improve_runtime.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/reports/codex-goal-contract.json",
+          "exists": true,
+          "status": "active",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_auto_improve_runtime.py",
           "exists": true,
           "status": "",
           "producer": ""
@@ -406,18 +565,14 @@
       "theme": "goal run status, audit log, checkpoint, and resume contract",
       "current_status": "requires_release_run_verification",
       "source_report_paths": [
-        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
+        "external-reports/llmwiki_code_change_implementation_report_20260516.md",
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
       ],
       "recommended_target": "auto-improve-goal-run",
       "evidence": [
         {
           "path": "ops/schemas/goal-run-status.schema.json",
-          "exists": true,
-          "status": "",
-          "producer": ""
-        },
-        {
-          "path": "ops/scripts/mechanism/auto_improve_goal_runtime.py",
           "exists": true,
           "status": "",
           "producer": ""
@@ -435,13 +590,80 @@
           "producer": ""
         },
         {
+          "path": "ops/scripts/mechanism/goal_runtime_runner.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
           "path": "ops/reports/goal-run-status.json",
           "exists": true,
-          "status": "running",
+          "status": "attention",
           "producer": "ops.scripts.goal_run_status"
         },
         {
           "path": "tests/test_goal_auto_improve_runtime.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_goal_run_status.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_goal_runtime_runner.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "goal_execution_ladder_profiles",
+      "priority": "P0",
+      "theme": "bounded goal execution ladder profile verification",
+      "current_status": "requires_release_run_verification",
+      "source_report_paths": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
+      ],
+      "recommended_target": "auto-improve-goal-ladder-run",
+      "evidence": [
+        {
+          "path": "mk/mechanism.mk",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/schemas/codex-goal-contract.schema.json",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/scripts/mechanism/goal_run_status.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/scripts/mechanism/goal_profile_verification.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/scripts/mechanism/goal_runtime_profile.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_goal_profile_verification.py",
           "exists": true,
           "status": "",
           "producer": ""
@@ -458,9 +680,11 @@
       "action_id": "command_heartbeat_observability",
       "priority": "P1",
       "theme": "long command heartbeat and quiet-run observability",
-      "current_status": "requires_release_run_verification",
+      "current_status": "implemented",
       "source_report_paths": [
-        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
+        "external-reports/llmwiki_code_change_implementation_report_20260516.md",
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
       ],
       "recommended_target": "test-subprocess",
       "evidence": [
@@ -477,7 +701,73 @@
           "producer": ""
         },
         {
+          "path": "ops/scripts/core/source_package_clean_extract.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/schemas/source-package-clean-extract.schema.json",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/reports/source-package-clean-extract.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.source_package_clean_extract"
+        },
+        {
           "path": "tests/test_command_runtime_heartbeat.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_source_package_clean_extract.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "goal_executor_backoff_observability",
+      "priority": "P1",
+      "theme": "goal executor retry-after backoff and status observability",
+      "current_status": "requires_release_run_verification",
+      "source_report_paths": [
+        "external-reports/llmwiki_code_change_implementation_report_20260516.md"
+      ],
+      "recommended_target": "auto-improve-goal-run",
+      "evidence": [
+        {
+          "path": "ops/scripts/mechanism/goal_runtime_backoff.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/scripts/mechanism/goal_runtime_runner.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/schemas/goal-run-status.schema.json",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_goal_runtime_runner.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_goal_run_status.py",
           "exists": true,
           "status": "",
           "producer": ""
@@ -488,7 +778,7 @@
       "action_id": "selected_contract_currentness_gate",
       "priority": "P0",
       "theme": "selected contract currentness gate distinct from artifact freshness",
-      "current_status": "requires_release_run_verification",
+      "current_status": "implemented",
       "source_report_paths": [
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
       ],
@@ -499,6 +789,18 @@
           "exists": true,
           "status": "",
           "producer": ""
+        },
+        {
+          "path": "ops/reports/auto-improve-readiness.json",
+          "exists": true,
+          "status": "",
+          "producer": "ops.scripts.auto_improve_readiness_runtime"
+        },
+        {
+          "path": "ops/reports/test-execution-summary.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.test_execution_summary"
         },
         {
           "path": "tests/test_auto_improve_readiness_release_authority_runtime.py",
@@ -512,12 +814,32 @@
       "action_id": "sealed_preflight_canonicalization",
       "priority": "P0",
       "theme": "sealed authority preflight clean-required canonical evidence",
-      "current_status": "requires_release_run_verification",
+      "current_status": "implemented",
       "source_report_paths": [
-        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
+        "external-reports/llmwiki_code_change_implementation_report_20260516.md",
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
       ],
       "recommended_target": "release-authority-sealed-preflight",
       "evidence": [
+        {
+          "path": "mk/release.mk",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/scripts/mechanism/auto_improve_readiness_constants_runtime.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/reports/release-closeout-sealed-rehearsal-check.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.release_closeout_sealed_rehearsal_check"
+        },
         {
           "path": "ops/scripts/release/release_closeout_sealed_rehearsal_check.py",
           "exists": true,
@@ -535,6 +857,18 @@
           "exists": true,
           "status": "",
           "producer": ""
+        },
+        {
+          "path": "tests/test_auto_improve_readiness_runtime.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_makefile_static_gates.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
         }
       ]
     },
@@ -542,9 +876,10 @@
       "action_id": "negative_learning_ledger",
       "priority": "P2",
       "theme": "standalone negative learning ledger",
-      "current_status": "requires_release_run_verification",
+      "current_status": "implemented",
       "source_report_paths": [
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
         "external-reports/llmwiki_review_reconciled_improvement_report.md"
       ],
       "recommended_target": "self-improvement-negative-lessons",
@@ -573,9 +908,10 @@
       "action_id": "remediation_backlog",
       "priority": "P1",
       "theme": "remediation backlog for repeated blockers",
-      "current_status": "requires_release_run_verification",
+      "current_status": "implemented",
       "source_report_paths": [
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
         "external-reports/llmwiki_review_reconciled_improvement_report.md"
       ],
       "recommended_target": "remediation-backlog",
@@ -589,7 +925,7 @@
         {
           "path": "ops/reports/remediation-backlog.json",
           "exists": true,
-          "status": "pass",
+          "status": "attention",
           "producer": "ops.scripts.remediation_backlog"
         },
         {
@@ -604,9 +940,10 @@
       "action_id": "git_worktree_goal_guard",
       "priority": "P1",
       "theme": "Git worktree and ZIP mode guard for long goal runs",
-      "current_status": "requires_release_run_verification",
+      "current_status": "implemented",
       "source_report_paths": [
-        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
       ],
       "recommended_target": "auto-improve-goal-preflight",
       "evidence": [
@@ -617,7 +954,61 @@
           "producer": ""
         },
         {
+          "path": "ops/schemas/goal-worktree-guard.schema.json",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tmp/goal-worktree-guard.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.goal_worktree_guard"
+        },
+        {
           "path": "tests/test_goal_worktree_guard.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "goal_runtime_transient_cleanup_gate",
+      "priority": "P1",
+      "theme": "transient artifact cleanup gate for long goal runs",
+      "current_status": "implemented",
+      "source_report_paths": [
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
+      ],
+      "recommended_target": "long-run-preflight-clean",
+      "evidence": [
+        {
+          "path": "mk/mechanism.mk",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/scripts/mechanism/goal_runtime_clean_transient.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/schemas/goal-runtime-clean-transient.schema.json",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tmp/goal-runtime-clean-transient.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.goal_runtime_clean_transient"
+        },
+        {
+          "path": "tests/test_goal_runtime_clean_transient.py",
           "exists": true,
           "status": "",
           "producer": ""

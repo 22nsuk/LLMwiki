@@ -15,7 +15,7 @@ from ops.scripts.promotion_decision_registry_runtime import (
 )
 
 TERMINAL_NON_BLOCKING_OUTCOMES = frozenset({"promoted"})
-TERMINAL_SUCCESS_OUTCOMES = frozenset({"promoted", "discarded"})
+TERMINAL_SUCCESS_OUTCOMES = frozenset({"promoted"})
 SESSION_CONTEXT_AVAILABLE = "session_context_available"
 SESSION_CONTEXT_PARTIAL = "partial_context"
 SESSION_CONTEXT_MISSING = "no_attempt_context"

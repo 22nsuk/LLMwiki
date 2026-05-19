@@ -181,6 +181,9 @@
     "decision_record": {
       "$ref": "#/$defs/decision_record"
     },
+    "discard_non_regression_evidence": {
+      "$ref": "#/$defs/discard_non_regression_evidence"
+    },
     "finalized": {
       "type": "boolean"
     },
@@ -189,6 +192,81 @@
     }
   },
   "$defs": {
+    "discard_non_regression_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "promotion_report_source"
+            ],
+            "properties": {
+              "promotion_report_source": {
+                "enum": [
+                  "path",
+                  "default_path"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "promotion_report"
+            ]
+          }
+        }
+      ],
+      "required": [
+        "promotion_report_source",
+        "candidate_eval_pass",
+        "eval_score_improves",
+        "lint_non_regression",
+        "structural_complexity_non_regression",
+        "tests_non_regression",
+        "blocking_check_ids",
+        "decision_record_reason_code"
+      ],
+      "properties": {
+        "promotion_report_source": {
+          "type": "string",
+          "enum": [
+            "inline",
+            "path",
+            "default_path"
+          ]
+        },
+        "promotion_report": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_eval_pass": {
+          "type": "boolean"
+        },
+        "eval_score_improves": {
+          "type": "boolean"
+        },
+        "lint_non_regression": {
+          "type": "boolean"
+        },
+        "structural_complexity_non_regression": {
+          "type": "boolean"
+        },
+        "tests_non_regression": {
+          "type": "boolean"
+        },
+        "blocking_check_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "decision_record_reason_code": {
+          "type": "string"
+        }
+      }
+    },
     "workspace_preparation": {
       "type": "object",
       "additionalProperties": false,

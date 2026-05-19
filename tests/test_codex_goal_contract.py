@@ -38,7 +38,13 @@ def sample_goal_contract() -> dict[str, Any]:
             "profile_ladder": [
                 {
                     "profile": "30m_trial",
-                    "required_before_next_profile": "trial evidence stays promotion-blocked",
+                    "max_wall_clock_seconds": 1800,
+                    "max_proposals": 1,
+                    "max_consecutive_failures": 1,
+                    "required_before_next_profile": (
+                        "one-proposal trial evidence includes runtime maintenance "
+                        "and stays promotion-blocked"
+                    ),
                 }
             ],
         },

@@ -68,12 +68,21 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["profile", "required_before_next_profile"],
+            "required": [
+              "profile",
+              "max_wall_clock_seconds",
+              "max_proposals",
+              "max_consecutive_failures",
+              "required_before_next_profile"
+            ],
             "properties": {
               "profile": {
                 "type": "string",
                 "enum": ["30m_trial", "6h_ramp", "2d_candidate", "5d_sustained"]
               },
+              "max_wall_clock_seconds": { "type": "integer", "minimum": 1 },
+              "max_proposals": { "type": "integer", "minimum": 1 },
+              "max_consecutive_failures": { "type": "integer", "minimum": 1 },
               "required_before_next_profile": { "type": "string", "minLength": 1 }
             }
           }
@@ -122,7 +131,7 @@
       "properties": {
         "backend_type": {
           "type": "string",
-          "enum": ["file", "app_server"]
+          "enum": ["file", "run_local_file", "app_server"]
         },
         "process_persistent": { "type": "boolean", "const": true },
         "storage_path": { "type": "string", "minLength": 1 }

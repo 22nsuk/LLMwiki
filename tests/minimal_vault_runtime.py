@@ -30,6 +30,10 @@ SCHEMA_PATHS = {
     "run-ledger.schema.json": REPO_ROOT / "ops" / "schemas" / "run-ledger.schema.json",
     "improvement-observations.schema.json": REPO_ROOT / "ops" / "schemas" / "improvement-observations.schema.json",
     "changed-files-manifest.schema.json": REPO_ROOT / "ops" / "schemas" / "changed-files-manifest.schema.json",
+    "clean-fixture-regeneration-guard.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "clean-fixture-regeneration-guard.schema.json",
     "shadow-apply-report.schema.json": REPO_ROOT / "ops" / "schemas" / "shadow-apply-report.schema.json",
     "rollback-rehearsal-report.schema.json": REPO_ROOT
     / "ops"
@@ -65,6 +69,14 @@ SCHEMA_PATHS = {
     / "auto-improve-readiness-report.schema.json",
     "codex-goal-contract.schema.json": REPO_ROOT / "ops" / "schemas" / "codex-goal-contract.schema.json",
     "goal-run-status.schema.json": REPO_ROOT / "ops" / "schemas" / "goal-run-status.schema.json",
+    "goal-runtime-clean-transient.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "goal-runtime-clean-transient.schema.json",
+    "goal-runtime-fixed-point-check.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "goal-runtime-fixed-point-check.schema.json",
     "goal-resume-metadata.schema.json": REPO_ROOT
     / "ops"
     / "schemas"

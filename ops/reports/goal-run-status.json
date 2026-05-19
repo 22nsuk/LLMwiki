@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/goal-run-status.schema.json",
   "artifact_kind": "goal_run_status",
-  "generated_at": "2026-05-17T20:10:31Z",
+  "generated_at": "2026-05-19T16:10:23Z",
   "producer": "ops.scripts.goal_run_status",
   "source_command": "python -m ops.scripts.goal_run_status --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "6828c2ad8f506ceadafd05b1a96079e419e1e5122ae8eb0bcb59e586b0b567a1",
+  "source_tree_fingerprint": "c7decce364a1c66ff84e473994344985569b4a9f31ac6c7be34ab4c7652cb41b",
   "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "a0076b65caa987558a05bd5653b0a7df5eb16b0e26cd3185bc1dd64c06030a41",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "c7d0a54810881c6b09557623e89fadce183534a8f146eee81454a532edde6567",
-    "goal_contract": "2be9e96ed819096a057624527bbd7d2630457e6851d1d93c2db96fd23ad0cf56",
+    "source_paths": "e7e8a33fb0467e2db81d86b379b22e112b2080f84ef7da407ed3bc6e19fde649",
+    "goal_contract": "9e2057653cdb243acd10e369f7f9911fe8ffe7b05ffbf6c2f4b7baf319d7c4a8",
     "session_synopsis_link": "7cbf10072f9b38b0b7b209442fe7e61976148ae82e700c307dc8c735ff054848"
   },
   "schema_version": 1,
@@ -20,17 +20,17 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T20:10:31Z"
+    "checked_at": "2026-05-19T16:10:23Z"
   },
   "goal": {
-    "contract_path": "ops/reports/codex-goal-contract.json",
-    "contract_sha256": "9b16ed8ca4c74290c204799f4fbbe721609429a1b5b51e75ecb1b67caa2e887d",
+    "contract_path": "runs/goal-auto-improve-trial/state/codex-goal-contract.json",
+    "contract_sha256": "df2c565010d904a9c3dcaae186e068df9ebfdc3c0909de68981629ab800adbd2",
     "contract_status": "loaded",
     "contract_id": "auto-improve-goal",
     "objective": "Build a bounded auto-improve goal runtime only after profile-ladder evidence, release authority, and promotion guards are current.",
     "goal_status": "active",
     "backend": {
-      "name": "file",
+      "name": "run_local_file",
       "process_persistent": true
     }
   },
@@ -38,15 +38,15 @@
     "run_id": "auto-improve-trial",
     "status": "blocked",
     "profile": "30m_trial",
-    "started_at": "2026-05-17T20:10:31Z",
-    "updated_at": "2026-05-17T20:10:31Z",
+    "started_at": "2026-05-19T16:10:23Z",
+    "updated_at": "2026-05-19T16:10:23Z",
     "completed_at": ""
   },
   "observability": {
     "heartbeat_interval_seconds": 300,
     "checkpoint_interval_seconds": 1800,
-    "last_heartbeat_at": "2026-05-17T20:10:31Z",
-    "last_checkpoint_at": "2026-05-17T20:10:31Z",
+    "last_heartbeat_at": "2026-05-19T16:10:23Z",
+    "last_checkpoint_at": "2026-05-19T16:10:23Z",
     "last_command_heartbeat_at": "",
     "quiet_seconds": 0,
     "command_observation_mode": "",
@@ -69,8 +69,8 @@
     "command_heartbeat_status": "not_recorded",
     "backoff_status": "inactive",
     "resume_status": "not_requested",
-    "promotion_status": "allowed",
-    "can_promote_result": true
+    "promotion_status": "blocked",
+    "can_promote_result": false
   },
   "profile_ladder": {
     "status": "incomplete",
@@ -88,7 +88,7 @@
         "minimum_elapsed_seconds": 1800,
         "verified": false,
         "active": true,
-        "required_before_next_profile": "status, audit, checkpoint, heartbeat, and no promotion claim",
+        "required_before_next_profile": "30m wall-clock one-proposal trial evidence with a successful improvement, repeated runtime maintenance work, status, audit, checkpoint, heartbeat, and no promotion claim",
         "evidence_paths": [
           {
             "path": "ops/reports/goal-run-status.json",
@@ -111,7 +111,7 @@
         "minimum_elapsed_seconds": 21600,
         "verified": false,
         "active": false,
-        "required_before_next_profile": "30m trial evidence plus current release/readiness blockers",
+        "required_before_next_profile": "30m trial evidence plus 6h repeated improvement session evidence and current release/readiness blockers",
         "evidence_paths": [
           {
             "path": "ops/reports/goal-run-status.json",
@@ -139,7 +139,7 @@
         "minimum_elapsed_seconds": 172800,
         "verified": false,
         "active": false,
-        "required_before_next_profile": "6h ramp evidence plus resume and backoff evidence",
+        "required_before_next_profile": "6h ramp evidence plus 2d repeated improvement session evidence, resume, and backoff evidence",
         "evidence_paths": [
           {
             "path": "ops/reports/goal-run-status.json",
@@ -168,7 +168,7 @@
         "minimum_elapsed_seconds": 432000,
         "verified": false,
         "active": false,
-        "required_before_next_profile": "2d candidate evidence plus sealed authority clean pass",
+        "required_before_next_profile": "2d candidate evidence plus 5d repeated improvement session evidence and sealed authority clean pass",
         "evidence_paths": [
           {
             "path": "ops/reports/goal-run-status.json",
@@ -208,7 +208,7 @@
       {
         "checkpoint_id": "checkpoint_6h",
         "due_after_seconds": 21600,
-        "due_at": "2026-05-18T02:10:31Z",
+        "due_at": "2026-05-19T22:10:23Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -221,19 +221,19 @@
           "last_event_at": "",
           "command_count": 3,
           "failed_command_count": 0,
-          "log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl"
+          "log_path": "runs/goal-auto-improve-trial/state/checkpoint-command-events.jsonl"
         },
         "evidence_paths": [
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "status": "present",
-            "generated_at": "2026-05-17T20:10:30Z",
+            "generated_at": "2026-05-19T16:10:22Z",
             "freshness_status": "not_due"
           },
           {
             "path": "ops/reports/session-synopsis.json",
             "status": "present",
-            "generated_at": "2026-05-17T20:07:32Z",
+            "generated_at": "2026-05-19T16:10:20Z",
             "freshness_status": "not_due"
           }
         ]
@@ -241,7 +241,7 @@
       {
         "checkpoint_id": "checkpoint_12h",
         "due_after_seconds": 43200,
-        "due_at": "2026-05-18T08:10:31Z",
+        "due_at": "2026-05-20T04:10:23Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -253,13 +253,13 @@
           "last_event_at": "",
           "command_count": 2,
           "failed_command_count": 0,
-          "log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl"
+          "log_path": "runs/goal-auto-improve-trial/state/checkpoint-command-events.jsonl"
         },
         "evidence_paths": [
           {
             "path": "ops/reports/test-execution-summary.json",
             "status": "present",
-            "generated_at": "2026-05-17T17:45:40Z",
+            "generated_at": "2026-05-19T16:08:01Z",
             "freshness_status": "not_due"
           },
           {
@@ -273,7 +273,7 @@
       {
         "checkpoint_id": "checkpoint_24h",
         "due_after_seconds": 86400,
-        "due_at": "2026-05-18T20:10:31Z",
+        "due_at": "2026-05-20T16:10:23Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -285,13 +285,13 @@
           "last_event_at": "",
           "command_count": 2,
           "failed_command_count": 0,
-          "log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl"
+          "log_path": "runs/goal-auto-improve-trial/state/checkpoint-command-events.jsonl"
         },
         "evidence_paths": [
           {
             "path": "ops/reports/public-check-summary.json",
             "status": "present",
-            "generated_at": "2026-05-17T20:05:38Z",
+            "generated_at": "2026-05-19T12:38:18Z",
             "freshness_status": "not_due"
           },
           {
@@ -308,27 +308,34 @@
     "link_status": "linked",
     "report_path": "ops/reports/session-synopsis.json",
     "status": "attention",
-    "generated_at": "2026-05-17T20:07:32Z",
+    "generated_at": "2026-05-19T16:10:20Z",
     "recent_blocker_count": 5,
     "evidence_gap_count": 3,
-    "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Refresh sealed authority preflight evidence, then rerun make auto-improve-readiness."
+    "next_action": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
   },
   "artifacts": {
-    "status_report_path": "ops/reports/goal-run-status.json",
-    "status_markdown_path": "runs/goal-auto-improve-trial/status.md",
-    "audit_log_path": "runs/goal-auto-improve-trial/audit-log.jsonl",
-    "resume_metadata_path": "runs/goal-auto-improve-trial/resume-metadata.json",
-    "checkpoint_command_log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl"
+    "status_report_path": "runs/goal-auto-improve-trial/state/goal-run-status.json",
+    "status_markdown_path": "runs/goal-auto-improve-trial/state/status.md",
+    "audit_log_path": "runs/goal-auto-improve-trial/state/audit-log.jsonl",
+    "resume_metadata_path": "runs/goal-auto-improve-trial/state/resume-metadata.json",
+    "checkpoint_command_log_path": "runs/goal-auto-improve-trial/state/checkpoint-command-events.jsonl"
   },
   "promotion_guard": {
-    "can_promote_result": true,
-    "promotion_blockers": [],
+    "can_promote_result": false,
+    "promotion_blockers": [
+      "execution_blocked_by_no_runnable_proposal",
+      "learning_blocked_by_execution_not_runnable",
+      "promotion_blocked_by_remediation_backlog_open"
+    ],
     "sealed_authority_clean": true,
     "profile_verified": "unverified",
     "sustained_runtime_claimed": false,
     "no_sustained_claim_before_profile_verified": true
   },
   "blockers": [
+    "execution_blocked_by_no_runnable_proposal",
+    "learning_blocked_by_execution_not_runnable",
+    "promotion_blocked_by_remediation_backlog_open",
     "profile ladder incomplete"
   ],
   "status": "attention"

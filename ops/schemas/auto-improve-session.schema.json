@@ -824,6 +824,160 @@
       },
       "additionalProperties": false
     },
+    "maintenance": {
+      "type": "object",
+      "required": [
+        "mode",
+        "status",
+        "started_at",
+        "completed_at",
+        "target_elapsed_seconds",
+        "started_elapsed_seconds",
+        "interval_seconds",
+        "expected_min_cycle_count",
+        "cycle_count",
+        "meaningful_cycle_count",
+        "last_cycle_elapsed_seconds",
+        "stop_reason",
+        "cycles"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "proposal_budget_runtime_maintenance"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "running",
+            "complete"
+          ]
+        },
+        "started_at": {
+          "type": "string"
+        },
+        "completed_at": {
+          "type": "string"
+        },
+        "target_elapsed_seconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "started_elapsed_seconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "interval_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "expected_min_cycle_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cycle_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "meaningful_cycle_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "last_cycle_elapsed_seconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stop_reason": {
+          "type": "string"
+        },
+        "cycles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "index",
+              "observed_at",
+              "cycle_started_elapsed_seconds",
+              "elapsed_seconds",
+              "duration_ms",
+              "status",
+              "work_items",
+              "mechanism_review_report",
+              "mutation_proposal_report",
+              "readiness_report",
+              "session_report",
+              "runnable_proposal_count",
+              "queue_snapshot"
+            ],
+            "properties": {
+              "index": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "observed_at": {
+                "type": "string",
+                "minLength": 1
+              },
+              "cycle_started_elapsed_seconds": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "elapsed_seconds": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "duration_ms": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pass"
+                ]
+              },
+              "work_items": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "mechanism_review_report": {
+                "type": "string",
+                "minLength": 1
+              },
+              "mutation_proposal_report": {
+                "type": "string",
+                "minLength": 1
+              },
+              "readiness_report": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_report": {
+                "type": "string",
+                "minLength": 1
+              },
+              "runnable_proposal_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "queue_snapshot": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "path": {
       "type": "string"
     },

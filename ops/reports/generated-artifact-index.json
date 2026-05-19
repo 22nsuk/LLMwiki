@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-17T20:59:36Z",
+  "generated_at": "2026-05-19T16:10:33Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "9350e520a440ddc94e56598481494dc5eab93760012b772a58bdd0a0aa8bd207",
+  "source_tree_fingerprint": "81d6acebfae87091e9e60a9ee0042c2398a7159a5bd603b84b77b14fe4c10533",
   "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "834eb6cfec958f35d3989a742cfd58414bb50bb75040ab9283e4c90ed61f1657",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "e9a129e181ae8141c2c3196f0d9daf48a938e2776ef50f432d8415ba7ed60590",
-    "run_promotion_reports": "47308e6ead45e6366547bffe91c993d0d224544c2a4fb589d598b124c76a0a5f",
-    "external_report_inventory": "af4123132bc65c39b81a2bd406e4867e40c55695efe12aff35d9311f042d6506",
+    "source_paths": "3090e8825cf76941fff0428cae33626bf250f99e0ab497ee5c0c5883b415cffe",
+    "run_promotion_reports": "759746b887243b2bbe67c310b4c968cdf7dec18360771a7e6397dcefe580c184",
+    "external_report_inventory": "848cfdce298509e95eb6f37bfd4b7f780b2e64a7cca20648d8f6f277d5c9f291",
     "operator_report_inventory": "0479590a186415fa72ba934ab4431828124b8ca576b06322a6eae193e9627721",
-    "ops_report_inventory": "779ebd78e34aa60638daa0c27b33a99df58dd73b1cb38218a8831faf28588343",
-    "task_improvement_observation_inventory": "e5afbe277de7c757caecfe465586864c6e6839f5792c4af9a9ee9004bdef7702"
+    "ops_report_inventory": "42888319f0fa00ed45687b2461bda3d2739588b931ba8c665afa1e1be992c762",
+    "task_improvement_observation_inventory": "0adf67e9570e135d4beea5ddae2a2fb09600ac1b1e92e7945f535d5a415cd24c"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T20:59:36Z"
+    "checked_at": "2026-05-19T16:10:33Z"
   },
   "vault": ".",
   "policy": {
@@ -59,24 +59,26 @@
   ],
   "now": [
     "90 canonical artifact(s) are currently indexed.",
-    "1 archive candidate(s) remain in active namespaces."
+    "4 archive candidate(s) remain in active namespaces."
   ],
   "next": [
     "Archive the root-level candidates after confirming their content lifecycle decision and linked replacement evidence."
   ],
   "why_blocked": [
-    "All structured action themes from this external report are implemented in canonical evidence."
+    "All structured action themes from this external report are implemented in canonical evidence.",
+    "External report has no unique unresolved action themes; remaining open themes are covered by a broader active external report.",
+    "promotion-report.history.status=archived but the run remains in the top-level runs namespace."
   ],
   "summary": {
-    "ops_reports_root_file_count": 71,
-    "task_improvement_observation_count": 62,
+    "ops_reports_root_file_count": 68,
+    "task_improvement_observation_count": 63,
     "operator_reports_root_file_count": 2,
-    "external_reports_root_file_count": 3,
+    "external_reports_root_file_count": 5,
     "external_reports_archive_file_count": 66,
-    "run_directory_count": 15,
-    "run_archive_directory_count": 4,
+    "run_directory_count": 19,
+    "run_archive_directory_count": 12,
     "canonical_report_count": 90,
-    "archive_candidate_count": 1
+    "archive_candidate_count": 4
   },
   "canonical_reports": [
     {
@@ -116,6 +118,17 @@
       "surface": "ops_reports",
       "family": "codex_goal_contract",
       "path": "ops/reports/codex-goal-contract.json",
+      "role": "current_stable_report",
+      "date": "",
+      "reason": "Top-level ops/reports files with stable names are current operational reports.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "operator_preflight"
+    },
+    {
+      "surface": "ops_reports",
+      "family": "codex_goal_prompt",
+      "path": "ops/reports/codex-goal-prompt.json",
       "role": "current_stable_report",
       "date": "",
       "reason": "Top-level ops/reports files with stable names are current operational reports.",
@@ -180,17 +193,6 @@
     },
     {
       "surface": "ops_reports",
-      "family": "goal_audit_log",
-      "path": "ops/reports/goal-audit-log.jsonl",
-      "role": "current_stable_report",
-      "date": "",
-      "reason": "Top-level ops/reports files with stable names are current operational reports.",
-      "supersedes": [],
-      "superseded_by": [],
-      "decision_relevance": "operator_preflight"
-    },
-    {
-      "surface": "ops_reports",
       "family": "goal_profile_verification",
       "path": "ops/reports/goal-profile-verification.json",
       "role": "current_stable_report",
@@ -202,41 +204,8 @@
     },
     {
       "surface": "ops_reports",
-      "family": "goal_prompt",
-      "path": "ops/reports/goal-prompt.md",
-      "role": "current_stable_report",
-      "date": "",
-      "reason": "Top-level ops/reports files with stable names are current operational reports.",
-      "supersedes": [],
-      "superseded_by": [],
-      "decision_relevance": "operator_preflight"
-    },
-    {
-      "surface": "ops_reports",
-      "family": "goal_resume_metadata",
-      "path": "ops/reports/goal-resume-metadata.json",
-      "role": "current_stable_report",
-      "date": "",
-      "reason": "Top-level ops/reports files with stable names are current operational reports.",
-      "supersedes": [],
-      "superseded_by": [],
-      "decision_relevance": "operator_preflight"
-    },
-    {
-      "surface": "ops_reports",
       "family": "goal_run_status",
       "path": "ops/reports/goal-run-status.json",
-      "role": "current_stable_report",
-      "date": "",
-      "reason": "Top-level ops/reports files with stable names are current operational reports.",
-      "supersedes": [],
-      "superseded_by": [],
-      "decision_relevance": "operator_preflight"
-    },
-    {
-      "surface": "ops_reports",
-      "family": "goal_status",
-      "path": "ops/reports/goal-status.md",
       "role": "current_stable_report",
       "date": "",
       "reason": "Top-level ops/reports files with stable names are current operational reports.",
@@ -884,12 +853,25 @@
     },
     {
       "surface": "external_reports",
+      "family": "llmwiki_code_change_implementation_report",
+      "path": "external-reports/llmwiki_code_change_implementation_report_20260516.md",
+      "role": "current_review_report",
+      "date": "2026-05-16",
+      "reason": "External report still carries unique unresolved action themes not covered by another active report.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "review_context"
+    },
+    {
+      "surface": "external_reports",
       "family": "llmwiki_integrated_review_reconciliation_improvement_report",
       "path": "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
       "role": "current_review_report",
       "date": "2026-05-15",
       "reason": "External report still carries unique unresolved action themes not covered by another active report.",
-      "supersedes": [],
+      "supersedes": [
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
+      ],
       "superseded_by": [],
       "decision_relevance": "review_context"
     },
@@ -911,6 +893,28 @@
       "role": "run_history_record",
       "date": "2026-05-15",
       "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary. Load issues: promotion-report.json:missing, run-ledger.json:missing.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/auto-improve-remediation-p1b-20260519T124442Z-run-01-auto-improve-iteration-persistence-runtime",
+      "role": "run_history_record",
+      "date": "2026-05-19",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/auto-improve-remediation-p1e-20260519T142130Z-run-01-auto-improve-iteration-persistence-runtime",
+      "role": "run_history_record",
+      "date": "2026-05-19",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
       "supersedes": [],
       "superseded_by": [],
       "decision_relevance": "run_history"
@@ -1073,6 +1077,19 @@
   "archive_candidates": [
     {
       "surface": "external_reports",
+      "family": "llmwiki_long_run_integrated_improvement_plan",
+      "path": "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
+      "suggested_archive_path": "external-reports/archive/llmwiki_long_run_integrated_improvement_plan_20260519.md",
+      "date": "2026-05-19",
+      "reason": "External report has no unique unresolved action themes; remaining open themes are covered by a broader active external report.",
+      "superseded_by": [
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
+      ],
+      "supersedes": [],
+      "decision_relevance": "review_context"
+    },
+    {
+      "surface": "external_reports",
       "family": "llmwiki_review_reconciled_improvement_report",
       "path": "external-reports/llmwiki_review_reconciled_improvement_report.md",
       "suggested_archive_path": "external-reports/archive/llmwiki_review_reconciled_improvement_report.md",
@@ -1081,6 +1098,28 @@
       "superseded_by": [],
       "supersedes": [],
       "decision_relevance": "review_context"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/auto-improve-remediation-p1c-20260519T132655Z-run-01-auto-improve-iteration-persistence-runtime",
+      "suggested_archive_path": "runs/archive/auto-improve-remediation-p1c-20260519T132655Z-run-01-auto-improve-iteration-persistence-runtime",
+      "date": "2026-05-19",
+      "reason": "promotion-report.history.status=archived but the run remains in the top-level runs namespace.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/auto-improve-remediation-p1d-20260519T140010Z-run-01-auto-improve-iteration-persistence-runtime",
+      "suggested_archive_path": "runs/archive/auto-improve-remediation-p1d-20260519T140010Z-run-01-auto-improve-iteration-persistence-runtime",
+      "date": "2026-05-19",
+      "reason": "promotion-report.history.status=archived but the run remains in the top-level runs namespace.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
     }
   ]
 }

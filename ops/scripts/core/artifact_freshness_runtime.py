@@ -114,6 +114,15 @@ NONCANONICAL_JSON_ARCHIVE_PATHS = {
         "registration/source-english-summary-reregistration-2026-04-22.json"
     ),
 }
+NONCANONICAL_ARCHIVED_RUN_AUXILIARY_FILENAMES = {
+    "scope-freeze.json",
+    "subagent-routing.validator.json",
+    "subagent-routing.worker.json",
+    "validator-executor-report.json",
+    "validator-last-message.json",
+    "worker-executor-report.json",
+    "worker-last-message.json",
+}
 NON_SEALING_ARTIFACT_PATHS = {
     "ops/reports/archive-execution-manifest.json",
     "ops/reports/make-target-inventory.json",
@@ -122,6 +131,24 @@ NON_SEALING_ARTIFACT_PATHS = {
     "ops/reports/release-workflow-order-guard.json",
     "ops/reports/workflow-dependency-planner.json",
 }
+
+
+def _is_noncanonical_json_archive_path(rel_path: str) -> bool:
+    normalized = rel_path.replace("\\", "/")
+    if normalized in NONCANONICAL_JSON_ARCHIVE_PATHS:
+        return True
+    if not normalized.startswith("runs/"):
+        return False
+    filename = Path(normalized).name
+    if filename in NONCANONICAL_ARCHIVED_RUN_AUXILIARY_FILENAMES:
+        return True
+    if filename.startswith("subagent-routing.") and filename.endswith(".json"):
+        return True
+    if filename.endswith("-executor-report.json"):
+        return True
+    if filename.endswith("-last-message.json"):
+        return True
+    return False
 
 
 def _sha256_text(text: str) -> str:
@@ -731,11 +758,14 @@ def _schema_contract(
     has_schema: bool,
     schema_validation_status: str,
 ) -> dict[str, str]:
-    if rel_path in NONCANONICAL_JSON_ARCHIVE_PATHS:
+    if _is_noncanonical_json_archive_path(rel_path):
         return {
             "status": "not_applicable",
             "classification": "noncanonical_archived_run_note",
-            "reason": "one-off historical run note is retained for audit context but is not canonical release evidence",
+            "reason": (
+                "auxiliary run JSON is retained for audit context "
+                "but is not canonical release evidence"
+            ),
             "recommended_next_action": "none",
         }
     if has_schema:
@@ -1045,7 +1075,7 @@ def _json_artifact_record(
     zip_mtimes: Mapping[str, dt.datetime],
 ) -> dict[str, Any]:
     rel_path = report_path(vault, path)
-    noncanonical_archive = rel_path in NONCANONICAL_JSON_ARCHIVE_PATHS
+    noncanonical_archive = _is_noncanonical_json_archive_path(rel_path)
     payload, utf8_ok, json_ok, issues = _read_json_artifact_payload(path)
     fields = _artifact_record_fields(payload, noncanonical_archive=noncanonical_archive)
     normalized_payload = fields["normalized_payload"]

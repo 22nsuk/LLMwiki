@@ -2055,6 +2055,7 @@
         "max_proposals",
         "lookback_runs",
         "dedupe_window",
+        "recent_log_overlap_max_age_days",
         "run_history_input",
         "allowed_failure_modes"
       ],
@@ -2072,6 +2073,10 @@
           "minimum": 1
         },
         "dedupe_window": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recent_log_overlap_max_age_days": {
           "type": "integer",
           "minimum": 0
         },

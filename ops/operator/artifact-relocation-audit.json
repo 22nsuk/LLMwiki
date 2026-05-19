@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/artifact-relocation-audit.schema.json",
   "artifact_kind": "artifact_relocation_audit",
-  "generated_at": "2026-05-17T20:59:33Z",
+  "generated_at": "2026-05-19T16:10:31Z",
   "producer": "ops.scripts.artifact_relocation_audit",
   "source_command": "python -m ops.scripts.artifact_relocation_audit --vault . --out ops/operator/artifact-relocation-audit.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "9350e520a440ddc94e56598481494dc5eab93760012b772a58bdd0a0aa8bd207",
+  "source_tree_fingerprint": "81d6acebfae87091e9e60a9ee0042c2398a7159a5bd603b84b77b14fe4c10533",
   "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "2bca24a2fb1f0a7c49b35b6df2aac4e0676e137502b48691d033ad62e3769173",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "1ffc3cd808f7848d5e07c33875f5b587f2c166346a1e07e6617ac6b127df422c",
     "candidate_spec": "b1200b347913aa0fd79d57373d7874415448511a26db8629fc55c649d860c9c2",
-    "dependency_paths": "fe8232f0224a2460c431287815c705574a1ccf2199fc1542f20c02b4c82f1074",
+    "dependency_paths": "a4160c997576c243e3aa9401cee32cfca0e6b60ab230eeacea69fcc21c9cb37f",
     "dependency_roots": "be545ec75d1f4e02ad9ba08e5ac7019a5c4bf7d0baa3aa348395f93db732be97",
     "excluded_scan_paths": "fd1a01cc9a3c77d51ba8bec1c7117e110d4c742ac36077133fbb3b0b3d4b90bd",
     "excluded_scan_prefixes": "e957c42e176e00f268bb61a907a17e555ae0d84924fcabe7c04d0ab207727581"
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T20:59:33Z"
+    "checked_at": "2026-05-19T16:10:31Z"
   },
   "vault": ".",
   "policy": {
@@ -67,7 +67,7 @@
       "system/",
       "external-reports/"
     ],
-    "file_count": 628,
+    "file_count": 637,
     "files": [
       ".github/workflows/ci.yml",
       ".github/workflows/release.yml",
@@ -120,6 +120,7 @@
       "ops/schemas/bootstrap-preflight-report.schema.json",
       "ops/schemas/bundle-manifest.schema.json",
       "ops/schemas/changed-files-manifest.schema.json",
+      "ops/schemas/clean-fixture-regeneration-guard.schema.json",
       "ops/schemas/codex-goal-contract.schema.json",
       "ops/schemas/codex-goal-prompt.schema.json",
       "ops/schemas/cyclonedx-1.6.schema.json",
@@ -135,6 +136,8 @@
       "ops/schemas/goal-resume-metadata.schema.json",
       "ops/schemas/goal-run-resume-metadata.schema.json",
       "ops/schemas/goal-run-status.schema.json",
+      "ops/schemas/goal-runtime-clean-transient.schema.json",
+      "ops/schemas/goal-runtime-fixed-point-check.schema.json",
       "ops/schemas/goal-worktree-guard.schema.json",
       "ops/schemas/improvement-observations.schema.json",
       "ops/schemas/in-toto-statement.schema.json",
@@ -373,6 +376,8 @@
       "ops/scripts/mechanism/goal_profile_verification.py",
       "ops/scripts/mechanism/goal_run_status.py",
       "ops/scripts/mechanism/goal_runtime_backoff.py",
+      "ops/scripts/mechanism/goal_runtime_clean_transient.py",
+      "ops/scripts/mechanism/goal_runtime_fixed_point_check.py",
       "ops/scripts/mechanism/goal_runtime_maintenance.py",
       "ops/scripts/mechanism/goal_runtime_profile.py",
       "ops/scripts/mechanism/goal_runtime_resume.py",
@@ -420,6 +425,7 @@
       "ops/scripts/mechanism/run_mechanism_experiment_runtime.py",
       "ops/scripts/mechanism/set_mechanism_run_history.py",
       "ops/scripts/public/__init__.py",
+      "ops/scripts/public/clean_fixture_regeneration_guard.py",
       "ops/scripts/public/export_public_repo.py",
       "ops/scripts/public/public_check_summary.py",
       "ops/scripts/public/public_surface_policy.py",
@@ -534,6 +540,7 @@
       "tests/test_behavior_delta_runtime.py",
       "tests/test_bootstrap_preflight.py",
       "tests/test_ci_workflow_static.py",
+      "tests/test_clean_fixture_regeneration_guard.py",
       "tests/test_closure_registry_envelope.py",
       "tests/test_codex_goal_client.py",
       "tests/test_codex_goal_contract.py",
@@ -561,6 +568,8 @@
       "tests/test_goal_auto_improve_runtime.py",
       "tests/test_goal_profile_verification.py",
       "tests/test_goal_run_status.py",
+      "tests/test_goal_runtime_clean_transient.py",
+      "tests/test_goal_runtime_fixed_point_check.py",
       "tests/test_goal_runtime_runner.py",
       "tests/test_goal_worktree_guard.py",
       "tests/test_import_fallback_contract.py",
@@ -706,7 +715,7 @@
     "blocking_candidate_count": 0,
     "old_reference_count": 0,
     "new_reference_count": 28,
-    "dependency_file_count": 628
+    "dependency_file_count": 637
   },
   "candidates": [
     {
@@ -811,7 +820,7 @@
           "match_count": 1,
           "matches": [
             {
-              "line": 1786,
+              "line": 1787,
               "excerpt": "\"path\": \"ops/operator/operator-release-summary.json\","
             }
           ]

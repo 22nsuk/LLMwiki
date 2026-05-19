@@ -391,6 +391,277 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
             self.assertEqual(payload["decision_record"], contract["decision_record"])
 
+    def test_write_iteration_telemetry_prefers_promotion_report_over_result_decision_mirror(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-decision-mirror-conflict"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            contract = reduce_decision_proposals(
+                [],
+                subject_id=run_id,
+                subject_kind="system_mechanism",
+                policy_version=1,
+                source_pass="system_mechanism",
+                signoff={"required": False, "status": "not_required"},
+            )
+            promotion_rel = f"runs/{run_id}/promotion-report.json"
+            (vault / promotion_rel).write_text(
+                json.dumps(
+                    {
+                        "decision": "PROMOTE",
+                        "checks": [
+                            {"id": "candidate_eval_pass", "status": "PASS"},
+                            {"id": "eval_score_improves", "status": "PASS"},
+                            {"id": "lint_non_regression", "status": "PASS"},
+                            {"id": "structural_complexity_non_regression", "status": "PASS"},
+                            {"id": "tests_non_regression", "status": "PASS"},
+                        ],
+                        "decision_record": contract["decision_record"],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[f"runs/{run_id}/subagent-routing.worker.json"],
+                    roles=["worker"],
+                    phase_durations={"routing": 0.1, "experiment": 0.2},
+                    outcome="discarded",
+                    result={
+                        "decision": "HOLD",
+                        "promotion_report": promotion_rel,
+                        "finalized": True,
+                        "finalize_result": {"run_id": run_id},
+                    },
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertEqual(payload["decision"], "PROMOTE")
+            self.assertEqual(payload["decision_record"], contract["decision_record"])
+            self.assertNotIn("discard_non_regression_evidence", payload)
+
+    def test_write_iteration_telemetry_records_discard_evidence_from_actual_report_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-discard-evidence-path"
+            run_dir = vault / "runs" / run_id
+            evidence_dir = run_dir / "evidence"
+            evidence_dir.mkdir(parents=True)
+            promotion_rel = f"runs/{run_id}/evidence/non-default-promotion-report.json"
+            contract = reduce_decision_proposals(
+                [
+                    {
+                        "rule_id": "equal_score_secondary_eligibility",
+                        "decision": "DISCARD",
+                        "evidence_refs": ["equal_score_secondary_eligibility"],
+                    }
+                ],
+                subject_id=run_id,
+                subject_kind="system_mechanism",
+                policy_version=1,
+                source_pass="system_mechanism",
+                signoff={"required": False, "status": "not_required"},
+            )
+            promotion_report = {
+                "decision": "DISCARD",
+                "checks": [
+                    {"id": "candidate_eval_pass", "status": "PASS"},
+                    {"id": "eval_score_improves", "status": "WARN"},
+                    {"id": "lint_non_regression", "status": "PASS"},
+                    {"id": "structural_complexity_non_regression", "status": "PASS"},
+                    {"id": "tests_non_regression", "status": "PASS"},
+                    {"id": "equal_score_secondary_eligibility", "status": "FAIL"},
+                ],
+                "decision_record": contract["decision_record"],
+            }
+            (vault / promotion_rel).write_text(
+                json.dumps(promotion_report, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[f"runs/{run_id}/subagent-routing.worker.json"],
+                    roles=["worker"],
+                    phase_durations={"routing": 0.1, "experiment": 0.2},
+                    outcome="discarded",
+                    result={
+                        "decision": "DISCARD",
+                        "promotion_report": promotion_rel,
+                        "finalized": True,
+                        "finalize_result": {"run_id": run_id},
+                    },
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertEqual(payload["decision"], "DISCARD")
+            evidence = payload["discard_non_regression_evidence"]
+            self.assertEqual(evidence["promotion_report_source"], "path")
+            self.assertEqual(evidence["promotion_report"], promotion_rel)
+            self.assertTrue((vault / evidence["promotion_report"]).is_file())
+            self.assertTrue(evidence["candidate_eval_pass"])
+            self.assertFalse(evidence["eval_score_improves"])
+            self.assertTrue(evidence["lint_non_regression"])
+            self.assertTrue(evidence["structural_complexity_non_regression"])
+            self.assertTrue(evidence["tests_non_regression"])
+            self.assertEqual(evidence["blocking_check_ids"], ["equal_score_secondary_eligibility"])
+            self.assertEqual(
+                evidence["decision_record_reason_code"],
+                "equal_score_secondary_eligibility",
+            )
+
+    def test_write_iteration_telemetry_ignores_discard_evidence_for_report_mirror_drift(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-discard-evidence-mirror-drift"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            promotion_rel = f"runs/{run_id}/promotion-report.json"
+            contract = reduce_decision_proposals(
+                [],
+                subject_id=run_id,
+                subject_kind="system_mechanism",
+                policy_version=1,
+                source_pass="system_mechanism",
+                signoff={"required": False, "status": "not_required"},
+            )
+            (vault / promotion_rel).write_text(
+                json.dumps(
+                    {
+                        "decision": "DISCARD",
+                        "checks": [
+                            {"id": "candidate_eval_pass", "status": "FAIL"},
+                            {"id": "eval_score_improves", "status": "WARN"},
+                            {"id": "lint_non_regression", "status": "PASS"},
+                            {"id": "structural_complexity_non_regression", "status": "PASS"},
+                            {"id": "tests_non_regression", "status": "PASS"},
+                        ],
+                        "decision_record": contract["decision_record"],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[f"runs/{run_id}/subagent-routing.worker.json"],
+                    roles=["worker"],
+                    phase_durations={"routing": 0.1, "experiment": 0.2},
+                    outcome="discarded",
+                    result={
+                        "decision": "DISCARD",
+                        "promotion_report": promotion_rel,
+                        "finalized": True,
+                        "finalize_result": {"run_id": run_id},
+                    },
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertNotIn("decision_record", payload)
+            self.assertNotIn("discard_non_regression_evidence", payload)
+
+    def test_write_iteration_telemetry_does_not_invent_default_path_for_inline_discard_evidence(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-discard-evidence-inline"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            contract = reduce_decision_proposals(
+                [
+                    {
+                        "rule_id": "candidate_eval_pass",
+                        "decision": "DISCARD",
+                        "evidence_refs": ["candidate_eval_pass"],
+                    }
+                ],
+                subject_id=run_id,
+                subject_kind="system_mechanism",
+                policy_version=1,
+                source_pass="system_mechanism",
+                signoff={"required": False, "status": "not_required"},
+            )
+            inline_report = {
+                "decision": "DISCARD",
+                "checks": [
+                    {"id": "candidate_eval_pass", "status": "FAIL"},
+                    {"id": "eval_score_improves", "status": "WARN"},
+                    {"id": "lint_non_regression", "status": "PASS"},
+                    {"id": "structural_complexity_non_regression", "status": "PASS"},
+                    {"id": "tests_non_regression", "status": "PASS"},
+                ],
+                "decision_record": contract["decision_record"],
+            }
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[f"runs/{run_id}/subagent-routing.worker.json"],
+                    roles=["worker"],
+                    phase_durations={"routing": 0.1, "experiment": 0.2},
+                    outcome="discarded",
+                    result={
+                        "decision": "DISCARD",
+                        "promotion_report": inline_report,
+                        "finalized": True,
+                        "finalize_result": {"run_id": run_id},
+                    },
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            evidence = payload["discard_non_regression_evidence"]
+            self.assertEqual(evidence["promotion_report_source"], "inline")
+            self.assertNotIn("promotion_report", evidence)
+            self.assertFalse((run_dir / "promotion-report.json").exists())
+            self.assertFalse(evidence["candidate_eval_pass"])
+            self.assertEqual(evidence["blocking_check_ids"], ["candidate_eval_pass"])
+
     def test_execute_evaluate_iteration_phase_builds_request_and_delegates(self) -> None:
         captured: dict[str, ExecuteEvaluateRequest] = {}
         expected = ExecuteEvaluatePhaseResult(

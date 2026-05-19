@@ -532,6 +532,7 @@ def mutation_proposal_report(primary_target: str) -> dict:
             },
             "recent_log_overlap": {
                 "dedupe_window": 5,
+                "max_age_days": 7,
                 "section_ordering": "timestamp",
                 "scanned_log_headings": [],
                 "matches": [],

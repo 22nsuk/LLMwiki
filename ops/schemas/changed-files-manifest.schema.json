@@ -172,6 +172,85 @@
         }
       }
     },
+    "ignored_changes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "ignored_prefixes",
+        "files"
+      ],
+      "properties": {
+        "summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "total_ignored_files",
+            "added",
+            "modified",
+            "deleted"
+          ],
+          "properties": {
+            "total_ignored_files": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "added": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "modified": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "deleted": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "ignored_prefixes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "change_type",
+              "reason"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "change_type": {
+                "type": "string",
+                "enum": [
+                  "added",
+                  "modified",
+                  "deleted"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "generated_report_surface",
+                  "transient_workspace_surface"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
     "metadata": {
       "$ref": "#/$defs/metadata"
     }

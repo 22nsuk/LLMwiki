@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import datetime as dt
 import json
 import re
 from dataclasses import dataclass
@@ -35,6 +36,7 @@ from ops.scripts.schema_runtime import load_schema_with_vault_override, validate
 MECHANISM_REVIEW_SCHEMA = MECHANISM_REVIEW_SCHEMA_PATH
 MUTATION_PROPOSAL_SCHEMA = MUTATION_PROPOSAL_SCHEMA_PATH
 DEFAULT_MECHANISM_REVIEW_REPORT = "ops/reports/mechanism-review-candidates.json"
+DEFAULT_OUTCOME_METRICS_REPORT = "ops/reports/outcome-metrics.json"
 DEFAULT_SYSTEM_LOG = "system/system-log.md"
 QUEUE_PRESSURE_SUMMARY_TOP_N = 3
 PRODUCER = "ops.scripts.mutation_proposal_runtime"
@@ -56,8 +58,15 @@ RECENT_LOG_OVERLAP_UNBLOCK_FAMILY = "queue_unblock"
 RECENT_LOG_OVERLAP_UNBLOCK_PRIMARY_TARGETS = [
     "ops/scripts/mechanism/mutation_proposal_runtime.py"
 ]
-RECENT_LOG_OVERLAP_UNBLOCK_TEST_FILES = ["tests/test_mutation_proposal.py"]
+RECENT_LOG_OVERLAP_UNBLOCK_TEST_FILES = [
+    "tests/test_mutation_proposal.py",
+    "tests/test_report_generation_smoke.py",
+]
 RECENT_LOG_OVERLAP_UNBLOCK_RUN_ID = "recent-log-overlap-queue-blocked"
+RECENT_OUTCOME_REWORK_BLOCKER = "recent_outcome_rework"
+RECENT_OUTCOME_REWORK_MIN_ATTEMPTS = 2
+RESOLVED_PROMOTION_HISTORY_STATUSES = {"archived", "quarantined"}
+SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
 
 
 @dataclass(frozen=True)
@@ -187,6 +196,8 @@ class _MutationReportInputs:
     mutation_policy: dict
     mechanism_review_path: Path
     mechanism_review_report: dict
+    outcome_metrics_path: Path
+    outcome_metrics_report: dict
     system_log: Path
     recent_log_sections: list[RecentLogSection]
     recent_log_section_ordering: str
@@ -215,6 +226,30 @@ def _read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _read_optional_report(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    payload = _read_json(path)
+    if not isinstance(payload, dict):
+        raise ValueError(f"expected object report at {path}")
+    return payload
+
+
+def _safe_repo_relative_path(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = normalize_repo_path_text(value)
+    if (
+        normalized is None
+        or normalized == "."
+        or normalized == ".."
+        or normalized.startswith("../")
+        or normalized.startswith("/")
+    ):
+        return None
+    return normalized
+
+
 def _parse_log_heading_timestamp(heading: str) -> tuple[int, int, int, int, int] | None:
     matched = re.match(r"\[(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})(?: [A-Z]+)?\]", heading)
     if not matched:
@@ -223,7 +258,46 @@ def _parse_log_heading_timestamp(heading: str) -> tuple[int, int, int, int, int]
     return (int(year), int(month), int(day), int(hour), int(minute))
 
 
-def _read_log_sections(path: Path, *, max_entries: int) -> tuple[list[RecentLogSection], str]:
+def _log_heading_datetime(
+    heading: str,
+    *,
+    display_timezone: dt.tzinfo,
+) -> dt.datetime | None:
+    timestamp = _parse_log_heading_timestamp(heading)
+    if timestamp is None:
+        return None
+    year, month, day, hour, minute = timestamp
+    return dt.datetime(year, month, day, hour, minute, tzinfo=display_timezone)
+
+
+def _filter_recent_log_sections_by_age(
+    sections: list[RecentLogSection],
+    *,
+    runtime_context: RuntimeContext,
+    max_age_days: int,
+    section_ordering: str,
+) -> list[RecentLogSection]:
+    if max_age_days <= 0 or section_ordering != "timestamp":
+        return sections
+    cutoff = runtime_context.utcnow() - dt.timedelta(days=max_age_days)
+    filtered: list[RecentLogSection] = []
+    for section in sections:
+        heading_time = _log_heading_datetime(
+            section.heading,
+            display_timezone=runtime_context.display_timezone,
+        )
+        if heading_time is None or heading_time.astimezone(dt.timezone.utc) >= cutoff:
+            filtered.append(section)
+    return filtered
+
+
+def _read_log_sections(
+    path: Path,
+    *,
+    max_entries: int,
+    max_age_days: int,
+    runtime_context: RuntimeContext,
+) -> tuple[list[RecentLogSection], str]:
     if max_entries <= 0 or not path.exists():
         return [], "file_order_fallback"
 
@@ -253,8 +327,25 @@ def _read_log_sections(path: Path, *, max_entries: int) -> tuple[list[RecentLogS
                 key=lambda item: (item[0], item[1]),
             )
         ]
-        return ordered[-max_entries:], "timestamp"
-    return entries[-max_entries:], "file_order_fallback"
+        recent_entries = ordered[-max_entries:]
+        return (
+            _filter_recent_log_sections_by_age(
+                recent_entries,
+                runtime_context=runtime_context,
+                max_age_days=max_age_days,
+                section_ordering="timestamp",
+            ),
+            "timestamp",
+        )
+    return (
+        _filter_recent_log_sections_by_age(
+            entries[-max_entries:],
+            runtime_context=runtime_context,
+            max_age_days=max_age_days,
+            section_ordering="file_order_fallback",
+        ),
+        "file_order_fallback",
+    )
 
 
 def _log_heading_summary(recent_log_sections: list[RecentLogSection]) -> list[str]:
@@ -331,7 +422,7 @@ def _recent_log_overlap_matches(
                         matched_log_heading=heading,
                         unblock_condition=(
                             "advance chronology beyond the configured dedupe window "
-                            "or rotate to a non-overlapping target set"
+                            "or max age window, or rotate to a non-overlapping target set"
                         ),
                     )
                 )
@@ -443,6 +534,32 @@ def _resolve_must_change_tests(
     if scoped_tests:
         return scoped_tests
     return _content_evidence_tests(vault, primary_targets)
+
+
+def _generated_supporting_targets(vault: Path, primary_targets: list[str]) -> list[str]:
+    if not (vault / SCRIPT_OUTPUT_SURFACES_TARGET).is_file():
+        return []
+    for target in primary_targets:
+        normalized_target = normalize_repo_path_text(target)
+        if normalized_target and normalized_target.startswith("ops/scripts/") and normalized_target.endswith(".py"):
+            return [SCRIPT_OUTPUT_SURFACES_TARGET]
+    return []
+
+
+def _with_generated_supporting_targets(
+    vault: Path,
+    *,
+    primary_targets: list[str],
+    supporting_targets: list[str],
+) -> list[str]:
+    ordered: list[str] = []
+    seen: set[str] = set()
+    for target in [*supporting_targets, *_generated_supporting_targets(vault, primary_targets)]:
+        if target in seen:
+            continue
+        seen.add(target)
+        ordered.append(target)
+    return ordered
 
 
 def _proposal_blast_radius_score(
@@ -665,16 +782,21 @@ def _bootstrap_group_proposal(
     additional_runs_needed = _bootstrap_additional_runs_needed(group)
     priority = _bootstrap_priority(group)
     priority_breakdown = _bootstrap_priority_breakdown(priority)
+    supporting_targets = _with_generated_supporting_targets(
+        vault,
+        primary_targets=primary_targets,
+        supporting_targets=[],
+    )
     pseudo_candidate = {
         "primary_targets": primary_targets,
-        "supporting_targets": [],
+        "supporting_targets": supporting_targets,
         "tier": "supporting",
     }
     must_change_tests = _resolve_must_change_tests(
         vault,
         policy,
         primary_targets=primary_targets,
-        supporting_targets=[],
+        supporting_targets=supporting_targets,
     )
     proposal_id = _proposal_id(
         {
@@ -691,7 +813,7 @@ def _bootstrap_group_proposal(
         tier="supporting",
         priority=priority_breakdown.final_priority,
         primary_targets=primary_targets,
-        supporting_targets=[],
+        supporting_targets=supporting_targets,
         metrics_triggered=[BOOTSTRAP_FAILURE_MODE],
         run_ids=[latest_run_id],
         failure_mode=BOOTSTRAP_FAILURE_MODE,
@@ -711,7 +833,7 @@ def _bootstrap_group_proposal(
         must_not_expand_apply_roots=_must_not_expand_apply_roots(
             vault,
             policy,
-            proposal_targets=primary_targets,
+            proposal_targets=[*primary_targets, *supporting_targets],
             must_change_tests=must_change_tests,
         ),
         must_not_increase_untyped_surface=True,
@@ -762,7 +884,11 @@ def _bootstrap_no_history_proposal(
     policy: dict,
 ) -> MutationProposal | None:
     primary_targets = list(FALLBACK_PRIMARY_TARGETS)
-    supporting_targets = list(FALLBACK_SUPPORTING_TARGETS)
+    supporting_targets = _with_generated_supporting_targets(
+        vault,
+        primary_targets=primary_targets,
+        supporting_targets=list(FALLBACK_SUPPORTING_TARGETS),
+    )
     if not primary_targets:
         return None
 
@@ -841,10 +967,88 @@ def _bootstrap_no_history_proposal(
     )
 
 
+def _promotion_report_history_resolved(
+    vault: Path,
+    attempt: dict,
+) -> bool:
+    report_rel_path = _safe_repo_relative_path(attempt.get("promotion_report"))
+    if report_rel_path is None:
+        return False
+
+    try:
+        promotion_report = _read_json(vault / report_rel_path)
+    except (OSError, json.JSONDecodeError):
+        return False
+    if not isinstance(promotion_report, dict):
+        return False
+
+    attempt_run_id = str(attempt.get("run_id", "")).strip()
+    report_run_id = str(promotion_report.get("run_id", "")).strip()
+    report_path_run_id = Path(report_rel_path).parent.name
+    if attempt_run_id:
+        if report_run_id and attempt_run_id not in {report_run_id, report_path_run_id}:
+            return False
+        if not report_run_id and attempt_run_id != report_path_run_id:
+            return False
+
+    history = promotion_report.get("history", {})
+    if not isinstance(history, dict):
+        return False
+    history_status = str(history.get("status", "active")).strip().lower()
+    return history_status in RESOLVED_PROMOTION_HISTORY_STATUSES
+
+
+def _recent_unresolved_outcome_attempt_count(
+    vault: Path,
+    outcome_metrics_report: dict,
+    *,
+    proposal_id: str,
+) -> int:
+    recent_attempts = outcome_metrics_report.get("recent_attempts", [])
+    if not isinstance(recent_attempts, list):
+        return 0
+
+    unresolved_count = 0
+    for attempt in recent_attempts:
+        if not isinstance(attempt, dict):
+            continue
+        if str(attempt.get("proposal_id", "")).strip() != proposal_id:
+            continue
+
+        outcome = str(attempt.get("outcome", "")).strip().lower()
+        decision = str(attempt.get("decision", "")).strip().upper()
+        if outcome == "promoted" or decision == "PROMOTE":
+            break
+        if _promotion_report_history_resolved(vault, attempt):
+            continue
+        if outcome or decision:
+            unresolved_count += 1
+    return unresolved_count
+
+
+def _recent_outcome_rework_blockers(
+    vault: Path,
+    outcome_metrics_report: dict,
+    *,
+    proposal_id: str,
+) -> list[str]:
+    unresolved_count = _recent_unresolved_outcome_attempt_count(
+        vault,
+        outcome_metrics_report,
+        proposal_id=proposal_id,
+    )
+    if unresolved_count < RECENT_OUTCOME_REWORK_MIN_ATTEMPTS:
+        return []
+    return [RECENT_OUTCOME_REWORK_BLOCKER]
+
+
 def _recent_log_overlap_queue_unblock_proposal(
     vault: Path,
     policy: dict,
     available_proposals: list[MutationProposal],
+    *,
+    recent_log_sections: list[RecentLogSection],
+    outcome_metrics_report: dict,
 ) -> MutationProposal | None:
     allowed_failure_modes = set(policy["mutation_proposal"]["allowed_failure_modes"])
     if RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE not in allowed_failure_modes:
@@ -857,7 +1061,11 @@ def _recent_log_overlap_queue_unblock_proposal(
         return None
 
     primary_targets = list(RECENT_LOG_OVERLAP_UNBLOCK_PRIMARY_TARGETS)
-    supporting_targets: list[str] = []
+    supporting_targets = _with_generated_supporting_targets(
+        vault,
+        primary_targets=primary_targets,
+        supporting_targets=[],
+    )
     must_change_tests = _resolve_must_change_tests(
         vault,
         policy,
@@ -877,18 +1085,32 @@ def _recent_log_overlap_queue_unblock_proposal(
     priority_breakdown = _bootstrap_priority_breakdown(priority)
     candidate_id = "recent_log_overlap_queue_unblock__mutation-proposal-runtime"
     pseudo_candidate = {
+        "candidate_id": candidate_id,
         "primary_targets": primary_targets,
         "supporting_targets": supporting_targets,
         "tier": "supporting",
     }
+    proposal_id = _proposal_id(
+        {
+            "primary_targets": primary_targets,
+            "candidate_id": candidate_id,
+        },
+        RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE,
+    )
+    recent_log_matches = _recent_log_overlap_matches(pseudo_candidate, recent_log_sections)
+    blocked_by = ["recent_log_overlap"] if recent_log_matches else []
+    blocked_by.extend(
+        blocker
+        for blocker in _recent_outcome_rework_blockers(
+            vault,
+            outcome_metrics_report,
+            proposal_id=proposal_id,
+        )
+        if blocker not in blocked_by
+    )
+    scoped_test_text = " and ".join(f"`{path}`" for path in must_change_tests)
     return MutationProposal(
-        proposal_id=_proposal_id(
-            {
-                "primary_targets": primary_targets,
-                "candidate_id": candidate_id,
-            },
-            RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE,
-        ),
+        proposal_id=proposal_id,
         source_candidate_id=candidate_id,
         source_candidate_type=RECENT_LOG_OVERLAP_UNBLOCK_SOURCE_CANDIDATE_TYPE,
         family=RECENT_LOG_OVERLAP_UNBLOCK_FAMILY,
@@ -901,7 +1123,7 @@ def _recent_log_overlap_queue_unblock_proposal(
         failure_mode=RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE,
         single_mechanism_scope=(
             "keep the unblock experiment scoped to `ops/scripts/mechanism/mutation_proposal_runtime.py` "
-            "and `tests/test_mutation_proposal.py` so all existing recent-log-overlap-blocked proposals "
+            f"and {scoped_test_text} so all existing recent-log-overlap-blocked proposals "
             "remain diagnostic evidence while one runnable rotation target reopens the queue"
         ),
         change_hypothesis=(
@@ -930,13 +1152,13 @@ def _recent_log_overlap_queue_unblock_proposal(
         ),
         must_not_increase_untyped_surface=True,
         required_artifacts=_required_artifacts(),
-        blocked_by=[],
+        blocked_by=blocked_by,
         why_now=(
             "현재 후보들이 모두 recent_log_overlap 하나로만 막히면 live queue가 비어 readiness와 learning "
             "execution gate까지 연쇄적으로 닫힌다. guardrail은 보존하고 target rotation proposal만 별도로 열어둔다."
         ),
         priority_breakdown=priority_breakdown,
-        recent_log_overlap_matches=[],
+        recent_log_overlap_matches=recent_log_matches,
     )
 
 
@@ -949,7 +1171,11 @@ def _proposal_from_candidate(
 ) -> MutationProposal | None:
     allowed_failure_modes = set(policy["mutation_proposal"]["allowed_failure_modes"])
     primary_targets = current_repo_target_paths(vault, list(candidate["primary_targets"]))
-    supporting_targets = current_repo_target_paths(vault, list(candidate["supporting_targets"]))
+    supporting_targets = _with_generated_supporting_targets(
+        vault,
+        primary_targets=primary_targets,
+        supporting_targets=current_repo_target_paths(vault, list(candidate["supporting_targets"])),
+    )
     current_candidate = {
         **candidate,
         "primary_targets": primary_targets,
@@ -1079,11 +1305,13 @@ def _recent_log_overlap_diagnostics(
     proposal_models: list[MutationProposal],
     *,
     dedupe_window: int,
+    max_age_days: int,
     section_ordering: str,
     recent_log_sections: list[RecentLogSection],
 ) -> dict:
     return {
         "dedupe_window": dedupe_window,
+        "max_age_days": max_age_days,
         "section_ordering": section_ordering,
         "scanned_log_headings": _log_heading_summary(recent_log_sections),
         "matches": [
@@ -1487,6 +1715,7 @@ def _proposal_models_from_candidates(
     mechanism_review_report: dict,
     *,
     recent_log_sections: list[RecentLogSection],
+    outcome_metrics_report: dict,
 ) -> tuple[list[MutationProposal], list[dict]]:
     available_proposal_models: list[MutationProposal] = []
     skipped_candidates: list[dict] = []
@@ -1527,6 +1756,8 @@ def _proposal_models_from_candidates(
         vault,
         effective_policy,
         available_proposal_models,
+        recent_log_sections=recent_log_sections,
+        outcome_metrics_report=outcome_metrics_report,
     )
     if recent_log_overlap_unblock is not None:
         available_proposal_models.append(recent_log_overlap_unblock)
@@ -1556,10 +1787,14 @@ def _load_mutation_report_inputs(
         policy_path,
         mechanism_review_report_path,
     )
+    outcome_metrics_path = (vault / DEFAULT_OUTCOME_METRICS_REPORT).resolve()
+    outcome_metrics_report = _read_optional_report(outcome_metrics_path)
     system_log = (vault / (system_log_path or DEFAULT_SYSTEM_LOG)).resolve()
     recent_log_sections, recent_log_section_ordering = _read_log_sections(
         system_log,
         max_entries=mutation_policy["dedupe_window"],
+        max_age_days=int(mutation_policy["recent_log_overlap_max_age_days"]),
+        runtime_context=runtime_context,
     )
     return _MutationReportInputs(
         runtime_context=runtime_context,
@@ -1567,6 +1802,8 @@ def _load_mutation_report_inputs(
         mutation_policy=mutation_policy,
         mechanism_review_path=mechanism_review_path,
         mechanism_review_report=mechanism_review_report,
+        outcome_metrics_path=outcome_metrics_path,
+        outcome_metrics_report=outcome_metrics_report,
         system_log=system_log,
         recent_log_sections=recent_log_sections,
         recent_log_section_ordering=recent_log_section_ordering,
@@ -1582,6 +1819,7 @@ def _assemble_mutation_proposals(
         inputs.effective_policy,
         inputs.mechanism_review_report,
         recent_log_sections=inputs.recent_log_sections,
+        outcome_metrics_report=inputs.outcome_metrics_report,
     )
     proposal_models = _select_report_proposals(
         available_proposal_models,
@@ -1643,6 +1881,7 @@ def _assemble_mutation_diagnostics(
             "recent_log_overlap": _recent_log_overlap_diagnostics(
                 proposal_assembly.available_proposal_models,
                 dedupe_window=int(inputs.mutation_policy["dedupe_window"]),
+                max_age_days=int(inputs.mutation_policy["recent_log_overlap_max_age_days"]),
                 section_ordering=inputs.recent_log_section_ordering,
                 recent_log_sections=inputs.recent_log_sections,
             ),
@@ -1675,11 +1914,15 @@ def _mutation_report_payload(
             ],
             file_inputs={
                 "mechanism_review_report": report_path(vault, inputs.mechanism_review_path),
+                "outcome_metrics": report_path(vault, inputs.outcome_metrics_path),
                 "system_log": report_path(vault, inputs.system_log),
             },
             text_inputs={
                 "mutation_max_proposals": str(inputs.mutation_policy["max_proposals"]),
                 "mutation_dedupe_window": str(inputs.mutation_policy["dedupe_window"]),
+                "mutation_recent_log_overlap_max_age_days": str(
+                    inputs.mutation_policy["recent_log_overlap_max_age_days"]
+                ),
             },
         ),
         "vault": display_path(vault, vault),

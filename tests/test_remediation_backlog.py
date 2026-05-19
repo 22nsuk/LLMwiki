@@ -84,6 +84,13 @@ def seed_backlog_inputs(vault: Path) -> None:
                     "status": "open",
                     "reason": "remediation backlog is not clear for promotion",
                     "repair_target": "Close remediation backlog items.",
+                },
+                {
+                    "id": "goal_status_promotion_blocked_by_remediation_backlog_open",
+                    "source": "goal_run_status.blockers",
+                    "status": "open",
+                    "reason": "goal status echoes the remediation backlog promotion blocker",
+                    "repair_target": "Close remediation backlog items.",
                 }
             ]
         },
@@ -194,6 +201,65 @@ class RemediationBacklogTests(unittest.TestCase):
             )
             self.assertEqual(report["summary"]["open_item_count"], 2)
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_stale_zero_iteration_backlog_guard_stop_does_not_recreate_closed_lesson(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_backlog_inputs(vault)
+            write_json(
+                vault,
+                "ops/reports/self-improvement-negative-lessons.json",
+                {
+                    "status": "attention",
+                    "lessons": [
+                        {
+                            "lesson_id": "discard_specific_reason",
+                            "source": "learning_claim_activation.negative_learning_ledger",
+                            "decisions": ["DISCARD"],
+                            "run_ids": ["run-specific"],
+                            "occurrence_count": 1,
+                            "forbidden_repeat": "Do not repeat this run shape.",
+                            "repair_target": "Specific advisory only.",
+                            "evidence_digests": [],
+                            "repeat_policy": "do_not_repeat_until_repaired",
+                            "backlog_candidate": False,
+                        }
+                    ],
+                },
+            )
+            write_json(
+                vault,
+                "ops/reports/auto-improve-sessions/stale-zero-iteration-stop.json",
+                {
+                    "session_id": "stale-zero-iteration-stop",
+                    "stop_reason": "repeated_blocker_backlog_required",
+                    "attempted_proposal_ids": [],
+                    "run_ids": [],
+                    "iterations": [],
+                    "loop_state": {
+                        "blocking_reason_counts": {"discard_unspecified": 2},
+                        "repeated_blocker_stop": True,
+                        "repeated_blocker_reason": "discard_unspecified",
+                    },
+                },
+            )
+
+            report = build_report(vault, context=fixed_context())
+            item_ids = {item["item_id"] for item in report["items"]}
+
+            self.assertNotIn(
+                "auto_session_repeated_blocker_stale_zero_iteration_stop_discard_unspecified",
+                item_ids,
+            )
+            self.assertNotIn("negative_lesson_discard_specific_reason", item_ids)
+            self.assertIn(
+                "auto_session_repeated_blocker_auto_session_repeat_validation_blocked",
+                item_ids,
+            )
 
     def test_invalid_status_override_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

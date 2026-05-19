@@ -450,40 +450,127 @@ def _has_success_then_followup(iterations: list[Mapping[str, Any]]) -> bool:
     return False
 
 
-def _session_evidence(vault: Path, status_report: Mapping[str, Any]) -> dict[str, Any]:
+def _session_requirement_summary(profile: str) -> dict[str, Any]:
+    requirements = PROFILE_REQUIREMENTS.get(profile, {})
+    accepted_stop_reasons = _list_text(requirements.get("accepted_stop_reasons"))
+    if not accepted_stop_reasons and profile in PROFILE_REQUIREMENTS:
+        accepted_stop_reasons = ["time_budget_exhausted"]
+    requires_followup = requirements.get("requires_success_then_followup")
+    requires_maintenance = requirements.get("requires_meaningful_maintenance")
+    return {
+        "accepted_stop_reasons": accepted_stop_reasons,
+        "minimum_iteration_count": _integer_value(requirements.get("minimum_iterations")),
+        "minimum_successful_iteration_count": _integer_value(
+            requirements.get("minimum_successful_iterations")
+        ),
+        "requires_success_then_followup": requires_followup
+        if isinstance(requires_followup, bool)
+        else profile in PROFILE_REQUIREMENTS,
+        "requires_meaningful_maintenance": requires_maintenance
+        if isinstance(requires_maintenance, bool)
+        else False,
+    }
+
+
+def _empty_session_evidence(profile: str, *, status: str, path: str) -> dict[str, Any]:
+    return {
+        "status": status,
+        "path": path,
+        "session_status": "",
+        "stop_reason": "",
+        "iteration_count": 0,
+        "successful_iteration_count": 0,
+        "has_success_then_followup": False,
+        "maintenance_status": "missing",
+        "maintenance_cycle_count": 0,
+        "meaningful_maintenance_cycle_count": 0,
+        "expected_min_maintenance_cycle_count": 0,
+        "maintenance_last_cycle_elapsed_seconds": 0,
+        **_session_requirement_summary(profile),
+    }
+
+
+def _meaningful_maintenance_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
+    maintenance = _mapping_value(payload, "maintenance")
+    cycles = maintenance.get("cycles")
+    cycle_items = [item for item in cycles if isinstance(item, Mapping)] if isinstance(cycles, list) else []
+    cycle_count = _integer_value(maintenance.get("cycle_count")) or len(cycle_items)
+    meaningful_count = _integer_value(maintenance.get("meaningful_cycle_count"))
+    if meaningful_count == 0:
+        required_work = {
+            "mechanism_review_report",
+            "mutation_proposal_report",
+            "auto_improve_readiness_report",
+            "auto_improve_session_report",
+        }
+        meaningful_count = sum(
+            1
+            for cycle in cycle_items
+            if str(cycle.get("status", "")).strip() == "pass"
+            and set(_list_text(cycle.get("work_items"))) >= required_work
+        )
+    expected_count = _integer_value(maintenance.get("expected_min_cycle_count"))
+    target_elapsed = _integer_value(maintenance.get("target_elapsed_seconds"))
+    last_elapsed = _integer_value(maintenance.get("last_cycle_elapsed_seconds"))
+    if last_elapsed == 0:
+        last_elapsed = max(
+            (_integer_value(cycle.get("elapsed_seconds")) for cycle in cycle_items),
+            default=0,
+        )
+    complete = (
+        str(maintenance.get("mode", "")).strip() == "proposal_budget_runtime_maintenance"
+        and str(maintenance.get("status", "")).strip() == "complete"
+        and cycle_count >= expected_count
+        and meaningful_count >= expected_count
+        and last_elapsed >= target_elapsed
+    )
+    if not maintenance:
+        status = "missing"
+    elif complete:
+        status = "clean"
+    else:
+        status = "incomplete"
+    return {
+        "maintenance_status": status,
+        "maintenance_cycle_count": cycle_count,
+        "meaningful_maintenance_cycle_count": meaningful_count,
+        "expected_min_maintenance_cycle_count": expected_count,
+        "maintenance_last_cycle_elapsed_seconds": last_elapsed,
+    }
+
+
+def _session_evidence(
+    vault: Path,
+    status_report: Mapping[str, Any],
+    *,
+    profile: str,
+) -> dict[str, Any]:
     rel_path = _session_report_rel_path(status_report)
     if not rel_path:
-        return {
-            "status": "missing",
-            "path": "",
-            "session_status": "",
-            "stop_reason": "",
-            "iteration_count": 0,
-            "successful_iteration_count": 0,
-            "has_success_then_followup": False,
-        }
+        return _empty_session_evidence(profile, status="missing", path="")
     payload = load_optional_json_object(vault / rel_path)
     if not payload:
-        return {
-            "status": "missing",
-            "path": rel_path,
-            "session_status": "",
-            "stop_reason": "",
-            "iteration_count": 0,
-            "successful_iteration_count": 0,
-            "has_success_then_followup": False,
-        }
+        return _empty_session_evidence(profile, status="missing", path=rel_path)
     iterations = _session_iterations(payload)
     successful_count = sum(1 for iteration in iterations if _successful_iteration(iteration))
     has_success_then_followup = _has_success_then_followup(iterations)
     stop_reason = str(payload.get("stop_reason", "")).strip()
     session_status = str(payload.get("status", "")).strip()
+    session_requirements = _session_requirement_summary(profile)
+    maintenance_summary = _meaningful_maintenance_summary(payload)
     clean = (
         session_status == "complete"
-        and stop_reason == "time_budget_exhausted"
-        and len(iterations) >= 2
-        and successful_count >= 1
-        and has_success_then_followup
+        and stop_reason in session_requirements["accepted_stop_reasons"]
+        and len(iterations) >= session_requirements["minimum_iteration_count"]
+        and successful_count >= session_requirements["minimum_successful_iteration_count"]
+        and (
+            not session_requirements["requires_success_then_followup"]
+            or has_success_then_followup
+        )
+        and (
+            not session_requirements["requires_meaningful_maintenance"]
+            or maintenance_summary["maintenance_status"] == "clean"
+        )
     )
     return {
         "status": "clean" if clean else "incomplete",
@@ -493,6 +580,8 @@ def _session_evidence(vault: Path, status_report: Mapping[str, Any]) -> dict[str
         "iteration_count": len(iterations),
         "successful_iteration_count": successful_count,
         "has_success_then_followup": has_success_then_followup,
+        **maintenance_summary,
+        **session_requirements,
     }
 
 
@@ -504,14 +593,39 @@ def _session_evidence_blockers(session_evidence: Mapping[str, Any]) -> list[str]
     blockers: list[str] = []
     if session_evidence.get("session_status") != "complete":
         blockers.append("auto-improve session did not complete")
-    if session_evidence.get("stop_reason") != "time_budget_exhausted":
-        blockers.append("auto-improve session did not run until time budget")
-    if _integer_value(session_evidence.get("iteration_count")) < 2:
-        blockers.append("auto-improve session did not repeat improvement iterations")
-    if _integer_value(session_evidence.get("successful_iteration_count")) < 1:
-        blockers.append("auto-improve session has no successful improvement iteration")
-    if not _bool_value(session_evidence.get("has_success_then_followup")):
+    accepted_stop_reasons = _list_text(session_evidence.get("accepted_stop_reasons"))
+    if session_evidence.get("stop_reason") not in accepted_stop_reasons:
+        if accepted_stop_reasons == ["time_budget_exhausted"]:
+            blockers.append("auto-improve session did not run until time budget")
+        else:
+            blockers.append("auto-improve session stop reason is not accepted for profile")
+    minimum_iteration_count = _integer_value(session_evidence.get("minimum_iteration_count"))
+    if _integer_value(session_evidence.get("iteration_count")) < minimum_iteration_count:
+        if minimum_iteration_count == 2:
+            blockers.append("auto-improve session did not repeat improvement iterations")
+        else:
+            blockers.append("auto-improve session has fewer than required improvement iterations")
+    minimum_successful_count = _integer_value(
+        session_evidence.get("minimum_successful_iteration_count")
+    )
+    if _integer_value(session_evidence.get("successful_iteration_count")) < minimum_successful_count:
+        if minimum_successful_count == 1:
+            blockers.append("auto-improve session has no successful improvement iteration")
+        else:
+            blockers.append(
+                "auto-improve session has fewer than required successful improvement iterations"
+            )
+    if _bool_value(session_evidence.get("requires_success_then_followup")) and not _bool_value(
+        session_evidence.get("has_success_then_followup")
+    ):
         blockers.append("auto-improve session did not continue after a successful improvement")
+    if _bool_value(session_evidence.get("requires_meaningful_maintenance")):
+        if str(session_evidence.get("maintenance_status", "")).strip() != "clean":
+            blockers.append("auto-improve session lacks meaningful runtime maintenance evidence")
+        elif _integer_value(session_evidence.get("maintenance_cycle_count")) < _integer_value(
+            session_evidence.get("expected_min_maintenance_cycle_count")
+        ):
+            blockers.append("auto-improve session maintenance evidence is below expected cadence")
     return blockers
 
 
@@ -679,15 +793,11 @@ def build_report(request: GoalProfileVerificationRequest) -> dict[str, Any]:
         "audit_event_count": 0,
         "runner_command_audit_current": False,
     }
-    session_evidence = _session_evidence(vault, status_report) if status_report else {
-        "status": "missing",
-        "path": "",
-        "session_status": "",
-        "stop_reason": "",
-        "iteration_count": 0,
-        "successful_iteration_count": 0,
-        "has_success_then_followup": False,
-    }
+    session_evidence = (
+        _session_evidence(vault, status_report, profile=target_profile)
+        if status_report
+        else _empty_session_evidence(target_profile, status="missing", path="")
+    )
     blockers: list[str] = []
     if target_profile == "none":
         verification_status = "already_complete"

@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-claim-activation-report.schema.json",
   "artifact_kind": "learning_claim_activation_report",
-  "generated_at": "2026-05-17T22:14:49Z",
+  "generated_at": "2026-05-19T16:10:27Z",
   "producer": "ops.scripts.learning_claim_activation_report",
   "source_command": "python -m ops.scripts.learning_claim_activation_report --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e362b1f99c00851970afef15992d799a3fdc1e4eca29177c243e681e1c0bc52a",
+  "source_tree_fingerprint": "81d6acebfae87091e9e60a9ee0042c2398a7159a5bd603b84b77b14fe4c10533",
   "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "d366a06d6c9fbade9f99a3a702f7e88409d8e793328122ab6b196c4d7d670305",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "b07eab6c0997284ce26fad16b3bd7bbf373e916a726d3ee1372dcd463b8d2c8e",
-    "learning_claim_activation_inputs": "0cd15a3bc798ff45f8ed6cd34ab5d2a3a1ee4747e517f6257bdda0c53e0ba857"
+    "source_paths": "9879aa6dea2f107086d381aec9d1ab487d1ad7ceab74981f697ec14fee9ccd3b",
+    "learning_claim_activation_inputs": "5e14a1e6de8ef5e84ffc1f58d54b3d618c5fb6ce784866ee4815585561c6a9c1"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-17T22:14:49Z"
+    "checked_at": "2026-05-19T16:10:27Z"
   },
   "vault": ".",
   "policy": {
@@ -28,20 +28,20 @@
   },
   "status": "pass",
   "summary": {
-    "activation_status": "blocked",
+    "activation_status": "not_candidate",
     "claim_level": "none",
     "claim_wording_allowed": false,
     "blocked_predicate_count": 2,
     "anti_slop_preview_status": "attention",
-    "negative_learning_pattern_count": 5,
+    "negative_learning_pattern_count": 9,
     "gate_effect": "none"
   },
   "claim_candidate": {
-    "status": "blocked",
-    "candidate": true,
+    "status": "not_candidate",
+    "candidate": false,
     "current": {
       "claim_level": "none",
-      "learning_likely": true,
+      "learning_likely": false,
       "claims_learning_improved": false,
       "learning_claim_allowed": false,
       "bounded_learning_claim_allowed": false,
@@ -58,7 +58,7 @@
     "evidence_digest": {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "fc02559254cd8d19c0463760078be99787a150557f526ce010c0330bf0a4b30e",
+      "sha256": "cb59687ced9e17b25c1c2cec469ca74c2b5fb6ba27a2010d22c45224ebcc7aff",
       "status": "present"
     },
     "post_seal_linkage": {
@@ -80,7 +80,7 @@
       "evidence_digest": {
         "path": "ops/reports/learning-delta-scoreboard.json",
         "exists": true,
-        "sha256": "fc02559254cd8d19c0463760078be99787a150557f526ce010c0330bf0a4b30e",
+        "sha256": "cb59687ced9e17b25c1c2cec469ca74c2b5fb6ba27a2010d22c45224ebcc7aff",
         "status": "present"
       },
       "post_seal_linkage": {
@@ -115,13 +115,13 @@
     {
       "path": "ops/reports/auto-improve-readiness.json",
       "exists": true,
-      "sha256": "b129c8ba4521551fb6a313f1bb8c2c1de338e4f8cf950f25a5e07debedf3d9e6",
+      "sha256": "574c910f932f253f1281f397580e57699d7288aceae04d74487dcc51dc0b0998",
       "status": "present"
     },
     {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "fc02559254cd8d19c0463760078be99787a150557f526ce010c0330bf0a4b30e",
+      "sha256": "cb59687ced9e17b25c1c2cec469ca74c2b5fb6ba27a2010d22c45224ebcc7aff",
       "status": "present"
     },
     {
@@ -199,7 +199,7 @@
       {
         "axis": "scope_discipline",
         "status": "pass",
-        "current": "runnable_proposal_count=1; can_execute_trial=True",
+        "current": "runnable_proposal_count=0; can_execute_trial=False",
         "required": "Auto-improve learning probes should remain narrow, with at most one runnable proposal.",
         "repair_target": "Split or defer proposals until the active run has a single bounded target.",
         "gate_effect": "none"
@@ -226,7 +226,7 @@
     "mode": "advisory",
     "gate_effect": "none",
     "status": "attention",
-    "pattern_count": 5,
+    "pattern_count": 9,
     "patterns": [
       {
         "pattern_id": "blocked_queue_recent_log_overlap",
@@ -234,14 +234,14 @@
           "BLOCKED"
         ],
         "run_ids": [],
-        "occurrence_count": 1,
+        "occurrence_count": 2,
         "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
         "repair_target": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane.",
         "evidence_digests": [
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "exists": true,
-            "sha256": "b129c8ba4521551fb6a313f1bb8c2c1de338e4f8cf950f25a5e07debedf3d9e6",
+            "sha256": "574c910f932f253f1281f397580e57699d7288aceae04d74487dcc51dc0b0998",
             "status": "present"
           }
         ]
@@ -261,7 +261,7 @@
           {
             "path": "ops/reports/learning-delta-scoreboard.json",
             "exists": true,
-            "sha256": "fc02559254cd8d19c0463760078be99787a150557f526ce010c0330bf0a4b30e",
+            "sha256": "cb59687ced9e17b25c1c2cec469ca74c2b5fb6ba27a2010d22c45224ebcc7aff",
             "status": "present"
           }
         ]
@@ -287,6 +287,73 @@
         ]
       },
       {
+        "pattern_id": "discard_changed_files_manifest_primary_targets_touched",
+        "decisions": [
+          "DISCARD"
+        ],
+        "run_ids": [
+          "auto-improve-trial-maintenance-rerun-4-run-01-mutation-proposal-runtime",
+          "auto-improve-remediation-p1e-20260519T142130Z-run-01-auto-improve-iteration-persistence-runtime"
+        ],
+        "occurrence_count": 2,
+        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+        "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=changed_files_manifest_primary_targets_touched.",
+        "evidence_digests": [
+          {
+            "path": "runs/archive/auto-improve-trial-maintenance-rerun-4-run-01-mutation-proposal-runtime-discard-maintenance-redesign-20260519t103553z/run-telemetry.json",
+            "exists": true,
+            "sha256": "2c15bbc05ab31629e6a4dcaaa5c5d58d6a8040115596fd764a34ca78f946d704",
+            "status": "present"
+          },
+          {
+            "path": "runs/auto-improve-remediation-p1e-20260519T142130Z-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "12562081d19a2b989d909c24bba5f97ab60ac2b8156e1981e25abd692db58a97",
+            "status": "present"
+          }
+        ]
+      },
+      {
+        "pattern_id": "discard_changed_files_manifest_scope",
+        "decisions": [
+          "DISCARD"
+        ],
+        "run_ids": [
+          "auto-improve-remediation-p1b-20260519T124442Z-run-01-auto-improve-iteration-persistence-runtime"
+        ],
+        "occurrence_count": 1,
+        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+        "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=changed_files_manifest_scope.",
+        "evidence_digests": [
+          {
+            "path": "runs/auto-improve-remediation-p1b-20260519T124442Z-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "3eb591608cd8835f6e618f93109e654cfb967af9d9952cb3f6f44a405309d290",
+            "status": "present"
+          }
+        ]
+      },
+      {
+        "pattern_id": "discard_equal_score_secondary_eligibility",
+        "decisions": [
+          "DISCARD"
+        ],
+        "run_ids": [
+          "auto-improve-trial-run-01-mutation-proposal-runtime"
+        ],
+        "occurrence_count": 1,
+        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+        "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=equal_score_secondary_eligibility.",
+        "evidence_digests": [
+          {
+            "path": "runs/archive/auto-improve-trial-run-01-mutation-proposal-runtime-noop-discard-20260519t091216z/run-telemetry.json",
+            "exists": true,
+            "sha256": "30393312bf1038c7735d3e6987cbf7ee8c9e54c0406eaf5ba34ade6d4ba8fd7f",
+            "status": "present"
+          }
+        ]
+      },
+      {
         "pattern_id": "discard_telemetry_discoverability_improved",
         "decisions": [
           "DISCARD"
@@ -302,6 +369,26 @@
             "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/run-telemetry.json",
             "exists": true,
             "sha256": "370f77f245e56c0572e6542a94c5dbf3257f9d533d78da70f01507d83a8007d4",
+            "status": "present"
+          }
+        ]
+      },
+      {
+        "pattern_id": "hold_legacy_promotion_report",
+        "decisions": [
+          "HOLD"
+        ],
+        "run_ids": [
+          "auto-improve-remediation-p1d-20260519T140010Z-run-01-auto-improve-iteration-persistence-runtime"
+        ],
+        "occurrence_count": 1,
+        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+        "repair_target": "Change the mechanism or evidence predicate before rerunning another HOLD attempt with same_eval_reason_code=legacy_promotion_report.",
+        "evidence_digests": [
+          {
+            "path": "runs/auto-improve-remediation-p1d-20260519T140010Z-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "e7ec55765eb809e4e3abe6039c851a3fc5a485994c9b646eb02113b8dd9c66a2",
             "status": "present"
           }
         ]

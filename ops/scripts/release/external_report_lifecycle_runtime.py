@@ -415,6 +415,27 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         ],
         "recommended_target": "auto-improve-goal-preflight",
     },
+    {
+        "action_id": "goal_runtime_transient_cleanup_gate",
+        "priority": "P1",
+        "theme": "transient artifact cleanup gate for long goal runs",
+        "patterns": [
+            r"transient artifact cleanup",
+            r"transient cleanup gate",
+            r"goal-runtime-clean-transient",
+            r"long-run-preflight-clean",
+            r"obsolete tracked goal",
+            r"stale legacy runtime",
+        ],
+        "evidence_paths": [
+            "mk/mechanism.mk",
+            "ops/scripts/mechanism/goal_runtime_clean_transient.py",
+            "ops/schemas/goal-runtime-clean-transient.schema.json",
+            "tmp/goal-runtime-clean-transient.json",
+            "tests/test_goal_runtime_clean_transient.py",
+        ],
+        "recommended_target": "long-run-preflight-clean",
+    },
 ]
 
 ARCHIVE_STATUS_RE = re.compile(
@@ -655,7 +676,7 @@ def _goal_contract_is_bounded(contract: dict[str, Any]) -> bool:
         and as_list(budgets.get("profile_ladder"))
         and runtime_profile.get("current_profile")
         and bool(goal_backend.get("process_persistent"))
-        and goal_backend.get("backend_type") == "file"
+        and goal_backend.get("backend_type") in {"file", "run_local_file"}
         and as_list(contract.get("stop_conditions"))
         and as_list(contract.get("required_evidence"))
         and bool(promotion_guard.get("no_sustained_claim_before_profile_verified"))
@@ -681,9 +702,13 @@ def codex_goal_adapter_status(vault: Path, existing_count: int, expected_count: 
         return status
     contract = load_json_object(vault / "ops/reports/codex-goal-contract.json")
     goal_backend = as_dict(contract.get("goal_backend"))
-    if (
-        _goal_contract_is_bounded(contract)
-        and goal_backend.get("storage_path") == "ops/reports/codex-goal-contract.json"
+    storage_path = str(goal_backend.get("storage_path", "")).strip()
+    if _goal_contract_is_bounded(contract) and (
+        storage_path == "ops/reports/codex-goal-contract.json"
+        or (
+            storage_path.startswith("runs/goal-")
+            and storage_path.endswith("/state/codex-goal-contract.json")
+        )
     ):
         return "implemented"
     return "requires_release_run_verification"
@@ -729,12 +754,16 @@ def auto_improve_goal_contract_input_status(
         for item in required_evidence
         if isinstance(item, dict)
     }
+    has_goal_status_path = "ops/reports/goal-run-status.json" in required_paths or any(
+        path.startswith("runs/goal-") and path.endswith("/state/goal-run-status.json")
+        for path in required_paths
+    )
     if (
         _goal_contract_is_bounded(contract)
         and as_int(budgets.get("max_wall_clock_seconds")) == 1800
         and as_int(budgets.get("max_proposals")) == 1
         and as_int(budgets.get("max_consecutive_failures")) == 1
-        and "ops/reports/goal-run-status.json" in required_paths
+        and has_goal_status_path
     ):
         return "implemented"
     return "requires_release_run_verification"
@@ -753,8 +782,12 @@ def goal_run_status_audit_resume_status(
     health = as_dict(report.get("health"))
     profile_ladder = as_dict(report.get("profile_ladder"))
     contract_digest = _current_contract_digest(vault)
+    status_report_path = str(artifacts.get("status_report_path", "")).strip()
+    status_report_path_valid = status_report_path == "ops/reports/goal-run-status.json" or (
+        status_report_path.startswith("runs/goal-")
+        and status_report_path.endswith("/state/goal-run-status.json")
+    )
     artifact_paths = {
-        "status_report_path": "ops/reports/goal-run-status.json",
         "status_markdown_path": "runs/goal-",
         "audit_log_path": "runs/goal-",
         "resume_metadata_path": "runs/goal-",
@@ -772,6 +805,7 @@ def goal_run_status_audit_resume_status(
         and report.get("status") in {"pass", "attention"}
         and bool(backend.get("process_persistent"))
         and goal.get("contract_sha256") == contract_digest
+        and status_report_path_valid
         and paths_valid
         and health.get("heartbeat_status") in {"current", "stale"}
         and health.get("checkpoint_status") in {"current", "stale"}
@@ -836,6 +870,31 @@ def git_worktree_goal_guard_status(
         and isinstance(decisions.get("can_execute_goal_runtime"), bool)
         and isinstance(decisions.get("can_promote_result"), bool)
         and isinstance(report.get("blockers"), list)
+    ):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
+def goal_runtime_transient_cleanup_gate_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    status = _all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    report = load_json_object(vault / "tmp/goal-runtime-clean-transient.json")
+    summary = as_dict(report.get("summary"))
+    try:
+        makefile_text = (vault / "mk/mechanism.mk").read_text(encoding="utf-8")
+    except OSError:
+        makefile_text = ""
+    if (
+        "goal-runtime-clean-transient:" in makefile_text
+        and "long-run-preflight-clean:" in makefile_text
+        and report.get("artifact_kind") == "goal_runtime_clean_transient"
+        and report.get("producer") == "ops.scripts.goal_runtime_clean_transient"
+        and report.get("status") == "pass"
+        and summary.get("apply") is True
+        and as_int(summary.get("failed_count")) == 0
     ):
         return "implemented"
     return "requires_release_run_verification"
@@ -1038,6 +1097,12 @@ def status_from_evidence(vault: Path, action: dict[str, Any]) -> tuple[str, list
         )
     elif action_id == "git_worktree_goal_guard":
         status = git_worktree_goal_guard_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "goal_runtime_transient_cleanup_gate":
+        status = goal_runtime_transient_cleanup_gate_status(
             vault,
             existing_count,
             len(action["evidence_paths"]),

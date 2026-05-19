@@ -10,18 +10,27 @@ PROFILE_ORDER = ("30m_trial", "6h_ramp", "2d_candidate", "5d_sustained")
 PROFILE_REQUIREMENTS: dict[str, dict[str, Any]] = {
     "30m_trial": {
         "minimum_elapsed_seconds": 1800,
+        "minimum_iterations": 1,
+        "minimum_successful_iterations": 1,
+        "requires_success_then_followup": False,
+        "requires_meaningful_maintenance": True,
+        "accepted_stop_reasons": ["time_budget_exhausted", "proposal_budget_exhausted"],
         "evidence_paths": [
             "ops/reports/goal-run-status.json",
             "ops/reports/session-synopsis.json",
             "ops/reports/auto-improve-readiness.json",
         ],
         "required_before_next_profile": (
-            "bounded 30m repeated-improvement session, status, audit, synopsis, readiness, "
-            "and no promotion claim"
+            "bounded 30m one-proposal trial session with repeated runtime maintenance work, "
+            "status, audit, synopsis, readiness, and no promotion claim"
         ),
     },
     "6h_ramp": {
         "minimum_elapsed_seconds": 21600,
+        "minimum_iterations": 2,
+        "minimum_successful_iterations": 1,
+        "requires_success_then_followup": True,
+        "accepted_stop_reasons": ["time_budget_exhausted"],
         "evidence_paths": [
             "ops/reports/goal-run-status.json",
             "ops/reports/session-synopsis.json",
@@ -35,6 +44,10 @@ PROFILE_REQUIREMENTS: dict[str, dict[str, Any]] = {
     },
     "2d_candidate": {
         "minimum_elapsed_seconds": 172800,
+        "minimum_iterations": 2,
+        "minimum_successful_iterations": 1,
+        "requires_success_then_followup": True,
+        "accepted_stop_reasons": ["time_budget_exhausted"],
         "evidence_paths": [
             "ops/reports/goal-run-status.json",
             "ops/reports/remediation-backlog.json",
@@ -48,6 +61,10 @@ PROFILE_REQUIREMENTS: dict[str, dict[str, Any]] = {
     },
     "5d_sustained": {
         "minimum_elapsed_seconds": 432000,
+        "minimum_iterations": 2,
+        "minimum_successful_iterations": 1,
+        "requires_success_then_followup": True,
+        "accepted_stop_reasons": ["time_budget_exhausted"],
         "evidence_paths": [
             "ops/reports/goal-run-status.json",
             "ops/reports/public-check-summary.json",

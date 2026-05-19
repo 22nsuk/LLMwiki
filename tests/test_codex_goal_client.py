@@ -13,6 +13,7 @@ from ops.scripts.codex_goal_client import (
     FileGoalBackend,
     GoalBackendUnavailableError,
     GoalContractValidationError,
+    RunLocalFileGoalBackend,
     build_auto_improve_goal_contract,
     detect_goal_backend,
     get_goal,
@@ -113,7 +114,24 @@ class CodexGoalClientTests(unittest.TestCase):
         self.assertIn("non_goals", contract)
         self.assertIn("allowed_roots", contract)
         self.assertEqual(contract["budgets"]["max_wall_clock_seconds"], 1800)
-        self.assertEqual(contract["budgets"]["max_proposals"], 10000)
+        self.assertEqual(contract["budgets"]["max_proposals"], 1)
+        self.assertEqual(
+            [
+                (
+                    item["profile"],
+                    item["max_wall_clock_seconds"],
+                    item["max_proposals"],
+                    item["max_consecutive_failures"],
+                )
+                for item in contract["budgets"]["profile_ladder"]
+            ],
+            [
+                ("30m_trial", 1800, 1, 1),
+                ("6h_ramp", 21600, 6, 2),
+                ("2d_candidate", 172800, 24, 3),
+                ("5d_sustained", 432000, 60, 3),
+            ],
+        )
         self.assertEqual(contract["runtime_profile"]["verified_profiles"], [])
         self.assertEqual(contract["runtime_profile"]["next_profile"], "30m_trial")
         self.assertEqual(contract["promotion_guard"]["can_promote_result"], False)
@@ -396,6 +414,32 @@ class CodexGoalClientTests(unittest.TestCase):
         self.assertEqual(loaded["runtime_profile"]["next_profile"], "6h_ramp")
         self.assertEqual(loaded["promotion_guard"]["profile_verified"], "30m_trial")
         self.assertFalse(loaded["promotion_guard"]["sustained_runtime_claimed"])
+
+    def test_run_local_contract_marks_backend_and_status_path(self) -> None:
+        contract = build_auto_improve_goal_contract(
+            created_at="2026-05-17T00:00:00Z",
+            storage_path="runs/goal-trial/state/codex-goal-contract.json",
+            backend_type="run_local_file",
+            goal_status_path="runs/goal-trial/state/goal-run-status.json",
+        )
+
+        backend = RunLocalFileGoalBackend(
+            self.vault,
+            contract_path="runs/goal-trial/state/codex-goal-contract.json",
+        )
+        written = set_goal(contract, backend=backend)
+
+        self.assertEqual(written["goal_backend"]["backend_type"], "run_local_file")
+        self.assertEqual(backend.name, "run_local_file")
+        self.assertEqual(
+            next(
+                item["path"]
+                for item in written["required_evidence"]
+                if item["evidence_id"] == "goal_run_status"
+            ),
+            "runs/goal-trial/state/goal-run-status.json",
+        )
+        self.assertTrue((self.vault / "runs" / "goal-trial" / "state" / "codex-goal-contract.json").is_file())
 
 
 if __name__ == "__main__":

@@ -18,7 +18,14 @@ from ops.scripts.auto_improve_outcome_runtime import (
 from ops.scripts.promotion_decision_registry_runtime import reduce_decision_proposals
 
 
-def _write_executor_report(vault: Path, run_id: str, role: str, status: str) -> None:
+def _write_executor_report(
+    vault: Path,
+    run_id: str,
+    role: str,
+    status: str,
+    *,
+    returncode: int | None = None,
+) -> None:
     path = vault / role_report_path(run_id, role)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -26,7 +33,12 @@ def _write_executor_report(vault: Path, run_id: str, role: str, status: str) -> 
             {
                 "role": role,
                 "status": status,
-                "result": {"returncode": 0 if status == "pass" else 1},
+                "artifacts": {
+                    "stderr": f"runs/{run_id}/{role}.stderr.txt",
+                },
+                "result": {
+                    "returncode": returncode if returncode is not None else 0 if status == "pass" else 1,
+                },
             },
             ensure_ascii=False,
             indent=2,
@@ -77,7 +89,7 @@ class AutoImproveOutcomeRuntimeTests(unittest.TestCase):
         self.assertTrue(outcome.quarantine_proposal)
         self.assertIsNone(outcome.result)
 
-    def test_evaluate_experiment_result_promote_and_discard_reset_failure_count(self) -> None:
+    def test_evaluate_experiment_result_promote_resets_discard_increments_failure_count(self) -> None:
         promoted = evaluate_experiment_result(
             {"decision": "PROMOTE", "repo_health": {"passed": True}},
             2,
@@ -91,8 +103,10 @@ class AutoImproveOutcomeRuntimeTests(unittest.TestCase):
         self.assertEqual(promoted.next_consecutive_failures, 0)
         self.assertFalse(promoted.quarantine_proposal)
         self.assertEqual(discarded.outcome, "discarded")
-        self.assertEqual(discarded.next_consecutive_failures, 0)
+        self.assertEqual(discarded.next_consecutive_failures, 3)
         self.assertFalse(discarded.quarantine_proposal)
+        self.assertFalse(discarded.is_terminal_success)
+        self.assertEqual(discarded.iteration_status, "blocked")
 
     def test_evaluate_experiment_result_hold_increments_without_quarantine(self) -> None:
         outcome = evaluate_experiment_result(
@@ -124,7 +138,7 @@ class AutoImproveOutcomeRuntimeTests(unittest.TestCase):
         )
 
         self.assertEqual(outcome.outcome, "discarded")
-        self.assertEqual(outcome.next_consecutive_failures, 0)
+        self.assertEqual(outcome.next_consecutive_failures, 4)
 
     def test_evaluate_experiment_result_hold_precedes_failed_repo_health(self) -> None:
         outcome = evaluate_experiment_result(
@@ -166,6 +180,37 @@ class AutoImproveOutcomeRuntimeTests(unittest.TestCase):
 
             self.assertEqual(
                 detect_executor_failure(run_id, ["worker", "reviewer", "validator"], vault),
+                "review_blocked",
+            )
+
+    def test_detect_executor_failure_does_not_treat_review_output_snippets_as_usage_limit(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            run_id = "run-a"
+            _write_executor_report(vault, run_id, "worker", "pass")
+            _write_executor_report(vault, run_id, "reviewer", "fail", returncode=0)
+            stderr_path = vault / "runs" / run_id / "reviewer.stderr.txt"
+            stderr_path.write_text(
+                "\n".join(
+                    [
+                        "exec",
+                        "rg -n 'executor_usage_limited|usage limit' tests ops",
+                        " succeeded in 23ms:",
+                        (
+                            "tests/test_auto_improve_runtime.py:542:"
+                            "\"ERROR: You've hit your usage limit. Try again at May 16th\""
+                        ),
+                        "ops/scripts/mechanism/auto_improve_outcome_runtime.py:17:"
+                        "RETRYABLE_EXECUTOR_FAILURE_OUTCOMES = {'executor_usage_limited'}",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                detect_executor_failure(run_id, ["worker", "reviewer"], vault),
                 "review_blocked",
             )
 

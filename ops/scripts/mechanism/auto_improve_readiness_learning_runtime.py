@@ -15,7 +15,7 @@ from ops.scripts.learning_readiness_vocabulary import (
 from ops.scripts.policy_runtime import report_path
 
 from .auto_improve_readiness_constants_runtime import (
-    AUTO_IMPROVE_LOOP_ALLOW_LEARNING_UNCERTAIN_COMMAND,
+    AUTO_IMPROVE_GOAL_ALLOW_LEARNING_UNCERTAIN_COMMAND,
     DEFAULT_DEFECT_ESCAPE_PAIR_COUNT,
     DEFAULT_HIGH_REWORK_COUNT,
     DEFAULT_HOLD_OR_DISCARD_MOVING_AVERAGE,
@@ -682,8 +682,9 @@ def _learning_readiness_assessment(
             if likely_to_learn
             else (
                 "Execution readiness is pass, but learning readiness still requires explicit operator review. "
-                "Rerun auto-improve with "
-                f"`{AUTO_IMPROVE_LOOP_ALLOW_LEARNING_UNCERTAIN_COMMAND}` only if you want a bounded trial while session evidence remains incomplete."
+                "Rerun goal-native auto-improve with "
+                f"`{AUTO_IMPROVE_GOAL_ALLOW_LEARNING_UNCERTAIN_COMMAND}` only if you want a bounded 30m trial "
+                "with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
             )
         )
     )
@@ -765,4 +766,3 @@ def _learning_release_blockers(learning: LearningReadinessAssessment) -> list[Le
             recommended_next_step=learning.recommended_next_step,
         )
     ]
-

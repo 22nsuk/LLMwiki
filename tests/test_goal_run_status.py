@@ -385,6 +385,62 @@ class GoalRunStatusTests(unittest.TestCase):
         self.assertEqual(audit_event["event"], "goal_run_status_written")
         self.assertEqual(audit_event["writer"], "ops.scripts.goal_run_status")
 
+    def test_goal_run_status_uses_run_local_state_paths_for_active_status(self) -> None:
+        contract = sample_goal_contract()
+        contract["goal_backend"].update(
+            {
+                "backend_type": "run_local_file",
+                "storage_path": "runs/goal-20260517-trial/state/codex-goal-contract.json",
+            }
+        )
+        set_goal(
+            contract,
+            vault=self.vault,
+            contract_path="runs/goal-20260517-trial/state/codex-goal-contract.json",
+        )
+
+        report = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                goal_contract_path="runs/goal-20260517-trial/state/codex-goal-contract.json",
+                status_report_path="runs/goal-20260517-trial/state/goal-run-status.json",
+                context=fixed_context(),
+            )
+        )
+        report_path = write_report(
+            self.vault,
+            report,
+            out_path="runs/goal-20260517-trial/state/goal-run-status.json",
+        )
+        written_paths = write_run_artifacts(self.vault, report)
+
+        self.assertEqual(
+            report_path,
+            self.vault / "runs" / "goal-20260517-trial" / "state" / "goal-run-status.json",
+        )
+        self.assertEqual(report["goal"]["backend"]["name"], "run_local_file")
+        self.assertEqual(
+            report["artifacts"]["status_markdown_path"],
+            "runs/goal-20260517-trial/state/status.md",
+        )
+        self.assertEqual(
+            report["artifacts"]["audit_log_path"],
+            "runs/goal-20260517-trial/state/audit-log.jsonl",
+        )
+        self.assertEqual(
+            report["artifacts"]["resume_metadata_path"],
+            "runs/goal-20260517-trial/state/resume-metadata.json",
+        )
+        self.assertEqual(
+            [path.relative_to(self.vault).as_posix() for path in written_paths],
+            [
+                "runs/goal-20260517-trial/state/status.md",
+                "runs/goal-20260517-trial/state/resume-metadata.json",
+                "runs/goal-20260517-trial/state/audit-log.jsonl",
+            ],
+        )
+
     def test_goal_run_status_finalization_preserves_prior_run_clock(self) -> None:
         self._seed_goal_contract()
         initial = build_report(

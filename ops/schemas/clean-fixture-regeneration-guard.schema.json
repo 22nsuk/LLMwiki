@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Clean Fixture Regeneration Guard",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "status",
+    "allow_dirty_ops_reports",
+    "git_status_error",
+    "dirty_entries",
+    "dirty_ops_report_paths",
+    "dirty_public_surface_paths",
+    "summary"
+  ],
+  "properties": {
+    "$schema": { "const": "ops/schemas/clean-fixture-regeneration-guard.schema.json" },
+    "artifact_kind": { "const": "clean_fixture_regeneration_guard" },
+    "generated_at": { "type": "string" },
+    "producer": { "const": "ops.scripts.clean_fixture_regeneration_guard" },
+    "source_command": { "type": "string" },
+    "source_revision": { "type": "string" },
+    "source_tree_fingerprint": { "type": "string" },
+    "input_fingerprints": { "type": "object", "additionalProperties": { "type": "string" } },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": { "type": "string" },
+    "retention_policy": { "type": "string" },
+    "encoding": { "const": "utf-8" },
+    "currentness": { "type": "object" },
+    "vault": { "type": "string" },
+    "status": { "enum": ["pass", "fail"] },
+    "allow_dirty_ops_reports": { "type": "boolean" },
+    "git_status_error": { "type": "string" },
+    "dirty_entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "path"],
+        "properties": {
+          "status": { "type": "string" },
+          "path": { "type": "string" }
+        }
+      }
+    },
+    "dirty_ops_report_paths": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "dirty_public_surface_paths": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dirty_ops_report_count",
+        "dirty_public_surface_count",
+        "allow_dirty_ops_reports",
+        "next_action"
+      ],
+      "properties": {
+        "dirty_ops_report_count": { "type": "integer", "minimum": 0 },
+        "dirty_public_surface_count": { "type": "integer", "minimum": 0 },
+        "allow_dirty_ops_reports": { "type": "boolean" },
+        "next_action": { "type": "string" }
+      }
+    }
+  }
+}

@@ -442,12 +442,17 @@
           "type": "object",
           "required": [
             "dedupe_window",
+            "max_age_days",
             "section_ordering",
             "scanned_log_headings",
             "matches"
           ],
           "properties": {
             "dedupe_window": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "max_age_days": {
               "type": "integer",
               "minimum": 0
             },

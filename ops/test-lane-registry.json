@@ -272,7 +272,10 @@
           "tests/test_report_schemas.py",
           "tests/test_report_schema_sample_regeneration.py",
           "tests/test_workflow_dependency_planner.py",
+          "tests/test_clean_fixture_regeneration_guard.py",
           "tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface",
+          "tests/test_goal_runtime_clean_transient.py",
+          "tests/test_goal_runtime_fixed_point_check.py",
           "tests/test_run_templates.py"
         ]
       },

@@ -49,17 +49,11 @@ DEFAULT_DEFECT_ESCAPE_PAIR_COUNT = 1
 REFRESH_GENERATED_TARGET = "make refresh-generated-core"
 READINESS_TARGET = "make auto-improve-readiness"
 AUTO_IMPROVE_GOAL_RUN_COMMAND = "make auto-improve-goal-run"
-AUTO_IMPROVE_LOOP_COMMAND = (
-    ".venv/bin/python -m ops.scripts.mechanism.auto_improve_loop "
-    "--vault . "
-    "--policy ops/policies/wiki-maintainer-policy.yaml "
-    "--max-proposals 10000 "
-    "--max-minutes 30 "
-    "--max-consecutive-failures 1 "
-    "--executor codex_exec"
-)
-AUTO_IMPROVE_LOOP_ALLOW_LEARNING_UNCERTAIN_COMMAND = (
-    f"{AUTO_IMPROVE_LOOP_COMMAND} --allow-learning-uncertain"
+AUTO_IMPROVE_GOAL_ALLOW_LEARNING_UNCERTAIN_COMMAND = (
+    "make auto-improve-goal-run "
+    "PYTHON=.venv/bin/python "
+    "VAULT=. "
+    "GOAL_ALLOW_LEARNING_UNCERTAIN=1"
 )
 SAME_EVAL_PROPOSAL_FAILURE_MODES = {
     "repeated_same_eval_or_discard",
@@ -73,10 +67,24 @@ RECENT_LOG_OVERLAP_REMEDIATION = {
     "minimum_evidence": [
         "A refreshed mutation proposal report no longer lists recent_log_overlap in blocked_by for every emitted proposal.",
         "auto-improve readiness reports queue.runnable_proposal_count greater than 0.",
-        "The recent overlapping target chronology has advanced or the proposal target set no longer overlaps the recent run log.",
+        "The recent overlapping target chronology has advanced, the max-age window has expired, or the proposal target set no longer overlaps the recent run log.",
     ],
     "retry_condition": (
         "Rerun make auto-improve-readiness after make refresh-generated-core observes a newer chronology "
-        "or a non-overlapping runnable proposal."
+        "after the max-age window expires, or after a non-overlapping runnable proposal appears."
+    ),
+}
+RECENT_OUTCOME_REWORK_REMEDIATION = {
+    "remediation_code": "stop_repeating_unresolved_queue_rotation",
+    "blocker_kind": "hard",
+    "unblock_action_type": "outcome_rework_repair_or_successful_supersession",
+    "minimum_evidence": [
+        "A refreshed outcome-metrics report no longer shows repeated unresolved attempts for the same queue-unblock proposal.",
+        "A refreshed mutation proposal report no longer lists recent_outcome_rework in blocked_by for the queue-unblock proposal.",
+        "auto-improve readiness reports queue.runnable_proposal_count greater than 0.",
+    ],
+    "retry_condition": (
+        "Do not rerun the same queue-unblock proposal until a promoted repair supersedes the unresolved attempts "
+        "or mutation proposal generation emits a different non-overlapping runnable target."
     ),
 }

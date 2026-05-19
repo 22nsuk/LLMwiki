@@ -25,9 +25,33 @@ DEFAULT_CONTRACT_ID = "auto-improve-goal"
 PRODUCER = "ops.scripts.codex_goal_client"
 SOURCE_COMMAND = "python -m ops.scripts.codex_goal_client --vault ."
 PROFILE_LADDER = ("30m_trial", "6h_ramp", "2d_candidate", "5d_sustained")
+PROFILE_BUDGETS: dict[str, dict[str, int]] = {
+    "30m_trial": {
+        "max_wall_clock_seconds": 1800,
+        "max_proposals": 1,
+        "max_consecutive_failures": 1,
+    },
+    "6h_ramp": {
+        "max_wall_clock_seconds": 21600,
+        "max_proposals": 6,
+        "max_consecutive_failures": 2,
+    },
+    "2d_candidate": {
+        "max_wall_clock_seconds": 172800,
+        "max_proposals": 24,
+        "max_consecutive_failures": 3,
+    },
+    "5d_sustained": {
+        "max_wall_clock_seconds": 432000,
+        "max_proposals": 60,
+        "max_consecutive_failures": 3,
+    },
+}
 DEFAULT_READINESS_REPORT_PATH = "ops/reports/auto-improve-readiness.json"
 SEALED_PREFLIGHT_REPORT_PATH = "ops/reports/release-closeout-sealed-rehearsal-check.json"
 DEFAULT_WORKTREE_GUARD_REPORT_PATH = "tmp/goal-worktree-guard.json"
+DEFAULT_GOAL_STATUS_PATH = "ops/reports/goal-run-status.json"
+GOAL_BACKEND_TYPES = ("file", "run_local_file", "app_server")
 
 
 class GoalBackendError(RuntimeError):
@@ -151,6 +175,17 @@ def _next_profile_from_verified_profiles(verified_profiles: list[str]) -> str:
         if profile not in verified:
             return profile
     return "none"
+
+
+def _profile_ladder_budget(profile: str, required_before_next_profile: str) -> dict[str, Any]:
+    budget = PROFILE_BUDGETS[profile]
+    return {
+        "profile": profile,
+        "max_wall_clock_seconds": budget["max_wall_clock_seconds"],
+        "max_proposals": budget["max_proposals"],
+        "max_consecutive_failures": budget["max_consecutive_failures"],
+        "required_before_next_profile": required_before_next_profile,
+    }
 
 
 def _existing_contract_for_same_id(
@@ -294,16 +329,20 @@ def build_auto_improve_goal_contract(
     created_at: str | None = None,
     created_by: str = "codex",
     storage_path: str = DEFAULT_CONTRACT_PATH,
+    backend_type: str = "file",
     current_profile: str = "30m_trial",
     max_unattended_seconds: int = 1800,
-    max_proposals: int = 10000,
+    max_proposals: int = 1,
     max_consecutive_failures: int = 1,
     heartbeat_interval_seconds: int = 300,
     checkpoint_interval_seconds: int = 1800,
+    goal_status_path: str = DEFAULT_GOAL_STATUS_PATH,
     promotion_guard: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     if current_profile not in PROFILE_LADDER:
         raise GoalBackendError(f"unsupported goal profile: {current_profile}")
+    if backend_type not in GOAL_BACKEND_TYPES:
+        raise GoalBackendError(f"unsupported goal backend type: {backend_type}")
     default_promotion_guard = {
         "can_promote_result": False,
         "promotion_blockers": [
@@ -346,34 +385,35 @@ def build_auto_improve_goal_contract(
             "heartbeat_interval_seconds": heartbeat_interval_seconds,
             "checkpoint_interval_seconds": checkpoint_interval_seconds,
             "profile_ladder": [
-                {
-                    "profile": "30m_trial",
-                    "required_before_next_profile": (
-                        "30m wall-clock session evidence with repeated improvement iterations, "
-                        "status, audit, checkpoint, heartbeat, and no promotion claim"
+                _profile_ladder_budget(
+                    "30m_trial",
+                    (
+                        "30m wall-clock one-proposal trial evidence with a successful improvement, "
+                        "repeated runtime maintenance work, status, audit, checkpoint, heartbeat, "
+                        "and no promotion claim"
                     ),
-                },
-                {
-                    "profile": "6h_ramp",
-                    "required_before_next_profile": (
+                ),
+                _profile_ladder_budget(
+                    "6h_ramp",
+                    (
                         "30m trial evidence plus 6h repeated improvement session evidence "
                         "and current release/readiness blockers"
                     ),
-                },
-                {
-                    "profile": "2d_candidate",
-                    "required_before_next_profile": (
+                ),
+                _profile_ladder_budget(
+                    "2d_candidate",
+                    (
                         "6h ramp evidence plus 2d repeated improvement session evidence, "
                         "resume, and backoff evidence"
                     ),
-                },
-                {
-                    "profile": "5d_sustained",
-                    "required_before_next_profile": (
+                ),
+                _profile_ladder_budget(
+                    "5d_sustained",
+                    (
                         "2d candidate evidence plus 5d repeated improvement session evidence "
                         "and sealed authority clean pass"
                     ),
-                },
+                ),
             ],
         },
         "created_at": created_at or _utc_now(),
@@ -386,7 +426,7 @@ def build_auto_improve_goal_contract(
             "max_unattended_seconds": max_unattended_seconds,
         },
         "goal_backend": {
-            "backend_type": "file",
+            "backend_type": backend_type,
             "process_persistent": True,
             "storage_path": storage_path,
         },
@@ -417,7 +457,7 @@ def build_auto_improve_goal_contract(
             },
             {
                 "evidence_id": "goal_run_status",
-                "path": "ops/reports/goal-run-status.json",
+                "path": goal_status_path,
                 "description": "Goal status records heartbeat, checkpoint, resume, and promotion blockers.",
                 "freshness": "current_run",
                 "required_for_promotion": True,
@@ -500,6 +540,11 @@ class FileGoalBackend:
 
     def update_goal(self, patch: Mapping[str, Any]) -> dict[str, Any]:
         return self.set_goal(_merge_json_objects(self.get_goal(), patch))
+
+
+@dataclass(frozen=True)
+class RunLocalFileGoalBackend(FileGoalBackend):
+    name: str = "run_local_file"
 
 
 def detect_goal_backend(
@@ -643,12 +688,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--contract-id", default=DEFAULT_CONTRACT_ID)
     parser.add_argument("--created-at", default="")
     parser.add_argument("--created-by", default="codex")
+    parser.add_argument("--backend-type", choices=GOAL_BACKEND_TYPES, default="file")
     parser.add_argument("--current-profile", default="30m_trial")
     parser.add_argument("--max-unattended-seconds", type=int, default=1800)
-    parser.add_argument("--max-proposals", type=int, default=10000)
+    parser.add_argument("--max-proposals", type=int, default=1)
     parser.add_argument("--max-consecutive-failures", type=int, default=1)
     parser.add_argument("--heartbeat-interval-seconds", type=int, default=300)
     parser.add_argument("--checkpoint-interval-seconds", type=int, default=1800)
+    parser.add_argument("--goal-status-path", default=DEFAULT_GOAL_STATUS_PATH)
     parser.add_argument("--readiness-report", default=DEFAULT_READINESS_REPORT_PATH)
     parser.add_argument("--worktree-guard-report", default="")
     parser.add_argument("--no-readiness-sync", action="store_true")
@@ -673,12 +720,14 @@ def main(argv: list[str] | None = None) -> int:
         or None,
         created_by=args.created_by,
         storage_path=args.out,
+        backend_type=args.backend_type,
         current_profile=args.current_profile,
         max_unattended_seconds=args.max_unattended_seconds,
         max_proposals=args.max_proposals,
         max_consecutive_failures=args.max_consecutive_failures,
         heartbeat_interval_seconds=args.heartbeat_interval_seconds,
         checkpoint_interval_seconds=args.checkpoint_interval_seconds,
+        goal_status_path=args.goal_status_path,
         promotion_guard=promotion_guard,
     )
     contract = _preserve_existing_profile_state(contract, existing_contract)

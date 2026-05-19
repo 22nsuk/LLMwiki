@@ -236,6 +236,38 @@ class LearningClaimActivationReportTests(unittest.TestCase):
             self.assertIn("blocked_queue_recent_log_overlap", patterns)
             self.assertIn("BLOCKED", patterns["blocked_queue_recent_log_overlap"]["decisions"])
 
+    def test_negative_learning_uses_decision_record_reason_when_same_eval_code_missing(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_activation_inputs(vault)
+            write_json(
+                vault,
+                "runs/run-discard-decision-record/run-telemetry.json",
+                {
+                    "run_id": "run-discard-decision-record",
+                    "decision": "DISCARD",
+                    "decision_record": {
+                        "reason_code": "changed_files_manifest_primary_targets_touched"
+                    },
+                },
+            )
+
+            report = build_report(vault, context=fixed_context())
+            patterns = {
+                item["pattern_id"]: item
+                for item in report["negative_learning_ledger"]["patterns"]
+            }
+
+            self.assertIn(
+                "discard_changed_files_manifest_primary_targets_touched",
+                patterns,
+            )
+            self.assertNotIn("discard_unspecified", patterns)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -915,7 +915,7 @@ subagent_routing_policy:
           threshold: 3
           min_rung: 3
     validator:
-      sandbox_mode: read-only
+      sandbox_mode: workspace-write
       default_rung: 2
       allowed_rungs:
         - 2
@@ -1200,6 +1200,7 @@ mutation_proposal:
   max_proposals: 10
   lookback_runs: 5
   dedupe_window: 5
+  recent_log_overlap_max_age_days: 7
   run_history_input:
     include_statuses:
       - active

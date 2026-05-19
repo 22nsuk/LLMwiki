@@ -116,12 +116,11 @@ RELEASE_RISK_TAXONOMY_MATRIX_SCHEMA_PATH = (
 WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "workflow-dependency-planner.schema.json"
 TEST_EXECUTION_SUMMARY_PATH = REPO_ROOT / "ops" / "reports" / "test-execution-summary.json"
 TEST_EXECUTION_SUMMARY_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "test-execution-summary.schema.json"
-ROUTING_PROVENANCE_AGGREGATE_REPORT_PATH = (
+ROUTING_PROVENANCE_AGGREGATE_REPORT_DIR = (
     REPO_ROOT
     / "ops"
     / "reports"
     / "routing-provenance-aggregates"
-    / "auto-improve-2026-05-02t03-27-31z.json"
 )
 EXPECTED_MISSING_GENERATED_AT_ACTION = "backfill_generated_at_or_mark_legacy_noncanonical"
 EXPECTED_ARCHIVED_RUN_ID = "run-20260422-auto-improve-decision-record-fallback"
@@ -145,8 +144,8 @@ EXPECTED_RELEASE_SMOKE_SOURCE_PATHS = [
     "ops/scripts/command_runtime.py",
     "ops/scripts/wiki_manifest.py",
 ]
-EXPECTED_ROUTING_PROVENANCE_AGGREGATE_REPORT_PATH = (
-    ROUTING_PROVENANCE_AGGREGATE_REPORT_PATH.relative_to(REPO_ROOT).as_posix()
+EXPECTED_ROUTING_PROVENANCE_AGGREGATE_REPORT_DIR = (
+    ROUTING_PROVENANCE_AGGREGATE_REPORT_DIR.relative_to(REPO_ROOT).as_posix()
 )
 EXPECTED_RELEASE_SMOKE_COMMANDS = {
     "raw_registry_preflight": "python -m ops.scripts.registry.raw_registry_preflight --vault .",
@@ -178,10 +177,6 @@ EXPECTED_CURRENT_SAFE_BACKFILL_REPORTS = {
     "ops/reports/promotion-decision-trends.json": (
         REPO_ROOT / "ops" / "schemas" / "promotion-decision-trends.schema.json",
         "promotion_decision_trends",
-    ),
-    EXPECTED_ROUTING_PROVENANCE_AGGREGATE_REPORT_PATH: (
-        REPO_ROOT / "ops" / "schemas" / "routing-provenance-aggregate.schema.json",
-        "routing_provenance_aggregate",
     ),
     "ops/reports/sbom-readiness-gate-report.json": (
         REPO_ROOT / "ops" / "schemas" / "sbom-readiness-gate-report.schema.json",
@@ -264,6 +259,17 @@ EXPECTED_NONCANONICAL_ARCHIVED_RUN_NOTE_PATHS = {
 
 def _read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _read_readiness_loop_health_aggregate(readiness: dict) -> tuple[str, dict]:
+    loop_health_summary = readiness.get("diagnostics", {}).get("loop_health_summary", {})
+    source_report = str(loop_health_summary.get("source_report", "")).strip()
+    assert source_report.startswith(f"{EXPECTED_ROUTING_PROVENANCE_AGGREGATE_REPORT_DIR}/")
+    assert source_report.endswith(".json")
+
+    aggregate_path = REPO_ROOT / source_report
+    assert aggregate_path.is_file(), f"readiness loop health source is missing: {source_report}"
+    return source_report, _read_json(aggregate_path)
 
 
 def _shape_signature(value: object) -> object:
@@ -506,9 +512,18 @@ def test_checked_in_archived_run_safe_backfill_artifacts_embed_archived_envelope
 
 
 def test_checked_in_current_safe_backfill_reports_have_envelopes_and_no_stable_debt() -> None:
+    readiness = _read_json(AUTO_IMPROVE_READINESS_REPORT_PATH)
     freshness_report = _read_json(ARTIFACT_FRESHNESS_REPORT_PATH)
+    routing_aggregate_path, _routing_aggregate = _read_readiness_loop_health_aggregate(readiness)
+    expected_reports = {
+        **EXPECTED_CURRENT_SAFE_BACKFILL_REPORTS,
+        routing_aggregate_path: (
+            REPO_ROOT / "ops" / "schemas" / "routing-provenance-aggregate.schema.json",
+            "routing_provenance_aggregate",
+        ),
+    }
 
-    for rel_path, (schema_path, artifact_kind) in EXPECTED_CURRENT_SAFE_BACKFILL_REPORTS.items():
+    for rel_path, (schema_path, artifact_kind) in expected_reports.items():
         payload = _read_json(REPO_ROOT / rel_path)
         schema = load_schema(schema_path)
         record = next(
@@ -1253,7 +1268,7 @@ def test_checked_in_auto_improve_readiness_keeps_evidence_ledgers_in_sync() -> N
     readiness = _read_json(AUTO_IMPROVE_READINESS_REPORT_PATH)
     mechanism_review = _read_json(MECHANISM_REVIEW_REPORT_PATH)
     outcome_metrics = _read_json(OUTCOME_METRICS_REPORT_PATH)
-    routing_provenance_aggregate = _read_json(ROUTING_PROVENANCE_AGGREGATE_REPORT_PATH)
+    routing_aggregate_path, routing_provenance_aggregate = _read_readiness_loop_health_aggregate(readiness)
 
     learning_metrics = readiness.get("learning_readiness", {}).get("metrics", {})
     learning_signals = {
@@ -1279,7 +1294,7 @@ def test_checked_in_auto_improve_readiness_keeps_evidence_ledgers_in_sync() -> N
         "defect_escape_proxy", {}
     ).get("count")
 
-    assert loop_health_summary.get("source_report") == EXPECTED_ROUTING_PROVENANCE_AGGREGATE_REPORT_PATH
+    assert loop_health_summary.get("source_report") == routing_aggregate_path
     assert loop_health_summary.get("source_generated_at") == routing_provenance_aggregate.get("generated_at")
     assert loop_health_summary.get("attempt_count") == aggregate_loop_health.get("attempt_count")
     assert loop_health_summary.get("rework_count") == aggregate_loop_health.get("rework_count")

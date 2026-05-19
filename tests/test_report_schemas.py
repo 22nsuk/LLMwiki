@@ -258,6 +258,34 @@ class ReportSchemaContractTest(unittest.TestCase):
             validate_with_schema(invalid_decision, schema),
         )
 
+    def test_run_telemetry_discard_evidence_requires_path_when_source_is_pathlike(
+        self,
+    ) -> None:
+        report = copy.deepcopy(self.samples["run_telemetry"])
+        schema = self.schemas["run_telemetry"]
+        report["decision"] = "DISCARD"
+        report["discard_non_regression_evidence"] = {
+            "promotion_report_source": "inline",
+            "candidate_eval_pass": True,
+            "eval_score_improves": False,
+            "lint_non_regression": True,
+            "structural_complexity_non_regression": True,
+            "tests_non_regression": True,
+            "blocking_check_ids": ["equal_score_secondary_eligibility"],
+            "decision_record_reason_code": "equal_score_secondary_eligibility",
+        }
+        self.assertEqual(validate_with_schema(report, schema), [])
+
+        for source in ("path", "default_path"):
+            missing_report_path = copy.deepcopy(report)
+            missing_report_path["discard_non_regression_evidence"][
+                "promotion_report_source"
+            ] = source
+            self.assertIn(
+                "$.discard_non_regression_evidence: missing required property 'promotion_report'",
+                validate_with_schema(missing_report_path, schema),
+            )
+
     def test_sample_auto_improve_readiness_report_validates_and_requires_queue_block(self) -> None:
         report = self.samples["auto_improve_readiness_report"]
         schema = self.schemas["auto_improve_readiness_report"]

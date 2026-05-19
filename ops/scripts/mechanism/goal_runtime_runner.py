@@ -4,7 +4,9 @@ import argparse
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 import datetime as dt
+import json
 from pathlib import Path
+import re
 import shlex
 import sys
 from typing import Any
@@ -37,6 +39,16 @@ from .goal_runtime_maintenance import (
 
 DEFAULT_RESULT_OUT = "tmp/auto-improve-goal-session-result.json"
 PRODUCER = "ops.scripts.goal_runtime_runner"
+USAGE_LIMIT_STOP_REASON = "executor_usage_limited"
+USAGE_LIMIT_RE = re.compile(
+    r"(executor_usage_limited|usage limit|try again at|upgrade to pro)",
+    flags=re.IGNORECASE,
+)
+USAGE_LIMIT_RETRY_RE = re.compile(
+    r"(?:retry_after=|try again at\s+)([^.\n\r]+)",
+    flags=re.IGNORECASE,
+)
+ORDINAL_DAY_SUFFIX_RE = re.compile(r"\b(\d{1,2})(st|nd|rd|th)\b", flags=re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -111,6 +123,8 @@ def _status_report(
     last_command_returncode: int = -1,
     last_command_timed_out: bool = False,
     last_command_termination_reason: str = "",
+    last_backoff_until: str = "",
+    backoff_reason: str = "",
     runtime_context: RuntimeContext,
 ) -> dict[str, Any]:
     observed_at = _iso_z(generated_at)
@@ -139,6 +153,8 @@ def _status_report(
             last_command_returncode=last_command_returncode,
             last_command_timed_out=last_command_timed_out,
             last_command_termination_reason=last_command_termination_reason,
+            last_backoff_until=last_backoff_until,
+            backoff_reason=backoff_reason,
             resume_from_checkpoint=request.resume_from_checkpoint,
             resume_command=resume_command,
             status_report_path=request.status_report_path,
@@ -177,6 +193,112 @@ def _execution_from_timed_process(
         stdout_bytes=len(result.stdout.encode("utf-8")),
         stderr_bytes=len(result.stderr.encode("utf-8")),
     )
+
+
+def _safe_relative_text(vault: Path, rel_path: str) -> str:
+    path = Path(rel_path)
+    if path.is_absolute() or ".." in path.parts:
+        return ""
+    candidate = (vault / path).resolve(strict=False)
+    try:
+        candidate.relative_to(vault.resolve())
+    except ValueError:
+        return ""
+    if not candidate.is_file():
+        return ""
+    return candidate.read_text(encoding="utf-8", errors="replace")
+
+
+def _retry_after_source_from_text(text: str) -> str:
+    match = USAGE_LIMIT_RETRY_RE.search(text)
+    return match.group(1).strip() if match else ""
+
+
+def _parse_retry_after_source(source: str) -> str:
+    text = source.strip().rstrip(".")
+    if not text:
+        return ""
+    normalized = ORDINAL_DAY_SUFFIX_RE.sub(r"\1", text)
+    iso_candidate = normalized[:-1] + "+00:00" if normalized.endswith("Z") else normalized
+    try:
+        parsed = dt.datetime.fromisoformat(iso_candidate)
+    except ValueError:
+        parsed = None
+    if parsed is None:
+        for fmt in ("%B %d, %Y %I:%M %p", "%b %d, %Y %I:%M %p"):
+            try:
+                parsed = dt.datetime.strptime(normalized, fmt)
+            except ValueError:
+                continue
+            break
+    if parsed is None:
+        return ""
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt.timezone.utc)
+    return _iso_z(parsed)
+
+
+def _json_stdout(stdout: str) -> dict[str, Any]:
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _executor_retry_after_source(vault: Path, run_ids: list[str]) -> str:
+    for run_id in run_ids:
+        run_dir = vault / "runs" / run_id
+        if not run_dir.is_dir():
+            continue
+        for report_path in sorted(run_dir.glob("*-executor-report.json")):
+            try:
+                report = json.loads(report_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            diagnostics = report.get("diagnostics")
+            if isinstance(diagnostics, dict):
+                notes = diagnostics.get("notes")
+                if isinstance(notes, list):
+                    source = _retry_after_source_from_text("\n".join(str(note) for note in notes))
+                    if source:
+                        return source
+            artifacts = report.get("artifacts")
+            if isinstance(artifacts, dict):
+                stderr_text = _safe_relative_text(vault, str(artifacts.get("stderr", "")).strip())
+                source = _retry_after_source_from_text(stderr_text)
+                if source:
+                    return source
+    return ""
+
+
+def _usage_limit_backoff(
+    vault: Path,
+    *,
+    stdout: str,
+    stderr: str,
+) -> tuple[str, str]:
+    session_result = _json_stdout(stdout)
+    stop_reason = str(session_result.get("stop_reason", "")).strip()
+    text = f"{stdout}\n{stderr}"
+    if stop_reason != USAGE_LIMIT_STOP_REASON and not USAGE_LIMIT_RE.search(text):
+        return "", ""
+    run_ids = [
+        str(run_id).strip()
+        for run_id in session_result.get("run_ids", [])
+        if str(run_id).strip()
+    ] if isinstance(session_result.get("run_ids"), list) else []
+    retry_after_source = (
+        _retry_after_source_from_text(text)
+        or _executor_retry_after_source(vault, run_ids)
+    )
+    retry_after_until = _parse_retry_after_source(retry_after_source)
+    if retry_after_source:
+        return (
+            retry_after_until,
+            f"{USAGE_LIMIT_STOP_REASON}; retry_after_source={retry_after_source}",
+        )
+    return "", USAGE_LIMIT_STOP_REASON
 
 
 def _run_checkpoint_command(
@@ -360,6 +482,11 @@ def run_goal_runtime_command(request: GoalRuntimeRunnerRequest) -> int:
         started_at=started_at,
     )
     final_status = "completed" if result.returncode == 0 and not result.timed_out else "failed"
+    last_backoff_until, backoff_reason = _usage_limit_backoff(
+        vault,
+        stdout=result.stdout,
+        stderr=result.stderr,
+    )
     _write_status(
         request,
         _status_report(
@@ -381,6 +508,8 @@ def run_goal_runtime_command(request: GoalRuntimeRunnerRequest) -> int:
             last_command_returncode=result.returncode,
             last_command_timed_out=result.timed_out,
             last_command_termination_reason=result.termination_reason,
+            last_backoff_until=last_backoff_until,
+            backoff_reason=backoff_reason,
             runtime_context=runtime_context,
         ),
     )

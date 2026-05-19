@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -13,13 +14,16 @@ from ops.scripts.promotion_decision_registry_runtime import (
 )
 
 
-TERMINAL_SUCCESS_OUTCOMES = frozenset({"promoted", "discarded"})
+TERMINAL_SUCCESS_OUTCOMES = frozenset({"promoted"})
 RETRYABLE_EXECUTOR_FAILURE_OUTCOMES = frozenset({"executor_usage_limited"})
-_USAGE_LIMIT_MARKERS = (
+_USAGE_LIMIT_NOTE_MARKERS = (
     "executor_usage_limited",
-    "usage limit",
-    "try again at",
-    "upgrade to pro",
+    "codex exec blocked by usage limit",
+)
+_USAGE_LIMIT_STDERR_RE = re.compile(
+    r"^\s*(?:ERROR:\s*)?(?:you(?:'ve| have) hit your usage limit|"
+    r"usage limit\b|upgrade to pro\b|try again at\b).*$",
+    flags=re.IGNORECASE | re.MULTILINE,
 )
 
 
@@ -79,15 +83,18 @@ def _read_report_artifact_text(report: dict, artifact_root: Path, key: str) -> s
 
 
 def _executor_report_has_usage_limit(report: dict, artifact_root: Path) -> bool:
-    texts: list[str] = []
     diagnostics = report.get("diagnostics", {})
     if isinstance(diagnostics, dict):
         notes = diagnostics.get("notes", [])
         if isinstance(notes, list):
-            texts.extend(str(item) for item in notes)
-    texts.append(_read_report_artifact_text(report, artifact_root, "stderr"))
-    combined = "\n".join(texts).lower()
-    return any(marker in combined for marker in _USAGE_LIMIT_MARKERS)
+            combined_notes = "\n".join(str(item) for item in notes).lower()
+            if any(marker in combined_notes for marker in _USAGE_LIMIT_NOTE_MARKERS):
+                return True
+    result = report.get("result")
+    if not isinstance(result, dict) or result.get("returncode") in (0, "0"):
+        return False
+    stderr = _read_report_artifact_text(report, artifact_root, "stderr")
+    return bool(_USAGE_LIMIT_STDERR_RE.search(stderr))
 
 
 def detect_executor_failure(run_id: str, roles: list[str], artifact_root: Path) -> str:
@@ -130,7 +137,9 @@ def evaluate_experiment_result(result: dict, consecutive_failures: int) -> Execu
     if is_terminal:
         return ExecutionOutcome(
             outcome=outcome,
-            next_consecutive_failures=0,
+            next_consecutive_failures=(
+                0 if outcome in TERMINAL_SUCCESS_OUTCOMES else consecutive_failures + 1
+            ),
             result=result,
         )
     if outcome:

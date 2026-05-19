@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -45,6 +46,49 @@ def _role_order_key(role: str) -> tuple[int, str]:
         return (len(ROLE_ORDER), role)
 
 
+def _file_digest(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _primary_targets_from_scope_freeze(artifact_root: Path, scope_freeze_rel: str) -> list[str]:
+    payload = json.loads((artifact_root / scope_freeze_rel).read_text(encoding="utf-8"))
+    inputs = payload.get("inputs", {})
+    if not isinstance(inputs, dict):
+        return []
+    primary_targets = inputs.get("primary_targets", [])
+    if not isinstance(primary_targets, list):
+        return []
+    normalized: list[str] = []
+    for value in primary_targets:
+        rel_path = str(value).strip().replace("\\", "/")
+        if not rel_path:
+            continue
+        path = Path(rel_path)
+        if path.is_absolute() or ".." in path.parts:
+            continue
+        normalized.append(rel_path)
+    return normalized
+
+
+def _target_digest_snapshot(workspace_root: Path, targets: list[str]) -> dict[str, str | None]:
+    snapshot: dict[str, str | None] = {}
+    for rel_path in targets:
+        path = workspace_root / rel_path
+        snapshot[rel_path] = _file_digest(path) if path.is_file() else None
+    return snapshot
+
+
+def _changed_targets(
+    before: dict[str, str | None],
+    after: dict[str, str | None],
+) -> list[str]:
+    return [target for target in sorted(before) if before.get(target) != after.get(target)]
+
+
 def run_executor_pipeline(
     artifact_root: Path,
     *,
@@ -68,6 +112,8 @@ def run_executor_pipeline(
     if not ordered_roles:
         raise ExecutorRuntimeUsageError("at least one --role is required")
 
+    primary_targets = _primary_targets_from_scope_freeze(artifact_root, scope_freeze_rel)
+    primary_before_worker = _target_digest_snapshot(workspace_root, primary_targets)
     for role in ordered_roles:
         routing_report_rel = routing_map.get(role)
         if routing_report_rel is None:
@@ -86,6 +132,15 @@ def run_executor_pipeline(
         report_by_role[role] = report
         if report["status"] != "pass":
             raise ExecutorRuntimeExecutionError(f"{role} reported a blocking status")
+        if role == "worker" and primary_targets:
+            primary_after_worker = _target_digest_snapshot(workspace_root, primary_targets)
+            changed_primary_targets = _changed_targets(primary_before_worker, primary_after_worker)
+            if not changed_primary_targets:
+                joined_targets = ", ".join(primary_targets)
+                raise ExecutorRuntimeExecutionError(
+                    "worker reported pass without modifying any declared primary target; "
+                    f"primary_targets=[{joined_targets}]"
+                )
 
     return {
         "run_id": run_id,

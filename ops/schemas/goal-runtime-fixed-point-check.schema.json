@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Goal Runtime Fixed Point Check",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "status",
+    "summary",
+    "checks"
+  ],
+  "properties": {
+    "$schema": { "const": "ops/schemas/goal-runtime-fixed-point-check.schema.json" },
+    "artifact_kind": { "const": "goal_runtime_fixed_point_check" },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "producer": { "const": "ops.scripts.goal_runtime_fixed_point_check" },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": {
+      "type": "string",
+      "enum": ["current", "archived", "stale", "unknown"]
+    },
+    "retention_policy": { "const": "canonical_report" },
+    "encoding": { "const": "utf-8" },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown", "invalid"] },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "vault": { "type": "string" },
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["report_count", "check_count", "failed_check_count", "status"],
+      "properties": {
+        "report_count": { "type": "integer", "minimum": 0 },
+        "check_count": { "type": "integer", "minimum": 0 },
+        "failed_check_count": { "type": "integer", "minimum": 0 },
+        "status": { "type": "string", "enum": ["pass", "fail"] }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/check" }
+    }
+  },
+  "$defs": {
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "expected", "observed", "reason"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_]*$" },
+        "status": { "type": "string", "enum": ["pass", "fail"] },
+        "expected": {},
+        "observed": {},
+        "reason": { "type": "string" }
+      }
+    }
+  }
+}
