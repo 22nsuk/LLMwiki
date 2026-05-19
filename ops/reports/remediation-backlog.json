@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-19T16:10:28Z",
+  "generated_at": "2026-05-19T20:47:10Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "210451b8c1f4611ce001511da95db683b039fa0c4d7783a8abd7c9622ad2bc04",
+  "source_tree_fingerprint": "5bb31e427dd65a2f2ce699e7376aeff7947374317a719ff5aedd9b4b76c74476",
   "input_fingerprints": {
     "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ac89dead9a209f58ec98e9f5a02446afe66adf70edbba3f94c9c88d59e3386cb",
-    "learning_claim_activation": "d66aefe4d3c2b5c4cf94f0b40ff9902ad4345c5ddbc0bb76528cbd2f00a6cf35",
-    "self_improvement_negative_lessons": "11c5e265caff34b124fcabc8002725ddd6b588c3ba4fa29eb1c49c3ff4a4056c",
-    "session_synopsis": "336bb8383cc5257feb7f5b8b00fe22c0e4ecc72edf1b8ae78e1cc48b8b8a2235",
+    "learning_claim_activation": "887aea5e79f0be6017749a7958aa197718b160394a23214b5e77347560918c55",
+    "self_improvement_negative_lessons": "e406c6462dee1ce751282390a1bf055e59b5698b72451438fc9886797663271d",
+    "session_synopsis": "1fe6d3089ba5de505429d447acebc4195f75d7e6f0be1e47b2a16858144c53a9",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
-    "auto_improve_sessions": "a70f570088e33229a10994b6875ef0491c5314405811d9b3a3e4e947e36696b8"
+    "auto_improve_sessions": "84aafcc0231159c213758a92cba55facf41c628d464ae1794e42d435bfa1f626"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-19T16:10:28Z"
+    "checked_at": "2026-05-19T20:47:10Z"
   },
   "vault": ".",
   "policy": {
@@ -32,18 +32,18 @@
   },
   "status": "attention",
   "summary": {
-    "backlog_item_count": 7,
-    "repeated_blocker_count": 2,
+    "backlog_item_count": 5,
+    "repeated_blocker_count": 0,
     "active_blocker_count": 5,
-    "open_item_count": 7,
+    "open_item_count": 5,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
     "next_action": "Close or explicitly defer remediation backlog items before promotion."
   },
   "items": [
     {
-      "item_id": "active_blocker_execution_blocked_by_no_runnable_proposal",
-      "blocker_id": "execution_blocked_by_no_runnable_proposal",
-      "source": "auto_improve_readiness.promotion_blockers",
+      "item_id": "active_blocker_goal_status_execution_blocked_by_no_runnable_proposal",
+      "blocker_id": "goal_status_execution_blocked_by_no_runnable_proposal",
+      "source": "goal_run_status.blockers",
       "item_type": "active_blocker",
       "status": "open",
       "severity": "blocks_promotion",
@@ -51,8 +51,22 @@
       "evidence_paths": [
         "ops/reports/session-synopsis.json"
       ],
-      "repair_target": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap.",
-      "next_action": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
+      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
+      "next_action": "Refresh goal run status and close the active blocker before resuming."
+    },
+    {
+      "item_id": "active_blocker_goal_status_learning_blocked_by_execution_not_runnable",
+      "blocker_id": "goal_status_learning_blocked_by_execution_not_runnable",
+      "source": "goal_run_status.blockers",
+      "item_type": "active_blocker",
+      "status": "open",
+      "severity": "blocks_promotion",
+      "occurrence_count": 1,
+      "evidence_paths": [
+        "ops/reports/session-synopsis.json"
+      ],
+      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
+      "next_action": "Refresh goal run status and close the active blocker before resuming."
     },
     {
       "item_id": "active_blocker_goal_status_profile_ladder_incomplete",
@@ -69,8 +83,8 @@
       "next_action": "Collect bounded runtime evidence for next_profile_required=30m_trial."
     },
     {
-      "item_id": "active_blocker_learning_blocked_by_execution_not_runnable",
-      "blocker_id": "learning_blocked_by_execution_not_runnable",
+      "item_id": "active_blocker_learning_blocked_by_review_required",
+      "blocker_id": "learning_blocked_by_review_required",
       "source": "auto_improve_readiness.promotion_blockers",
       "item_type": "active_blocker",
       "status": "open",
@@ -79,8 +93,8 @@
       "evidence_paths": [
         "ops/reports/session-synopsis.json"
       ],
-      "repair_target": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty.",
-      "next_action": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty."
+      "repair_target": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete.",
+      "next_action": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
     },
     {
       "item_id": "active_blocker_learning_claim_unlock_review_not_approved",
@@ -95,49 +109,6 @@
       ],
       "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean.",
       "next_action": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean."
-    },
-    {
-      "item_id": "active_blocker_post_seal_learning_claim_linkage",
-      "blocker_id": "post_seal_learning_claim_linkage",
-      "source": "learning_claim_activation.blocked_predicates",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Run release-post-seal-attestation after the candidate evidence is sealed and verify the learning claim authority binding.",
-      "next_action": "Run release-post-seal-attestation after the candidate evidence is sealed and verify the learning claim authority binding."
-    },
-    {
-      "item_id": "negative_lesson_blocked_queue_recent_log_overlap",
-      "blocker_id": "blocked_queue_recent_log_overlap",
-      "source": "self_improvement_negative_lessons.lessons",
-      "item_type": "repeated_negative_lesson",
-      "status": "open",
-      "severity": "blocks_repeat",
-      "occurrence_count": 2,
-      "evidence_paths": [
-        "ops/reports/auto-improve-readiness.json"
-      ],
-      "repair_target": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane.",
-      "next_action": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane."
-    },
-    {
-      "item_id": "negative_lesson_discard_changed_files_manifest_primary_targets_touched",
-      "blocker_id": "discard_changed_files_manifest_primary_targets_touched",
-      "source": "self_improvement_negative_lessons.lessons",
-      "item_type": "repeated_negative_lesson",
-      "status": "open",
-      "severity": "blocks_repeat",
-      "occurrence_count": 2,
-      "evidence_paths": [
-        "runs/archive/auto-improve-trial-maintenance-rerun-4-run-01-mutation-proposal-runtime-discard-maintenance-redesign-20260519t103553z/run-telemetry.json",
-        "runs/auto-improve-remediation-p1e-20260519T142130Z-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json"
-      ],
-      "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=changed_files_manifest_primary_targets_touched.",
-      "next_action": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=changed_files_manifest_primary_targets_touched."
     }
   ],
   "inputs": {
