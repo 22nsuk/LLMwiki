@@ -1,16 +1,16 @@
 {
   "$schema": "ops/schemas/mutation-proposals.schema.json",
   "artifact_kind": "mutation_proposals_report",
-  "generated_at": "2026-05-19T16:07:06Z",
+  "generated_at": "2026-05-19T20:45:22Z",
   "producer": "ops.scripts.mutation_proposal_runtime",
   "source_command": "python -m ops.scripts.mutation_proposal --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "81d6acebfae87091e9e60a9ee0042c2398a7159a5bd603b84b77b14fe4c10533",
+  "source_tree_fingerprint": "7b3ccfa9e257862df5a402d14944e2c87925c6d809cf34bbbc82f269450211fc",
   "input_fingerprints": {
     "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "353b4d7e2eae002662a75b043aec091b55b0eca7e339590e79088043c0bbba8f",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "a4ec1d0031bf2b5c7beb226a5c1d825fc496da057f80f7007d756c8b089756ad",
+    "source_paths": "aedebcf3a7bdd78f684e29b746c493d64fec82d08b02e45c1aec04ac63a53f23",
     "mechanism_review_report": "64561bdd6dc2d8b573125b5f0aeed17decc44190b5ce43e63a686fe290d4f21d",
     "outcome_metrics": "b806956fae85996d7ef66e28c63e4ede38d114d1d5279b02c4365ec71b559ef3",
     "system_log": "ba9d72dab51712154d2713e628d98f08c795683c76142b712b1601f852babc80",
@@ -24,22 +24,22 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-19T16:07:06Z"
+    "checked_at": "2026-05-19T20:45:22Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "status": "attention",
+  "status": "pass",
   "summary": {
     "source_candidates_read": 1,
     "log_entries_scanned": 2,
     "proposals_emitted": 2,
-    "blocked_proposals": 2,
+    "blocked_proposals": 1,
     "candidate_blocker_count": 0,
     "proposal_blocker_count": 0,
-    "queue_pressure_summary": "contract_regression_signals 1 proposal, 1 blocked; queue_unblock 1 proposal, 1 blocked"
+    "queue_pressure_summary": "contract_regression_signals 1 proposal, 1 blocked; queue_unblock 1 proposal"
   },
   "diagnostics": {
     "source_mechanism_review_report": "ops/reports/mechanism-review-candidates.json",
@@ -50,7 +50,7 @@
       "enabled": true,
       "status": "active",
       "proposal_count": 2,
-      "blocked_proposal_count": 2,
+      "blocked_proposal_count": 1,
       "by_family": [
         {
           "family": "contract_regression_signals",
@@ -70,7 +70,7 @@
         {
           "family": "queue_unblock",
           "proposal_count": 1,
-          "blocked_proposal_count": 1,
+          "blocked_proposal_count": 0,
           "session_priority_delta": 0,
           "boosted_candidates": 0,
           "lowered_candidates": 0,
@@ -87,14 +87,14 @@
     "queue_selection": {
       "available_proposal_count": 2,
       "selected_proposal_count": 2,
-      "runnable_available_count": 0,
-      "blocked_available_count": 2,
-      "selected_runnable_count": 0,
-      "selected_blocked_count": 2,
+      "runnable_available_count": 1,
+      "blocked_available_count": 1,
+      "selected_runnable_count": 1,
+      "selected_blocked_count": 1,
       "blocked_reason_counts": [
         {
           "reason": "recent_log_overlap",
-          "count": 2
+          "count": 1
         }
       ]
     },
@@ -113,27 +113,20 @@
           "matched_marker": "auto_improve_iteration_persistence_runtime.py",
           "matched_log_heading": "[2026-05-19 23:56 KST] improve | Diagnose p1e no-op DISCARD and add worker primary-target gate",
           "unblock_condition": "advance chronology beyond the configured dedupe window or max age window, or rotate to a non-overlapping target set"
-        },
-        {
-          "proposal_id": "recent_log_overlap_queue_blocked__mutation-proposal-runtime",
-          "source_candidate_id": "recent_log_overlap_queue_unblock__mutation-proposal-runtime",
-          "matched_marker": "mutation_proposal_runtime.py",
-          "matched_log_heading": "[2026-05-20 00:14 KST] improve | Resolve archived queue-unblock rework counting",
-          "unblock_condition": "advance chronology beyond the configured dedupe window or max age window, or rotate to a non-overlapping target set"
         }
       ]
     }
   },
   "proposals": [
     {
-      "proposal_id": "recent_log_overlap_queue_blocked__mutation-proposal-runtime",
-      "source_candidate_id": "recent_log_overlap_queue_unblock__mutation-proposal-runtime",
+      "proposal_id": "recent_log_overlap_queue_blocked__auto-improve-readiness-queue-runtime",
+      "source_candidate_id": "recent_log_overlap_queue_unblock__auto-improve-readiness-queue-runtime",
       "source_candidate_type": "mechanism_recent_log_overlap_queue_unblock_candidate",
       "family": "queue_unblock",
       "tier": "supporting",
       "priority": 91,
       "primary_targets": [
-        "ops/scripts/mechanism/mutation_proposal_runtime.py"
+        "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py"
       ],
       "supporting_targets": [
         "ops/script-output-surfaces.json"
@@ -145,13 +138,12 @@
         "recent-log-overlap-queue-blocked"
       ],
       "failure_mode": "recent_log_overlap_queue_blocked",
-      "single_mechanism_scope": "keep the unblock experiment scoped to `ops/scripts/mechanism/mutation_proposal_runtime.py` and `tests/test_mutation_proposal.py` and `tests/test_report_generation_smoke.py` so all existing recent-log-overlap-blocked proposals remain diagnostic evidence while one runnable rotation target reopens the queue",
-      "change_hypothesis": "If mutation proposal runtime emits a narrow fallback when every candidate is blocked only by recent_log_overlap, auto-improve readiness can keep a runnable queue without weakening the chronology overlap guardrail.",
+      "single_mechanism_scope": "keep the unblock experiment scoped to `ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py` and `tests/test_auto_improve_readiness_runtime.py` so all existing recent-log-overlap-blocked proposals remain diagnostic evidence while one runnable rotation target reopens the queue",
+      "change_hypothesis": "If mutation proposal runtime emits a narrow non-overlapping fallback when every candidate is blocked only by recent_log_overlap, auto-improve readiness can keep a runnable queue without weakening the chronology overlap guardrail.",
       "expected_binary_signal": "mutation proposal diagnostics retain recent_log_overlap blocked candidates and queue_selection.runnable_available_count becomes greater than zero",
-      "blast_radius_score": 30,
+      "blast_radius_score": 28,
       "must_change_tests": [
-        "tests/test_mutation_proposal.py",
-        "tests/test_report_generation_smoke.py"
+        "tests/test_auto_improve_readiness_runtime.py"
       ],
       "must_change_budget_signal": {
         "signal": "mutation_proposal.queue_selection.runnable_available_count",
@@ -164,9 +156,7 @@
         "runs/<run-id>/baseline-mechanism-assessment.json",
         "runs/<run-id>/candidate-mechanism-assessment.json"
       ],
-      "blocked_by": [
-        "recent_log_overlap"
-      ],
+      "blocked_by": [],
       "why_now": "현재 후보들이 모두 recent_log_overlap 하나로만 막히면 live queue가 비어 readiness와 learning execution gate까지 연쇄적으로 닫힌다. guardrail은 보존하고 target rotation proposal만 별도로 열어둔다.",
       "priority_breakdown": {
         "base_priority": 91,
