@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-19T20:45:52Z",
+  "generated_at": "2026-05-19T20:47:45Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -12,7 +12,7 @@
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "fbec8d2540f7bfdd887c5750efa39eb9a0f4192cd8402ffd7859676e07b85ae6",
     "artifact_freshness_report": "ef05ce0d4e63d092dc12226a4ea2fda7deb0a0082ff15c18caefb35b0898d913",
-    "goal_worktree_guard_report": "2c5a2a1ab3fb0459ae58ab9b21986fc3bbab1d0081de7cd49c9e227a7fd0d7a6",
+    "goal_worktree_guard_report": "badb0e51a12de35fedb76a058df9065106ab93bdeda024436b869db86fb9856d",
     "mechanism_review_report": "64561bdd6dc2d8b573125b5f0aeed17decc44190b5ce43e63a686fe290d4f21d",
     "mutation_proposal_report": "354eb3a46b7b2dfd3726a67f5f9c8cd4cd84572e604316f4e766a2402b01b072",
     "outcome_metrics_report": "b806956fae85996d7ef66e28c63e4ede38d114d1d5279b02c4365ec71b559ef3",
@@ -22,7 +22,7 @@
     "release_closeout_post_check_finalizer_report": "missing",
     "release_closeout_summary_report": "44a45b6591a17a02b77fe5ce3f9f6b292b6e82b9163125a9436d119f476c2ad2",
     "release_evidence_cohort_report": "e2d2076c043dbd15cbe06d8c57d6f9b6bc1c854e62f3a6728016f6582f2d184e",
-    "remediation_backlog_report": "005d00982eb9a1dbc6bbe9351093a492d9f61961157e20d222e243803a2a5fd4",
+    "remediation_backlog_report": "e40c1241956e11b64b0c1bae099301ef90c1d27e5e313d2794feaafead98e8bb",
     "selected_contract_summary_report": "a26f12921ce79e4f7525db2161b3667a977ce59ecae50e207bf9752ca907deaa",
     "source_package_clean_extract_report": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "release_authority_preflight_report_candidates": "145f23a10e25dfcf0b9eb8875753adc591ca775e5c55cdea7926a32a5e51bebd"
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-19T20:45:52Z"
+    "checked_at": "2026-05-19T20:47:45Z"
   },
   "vault": ".",
   "policy": {
@@ -174,13 +174,13 @@
       "accepted_risk": false,
       "gate_effect": "active",
       "source_status": "attention",
-      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=7; active_blocker_count=5; blocking_item_count=5",
+      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=5; active_blocker_count=5; blocking_item_count=5",
       "signal_ids": [
-        "execution_blocked_by_no_runnable_proposal",
+        "goal_status_execution_blocked_by_no_runnable_proposal",
+        "goal_status_learning_blocked_by_execution_not_runnable",
         "goal_status_profile_ladder_incomplete",
-        "learning_blocked_by_execution_not_runnable",
-        "learning_claim_unlock_review_not_approved",
-        "post_seal_learning_claim_linkage"
+        "learning_blocked_by_review_required",
+        "learning_claim_unlock_review_not_approved"
       ],
       "required_evidence": [
         "Run make remediation-backlog and confirm status=pass with open_item_count=0.",
@@ -398,18 +398,18 @@
       "status": "fail",
       "source_status": "attention",
       "release_blocking": true,
-      "open_item_count": 7,
+      "open_item_count": 5,
       "active_blocker_count": 5,
       "blocking_item_count": 5,
       "signal_ids": [
-        "execution_blocked_by_no_runnable_proposal",
+        "goal_status_execution_blocked_by_no_runnable_proposal",
+        "goal_status_learning_blocked_by_execution_not_runnable",
         "goal_status_profile_ladder_incomplete",
-        "learning_blocked_by_execution_not_runnable",
-        "learning_claim_unlock_review_not_approved",
-        "post_seal_learning_claim_linkage"
+        "learning_blocked_by_review_required",
+        "learning_claim_unlock_review_not_approved"
       ],
       "currentness_status": "current",
-      "summary": "remediation backlog status=attention; open_item_count=7; active_blocker_count=5; blocking_item_count=5"
+      "summary": "remediation backlog status=attention; open_item_count=5; active_blocker_count=5; blocking_item_count=5"
     }
   },
   "queue": {

@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-19T20:47:10Z",
+  "generated_at": "2026-05-19T20:47:49Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
@@ -11,10 +11,10 @@
     "schema": "8c91343f30427af06d94db468c972889a09ff0185c7db529c93733a70f373b82",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "1b3dc9e7a915a19253d410de18eaaaf886a7ff3ed065da0c66c496fb7e0f9ae4",
-    "auto_improve_readiness": "0c37f2f9f278d538ec14262f643300ed66f1b868e1e94c1bbef699655761937f",
+    "auto_improve_readiness": "726278485f928cf92a7f07194719b62971086f070e83dccbba3a0a475f79e148",
     "goal_run_status": "2c8f7afd6bbfd924c469fff750365c51da32a3815d2079d934b716e8cbc2fd1c",
-    "learning_claim_activation": "887aea5e79f0be6017749a7958aa197718b160394a23214b5e77347560918c55",
-    "learning_delta_scoreboard": "c395c2d858823fb70f1a8c45e8ace9a94d8ba8c084b6fde1d520686eaa5d0f93",
+    "learning_claim_activation": "95a0272da139611820d6d41b64f64debf8fd3d4b67202e032bb53015a1357899",
+    "learning_delta_scoreboard": "87f44abcd36cd50d475b33f9966c4dfd6f3aca911abba76d218071172db6d529",
     "source_package_clean_extract": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "task_observations": "71013a0efaa510f93ecdb4cb6a3cbc18ff61d60d8fc093c6521a4aea80829677"
   },
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-19T20:47:10Z"
+    "checked_at": "2026-05-19T20:47:49Z"
   },
   "vault": ".",
   "policy": {
