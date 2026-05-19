@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/external-report-reference-manifest.schema.json",
   "artifact_kind": "external_report_reference_manifest",
-  "generated_at": "2026-05-19T02:23:28Z",
+  "generated_at": "2026-05-19T21:01:48Z",
   "producer": "ops.scripts.external_report_reference_manifest",
   "source_command": "python -m ops.scripts.external_report_reference_manifest --vault . --out external-reports/report-reference-manifest.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "bbcc7d7c267cccd4b47d6c42e130b3edb677dec3a6db36e973e69c6818ab6646",
+  "source_tree_fingerprint": "607290458796684e94ce743b6505911314a98e5650fdf4ec4c612228a60d0263",
   "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "1d6f04ca255e308a81818f56c8abffc20fb6bd6b56145cbde9dbed29b1637437",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "6da186ae7de647a7a24cf53aa44e0f4507522e360f6229d505e76d1ec154890c",
-    "external_reports": "ac9af94d99b813b6c6ff62af6347f2632a41faf8356b21df5ae3ec39aef7cfba",
+    "external_reports": "0805866b473b0233b784f8f97facae6986f7172f7458011d3d723988a00668d2",
     "active_reference_set_status": "97b0560280ed60a5a1eaa1bc45492543c8a986ad5a25b468c427eb83c3e88191",
     "basis_zip_entry_count": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "basis_zip_name": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -28,7 +28,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-19T02:23:28Z"
+    "checked_at": "2026-05-19T21:01:48Z"
   },
   "vault": ".",
   "policy": {
@@ -62,15 +62,15 @@
   },
   "active_reference_set": {
     "status": "current",
-    "previous_report_count": 4,
-    "current_report_count": 4,
+    "previous_report_count": 5,
+    "current_report_count": 5,
     "added_paths": [],
     "removed_paths": []
   },
   "archive_exclusion_policy": "external-reports/archive is excluded from active reference provenance; root external-reports files are the operator-facing evidence set",
   "excluded_file_count": 66,
   "summary": {
-    "report_count": 4,
+    "report_count": 5,
     "basis_zip_known": false,
     "review_basis_zip_known": false,
     "current_distribution_zip_known": false,
@@ -102,6 +102,29 @@
         "python_unicode_escape_filename_bytes": 53,
         "posix_escape_expanded_filename_bytes": 53,
         "infozip_c_locale_escape_filename_bytes": 53
+      }
+    },
+    {
+      "path": "external-reports/llmwiki_goal_runtime_comparison_report.md",
+      "storage_path": "external-reports/llmwiki_goal_runtime_comparison_report.md",
+      "display_name": "llmwiki_goal_runtime_comparison_report.md",
+      "path_aliases": [
+        "external-reports/llmwiki_goal_runtime_comparison_report.md"
+      ],
+      "sha256": "f7026380c8b0a88aca7acca92b09ad7b47506d181455726af05c9e85ec82ddf3",
+      "content_sha256": "f7026380c8b0a88aca7acca92b09ad7b47506d181455726af05c9e85ec82ddf3",
+      "byte_count": 32902,
+      "line_count": 623,
+      "evidence_role": "active_external_report",
+      "normalization_form": "NFC",
+      "escape_diagnostics": {
+        "display_path": "external-reports/llmwiki_goal_runtime_comparison_report.md",
+        "archive_path": "external-reports/llmwiki_goal_runtime_comparison_report.md",
+        "escape_expanded_diagnostic_path": "external-reports/llmwiki_goal_runtime_comparison_report.md",
+        "utf8_path_bytes": 58,
+        "python_unicode_escape_filename_bytes": 41,
+        "posix_escape_expanded_filename_bytes": 41,
+        "infozip_c_locale_escape_filename_bytes": 41
       }
     },
     {

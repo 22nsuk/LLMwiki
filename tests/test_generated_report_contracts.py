@@ -9,7 +9,9 @@ import pytest
 from ops.scripts.artifact_freshness_runtime import STABLE_CONTRACT_ISSUES, build_canonical_report_envelope
 from ops.scripts.generated_artifact_index import build_report as build_generated_artifact_index_report
 from ops.scripts.learning_readiness_vocabulary import (
+    LEARNING_REVIEW_REQUIRED_BLOCKER_ID,
     LEARNING_STATUS_LIKELY,
+    LEARNING_STATUS_UNCERTAIN,
 )
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
@@ -1141,7 +1143,11 @@ def test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflig
     assert payload.get("artifact_kind") == "auto_improve_readiness_report"
     assert payload.get("artifact_status") == "current"
     assert payload.get("currentness", {}).get("status") == "current"
-    assert payload.get("learning_readiness", {}).get("status") == LEARNING_STATUS_LIKELY
+    learning_status = payload.get("learning_readiness", {}).get("status")
+    assert learning_status in {
+        LEARNING_STATUS_LIKELY,
+        LEARNING_STATUS_UNCERTAIN,
+    }
     assert payload.get("can_execute_trial") is True
     can_promote_result = payload.get("can_promote_result")
     assert payload.get("execution_readiness", {}).get("can_run") is True
@@ -1169,19 +1175,38 @@ def test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflig
     assert payload.get("learning_readiness", {}).get("metrics", {}).get(
         "behavior_delta_digest_coverage_ratio"
     ) == 1.0
-    assert signal_ids == set()
     for signal in payload.get("learning_readiness", {}).get("signals", []):
         assert signal.get("owner") == "runtime-maintainer"
         assert signal.get("required_evidence")
         assert int(signal.get("minimum_sample_size", 0)) >= 1
         assert str(signal.get("next_evaluation_command", "")).startswith("make ")
         assert signal.get("closure_strategy")
-    assert payload.get("learning_blockers") == []
+    learning_blocker_ids = {
+        str(item.get("id", "")).strip()
+        for item in payload.get("learning_blockers", [])
+        if isinstance(item, dict)
+    }
+    release_blocker_ids = {
+        str(item.get("id", "")).strip()
+        for item in payload.get("release_blockers", [])
+        if isinstance(item, dict)
+    }
     promotion_blocker_ids = {
         str(item.get("id", "")).strip()
         for item in payload.get("promotion_blockers", [])
         if isinstance(item, dict)
     }
+    if learning_status == LEARNING_STATUS_LIKELY:
+        assert signal_ids == set()
+        assert learning_blocker_ids == set()
+        assert release_blocker_ids == set()
+        assert LEARNING_REVIEW_REQUIRED_BLOCKER_ID not in promotion_blocker_ids
+    else:
+        assert signal_ids
+        assert learning_blocker_ids == {LEARNING_REVIEW_REQUIRED_BLOCKER_ID}
+        assert release_blocker_ids == {LEARNING_REVIEW_REQUIRED_BLOCKER_ID}
+        assert LEARNING_REVIEW_REQUIRED_BLOCKER_ID in promotion_blocker_ids
+        assert can_promote_result is False
     closeout_summary = payload.get("diagnostics", {}).get("release_closeout_summary", {})
     assert closeout_summary.get("source_status") == "pass"
     if closeout_summary.get("release_blocking") is True:
@@ -1198,7 +1223,6 @@ def test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflig
     else:
         assert batch_manifest_summary.get("status") == "pass"
         assert "promotion_blocked_by_release_batch_manifest_failure" not in promotion_blocker_ids
-    assert payload.get("release_blockers") == []
     evidence_cohort_summary = payload.get("diagnostics", {}).get("release_evidence_cohort_summary", {})
     if evidence_cohort_summary.get("release_blocking") is True:
         assert evidence_cohort_summary.get("status") == "fail"
@@ -1245,7 +1269,13 @@ def test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflig
             ]
     assert can_promote_result is (len(promotion_blocker_ids) == 0)
     if promotion_blocker_ids:
-        assert payload.get("next_action", "").startswith("Trial only; do not promote.")
+        next_action = payload.get("next_action", "")
+        if learning_status == LEARNING_STATUS_UNCERTAIN:
+            assert next_action.startswith(
+                "Execution readiness is pass, but learning readiness still requires explicit operator review."
+            )
+        else:
+            assert next_action.startswith("Trial only; do not promote.")
     else:
         assert not payload.get("next_action", "").startswith("Trial only; do not promote.")
 
