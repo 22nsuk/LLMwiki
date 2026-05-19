@@ -668,6 +668,61 @@ class MutationProposalTest(unittest.TestCase):
                 },
             )
 
+    def test_recent_log_overlap_rotation_uses_non_overlapping_secondary_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            (vault / "system" / "system-log.md").write_text(
+                "# System Log\n\n"
+                "## [2026-04-14 00:00] decision | prior overlapping experiments\n\n"
+                "### Artifacts\n"
+                "- `ops/scripts/promotion_gate.py`\n"
+                "- `ops/scripts/wiki_lint.py`\n"
+                "- `ops/scripts/mechanism_assess.py`\n"
+                "- `ops/scripts/mechanism/mutation_proposal_runtime.py`\n",
+                encoding="utf-8",
+            )
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            schema = load_schema(vault / "ops" / "schemas" / "mutation-proposals.schema.json")
+
+            self.assertEqual(validate_with_schema(proposal_report, schema), [])
+            self.assertEqual(proposal_report["status"], "pass")
+            self.assertEqual(proposal_report["summary"]["proposals_emitted"], 4)
+            self.assertEqual(proposal_report["summary"]["blocked_proposals"], 3)
+            self.assertEqual(
+                proposal_report["diagnostics"]["queue_selection"],
+                {
+                    "available_proposal_count": 4,
+                    "selected_proposal_count": 4,
+                    "runnable_available_count": 1,
+                    "blocked_available_count": 3,
+                    "selected_runnable_count": 1,
+                    "selected_blocked_count": 3,
+                    "blocked_reason_counts": [
+                        {"reason": "recent_log_overlap", "count": 3}
+                    ],
+                },
+            )
+
+            rotation = proposal_report["proposals"][0]
+            self.assertEqual(rotation["failure_mode"], "recent_log_overlap_queue_blocked")
+            self.assertEqual(
+                rotation["proposal_id"],
+                "recent_log_overlap_queue_blocked__auto-improve-readiness-queue-runtime",
+            )
+            self.assertEqual(
+                rotation["primary_targets"],
+                ["ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py"],
+            )
+            self.assertEqual(
+                rotation["must_change_tests"],
+                ["tests/test_auto_improve_readiness_runtime.py"],
+            )
+            self.assertEqual(rotation["blocked_by"], [])
+
     def test_recent_log_overlap_rotation_blocks_after_repeated_recent_outcome_rework(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
@@ -816,7 +871,8 @@ class MutationProposalTest(unittest.TestCase):
                 "- `ops/scripts/promotion_gate.py`\n"
                 "- `ops/scripts/wiki_lint.py`\n"
                 "- `ops/scripts/mechanism_assess.py`\n"
-                "- `ops/scripts/mechanism/mutation_proposal_runtime.py`\n",
+                "- `ops/scripts/mechanism/mutation_proposal_runtime.py`\n"
+                "- `ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py`\n",
                 encoding="utf-8",
             )
 

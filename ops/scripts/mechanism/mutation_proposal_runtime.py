@@ -62,6 +62,18 @@ RECENT_LOG_OVERLAP_UNBLOCK_TEST_FILES = [
     "tests/test_mutation_proposal.py",
     "tests/test_report_generation_smoke.py",
 ]
+RECENT_LOG_OVERLAP_UNBLOCK_TARGET_OPTIONS = [
+    {
+        "primary_targets": RECENT_LOG_OVERLAP_UNBLOCK_PRIMARY_TARGETS,
+        "test_files": RECENT_LOG_OVERLAP_UNBLOCK_TEST_FILES,
+    },
+    {
+        "primary_targets": [
+            "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py"
+        ],
+        "test_files": ["tests/test_auto_improve_readiness_runtime.py"],
+    },
+]
 RECENT_LOG_OVERLAP_UNBLOCK_RUN_ID = "recent-log-overlap-queue-blocked"
 RECENT_OUTCOME_REWORK_BLOCKER = "recent_outcome_rework"
 RECENT_OUTCOME_REWORK_MIN_ATTEMPTS = 2
@@ -620,9 +632,14 @@ def _why_now(candidate: dict, run_ids: list[str], blocked_by: list[str]) -> str:
     return message
 
 
-def _proposal_id(candidate: dict, failure_mode: str) -> str:
-    target_slug = "-".join(Path(target).stem for target in candidate["primary_targets"])
+def _target_slug(primary_targets: list[str]) -> str:
+    target_slug = "-".join(Path(target).stem for target in primary_targets)
     target_slug = re.sub(r"[^a-z0-9]+", "-", target_slug.lower()).strip("-")
+    return target_slug
+
+
+def _proposal_id(candidate: dict, failure_mode: str) -> str:
+    target_slug = _target_slug(candidate["primary_targets"])
     return f"{failure_mode}__{target_slug or candidate['candidate_id']}"
 
 
@@ -1042,6 +1059,74 @@ def _recent_outcome_rework_blockers(
     return [RECENT_OUTCOME_REWORK_BLOCKER]
 
 
+def _fallback_test_files(vault: Path, test_files: list[str]) -> list[str]:
+    existing = [path for path in test_files if (vault / path).exists()]
+    return existing or list(test_files)
+
+
+def _recent_log_overlap_unblock_target_option(
+    vault: Path,
+    policy: dict,
+    *,
+    recent_log_sections: list[RecentLogSection],
+) -> tuple[list[str], list[str], list[str], list[RecentLogOverlapMatch], str]:
+    options: list[
+        tuple[list[str], list[str], list[str], list[RecentLogOverlapMatch], str]
+    ] = []
+    for index, option in enumerate(RECENT_LOG_OVERLAP_UNBLOCK_TARGET_OPTIONS):
+        primary_targets = current_repo_target_paths(
+            vault,
+            [str(target).strip() for target in option["primary_targets"] if str(target).strip()],
+        )
+        if not primary_targets:
+            continue
+        supporting_targets = _with_generated_supporting_targets(
+            vault,
+            primary_targets=primary_targets,
+            supporting_targets=[],
+        )
+        must_change_tests = _resolve_must_change_tests(
+            vault,
+            policy,
+            primary_targets=primary_targets,
+            supporting_targets=supporting_targets,
+        )
+        if not must_change_tests:
+            must_change_tests = _fallback_test_files(
+                vault,
+                [str(path).strip() for path in option["test_files"] if str(path).strip()],
+            )
+        candidate_id = f"recent_log_overlap_queue_unblock__{_target_slug(primary_targets)}"
+        pseudo_candidate = {
+            "candidate_id": candidate_id,
+            "primary_targets": primary_targets,
+            "supporting_targets": supporting_targets,
+            "tier": "supporting",
+        }
+        recent_log_matches = _recent_log_overlap_matches(
+            pseudo_candidate,
+            recent_log_sections,
+        )
+        options.append(
+            (
+                primary_targets,
+                supporting_targets,
+                must_change_tests,
+                recent_log_matches,
+                candidate_id,
+            )
+        )
+        if not recent_log_matches:
+            return options[-1]
+
+    for option_candidate in options:
+        if not option_candidate[3]:
+            return option_candidate
+    if options:
+        return options[0]
+    return ([], [], [], [], "recent_log_overlap_queue_unblock__unresolved")
+
+
 def _recent_log_overlap_queue_unblock_proposal(
     vault: Path,
     policy: dict,
@@ -1060,30 +1145,22 @@ def _recent_log_overlap_queue_unblock_proposal(
     if any(proposal.blocked_by != ["recent_log_overlap"] for proposal in available_proposals):
         return None
 
-    primary_targets = list(RECENT_LOG_OVERLAP_UNBLOCK_PRIMARY_TARGETS)
-    supporting_targets = _with_generated_supporting_targets(
-        vault,
-        primary_targets=primary_targets,
-        supporting_targets=[],
-    )
-    must_change_tests = _resolve_must_change_tests(
+    (
+        primary_targets,
+        supporting_targets,
+        must_change_tests,
+        recent_log_matches,
+        candidate_id,
+    ) = _recent_log_overlap_unblock_target_option(
         vault,
         policy,
-        primary_targets=primary_targets,
-        supporting_targets=supporting_targets,
+        recent_log_sections=recent_log_sections,
     )
-    if not must_change_tests:
-        must_change_tests = [
-            path
-            for path in RECENT_LOG_OVERLAP_UNBLOCK_TEST_FILES
-            if (vault / path).exists()
-        ]
-    if not must_change_tests:
-        must_change_tests = list(RECENT_LOG_OVERLAP_UNBLOCK_TEST_FILES)
+    if not primary_targets:
+        return None
 
     priority = 91
     priority_breakdown = _bootstrap_priority_breakdown(priority)
-    candidate_id = "recent_log_overlap_queue_unblock__mutation-proposal-runtime"
     pseudo_candidate = {
         "candidate_id": candidate_id,
         "primary_targets": primary_targets,
@@ -1097,7 +1174,6 @@ def _recent_log_overlap_queue_unblock_proposal(
         },
         RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE,
     )
-    recent_log_matches = _recent_log_overlap_matches(pseudo_candidate, recent_log_sections)
     blocked_by = ["recent_log_overlap"] if recent_log_matches else []
     blocked_by.extend(
         blocker
@@ -1108,6 +1184,7 @@ def _recent_log_overlap_queue_unblock_proposal(
         )
         if blocker not in blocked_by
     )
+    scoped_target_text = " and ".join(f"`{path}`" for path in primary_targets)
     scoped_test_text = " and ".join(f"`{path}`" for path in must_change_tests)
     return MutationProposal(
         proposal_id=proposal_id,
@@ -1122,14 +1199,14 @@ def _recent_log_overlap_queue_unblock_proposal(
         run_ids=[RECENT_LOG_OVERLAP_UNBLOCK_RUN_ID],
         failure_mode=RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE,
         single_mechanism_scope=(
-            "keep the unblock experiment scoped to `ops/scripts/mechanism/mutation_proposal_runtime.py` "
-            f"and {scoped_test_text} so all existing recent-log-overlap-blocked proposals "
-            "remain diagnostic evidence while one runnable rotation target reopens the queue"
+            f"keep the unblock experiment scoped to {scoped_target_text} and "
+            f"{scoped_test_text} so all existing recent-log-overlap-blocked proposals remain "
+            "diagnostic evidence while one runnable rotation target reopens the queue"
         ),
         change_hypothesis=(
-            "If mutation proposal runtime emits a narrow fallback when every candidate is blocked only "
-            "by recent_log_overlap, auto-improve readiness can keep a runnable queue without weakening "
-            "the chronology overlap guardrail."
+            "If mutation proposal runtime emits a narrow non-overlapping fallback when every candidate "
+            "is blocked only by recent_log_overlap, auto-improve readiness can keep a runnable queue "
+            "without weakening the chronology overlap guardrail."
         ),
         expected_binary_signal=(
             "mutation proposal diagnostics retain recent_log_overlap blocked candidates and "
