@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/routing-provenance-aggregate.schema.json",
   "artifact_kind": "routing_provenance_aggregate",
-  "generated_at": "2026-05-19T08:18:54Z",
+  "generated_at": "2026-05-20T06:24:24Z",
   "producer": "ops.scripts.observability_routing_provenance_runtime",
   "source_command": "python -m ops.scripts.observability_routing_provenance_runtime --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "75c9f4093047a99a1aabf6b05900ace32438a1f6e7ca9c133e0f2114fd9a2475",
+  "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
   "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "d1020425815581b2e5ba63d8e577aa169eeb759773d42063844263ef84a3e78f",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "ead2e8c99a9f5ad6e934082caf3cd1b6aa0238d2d408ae35a4bdb6e91e69856f",
-    "source_session_report": "03a53f72db4dc9f3c5c8bf7025abf3da7cdaafed87e6b51a808852f8622c65a8",
+    "source_paths": "b4a1a3de468aa500d941eb1ceb9eccc6e27bf819354e9120952fdf2bdb36e852",
+    "source_session_report": "0b62218a18dd19e5eda4b868c99d7309e2de417a90f162cb790a97e87d9ca7fb",
     "run_ids": "956d3bef96e8109cfe80b84ef95e977f83567fe6d1aa941d9984082ee7717340"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-19T08:18:54Z"
+    "checked_at": "2026-05-20T06:24:24Z"
   },
   "session_id": "standalone-run-telemetry",
   "policy": {

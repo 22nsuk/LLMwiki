@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/auto-improve-session.schema.json",
   "session_id": "standalone-run-telemetry",
-  "generated_at": "2026-05-19T08:18:54Z",
+  "generated_at": "2026-05-20T06:24:25Z",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
@@ -137,7 +137,7 @@
       "status": "complete",
       "decision": "DISCARD",
       "outcome": "discarded",
-      "failure_taxonomy": "",
+      "failure_taxonomy": "discarded",
       "proposal_snapshot": "",
       "scope_freeze": "",
       "routing_reports": [],
@@ -217,7 +217,7 @@
       "status": "complete",
       "decision": "DISCARD",
       "outcome": "discarded",
-      "failure_taxonomy": "",
+      "failure_taxonomy": "discarded",
       "proposal_snapshot": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/proposal-snapshot.json",
       "scope_freeze": "",
       "routing_reports": [],
@@ -257,7 +257,7 @@
       "status": "complete",
       "decision": "DISCARD",
       "outcome": "discarded",
-      "failure_taxonomy": "",
+      "failure_taxonomy": "discarded",
       "proposal_snapshot": "",
       "scope_freeze": "",
       "routing_reports": [],
@@ -306,7 +306,7 @@
     "repeated_blocker_stop": false,
     "repeated_blocker_reason": "",
     "remediation_backlog_path": "ops/reports/remediation-backlog.json",
-    "updated_at": "2026-05-19T08:18:54Z"
+    "updated_at": "2026-05-20T06:24:25Z"
   },
   "queue_snapshot": [],
   "stop_reason": "reconstructed_from_standalone_run_artifacts",
@@ -317,7 +317,7 @@
     "properties": [
       {
         "name": "urn:openai:artifact-envelope",
-        "value": "{\"$schema\": \"ops/schemas/auto-improve-session.schema.json\", \"artifact_kind\": \"auto_improve_session\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-19T08:18:54Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-19T08:18:54Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"policy\": \"ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f\", \"run_ids\": \"956d3bef96e8109cfe80b84ef95e977f83567fe6d1aa941d9984082ee7717340\", \"schema\": \"5351ee1782980a0fae8ba3b4290eff91f4f476fc83b6ecc2201edd94ba041663\", \"session_id\": \"c98afbb0c3af0cb19b560ec0ddbae775b2620f3a3d454f15bf98250eceddb958\", \"source_paths\": \"ead2e8c99a9f5ad6e934082caf3cd1b6aa0238d2d408ae35a4bdb6e91e69856f\"}, \"producer\": \"ops.scripts.observability_routing_provenance_runtime\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.observability_routing_provenance_runtime --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"75c9f4093047a99a1aabf6b05900ace32438a1f6e7ca9c133e0f2114fd9a2475\"}"
+        "value": "{\"$schema\": \"ops/schemas/auto-improve-session.schema.json\", \"artifact_kind\": \"auto_improve_session\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-20T06:24:25Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-20T06:24:25Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"policy\": \"9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3\", \"run_ids\": \"956d3bef96e8109cfe80b84ef95e977f83567fe6d1aa941d9984082ee7717340\", \"schema\": \"5351ee1782980a0fae8ba3b4290eff91f4f476fc83b6ecc2201edd94ba041663\", \"session_id\": \"c98afbb0c3af0cb19b560ec0ddbae775b2620f3a3d454f15bf98250eceddb958\", \"source_paths\": \"b4a1a3de468aa500d941eb1ceb9eccc6e27bf819354e9120952fdf2bdb36e852\"}, \"producer\": \"ops.scripts.observability_routing_provenance_runtime\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.observability_routing_provenance_runtime --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a\"}"
       }
     ]
   },

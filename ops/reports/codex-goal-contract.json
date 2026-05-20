@@ -2,7 +2,7 @@
   "$schema": "ops/schemas/codex-goal-contract.schema.json",
   "schema_version": 1,
   "contract_id": "goal-5day-auto-improve-runtime",
-  "objective": "Achieve a verified 5-day sustained LLMwiki auto-improve runtime test through the profile ladder, preserving public/private boundaries and keeping promotion blocked until readiness, sealed authority, remediation backlog, and profile verification are clean.",
+  "objective": "Achieve a verified 5-day sustained LLMwiki auto-improve runtime test through the profile ladder, preserving public/private boundaries and keeping promotion blocked until readiness, sealed authority, remediation backlog, and profile evidence are clean.",
   "non_goals": [
     "Do not claim 5-day sustained operation before the 5d_sustained profile is verified.",
     "Do not promote release, learning, or improvement claims while promotion blockers remain.",
@@ -39,9 +39,9 @@
     }
   ],
   "budgets": {
-    "max_wall_clock_seconds": 432000,
-    "max_proposals": 60,
-    "max_consecutive_failures": 3,
+    "max_wall_clock_seconds": 1800,
+    "max_proposals": 1,
+    "max_consecutive_failures": 1,
     "heartbeat_interval_seconds": 300,
     "checkpoint_interval_seconds": 1800,
     "profile_ladder": [
@@ -79,10 +79,10 @@
   "created_by": "codex",
   "status": "active",
   "runtime_profile": {
-    "current_profile": "5d_sustained",
+    "current_profile": "30m_trial",
     "verified_profiles": [],
     "next_profile": "30m_trial",
-    "max_unattended_seconds": 432000
+    "max_unattended_seconds": 1800
   },
   "goal_backend": {
     "backend_type": "run_local_file",
@@ -140,7 +140,9 @@
     "can_promote_result": false,
     "promotion_blockers": [
       "learning_blocked_by_review_required",
-      "promotion_blocked_by_remediation_backlog_open"
+      "promotion_blocked_by_goal_worktree_guard_failure",
+      "promotion_blocked_by_remediation_backlog_open",
+      "git_worktree_dirty"
     ],
     "sealed_authority_clean": true,
     "profile_verified": "unverified",
@@ -157,6 +159,12 @@
       "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
       "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
     ],
-    "archive_action_completed": "external-reports/archive/llmwiki_review_reconciled_improvement_report.md"
+    "archive_action_completed": "external-reports/archive/llmwiki_review_reconciled_improvement_report.md",
+    "properties": [
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/codex-goal-contract.schema.json\", \"artifact_kind\": \"codex_goal_contract\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-20T06:18:42Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-20T06:18:42Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"auto_improve_readiness\": \"6220839edeca82bbfd97759506b8eb88b53ce00bcff3efeb9fe275e1cf2149d4\", \"contract_id\": \"9ec0b63f3aaa921def5fbe2c83b9b88c01f79b3d47ec3cb6a839f49065480962\", \"goal_worktree_guard_report\": \"0b072a7b49e07d144c40045866fa4f31dafae1be18266766cec272ced0d754d8\", \"policy\": \"9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3\", \"schema\": \"cf26e46d79af52c7038096664bc878959de9cb0107d8673fe58f0d33f0e25b6e\", \"source_paths\": \"24fc54460b1ef2f39cb9ba71bb17c7ebd9ce41b3455e7d13a5acac6c7a2d780e\"}, \"producer\": \"ops.scripts.codex_goal_client\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.codex_goal_client --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"edd38b0934877a885aab3fa274f4e1ad283c3c97990f7ec3f4bb7076a49a8e59\"}"
+      }
+    ]
   }
 }

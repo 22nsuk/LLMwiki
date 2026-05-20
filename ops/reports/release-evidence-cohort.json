@@ -1,27 +1,27 @@
 {
   "$schema": "ops/schemas/release-evidence-cohort.schema.json",
   "artifact_kind": "release_evidence_cohort",
-  "generated_at": "2026-05-15T19:08:20Z",
+  "generated_at": "2026-05-20T06:24:29Z",
   "producer": "ops.scripts.release_evidence_cohort",
-  "source_command": "python -m ops.scripts.release_evidence_cohort --vault . --profile base --cohort-policy strict_same_fingerprint --provenance-mode embedded_currentness",
+  "source_command": "python -m ops.scripts.release_evidence_cohort --vault . --profile base --cohort-policy allowed_divergence_with_explicit_risk --provenance-mode embedded_currentness",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
+  "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
   "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "1208ec3ed20e6b59117a09f7014db23733b735911bd5b71e22e26f62eeb0f3cd",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "82d6b1369c6ce00d2f1064ca53e9f3ed51938c1b06a4cea7c92248b0be269d4e",
-    "artifact_freshness": "af5ccac4cc62f4bfd2eb69da24a8d395d219719f70d152dc83eb84a9aa8789d7",
-    "auto_improve_readiness": "ed82f5a96a0c6c096c8aca7c36ce2084f357a65841417c62abddc853013a0ca6",
+    "source_paths": "3b18985436a82cd47b63eb667a00255463922a0523f69bd515c7789fce1d4f6d",
+    "artifact_freshness": "619689613a44f2a2c9b3ff97381075ebc3c3eef6bf998093c8972aa3979cdf14",
+    "auto_improve_readiness": "eed0c3e431a31d2c9a88532fa27b96c7a43bd91f4a626989d585bc1b162338a4",
     "bootstrap_preflight": "121ff3337eb7f147cb7f57ba01e25be73bd5e0c2827bbf45191daedaba6049a5",
-    "generated_index": "7e7673436cb22431b1dc592b5488f4154d715a40c3752f9551801792ea1958bb",
-    "raw_registry": "4c3f9cd87ed317a628f2c39e35215be57c7921b1fd522114ce48a4036fc34373",
-    "release_closeout_summary": "9b4ab12051ef1602554630c3ab49ad43cca7502d52a93d9253c08b4f1a4892c4",
-    "release_smoke": "c5968d4b0d24febe55113ce8553ecc94999e7da9b36097eafb5955fd22bf4299",
-    "source_package_clean_extract": "2abf2285095f037cae52f590f18507f8549bb1f135bfdb1182fb49f17a2de7a5",
-    "test_summary": "8dd9c713907ae84bbd1e28fd5f4b261a6f5bdf79dabae671950f13ebb02f0875",
+    "generated_index": "6237a2491f061a52d05c6e3b43575a0021882ed007efb5ec961422ff90516656",
+    "raw_registry": "049938d796eb2af1e587756e9b84ebdfa85c5cf0d59cb51db28999b8ec3dd572",
+    "release_closeout_summary": "f511d1dd30d1260128a104d2cdceadd1c93b1b739cbbc38592615899476fc280",
+    "release_smoke": "50b729d9d744366bbc1b64ba34ef33b29b59eee612f3f8957ef837b32cf62de9",
+    "source_package_clean_extract": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
+    "test_summary": "2ca7d1c2634baeac185d0507451d4e444910012ba2a89a12ed871c9ff244a216",
     "test_summary_full": "8529387d5cd28d2bfae1b2345d296cdabd50f3db26843b106a556a25f69cf6b9",
-    "cohort_policy": "658021716cd3da44d75e54ae455b8bca7f6c6f7993e391dcc31ffbd20b3a4039",
+    "cohort_policy": "1d487a20a973f5728bd68e1ba20116676965128a8587ad911fe05af33a8b543a",
     "profile": "cae662172fd450bb0cd710a769079c05bfc5d8e35efa6576edc7d0377afdd4a2",
     "provenance_mode": "9883ec29a0dfa7e11bf00fe98269a76af9da9c44a95aa40b76bffec6af6326cf",
     "zip_metadata": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -32,7 +32,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T19:08:20Z"
+    "checked_at": "2026-05-20T06:24:29Z"
   },
   "vault": ".",
   "policy": {
@@ -40,22 +40,22 @@
     "version": 4
   },
   "profile": "base",
-  "status": "pass",
-  "cohort_policy": "strict_same_fingerprint",
+  "status": "attention",
+  "cohort_policy": "allowed_divergence_with_explicit_risk",
   "provenance_mode": "embedded_currentness",
   "summary": {
     "component_count": 10,
     "loaded_component_count": 10,
     "issue_count": 0,
-    "risk_count": 0,
-    "strict_same_fingerprint": true,
-    "component_fingerprint_count": 1,
+    "risk_count": 1,
+    "strict_same_fingerprint": false,
+    "component_fingerprint_count": 5,
     "modified_after_generated_at_count": 0,
     "deselected_test_count": 0,
-    "accepted_risk_family_count": 0,
+    "accepted_risk_family_count": 2,
     "expired_risk_count": 0,
     "evidence_artifact_count": 3,
-    "clean_lane_contract_status": "pass"
+    "clean_lane_contract_status": "fail"
   },
   "ordered_chain": [
     {
@@ -105,38 +105,270 @@
     }
   ],
   "cohort": {
-    "status": "pass",
-    "policy": "strict_same_fingerprint",
+    "status": "attention",
+    "policy": "allowed_divergence_with_explicit_risk",
     "provenance_mode": "embedded_currentness",
-    "strict_same_fingerprint": true,
+    "strict_same_fingerprint": false,
     "component_count": 10,
     "loaded_component_count": 10,
-    "component_fingerprint_count": 1,
+    "component_fingerprint_count": 5,
     "fingerprints": [
-      "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3"
+      "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
+      "227bd9d6d2769fc2ef84dfeaea9991898645931919d80b6d5ad27f598a592b39",
+      "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
+      "4d8c5f4ee54bb6f4131e9016befdfd25a6f83e17269958a2ad7147913e7b21e1",
+      "607290458796684e94ce743b6505911314a98e5650fdf4ec4c612228a60d0263"
     ],
     "missing_fingerprint_components": [],
     "modified_after_generated_at_components": [],
     "divergence_diagnostics": {
       "path_limit": 10,
-      "components": []
+      "components": [
+        {
+          "name": "bootstrap_preflight",
+          "path": "ops/reports/bootstrap-preflight-report.json",
+          "generated_at": "2026-05-15T18:52:29Z",
+          "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
+          "matches_current_source_tree_fingerprint": false,
+          "modified_after_generated_at": false,
+          "changed_after_generated_at_count": 144,
+          "changed_after_generated_at": [
+            {
+              "path": ".serena/memories/memory_maintenance.md",
+              "mtime": "2026-05-19T20:05:16Z"
+            },
+            {
+              "path": ".codex/agents/validator.toml",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": ".github/workflows/ci.yml",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "README.md",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "mk/artifact.mk",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "mk/release.mk",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "mk/test.mk",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "ops/README.md",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "ops/mypy-allowlist.txt",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "ops/policies/release-risk-taxonomy.json",
+              "mtime": "2026-05-19T20:25:47Z"
+            }
+          ]
+        },
+        {
+          "name": "release_smoke",
+          "path": "ops/reports/release-smoke-report.json",
+          "generated_at": "2026-05-19T21:01:08Z",
+          "source_tree_fingerprint": "607290458796684e94ce743b6505911314a98e5650fdf4ec4c612228a60d0263",
+          "matches_current_source_tree_fingerprint": false,
+          "modified_after_generated_at": false,
+          "changed_after_generated_at_count": 22,
+          "changed_after_generated_at": [
+            {
+              "path": "ops/scripts/core/codex_goal_client.py",
+              "mtime": "2026-05-20T02:51:07Z"
+            },
+            {
+              "path": "tests/test_codex_goal_client.py",
+              "mtime": "2026-05-20T02:51:58Z"
+            },
+            {
+              "path": "ops/schemas/goal-profile-verification.schema.json",
+              "mtime": "2026-05-20T04:01:14Z"
+            },
+            {
+              "path": "ops/schemas/goal-run-status.schema.json",
+              "mtime": "2026-05-20T04:01:14Z"
+            },
+            {
+              "path": "tests/test_goal_profile_verification.py",
+              "mtime": "2026-05-20T04:01:14Z"
+            },
+            {
+              "path": "tests/test_goal_runtime_runner.py",
+              "mtime": "2026-05-20T04:01:14Z"
+            },
+            {
+              "path": "mk/mechanism.mk",
+              "mtime": "2026-05-20T04:17:14Z"
+            },
+            {
+              "path": "tests/test_makefile_static_gates.py",
+              "mtime": "2026-05-20T04:17:14Z"
+            },
+            {
+              "path": ".codex/agents/README.md",
+              "mtime": "2026-05-20T04:50:31Z"
+            },
+            {
+              "path": ".codex/agents/reviewer.toml",
+              "mtime": "2026-05-20T04:50:31Z"
+            }
+          ]
+        },
+        {
+          "name": "source_package_clean_extract",
+          "path": "ops/reports/source-package-clean-extract.json",
+          "generated_at": "2026-05-17T17:48:15Z",
+          "source_tree_fingerprint": "4d8c5f4ee54bb6f4131e9016befdfd25a6f83e17269958a2ad7147913e7b21e1",
+          "matches_current_source_tree_fingerprint": false,
+          "modified_after_generated_at": false,
+          "changed_after_generated_at_count": 144,
+          "changed_after_generated_at": [
+            {
+              "path": ".serena/memories/memory_maintenance.md",
+              "mtime": "2026-05-19T20:05:16Z"
+            },
+            {
+              "path": ".codex/agents/validator.toml",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": ".github/workflows/ci.yml",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "README.md",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "mk/artifact.mk",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "mk/release.mk",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "mk/test.mk",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "ops/README.md",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "ops/mypy-allowlist.txt",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "ops/policies/release-risk-taxonomy.json",
+              "mtime": "2026-05-19T20:25:47Z"
+            }
+          ]
+        },
+        {
+          "name": "test_summary",
+          "path": "ops/reports/test-execution-summary.json",
+          "generated_at": "2026-05-20T06:08:14Z",
+          "source_tree_fingerprint": "227bd9d6d2769fc2ef84dfeaea9991898645931919d80b6d5ad27f598a592b39",
+          "matches_current_source_tree_fingerprint": false,
+          "modified_after_generated_at": false,
+          "changed_after_generated_at_count": 2,
+          "changed_after_generated_at": [
+            {
+              "path": "ops/scripts/core/artifact_freshness_runtime.py",
+              "mtime": "2026-05-20T06:11:43Z"
+            },
+            {
+              "path": "tests/test_artifact_freshness_runtime.py",
+              "mtime": "2026-05-20T06:12:00Z"
+            }
+          ]
+        },
+        {
+          "name": "test_summary_full",
+          "path": "ops/reports/test-execution-summary-full.json",
+          "generated_at": "2026-05-15T19:06:36Z",
+          "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
+          "matches_current_source_tree_fingerprint": false,
+          "modified_after_generated_at": false,
+          "changed_after_generated_at_count": 144,
+          "changed_after_generated_at": [
+            {
+              "path": ".serena/memories/memory_maintenance.md",
+              "mtime": "2026-05-19T20:05:16Z"
+            },
+            {
+              "path": ".codex/agents/validator.toml",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": ".github/workflows/ci.yml",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "README.md",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "mk/artifact.mk",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "mk/release.mk",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "mk/test.mk",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "ops/README.md",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "ops/mypy-allowlist.txt",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "ops/policies/release-risk-taxonomy.json",
+              "mtime": "2026-05-19T20:25:47Z"
+            }
+          ]
+        }
+      ]
     }
   },
   "clean_lane_contract": {
-    "status": "pass",
+    "status": "fail",
     "zero_deselection": true,
-    "zero_accepted_risk_family": true,
-    "strict_cohort_pass": true,
-    "release_closeout_clean": true,
+    "zero_accepted_risk_family": false,
+    "strict_cohort_pass": false,
+    "release_closeout_clean": false,
     "expired_risk_present": false,
     "expired_risk_count": 0,
     "deselected_test_count": 0,
-    "clean_lane_blocking_family_count": 0,
+    "clean_lane_blocking_family_count": 2,
     "learning_claim_blocking_family_count": 0,
-    "advisory_lifecycle_family_count": 0,
-    "total_accepted_risk_family_count": 0,
-    "cohort_risk_count": 0,
-    "failed_conditions": []
+    "advisory_lifecycle_family_count": 2,
+    "total_accepted_risk_family_count": 4,
+    "cohort_risk_count": 1,
+    "failed_conditions": [
+      "zero_accepted_risk_family",
+      "strict_cohort_pass",
+      "release_closeout_clean"
+    ]
   },
   "components": [
     {
@@ -172,12 +404,12 @@
       "expected_artifact_kind": "release_smoke_report",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-15T19:00:16Z",
-      "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
-      "producer_input_fingerprint": "3bffb56c1dca44fdaad792eb5eac7522602a04b7f92c65af3c41df4356558a87",
+      "generated_at": "2026-05-19T21:01:08Z",
+      "source_tree_fingerprint": "607290458796684e94ce743b6505911314a98e5650fdf4ec4c612228a60d0263",
+      "producer_input_fingerprint": "1e5fff9cb6138c80fe4862f4b5525e040456e28ec5a262bebb08a5d8cf040ffd",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-15T19:00:16Z",
+      "currentness_checked_at": "2026-05-19T21:01:08Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -199,12 +431,12 @@
       "expected_artifact_kind": "source_package_clean_extract",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-15T18:53:04Z",
-      "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
-      "producer_input_fingerprint": "4fcf577226799fe49c27d8afafe8d9d5cd87fa91a80c1bad0c54086da621f7be",
+      "generated_at": "2026-05-17T17:48:15Z",
+      "source_tree_fingerprint": "4d8c5f4ee54bb6f4131e9016befdfd25a6f83e17269958a2ad7147913e7b21e1",
+      "producer_input_fingerprint": "745a1dca096dcfd3870f1e9c94f5d3f1b04f1c49e3e4786d7b7855887ebf8882",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-15T18:53:04Z",
+      "currentness_checked_at": "2026-05-17T17:48:15Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -226,12 +458,12 @@
       "expected_artifact_kind": "raw_registry_preflight_report",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-15T18:59:52Z",
-      "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
-      "producer_input_fingerprint": "497e95884177936a9c6efbb925edca8541e8da4ae2432e1e4c74b20cae9735a7",
+      "generated_at": "2026-05-20T06:24:20Z",
+      "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
+      "producer_input_fingerprint": "7e87a2e24f004c7fada44060218f49163836da60935f2e2ea75f75c6c23e97e0",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-15T18:59:52Z",
+      "currentness_checked_at": "2026-05-20T06:24:20Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -253,12 +485,12 @@
       "expected_artifact_kind": "test_execution_summary",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-15T19:07:04Z",
-      "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
-      "producer_input_fingerprint": "620e2e7a6b41cddd52c6af2e861cef3b843eec1bad09577abc6e7a7f3a5d44f8",
+      "generated_at": "2026-05-20T06:08:14Z",
+      "source_tree_fingerprint": "227bd9d6d2769fc2ef84dfeaea9991898645931919d80b6d5ad27f598a592b39",
+      "producer_input_fingerprint": "e73a63cb2219cdecd263c948e370d5a26ec8b1ef6b266612dab8d571872cc627",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-15T19:07:04Z",
+      "currentness_checked_at": "2026-05-20T06:08:14Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -332,12 +564,12 @@
       "expected_artifact_kind": "auto_improve_readiness_report",
       "load_status": "ok",
       "source_status": "unknown",
-      "generated_at": "2026-05-15T19:07:10Z",
-      "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
-      "producer_input_fingerprint": "bbdc86759f0f82113c3de644e73e8970a2e5db1f0baffa70456ae5630a05cba0",
+      "generated_at": "2026-05-20T06:24:28Z",
+      "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
+      "producer_input_fingerprint": "a8a9d53a39eecdf44de2882e38d26f8fe61c3f08aa6631775d377e40a8c52386",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-15T19:07:10Z",
+      "currentness_checked_at": "2026-05-20T06:24:28Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -358,13 +590,13 @@
       "path": "ops/reports/generated-artifact-index.json",
       "expected_artifact_kind": "generated_artifact_index_report",
       "load_status": "ok",
-      "source_status": "pass",
-      "generated_at": "2026-05-15T19:07:13Z",
-      "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
-      "producer_input_fingerprint": "d19d9f26f42dd7fd2a179fa1fcc31bf77229183af7a2ea09f65a469931b4cad4",
+      "source_status": "attention",
+      "generated_at": "2026-05-20T06:19:45Z",
+      "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
+      "producer_input_fingerprint": "7234bf205097ef123574fa965d0140bc2568abc32853b3b4d293723b0c69d270",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-15T19:07:13Z",
+      "currentness_checked_at": "2026-05-20T06:19:45Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -385,13 +617,13 @@
       "path": "ops/reports/artifact-freshness-report.json",
       "expected_artifact_kind": "artifact_freshness_report",
       "load_status": "ok",
-      "source_status": "pass",
-      "generated_at": "2026-05-15T19:07:16Z",
-      "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
-      "producer_input_fingerprint": "26ebde2fce026ec5f6b4f83eb26d19dba866e082a0ee2854b54b94d42ae20ef8",
+      "source_status": "attention",
+      "generated_at": "2026-05-20T06:19:33Z",
+      "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
+      "producer_input_fingerprint": "efaf02f1dd0613d22ff3185699724135ad6e1f88795b7baaf68bc0983b9be3ac",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-15T19:07:16Z",
+      "currentness_checked_at": "2026-05-20T06:19:33Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -412,29 +644,50 @@
       "path": "ops/reports/release-closeout-summary.json",
       "expected_artifact_kind": "release_closeout_summary",
       "load_status": "ok",
-      "source_status": "pass",
-      "generated_at": "2026-05-15T19:08:19Z",
-      "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
-      "producer_input_fingerprint": "7a8069573456ab3a638973bbf671d0ce7b95289c20d8a2b709b710136a1db7b4",
+      "source_status": "fail",
+      "generated_at": "2026-05-20T06:24:29Z",
+      "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
+      "producer_input_fingerprint": "e3903c777168a4f5054bb8f81be2d9a25d40867df24f433ed8c1a2f47c4b2b05",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-15T19:08:19Z",
+      "currentness_checked_at": "2026-05-20T06:24:29Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
       "modified_after_generated_at": false,
       "deselected_test_count": 0,
-      "accepted_risk_family_count": 0,
-      "clean_lane_blocking_risk_family_count": 0,
+      "accepted_risk_family_count": 4,
+      "clean_lane_blocking_risk_family_count": 2,
       "learning_claim_blocking_risk_family_count": 0,
-      "advisory_lifecycle_risk_family_count": 0,
-      "release_readiness_state": "clean_pass",
-      "machine_release_allowed": true,
+      "advisory_lifecycle_risk_family_count": 2,
+      "release_readiness_state": "blocked",
+      "machine_release_allowed": false,
       "evidence_artifact_count": 0,
       "evidence_artifacts": [],
       "issue_count": 0
     }
   ],
   "issues": [],
-  "cohort_risks": []
+  "cohort_risks": [
+    {
+      "source": "release_evidence_cohort",
+      "source_path": "ops/reports/release-evidence-cohort.json",
+      "code": "cohort_not_strict_same_fingerprint",
+      "severity": "warn",
+      "gate_effect": "accepted_by_cohort_policy",
+      "message": "release evidence components have more than one source_tree_fingerprint.",
+      "required_evidence": [
+        "Regenerate release evidence in one ordered closeout chain, or keep explicit fingerprint divergence risk visible."
+      ],
+      "risk_acceptance": {
+        "accepted_by": "release_evidence_cohort_policy",
+        "accepted_at": "2026-05-20T06:24:29Z",
+        "expires_at": "2026-05-27T06:24:29Z",
+        "risk_owner": "runtime-maintainer",
+        "revalidation_condition": "Rerun the ordered release evidence chain before the next release closeout.",
+        "rollback_trigger": "Treat cohort fingerprint divergence as a blocker if policy requires strict same-fingerprint evidence.",
+        "acceptance_source": "cohort_policy"
+      }
+    }
+  ]
 }
