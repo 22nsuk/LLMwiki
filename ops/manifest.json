@@ -1672,8 +1672,8 @@
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_runner.py",
-      "sha256": "4406a7c0b0cb4967726c016e382e2f0c025da6c215be970e111077761a2130ba",
-      "size_bytes": 20902
+      "sha256": "2a1d31c2dc3a27c7023a5b36209d741d4746556a38876d729edafc87bbfd12de",
+      "size_bytes": 24275
     },
     {
       "path": "ops/scripts/mechanism/goal_worktree_guard.py",
@@ -5222,8 +5222,8 @@
     },
     {
       "path": "tests/test_goal_runtime_runner.py",
-      "sha256": "5ed5451fd472b4e5099bfd299e941c6e70a394bd3cedc8c5d90a334d301e232c",
-      "size_bytes": 15823
+      "sha256": "24f63215be8b3a8a4dfd00e46c627caf38075ee00c8780b5de3842cfd93db2bf",
+      "size_bytes": 18799
     },
     {
       "path": "tests/test_goal_worktree_guard.py",

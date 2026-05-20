@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -187,6 +188,73 @@ class GoalRuntimeRunnerTests(unittest.TestCase):
         ]
         self.assertEqual([event["run_status"] for event in audit_events], ["running", "failed"])
         self.assertEqual(audit_events[-1]["writer"], "ops.scripts.goal_runtime_runner")
+
+    def test_runner_rejects_duplicate_run_id_before_status_overwrite(self) -> None:
+        lock_path = self.vault / "runs" / "goal-20260517-trial" / "runner.lock.json"
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        lock_path.write_text(
+            json.dumps({"pid": os.getpid(), "run_id": "20260517-trial", "token": "active"}),
+            encoding="utf-8",
+        )
+        process = FakeProcess(communicate_side_effect=[('{"ok": true}\n', "")])
+        backend = FakeProcessBackend(process)
+
+        exit_code = run_goal_runtime_command(
+            GoalRuntimeRunnerRequest(
+                vault=self.vault,
+                command_argv=["python", "-m", "ops.scripts.auto_improve_loop"],
+                run_id="20260517-trial",
+                goal_contract_path="ops/reports/codex-goal-contract.json",
+                result_out="tmp/session-result.json",
+                heartbeat_interval_seconds=1,
+                checkpoint_interval_seconds=2,
+                timeout_seconds=5,
+                context=fixed_context(),
+                backend=backend,
+                monotonic_clock=SteppedClock([0.0]),
+            )
+        )
+
+        self.assertEqual(exit_code, 75)
+        self.assertEqual(backend.start_calls, [])
+        self.assertFalse((self.vault / "ops" / "reports" / "goal-run-status.json").exists())
+        self.assertEqual(
+            json.loads(lock_path.read_text(encoding="utf-8")),
+            {"pid": os.getpid(), "run_id": "20260517-trial", "token": "active"},
+        )
+
+    def test_runner_replaces_stale_run_id_lock(self) -> None:
+        lock_path = self.vault / "runs" / "goal-20260517-trial" / "runner.lock.json"
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        lock_path.write_text(
+            json.dumps({"pid": -1, "run_id": "20260517-trial", "token": "stale"}),
+            encoding="utf-8",
+        )
+        process = FakeProcess(communicate_side_effect=[('{"ok": true}\n', "")])
+        process.returncode = 0
+
+        exit_code = run_goal_runtime_command(
+            GoalRuntimeRunnerRequest(
+                vault=self.vault,
+                command_argv=["python", "-m", "ops.scripts.auto_improve_loop"],
+                run_id="20260517-trial",
+                goal_contract_path="ops/reports/codex-goal-contract.json",
+                result_out="tmp/session-result.json",
+                heartbeat_interval_seconds=1,
+                checkpoint_interval_seconds=2,
+                timeout_seconds=5,
+                context=fixed_context(),
+                backend=FakeProcessBackend(process),
+                monotonic_clock=SteppedClock([0.0, 0.0, 0.0]),
+            )
+        )
+
+        self.assertEqual(exit_code, 0)
+        self.assertFalse(lock_path.exists())
+        status = json.loads(
+            (self.vault / "ops" / "reports" / "goal-run-status.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(status["run"]["status"], "completed")
 
     def test_runner_records_signal_returncode_without_schema_failure(self) -> None:
         process = FakeProcess(communicate_side_effect=[("", "terminated\n")])

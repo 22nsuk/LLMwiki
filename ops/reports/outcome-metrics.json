@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/outcome-metrics.schema.json",
   "artifact_kind": "outcome_metrics_report",
-  "generated_at": "2026-05-20T07:23:26Z",
+  "generated_at": "2026-05-20T07:34:52Z",
   "producer": "ops.scripts.observability_decision_metrics_runtime",
   "source_command": "python -m ops.scripts.outcome_metrics --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "9c055b406ed3413d44c30d0fbef0b71dbf5dabaea65ecfddc34b3e6b4384c0df",
+  "source_tree_fingerprint": "27c8028105f2008f77c1491b69a846e8eb5f5a5433d9382805e224fb09c8e3b8",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "aadbf232f7dc6bf40f35290f0dabcc4e9320b93c70cc2f0177f1167b24ecff29",
@@ -13,8 +13,8 @@
     "source_paths": "c364e1ed667cd810b07ae3d6b09e9de4431804a8db70852d444664e6939e289d",
     "defect_escape_closures": "cefd893320a733da69c34eb5a55e92ee1c88475952ebe35db8788284714cbb82",
     "rework_closures": "330a3dc74be9abbeb429578369920572d94f20e38b1bbae93ac21f487bbdcd61",
-    "run_inputs": "77ed70832234970742d77da9e21eb2edfef82b92b11fa2d795a9caf7e1a62584",
-    "session_reports": "bef0193b70f3aced5e32d636b86b20a329c4b95a5e1cce090f513008f1992178",
+    "run_inputs": "4e4c6a970f54e174ecb0dcf374f6a8b2a4f537776f4bc849d81f1916c85f3e6f",
+    "session_reports": "23cea440351b5db1b40d57a0987a3a822487d71880069946f836b9acbad80ca7",
     "recent_window": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T07:23:26Z"
+    "checked_at": "2026-05-20T07:34:52Z"
   },
   "vault": ".",
   "policy": {
@@ -31,21 +31,21 @@
     "version": 4
   },
   "summary": {
-    "attempts_considered": 15,
+    "attempts_considered": 16,
     "recent_window": 20,
-    "recent_attempt_count": 15,
-    "session_reports_considered": 5
+    "recent_attempt_count": 16,
+    "session_reports_considered": 6
   },
   "metrics": {
-    "attempt_count": 15,
+    "attempt_count": 16,
     "recent_window": 20,
-    "recent_attempt_count": 15,
+    "recent_attempt_count": 16,
     "rework_count": 0,
     "rollback_signal_count": 0,
     "rollback_rehearsal_coverage_count": 3,
     "moving_averages": {
-      "hold": 0.3333,
-      "discard": 0.2,
+      "hold": 0.375,
+      "discard": 0.1875,
       "rollback_signal": 0.0
     },
     "operator_effort_proxy": {
@@ -60,7 +60,7 @@
       "reviewer_dispatch_count": 0,
       "validator_dispatch_count": 0,
       "auditor_dispatch_count": 0,
-      "hold_count": 5
+      "hold_count": 6
     },
     "rework_keys": [],
     "defect_escape_proxy": {
@@ -200,6 +200,23 @@
     ]
   },
   "recent_attempts": [
+    {
+      "run_id": "5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime",
+      "session_id": "standalone-run-telemetry",
+      "proposal_id": "",
+      "source_candidate_id": "recent_log_overlap_queue_unblock__mechanism-run-validation-runtime",
+      "observed_at": "2026-05-20T07:26:55Z",
+      "decision": "HOLD",
+      "outcome": "hold",
+      "primary_targets": [
+        "ops/scripts/mechanism/mechanism_run_validation_runtime.py"
+      ],
+      "rework_key": "targets:ops/scripts/mechanism/mechanism_run_validation_runtime.py",
+      "rollback_rehearsal_covered": false,
+      "rollback_signal": false,
+      "run_telemetry": "runs/5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime/run-telemetry.json",
+      "promotion_report": "runs/5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime/promotion-report.json"
+    },
     {
       "run_id": "5day-auto-improve-runtime-rerun6-30m_trial-run-01-mechanism-run-validation-runtime",
       "session_id": "5day-auto-improve-runtime-rerun6-30m_trial",

@@ -5,6 +5,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 import datetime as dt
 import json
+import os
 from pathlib import Path
 import re
 import shlex
@@ -39,6 +40,7 @@ from .goal_runtime_maintenance import (
 
 DEFAULT_RESULT_OUT = "tmp/auto-improve-goal-session-result.json"
 PRODUCER = "ops.scripts.goal_runtime_runner"
+RUNNER_LOCK_EXIT_CODE = 75
 USAGE_LIMIT_STOP_REASON = "executor_usage_limited"
 USAGE_LIMIT_RE = re.compile(
     r"(executor_usage_limited|usage limit|try again at|upgrade to pro)",
@@ -87,6 +89,16 @@ class GoalRuntimeRunnerRequest:
     monotonic_clock: Callable[[], float] | None = None
     checkpoint_backend: ProcessBackend | None = None
     checkpoint_command_executor: CheckpointCommandExecutor | None = None
+
+
+@dataclass(frozen=True)
+class GoalRuntimeRunnerLock:
+    path: Path
+    token: str
+
+
+class GoalRuntimeRunnerAlreadyRunning(RuntimeError):
+    pass
 
 
 def _iso_z(value: dt.datetime) -> str:
@@ -169,6 +181,85 @@ def _write_status(
 ) -> None:
     write_goal_run_status_report(request.vault, report, request.status_report_path)
     write_run_artifacts(request.vault, report, writer=PRODUCER)
+
+
+def _runner_lock_path(request: GoalRuntimeRunnerRequest) -> Path:
+    paths = goal_run_artifact_paths(
+        request.run_id,
+        status_report_path=request.status_report_path,
+    )
+    return (request.vault / paths.audit_log_path).parent / "runner.lock.json"
+
+
+def _process_is_running(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return True
+    return True
+
+
+def _load_lock_payload(path: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _acquire_runner_lock(
+    request: GoalRuntimeRunnerRequest,
+    *,
+    started_at: str,
+) -> GoalRuntimeRunnerLock:
+    lock_path = _runner_lock_path(request)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    token = f"{os.getpid()}:{request.run_id}:{started_at}"
+    payload = {
+        "run_id": request.run_id,
+        "profile": request.profile,
+        "pid": os.getpid(),
+        "started_at": started_at,
+        "token": token,
+    }
+    while True:
+        try:
+            fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError as exc:
+            existing = _load_lock_payload(lock_path)
+            existing_pid = existing.get("pid")
+            if isinstance(existing_pid, int) and not _process_is_running(existing_pid):
+                try:
+                    lock_path.unlink()
+                except FileNotFoundError:
+                    continue
+                except OSError:
+                    pass
+                else:
+                    continue
+            raise GoalRuntimeRunnerAlreadyRunning(
+                f"goal runtime run_id already active: {request.run_id}; lock={lock_path}"
+            ) from exc
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=False, sort_keys=True)
+            handle.write("\n")
+        return GoalRuntimeRunnerLock(path=lock_path, token=token)
+
+
+def _release_runner_lock(lock: GoalRuntimeRunnerLock) -> None:
+    payload = _load_lock_payload(lock.path)
+    if payload.get("token") != lock.token:
+        return
+    try:
+        lock.path.unlink()
+    except FileNotFoundError:
+        return
 
 
 def _exit_code(returncode: int, *, timed_out: bool) -> int:
@@ -412,109 +503,122 @@ def run_goal_runtime_command(request: GoalRuntimeRunnerRequest) -> int:
     runtime_context = request.context or RuntimeContext.from_policy(policy)
     started_at_dt = runtime_context.utcnow().replace(microsecond=0)
     started_at = _iso_z(started_at_dt)
-    _write_status(
-        request,
-        _status_report(
+    try:
+        runner_lock = _acquire_runner_lock(request, started_at=started_at)
+    except GoalRuntimeRunnerAlreadyRunning as exc:
+        print(str(exc), file=sys.stderr)
+        return RUNNER_LOCK_EXIT_CODE
+
+    try:
+        _write_status(
             request,
-            generated_at=started_at_dt,
-            started_at=started_at,
-            run_status="running",
-            quiet_seconds=0,
-            command_observation_mode="process_heartbeat",
-            command_timeout_seconds=request.timeout_seconds,
-            runtime_context=runtime_context,
-        ),
-    )
+            _status_report(
+                request,
+                generated_at=started_at_dt,
+                started_at=started_at,
+                run_status="running",
+                quiet_seconds=0,
+                command_observation_mode="process_heartbeat",
+                command_timeout_seconds=request.timeout_seconds,
+                runtime_context=runtime_context,
+            ),
+        )
 
-    last_observed_at = started_at_dt
+        last_observed_at = started_at_dt
 
-    def heartbeat_callback(event: CommandHeartbeat) -> None:
-        nonlocal last_observed_at
-        observed_at = started_at_dt + dt.timedelta(seconds=int(event.elapsed_seconds))
-        last_observed_at = max(last_observed_at, observed_at)
-        observed_at_text = _iso_z(observed_at)
+        def heartbeat_callback(event: CommandHeartbeat) -> None:
+            nonlocal last_observed_at
+            observed_at = started_at_dt + dt.timedelta(seconds=int(event.elapsed_seconds))
+            last_observed_at = max(last_observed_at, observed_at)
+            observed_at_text = _iso_z(observed_at)
+            _run_due_checkpoint_commands(
+                request,
+                generated_at=observed_at,
+                started_at=started_at,
+            )
+            _write_status(
+                request,
+                _status_report(
+                    request,
+                    generated_at=observed_at,
+                    started_at=started_at,
+                    run_status="running",
+                    last_heartbeat_at=observed_at_text,
+                    last_checkpoint_at=observed_at_text,
+                    last_command_heartbeat_at=observed_at_text,
+                    quiet_seconds=event.quiet_seconds,
+                    command_observation_mode=event.observation_mode,
+                    command_heartbeat_count=event.heartbeat_index,
+                    command_timeout_seconds=event.timeout_seconds,
+                    last_stdout_at=event.last_stdout_at,
+                    last_stderr_at=event.last_stderr_at,
+                    last_artifact_touch_at=event.last_artifact_touch_at,
+                    runtime_context=runtime_context,
+                ),
+            )
+
+        result = run_with_timeout(
+            list(request.command_argv),
+            cwd=vault,
+            timeout_seconds=request.timeout_seconds,
+            backend=request.backend,
+            heartbeat_interval_seconds=request.heartbeat_interval_seconds,
+            heartbeat_callback=heartbeat_callback,
+            monotonic_clock=request.monotonic_clock,
+        )
+        result_path = resolve_repo_output_path(
+            vault,
+            request.result_out,
+            default_relative_path=DEFAULT_RESULT_OUT,
+        )
+        write_output_text(result_path, result.stdout)
+        if result.stderr:
+            print(result.stderr, file=sys.stderr, end="" if result.stderr.endswith("\n") else "\n")
+
+        completed_now = runtime_context.utcnow().replace(microsecond=0)
+        completed_at_dt = max(completed_now, last_observed_at)
+        completed_at = _iso_z(completed_at_dt)
         _run_due_checkpoint_commands(
             request,
-            generated_at=observed_at,
+            generated_at=completed_at_dt,
             started_at=started_at,
+        )
+        final_status = "completed" if result.returncode == 0 and not result.timed_out else "failed"
+        last_backoff_until, backoff_reason = _usage_limit_backoff(
+            vault,
+            stdout=result.stdout,
+            stderr=result.stderr,
         )
         _write_status(
             request,
             _status_report(
                 request,
-                generated_at=observed_at,
+                generated_at=completed_at_dt,
                 started_at=started_at,
-                run_status="running",
-                last_heartbeat_at=observed_at_text,
-                last_checkpoint_at=observed_at_text,
-                last_command_heartbeat_at=observed_at_text,
-                quiet_seconds=event.quiet_seconds,
-                command_observation_mode=event.observation_mode,
-                command_heartbeat_count=event.heartbeat_index,
-                command_timeout_seconds=event.timeout_seconds,
-                last_stdout_at=event.last_stdout_at,
-                last_stderr_at=event.last_stderr_at,
-                last_artifact_touch_at=event.last_artifact_touch_at,
+                run_status=final_status,
+                completed_at=completed_at,
+                last_heartbeat_at=completed_at,
+                last_checkpoint_at=completed_at,
+                last_command_heartbeat_at=completed_at,
+                quiet_seconds=result.quiet_seconds,
+                command_observation_mode=result.observation_mode,
+                command_heartbeat_count=result.heartbeat_count,
+                command_timeout_seconds=result.timeout_seconds,
+                last_stdout_at=result.last_stdout_at,
+                last_stderr_at=result.last_stderr_at,
+                last_artifact_touch_at=result.last_artifact_touch_at,
+                last_command_returncode=result.returncode,
+                last_command_timed_out=result.timed_out,
+                last_command_termination_reason=result.termination_reason,
+                last_backoff_until=last_backoff_until,
+                backoff_reason=backoff_reason,
                 runtime_context=runtime_context,
             ),
         )
-
-    result = run_with_timeout(
-        list(request.command_argv),
-        cwd=vault,
-        timeout_seconds=request.timeout_seconds,
-        backend=request.backend,
-        heartbeat_interval_seconds=request.heartbeat_interval_seconds,
-        heartbeat_callback=heartbeat_callback,
-        monotonic_clock=request.monotonic_clock,
-    )
-    result_path = resolve_repo_output_path(vault, request.result_out, default_relative_path=DEFAULT_RESULT_OUT)
-    write_output_text(result_path, result.stdout)
-    if result.stderr:
-        print(result.stderr, file=sys.stderr, end="" if result.stderr.endswith("\n") else "\n")
-
-    completed_now = runtime_context.utcnow().replace(microsecond=0)
-    completed_at_dt = max(completed_now, last_observed_at)
-    completed_at = _iso_z(completed_at_dt)
-    _run_due_checkpoint_commands(
-        request,
-        generated_at=completed_at_dt,
-        started_at=started_at,
-    )
-    final_status = "completed" if result.returncode == 0 and not result.timed_out else "failed"
-    last_backoff_until, backoff_reason = _usage_limit_backoff(
-        vault,
-        stdout=result.stdout,
-        stderr=result.stderr,
-    )
-    _write_status(
-        request,
-        _status_report(
-            request,
-            generated_at=completed_at_dt,
-            started_at=started_at,
-            run_status=final_status,
-            completed_at=completed_at,
-            last_heartbeat_at=completed_at,
-            last_checkpoint_at=completed_at,
-            last_command_heartbeat_at=completed_at,
-            quiet_seconds=result.quiet_seconds,
-            command_observation_mode=result.observation_mode,
-            command_heartbeat_count=result.heartbeat_count,
-            command_timeout_seconds=result.timeout_seconds,
-            last_stdout_at=result.last_stdout_at,
-            last_stderr_at=result.last_stderr_at,
-            last_artifact_touch_at=result.last_artifact_touch_at,
-            last_command_returncode=result.returncode,
-            last_command_timed_out=result.timed_out,
-            last_command_termination_reason=result.termination_reason,
-            last_backoff_until=last_backoff_until,
-            backoff_reason=backoff_reason,
-            runtime_context=runtime_context,
-        ),
-    )
-    print(display_path(vault, result_path))
-    return _exit_code(result.returncode, timed_out=result.timed_out)
+        print(display_path(vault, result_path))
+        return _exit_code(result.returncode, timed_out=result.timed_out)
+    finally:
+        _release_runner_lock(runner_lock)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
