@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/raw-registry-preflight-report.schema.json",
   "artifact_kind": "raw_registry_preflight_report",
-  "generated_at": "2026-05-20T07:22:34Z",
+  "generated_at": "2026-05-20T07:23:21Z",
   "producer": "ops.scripts.raw_registry_preflight",
   "source_command": "python -m ops.scripts.raw_registry_preflight --vault .",
   "source_revision": "unknown",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T07:22:34Z"
+    "checked_at": "2026-05-20T07:23:21Z"
   },
   "vault": ".",
   "policy": {
