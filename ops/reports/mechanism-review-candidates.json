@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/mechanism-review-candidates.schema.json",
   "artifact_kind": "mechanism_review_candidates_report",
-  "generated_at": "2026-05-20T08:14:34Z",
+  "generated_at": "2026-05-20T08:51:52Z",
   "producer": "ops.scripts.mechanism_review_runtime",
   "source_command": "python -m ops.scripts.mechanism_review",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "518b36d47ca6bb09a61cbf1c7fe908ec943776e91584d628e6bb8604afb9fb6f",
+  "source_tree_fingerprint": "0e14298ef90444462a87ace241d6ab035cc99f34f352eb00d49ec9b32a0854c4",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "c730a4570492eaf5cb038d51227064a8c9404069f62cb3920049a985951e876a",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b6a97e444164d60ea21111ba0d6068ce8e345c212c78dd4070013da1d67097f4",
     "excluded_promotion_reports": "37ae6dd0e225f063f878cf542ef37ab7f846be1b1ef044afcf54acd4d16a624f",
-    "promotion_reports": "47308e6ead45e6366547bffe91c993d0d224544c2a4fb589d598b124c76a0a5f",
+    "promotion_reports": "78f2a79baaf822d037acad3bdb268e90c6b5fbe0da04ea7c21e90e6165f8e2e3",
     "skipped_artifacts": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "mechanism_review_enabled": "3cbc87c7681f34db4617feaa2c8801931bc5e42d8d0f560e756dd4cd92885f18",
     "mechanism_review_max_candidates": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T08:14:34Z"
+    "checked_at": "2026-05-20T08:51:52Z"
   },
   "vault": ".",
   "policy": {
@@ -33,8 +33,8 @@
   },
   "status": "pass",
   "summary": {
-    "runs_discovered": 17,
-    "runs_considered": 9,
+    "runs_discovered": 18,
+    "runs_considered": 10,
     "runs_excluded": 8,
     "runs_skipped": 0,
     "candidates_emitted": 1
@@ -146,6 +146,35 @@
               "additional_runs_needed": 1
             }
           ]
+        },
+        {
+          "primary_targets": [
+            "ops/scripts/mechanism/mechanism_run_validation_runtime.py"
+          ],
+          "comparable_runs": 1,
+          "latest_run_id": "5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime",
+          "blocked_candidate_types": [
+            {
+              "candidate_type": "mechanism_branch_growth_without_test_growth_candidate",
+              "required_runs": 2,
+              "additional_runs_needed": 1
+            },
+            {
+              "candidate_type": "mechanism_schema_drift_candidate",
+              "required_runs": 2,
+              "additional_runs_needed": 1
+            },
+            {
+              "candidate_type": "mechanism_policy_complexity_growth_candidate",
+              "required_runs": 2,
+              "additional_runs_needed": 1
+            },
+            {
+              "candidate_type": "mechanism_eval_stagnation_candidate",
+              "required_runs": 2,
+              "additional_runs_needed": 1
+            }
+          ]
         }
       ],
       "non_trigger_diagnostics": []
@@ -209,14 +238,14 @@
         "defect_escape_pair_count": 1
       },
       "global_signals": {
-        "attempt_count": 17,
-        "recent_attempt_count": 17,
+        "attempt_count": 18,
+        "recent_attempt_count": 18,
         "moving_averages": {
-          "hold": 0.4118,
-          "discard": 0.1765,
+          "hold": 0.3889,
+          "discard": 0.2222,
           "rollback_signal": 0.0
         },
-        "rework_count": 1,
+        "rework_count": 2,
         "rollback_signal_count": 0,
         "defect_escape_pair_count": 0
       },
@@ -286,7 +315,7 @@
         "min_attempts_considered": 10,
         "min_target_attempts": 2,
         "shadow_priority_max_delta": 10,
-        "attempts_considered": 17,
+        "attempts_considered": 18,
         "current_order": [
           "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime"
         ],

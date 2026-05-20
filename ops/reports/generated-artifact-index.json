@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-20T07:02:26Z",
+  "generated_at": "2026-05-20T08:52:17Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "b61c1cf1492c34c9b9f57c25af1f525746f1567fa4bec22ed2db54d00b774bb3",
+  "source_tree_fingerprint": "0e14298ef90444462a87ace241d6ab035cc99f34f352eb00d49ec9b32a0854c4",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "834eb6cfec958f35d3989a742cfd58414bb50bb75040ab9283e4c90ed61f1657",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "3090e8825cf76941fff0428cae33626bf250f99e0ab497ee5c0c5883b415cffe",
-    "run_promotion_reports": "1332cb2797c4a91be317b63bd0981b1f27a9572e4715f978c0c63bd41fef7fc5",
+    "run_promotion_reports": "9f3dae86943773e69ec60f9eee8ed05b532c3fe0607ba40cb627b587f42679f2",
     "external_report_inventory": "8500649368cfaba258623f14fdb3e14f3b149ee174603d4be00ba71bcf77b11b",
     "operator_report_inventory": "0479590a186415fa72ba934ab4431828124b8ca576b06322a6eae193e9627721",
     "ops_report_inventory": "42888319f0fa00ed45687b2461bda3d2739588b931ba8c665afa1e1be992c762",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T07:02:26Z"
+    "checked_at": "2026-05-20T08:52:17Z"
   },
   "vault": ".",
   "policy": {
@@ -58,14 +58,15 @@
     }
   ],
   "now": [
-    "88 canonical artifact(s) are currently indexed.",
-    "1 archive candidate(s) remain in active namespaces."
+    "92 canonical artifact(s) are currently indexed.",
+    "2 archive candidate(s) remain in active namespaces."
   ],
   "next": [
     "Archive the root-level candidates after confirming their content lifecycle decision and linked replacement evidence."
   ],
   "why_blocked": [
-    "External report has no unique unresolved action themes; remaining open themes are covered by a broader active external report."
+    "External report has no unique unresolved action themes; remaining open themes are covered by a broader active external report.",
+    "promotion-report.history.status=archived but the run remains in the top-level runs namespace."
   ],
   "summary": {
     "ops_reports_root_file_count": 68,
@@ -73,10 +74,10 @@
     "operator_reports_root_file_count": 2,
     "external_reports_root_file_count": 4,
     "external_reports_archive_file_count": 68,
-    "run_directory_count": 15,
+    "run_directory_count": 20,
     "run_archive_directory_count": 4,
-    "canonical_report_count": 88,
-    "archive_candidate_count": 1
+    "canonical_report_count": 92,
+    "archive_candidate_count": 2
   },
   "canonical_reports": [
     {
@@ -898,7 +899,51 @@
     {
       "surface": "runs",
       "family": "mechanism_run",
+      "path": "runs/5day-auto-improve-runtime-rerun6-30m_trial-run-01-mechanism-run-validation-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
       "path": "runs/goal-5day-auto-improve-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary. Load issues: promotion-report.json:missing, run-ledger.json:missing.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/goal-auto-improve-trial",
       "role": "run_history_record",
       "date": "",
       "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary. Load issues: promotion-report.json:missing, run-ledger.json:missing.",
@@ -1063,6 +1108,17 @@
       ],
       "supersedes": [],
       "decision_relevance": "review_context"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime",
+      "suggested_archive_path": "runs/archive/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime",
+      "date": "",
+      "reason": "promotion-report.history.status=archived but the run remains in the top-level runs namespace.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
     }
   ]
 }

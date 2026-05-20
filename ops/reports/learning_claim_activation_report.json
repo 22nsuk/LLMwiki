@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-claim-activation-report.schema.json",
   "artifact_kind": "learning_claim_activation_report",
-  "generated_at": "2026-05-20T07:08:10Z",
+  "generated_at": "2026-05-20T08:55:06Z",
   "producer": "ops.scripts.learning_claim_activation_report",
   "source_command": "python -m ops.scripts.learning_claim_activation_report --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "b61c1cf1492c34c9b9f57c25af1f525746f1567fa4bec22ed2db54d00b774bb3",
+  "source_tree_fingerprint": "db54d282fb6d36be74f680047e16d21eb312a38f5fca7b617583350e340a838a",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "d366a06d6c9fbade9f99a3a702f7e88409d8e793328122ab6b196c4d7d670305",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "dacdaf0814200d85ea19b48020b2b4fc37138c2de5e4969ffef772480063bbd0",
-    "learning_claim_activation_inputs": "254a4cb9f8b2af9f5d7c7703b968a754ce887695cea97aed781779a6b6333659"
+    "learning_claim_activation_inputs": "9e40d4b0733f30fb3893173bc04d9e800396c51d794124b18579051400537cd5"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T07:08:10Z"
+    "checked_at": "2026-05-20T08:55:06Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
     "claim_wording_allowed": false,
     "blocked_predicate_count": 1,
     "anti_slop_preview_status": "attention",
-    "negative_learning_pattern_count": 4,
+    "negative_learning_pattern_count": 5,
     "gate_effect": "none"
   },
   "claim_candidate": {
@@ -58,7 +58,7 @@
     "evidence_digest": {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "3b95d5f2f182532a36f2825730bc1065e5cdeaca8bd182c47cbe2ab72076ac23",
+      "sha256": "4bb222e5e41d97d5ac6caa7cb47a0235caed1c3b492e4763825ee2b59d0c5167",
       "status": "present"
     },
     "post_seal_linkage": {
@@ -80,7 +80,7 @@
       "evidence_digest": {
         "path": "ops/reports/learning-delta-scoreboard.json",
         "exists": true,
-        "sha256": "3b95d5f2f182532a36f2825730bc1065e5cdeaca8bd182c47cbe2ab72076ac23",
+        "sha256": "4bb222e5e41d97d5ac6caa7cb47a0235caed1c3b492e4763825ee2b59d0c5167",
         "status": "present"
       },
       "post_seal_linkage": {
@@ -94,13 +94,13 @@
     {
       "path": "ops/reports/auto-improve-readiness.json",
       "exists": true,
-      "sha256": "aefd6896bdefaf67b929ac81a01f64e95e4f9d07129438e3a329e0a732b36e2f",
+      "sha256": "b3fc19bce7a03aaf535d4ae8ca252c5eb91051ba2f447d298cb014f06af33337",
       "status": "present"
     },
     {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "3b95d5f2f182532a36f2825730bc1065e5cdeaca8bd182c47cbe2ab72076ac23",
+      "sha256": "4bb222e5e41d97d5ac6caa7cb47a0235caed1c3b492e4763825ee2b59d0c5167",
       "status": "present"
     },
     {
@@ -205,7 +205,7 @@
     "mode": "advisory",
     "gate_effect": "none",
     "status": "attention",
-    "pattern_count": 4,
+    "pattern_count": 5,
     "patterns": [
       {
         "pattern_id": "blocked_queue_recent_log_overlap",
@@ -220,7 +220,7 @@
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "exists": true,
-            "sha256": "aefd6896bdefaf67b929ac81a01f64e95e4f9d07129438e3a329e0a732b36e2f",
+            "sha256": "b3fc19bce7a03aaf535d4ae8ca252c5eb91051ba2f447d298cb014f06af33337",
             "status": "present"
           }
         ]
@@ -240,7 +240,7 @@
           {
             "path": "ops/reports/learning-delta-scoreboard.json",
             "exists": true,
-            "sha256": "3b95d5f2f182532a36f2825730bc1065e5cdeaca8bd182c47cbe2ab72076ac23",
+            "sha256": "4bb222e5e41d97d5ac6caa7cb47a0235caed1c3b492e4763825ee2b59d0c5167",
             "status": "present"
           }
         ]
@@ -261,6 +261,26 @@
             "path": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/run-telemetry.json",
             "exists": true,
             "sha256": "9048eb29f9df2973099c992e7d5f5f920d21fbc05f258ce3625499e5dd26e7a6",
+            "status": "present"
+          }
+        ]
+      },
+      {
+        "pattern_id": "discard_equal_score_secondary_eligibility",
+        "decisions": [
+          "DISCARD"
+        ],
+        "run_ids": [
+          "5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime"
+        ],
+        "occurrence_count": 1,
+        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+        "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=equal_score_secondary_eligibility.",
+        "evidence_digests": [
+          {
+            "path": "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "919f0918862fcfbcb7e194210c9e32781097770cd203b9bd825225498c9fd1f9",
             "status": "present"
           }
         ]

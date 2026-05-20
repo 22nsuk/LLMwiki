@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/outcome-metrics.schema.json",
   "artifact_kind": "outcome_metrics_report",
-  "generated_at": "2026-05-20T08:10:54Z",
+  "generated_at": "2026-05-20T08:51:50Z",
   "producer": "ops.scripts.observability_decision_metrics_runtime",
   "source_command": "python -m ops.scripts.outcome_metrics --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "0697bf275d20acb79c13db6d2efa0d512cf54745581f1a183315f5c2d81ed412",
+  "source_tree_fingerprint": "0e14298ef90444462a87ace241d6ab035cc99f34f352eb00d49ec9b32a0854c4",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "aadbf232f7dc6bf40f35290f0dabcc4e9320b93c70cc2f0177f1167b24ecff29",
@@ -13,8 +13,8 @@
     "source_paths": "c364e1ed667cd810b07ae3d6b09e9de4431804a8db70852d444664e6939e289d",
     "defect_escape_closures": "cefd893320a733da69c34eb5a55e92ee1c88475952ebe35db8788284714cbb82",
     "rework_closures": "330a3dc74be9abbeb429578369920572d94f20e38b1bbae93ac21f487bbdcd61",
-    "run_inputs": "565263a8141c9368f0851535807c1771b978b1f82b2e3356ec34b0919f151ef2",
-    "session_reports": "15dbbfe74be447d79fa5e260540f3bbc782594f6eca63490d7e7d52d789b8627",
+    "run_inputs": "849d6df55b27bac21e2f5aeb30024fba70b240da46d4605444754b24ccddfa01",
+    "session_reports": "c6c723a041277de609fceea4c1d7f2cf848c193f829366f73885deff6506c0ff",
     "recent_window": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T08:10:54Z"
+    "checked_at": "2026-05-20T08:51:50Z"
   },
   "vault": ".",
   "policy": {
@@ -31,45 +31,46 @@
     "version": 4
   },
   "summary": {
-    "attempts_considered": 17,
+    "attempts_considered": 18,
     "recent_window": 20,
-    "recent_attempt_count": 17,
-    "session_reports_considered": 7
+    "recent_attempt_count": 18,
+    "session_reports_considered": 8
   },
   "metrics": {
-    "attempt_count": 17,
+    "attempt_count": 18,
     "recent_window": 20,
-    "recent_attempt_count": 17,
-    "rework_count": 1,
+    "recent_attempt_count": 18,
+    "rework_count": 2,
     "rollback_signal_count": 0,
     "rollback_rehearsal_coverage_count": 3,
     "moving_averages": {
-      "hold": 0.4118,
-      "discard": 0.1765,
+      "hold": 0.3889,
+      "discard": 0.2222,
       "rollback_signal": 0.0
     },
     "operator_effort_proxy": {
       "phase_totals_seconds": {
-        "scope_freeze": 0.047,
-        "routing": 2.297,
-        "scaffold": 2.004,
-        "experiment": 2713.207,
+        "scope_freeze": 0.059,
+        "routing": 2.91,
+        "scaffold": 2.513,
+        "experiment": 4570.857,
         "typed_same_eval_evidence": 0.0
       },
-      "executor_report_count": 3,
-      "reviewer_dispatch_count": 1,
-      "validator_dispatch_count": 0,
-      "auditor_dispatch_count": 0,
+      "executor_report_count": 7,
+      "reviewer_dispatch_count": 2,
+      "validator_dispatch_count": 1,
+      "auditor_dispatch_count": 1,
       "hold_count": 7
     },
     "rework_keys": [
       {
         "key": "proposal:recent_log_overlap_queue_blocked__mechanism-run-validation-runtime",
-        "attempt_count": 2,
-        "rework_count": 1,
+        "attempt_count": 3,
+        "rework_count": 2,
         "run_ids": [
           "5day-auto-improve-runtime-rerun6-30m_trial-run-01-mechanism-run-validation-runtime",
-          "5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime"
+          "5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime",
+          "5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime"
         ]
       }
     ],
@@ -143,7 +144,7 @@
         }
       ]
     },
-    "raw_rework_count": 7,
+    "raw_rework_count": 8,
     "closed_rework_count": 6,
     "closed_rework_keys": [
       {
@@ -210,6 +211,23 @@
     ]
   },
   "recent_attempts": [
+    {
+      "run_id": "5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime",
+      "session_id": "5day-auto-improve-runtime-rerun9-30m_trial",
+      "proposal_id": "recent_log_overlap_queue_blocked__mechanism-run-validation-runtime",
+      "source_candidate_id": "recent_log_overlap_queue_unblock__mechanism-run-validation-runtime",
+      "observed_at": "2026-05-20T08:44:37Z",
+      "decision": "DISCARD",
+      "outcome": "discarded",
+      "primary_targets": [
+        "ops/scripts/mechanism/mechanism_run_validation_runtime.py"
+      ],
+      "rework_key": "proposal:recent_log_overlap_queue_blocked__mechanism-run-validation-runtime",
+      "rollback_rehearsal_covered": false,
+      "rollback_signal": false,
+      "run_telemetry": "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/run-telemetry.json",
+      "promotion_report": "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/promotion-report.json"
+    },
     {
       "run_id": "5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime",
       "session_id": "5day-auto-improve-runtime-rerun8-30m_trial",

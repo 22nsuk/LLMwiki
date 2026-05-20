@@ -5895,3 +5895,56 @@ The remediation keeps unresolved repeated outcomes blocked when no promotion rep
 - Closed remediation-history attempts no longer keep `recent_outcome_rework` active for the queue-unblock candidate.
 - Attempts without usable promotion report history still count as unresolved rework, so the guardrail remains active for genuinely repeated HOLD/DISCARD loops.
 - The current chronology now intentionally overlaps `ops/scripts/mechanism/mutation_proposal_runtime.py`, so a goal-native trial should not immediately rerun this just-handled queue-unblock target merely to fill a profile window.
+
+---
+
+## [2026-05-20 17:49 KST] improve | Record rerun9 queue-unblock discard and refreshed goal blockers
+
+### Summary
+`5day-auto-improve-runtime-rerun9-30m_trial` executed the queue-unblock rotation proposal for `ops/scripts/mechanism/mechanism_run_validation_runtime.py`. The worker, reviewer, validator, and provenance-auditor roles all reported `pass`, but the promotion gate discarded the candidate because equal-score secondary eligibility failed structural complexity non-regression: the candidate added a focused test and behavior guard, but total structural complexity increased from 3052 to 3065.
+
+After the run, generated outcome, proposal, readiness, goal-status, session-synopsis, remediation-backlog, and fixed-point reports were refreshed. The queue-unblock proposal is now blocked by `recent_outcome_rework`, the original iteration-persistence proposal remains blocked by recent chronology until this log entry advances the window, and `goal-runtime-fixed-point-check` passes against the refreshed blocked-state reports.
+
+### Artifacts
+- `ops/reports/auto-improve-sessions/5day-auto-improve-runtime-rerun9-30m_trial.json`
+- `runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/promotion-report.json`
+- `runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/changed-files-manifest.json`
+- `runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/behavior-delta.json`
+- `runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/worker-executor-report.json`
+- `runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/reviewer-executor-report.json`
+- `runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/validator-executor-report.json`
+- `runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/provenance-auditor-executor-report.json`
+- `ops/reports/mutation-proposals.json`
+- `ops/reports/auto-improve-readiness.json`
+- `ops/reports/session-synopsis.json`
+- `ops/reports/remediation-backlog.json`
+- `tmp/goal-runtime-fixed-point-check.json`
+- `system/system-log.md`
+
+### Consequence
+- The rerun9 candidate is not a promoted improvement and must not count as successful 30m profile evidence.
+- The queue-unblock fallback is correctly prevented from immediately retrying the same mechanism-validation proposal after a DISCARD.
+- Current goal state remains blocked until a genuinely runnable proposal exists and a successful improvement iteration produces profile-ladder evidence.
+
+---
+
+## [2026-05-20 17:50 KST] improve | Refresh queue evidence after rerun9 closeout
+
+### Summary
+After recording rerun9, the generated outcome, mutation proposal, readiness, goal-status, session synopsis, remediation backlog, and fixed-point evidence was refreshed again so the active goal state points at current blocker evidence rather than pre-closeout reports.
+
+The fixed-point check now passes with the refreshed blocked-state reports. The next safe step is to keep the queue evidence current, commit the generated closeout surfaces, and only start another bounded profile run when readiness reports a runnable proposal from current chronology rather than from a stale fallback retry.
+
+### Artifacts
+- `ops/reports/mutation-proposals.json`
+- `ops/reports/auto-improve-readiness.json`
+- `ops/reports/session-synopsis.json`
+- `ops/reports/remediation-backlog.json`
+- `runs/goal-5day-auto-improve-runtime/state/goal-run-status.json`
+- `tmp/goal-runtime-fixed-point-check.json`
+- `system/system-log.md`
+
+### Consequence
+- Active reports now agree that rerun9 is closed as DISCARD evidence, not promoted runtime progress.
+- `goal-runtime-fixed-point-check` is the current semantic alignment proof for the blocked goal state.
+- Further runtime attempts should be based on freshly generated queue readiness, not on preserved pre-merge safety artifacts.

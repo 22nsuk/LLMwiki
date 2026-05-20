@@ -563,9 +563,7 @@ def event_sequence_state(run_ledger_report: dict, *, phase: str) -> EventSequenc
     observed_required_event_types = [
         event_type for event_type in observed_event_types if event_type in expected_sequence
     ]
-    expected_terminal_event = (
-        "finalized" if phase == "mechanism_finalized" else "promotion_evaluated"
-    )
+    expected_terminal_event = "finalized" if phase == "mechanism_finalized" else "promotion_evaluated"
     return EventSequenceState(
         observed_event_types=observed_event_types,
         observed_required_event_types=observed_required_event_types,
@@ -576,6 +574,7 @@ def event_sequence_state(run_ledger_report: dict, *, phase: str) -> EventSequenc
         terminal_pass=(
             bool(observed_required_event_types)
             and observed_required_event_types[-1] == expected_terminal_event
+            and not (phase != "mechanism_finalized" and "finalized" in observed_event_types)
         ),
     )
 
@@ -613,7 +612,8 @@ def build_event_sequence_phase_checks(
                 if state.terminal_pass
                 else (
                     f"expected terminal event {state.expected_terminal_event}, "
-                    f"observed {state.observed_required_event_types[-1] if state.observed_required_event_types else 'none'}"
+                    f"observed {state.observed_required_event_types[-1] if state.observed_required_event_types else 'none'}; "
+                    f"all events: {', '.join(state.observed_event_types) or 'none'}"
                 )
             ),
         ),

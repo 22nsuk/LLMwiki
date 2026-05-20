@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-delta-scoreboard.schema.json",
   "artifact_kind": "learning_delta_scoreboard",
-  "generated_at": "2026-05-20T07:08:11Z",
+  "generated_at": "2026-05-20T08:55:05Z",
   "producer": "ops.scripts.learning_delta_scoreboard",
   "source_command": "python -m ops.scripts.learning_delta_scoreboard --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "b61c1cf1492c34c9b9f57c25af1f525746f1567fa4bec22ed2db54d00b774bb3",
+  "source_tree_fingerprint": "db54d282fb6d36be74f680047e16d21eb312a38f5fca7b617583350e340a838a",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "27d4da175fb390b9e8aa35ec13404af61fb32cfef4fcefee316d1e9557b89ae2",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "f4549dd5b13ac715af49224e9ee0822e13f9e0feac17df335f0df02abbf01b11",
-    "learning_delta_inputs": "418e891f6da899d4ee785fc28fb56bcfca207b4fc8e79a1ea549301bb758886c"
+    "learning_delta_inputs": "a74fe954e355965945adca28462bb324e6bf7c0fd4f1995f0e0da214b0d71698"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T07:08:11Z"
+    "checked_at": "2026-05-20T08:55:05Z"
   },
   "vault": ".",
   "policy": {
@@ -484,7 +484,7 @@
     ],
     "bundle_status": "stale",
     "bundle_sha256": "197a6c46809897c6545d8b15dd54cb9f3f78bfda9390bf79b222864aea8c1500",
-    "current_bundle_sha256": "bd82d3480fd1446602235fec67b609f044b7a63b9b03b4d5875eb4b6692e366f",
+    "current_bundle_sha256": "40fd4010f667bb20f506697388689b2227f429a10473e7b3cf25eb3e1a035472",
     "revocation_status": "stale",
     "confirmed_evidence_cohort_path": "ops/reports/learning-confirmed-evidence-cohort.json",
     "confirmed_evidence_cohort_sha256": "fd616f2c2f4c7801ce235fba597529d8c341c71eb021e94d7f3503dcc51e1178",
@@ -757,9 +757,9 @@
   "aggregate_selector": {
     "latest_session_coverage": {
       "status": "available",
-      "source_path": "ops/reports/routing-provenance-aggregates/5day-auto-improve-runtime-rerun5-30m_trial.json",
+      "source_path": "ops/reports/routing-provenance-aggregates/5day-auto-improve-runtime-rerun9-30m_trial.json",
       "telemetry_coverage_ratio": 1.0,
-      "session_id": "5day-auto-improve-runtime-rerun5-30m_trial",
+      "session_id": "5day-auto-improve-runtime-rerun9-30m_trial",
       "summary": "latest routing provenance aggregate selected by generated_at"
     },
     "proposal_family_coverage": {
@@ -816,7 +816,7 @@
     },
     {
       "scope": "learning_loop",
-      "path": "ops/reports/routing-provenance-aggregates/5day-auto-improve-runtime-rerun5-30m_trial.json",
+      "path": "ops/reports/routing-provenance-aggregates/5day-auto-improve-runtime-rerun9-30m_trial.json",
       "authority": "diagnostic"
     }
   ],

@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-20T07:08:10Z",
+  "generated_at": "2026-05-20T08:55:06Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "b61c1cf1492c34c9b9f57c25af1f525746f1567fa4bec22ed2db54d00b774bb3",
+  "source_tree_fingerprint": "db54d282fb6d36be74f680047e16d21eb312a38f5fca7b617583350e340a838a",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "8c91343f30427af06d94db468c972889a09ff0185c7db529c93733a70f373b82",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "1b3dc9e7a915a19253d410de18eaaaf886a7ff3ed065da0c66c496fb7e0f9ae4",
-    "auto_improve_readiness": "aefd6896bdefaf67b929ac81a01f64e95e4f9d07129438e3a329e0a732b36e2f",
-    "goal_run_status": "921bb57ab7cd1cad4c61c26931a91e2add4bc6d4ead68e42606879850d97ddd7",
-    "learning_claim_activation": "723a99531f88002ada74fec078571c2cd5f64184245a4dddec4e9232bc23d25c",
-    "learning_delta_scoreboard": "3b95d5f2f182532a36f2825730bc1065e5cdeaca8bd182c47cbe2ab72076ac23",
+    "auto_improve_readiness": "b3fc19bce7a03aaf535d4ae8ca252c5eb91051ba2f447d298cb014f06af33337",
+    "goal_run_status": "fce1b571b3fea554fd75de623efb9ff96d8afbd6a8b97ede1cdc902ceaf5199b",
+    "learning_claim_activation": "88a7d7419eb57e381d49f11a5d34e0bcae28535bd0788ed6df689205946c8f54",
+    "learning_delta_scoreboard": "4bb222e5e41d97d5ac6caa7cb47a0235caed1c3b492e4763825ee2b59d0c5167",
     "source_package_clean_extract": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "task_observations": "71013a0efaa510f93ecdb4cb6a3cbc18ff61d60d8fc093c6521a4aea80829677"
   },
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T07:08:10Z"
+    "checked_at": "2026-05-20T08:55:06Z"
   },
   "vault": ".",
   "policy": {
@@ -33,9 +33,9 @@
   },
   "status": "attention",
   "summary": {
-    "recent_blocker_count": 3,
+    "recent_blocker_count": 5,
     "last_success_pattern_count": 5,
-    "forbidden_repeat_pattern_count": 4,
+    "forbidden_repeat_pattern_count": 5,
     "recommended_seed_run_count": 3,
     "evidence_gap_count": 2,
     "source_package_replay_status": "pass",
@@ -49,6 +49,13 @@
   },
   "recent_blockers": [
     {
+      "id": "goal_status_git_worktree_dirty",
+      "source": "goal_run_status.blockers",
+      "status": "open",
+      "reason": "git_worktree_dirty",
+      "repair_target": "Refresh goal run status and close the active blocker before resuming."
+    },
+    {
       "id": "goal_status_profile_ladder_incomplete",
       "source": "goal_run_status.blockers",
       "status": "open",
@@ -59,15 +66,22 @@
       "id": "learning_blocked_by_review_required",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
-      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: recent_hold_moving_average",
+      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: recent_hold_moving_average, high_rework",
       "repair_target": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
     },
     {
-      "id": "learning_claim_unlock_review_not_approved",
-      "source": "learning_claim_activation.blocked_predicates",
-      "status": "stale",
-      "reason": "",
-      "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean."
+      "id": "promotion_blocked_by_artifact_contract_failure",
+      "source": "auto_improve_readiness.promotion_blockers",
+      "status": "open",
+      "reason": "artifact freshness status=attention; schema_invalid_artifact_count=0",
+      "repair_target": "Resolve artifact freshness blockers, then rerun make auto-improve-readiness."
+    },
+    {
+      "id": "promotion_blocked_by_goal_worktree_guard_failure",
+      "source": "auto_improve_readiness.promotion_blockers",
+      "status": "open",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=30",
+      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     }
   ],
   "last_success_patterns": [
@@ -146,6 +160,18 @@
       "occurrence_count": 1,
       "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
       "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=behavior_delta_digest_added."
+    },
+    {
+      "id": "discard_equal_score_secondary_eligibility",
+      "decisions": [
+        "DISCARD"
+      ],
+      "run_ids": [
+        "5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime"
+      ],
+      "occurrence_count": 1,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=equal_score_secondary_eligibility."
     },
     {
       "id": "discard_telemetry_discoverability_improved",
@@ -251,8 +277,8 @@
     "target_profile": "30m_trial",
     "profile_ladder_status": "incomplete",
     "sustained_claim_allowed": false,
-    "open_blocker_count": 3,
-    "forbidden_pattern_count": 4,
+    "open_blocker_count": 5,
+    "forbidden_pattern_count": 5,
     "evidence_gap_count": 2
   },
   "inputs": {
