@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/routing-provenance-aggregate.schema.json",
   "artifact_kind": "routing_provenance_aggregate",
-  "generated_at": "2026-05-20T07:34:51Z",
+  "generated_at": "2026-05-20T07:36:52Z",
   "producer": "ops.scripts.observability_routing_provenance_runtime",
   "source_command": "python -m ops.scripts.observability_routing_provenance_runtime --vault .",
   "source_revision": "unknown",
@@ -11,7 +11,7 @@
     "schema": "d1020425815581b2e5ba63d8e577aa169eeb759773d42063844263ef84a3e78f",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b4a1a3de468aa500d941eb1ceb9eccc6e27bf819354e9120952fdf2bdb36e852",
-    "source_session_report": "f0c11b633967a170c47df42705200d60f333329e8d4637b0af1ef51d27262ef0",
+    "source_session_report": "e4f43e89b49445cfe75e84af9752b6306feaef45efe4e16a30d1bb04331c6e31",
     "run_ids": "9790665f0975490258e8d473b7d265794a40dee1224df059bca250d33f437938"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T07:34:51Z"
+    "checked_at": "2026-05-20T07:36:52Z"
   },
   "session_id": "standalone-run-telemetry",
   "policy": {
