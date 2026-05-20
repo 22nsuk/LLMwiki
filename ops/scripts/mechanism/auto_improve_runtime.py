@@ -350,7 +350,7 @@ def _goal_contract_snapshot(
     resolved_contract_path: Path,
 ) -> dict[str, Any]:
     budgets = _mapping_value(contract, "budgets")
-    runtime_profile = _mapping_value(contract, "runtime_profile")
+    runtime = _mapping_value(contract, "runtime")
     promotion_guard = _mapping_value(contract, "promotion_guard")
     max_wall_clock_seconds = _positive_contract_int(
         budgets,
@@ -358,9 +358,9 @@ def _goal_contract_snapshot(
         context="budgets",
     )
     max_unattended_seconds = _positive_contract_int(
-        runtime_profile,
+        runtime,
         "max_unattended_seconds",
-        context="runtime_profile",
+        context="runtime",
     )
     return {
         "path": report_path(vault, resolved_contract_path),
@@ -368,7 +368,7 @@ def _goal_contract_snapshot(
         "contract_sha256": _canonical_json_digest(contract),
         "contract_id": str(contract.get("contract_id", "")).strip(),
         "status": str(contract.get("status", "")).strip(),
-        "current_profile": str(runtime_profile.get("current_profile", "")).strip(),
+        "runtime_mode": str(runtime.get("mode", "")).strip(),
         "max_wall_clock_seconds": max_wall_clock_seconds,
         "max_unattended_seconds": max_unattended_seconds,
         "max_proposals": _positive_contract_int(
@@ -580,6 +580,7 @@ def _write_session_report(vault: Path, session: dict, *, context: RuntimeContext
         source_paths=[
             "ops/scripts/mechanism/auto_improve_runtime.py",
             "ops/scripts/mechanism/auto_improve_session_runtime.py",
+            "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
             "ops/scripts/core/artifact_freshness_runtime.py",
         ],
         text_inputs={
@@ -702,6 +703,7 @@ def _new_auto_improve_session(
         "quarantined_proposal_ids": [],
         "run_ids": [],
         "iterations": [],
+        "next_run_decisions": [],
         "learning_summary": {
             "attempt_count": 0,
             "rework_count": 0,

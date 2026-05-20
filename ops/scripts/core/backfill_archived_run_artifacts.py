@@ -654,13 +654,22 @@ def _is_archive_run_artifact_path(rel_path: str) -> bool:
     return rel_path.replace("\\", "/").startswith("runs/archive/")
 
 
+def _archived_run_artifact_spec_for_filename(filename: str) -> ArchivedRunArtifactSpec | None:
+    spec = ARCHIVED_RUN_ARTIFACT_SPECS.get(filename)
+    if spec is not None:
+        return spec
+    if filename.startswith("promotion-report.") and filename.endswith(".json"):
+        return ARCHIVED_RUN_ARTIFACT_SPECS["promotion-report.json"]
+    return None
+
+
 def _discover_supported_rel_paths(vault: Path) -> list[str]:
     scan_root = vault / RUN_ARTIFACT_SCAN_ROOT
     if not scan_root.exists():
         return []
     discovered: list[str] = []
     for path in sorted(scan_root.rglob("*.json")):
-        if path.name not in ARCHIVED_RUN_ARTIFACT_SPECS:
+        if _archived_run_artifact_spec_for_filename(path.name) is None:
             continue
         rel_path = _report_path(vault, path)
         if _is_supported_run_artifact_path(rel_path):
@@ -682,7 +691,7 @@ def backfill_archived_run_artifacts(
     written: list[str] = []
     for rel_path in target_rel_paths:
         artifact_path = vault / rel_path
-        spec = ARCHIVED_RUN_ARTIFACT_SPECS.get(artifact_path.name)
+        spec = _archived_run_artifact_spec_for_filename(artifact_path.name)
         if spec is None:
             raise ValueError(f"unsupported run artifact path: {rel_path}")
         if not _is_supported_run_artifact_path(rel_path):

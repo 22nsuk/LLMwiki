@@ -127,7 +127,11 @@ def _item_from_lesson(lesson: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def _item_from_blocker(blocker: dict[str, Any]) -> dict[str, Any] | None:
+def _item_from_blocker(
+    blocker: dict[str, Any],
+    *,
+    session_synopsis_path: str = SESSION_SYNOPSIS_PATH,
+) -> dict[str, Any] | None:
     blocker_id = str(blocker.get("id", "")).strip()
     if not blocker_id:
         return None
@@ -143,7 +147,7 @@ def _item_from_blocker(blocker: dict[str, Any]) -> dict[str, Any] | None:
         "status": "open",
         "severity": "blocks_promotion",
         "occurrence_count": 1,
-        "evidence_paths": [SESSION_SYNOPSIS_PATH],
+        "evidence_paths": [session_synopsis_path],
         "repair_target": repair_target,
         "next_action": repair_target or "Resolve or explicitly defer this active blocker.",
     }
@@ -236,9 +240,14 @@ def _auto_improve_session_report_paths(vault: Path) -> list[str]:
     return [path.relative_to(vault).as_posix() for path in sorted(sessions_dir.glob("*.json"))]
 
 
-def collect_backlog_items(vault: Path) -> list[dict[str, Any]]:
-    negative_lessons = load_optional_json_object(vault / NEGATIVE_LESSONS_PATH)
-    synopsis = load_optional_json_object(vault / SESSION_SYNOPSIS_PATH)
+def collect_backlog_items(
+    vault: Path,
+    *,
+    negative_lessons_path: str = NEGATIVE_LESSONS_PATH,
+    session_synopsis_path: str = SESSION_SYNOPSIS_PATH,
+) -> list[dict[str, Any]]:
+    negative_lessons = load_optional_json_object(vault / negative_lessons_path)
+    synopsis = load_optional_json_object(vault / session_synopsis_path)
     status_overrides = _status_overrides(vault)
     items_by_id: dict[str, dict[str, Any]] = {}
     active_negative_lesson_blocker_ids: set[str] = set()
@@ -248,7 +257,7 @@ def collect_backlog_items(vault: Path) -> list[dict[str, Any]]:
             items_by_id[item["item_id"]] = item
             active_negative_lesson_blocker_ids.add(item["blocker_id"])
     for blocker in _dict_list(synopsis.get("recent_blockers")):
-        item = _item_from_blocker(blocker)
+        item = _item_from_blocker(blocker, session_synopsis_path=session_synopsis_path)
         if item is not None:
             items_by_id.setdefault(item["item_id"], item)
     for item in _auto_improve_session_backlog_items(
@@ -287,10 +296,17 @@ def build_report(
     *,
     context: RuntimeContext | None = None,
     policy_path: str | None = None,
+    negative_lessons_path: str = NEGATIVE_LESSONS_PATH,
+    session_synopsis_path: str = SESSION_SYNOPSIS_PATH,
+    activation_report_path: str = ACTIVATION_REPORT_PATH,
 ) -> dict[str, Any]:
     policy, resolved_policy_path = load_policy(vault, policy_path)
     runtime_context = context or RuntimeContext.from_policy(policy)
-    items = collect_backlog_items(vault)
+    items = collect_backlog_items(
+        vault,
+        negative_lessons_path=negative_lessons_path,
+        session_synopsis_path=session_synopsis_path,
+    )
     summary = _summary(items)
     return {
         **build_canonical_report_envelope(
@@ -303,9 +319,9 @@ def build_report(
             schema_path=SCHEMA_PATH,
             source_paths=SOURCE_PATHS,
             file_inputs={
-                "self_improvement_negative_lessons": NEGATIVE_LESSONS_PATH,
-                "session_synopsis": SESSION_SYNOPSIS_PATH,
-                "learning_claim_activation": ACTIVATION_REPORT_PATH,
+                "self_improvement_negative_lessons": negative_lessons_path,
+                "session_synopsis": session_synopsis_path,
+                "learning_claim_activation": activation_report_path,
                 "status_overrides": STATUS_OVERRIDES_PATH,
             },
             path_group_inputs={
@@ -322,9 +338,9 @@ def build_report(
         "summary": summary,
         "items": items,
         "inputs": {
-            "self_improvement_negative_lessons": NEGATIVE_LESSONS_PATH,
-            "session_synopsis": SESSION_SYNOPSIS_PATH,
-            "learning_claim_activation": ACTIVATION_REPORT_PATH,
+            "self_improvement_negative_lessons": negative_lessons_path,
+            "session_synopsis": session_synopsis_path,
+            "learning_claim_activation": activation_report_path,
             "auto_improve_sessions": AUTO_IMPROVE_SESSIONS_DIR,
             "status_overrides": STATUS_OVERRIDES_PATH,
         },
@@ -349,13 +365,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--vault", default=".")
     parser.add_argument("--policy-path")
     parser.add_argument("--out", default=DEFAULT_OUT)
+    parser.add_argument("--self-improvement-negative-lessons", default=NEGATIVE_LESSONS_PATH)
+    parser.add_argument("--session-synopsis", default=SESSION_SYNOPSIS_PATH)
+    parser.add_argument("--learning-claim-activation", default=ACTIVATION_REPORT_PATH)
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
-    report = build_report(vault, policy_path=args.policy_path)
+    report = build_report(
+        vault,
+        policy_path=args.policy_path,
+        negative_lessons_path=args.self_improvement_negative_lessons,
+        session_synopsis_path=args.session_synopsis,
+        activation_report_path=args.learning_claim_activation,
+    )
     destination = write_report(vault, report, args.out)
     print(display_path(vault, destination))
     return 0

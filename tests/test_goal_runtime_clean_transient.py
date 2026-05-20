@@ -141,7 +141,7 @@ class GoalRuntimeCleanTransientTests(unittest.TestCase):
                     "goal": {
                         "contract_path": "runs/goal-active/state/codex-goal-contract.json",
                     },
-                    "run": {"run_id": "active-rerun12-30m_trial", "status": "blocked"},
+                    "run": {"run_id": "active-rerun12-self-improvement-loop", "status": "blocked"},
                     "artifacts": {
                         "status_report_path": "runs/goal-active/state/goal-run-status.json",
                     },

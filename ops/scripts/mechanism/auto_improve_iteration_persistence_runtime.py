@@ -19,6 +19,7 @@ from .auto_improve_iteration_telemetry_runtime import (
     iteration_same_eval_contract,
     iteration_same_eval_reason,
 )
+from .auto_improve_next_run_decision_runtime import build_next_run_decision
 from .auto_improve_outcome_runtime import role_report_path
 from .auto_improve_route_scaffold_runtime import RouteScaffoldPhaseResult
 from .auto_improve_session_runtime import load_optional_json
@@ -577,6 +578,20 @@ def persist_iteration_phase(
             run_id=run_id,
         )
     )
+    next_run_decision = build_next_run_decision(
+        session_id=session_id,
+        iteration=iteration,
+        run_id=run_id,
+        proposal=proposal,
+        outcome=execution.outcome,
+        roles=route_scaffold.roles,
+        scope_freeze_rel=route_scaffold.scope_freeze_rel,
+        routing_report_rels=route_scaffold.routing_report_rels,
+        telemetry_rel=telemetry_rel,
+        context=context,
+    )
+    if next_run_decision is not None:
+        session.setdefault("next_run_decisions", []).append(next_run_decision)
     _update_session_loop_state(
         session,
         run_id=run_id,

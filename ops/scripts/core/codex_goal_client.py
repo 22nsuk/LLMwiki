@@ -24,29 +24,9 @@ SCHEMA_PATH = "ops/schemas/codex-goal-contract.schema.json"
 DEFAULT_CONTRACT_ID = "auto-improve-goal"
 PRODUCER = "ops.scripts.codex_goal_client"
 SOURCE_COMMAND = "python -m ops.scripts.codex_goal_client --vault ."
-PROFILE_LADDER = ("30m_trial", "6h_ramp", "2d_candidate", "5d_sustained")
-PROFILE_BUDGETS: dict[str, dict[str, int]] = {
-    "30m_trial": {
-        "max_wall_clock_seconds": 1800,
-        "max_proposals": 1,
-        "max_consecutive_failures": 1,
-    },
-    "6h_ramp": {
-        "max_wall_clock_seconds": 21600,
-        "max_proposals": 6,
-        "max_consecutive_failures": 2,
-    },
-    "2d_candidate": {
-        "max_wall_clock_seconds": 172800,
-        "max_proposals": 24,
-        "max_consecutive_failures": 3,
-    },
-    "5d_sustained": {
-        "max_wall_clock_seconds": 432000,
-        "max_proposals": 60,
-        "max_consecutive_failures": 3,
-    },
-}
+DEFAULT_RUNTIME_MODE = "self_improvement_loop"
+RUNTIME_MODES = (DEFAULT_RUNTIME_MODE,)
+DEFAULT_RUNTIME_SECONDS = 21600
 DEFAULT_READINESS_REPORT_PATH = "ops/reports/auto-improve-readiness.json"
 SEALED_PREFLIGHT_REPORT_PATH = "ops/reports/release-closeout-sealed-rehearsal-check.json"
 DEFAULT_WORKTREE_GUARD_REPORT_PATH = "tmp/goal-worktree-guard.json"
@@ -151,43 +131,6 @@ def _unique_text(values: list[str]) -> list[str]:
     return unique
 
 
-def _profile_list(value: object) -> list[str]:
-    seen: set[str] = set()
-    profiles: list[str] = []
-    for profile in _list_text(value):
-        if profile in PROFILE_LADDER and profile not in seen:
-            profiles.append(profile)
-            seen.add(profile)
-    return profiles
-
-
-def _highest_profile(verified_profiles: list[str]) -> str:
-    highest = "unverified"
-    for profile in PROFILE_LADDER:
-        if profile in verified_profiles:
-            highest = profile
-    return highest
-
-
-def _next_profile_from_verified_profiles(verified_profiles: list[str]) -> str:
-    verified = set(verified_profiles)
-    for profile in PROFILE_LADDER:
-        if profile not in verified:
-            return profile
-    return "none"
-
-
-def _profile_ladder_budget(profile: str, required_before_next_profile: str) -> dict[str, Any]:
-    budget = PROFILE_BUDGETS[profile]
-    return {
-        "profile": profile,
-        "max_wall_clock_seconds": budget["max_wall_clock_seconds"],
-        "max_proposals": budget["max_proposals"],
-        "max_consecutive_failures": budget["max_consecutive_failures"],
-        "required_before_next_profile": required_before_next_profile,
-    }
-
-
 def _existing_contract_for_same_id(
     vault: Path,
     contract_path: str | Path,
@@ -204,7 +147,12 @@ def _existing_contract_for_same_id(
     return existing
 
 
-def _preserve_existing_profile_state(
+def _runtime_certificate_status(value: object) -> str:
+    status = str(value or "").strip()
+    return status if status in {"unverified", "verified"} else "unverified"
+
+
+def _preserve_existing_runtime_state(
     contract: Mapping[str, Any],
     existing_contract: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -217,24 +165,24 @@ def _preserve_existing_profile_state(
     existing_metadata = existing_contract.get("metadata")
     if isinstance(existing_metadata, Mapping):
         merged["metadata"] = _copy_json_object(existing_metadata)
-    existing_runtime = _mapping_value(existing_contract, "runtime_profile")
-    verified_profiles = _profile_list(existing_runtime.get("verified_profiles"))
-    runtime_profile = dict(_mapping_value(merged, "runtime_profile"))
-    runtime_profile["verified_profiles"] = verified_profiles
-    runtime_profile["next_profile"] = _next_profile_from_verified_profiles(verified_profiles)
-    merged["runtime_profile"] = runtime_profile
+    existing_runtime = _mapping_value(existing_contract, "runtime")
+    runtime = dict(_mapping_value(merged, "runtime"))
+    runtime["certificate_status"] = _runtime_certificate_status(
+        existing_runtime.get("certificate_status")
+    )
+    existing_verified_at = str(existing_runtime.get("verified_at", "")).strip()
+    if existing_verified_at and runtime["certificate_status"] == "verified":
+        runtime["verified_at"] = existing_verified_at
+    merged["runtime"] = runtime
 
     existing_guard = _mapping_value(existing_contract, "promotion_guard")
     promotion_guard = dict(_mapping_value(merged, "promotion_guard"))
-    existing_profile_verified = str(existing_guard.get("profile_verified", "")).strip()
-    if existing_profile_verified in verified_profiles:
-        profile_verified = existing_profile_verified
-    else:
-        profile_verified = _highest_profile(verified_profiles)
-    promotion_guard["profile_verified"] = profile_verified
+    promotion_guard["runtime_certificate_verified"] = (
+        runtime["certificate_status"] == "verified"
+    )
     promotion_guard["sustained_runtime_claimed"] = (
         bool(existing_guard.get("sustained_runtime_claimed", False))
-        and profile_verified == "5d_sustained"
+        and runtime["certificate_status"] == "verified"
         and bool(promotion_guard.get("can_promote_result", False))
         and bool(promotion_guard.get("sealed_authority_clean", False))
     )
@@ -323,9 +271,9 @@ def promotion_guard_from_readiness(
         "can_promote_result": can_promote,
         "promotion_blockers": blockers,
         "sealed_authority_clean": sealed_clean,
-        "profile_verified": "unverified",
+        "runtime_certificate_verified": False,
         "sustained_runtime_claimed": False,
-        "no_sustained_claim_before_profile_verified": True,
+        "no_sustained_claim_before_certificate_verified": True,
     }
 
 
@@ -336,8 +284,8 @@ def build_auto_improve_goal_contract(
     created_by: str = "codex",
     storage_path: str = DEFAULT_CONTRACT_PATH,
     backend_type: str = "file",
-    current_profile: str = "30m_trial",
-    max_unattended_seconds: int = 1800,
+    runtime_mode: str = DEFAULT_RUNTIME_MODE,
+    max_unattended_seconds: int = DEFAULT_RUNTIME_SECONDS,
     max_proposals: int = 1,
     max_consecutive_failures: int = 1,
     heartbeat_interval_seconds: int = 300,
@@ -345,20 +293,20 @@ def build_auto_improve_goal_contract(
     goal_status_path: str = DEFAULT_GOAL_STATUS_PATH,
     promotion_guard: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    if current_profile not in PROFILE_LADDER:
-        raise GoalBackendError(f"unsupported goal profile: {current_profile}")
+    if runtime_mode not in RUNTIME_MODES:
+        raise GoalBackendError(f"unsupported goal runtime mode: {runtime_mode}")
     if backend_type not in GOAL_BACKEND_TYPES:
         raise GoalBackendError(f"unsupported goal backend type: {backend_type}")
     default_promotion_guard = {
         "can_promote_result": False,
         "promotion_blockers": [
-            "profile ladder incomplete",
+            "self-improvement loop certificate incomplete",
             "sealed authority clean pass not verified",
         ],
         "sealed_authority_clean": False,
-        "profile_verified": "unverified",
+        "runtime_certificate_verified": False,
         "sustained_runtime_claimed": False,
-        "no_sustained_claim_before_profile_verified": True,
+        "no_sustained_claim_before_certificate_verified": True,
     }
     if promotion_guard is not None:
         default_promotion_guard.update(dict(promotion_guard))
@@ -367,11 +315,11 @@ def build_auto_improve_goal_contract(
         "schema_version": 1,
         "contract_id": contract_id,
         "objective": (
-            "Build a bounded auto-improve goal runtime only after profile-ladder "
-            "evidence, release authority, and promotion guards are current."
+            "Run a bounded self-improvement loop whose result is certified by current "
+            "readiness, release, source-package, public-check, status, and session evidence."
         ),
         "non_goals": [
-            "Do not claim 5-day sustained operation before the 5d_sustained profile is verified.",
+            "Do not treat wall-clock duration as proof without the self-improvement loop certificate.",
             "Do not promote release, learning, or improvement claims while promotion blockers remain.",
             "Do not mutate private corpus surfaces from a public/runtime maintenance goal.",
         ],
@@ -390,46 +338,16 @@ def build_auto_improve_goal_contract(
             "max_consecutive_failures": max_consecutive_failures,
             "heartbeat_interval_seconds": heartbeat_interval_seconds,
             "checkpoint_interval_seconds": checkpoint_interval_seconds,
-            "profile_ladder": [
-                _profile_ladder_budget(
-                    "30m_trial",
-                    (
-                        "30m wall-clock one-proposal trial evidence with a successful improvement, "
-                        "repeated runtime maintenance work, status, audit, checkpoint, heartbeat, "
-                        "and no promotion claim"
-                    ),
-                ),
-                _profile_ladder_budget(
-                    "6h_ramp",
-                    (
-                        "30m trial evidence plus 6h repeated improvement session evidence "
-                        "and current release/readiness blockers"
-                    ),
-                ),
-                _profile_ladder_budget(
-                    "2d_candidate",
-                    (
-                        "6h ramp evidence plus 2d repeated improvement session evidence, "
-                        "resume, and backoff evidence"
-                    ),
-                ),
-                _profile_ladder_budget(
-                    "5d_sustained",
-                    (
-                        "2d candidate evidence plus 5d repeated improvement session evidence "
-                        "and sealed authority clean pass"
-                    ),
-                ),
-            ],
         },
         "created_at": created_at or _utc_now(),
         "created_by": created_by,
         "status": "active",
-        "runtime_profile": {
-            "current_profile": current_profile,
-            "verified_profiles": [],
-            "next_profile": _next_profile_from_verified_profiles([]),
+        "runtime": {
+            "mode": runtime_mode,
+            "duration_seconds": max_unattended_seconds,
             "max_unattended_seconds": max_unattended_seconds,
+            "certificate_status": "unverified",
+            "verified_at": "",
         },
         "goal_backend": {
             "backend_type": backend_type,
@@ -443,8 +361,8 @@ def build_auto_improve_goal_contract(
                 "severity": "stop",
             },
             {
-                "condition_id": "profile_budget_exhausted",
-                "description": "Pause when the active profile wall-clock or proposal budget is exhausted.",
+                "condition_id": "runtime_budget_exhausted",
+                "description": "Pause when the runtime wall-clock or proposal budget is exhausted.",
                 "severity": "pause",
             },
             {
@@ -469,6 +387,34 @@ def build_auto_improve_goal_contract(
                 "required_for_promotion": True,
             },
             {
+                "evidence_id": "session_synopsis",
+                "path": "ops/reports/session-synopsis.json",
+                "description": "Session synopsis confirms the loop state, blockers, and next action.",
+                "freshness": "current_source_tree",
+                "required_for_promotion": True,
+            },
+            {
+                "evidence_id": "remediation_backlog",
+                "path": "ops/reports/remediation-backlog.json",
+                "description": "Remediation backlog must agree with readiness and session state.",
+                "freshness": "current_source_tree",
+                "required_for_promotion": True,
+            },
+            {
+                "evidence_id": "source_package_clean_extract",
+                "path": "ops/reports/source-package-clean-extract.json",
+                "description": "Source package replay proves packaged-copy parity for the loop output.",
+                "freshness": "current_source_tree",
+                "required_for_promotion": True,
+            },
+            {
+                "evidence_id": "public_check_summary",
+                "path": "ops/reports/public-check-summary.json",
+                "description": "Public mirror checks must pass for the loop output.",
+                "freshness": "current_source_tree",
+                "required_for_promotion": True,
+            },
+            {
                 "evidence_id": "release_authority",
                 "path": "ops/reports/release-closeout-summary.json",
                 "description": "Release authority blocks promotion until machine release is allowed.",
@@ -486,7 +432,7 @@ def build_auto_improve_goal_contract(
         "promotion_guard": default_promotion_guard,
         "metadata": {
             "contract_family": "bounded_auto_improve",
-            "claim_policy": "trial_only_until_profile_and_release_authority_are_clean",
+            "claim_policy": "loop_certificate_and_release_authority_required_for_claims",
         },
     }
 
@@ -695,8 +641,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--created-at", default="")
     parser.add_argument("--created-by", default="codex")
     parser.add_argument("--backend-type", choices=GOAL_BACKEND_TYPES, default="file")
-    parser.add_argument("--current-profile", default="30m_trial")
-    parser.add_argument("--max-unattended-seconds", type=int, default=1800)
+    parser.add_argument("--runtime-mode", default=DEFAULT_RUNTIME_MODE)
+    parser.add_argument("--current-profile", dest="runtime_mode", default=argparse.SUPPRESS)
+    parser.add_argument("--max-unattended-seconds", type=int, default=DEFAULT_RUNTIME_SECONDS)
     parser.add_argument("--max-proposals", type=int, default=1)
     parser.add_argument("--max-consecutive-failures", type=int, default=1)
     parser.add_argument("--heartbeat-interval-seconds", type=int, default=300)
@@ -727,7 +674,7 @@ def main(argv: list[str] | None = None) -> int:
         created_by=args.created_by,
         storage_path=args.out,
         backend_type=args.backend_type,
-        current_profile=args.current_profile,
+        runtime_mode=args.runtime_mode,
         max_unattended_seconds=args.max_unattended_seconds,
         max_proposals=args.max_proposals,
         max_consecutive_failures=args.max_consecutive_failures,
@@ -736,7 +683,7 @@ def main(argv: list[str] | None = None) -> int:
         goal_status_path=args.goal_status_path,
         promotion_guard=promotion_guard,
     )
-    contract = _preserve_existing_profile_state(contract, existing_contract)
+    contract = _preserve_existing_runtime_state(contract, existing_contract)
     contract = _embed_contract_artifact_envelope(
         vault,
         contract,

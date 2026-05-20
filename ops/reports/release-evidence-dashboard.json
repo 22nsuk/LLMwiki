@@ -1,23 +1,23 @@
 {
   "$schema": "ops/schemas/release-evidence-dashboard.schema.json",
   "artifact_kind": "release_evidence_dashboard",
-  "generated_at": "2026-05-20T09:22:19Z",
+  "generated_at": "2026-05-20T16:56:58Z",
   "producer": "ops.scripts.release_evidence_dashboard",
   "source_command": "python -m ops.scripts.release_evidence_dashboard --vault . --out ops/reports/release-evidence-dashboard.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "a0eb1f14b9f1868fe8fbacc68511c70444bfa4c3cfb7c9d67000e9ab0e7515b3",
+  "source_tree_fingerprint": "ac46b5999a4ffeeda7ba9d12e642f0a3a8ebbcb21484279381042a613041f99f",
   "input_fingerprints": {
-    "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
+    "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "3d201c44c8525de4f9e7af11e9bcba6a5572a46b2f246bc43324bf377c45ab56",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "4ef6c467c6746a683c510fda7ddea7fbf283b179aa5920ced99b61a6def7d268",
-    "artifact_freshness": "82a62201da7739b39115038db768817d4497f4c950a655ad836478bc60c69302",
-    "learning_delta_scoreboard": "15a17ffc60d38634f66f2de261fbb5b6fbd9965e3b0cb1edc716e4911734a188",
+    "artifact_freshness": "6bfb4587fd95a920343e9be91025037b7500a925f37d20064e275283e5f11098",
+    "learning_delta_scoreboard": "bbd6f92d95bac554925d3fe657a3b370f2ece6ee67c189501d48d6695fc12014",
     "learning_readiness_signoff_revalidation": "d082dc702fb5c7539b8fff77e9fcc09fa024db6edf940bc0282e86c2c66345ad",
     "release_closeout_fixed_point": "03ae1ca1e6d1fcfe5bd4934cdb4db2935538520f5a8cef2f294a731ea8949ee1",
     "release_closeout_fixed_point_cost_trend": "4ad9945123b2cb8856267681013cf7200acf64fef40079a738488071907344ef",
-    "release_closeout_summary": "3f7d5e7fc5192fffe9ef963b70f393ccf1aad153c1d1d23ef4b9d5891c552781",
-    "current_source_tree_fingerprint": "1494a0409e4008eef8e045d765ada9fbff2fee2210170c1ad27d4cf1c93af764"
+    "release_closeout_summary": "d7d59fe49d0ea65ef35728cf9a23f8ae61e0f559bd2374ec6d1162110b4edfb4",
+    "current_source_tree_fingerprint": "036065b18a32a14926468b45ad853941d84753c2675f78aa73031417bf808807"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -25,39 +25,38 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T09:22:19Z"
+    "checked_at": "2026-05-20T16:56:58Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "status": "fail",
-  "source_tree_fingerprint_current": "a0eb1f14b9f1868fe8fbacc68511c70444bfa4c3cfb7c9d67000e9ab0e7515b3",
+  "status": "attention",
+  "source_tree_fingerprint_current": "ac46b5999a4ffeeda7ba9d12e642f0a3a8ebbcb21484279381042a613041f99f",
   "inputs": {
     "release_closeout_summary": {
       "path": "ops/reports/release-closeout-summary.json",
       "load_status": "ok",
-      "status": "fail",
-      "release_readiness_state": "blocked",
-      "release_authority_status": "blocked",
-      "semantic_release_status": "blocked",
-      "sealed_release_status": "unsealed_artifact_incomplete",
+      "status": "pass",
+      "release_readiness_state": "conditional_pass",
+      "release_authority_status": "conditional_pass",
+      "semantic_release_status": "conditional_pass",
+      "sealed_release_status": "unsealed_distribution_not_provided",
       "status_v2_blocker_reason_ids": [
         "release_authority_not_clean_pass",
         "machine_release_not_allowed",
         "sealed_release_not_clean_pass",
-        "distribution_package_not_materialized",
-        "artifact_inventory_not_current"
+        "distribution_package_not_materialized"
       ],
       "status_v2_used_legacy_fallback_fields": [],
       "machine_release_allowed": false,
-      "operator_release_allowed": false,
-      "requires_accepted_risk_review": false,
+      "operator_release_allowed": true,
+      "requires_accepted_risk_review": true,
       "live_make_check_status": "pass",
       "live_make_check_ready": true,
       "live_make_check_blocking": false,
-      "summary": "release_authority_status=blocked; sealed_release_status=unsealed_artifact_incomplete; machine_release_allowed=False; operator_release_allowed=False; requires_accepted_risk_review=False; live_make_check_status=pass"
+      "summary": "release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided; machine_release_allowed=False; operator_release_allowed=True; requires_accepted_risk_review=True; live_make_check_status=pass"
     },
     "release_closeout_fixed_point": {
       "path": "ops/reports/release-closeout-fixed-point.json",
@@ -654,28 +653,27 @@
   },
   "accepted_risk_delta": {
     "status": "unchanged",
-    "previous_report_generated_at": "2026-05-20T06:24:29Z",
+    "previous_report_generated_at": "2026-05-20T16:55:49Z",
     "added_count": 0,
     "removed_count": 0,
-    "unchanged_count": 4,
+    "unchanged_count": 3,
     "added": [],
     "removed": [],
     "unchanged": [
-      "artifact_freshness::artifact_freshness_attention",
       "external_report_reference_manifest::external_report_strict_unavailable",
       "generated_index::generated_index_archive_advisory",
       "source_tree_coherence::source_tree_coherence_attention"
     ],
-    "summary": "accepted_risk_delta status=unchanged; added=0; removed=0; unchanged=4"
+    "summary": "accepted_risk_delta status=unchanged; added=0; removed=0; unchanged=3"
   },
   "summary": {
     "gate_count": 16,
-    "authoritative_gate_count": 4,
-    "checked_in_fail_count": 2,
-    "live_rerun_fail_count": 1,
-    "live_rerun_not_run_count": 10,
-    "accepted_risk_count": 4,
-    "gate_attention_count": 1,
+    "authoritative_gate_count": 10,
+    "checked_in_fail_count": 0,
+    "live_rerun_fail_count": 0,
+    "live_rerun_not_run_count": 3,
+    "accepted_risk_count": 3,
+    "gate_attention_count": 3,
     "required_input_fail_count": 0,
     "learning_claim_guard_status": "pass",
     "learning_claim_allowed": false,
@@ -898,10 +896,10 @@
     {
       "gate_id": "release_closeout_decision",
       "source_path": "ops/reports/release-closeout-summary.json",
-      "checked_in_state": "fail",
+      "checked_in_state": "attention",
       "live_rerun_state": {
-        "status": "fail",
-        "reason": "release_authority_status=blocked; sealed_release_status=unsealed_artifact_incomplete; machine_release_allowed=False; operator_release_allowed=False; requires_accepted_risk_review=False; live_make_check_status=pass"
+        "status": "attention",
+        "reason": "release closeout requires accepted-risk operator review before release"
       },
       "authoritative_for_release": false,
       "accepted_risk": {
@@ -910,17 +908,17 @@
       },
       "owner": "runtime-maintainer",
       "expiry": "",
-      "next_action": "Resolve release closeout blockers before release.",
+      "next_action": "Review accepted_risks before operator release signoff.",
       "required_evidence": [
-        "Resolve release closeout blockers before release."
+        "Review accepted_risks before operator release signoff."
       ],
       "claims": [
         {
-          "claim": "release closeout authoritative decision is release_authority_status=blocked; sealed_release_status=unsealed_artifact_incomplete",
+          "claim": "release closeout authoritative decision is release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided",
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "release closeout machine/operator decision is machine_release_allowed=False, operator_release_allowed=False, requires_accepted_risk_review=False",
+          "claim": "release closeout machine/operator decision is machine_release_allowed=False, operator_release_allowed=True, requires_accepted_risk_review=True",
           "provenance_label": "checked_in_json_confirmed"
         }
       ]
@@ -958,10 +956,10 @@
       "source_path": "ops/reports/release-smoke-report.json",
       "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "not_run",
-        "reason": "component fingerprint differs from current source tree"
+        "status": "pass",
+        "reason": "checked-in component matches current source tree"
       },
-      "authoritative_for_release": false,
+      "authoritative_for_release": true,
       "accepted_risk": {
         "count": 0,
         "codes": []
@@ -976,8 +974,8 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "release_smoke fingerprint/currentness diagnostic state is not_run",
-          "provenance_label": "diagnostic_workspace_only"
+          "claim": "release_smoke fingerprint/currentness diagnostic state is pass",
+          "provenance_label": "fingerprint_equivalent_to_checked_in"
         }
       ]
     },
@@ -1014,10 +1012,10 @@
       "source_path": "external-reports/report-reference-manifest.json",
       "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "not_run",
-        "reason": "component fingerprint differs from current source tree"
+        "status": "pass",
+        "reason": "checked-in component matches current source tree"
       },
-      "authoritative_for_release": false,
+      "authoritative_for_release": true,
       "accepted_risk": {
         "count": 1,
         "codes": [
@@ -1025,7 +1023,7 @@
         ]
       },
       "owner": "runtime-maintainer",
-      "expiry": "2026-05-27T09:16:22Z",
+      "expiry": "2026-05-27T16:56:57Z",
       "next_action": "Rerun the sealed closeout lane with a current distribution ZIP before external review signoff.",
       "required_evidence": [],
       "claims": [
@@ -1034,8 +1032,8 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "external_report_reference_manifest fingerprint/currentness diagnostic state is not_run",
-          "provenance_label": "diagnostic_workspace_only"
+          "claim": "external_report_reference_manifest fingerprint/currentness diagnostic state is pass",
+          "provenance_label": "fingerprint_equivalent_to_checked_in"
         }
       ]
     },
@@ -1044,10 +1042,10 @@
       "source_path": "ops/reports/test-execution-summary.json",
       "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "not_run",
-        "reason": "component fingerprint differs from current source tree"
+        "status": "pass",
+        "reason": "checked-in component matches current source tree"
       },
-      "authoritative_for_release": false,
+      "authoritative_for_release": true,
       "accepted_risk": {
         "count": 0,
         "codes": []
@@ -1062,8 +1060,8 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "test_summary fingerprint/currentness diagnostic state is not_run",
-          "provenance_label": "diagnostic_workspace_only"
+          "claim": "test_summary fingerprint/currentness diagnostic state is pass",
+          "provenance_label": "fingerprint_equivalent_to_checked_in"
         }
       ]
     },
@@ -1100,10 +1098,10 @@
       "source_path": "ops/reports/raw-registry-preflight-report.json",
       "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "not_run",
-        "reason": "component fingerprint differs from current source tree"
+        "status": "pass",
+        "reason": "checked-in component matches current source tree"
       },
-      "authoritative_for_release": false,
+      "authoritative_for_release": true,
       "accepted_risk": {
         "count": 0,
         "codes": []
@@ -1118,8 +1116,8 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "raw_registry fingerprint/currentness diagnostic state is not_run",
-          "provenance_label": "diagnostic_workspace_only"
+          "claim": "raw_registry fingerprint/currentness diagnostic state is pass",
+          "provenance_label": "fingerprint_equivalent_to_checked_in"
         }
       ]
     },
@@ -1128,19 +1126,17 @@
       "source_path": "ops/reports/artifact-freshness-report.json",
       "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "not_run",
-        "reason": "component fingerprint differs from current source tree"
+        "status": "pass",
+        "reason": "checked-in component matches current source tree"
       },
-      "authoritative_for_release": false,
+      "authoritative_for_release": true,
       "accepted_risk": {
-        "count": 1,
-        "codes": [
-          "artifact_freshness_attention"
-        ]
+        "count": 0,
+        "codes": []
       },
       "owner": "runtime-maintainer",
-      "expiry": "2026-05-27T09:16:22Z",
-      "next_action": "Rerun artifact-freshness before the next release closeout.",
+      "expiry": "",
+      "next_action": "none",
       "required_evidence": [],
       "claims": [
         {
@@ -1148,8 +1144,8 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "artifact_freshness fingerprint/currentness diagnostic state is not_run",
-          "provenance_label": "diagnostic_workspace_only"
+          "claim": "artifact_freshness fingerprint/currentness diagnostic state is pass",
+          "provenance_label": "fingerprint_equivalent_to_checked_in"
         }
       ]
     },
@@ -1158,10 +1154,10 @@
       "source_path": "ops/reports/generated-artifact-index.json",
       "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "not_run",
-        "reason": "component fingerprint differs from current source tree"
+        "status": "pass",
+        "reason": "checked-in component matches current source tree"
       },
-      "authoritative_for_release": false,
+      "authoritative_for_release": true,
       "accepted_risk": {
         "count": 1,
         "codes": [
@@ -1169,7 +1165,7 @@
         ]
       },
       "owner": "runtime-maintainer",
-      "expiry": "2026-05-27T09:16:22Z",
+      "expiry": "2026-05-27T16:56:57Z",
       "next_action": "Rerun generated-artifact-index before the next release closeout.",
       "required_evidence": [],
       "claims": [
@@ -1178,18 +1174,18 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "generated_index fingerprint/currentness diagnostic state is not_run",
-          "provenance_label": "diagnostic_workspace_only"
+          "claim": "generated_index fingerprint/currentness diagnostic state is pass",
+          "provenance_label": "fingerprint_equivalent_to_checked_in"
         }
       ]
     },
     {
       "gate_id": "auto_improve_readiness",
       "source_path": "ops/reports/auto-improve-readiness.json",
-      "checked_in_state": "fail",
+      "checked_in_state": "attention",
       "live_rerun_state": {
-        "status": "not_run",
-        "reason": "component fingerprint differs from current source tree"
+        "status": "attention",
+        "reason": "checked-in component is source-clean but has non-source lane blockers"
       },
       "authoritative_for_release": false,
       "accepted_risk": {
@@ -1198,21 +1194,22 @@
       },
       "owner": "runtime-maintainer",
       "expiry": "",
-      "next_action": "Run make artifact-freshness-check and confirm status=pass.",
+      "next_action": "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
       "required_evidence": [
-        "Run make artifact-freshness-check and confirm status=pass.",
-        "Resolve artifact freshness blockers before promoting an auto-improve result.",
+        "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
+        "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
+        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal.",
         "Run make remediation-backlog and confirm status=pass with open_item_count=0.",
         "Close or explicitly defer blocks_promotion backlog items before promotion.",
         "can_promote_result must stay false while remediation backlog items are open."
       ],
       "claims": [
         {
-          "claim": "auto_improve_readiness checked-in release evidence state is fail",
+          "claim": "auto_improve_readiness checked-in release evidence state is attention",
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "auto_improve_readiness fingerprint/currentness diagnostic state is not_run",
+          "claim": "auto_improve_readiness fingerprint/currentness diagnostic state is attention",
           "provenance_label": "diagnostic_workspace_only"
         }
       ]
@@ -1306,7 +1303,7 @@
         ]
       },
       "owner": "runtime-maintainer",
-      "expiry": "2026-05-27T09:16:22Z",
+      "expiry": "2026-05-27T16:56:57Z",
       "next_action": "Review advisory accepted-risk lifecycle before operator signoff.",
       "required_evidence": [
         "Rerun generated-artifact-index before the next release closeout.",

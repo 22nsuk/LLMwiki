@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/goal-run-status.schema.json",
   "artifact_kind": "goal_run_status",
-  "generated_at": "2026-05-20T10:05:34Z",
+  "generated_at": "2026-05-20T14:22:32Z",
   "producer": "ops.scripts.goal_run_status",
   "source_command": "python -m ops.scripts.goal_run_status --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "40b3c21521424f8666f03c9896ca95742dd28d346c859bf4470e2c57d26f4980",
+  "source_tree_fingerprint": "d80d425d7dab28646cac4eae0db9c07d57284f14a86a8d5c96a7a5a2f915279e",
   "input_fingerprints": {
-    "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
-    "schema": "88ae1d2a6f77cad197342016f545d78ebc7dc204fed9dddac8fef09bcc648725",
+    "policy": "5f97cf7619b458d6e8aa229fa3f318d888cf78c4a806b6b72a552c360ceb0894",
+    "schema": "d5f30c4146c3ec45940e3b0679f503e2ed7b45e3cfc5f0cd0846521f4db56bb6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "6c8f2f86ae6498da8c32d0a6b83f221f0c98a58cab3a6b176fc21a2b627da5e5",
-    "goal_contract": "687d2c9d19a3428492466d2d79ed64007a26946e1fbceb6ae33fe46be6244866",
+    "source_paths": "5c2b706b2852bbf2d32ee9c138b783f6b6a42e7ac47d068dfd55af0fd899a5ca",
+    "goal_contract": "67aa87affe1a15f96858601e8684bd524669f6fa3cc855c0e3c5a1397cbaefb6",
     "session_synopsis_link": "7cbf10072f9b38b0b7b209442fe7e61976148ae82e700c307dc8c735ff054848"
   },
   "schema_version": 1,
@@ -20,14 +20,14 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:05:34Z"
+    "checked_at": "2026-05-20T14:22:32Z"
   },
   "goal": {
-    "contract_path": "runs/goal-5day-auto-improve-runtime/state/codex-goal-contract.json",
-    "contract_sha256": "27289ca5585d738bb6f17e49c9786655f39124bf9d7bef3761db466b6e560b3b",
+    "contract_path": "runs/goal-auto-improve-trial/state/codex-goal-contract.json",
+    "contract_sha256": "95056ae3fed12293f6d817357cc7305290d0abb5dd0a20c3550ea3f7c9c04bc2",
     "contract_status": "loaded",
-    "contract_id": "goal-5day-auto-improve-runtime",
-    "objective": "Achieve a verified 5-day sustained LLMwiki auto-improve runtime test through the profile ladder, preserving public/private boundaries and keeping promotion blocked until readiness, sealed authority, remediation backlog, and profile evidence are clean.",
+    "contract_id": "auto-improve-goal",
+    "objective": "Run a bounded self-improvement loop whose result is certified by current readiness, release, source-package, public-check, status, and session evidence.",
     "goal_status": "active",
     "backend": {
       "name": "run_local_file",
@@ -37,16 +37,16 @@
   "run": {
     "run_id": "auto-improve-trial",
     "status": "blocked",
-    "profile": "30m_trial",
-    "started_at": "2026-05-20T10:05:34Z",
-    "updated_at": "2026-05-20T10:05:34Z",
+    "runtime_mode": "self_improvement_loop",
+    "started_at": "2026-05-20T14:22:32Z",
+    "updated_at": "2026-05-20T14:22:32Z",
     "completed_at": ""
   },
   "observability": {
     "heartbeat_interval_seconds": 300,
     "checkpoint_interval_seconds": 1800,
-    "last_heartbeat_at": "2026-05-20T10:05:34Z",
-    "last_checkpoint_at": "2026-05-20T10:05:34Z",
+    "last_heartbeat_at": "2026-05-20T14:22:32Z",
+    "last_checkpoint_at": "2026-05-20T14:22:32Z",
     "last_command_heartbeat_at": "",
     "quiet_seconds": 0,
     "command_observation_mode": "",
@@ -72,130 +72,72 @@
     "promotion_status": "blocked",
     "can_promote_result": false
   },
-  "profile_ladder": {
-    "status": "incomplete",
-    "current_profile": "30m_trial",
-    "run_profile": "30m_trial",
-    "verified_profiles": [],
-    "highest_verified_profile": "unverified",
-    "next_profile_required": "30m_trial",
-    "profile_verified_by_promotion_guard": "unverified",
-    "profile_guard_consistent": true,
-    "sustained_claim_allowed": false,
-    "profiles": [
+  "runtime_certificate": {
+    "status": "pending",
+    "mode": "self_improvement_loop",
+    "run_mode": "self_improvement_loop",
+    "duration_seconds": 21600,
+    "certificate_status": "unverified",
+    "mode_consistent": true,
+    "full_gate_clean": false,
+    "can_promote_result": false,
+    "sealed_authority_clean": true,
+    "promotion_blockers": [
+      "learning_blocked_by_review_required",
+      "promotion_blocked_by_goal_worktree_guard_failure",
+      "promotion_blocked_by_remediation_backlog_open",
+      "git_worktree_dirty"
+    ],
+    "required_evidence": [
       {
-        "profile": "30m_trial",
-        "minimum_elapsed_seconds": 1800,
-        "verified": false,
-        "active": true,
-        "required_before_next_profile": "30m wall-clock one-proposal trial evidence with a successful improvement, repeated runtime maintenance work, status, audit, checkpoint, heartbeat, and no promotion claim",
-        "evidence_paths": [
-          {
-            "path": "ops/reports/goal-run-status.json",
-            "status": "present",
-            "report_status": "attention"
-          },
-          {
-            "path": "ops/reports/session-synopsis.json",
-            "status": "present",
-            "report_status": "attention"
-          },
-          {
-            "path": "ops/reports/auto-improve-readiness.json",
-            "status": "present"
-          }
-        ]
+        "evidence_id": "auto_improve_readiness",
+        "path": "ops/reports/auto-improve-readiness.json",
+        "status": "present"
       },
       {
-        "profile": "6h_ramp",
-        "minimum_elapsed_seconds": 21600,
-        "verified": false,
-        "active": false,
-        "required_before_next_profile": "30m trial evidence plus 6h repeated improvement session evidence and current release/readiness blockers",
-        "evidence_paths": [
-          {
-            "path": "ops/reports/goal-run-status.json",
-            "status": "present",
-            "report_status": "attention"
-          },
-          {
-            "path": "ops/reports/session-synopsis.json",
-            "status": "present",
-            "report_status": "attention"
-          },
-          {
-            "path": "ops/reports/auto-improve-readiness.json",
-            "status": "present"
-          },
-          {
-            "path": "ops/reports/source-package-clean-extract.json",
-            "status": "present",
-            "report_status": "pass"
-          }
-        ]
+        "evidence_id": "goal_run_status",
+        "path": "runs/goal-auto-improve-trial/state/goal-run-status.json",
+        "status": "present",
+        "report_status": "attention"
       },
       {
-        "profile": "2d_candidate",
-        "minimum_elapsed_seconds": 172800,
-        "verified": false,
-        "active": false,
-        "required_before_next_profile": "6h ramp evidence plus 2d repeated improvement session evidence, resume, and backoff evidence",
-        "evidence_paths": [
-          {
-            "path": "ops/reports/goal-run-status.json",
-            "status": "present",
-            "report_status": "attention"
-          },
-          {
-            "path": "ops/reports/remediation-backlog.json",
-            "status": "present",
-            "report_status": "attention"
-          },
-          {
-            "path": "ops/reports/source-package-clean-extract.json",
-            "status": "present",
-            "report_status": "pass"
-          },
-          {
-            "path": "ops/reports/public-check-summary.json",
-            "status": "present",
-            "report_status": "pass"
-          }
-        ]
+        "evidence_id": "session_synopsis",
+        "path": "ops/reports/session-synopsis.json",
+        "status": "present",
+        "report_status": "attention"
       },
       {
-        "profile": "5d_sustained",
-        "minimum_elapsed_seconds": 432000,
-        "verified": false,
-        "active": false,
-        "required_before_next_profile": "2d candidate evidence plus 5d repeated improvement session evidence and sealed authority clean pass",
-        "evidence_paths": [
-          {
-            "path": "ops/reports/goal-run-status.json",
-            "status": "present",
-            "report_status": "attention"
-          },
-          {
-            "path": "ops/reports/public-check-summary.json",
-            "status": "present",
-            "report_status": "pass"
-          },
-          {
-            "path": "ops/reports/release-closeout-summary.json",
-            "status": "present",
-            "report_status": "pass"
-          },
-          {
-            "path": "ops/reports/release-closeout-sealed-rehearsal-check.json",
-            "status": "present",
-            "report_status": "pass",
-            "preflight_status": "sealed_clean_pass",
-            "distribution_binding_status": "pass",
-            "authority_preflight_status": "clean"
-          }
-        ]
+        "evidence_id": "remediation_backlog",
+        "path": "ops/reports/remediation-backlog.json",
+        "status": "present",
+        "report_status": "attention"
+      },
+      {
+        "evidence_id": "source_package_clean_extract",
+        "path": "ops/reports/source-package-clean-extract.json",
+        "status": "present",
+        "report_status": "pass"
+      },
+      {
+        "evidence_id": "public_check_summary",
+        "path": "ops/reports/public-check-summary.json",
+        "status": "present",
+        "report_status": "pass"
+      },
+      {
+        "evidence_id": "release_authority",
+        "path": "ops/reports/release-closeout-summary.json",
+        "status": "present",
+        "report_status": "pass"
+      },
+      {
+        "evidence_id": "goal_worktree_guard",
+        "path": "tmp/goal-worktree-guard.json",
+        "status": "present",
+        "report_status": "attention"
       }
-    ]
+    ],
+    "missing_evidence": []
   },
   "periodic_evidence": {
     "status": "not_due",
@@ -208,7 +150,7 @@
       {
         "checkpoint_id": "checkpoint_6h",
         "due_after_seconds": 21600,
-        "due_at": "2026-05-20T16:05:34Z",
+        "due_at": "2026-05-20T20:22:32Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -221,19 +163,19 @@
           "last_event_at": "",
           "command_count": 3,
           "failed_command_count": 0,
-          "log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl"
+          "log_path": "runs/goal-auto-improve-trial/state/checkpoint-command-events.jsonl"
         },
         "evidence_paths": [
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "status": "present",
-            "generated_at": "2026-05-20T10:05:08Z",
+            "generated_at": "2026-05-20T14:15:15Z",
             "freshness_status": "not_due"
           },
           {
             "path": "ops/reports/session-synopsis.json",
             "status": "present",
-            "generated_at": "2026-05-20T10:03:22Z",
+            "generated_at": "2026-05-20T13:50:06Z",
             "freshness_status": "not_due"
           }
         ]
@@ -241,7 +183,7 @@
       {
         "checkpoint_id": "checkpoint_12h",
         "due_after_seconds": 43200,
-        "due_at": "2026-05-20T22:05:34Z",
+        "due_at": "2026-05-21T02:22:32Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -253,13 +195,13 @@
           "last_event_at": "",
           "command_count": 2,
           "failed_command_count": 0,
-          "log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl"
+          "log_path": "runs/goal-auto-improve-trial/state/checkpoint-command-events.jsonl"
         },
         "evidence_paths": [
           {
             "path": "ops/reports/test-execution-summary.json",
             "status": "present",
-            "generated_at": "2026-05-20T10:02:31Z",
+            "generated_at": "2026-05-20T14:14:54Z",
             "freshness_status": "not_due"
           },
           {
@@ -273,7 +215,7 @@
       {
         "checkpoint_id": "checkpoint_24h",
         "due_after_seconds": 86400,
-        "due_at": "2026-05-21T10:05:34Z",
+        "due_at": "2026-05-21T14:22:32Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -285,7 +227,7 @@
           "last_event_at": "",
           "command_count": 2,
           "failed_command_count": 0,
-          "log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl"
+          "log_path": "runs/goal-auto-improve-trial/state/checkpoint-command-events.jsonl"
         },
         "evidence_paths": [
           {
@@ -308,33 +250,37 @@
     "link_status": "linked",
     "report_path": "ops/reports/session-synopsis.json",
     "status": "attention",
-    "generated_at": "2026-05-20T10:03:22Z",
-    "recent_blocker_count": 5,
+    "generated_at": "2026-05-20T13:50:06Z",
+    "recent_blocker_count": 7,
     "evidence_gap_count": 2,
-    "next_action": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
+    "next_action": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded runtime with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
   },
   "artifacts": {
-    "status_report_path": "runs/goal-5day-auto-improve-runtime/state/goal-run-status.json",
-    "status_markdown_path": "runs/goal-auto-improve-trial/status.md",
-    "audit_log_path": "runs/goal-auto-improve-trial/audit-log.jsonl",
-    "resume_metadata_path": "runs/goal-auto-improve-trial/resume-metadata.json",
-    "checkpoint_command_log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl"
+    "status_report_path": "runs/goal-auto-improve-trial/state/goal-run-status.json",
+    "status_markdown_path": "runs/goal-auto-improve-trial/state/status.md",
+    "audit_log_path": "runs/goal-auto-improve-trial/state/audit-log.jsonl",
+    "resume_metadata_path": "runs/goal-auto-improve-trial/state/resume-metadata.json",
+    "checkpoint_command_log_path": "runs/goal-auto-improve-trial/state/checkpoint-command-events.jsonl"
   },
   "promotion_guard": {
     "can_promote_result": false,
     "promotion_blockers": [
       "learning_blocked_by_review_required",
-      "promotion_blocked_by_remediation_backlog_open"
+      "promotion_blocked_by_goal_worktree_guard_failure",
+      "promotion_blocked_by_remediation_backlog_open",
+      "git_worktree_dirty"
     ],
     "sealed_authority_clean": true,
-    "profile_verified": "unverified",
+    "runtime_certificate_verified": false,
     "sustained_runtime_claimed": false,
-    "no_sustained_claim_before_profile_verified": true
+    "no_sustained_claim_before_certificate_verified": true
   },
   "blockers": [
     "learning_blocked_by_review_required",
+    "promotion_blocked_by_goal_worktree_guard_failure",
     "promotion_blocked_by_remediation_backlog_open",
-    "profile ladder incomplete"
+    "git_worktree_dirty",
+    "self-improvement loop certificate incomplete"
   ],
   "status": "attention"
 }

@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-claim-activation-report.schema.json",
   "artifact_kind": "learning_claim_activation_report",
-  "generated_at": "2026-05-20T10:56:32Z",
+  "generated_at": "2026-05-20T14:23:05Z",
   "producer": "ops.scripts.learning_claim_activation_report",
   "source_command": "python -m ops.scripts.learning_claim_activation_report --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "5ade0e0ef37079eaf129f91f9f3ef44eaf3d3f0cbd1f60a92ef6e195aa875de9",
+  "source_tree_fingerprint": "7e48bb48352541056b800c1e9a961b2b84f1300ec2579b7d9fab541dc24d44be",
   "input_fingerprints": {
-    "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
+    "policy": "5f97cf7619b458d6e8aa229fa3f318d888cf78c4a806b6b72a552c360ceb0894",
     "schema": "d366a06d6c9fbade9f99a3a702f7e88409d8e793328122ab6b196c4d7d670305",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "dacdaf0814200d85ea19b48020b2b4fc37138c2de5e4969ffef772480063bbd0",
-    "learning_claim_activation_inputs": "24d2484c671f31c873581838cc1f4ad5428781d09522dc44b1f51fdec525d008"
+    "learning_claim_activation_inputs": "4bbc5ecda341d5f43b324327e86c956db799c35de3f4ab961016f2b5c6c3513b"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:56:32Z"
+    "checked_at": "2026-05-20T14:23:05Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
     "claim_wording_allowed": false,
     "blocked_predicate_count": 1,
     "anti_slop_preview_status": "attention",
-    "negative_learning_pattern_count": 4,
+    "negative_learning_pattern_count": 3,
     "gate_effect": "none"
   },
   "claim_candidate": {
@@ -58,7 +58,7 @@
     "evidence_digest": {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "b44cda0c27c39b41ccc057ca5a5c69c9ab5d7d4f1a48cfce241899fc37c81c80",
+      "sha256": "bbd6f92d95bac554925d3fe657a3b370f2ece6ee67c189501d48d6695fc12014",
       "status": "present"
     },
     "post_seal_linkage": {
@@ -80,7 +80,7 @@
       "evidence_digest": {
         "path": "ops/reports/learning-delta-scoreboard.json",
         "exists": true,
-        "sha256": "b44cda0c27c39b41ccc057ca5a5c69c9ab5d7d4f1a48cfce241899fc37c81c80",
+        "sha256": "bbd6f92d95bac554925d3fe657a3b370f2ece6ee67c189501d48d6695fc12014",
         "status": "present"
       },
       "post_seal_linkage": {
@@ -94,13 +94,13 @@
     {
       "path": "ops/reports/auto-improve-readiness.json",
       "exists": true,
-      "sha256": "bc93571e75d33b0df8374add28a4c22cac3d9fdb7c692246b8c128262a1d1c37",
+      "sha256": "fa06edd7b2657b4d9db1efa150a8d1bd5696f2993171fb61a3d58bfcb5e57095",
       "status": "present"
     },
     {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "b44cda0c27c39b41ccc057ca5a5c69c9ab5d7d4f1a48cfce241899fc37c81c80",
+      "sha256": "bbd6f92d95bac554925d3fe657a3b370f2ece6ee67c189501d48d6695fc12014",
       "status": "present"
     },
     {
@@ -205,26 +205,8 @@
     "mode": "advisory",
     "gate_effect": "none",
     "status": "attention",
-    "pattern_count": 4,
+    "pattern_count": 3,
     "patterns": [
-      {
-        "pattern_id": "blocked_queue_recent_log_overlap",
-        "decisions": [
-          "BLOCKED"
-        ],
-        "run_ids": [],
-        "occurrence_count": 1,
-        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
-        "repair_target": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane.",
-        "evidence_digests": [
-          {
-            "path": "ops/reports/auto-improve-readiness.json",
-            "exists": true,
-            "sha256": "bc93571e75d33b0df8374add28a4c22cac3d9fdb7c692246b8c128262a1d1c37",
-            "status": "present"
-          }
-        ]
-      },
       {
         "pattern_id": "discard_behavior_delta_before_after_evidence_missing",
         "decisions": [
@@ -240,7 +222,7 @@
           {
             "path": "ops/reports/learning-delta-scoreboard.json",
             "exists": true,
-            "sha256": "b44cda0c27c39b41ccc057ca5a5c69c9ab5d7d4f1a48cfce241899fc37c81c80",
+            "sha256": "bbd6f92d95bac554925d3fe657a3b370f2ece6ee67c189501d48d6695fc12014",
             "status": "present"
           }
         ]

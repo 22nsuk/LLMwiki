@@ -246,31 +246,28 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         "recommended_target": "auto-improve-goal-run",
     },
     {
-        "action_id": "goal_execution_ladder_profiles",
+        "action_id": "goal_execution_runtime_certificate",
         "priority": "P0",
-        "theme": "bounded goal execution ladder profile verification",
+        "theme": "bounded goal execution runtime certificate",
         "patterns": [
-            r"execution ladder",
-            r"30-minute trial",
-            r"30분",
-            r"6-hour ramp",
-            r"6시간",
-            r"2-day candidate",
-            r"2일",
-            r"5-day sustained",
-            r"5일",
+            r"runtime certificate",
+            r"self-improvement loop",
+            r"자가개선 루프",
+            r"full gate",
+            r"source-package",
+            r"public-check",
             r"bounded trial",
         ],
         "evidence_paths": [
             "mk/mechanism.mk",
             "ops/schemas/codex-goal-contract.schema.json",
             "ops/scripts/mechanism/goal_run_status.py",
-            "ops/scripts/mechanism/goal_profile_verification.py",
-            "ops/scripts/mechanism/goal_runtime_profile.py",
-            "tests/test_goal_profile_verification.py",
+            "ops/scripts/mechanism/goal_runtime_certificate_report.py",
+            "ops/scripts/mechanism/goal_runtime_certificate.py",
+            "tests/test_goal_runtime_certificate.py",
             "tests/test_goal_run_status.py",
         ],
-        "recommended_target": "auto-improve-goal-ladder-run",
+        "recommended_target": "goal-runtime-certificate",
     },
     {
         "action_id": "command_heartbeat_observability",
@@ -661,7 +658,7 @@ def _all_evidence_status(existing_count: int, expected_count: int) -> str | None
 
 def _goal_contract_is_bounded(contract: dict[str, Any]) -> bool:
     budgets = as_dict(contract.get("budgets"))
-    runtime_profile = as_dict(contract.get("runtime_profile"))
+    runtime = as_dict(contract.get("runtime"))
     goal_backend = as_dict(contract.get("goal_backend"))
     promotion_guard = as_dict(contract.get("promotion_guard"))
     return bool(
@@ -673,13 +670,14 @@ def _goal_contract_is_bounded(contract: dict[str, Any]) -> bool:
         and as_int(budgets.get("max_consecutive_failures")) > 0
         and as_int(budgets.get("heartbeat_interval_seconds")) > 0
         and as_int(budgets.get("checkpoint_interval_seconds")) > 0
-        and as_list(budgets.get("profile_ladder"))
-        and runtime_profile.get("current_profile")
+        and runtime.get("mode") == "self_improvement_loop"
+        and as_int(runtime.get("duration_seconds")) > 0
+        and runtime.get("certificate_status") in {"unverified", "verified"}
         and bool(goal_backend.get("process_persistent"))
         and goal_backend.get("backend_type") in {"file", "run_local_file"}
         and as_list(contract.get("stop_conditions"))
         and as_list(contract.get("required_evidence"))
-        and bool(promotion_guard.get("no_sustained_claim_before_profile_verified"))
+        and bool(promotion_guard.get("no_sustained_claim_before_certificate_verified"))
         and not bool(promotion_guard.get("sustained_runtime_claimed"))
     )
 
@@ -760,7 +758,7 @@ def auto_improve_goal_contract_input_status(
     )
     if (
         _goal_contract_is_bounded(contract)
-        and as_int(budgets.get("max_wall_clock_seconds")) == 1800
+        and as_int(budgets.get("max_wall_clock_seconds")) >= 21600
         and as_int(budgets.get("max_proposals")) == 1
         and as_int(budgets.get("max_consecutive_failures")) == 1
         and has_goal_status_path
@@ -780,7 +778,7 @@ def goal_run_status_audit_resume_status(
     backend = as_dict(goal.get("backend"))
     artifacts = as_dict(report.get("artifacts"))
     health = as_dict(report.get("health"))
-    profile_ladder = as_dict(report.get("profile_ladder"))
+    runtime_certificate = as_dict(report.get("runtime_certificate"))
     contract_digest = _current_contract_digest(vault)
     status_report_path = str(artifacts.get("status_report_path", "")).strip()
     status_report_path_valid = status_report_path == "ops/reports/goal-run-status.json" or (
@@ -814,8 +812,8 @@ def goal_run_status_audit_resume_status(
         and health.get("resume_status") in {"not_requested", "ready"}
         and health.get("promotion_status") == "blocked"
         and health.get("can_promote_result") is False
-        and profile_ladder.get("status") in {"incomplete", "complete"}
-        and profile_ladder.get("sustained_claim_allowed") is False
+        and runtime_certificate.get("status") in {"pending", "complete"}
+        and runtime_certificate.get("mode") == "self_improvement_loop"
     ):
         return "implemented"
     return "requires_release_run_verification"

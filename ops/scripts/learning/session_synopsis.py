@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,14 @@ INPUT_PATHS = {
     "source_package_clean_extract": "ops/reports/source-package-clean-extract.json",
     "task_observations": "ops/reports/task-improvement-observations/task-20260515-reconciled-improvement-plan/improvement-observations.json",
 }
+INPUT_PATH_ARG_NAMES = {
+    "auto_improve_readiness": "--auto-improve-readiness",
+    "goal_run_status": "--goal-run-status",
+    "learning_delta_scoreboard": "--learning-delta-scoreboard",
+    "learning_claim_activation": "--learning-claim-activation",
+    "source_package_clean_extract": "--source-package-clean-extract",
+    "task_observations": "--task-observations",
+}
 DERIVED_REMEDIATION_BACKLOG_BLOCKER_IDS = {
     "goal_status_promotion_blocked_by_remediation_backlog_open",
     "promotion_blocked_by_remediation_backlog_open",
@@ -47,79 +56,71 @@ def _string_list(value: object) -> list[str]:
     return [str(item).strip() for item in value if str(item).strip()]
 
 
-def _load_inputs(vault: Path) -> dict[str, dict[str, Any]]:
+def resolve_input_paths(overrides: Mapping[str, str | None] | None = None) -> dict[str, str]:
+    paths = dict(INPUT_PATHS)
+    if overrides is None:
+        return paths
+    for key, rel_path in overrides.items():
+        if key not in paths:
+            continue
+        normalized = str(rel_path or "").strip()
+        if normalized:
+            paths[key] = normalized
+    return paths
+
+
+def _load_inputs(vault: Path, input_paths: Mapping[str, str]) -> dict[str, dict[str, Any]]:
     return {
         key: load_optional_json_object(vault / rel_path)
-        for key, rel_path in INPUT_PATHS.items()
+        for key, rel_path in input_paths.items()
     }
 
 
-def _goal_profile_ladder(status_report: dict[str, Any]) -> dict[str, Any]:
-    profile_ladder = status_report.get("profile_ladder")
-    if not isinstance(profile_ladder, dict):
+def _goal_runtime_certificate(status_report: dict[str, Any]) -> dict[str, Any]:
+    certificate = status_report.get("runtime_certificate")
+    if not isinstance(certificate, dict):
         return {
             "status": "missing",
-            "current_profile": "",
-            "run_profile": "",
-            "verified_profiles": [],
-            "highest_verified_profile": "unverified",
-            "next_profile_required": "",
-            "profile_verified_by_promotion_guard": "unverified",
-            "profile_guard_consistent": False,
-            "sustained_claim_allowed": False,
+            "mode": "",
+            "run_mode": "",
+            "duration_seconds": 0,
+            "certificate_status": "unverified",
+            "full_gate_clean": False,
             "missing_evidence": [],
         }
 
     missing_evidence: list[dict[str, Any]] = []
-    for profile in _dict_list(profile_ladder.get("profiles")):
-        profile_name = str(profile.get("profile", "")).strip()
-        for evidence in _dict_list(profile.get("evidence_paths")):
-            evidence_status = str(evidence.get("status", "")).strip()
-            if evidence_status == "present":
-                continue
-            evidence_path = str(evidence.get("path", "")).strip()
-            if not evidence_path:
-                continue
-            missing_evidence.append(
-                {
-                    "profile": profile_name,
-                    "path": evidence_path,
-                    "status": evidence_status or "missing",
-                }
-            )
+    for evidence in _dict_list(certificate.get("missing_evidence")):
+        evidence_path = str(evidence.get("path", "")).strip()
+        if not evidence_path:
+            continue
+        missing_evidence.append(
+            {
+                "evidence_id": str(evidence.get("evidence_id", "")).strip(),
+                "path": evidence_path,
+                "status": str(evidence.get("status", "")).strip() or "missing",
+            }
+        )
 
     return {
-        "status": str(profile_ladder.get("status", "missing")).strip() or "missing",
-        "current_profile": str(profile_ladder.get("current_profile", "")).strip(),
-        "run_profile": str(profile_ladder.get("run_profile", "")).strip(),
-        "verified_profiles": _string_list(profile_ladder.get("verified_profiles")),
-        "highest_verified_profile": str(
-            profile_ladder.get("highest_verified_profile", "unverified")
-        ).strip()
+        "status": str(certificate.get("status", "missing")).strip() or "missing",
+        "mode": str(certificate.get("mode", "")).strip(),
+        "run_mode": str(certificate.get("run_mode", "")).strip(),
+        "duration_seconds": int(certificate.get("duration_seconds", 0) or 0),
+        "certificate_status": str(certificate.get("certificate_status", "unverified")).strip()
         or "unverified",
-        "next_profile_required": str(profile_ladder.get("next_profile_required", "")).strip(),
-        "profile_verified_by_promotion_guard": str(
-            profile_ladder.get("profile_verified_by_promotion_guard", "unverified")
-        ).strip()
-        or "unverified",
-        "profile_guard_consistent": bool(
-            profile_ladder.get("profile_guard_consistent", False)
-        ),
-        "sustained_claim_allowed": bool(
-            profile_ladder.get("sustained_claim_allowed", False)
-        ),
+        "full_gate_clean": bool(certificate.get("full_gate_clean", False)),
         "missing_evidence": missing_evidence[:8],
     }
 
 
 def _goal_status_blockers(
     status_report: dict[str, Any],
-    profile_ladder: dict[str, Any],
+    runtime_certificate: dict[str, Any],
     *,
     suppressed_blocker_ids: set[str] | None = None,
 ) -> list[dict[str, Any]]:
     blockers: list[dict[str, Any]] = []
-    next_profile = str(profile_ladder.get("next_profile_required", "")).strip()
     suppressed_ids = suppressed_blocker_ids or set()
     for blocker in _string_list(status_report.get("blockers")):
         normalized_blocker_id = "_".join(
@@ -133,12 +134,8 @@ def _goal_status_blockers(
         if blocker_id in DERIVED_REMEDIATION_BACKLOG_BLOCKER_IDS:
             continue
         repair_target = "Refresh goal run status and close the active blocker before resuming."
-        if blocker == "profile ladder incomplete":
-            repair_target = (
-                f"Collect bounded runtime evidence for next_profile_required={next_profile}."
-                if next_profile
-                else "Collect bounded runtime evidence for the next profile."
-            )
+        if blocker == "self-improvement loop certificate incomplete":
+            repair_target = "Run the bounded self-improvement loop and full gates, then refresh goal-runtime-certificate."
         elif "sealed authority" in blocker:
             repair_target = "Refresh sealed authority preflight evidence before promotion."
         blockers.append(
@@ -153,15 +150,15 @@ def _goal_status_blockers(
     return blockers
 
 
-def _active_goal_link(status_report: dict[str, Any]) -> dict[str, Any]:
+def _active_goal_link(status_report: dict[str, Any], *, goal_run_status_path: str) -> dict[str, Any]:
     if not status_report:
         return {
             "link_status": "missing",
-            "report_path": GOAL_RUN_STATUS_PATH,
+            "report_path": goal_run_status_path,
             "contract_id": "",
             "run_id": "",
             "run_status": "",
-            "profile": "",
+            "runtime_mode": "",
             "promotion_status": "",
             "can_promote_result": False,
             "checkpoint_status": "",
@@ -182,11 +179,11 @@ def _active_goal_link(status_report: dict[str, Any]) -> dict[str, Any]:
     periodic_evidence = periodic_evidence if isinstance(periodic_evidence, dict) else {}
     return {
         "link_status": "linked",
-        "report_path": GOAL_RUN_STATUS_PATH,
+        "report_path": goal_run_status_path,
         "contract_id": str(goal.get("contract_id", "")).strip(),
         "run_id": str(run.get("run_id", "")).strip(),
         "run_status": str(run.get("status", "")).strip(),
-        "profile": str(run.get("profile", "")).strip(),
+        "runtime_mode": str(run.get("runtime_mode", "")).strip(),
         "promotion_status": str(health.get("promotion_status", "")).strip(),
         "can_promote_result": bool(health.get("can_promote_result", False)),
         "checkpoint_status": str(health.get("checkpoint_status", "")).strip(),
@@ -206,7 +203,7 @@ def _recent_blockers(inputs: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     readiness = inputs["auto_improve_readiness"]
     activation = inputs["learning_claim_activation"]
     goal_status = inputs["goal_run_status"]
-    goal_profile_ladder = _goal_profile_ladder(goal_status)
+    goal_runtime_certificate = _goal_runtime_certificate(goal_status)
     readiness_blockers: list[dict[str, Any]] = []
     readiness_blocker_ids: set[str] = set()
     for blocker in _dict_list(readiness.get("promotion_blockers")):
@@ -228,7 +225,7 @@ def _recent_blockers(inputs: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     blockers.extend(
         _goal_status_blockers(
             goal_status,
-            goal_profile_ladder,
+            goal_runtime_certificate,
             suppressed_blocker_ids=readiness_blocker_ids,
         )
     )
@@ -363,11 +360,15 @@ def _evidence_gaps(inputs: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     return [gap for gap in gaps if gap["id"]][:8]
 
 
-def _source_package_replay(inputs: dict[str, dict[str, Any]]) -> dict[str, Any]:
+def _source_package_replay(
+    inputs: dict[str, dict[str, Any]],
+    *,
+    input_paths: Mapping[str, str],
+) -> dict[str, Any]:
     source_package = inputs["source_package_clean_extract"]
     return {
         "status": str(source_package.get("status", "missing")).strip() or "missing",
-        "report_path": INPUT_PATHS["source_package_clean_extract"],
+        "report_path": input_paths["source_package_clean_extract"],
         "profile": "source-package/release-archive",
         "replay_command": "make release-source-package-check",
         "summary": "Use the profile-aware source package check before treating distribution evidence as replayable.",
@@ -380,7 +381,7 @@ def _next_session_entrypoint(
     blockers: list[dict[str, Any]],
     forbidden_patterns: list[dict[str, Any]],
     evidence_gaps: list[dict[str, Any]],
-    profile_ladder: dict[str, Any],
+    runtime_certificate: dict[str, Any],
 ) -> dict[str, Any]:
     readiness = inputs["auto_improve_readiness"]
     activation = inputs["learning_claim_activation"]
@@ -403,18 +404,18 @@ def _next_session_entrypoint(
             "make test-public",
             "make auto-improve-goal-preflight",
             "make auto-improve-goal-run",
-            "make goal-profile-verification",
+            "make goal-runtime-certificate",
         ],
         "stop_conditions": [
             "Do not promote while promotion_allowed is false.",
             "Do not claim learning improvement while claim_wording_allowed is false.",
-            "Do not claim 5d sustained runtime while sustained_claim_allowed is false.",
-            "Do not advance beyond next_profile_required without elapsed runtime evidence for that profile.",
+            "Do not claim sustained unattended runtime while runtime_certificate_status is not complete.",
+            "Do not treat elapsed wall-clock duration as proof without full gate evidence.",
             "Do not repeat forbidden patterns until their repair_target is closed.",
         ],
-        "target_profile": str(profile_ladder.get("next_profile_required", "")).strip(),
-        "profile_ladder_status": str(profile_ladder.get("status", "")).strip(),
-        "sustained_claim_allowed": bool(profile_ladder.get("sustained_claim_allowed", False)),
+        "target_runtime_mode": str(runtime_certificate.get("mode", "")).strip(),
+        "runtime_certificate_status": str(runtime_certificate.get("status", "")).strip(),
+        "runtime_certificate_full_gate_clean": bool(runtime_certificate.get("full_gate_clean", False)),
         "open_blocker_count": len(blockers),
         "forbidden_pattern_count": len(forbidden_patterns),
         "evidence_gap_count": len(evidence_gaps),
@@ -426,33 +427,33 @@ def build_report(
     *,
     context: RuntimeContext | None = None,
     policy_path: str | None = None,
+    input_path_overrides: Mapping[str, str | None] | None = None,
 ) -> dict[str, Any]:
     policy, resolved_policy_path = load_policy(vault, policy_path)
     runtime_context = context or RuntimeContext.from_policy(policy)
-    inputs = _load_inputs(vault)
+    input_paths = resolve_input_paths(input_path_overrides)
+    inputs = _load_inputs(vault, input_paths)
     blockers = _recent_blockers(inputs)
     success_patterns = _last_success_patterns(inputs)
     forbidden_patterns = _forbidden_repeat_patterns(inputs)
     seed_runs = _recommended_seed_runs(inputs)
     evidence_gaps = _evidence_gaps(inputs)
-    source_package_replay = _source_package_replay(inputs)
-    goal_profile_ladder = _goal_profile_ladder(inputs["goal_run_status"])
-    active_goal = _active_goal_link(inputs["goal_run_status"])
+    source_package_replay = _source_package_replay(inputs, input_paths=input_paths)
+    goal_runtime_certificate = _goal_runtime_certificate(inputs["goal_run_status"])
+    active_goal = _active_goal_link(
+        inputs["goal_run_status"],
+        goal_run_status_path=input_paths["goal_run_status"],
+    )
     next_session = _next_session_entrypoint(
         inputs,
         blockers=blockers,
         forbidden_patterns=forbidden_patterns,
         evidence_gaps=evidence_gaps,
-        profile_ladder=goal_profile_ladder,
+        runtime_certificate=goal_runtime_certificate,
     )
-    profile_ladder_clear = (
-        goal_profile_ladder["status"] == "complete"
-        and goal_profile_ladder["sustained_claim_allowed"]
-    )
+    runtime_certificate_clear = goal_runtime_certificate["status"] == "complete"
     status = (
-        "pass"
-        if not blockers and not evidence_gaps and profile_ladder_clear
-        else "attention"
+        "pass" if not blockers and not evidence_gaps and runtime_certificate_clear else "attention"
     )
     return {
         **build_canonical_report_envelope(
@@ -464,7 +465,7 @@ def build_report(
             resolved_policy_path=resolved_policy_path,
             schema_path=SCHEMA_PATH,
             source_paths=SOURCE_PATHS,
-            file_inputs=INPUT_PATHS,
+            file_inputs=input_paths,
         ),
         "vault": report_path(vault, vault),
         "policy": {
@@ -482,9 +483,9 @@ def build_report(
             "active_goal_id": active_goal["contract_id"],
             "active_goal_run_id": active_goal["run_id"],
             "active_goal_link_status": active_goal["link_status"],
-            "goal_profile_ladder_status": goal_profile_ladder["status"],
-            "goal_next_profile_required": goal_profile_ladder["next_profile_required"],
-            "sustained_claim_allowed": goal_profile_ladder["sustained_claim_allowed"],
+            "goal_runtime_certificate_status": goal_runtime_certificate["status"],
+            "goal_runtime_mode": goal_runtime_certificate["mode"],
+            "runtime_certificate_full_gate_clean": goal_runtime_certificate["full_gate_clean"],
             "next_action": next_session["recommended_next_action"],
         },
         "recent_blockers": blockers,
@@ -494,9 +495,9 @@ def build_report(
         "evidence_gaps": evidence_gaps,
         "source_package_replay": source_package_replay,
         "active_goal": active_goal,
-        "goal_profile_ladder": goal_profile_ladder,
+        "goal_runtime_certificate": goal_runtime_certificate,
         "next_session_entrypoint": next_session,
-        "inputs": INPUT_PATHS,
+        "inputs": input_paths,
     }
 
 
@@ -518,13 +519,24 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--vault", default=".")
     parser.add_argument("--policy-path")
     parser.add_argument("--out", default=DEFAULT_OUT)
+    for dest, option in INPUT_PATH_ARG_NAMES.items():
+        parser.add_argument(option, dest=dest)
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
-    report = build_report(vault, policy_path=args.policy_path)
+    input_path_overrides = {
+        key: getattr(args, key)
+        for key in INPUT_PATHS
+        if getattr(args, key, None)
+    }
+    report = build_report(
+        vault,
+        policy_path=args.policy_path,
+        input_path_overrides=input_path_overrides,
+    )
     destination = write_report(vault, report, args.out)
     print(display_path(vault, destination))
     return 0

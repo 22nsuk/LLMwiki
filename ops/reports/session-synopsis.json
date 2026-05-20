@@ -1,22 +1,22 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-20T10:56:33Z",
+  "generated_at": "2026-05-20T14:23:06Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "5ade0e0ef37079eaf129f91f9f3ef44eaf3d3f0cbd1f60a92ef6e195aa875de9",
+  "source_tree_fingerprint": "7e48bb48352541056b800c1e9a961b2b84f1300ec2579b7d9fab541dc24d44be",
   "input_fingerprints": {
-    "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
-    "schema": "8c91343f30427af06d94db468c972889a09ff0185c7db529c93733a70f373b82",
+    "policy": "5f97cf7619b458d6e8aa229fa3f318d888cf78c4a806b6b72a552c360ceb0894",
+    "schema": "f7dd295621a34a54cb5018604760de77e8685c6f0e0dc086056a7362e25a7519",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "f66d87472e0e2e1b03b99437ccbadec98a2fd769c9cf08e6924573dcac8ab784",
-    "auto_improve_readiness": "bc93571e75d33b0df8374add28a4c22cac3d9fdb7c692246b8c128262a1d1c37",
-    "goal_run_status": "c54611cf16c72bfedf106a410b8d2cd1d12f8a6c2815db08a70476abad4ba6b7",
-    "learning_claim_activation": "ca4245da90e2f93291caf05b41ab85a79576a4a1b5ede41b2777007810c680b7",
-    "learning_delta_scoreboard": "b44cda0c27c39b41ccc057ca5a5c69c9ab5d7d4f1a48cfce241899fc37c81c80",
+    "source_paths": "922b81368f7c79ee4966a7e495aec97cf19672890a14c5bba10d9b3672a0c3b0",
+    "auto_improve_readiness": "fa06edd7b2657b4d9db1efa150a8d1bd5696f2993171fb61a3d58bfcb5e57095",
+    "goal_run_status": "75cdbc8616cc7d348c7702b37d7ed7b94da24e4e9575b751862793b72005cbf4",
+    "learning_claim_activation": "f90a59b26c0aafc739d67a3d2bdde627f879afb337ca0220af680861946a0b81",
+    "learning_delta_scoreboard": "bbd6f92d95bac554925d3fe657a3b370f2ece6ee67c189501d48d6695fc12014",
     "source_package_clean_extract": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
-    "task_observations": "71013a0efaa510f93ecdb4cb6a3cbc18ff61d60d8fc093c6521a4aea80829677"
+    "task_observations": "5ee6fc130d9ca93cc1189b0816c3aca7b2fe351a203f126ba6f09522decfd6ea"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:56:33Z"
+    "checked_at": "2026-05-20T14:23:06Z"
   },
   "vault": ".",
   "policy": {
@@ -33,34 +33,48 @@
   },
   "status": "attention",
   "summary": {
-    "recent_blocker_count": 3,
+    "recent_blocker_count": 5,
     "last_success_pattern_count": 5,
-    "forbidden_repeat_pattern_count": 4,
+    "forbidden_repeat_pattern_count": 3,
     "recommended_seed_run_count": 3,
     "evidence_gap_count": 2,
     "source_package_replay_status": "pass",
-    "active_goal_id": "goal-5day-auto-improve-runtime",
+    "active_goal_id": "auto-improve-goal",
     "active_goal_run_id": "auto-improve-trial",
     "active_goal_link_status": "linked",
-    "goal_profile_ladder_status": "incomplete",
-    "goal_next_profile_required": "30m_trial",
-    "sustained_claim_allowed": false,
-    "next_action": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
+    "goal_runtime_certificate_status": "pending",
+    "goal_runtime_mode": "self_improvement_loop",
+    "runtime_certificate_full_gate_clean": false,
+    "next_action": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded runtime with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
   },
   "recent_blockers": [
     {
-      "id": "goal_status_profile_ladder_incomplete",
+      "id": "goal_status_git_worktree_dirty",
       "source": "goal_run_status.blockers",
       "status": "open",
-      "reason": "profile ladder incomplete",
-      "repair_target": "Collect bounded runtime evidence for next_profile_required=30m_trial."
+      "reason": "git_worktree_dirty",
+      "repair_target": "Refresh goal run status and close the active blocker before resuming."
+    },
+    {
+      "id": "goal_status_self_improvement_loop_certificate_incomplete",
+      "source": "goal_run_status.blockers",
+      "status": "open",
+      "reason": "self-improvement loop certificate incomplete",
+      "repair_target": "Run the bounded self-improvement loop and full gates, then refresh goal-runtime-certificate."
     },
     {
       "id": "learning_blocked_by_review_required",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
       "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: recent_hold_moving_average, high_rework",
-      "repair_target": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
+      "repair_target": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded runtime with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
+    },
+    {
+      "id": "promotion_blocked_by_goal_worktree_guard_failure",
+      "source": "auto_improve_readiness.promotion_blockers",
+      "status": "open",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=75",
+      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     },
     {
       "id": "learning_claim_unlock_review_not_approved",
@@ -74,7 +88,7 @@
     {
       "id": "goal_periodic_checkpoint_command_scheduler",
       "source": "task_improvement_observations",
-      "summary": "Automated in the goal-runtime runner: due periodic checkpoints now execute the configured bounded command bundle, append a run-local checkpoint-command event, and are only observed when that pass event and fresh generated_at evidence are both present. Keep profile verification blocked until a real completed 30m trial and the later 6h/2d/5d ladder evidence exist.",
+      "summary": "Updated in this task: due periodic checkpoints remain runner-owned command evidence, but goal progression is now blocked by the single self-improvement loop certificate until a completed runtime, session maintenance, and full readiness/source-package/public-check/release evidence are current.",
       "evidence": [
         "ops/scripts/mechanism/goal_runtime_runner.py, ops/scripts/mechanism/goal_runtime_maintenance.py, ops/reports/goal-run-status.json"
       ]
@@ -82,17 +96,17 @@
     {
       "id": "goal_status_run_artifact_persistence",
       "source": "task_improvement_observations",
-      "summary": "Automated on 2026-05-18 by adding --write-run-artifacts to auto-improve-goal-status and auto-improve-goal-finalize. Focused Makefile, goal status, and profile verification tests passed; make auto-improve-goal-status goal-profile-verification now leaves run_artifacts.status=clean while correctly preserving blockers for incomplete elapsed runtime and missing process heartbeat command evidence.",
+      "summary": "Updated in this task: auto-improve-goal-status and auto-improve-goal-finalize still materialize run artifacts, and goal-runtime-certificate now keeps run_artifacts.status=clean separate from blockers for incomplete runtime/session/command evidence.",
       "evidence": [
-        "mk/mechanism.mk, tests/test_makefile_static_gates.py, ops/reports/goal-run-status.json, ops/reports/goal-profile-verification.json, runs/goal-auto-improve-trial/status.md, runs/goal-auto-improve-trial/resume-metadata.json, runs/goal-auto-improve-trial/audit-log.jsonl"
+        "mk/mechanism.mk, tests/test_makefile_static_gates.py, ops/reports/goal-run-status.json, ops/reports/goal-runtime-certificate.json, runs/goal-auto-improve-trial/status.md, runs/goal-auto-improve-trial/resume-metadata.json, runs/goal-auto-improve-trial/audit-log.jsonl"
       ]
     },
     {
-      "id": "goal_profile_runner_origin_command_evidence",
+      "id": "goal_runtime_certificate_runner_origin_command_evidence",
       "source": "task_improvement_observations",
-      "summary": "Automated on 2026-05-18 by adding writer provenance to goal-run audit events and making goal-profile-verification report runner_audit_current=false for status-only artifacts. Report-only artifacts can remain run_artifacts.status=clean, but profile command observability now blocks until runner-origin command evidence exists.",
+      "summary": "Updated in this task: goal-runtime-certificate reports runner_audit_current=false for status-only artifacts. Report-only artifacts can remain run_artifacts.status=clean, but command observability now blocks until runner-origin command evidence exists.",
       "evidence": [
-        "ops/scripts/mechanism/goal_runtime_runner.py, ops/scripts/mechanism/goal_run_status.py, ops/scripts/mechanism/goal_profile_verification.py, ops/schemas/goal-profile-verification.schema.json"
+        "ops/scripts/mechanism/goal_runtime_runner.py, ops/scripts/mechanism/goal_run_status.py, ops/scripts/mechanism/goal_runtime_certificate_report.py, ops/schemas/goal-runtime-certificate.schema.json"
       ]
     },
     {
@@ -113,16 +127,6 @@
     }
   ],
   "forbidden_repeat_patterns": [
-    {
-      "id": "blocked_queue_recent_log_overlap",
-      "decisions": [
-        "BLOCKED"
-      ],
-      "run_ids": [],
-      "occurrence_count": 1,
-      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
-      "repair_target": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane."
-    },
     {
       "id": "discard_behavior_delta_before_after_evidence_missing",
       "decisions": [
@@ -203,34 +207,31 @@
   "active_goal": {
     "link_status": "linked",
     "report_path": "ops/reports/goal-run-status.json",
-    "contract_id": "goal-5day-auto-improve-runtime",
+    "contract_id": "auto-improve-goal",
     "run_id": "auto-improve-trial",
     "run_status": "blocked",
-    "profile": "30m_trial",
+    "runtime_mode": "self_improvement_loop",
     "promotion_status": "blocked",
     "can_promote_result": false,
     "checkpoint_status": "current",
     "periodic_evidence_status": "not_due",
-    "audit_log_path": "runs/goal-auto-improve-trial/audit-log.jsonl",
-    "resume_metadata_path": "runs/goal-auto-improve-trial/resume-metadata.json",
+    "audit_log_path": "runs/goal-auto-improve-trial/state/audit-log.jsonl",
+    "resume_metadata_path": "runs/goal-auto-improve-trial/state/resume-metadata.json",
     "next_action": "Resume via the linked goal status artifacts before starting a separate session."
   },
-  "goal_profile_ladder": {
-    "status": "incomplete",
-    "current_profile": "30m_trial",
-    "run_profile": "30m_trial",
-    "verified_profiles": [],
-    "highest_verified_profile": "unverified",
-    "next_profile_required": "30m_trial",
-    "profile_verified_by_promotion_guard": "unverified",
-    "profile_guard_consistent": true,
-    "sustained_claim_allowed": false,
+  "goal_runtime_certificate": {
+    "status": "pending",
+    "mode": "self_improvement_loop",
+    "run_mode": "self_improvement_loop",
+    "duration_seconds": 21600,
+    "certificate_status": "unverified",
+    "full_gate_clean": false,
     "missing_evidence": []
   },
   "next_session_entrypoint": {
     "promotion_allowed": false,
     "claim_wording_allowed": false,
-    "recommended_next_action": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete.",
+    "recommended_next_action": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded runtime with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete.",
     "first_commands": [
       "make auto-improve-goal-status",
       "make session-synopsis",
@@ -239,20 +240,20 @@
       "make test-public",
       "make auto-improve-goal-preflight",
       "make auto-improve-goal-run",
-      "make goal-profile-verification"
+      "make goal-runtime-certificate"
     ],
     "stop_conditions": [
       "Do not promote while promotion_allowed is false.",
       "Do not claim learning improvement while claim_wording_allowed is false.",
-      "Do not claim 5d sustained runtime while sustained_claim_allowed is false.",
-      "Do not advance beyond next_profile_required without elapsed runtime evidence for that profile.",
+      "Do not claim sustained unattended runtime while runtime_certificate_status is not complete.",
+      "Do not treat elapsed wall-clock duration as proof without full gate evidence.",
       "Do not repeat forbidden patterns until their repair_target is closed."
     ],
-    "target_profile": "30m_trial",
-    "profile_ladder_status": "incomplete",
-    "sustained_claim_allowed": false,
-    "open_blocker_count": 3,
-    "forbidden_pattern_count": 4,
+    "target_runtime_mode": "self_improvement_loop",
+    "runtime_certificate_status": "pending",
+    "runtime_certificate_full_gate_clean": false,
+    "open_blocker_count": 5,
+    "forbidden_pattern_count": 3,
     "evidence_gap_count": 2
   },
   "inputs": {

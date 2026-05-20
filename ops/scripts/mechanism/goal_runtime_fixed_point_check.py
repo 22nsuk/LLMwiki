@@ -34,6 +34,11 @@ class GoalRuntimeFixedPointCheckRequest:
     out_path: str | None = None
     policy_path: str | None = None
     context: RuntimeContext | None = None
+    codex_goal_contract_path: str = CODEX_GOAL_CONTRACT_PATH
+    goal_run_status_path: str = GOAL_RUN_STATUS_PATH
+    auto_improve_readiness_path: str = AUTO_IMPROVE_READINESS_PATH
+    session_synopsis_path: str = SESSION_SYNOPSIS_PATH
+    remediation_backlog_path: str = REMEDIATION_BACKLOG_PATH
 
 
 def _load_json_object(path: Path) -> dict[str, Any]:
@@ -73,7 +78,11 @@ def _check(
     }
 
 
-def _report_loaded_checks(reports: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+def _report_loaded_checks(
+    reports: dict[str, dict[str, Any]],
+    *,
+    report_paths: dict[str, str],
+) -> list[dict[str, Any]]:
     return [
         _check(
             f"{name}_loaded",
@@ -82,11 +91,15 @@ def _report_loaded_checks(reports: dict[str, dict[str, Any]]) -> list[dict[str, 
             reason=f"{path} is missing or is not a JSON object",
         )
         for name, path, report in (
-            ("codex_goal_contract", CODEX_GOAL_CONTRACT_PATH, reports["contract"]),
-            ("goal_run_status", GOAL_RUN_STATUS_PATH, reports["status"]),
-            ("auto_improve_readiness", AUTO_IMPROVE_READINESS_PATH, reports["readiness"]),
-            ("session_synopsis", SESSION_SYNOPSIS_PATH, reports["session"]),
-            ("remediation_backlog", REMEDIATION_BACKLOG_PATH, reports["backlog"]),
+            ("codex_goal_contract", report_paths["codex_goal_contract"], reports["contract"]),
+            ("goal_run_status", report_paths["goal_run_status"], reports["status"]),
+            (
+                "auto_improve_readiness",
+                report_paths["auto_improve_readiness"],
+                reports["readiness"],
+            ),
+            ("session_synopsis", report_paths["session_synopsis"], reports["session"]),
+            ("remediation_backlog", report_paths["remediation_backlog"], reports["backlog"]),
         )
     ]
 
@@ -99,7 +112,7 @@ def _promotion_guard(payload: dict[str, Any]) -> dict[str, Any]:
 def _contract_status_alignment(reports: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     contract = reports["contract"]
     status = reports["status"]
-    contract_profile = contract.get("runtime_profile")
+    contract_runtime = contract.get("runtime")
     status_run = status.get("run")
     status_goal = status.get("goal")
     return [
@@ -112,12 +125,12 @@ def _contract_status_alignment(reports: dict[str, dict[str, Any]]) -> list[dict[
             reason="goal-run-status must describe the selected codex goal contract",
         ),
         _check(
-            "contract_status_profile",
-            expected=str(contract_profile.get("current_profile", "")).strip()
-            if isinstance(contract_profile, dict)
+            "contract_status_runtime_mode",
+            expected=str(contract_runtime.get("mode", "")).strip()
+            if isinstance(contract_runtime, dict)
             else "",
-            observed=str(status_run.get("profile", "")).strip() if isinstance(status_run, dict) else "",
-            reason="goal-run-status run.profile must match the selected contract runtime profile",
+            observed=str(status_run.get("runtime_mode", "")).strip() if isinstance(status_run, dict) else "",
+            reason="goal-run-status run.runtime_mode must match the selected contract runtime mode",
         ),
         _check(
             "contract_status_promotion_blockers",
@@ -160,10 +173,10 @@ def _session_active_goal_alignment(reports: dict[str, dict[str, Any]]) -> list[d
             reason="session synopsis active goal must reference the current goal run status",
         ),
         _check(
-            "session_active_goal_profile",
-            expected=str(status_run.get("profile", "")).strip(),
-            observed=str(active_goal.get("profile", "")).strip(),
-            reason="session synopsis active goal must reference the current goal run profile",
+            "session_active_goal_runtime_mode",
+            expected=str(status_run.get("runtime_mode", "")).strip(),
+            observed=str(active_goal.get("runtime_mode", "")).strip(),
+            reason="session synopsis active goal must reference the current goal run runtime mode",
         ),
         _check(
             "session_active_goal_can_promote",
@@ -268,15 +281,22 @@ def build_report(request: GoalRuntimeFixedPointCheckRequest) -> dict[str, Any]:
     vault = request.vault.resolve()
     policy, resolved_policy_path = load_policy(vault, request.policy_path)
     context = request.context or RuntimeContext.from_policy(policy)
+    report_paths = {
+        "codex_goal_contract": request.codex_goal_contract_path,
+        "goal_run_status": request.goal_run_status_path,
+        "auto_improve_readiness": request.auto_improve_readiness_path,
+        "session_synopsis": request.session_synopsis_path,
+        "remediation_backlog": request.remediation_backlog_path,
+    }
     reports = {
-        "contract": _load_json_object(vault / CODEX_GOAL_CONTRACT_PATH),
-        "status": _load_json_object(vault / GOAL_RUN_STATUS_PATH),
-        "readiness": _load_json_object(vault / AUTO_IMPROVE_READINESS_PATH),
-        "session": _load_json_object(vault / SESSION_SYNOPSIS_PATH),
-        "backlog": _load_json_object(vault / REMEDIATION_BACKLOG_PATH),
+        "contract": _load_json_object(vault / request.codex_goal_contract_path),
+        "status": _load_json_object(vault / request.goal_run_status_path),
+        "readiness": _load_json_object(vault / request.auto_improve_readiness_path),
+        "session": _load_json_object(vault / request.session_synopsis_path),
+        "backlog": _load_json_object(vault / request.remediation_backlog_path),
     }
     checks = [
-        *_report_loaded_checks(reports),
+        *_report_loaded_checks(reports, report_paths=report_paths),
         *_contract_status_alignment(reports),
         *_session_active_goal_alignment(reports),
         *_blocker_alignment_checks(reports),
@@ -296,13 +316,7 @@ def build_report(request: GoalRuntimeFixedPointCheckRequest) -> dict[str, Any]:
                 "ops/schemas/goal-runtime-fixed-point-check.schema.json",
                 "mk/mechanism.mk",
             ],
-            file_inputs={
-                "codex_goal_contract": CODEX_GOAL_CONTRACT_PATH,
-                "goal_run_status": GOAL_RUN_STATUS_PATH,
-                "auto_improve_readiness": AUTO_IMPROVE_READINESS_PATH,
-                "session_synopsis": SESSION_SYNOPSIS_PATH,
-                "remediation_backlog": REMEDIATION_BACKLOG_PATH,
-            },
+            file_inputs=report_paths,
             source_tree_excluded_files=(request.out_path or DEFAULT_OUT,),
         ),
         "vault": report_path(vault, vault),
@@ -331,6 +345,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--vault", default=".", help="Repository/vault root.")
     parser.add_argument("--out", default=DEFAULT_OUT, help="Output report path.")
     parser.add_argument("--policy-path", default=None, help="Policy path relative to the vault.")
+    parser.add_argument("--codex-goal-contract", default=CODEX_GOAL_CONTRACT_PATH)
+    parser.add_argument("--goal-run-status", default=GOAL_RUN_STATUS_PATH)
+    parser.add_argument("--auto-improve-readiness", default=AUTO_IMPROVE_READINESS_PATH)
+    parser.add_argument("--session-synopsis", default=SESSION_SYNOPSIS_PATH)
+    parser.add_argument("--remediation-backlog", default=REMEDIATION_BACKLOG_PATH)
     return parser.parse_args(argv)
 
 
@@ -342,6 +361,11 @@ def main(argv: list[str] | None = None) -> int:
             vault=vault,
             out_path=args.out,
             policy_path=args.policy_path,
+            codex_goal_contract_path=args.codex_goal_contract,
+            goal_run_status_path=args.goal_run_status,
+            auto_improve_readiness_path=args.auto_improve_readiness,
+            session_synopsis_path=args.session_synopsis,
+            remediation_backlog_path=args.remediation_backlog,
         )
     )
     destination = write_report(vault, report, args.out)

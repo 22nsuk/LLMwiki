@@ -18,29 +18,34 @@ from ops.scripts.artifact_io_runtime import (
 from ops.scripts.codex_goal_client import (
     DEFAULT_CONTRACT_PATH,
     FileGoalBackend,
-    PROFILE_LADDER,
 )
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
 
-from .goal_runtime_profile import PROFILE_REQUIREMENTS
+from .goal_runtime_certificate import (
+    RUNTIME_MODES,
+    SESSION_REQUIREMENTS,
+    evidence_statuses,
+    runtime_duration_seconds,
+    runtime_mode as contract_runtime_mode,
+)
 
 
-DEFAULT_OUT = "ops/reports/goal-profile-verification.json"
+DEFAULT_OUT = "ops/reports/goal-runtime-certificate.json"
 DEFAULT_STATUS_REPORT_PATH = "ops/reports/goal-run-status.json"
-PRODUCER = "ops.scripts.goal_profile_verification"
+PRODUCER = "ops.scripts.goal_runtime_certificate_report"
 RUNNER_PRODUCER = "ops.scripts.goal_runtime_runner"
-SCHEMA_PATH = "ops/schemas/goal-profile-verification.schema.json"
-SOURCE_COMMAND = "python -m ops.scripts.goal_profile_verification --vault ."
+SCHEMA_PATH = "ops/schemas/goal-runtime-certificate.schema.json"
+SOURCE_COMMAND = "python -m ops.scripts.goal_runtime_certificate_report --vault ."
 
 
 @dataclass(frozen=True)
-class GoalProfileVerificationRequest:
+class GoalRuntimeCertificateRequest:
     vault: Path
     goal_contract_path: str = DEFAULT_CONTRACT_PATH
     status_report_path: str = DEFAULT_STATUS_REPORT_PATH
-    profile: str = ""
+    runtime_mode: str = ""
     apply_update: bool = False
     out_path: str | None = None
     policy_path: str | None = None
@@ -78,32 +83,6 @@ def _bool_value(value: object) -> bool:
 def _canonical_json_digest(payload: Mapping[str, Any]) -> str:
     data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
-
-
-def _profile_list(value: object) -> list[str]:
-    seen: set[str] = set()
-    profiles: list[str] = []
-    for profile in _list_text(value):
-        if profile in PROFILE_LADDER and profile not in seen:
-            profiles.append(profile)
-            seen.add(profile)
-    return profiles
-
-
-def _highest_profile(verified_profiles: list[str]) -> str:
-    highest = "unverified"
-    for profile in PROFILE_LADDER:
-        if profile in verified_profiles:
-            highest = profile
-    return highest
-
-
-def _next_profile_required(verified_profiles: list[str]) -> str:
-    verified = set(verified_profiles)
-    for profile in PROFILE_LADDER:
-        if profile not in verified:
-            return profile
-    return "none"
 
 
 def _parse_iso_z(value: object) -> dt.datetime | None:
@@ -148,19 +127,6 @@ def _report_status_fields(path: Path) -> dict[str, str]:
     return fields
 
 
-def _evidence_paths(vault: Path, profile: str) -> list[dict[str, str]]:
-    evidence: list[dict[str, str]] = []
-    for rel_path in PROFILE_REQUIREMENTS[profile]["evidence_paths"]:
-        absolute = vault / rel_path
-        item = {
-            "path": rel_path,
-            "status": "present" if absolute.is_file() else "missing",
-        }
-        item.update(_report_status_fields(absolute))
-        evidence.append(item)
-    return evidence
-
-
 def _load_audit_events(path: Path) -> list[dict[str, Any]]:
     if not path.is_file():
         return []
@@ -189,7 +155,7 @@ def _run_artifacts(vault: Path, status_report: Mapping[str, Any]) -> dict[str, A
 
     def path_check(field: str) -> tuple[str, Path, bool]:
         rel_path = str(artifacts.get(field, "")).strip()
-        absolute = vault / rel_path if rel_path else vault / "__missing_goal_profile_artifact__"
+        absolute = vault / rel_path if rel_path else vault / "__missing_goal_runtime_artifact__"
         present = bool(rel_path) and absolute.is_file()
         checks.append(
             {
@@ -450,29 +416,21 @@ def _has_success_then_followup(iterations: list[Mapping[str, Any]]) -> bool:
     return False
 
 
-def _session_requirement_summary(profile: str) -> dict[str, Any]:
-    requirements = PROFILE_REQUIREMENTS.get(profile, {})
+def _session_requirement_summary() -> dict[str, Any]:
+    requirements = SESSION_REQUIREMENTS
     accepted_stop_reasons = _list_text(requirements.get("accepted_stop_reasons"))
-    if not accepted_stop_reasons and profile in PROFILE_REQUIREMENTS:
-        accepted_stop_reasons = ["time_budget_exhausted"]
-    requires_followup = requirements.get("requires_success_then_followup")
-    requires_maintenance = requirements.get("requires_meaningful_maintenance")
     return {
         "accepted_stop_reasons": accepted_stop_reasons,
-        "minimum_iteration_count": _integer_value(requirements.get("minimum_iterations")),
+        "minimum_iteration_count": _integer_value(requirements.get("minimum_iteration_count")),
         "minimum_successful_iteration_count": _integer_value(
-            requirements.get("minimum_successful_iterations")
+            requirements.get("minimum_successful_iteration_count")
         ),
-        "requires_success_then_followup": requires_followup
-        if isinstance(requires_followup, bool)
-        else profile in PROFILE_REQUIREMENTS,
-        "requires_meaningful_maintenance": requires_maintenance
-        if isinstance(requires_maintenance, bool)
-        else False,
+        "requires_success_then_followup": bool(requirements.get("requires_success_then_followup", False)),
+        "requires_meaningful_maintenance": bool(requirements.get("requires_meaningful_maintenance", False)),
     }
 
 
-def _empty_session_evidence(profile: str, *, status: str, path: str) -> dict[str, Any]:
+def _empty_session_evidence(*, status: str, path: str) -> dict[str, Any]:
     return {
         "status": status,
         "path": path,
@@ -486,7 +444,7 @@ def _empty_session_evidence(profile: str, *, status: str, path: str) -> dict[str
         "meaningful_maintenance_cycle_count": 0,
         "expected_min_maintenance_cycle_count": 0,
         "maintenance_last_cycle_elapsed_seconds": 0,
-        **_session_requirement_summary(profile),
+        **_session_requirement_summary(),
     }
 
 
@@ -542,21 +500,19 @@ def _meaningful_maintenance_summary(payload: Mapping[str, Any]) -> dict[str, Any
 def _session_evidence(
     vault: Path,
     status_report: Mapping[str, Any],
-    *,
-    profile: str,
 ) -> dict[str, Any]:
     rel_path = _session_report_rel_path(status_report)
     if not rel_path:
-        return _empty_session_evidence(profile, status="missing", path="")
+        return _empty_session_evidence(status="missing", path="")
     payload = load_optional_json_object(vault / rel_path)
     if not payload:
-        return _empty_session_evidence(profile, status="missing", path=rel_path)
+        return _empty_session_evidence(status="missing", path=rel_path)
     iterations = _session_iterations(payload)
     successful_count = sum(1 for iteration in iterations if _successful_iteration(iteration))
     has_success_then_followup = _has_success_then_followup(iterations)
     stop_reason = str(payload.get("stop_reason", "")).strip()
     session_status = str(payload.get("status", "")).strip()
-    session_requirements = _session_requirement_summary(profile)
+    session_requirements = _session_requirement_summary()
     maintenance_summary = _meaningful_maintenance_summary(payload)
     clean = (
         session_status == "complete"
@@ -598,7 +554,7 @@ def _session_evidence_blockers(session_evidence: Mapping[str, Any]) -> list[str]
         if accepted_stop_reasons == ["time_budget_exhausted"]:
             blockers.append("auto-improve session did not run until time budget")
         else:
-            blockers.append("auto-improve session stop reason is not accepted for profile")
+            blockers.append("auto-improve session stop reason is not accepted for runtime certificate")
     minimum_iteration_count = _integer_value(session_evidence.get("minimum_iteration_count"))
     if _integer_value(session_evidence.get("iteration_count")) < minimum_iteration_count:
         if minimum_iteration_count == 2:
@@ -701,30 +657,26 @@ def _verification_blockers(
     vault: Path,
     contract: Mapping[str, Any],
     status_report: Mapping[str, Any],
-    profile: str,
-    verified_profiles: list[str],
+    runtime_mode: str,
     run_artifacts: Mapping[str, Any],
     session_evidence: Mapping[str, Any],
 ) -> list[str]:
     blockers: list[str] = []
-    if profile not in PROFILE_REQUIREMENTS:
-        return [f"unsupported profile: {profile}"]
-    next_profile = _next_profile_required(verified_profiles)
-    if profile != next_profile:
-        blockers.append(f"profile out of sequence: expected {next_profile}")
+    if runtime_mode not in RUNTIME_MODES:
+        return [f"unsupported runtime mode: {runtime_mode}"]
     if not status_report:
         blockers.append("goal run status report missing")
         return blockers
 
     run = _mapping_value(status_report, "run")
-    if str(run.get("profile", "")).strip() != profile:
-        blockers.append("goal run status profile mismatch")
+    if str(run.get("runtime_mode", "")).strip() != runtime_mode:
+        blockers.append("goal run status runtime mode mismatch")
     if str(run.get("status", "")).strip() != "completed":
         blockers.append("goal run is not completed")
     observed_elapsed_seconds = _elapsed_seconds(run.get("started_at"), run.get("completed_at"))
-    minimum_elapsed_seconds = int(PROFILE_REQUIREMENTS[profile]["minimum_elapsed_seconds"])
-    if observed_elapsed_seconds < minimum_elapsed_seconds:
-        blockers.append("profile minimum elapsed time not met")
+    max_runtime_seconds = runtime_duration_seconds(contract)
+    if observed_elapsed_seconds > max_runtime_seconds:
+        blockers.append("goal run exceeded runtime duration budget")
     if run_artifacts.get("status") != "clean":
         blockers.append("goal run artifacts are not clean")
     blockers.extend(_session_evidence_blockers(session_evidence))
@@ -736,45 +688,52 @@ def _verification_blockers(
             observed_elapsed_seconds=observed_elapsed_seconds,
         )
     )
-    for evidence in _evidence_paths(vault, profile):
+    for evidence in evidence_statuses(vault, contract):
         if evidence["status"] != "present":
-            blockers.append(f"profile evidence missing: {evidence['path']}")
+            blockers.append(f"runtime certificate evidence missing: {evidence['path']}")
+        elif evidence.get("report_status") in {"fail", "blocked"}:
+            blockers.append(f"runtime certificate evidence is not clean: {evidence['path']}")
     promotion_guard = _mapping_value(contract, "promotion_guard")
-    if profile != "5d_sustained" and bool(promotion_guard.get("sustained_runtime_claimed", False)):
-        blockers.append("sustained runtime was claimed before 5d profile verification")
-    if profile == "5d_sustained":
-        if not bool(promotion_guard.get("can_promote_result", False)):
-            blockers.append("can_promote_result is not clean for 5d verification")
-        if not bool(promotion_guard.get("sealed_authority_clean", False)) or not _sealed_authority_clean(vault):
-            blockers.append("sealed authority clean pass is not verified for 5d verification")
+    if bool(promotion_guard.get("sustained_runtime_claimed", False)) and not bool(
+        promotion_guard.get("runtime_certificate_verified", False)
+    ):
+        blockers.append("sustained runtime was claimed before loop certificate verification")
+    if not bool(promotion_guard.get("can_promote_result", False)):
+        blockers.append("can_promote_result is not clean for runtime certificate")
+    if not bool(promotion_guard.get("sealed_authority_clean", False)) or not _sealed_authority_clean(vault):
+        blockers.append("sealed authority clean pass is not verified for runtime certificate")
+    promotion_blockers = [
+        blocker
+        for blocker in _list_text(promotion_guard.get("promotion_blockers"))
+        if blocker != "self-improvement loop certificate incomplete"
+    ]
+    if promotion_blockers:
+        blockers.append("promotion guard still has blockers")
     return list(dict.fromkeys(blockers))
 
 
-def _contract_patch_for_verified_profile(
+def _contract_patch_for_verified_certificate(
     contract: Mapping[str, Any],
-    profile: str,
+    *,
+    verified_at: str,
 ) -> dict[str, Any]:
-    runtime_profile = dict(_mapping_value(contract, "runtime_profile"))
-    verified_profiles = _profile_list(runtime_profile.get("verified_profiles"))
-    if profile not in verified_profiles:
-        verified_profiles.append(profile)
-    runtime_profile["verified_profiles"] = verified_profiles
-    runtime_profile["next_profile"] = _next_profile_required(verified_profiles)
+    runtime = dict(_mapping_value(contract, "runtime"))
+    runtime["certificate_status"] = "verified"
+    runtime["verified_at"] = verified_at
     promotion_guard = dict(_mapping_value(contract, "promotion_guard"))
-    promotion_guard["profile_verified"] = _highest_profile(verified_profiles)
+    promotion_guard["runtime_certificate_verified"] = True
     promotion_guard["sustained_runtime_claimed"] = (
         bool(promotion_guard.get("sustained_runtime_claimed", False))
-        and promotion_guard["profile_verified"] == "5d_sustained"
         and bool(promotion_guard.get("can_promote_result", False))
         and bool(promotion_guard.get("sealed_authority_clean", False))
     )
     return {
-        "runtime_profile": runtime_profile,
+        "runtime": runtime,
         "promotion_guard": promotion_guard,
     }
 
 
-def build_report(request: GoalProfileVerificationRequest) -> dict[str, Any]:
+def build_report(request: GoalRuntimeCertificateRequest) -> dict[str, Any]:
     vault = request.vault.resolve()
     policy, resolved_policy_path = load_policy(vault, request.policy_path)
     runtime_context = request.context or RuntimeContext.from_policy(policy)
@@ -782,10 +741,10 @@ def build_report(request: GoalProfileVerificationRequest) -> dict[str, Any]:
     backend = FileGoalBackend(vault=vault, contract_path=request.goal_contract_path)
     contract = backend.get_goal()
     contract_sha256_before = _canonical_json_digest(contract)
-    runtime_profile = _mapping_value(contract, "runtime_profile")
-    verified_profiles_before = _profile_list(runtime_profile.get("verified_profiles"))
-    target_profile = request.profile.strip() or _next_profile_required(verified_profiles_before)
-    already_verified = target_profile in verified_profiles_before
+    runtime = _mapping_value(contract, "runtime")
+    target_runtime_mode = request.runtime_mode.strip() or contract_runtime_mode(contract)
+    certificate_status_before = str(runtime.get("certificate_status", "unverified")).strip() or "unverified"
+    already_verified = certificate_status_before == "verified"
     status_report = load_optional_json_object(vault / request.status_report_path)
     run_artifacts = _run_artifacts(vault, status_report) if status_report else {
         "status": "missing",
@@ -794,56 +753,59 @@ def build_report(request: GoalProfileVerificationRequest) -> dict[str, Any]:
         "runner_command_audit_current": False,
     }
     session_evidence = (
-        _session_evidence(vault, status_report, profile=target_profile)
+        _session_evidence(vault, status_report)
         if status_report
-        else _empty_session_evidence(target_profile, status="missing", path="")
+        else _empty_session_evidence(status="missing", path="")
     )
     blockers: list[str] = []
-    if target_profile == "none":
-        verification_status = "already_complete"
-    elif already_verified:
+    if already_verified:
         verification_status = "already_verified"
     else:
         blockers = _verification_blockers(
             vault=vault,
             contract=contract,
             status_report=status_report,
-            profile=target_profile,
-            verified_profiles=verified_profiles_before,
+            runtime_mode=target_runtime_mode,
             run_artifacts=run_artifacts,
             session_evidence=session_evidence,
         )
         verification_status = "eligible" if not blockers else "blocked"
 
     apply_allowed = verification_status == "eligible"
-    patch = _contract_patch_for_verified_profile(contract, target_profile) if apply_allowed else {}
-    verified_profiles_after = verified_profiles_before
-    profile_verified_after = str(_mapping_value(contract, "promotion_guard").get("profile_verified", "unverified"))
-    next_profile_after = _next_profile_required(verified_profiles_before)
+    patch = (
+        _contract_patch_for_verified_certificate(contract, verified_at=generated_at)
+        if apply_allowed
+        else {}
+    )
+    certificate_status_after = certificate_status_before
+    runtime_certificate_verified_before = bool(
+        _mapping_value(contract, "promotion_guard").get("runtime_certificate_verified", False)
+    )
+    runtime_certificate_verified_after = runtime_certificate_verified_before
     applied = False
     contract_sha256_after = contract_sha256_before
     if request.apply_update and apply_allowed:
         updated = backend.update_goal(patch)
         applied = True
         contract_sha256_after = _canonical_json_digest(updated)
-        verified_profiles_after = _profile_list(_mapping_value(updated, "runtime_profile").get("verified_profiles"))
-        profile_verified_after = str(
-            _mapping_value(updated, "promotion_guard").get("profile_verified", "unverified")
+        certificate_status_after = str(
+            _mapping_value(updated, "runtime").get("certificate_status", "unverified")
         )
-        next_profile_after = _next_profile_required(verified_profiles_after)
+        runtime_certificate_verified_after = bool(
+            _mapping_value(updated, "promotion_guard").get("runtime_certificate_verified", False)
+        )
     elif patch:
-        patched_runtime = _mapping_value(patch, "runtime_profile")
+        patched_runtime = _mapping_value(patch, "runtime")
         patched_guard = _mapping_value(patch, "promotion_guard")
-        verified_profiles_after = _profile_list(patched_runtime.get("verified_profiles"))
-        profile_verified_after = str(patched_guard.get("profile_verified", profile_verified_after))
-        next_profile_after = _next_profile_required(verified_profiles_after)
+        certificate_status_after = str(
+            patched_runtime.get("certificate_status", certificate_status_after)
+        )
+        runtime_certificate_verified_after = bool(
+            patched_guard.get("runtime_certificate_verified", runtime_certificate_verified_after)
+        )
 
     run = _mapping_value(status_report, "run")
-    minimum_elapsed_seconds = (
-        int(PROFILE_REQUIREMENTS[target_profile]["minimum_elapsed_seconds"])
-        if target_profile in PROFILE_REQUIREMENTS
-        else 0
-    )
+    max_runtime_seconds = runtime_duration_seconds(contract)
     observed_elapsed_seconds = _elapsed_seconds(run.get("started_at"), run.get("completed_at"))
     command_observability = _command_observability_summary(
         status_report=status_report,
@@ -858,7 +820,7 @@ def build_report(request: GoalProfileVerificationRequest) -> dict[str, Any]:
         )
         else "incomplete"
     )
-    evidence_paths = _evidence_paths(vault, target_profile) if target_profile in PROFILE_REQUIREMENTS else []
+    evidence_paths = evidence_statuses(vault, contract)
     file_inputs = {
         "goal_contract": request.goal_contract_path,
         "goal_run_status": request.status_report_path,
@@ -871,17 +833,17 @@ def build_report(request: GoalProfileVerificationRequest) -> dict[str, Any]:
         **build_canonical_report_envelope(
             vault,
             generated_at=generated_at,
-            artifact_kind="goal_profile_verification",
+            artifact_kind="goal_runtime_certificate",
             producer=PRODUCER,
             source_command=SOURCE_COMMAND,
             resolved_policy_path=resolved_policy_path,
             schema_path=SCHEMA_PATH,
             source_paths=[
-                "ops/scripts/mechanism/goal_profile_verification.py",
-                "ops/scripts/mechanism/goal_runtime_profile.py",
+                "ops/scripts/mechanism/goal_runtime_certificate_report.py",
+                "ops/scripts/mechanism/goal_runtime_certificate.py",
                 "ops/scripts/mechanism/goal_run_status.py",
                 "ops/scripts/core/codex_goal_client.py",
-                "ops/schemas/goal-profile-verification.schema.json",
+                "ops/schemas/goal-runtime-certificate.schema.json",
                 "ops/schemas/codex-goal-contract.schema.json",
                 "ops/schemas/goal-run-status.schema.json",
             ],
@@ -895,10 +857,10 @@ def build_report(request: GoalProfileVerificationRequest) -> dict[str, Any]:
             "contract_sha256_before": contract_sha256_before,
             "contract_sha256_after": contract_sha256_after,
         },
-        "profile": {
-            "target_profile": target_profile,
+        "certificate": {
+            "target_runtime_mode": target_runtime_mode,
             "verification_status": verification_status,
-            "minimum_elapsed_seconds": minimum_elapsed_seconds,
+            "max_runtime_seconds": max_runtime_seconds,
             "observed_elapsed_seconds": observed_elapsed_seconds,
             "already_verified": already_verified,
             "eligible": apply_allowed or verification_status in {"already_verified", "already_complete"},
@@ -907,7 +869,7 @@ def build_report(request: GoalProfileVerificationRequest) -> dict[str, Any]:
             "status_report_path": request.status_report_path,
             "run_id": str(run.get("run_id", "")).strip(),
             "run_status": str(run.get("status", "")).strip(),
-            "run_profile": str(run.get("profile", "")).strip(),
+            "run_runtime_mode": str(run.get("runtime_mode", "")).strip(),
             "started_at": str(run.get("started_at", "")).strip(),
             "completed_at": str(run.get("completed_at", "")).strip(),
         },
@@ -919,14 +881,10 @@ def build_report(request: GoalProfileVerificationRequest) -> dict[str, Any]:
             "apply_requested": request.apply_update,
             "apply_allowed": apply_allowed,
             "applied": applied,
-            "verified_profiles_before": verified_profiles_before,
-            "verified_profiles_after": verified_profiles_after,
-            "profile_verified_before": str(
-                _mapping_value(contract, "promotion_guard").get("profile_verified", "unverified")
-            ),
-            "profile_verified_after": profile_verified_after,
-            "next_profile_before": _next_profile_required(verified_profiles_before),
-            "next_profile_after": next_profile_after,
+            "certificate_status_before": certificate_status_before,
+            "certificate_status_after": certificate_status_after,
+            "runtime_certificate_verified_before": runtime_certificate_verified_before,
+            "runtime_certificate_verified_after": runtime_certificate_verified_after,
         },
         "blockers": blockers,
         "status": "attention" if blockers else "pass",
@@ -941,7 +899,7 @@ def write_report(vault: Path, report: Mapping[str, Any], out_path: str | None = 
             schema_path=SCHEMA_PATH,
             out_path=out_path,
             default_relative_path=DEFAULT_OUT,
-            context="goal profile verification schema validation failed",
+            context="goal runtime certificate schema validation failed",
             trailing_newline=True,
         )
     )
@@ -952,8 +910,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--vault", default=".", help="Repository/vault root.")
     parser.add_argument("--goal-contract", default=DEFAULT_CONTRACT_PATH)
     parser.add_argument("--status-report", default=DEFAULT_STATUS_REPORT_PATH)
-    parser.add_argument("--profile", default="")
-    parser.add_argument("--apply", action="store_true", help="Persist verified profile progress.")
+    parser.add_argument("--runtime-mode", default="")
+    parser.add_argument("--profile", dest="runtime_mode", default=argparse.SUPPRESS)
+    parser.add_argument("--apply", action="store_true", help="Persist verified runtime certificate.")
     parser.add_argument("--out", default=DEFAULT_OUT)
     return parser.parse_args(argv)
 
@@ -962,11 +921,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
     report = build_report(
-        GoalProfileVerificationRequest(
+        GoalRuntimeCertificateRequest(
             vault=vault,
             goal_contract_path=args.goal_contract,
             status_report_path=args.status_report,
-            profile=args.profile,
+            runtime_mode=args.runtime_mode,
             apply_update=args.apply,
             out_path=args.out,
         )

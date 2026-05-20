@@ -144,6 +144,7 @@
         "log_entries_scanned",
         "proposals_emitted",
         "blocked_proposals",
+        "next_run_repair_proposals",
         "queue_pressure_summary"
       ],
       "properties": {
@@ -168,6 +169,10 @@
           "type": "integer",
           "minimum": 0
         },
+        "next_run_repair_proposals": {
+          "type": "integer",
+          "minimum": 0
+        },
         "queue_pressure_summary": {
           "type": "string"
         }
@@ -181,6 +186,7 @@
         "skipped_candidates",
         "evidence_gaps",
         "family_session_calibration",
+        "next_run_decision_queue",
         "queue_selection",
         "recent_log_overlap"
       ],
@@ -373,6 +379,58 @@
                   }
                 },
                 "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "next_run_decision_queue": {
+          "type": "object",
+          "required": [
+            "session_reports_scanned",
+            "decisions_considered",
+            "open_carry_forward_decisions",
+            "repair_proposals_emitted",
+            "decision_counts",
+            "action_counts",
+            "selected_target_proposal_ids"
+          ],
+          "properties": {
+            "session_reports_scanned": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "decisions_considered": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "open_carry_forward_decisions": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "repair_proposals_emitted": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "decision_counts": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "action_counts": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "selected_target_proposal_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
               }
             }
           },
@@ -600,7 +658,8 @@
               "repeated_same_eval_after_promote",
               "repeated_discard_runs",
               "bootstrap_history_insufficient",
-              "recent_log_overlap_queue_blocked"
+              "recent_log_overlap_queue_blocked",
+              "next_run_failure_repair"
             ]
           },
           "single_mechanism_scope": {

@@ -17,6 +17,7 @@ ops/scripts/mechanism/auto_improve_execution_runtime.py
 ops/scripts/mechanism/auto_improve_iteration_runtime.py
 ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py
 ops/scripts/mechanism/auto_improve_iteration_telemetry_runtime.py
+ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py
 ops/scripts/mechanism/auto_improve_outcome_runtime.py
 ops/scripts/mechanism/auto_improve_queue_runtime.py
 ops/scripts/mechanism/auto_improve_route_scaffold_runtime.py
@@ -52,6 +53,7 @@ ops/scripts/mechanism/finalize_run_write_runtime.py
 ops/scripts/mechanism/goal_runtime_backoff.py
 ops/scripts/mechanism/goal_runtime_clean_transient.py
 ops/scripts/mechanism/goal_runtime_fixed_point_check.py
+ops/scripts/mechanism/goal_runtime_lock.py
 ops/scripts/mechanism/goal_runtime_maintenance.py
 ops/scripts/mechanism/goal_run_status.py
 ops/scripts/mechanism/goal_worktree_guard.py
@@ -233,8 +235,8 @@ ops/scripts/eval/wikilink_runtime.py
 ops/scripts/core/yaml_runtime.py
 ops/scripts/mechanism/auto_improve_readiness_worktree_guard_runtime.py
 ops/scripts/mechanism/codex_goal_prompt.py
-ops/scripts/mechanism/goal_profile_verification.py
-ops/scripts/mechanism/goal_runtime_profile.py
+ops/scripts/mechanism/goal_runtime_certificate.py
+ops/scripts/mechanism/goal_runtime_certificate_report.py
 ops/scripts/mechanism/goal_runtime_resume.py
 ops/scripts/mechanism/goal_runtime_runner.py
 ops/scripts/learning/remediation_backlog.py

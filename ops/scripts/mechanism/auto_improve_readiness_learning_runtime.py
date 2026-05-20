@@ -289,7 +289,7 @@ def _latest_routing_provenance_aggregate(vault: Path) -> tuple[str, dict[str, An
     if not reports_dir.exists():
         return "", {}
 
-    latest_key = (-1, "", "")
+    latest_key = (-1, -1, -1, "", "")
     latest_rel_path = ""
     latest_payload: dict[str, Any] = {}
     for path in sorted(reports_dir.glob("*.json")):
@@ -299,8 +299,27 @@ def _latest_routing_provenance_aggregate(vault: Path) -> tuple[str, dict[str, An
         generated_at = str(payload.get("generated_at", "")).strip()
         rel_path = report_path(vault, path)
         session_id = str(payload.get("session_id", "")).strip()
+        audit_rollup = payload.get("audit_rollup")
+        loop_health = audit_rollup.get("loop_health") if isinstance(audit_rollup, dict) else None
+        telemetry_coverage_ratio = 0.0
+        attempt_count = 0
+        finalized_run_count = 0
+        health_flags: list[str] = []
+        if isinstance(loop_health, dict):
+            coverage_ratios = loop_health.get("coverage_ratios")
+            if isinstance(coverage_ratios, dict):
+                telemetry_coverage_ratio = _float_value(coverage_ratios.get("telemetry"))
+            attempt_count = _int_value(loop_health.get("attempt_count"))
+            finalized_run_count = _int_value(loop_health.get("finalized_run_count"))
+            health_flags = _string_list(loop_health.get("health_flags"))
+        has_loop_health_evidence = int(
+            telemetry_coverage_ratio > 0.0
+            or attempt_count > 0
+            or finalized_run_count > 0
+            or ("missing_telemetry_coverage" not in health_flags and bool(health_flags))
+        )
         standalone_penalty = 0 if session_id == "standalone-run-telemetry" else 1
-        candidate_key = (standalone_penalty, generated_at, rel_path)
+        candidate_key = (has_loop_health_evidence, standalone_penalty, int(isinstance(loop_health, dict)), generated_at, rel_path)
         if candidate_key >= latest_key:
             latest_key = candidate_key
             latest_rel_path = rel_path
@@ -683,7 +702,7 @@ def _learning_readiness_assessment(
             else (
                 "Execution readiness is pass, but learning readiness still requires explicit operator review. "
                 "Rerun goal-native auto-improve with "
-                f"`{AUTO_IMPROVE_GOAL_ALLOW_LEARNING_UNCERTAIN_COMMAND}` only if you want a bounded 30m trial "
+                f"`{AUTO_IMPROVE_GOAL_ALLOW_LEARNING_UNCERTAIN_COMMAND}` only if you want a bounded runtime "
                 "with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
             )
         )

@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/script-output-surfaces.schema.json",
   "artifact_kind": "script_output_surfaces",
-  "generated_at": "2026-05-20T12:38:48Z",
+  "generated_at": "2026-05-20T17:15:57Z",
   "producer": "ops.scripts.script_output_surfaces",
   "source_command": "python -m ops.scripts.script_output_surfaces --vault . --out ops/script-output-surfaces.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "4f1977fd24ad4c07da0c7529c41aa615a494d463e4045e0a2e7af27aa109b0c1",
+  "source_tree_fingerprint": "9408f01472eb1c07a29ae6656fdb87418f61dfd2ff7b3612d5a076de47a61ee6",
   "input_fingerprints": {
-    "policy": "5f97cf7619b458d6e8aa229fa3f318d888cf78c4a806b6b72a552c360ceb0894",
+    "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "02cee320f449f8666c341a0a389855f3ef5ac34bddcdf4c2767b5d4b384a9722",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e900c33d02f3ad2e070458f03812edda50bfd1172100ba43707ef8dfdb11cc1c",
-    "ops_scripts": "578816135235456bfa15ddf0bae4b6949e890f62020d59a32e0529a8e03ffa53",
+    "ops_scripts": "a144aadbb19995f151c804049382d4bfa086ceeceea0d4dff7af9a143c156d86",
     "classification_values": "0ba4b7fd8868f9c9d070bea6d90c2cee76e2b9c8089223c413c8e898794923f4"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T12:38:48Z"
+    "checked_at": "2026-05-20T17:15:57Z"
   },
   "version": 1,
   "description": "Generated inventory for ops/scripts output path surfaces. Tests compare this registry with the live AST-derived inventory.",
@@ -1040,14 +1040,21 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_loop.py",
-      "classification": "repo_artifact",
-      "output_options": [
-        "--status-out"
-      ],
+      "classification": "no_output",
+      "output_options": [],
       "references_resolve_output_path": false,
       "references_resolve_repo_output_path": false,
       "direct_fallback_eligible": true,
-      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+      "reason": "no configurable output path surface detected"
+    },
+    {
+      "path": "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
+      "classification": "no_output",
+      "output_options": [],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": false,
+      "reason": "no configurable output path surface detected"
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_outcome_runtime.py",
@@ -1252,17 +1259,6 @@
       "reason": "no configurable output path surface detected"
     },
     {
-      "path": "ops/scripts/mechanism/goal_profile_verification.py",
-      "classification": "repo_artifact",
-      "output_options": [
-        "--out"
-      ],
-      "references_resolve_output_path": false,
-      "references_resolve_repo_output_path": false,
-      "direct_fallback_eligible": true,
-      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
-    },
-    {
       "path": "ops/scripts/mechanism/goal_run_status.py",
       "classification": "repo_artifact",
       "output_options": [
@@ -1281,6 +1277,26 @@
       "references_resolve_repo_output_path": false,
       "direct_fallback_eligible": false,
       "reason": "no configurable output path surface detected"
+    },
+    {
+      "path": "ops/scripts/mechanism/goal_runtime_certificate.py",
+      "classification": "no_output",
+      "output_options": [],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": false,
+      "reason": "no configurable output path surface detected"
+    },
+    {
+      "path": "ops/scripts/mechanism/goal_runtime_certificate_report.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_clean_transient.py",
@@ -1305,16 +1321,16 @@
       "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
-      "path": "ops/scripts/mechanism/goal_runtime_maintenance.py",
+      "path": "ops/scripts/mechanism/goal_runtime_lock.py",
       "classification": "no_output",
       "output_options": [],
       "references_resolve_output_path": false,
       "references_resolve_repo_output_path": false,
-      "direct_fallback_eligible": false,
+      "direct_fallback_eligible": true,
       "reason": "no configurable output path surface detected"
     },
     {
-      "path": "ops/scripts/mechanism/goal_runtime_profile.py",
+      "path": "ops/scripts/mechanism/goal_runtime_maintenance.py",
       "classification": "no_output",
       "output_options": [],
       "references_resolve_output_path": false,

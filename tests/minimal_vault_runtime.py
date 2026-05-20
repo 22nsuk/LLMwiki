@@ -233,10 +233,10 @@ SCHEMA_PATHS = {
     / "schemas"
     / "test-execution-summary.schema.json",
     "codex-goal-prompt.schema.json": REPO_ROOT / "ops" / "schemas" / "codex-goal-prompt.schema.json",
-    "goal-profile-verification.schema.json": REPO_ROOT
+    "goal-runtime-certificate.schema.json": REPO_ROOT
     / "ops"
     / "schemas"
-    / "goal-profile-verification.schema.json",
+    / "goal-runtime-certificate.schema.json",
     "goal-worktree-guard.schema.json": REPO_ROOT / "ops" / "schemas" / "goal-worktree-guard.schema.json",
     "test-deselection-policy.schema.json": REPO_ROOT
     / "ops"

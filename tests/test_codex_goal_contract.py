@@ -20,9 +20,9 @@ def sample_goal_contract() -> dict[str, Any]:
         "$schema": "ops/schemas/codex-goal-contract.schema.json",
         "schema_version": 1,
         "contract_id": "goal-20260517-auto-improve-runtime",
-        "objective": "Run bounded auto-improve only after profile evidence is durable.",
+        "objective": "Run bounded auto-improve only after the loop certificate is durable.",
         "non_goals": [
-            "Do not claim sustained runtime before profile verification.",
+            "Do not claim sustained runtime before certificate verification.",
             "Do not promote while blockers remain.",
         ],
         "allowed_roots": [
@@ -30,32 +30,21 @@ def sample_goal_contract() -> dict[str, Any]:
             {"path": "tests/", "purpose": "regression coverage"},
         ],
         "budgets": {
-            "max_wall_clock_seconds": 1800,
+            "max_wall_clock_seconds": 3600,
             "max_proposals": 1,
             "max_consecutive_failures": 1,
             "heartbeat_interval_seconds": 300,
             "checkpoint_interval_seconds": 1800,
-            "profile_ladder": [
-                {
-                    "profile": "30m_trial",
-                    "max_wall_clock_seconds": 1800,
-                    "max_proposals": 1,
-                    "max_consecutive_failures": 1,
-                    "required_before_next_profile": (
-                        "one-proposal trial evidence includes runtime maintenance "
-                        "and stays promotion-blocked"
-                    ),
-                }
-            ],
         },
         "created_at": "2026-05-17T00:00:00Z",
         "created_by": "codex",
         "status": "active",
-        "runtime_profile": {
-            "current_profile": "30m_trial",
-            "verified_profiles": [],
-            "next_profile": "30m_trial",
-            "max_unattended_seconds": 1800,
+        "runtime": {
+            "mode": "self_improvement_loop",
+            "duration_seconds": 3600,
+            "max_unattended_seconds": 3600,
+            "certificate_status": "unverified",
+            "verified_at": "",
         },
         "goal_backend": {
             "backend_type": "file",
@@ -64,8 +53,8 @@ def sample_goal_contract() -> dict[str, Any]:
         },
         "stop_conditions": [
             {
-                "condition_id": "profile_gate_failed",
-                "description": "Stop if the active profile cannot be verified.",
+                "condition_id": "runtime_certificate_failed",
+                "description": "Stop if the loop certificate cannot be verified.",
                 "severity": "stop",
             }
         ],
@@ -76,15 +65,64 @@ def sample_goal_contract() -> dict[str, Any]:
                 "description": "Readiness report separates execution from promotion.",
                 "freshness": "current_source_tree",
                 "required_for_promotion": True,
+            },
+            {
+                "evidence_id": "goal_run_status",
+                "path": "ops/reports/goal-run-status.json",
+                "description": "Goal status records loop observability.",
+                "freshness": "current_run",
+                "required_for_promotion": True,
+            },
+            {
+                "evidence_id": "session_synopsis",
+                "path": "ops/reports/session-synopsis.json",
+                "description": "Session synopsis records loop state.",
+                "freshness": "current_source_tree",
+                "required_for_promotion": True,
+            },
+            {
+                "evidence_id": "remediation_backlog",
+                "path": "ops/reports/remediation-backlog.json",
+                "description": "Remediation backlog agrees with loop state.",
+                "freshness": "current_source_tree",
+                "required_for_promotion": True,
+            },
+            {
+                "evidence_id": "source_package_clean_extract",
+                "path": "ops/reports/source-package-clean-extract.json",
+                "description": "Source package replay is clean.",
+                "freshness": "current_source_tree",
+                "required_for_promotion": True,
+            },
+            {
+                "evidence_id": "public_check_summary",
+                "path": "ops/reports/public-check-summary.json",
+                "description": "Public check is clean.",
+                "freshness": "current_source_tree",
+                "required_for_promotion": True,
+            },
+            {
+                "evidence_id": "release_authority",
+                "path": "ops/reports/release-closeout-summary.json",
+                "description": "Release authority blocks promotion until machine release is allowed.",
+                "freshness": "current_source_tree",
+                "required_for_promotion": True,
+            },
+            {
+                "evidence_id": "goal_worktree_guard",
+                "path": "tmp/goal-worktree-guard.json",
+                "description": "Git/ZIP preflight blocks promotion from dirty, non-Git, or replay-only trees.",
+                "freshness": "current_source_tree",
+                "required_for_promotion": True,
             }
         ],
         "promotion_guard": {
             "can_promote_result": False,
-            "promotion_blockers": ["profile ladder incomplete"],
+            "promotion_blockers": ["self-improvement loop certificate incomplete"],
             "sealed_authority_clean": False,
-            "profile_verified": "unverified",
+            "runtime_certificate_verified": False,
             "sustained_runtime_claimed": False,
-            "no_sustained_claim_before_profile_verified": True,
+            "no_sustained_claim_before_certificate_verified": True,
         },
         "metadata": {},
     }
@@ -103,7 +141,7 @@ class CodexGoalContractSchemaTests(unittest.TestCase):
             "non_goals",
             "allowed_roots",
             "budgets",
-            "runtime_profile",
+            "runtime",
             "goal_backend",
             "stop_conditions",
             "required_evidence",
@@ -140,30 +178,30 @@ class CodexGoalContractSchemaTests(unittest.TestCase):
         self.assertTrue(any("promotion_blockers" in error for error in errors), errors)
         self.assertTrue(any("sealed_authority_clean" in error for error in errors), errors)
 
-    def test_sustained_runtime_claim_requires_verified_five_day_profile(self) -> None:
+    def test_sustained_runtime_claim_requires_runtime_certificate(self) -> None:
         payload = sample_goal_contract()
         payload["promotion_guard"].update(
             {
                 "can_promote_result": True,
                 "promotion_blockers": [],
                 "sealed_authority_clean": True,
-                "profile_verified": "2d_candidate",
+                "runtime_certificate_verified": False,
                 "sustained_runtime_claimed": True,
             }
         )
 
         errors = validate_with_schema(payload, self.schema)
 
-        self.assertTrue(any("profile_verified" in error for error in errors), errors)
+        self.assertTrue(any("runtime_certificate_verified" in error for error in errors), errors)
 
-    def test_sustained_runtime_claim_allows_verified_five_day_profile(self) -> None:
+    def test_sustained_runtime_claim_allows_verified_runtime_certificate(self) -> None:
         payload = deepcopy(sample_goal_contract())
         payload["promotion_guard"].update(
             {
                 "can_promote_result": True,
                 "promotion_blockers": [],
                 "sealed_authority_clean": True,
-                "profile_verified": "5d_sustained",
+                "runtime_certificate_verified": True,
                 "sustained_runtime_claimed": True,
             }
         )

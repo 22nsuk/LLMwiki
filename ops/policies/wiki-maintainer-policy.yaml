@@ -947,6 +947,30 @@ subagent_routing_policy:
         high: 3
         extreme: 3
       pressure_overrides: {}
+    scope-gate-reviewer:
+      sandbox_mode: read-only
+      default_rung: 2
+      allowed_rungs:
+        - 2
+        - 3
+      score_band_rungs:
+        low: 2
+        moderate: 2
+        high: 3
+        extreme: 3
+      pressure_overrides:
+        change_surface:
+          threshold: 3
+          min_rung: 3
+        dependency_impact:
+          threshold: 4
+          min_rung: 3
+        artifact_heterogeneity:
+          threshold: 3
+          min_rung: 3
+        environment_risk:
+          threshold: 3
+          min_rung: 3
     parity-replay-auditor:
       sandbox_mode: read-only
       default_rung: 3
@@ -1215,6 +1239,7 @@ mutation_proposal:
     - repeated_discard_runs
     - bootstrap_history_insufficient
     - recent_log_overlap_queue_blocked
+    - next_run_failure_repair
 
 refactor_triggers:
   max_page_lines_before_review: 160

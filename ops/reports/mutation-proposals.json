@@ -1,19 +1,20 @@
 {
   "$schema": "ops/schemas/mutation-proposals.schema.json",
   "artifact_kind": "mutation_proposals_report",
-  "generated_at": "2026-05-20T12:07:12Z",
+  "generated_at": "2026-05-20T16:48:25Z",
   "producer": "ops.scripts.mutation_proposal_runtime",
   "source_command": "python -m ops.scripts.mutation_proposal --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "9c7a2a83006cd9b5dfd80f7457fcfbb506d221fa2c79f22af577bb5e7152f94c",
+  "source_tree_fingerprint": "ac46b5999a4ffeeda7ba9d12e642f0a3a8ebbcb21484279381042a613041f99f",
   "input_fingerprints": {
-    "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
-    "schema": "353b4d7e2eae002662a75b043aec091b55b0eca7e339590e79088043c0bbba8f",
+    "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
+    "schema": "45c5c7af5d8210fc6cbe07d6c5aeb5d3ff286b38a5606e71269eef9bb900fab3",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "a332ee114c61d042a76710b9a6eb76eb7a51cbbf694f595813cc634220b479b8",
-    "mechanism_review_report": "9105f0653723dc14e287ecb5b2083208b6fa9452c43a93c8f9fcfa07b2526f1a",
-    "outcome_metrics": "d9e84b9e0c852b73f909d18bf815d4bd185e11333704ca1cdcd288036212f45c",
+    "source_paths": "7a0c3d42e43d12b6185c9b749f4ebc482ffcacd6cbcb44250af9ee37f7ea36ef",
+    "mechanism_review_report": "c7eacb9cd5a7ba187acabd3dbfac323a19d73151b6dd7c8ecf23d48083df992e",
+    "outcome_metrics": "f6efe285d1753c7421fbae593a9417bfc18feebcdcbedff403aea7e814bc2648",
     "system_log": "ea2ae8e4ca3addf46a1af9fe74defbd9abb9aedd2e7a22661f5f023c5ae5167e",
+    "auto_improve_session_reports": "8351e0ae48d9933a5a585efb7218149b416e5e220c06dc9f20e514fac5697067",
     "mutation_dedupe_window": "ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d",
     "mutation_max_proposals": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
     "mutation_recent_log_overlap_max_age_days": "7902699be42c8a8e46fbbb4501726517e86b22c56a189f7625a6da49081b2451"
@@ -24,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T12:07:12Z"
+    "checked_at": "2026-05-20T16:48:25Z"
   },
   "vault": ".",
   "policy": {
@@ -39,6 +40,7 @@
     "blocked_proposals": 0,
     "candidate_blocker_count": 0,
     "proposal_blocker_count": 0,
+    "next_run_repair_proposals": 0,
     "queue_pressure_summary": "contract_regression_signals 1 proposal, validation 1, review 1"
   },
   "diagnostics": {
@@ -68,6 +70,15 @@
           "high_risk_routing_sessions": 1
         }
       ]
+    },
+    "next_run_decision_queue": {
+      "session_reports_scanned": 18,
+      "decisions_considered": 0,
+      "open_carry_forward_decisions": 0,
+      "repair_proposals_emitted": 0,
+      "decision_counts": {},
+      "action_counts": {},
+      "selected_target_proposal_ids": []
     },
     "queue_selection": {
       "available_proposal_count": 1,

@@ -58,7 +58,7 @@
         "contract_sha256",
         "contract_id",
         "status",
-        "current_profile",
+        "runtime_mode",
         "max_wall_clock_seconds",
         "max_unattended_seconds",
         "max_proposals",
@@ -87,14 +87,9 @@
           "type": "string",
           "minLength": 1
         },
-        "current_profile": {
+        "runtime_mode": {
           "type": "string",
-          "enum": [
-            "30m_trial",
-            "6h_ramp",
-            "2d_candidate",
-            "5d_sustained"
-          ]
+          "enum": ["self_improvement_loop"]
         },
         "max_wall_clock_seconds": {
           "type": "integer",
@@ -261,6 +256,138 @@
             "type": "boolean"
           },
           "primary_targets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "next_run_decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "decision_id",
+          "observed_at",
+          "session_id",
+          "iteration",
+          "source_run_id",
+          "proposal_id",
+          "source_candidate_id",
+          "target_proposal_id",
+          "proposal_family",
+          "proposal_tier",
+          "failure_taxonomy",
+          "blocking_role",
+          "decision",
+          "next_run_action",
+          "status",
+          "reason",
+          "quarantined_source_proposal",
+          "primary_targets",
+          "supporting_targets",
+          "must_change_tests",
+          "evidence_paths"
+        ],
+        "properties": {
+          "decision_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "observed_at": {
+            "type": "string",
+            "minLength": 1
+          },
+          "session_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "iteration": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "source_run_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "proposal_id": {
+            "type": "string"
+          },
+          "source_candidate_id": {
+            "type": "string"
+          },
+          "target_proposal_id": {
+            "type": "string"
+          },
+          "proposal_family": {
+            "type": "string"
+          },
+          "proposal_tier": {
+            "type": "string",
+            "enum": [
+              "core",
+              "supporting"
+            ]
+          },
+          "failure_taxonomy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "blocking_role": {
+            "type": "string"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "carry_forward",
+              "choose_alternative",
+              "ignore_retryable"
+            ]
+          },
+          "next_run_action": {
+            "type": "string",
+            "enum": [
+              "repair_failure",
+              "select_alternative_proposal",
+              "wait_for_executor_capacity"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "closed"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "quarantined_source_proposal": {
+            "type": "boolean"
+          },
+          "primary_targets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "supporting_targets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "must_change_tests": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidence_paths": {
             "type": "array",
             "items": {
               "type": "string"

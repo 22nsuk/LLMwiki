@@ -131,7 +131,7 @@ def seed_synopsis_inputs(vault: Path) -> None:
             "run": {
                 "run_id": "20260517-trial",
                 "status": "blocked",
-                "profile": "30m_trial",
+                "runtime_mode": "self_improvement_loop",
             },
             "health": {
                 "promotion_status": "blocked",
@@ -139,38 +139,22 @@ def seed_synopsis_inputs(vault: Path) -> None:
                 "checkpoint_status": "current",
             },
             "blockers": [
-                "profile ladder incomplete",
+                "self-improvement loop certificate incomplete",
                 "sealed authority clean pass not verified",
                 "promotion_blocked_by_remediation_backlog_open",
             ],
-            "profile_ladder": {
-                "status": "incomplete",
-                "current_profile": "30m_trial",
-                "run_profile": "30m_trial",
-                "verified_profiles": [],
-                "highest_verified_profile": "unverified",
-                "next_profile_required": "30m_trial",
-                "profile_verified_by_promotion_guard": "unverified",
-                "profile_guard_consistent": True,
-                "sustained_claim_allowed": False,
-                "profiles": [
+            "runtime_certificate": {
+                "status": "pending",
+                "mode": "self_improvement_loop",
+                "run_mode": "self_improvement_loop",
+                "duration_seconds": 21600,
+                "certificate_status": "unverified",
+                "full_gate_clean": False,
+                "missing_evidence": [
                     {
-                        "profile": "30m_trial",
-                        "evidence_paths": [
-                            {
-                                "path": "ops/reports/goal-run-status.json",
-                                "status": "present",
-                            }
-                        ],
-                    },
-                    {
-                        "profile": "5d_sustained",
-                        "evidence_paths": [
-                            {
-                                "path": "ops/reports/release-closeout-sealed-rehearsal-check.json",
-                                "status": "missing",
-                            }
-                        ],
+                        "evidence_id": "release_authority",
+                        "path": "ops/reports/release-closeout-sealed-rehearsal-check.json",
+                        "status": "missing",
                     },
                 ],
             },
@@ -217,29 +201,29 @@ class SessionSynopsisTests(unittest.TestCase):
             self.assertEqual(report["active_goal"]["checkpoint_status"], "current")
             self.assertEqual(report["active_goal"]["periodic_evidence_status"], "not_due")
             self.assertEqual(report["source_package_replay"]["replay_command"], "make release-source-package-check")
-            self.assertEqual(report["summary"]["goal_profile_ladder_status"], "incomplete")
-            self.assertEqual(report["summary"]["goal_next_profile_required"], "30m_trial")
-            self.assertFalse(report["summary"]["sustained_claim_allowed"])
-            self.assertEqual(report["goal_profile_ladder"]["status"], "incomplete")
+            self.assertEqual(report["summary"]["goal_runtime_certificate_status"], "pending")
+            self.assertEqual(report["summary"]["goal_runtime_mode"], "self_improvement_loop")
+            self.assertFalse(report["summary"]["runtime_certificate_full_gate_clean"])
+            self.assertEqual(report["goal_runtime_certificate"]["status"], "pending")
             self.assertEqual(
-                report["goal_profile_ladder"]["missing_evidence"][0]["path"],
+                report["goal_runtime_certificate"]["missing_evidence"][0]["path"],
                 "ops/reports/release-closeout-sealed-rehearsal-check.json",
             )
             self.assertFalse(report["next_session_entrypoint"]["promotion_allowed"])
             self.assertFalse(report["next_session_entrypoint"]["claim_wording_allowed"])
             self.assertEqual(
-                report["next_session_entrypoint"]["target_profile"],
-                "30m_trial",
+                report["next_session_entrypoint"]["target_runtime_mode"],
+                "self_improvement_loop",
             )
             self.assertEqual(
-                report["next_session_entrypoint"]["profile_ladder_status"],
-                "incomplete",
+                report["next_session_entrypoint"]["runtime_certificate_status"],
+                "pending",
             )
-            self.assertFalse(report["next_session_entrypoint"]["sustained_claim_allowed"])
+            self.assertFalse(report["next_session_entrypoint"]["runtime_certificate_full_gate_clean"])
             self.assertIn("make auto-improve-goal-status", report["next_session_entrypoint"]["first_commands"])
             self.assertIn("make auto-improve-goal-preflight", report["next_session_entrypoint"]["first_commands"])
             self.assertIn("make auto-improve-goal-run", report["next_session_entrypoint"]["first_commands"])
-            self.assertIn("make goal-profile-verification", report["next_session_entrypoint"]["first_commands"])
+            self.assertIn("make goal-runtime-certificate", report["next_session_entrypoint"]["first_commands"])
             self.assertIn("make session-synopsis", report["next_session_entrypoint"]["first_commands"])
             self.assertIn("make remediation-backlog", report["next_session_entrypoint"]["first_commands"])
             self.assertTrue(
@@ -278,7 +262,7 @@ class SessionSynopsisTests(unittest.TestCase):
             )
             goal_status["blockers"] = [
                 "learning_blocked_by_review_required",
-                "profile ladder incomplete",
+                "self-improvement loop certificate incomplete",
             ]
             write_json(vault, "ops/reports/goal-run-status.json", goal_status)
 
@@ -287,7 +271,7 @@ class SessionSynopsisTests(unittest.TestCase):
 
             self.assertIn("learning_blocked_by_review_required", blocker_ids)
             self.assertNotIn("goal_status_learning_blocked_by_review_required", blocker_ids)
-            self.assertIn("goal_status_profile_ladder_incomplete", blocker_ids)
+            self.assertIn("goal_status_self_improvement_loop_certificate_incomplete", blocker_ids)
             self.assertEqual(blocker_ids.count("learning_blocked_by_review_required"), 1)
 
     def test_readiness_blockers_are_not_dropped_when_goal_status_adds_pressure(self) -> None:
@@ -342,7 +326,7 @@ class SessionSynopsisTests(unittest.TestCase):
             )
             goal_status["blockers"] = [
                 "git_worktree_dirty",
-                "profile ladder incomplete",
+                "self-improvement loop certificate incomplete",
             ]
             write_json(vault, "ops/reports/goal-run-status.json", goal_status)
 
@@ -350,12 +334,82 @@ class SessionSynopsisTests(unittest.TestCase):
             blocker_ids = {blocker["id"] for blocker in report["recent_blockers"]}
 
             self.assertIn("goal_status_git_worktree_dirty", blocker_ids)
-            self.assertIn("goal_status_profile_ladder_incomplete", blocker_ids)
+            self.assertIn("goal_status_self_improvement_loop_certificate_incomplete", blocker_ids)
             self.assertIn("execution_blocked_by_no_runnable_proposal", blocker_ids)
             self.assertIn("learning_blocked_by_execution_not_runnable", blocker_ids)
             self.assertIn("promotion_blocked_by_artifact_contract_failure", blocker_ids)
             self.assertIn("promotion_blocked_by_goal_worktree_guard_failure", blocker_ids)
             self.assertNotIn("promotion_blocked_by_remediation_backlog_open", blocker_ids)
+
+    def test_build_report_can_read_run_local_readiness_and_goal_status(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_synopsis_inputs(vault)
+            write_json(
+                vault,
+                "runs/goal-local/state/auto-improve-readiness.json",
+                {
+                    "can_promote_result": True,
+                    "next_action": "Run-local evidence is converged.",
+                    "promotion_blockers": [],
+                    "fallback": {"seed_runs": ["run-local-seed"]},
+                },
+            )
+            write_json(
+                vault,
+                "runs/goal-local/state/goal-run-status.json",
+                {
+                    "goal": {"contract_id": "goal-local"},
+                    "run": {
+                        "run_id": "local-run",
+                        "status": "blocked",
+                        "runtime_mode": "self_improvement_loop",
+                    },
+                    "health": {
+                        "promotion_status": "ready",
+                        "can_promote_result": True,
+                        "checkpoint_status": "current",
+                    },
+                    "promotion_guard": {"can_promote_result": True, "promotion_blockers": []},
+                    "blockers": [],
+                    "runtime_certificate": {
+                        "status": "complete",
+                        "mode": "self_improvement_loop",
+                        "run_mode": "self_improvement_loop",
+                        "duration_seconds": 21600,
+                        "certificate_status": "complete",
+                        "full_gate_clean": True,
+                        "missing_evidence": [],
+                    },
+                    "periodic_evidence": {"status": "current"},
+                    "artifacts": {},
+                },
+            )
+
+            report = build_report(
+                vault,
+                context=fixed_context(),
+                input_path_overrides={
+                    "auto_improve_readiness": "runs/goal-local/state/auto-improve-readiness.json",
+                    "goal_run_status": "runs/goal-local/state/goal-run-status.json",
+                },
+            )
+
+            self.assertEqual(
+                report["inputs"]["auto_improve_readiness"],
+                "runs/goal-local/state/auto-improve-readiness.json",
+            )
+            self.assertEqual(
+                report["inputs"]["goal_run_status"],
+                "runs/goal-local/state/goal-run-status.json",
+            )
+            self.assertEqual(report["active_goal"]["report_path"], "runs/goal-local/state/goal-run-status.json")
+            self.assertEqual(report["summary"]["active_goal_id"], "goal-local")
+            self.assertEqual(report["summary"]["active_goal_run_id"], "local-run")
+            self.assertEqual(report["recommended_seed_runs"][0]["run_id"], "run-local-seed")
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_write_report_validates_schema(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

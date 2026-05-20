@@ -9,6 +9,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from ops.scripts.auto_improve_readiness_runtime import (
         READINESS_REPORT_REL_PATH,
+        REMEDIATION_BACKLOG_REPORT_REL_PATH,
         build_readiness_report,
         readiness_exit_code,
         write_readiness_report,
@@ -17,6 +18,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
 else:
     from .auto_improve_readiness_runtime import (
         READINESS_REPORT_REL_PATH,
+        REMEDIATION_BACKLOG_REPORT_REL_PATH,
         build_readiness_report,
         readiness_exit_code,
         write_readiness_report,
@@ -29,13 +31,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--vault", default=".")
     parser.add_argument("--policy-path")
     parser.add_argument("--out", default=READINESS_REPORT_REL_PATH)
+    parser.add_argument("--remediation-backlog", default=REMEDIATION_BACKLOG_REPORT_REL_PATH)
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
-    report = build_readiness_report(vault, policy_path=args.policy_path)
+    report = build_readiness_report(
+        vault,
+        policy_path=args.policy_path,
+        remediation_backlog_path=args.remediation_backlog,
+    )
     destination = write_readiness_report(vault, report, args.out)
     print(display_path(vault, destination))
     return readiness_exit_code(report)

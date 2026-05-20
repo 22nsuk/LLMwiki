@@ -116,6 +116,44 @@ class SelfImprovementNegativeLessonsTests(unittest.TestCase):
             )
             self.assertTrue(destination.exists())
 
+    def test_report_can_read_run_local_session_synopsis(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_negative_lesson_inputs(vault)
+            write_json(vault, "ops/reports/session-synopsis.json", {})
+            write_json(
+                vault,
+                "runs/goal-local/state/session-synopsis.json",
+                {
+                    "forbidden_repeat_patterns": [
+                        {
+                            "id": "local_repeat",
+                            "decisions": ["DISCARD"],
+                            "run_ids": ["local-run"],
+                            "occurrence_count": 2,
+                            "forbidden_repeat": "Do not repeat this local shape.",
+                            "repair_target": "Repair run-local evidence.",
+                        }
+                    ]
+                },
+            )
+
+            report = build_report(
+                vault,
+                context=fixed_context(),
+                session_synopsis_path="runs/goal-local/state/session-synopsis.json",
+            )
+
+            lesson_ids = {lesson["lesson_id"] for lesson in report["lessons"]}
+            self.assertIn("local_repeat", lesson_ids)
+            self.assertEqual(
+                report["inputs"]["session_synopsis"],
+                "runs/goal-local/state/session-synopsis.json",
+            )
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_next_action_distinguishes_advisory_lessons_from_empty_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

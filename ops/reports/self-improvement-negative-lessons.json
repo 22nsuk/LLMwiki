@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/self-improvement-negative-lessons.schema.json",
   "artifact_kind": "self_improvement_negative_lessons",
-  "generated_at": "2026-05-20T10:56:33Z",
+  "generated_at": "2026-05-20T14:23:05Z",
   "producer": "ops.scripts.self_improvement_negative_lessons",
   "source_command": "python -m ops.scripts.self_improvement_negative_lessons --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "abe314a20269667ad8f6e78dd162a36135f3af16c559c7a2b9ed9c1f423974bd",
+  "source_tree_fingerprint": "7db6e5792b5f28cdbd712e2e891853b1e6530a6eb5a85432d8f1a607cc35574d",
   "input_fingerprints": {
-    "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
+    "policy": "5f97cf7619b458d6e8aa229fa3f318d888cf78c4a806b6b72a552c360ceb0894",
     "schema": "47b79b46ef1a89257481eb0fa0b41f96e2765bb833dd8fe9b2f718d71cf470e2",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "6be541617f1774d9faca7c41ea0669ff4fe4b3b5780ad2b04b1c585c96dc8653",
-    "learning_claim_activation": "ca4245da90e2f93291caf05b41ab85a79576a4a1b5ede41b2777007810c680b7",
-    "session_synopsis": "9bec6fb704acc3659c6064495bb26ca025125a9dabc9bb8b91f31fe08c1c69cd"
+    "source_paths": "13c1b1d02685b41f4c679b17e2db63bbe76b1ea430bc533727ed464fa01c4810",
+    "learning_claim_activation": "f90a59b26c0aafc739d67a3d2bdde627f879afb337ca0220af680861946a0b81",
+    "session_synopsis": "972bc0479f06e36ef4af2f51fee8d8e58afb1d77a64d26b8af63205b1b1d28d1"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:56:33Z"
+    "checked_at": "2026-05-20T14:23:05Z"
   },
   "vault": ".",
   "policy": {
@@ -31,33 +31,12 @@
   "mode": "advisory",
   "gate_effect": "blocks_repeat_only",
   "summary": {
-    "lesson_count": 4,
+    "lesson_count": 3,
     "backlog_candidate_count": 0,
     "source_activation_status": "pass",
     "next_action": "Negative lessons are advisory only; no repeated backlog candidates detected."
   },
   "lessons": [
-    {
-      "lesson_id": "blocked_queue_recent_log_overlap",
-      "source": "learning_claim_activation.negative_learning_ledger+session_synopsis",
-      "decisions": [
-        "BLOCKED"
-      ],
-      "run_ids": [],
-      "occurrence_count": 1,
-      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
-      "repair_target": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane.",
-      "evidence_digests": [
-        {
-          "path": "ops/reports/auto-improve-readiness.json",
-          "exists": true,
-          "sha256": "bc93571e75d33b0df8374add28a4c22cac3d9fdb7c692246b8c128262a1d1c37",
-          "status": "present"
-        }
-      ],
-      "repeat_policy": "do_not_repeat_until_repaired",
-      "backlog_candidate": false
-    },
     {
       "lesson_id": "discard_behavior_delta_before_after_evidence_missing",
       "source": "learning_claim_activation.negative_learning_ledger+session_synopsis",
@@ -74,7 +53,7 @@
         {
           "path": "ops/reports/learning-delta-scoreboard.json",
           "exists": true,
-          "sha256": "b44cda0c27c39b41ccc057ca5a5c69c9ab5d7d4f1a48cfce241899fc37c81c80",
+          "sha256": "bbd6f92d95bac554925d3fe657a3b370f2ece6ee67c189501d48d6695fc12014",
           "status": "present"
         }
       ],

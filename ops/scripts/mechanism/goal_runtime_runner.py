@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import argparse
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 import datetime as dt
 import json
@@ -14,8 +14,12 @@ from typing import Any
 
 from ops.scripts.command_runtime import (
     CommandHeartbeat,
+    PosixProcessBackend,
     ProcessBackend,
+    ProcessHandle,
+    SignalValue,
     TimedProcessResult,
+    WindowsProcessBackend,
     run_with_timeout,
 )
 from ops.scripts.output_runtime import display_path, resolve_repo_output_path, write_output_text
@@ -35,6 +39,16 @@ from .goal_runtime_maintenance import (
     append_checkpoint_command_event,
     build_periodic_evidence,
     checkpoint_command_retry_due,
+)
+from .goal_runtime_certificate import DEFAULT_RUNTIME_MODE, DEFAULT_RUNTIME_SECONDS
+from .goal_runtime_lock import (
+    DEFAULT_LOCK_PATH as DEFAULT_WORKSPACE_LOCK_PATH,
+    GoalRuntimeWorkspaceLock,
+    GoalRuntimeWorkspaceLockActive,
+    acquire_workspace_lock,
+    process_group_id_for_pid,
+    release_workspace_lock,
+    update_workspace_lock_child,
 )
 
 
@@ -74,13 +88,13 @@ class GoalRuntimeRunnerRequest:
     command_argv: Sequence[str]
     run_id: str
     goal_contract_path: str
-    profile: str = "30m_trial"
+    runtime_mode: str = DEFAULT_RUNTIME_MODE
     status_report_path: str = DEFAULT_STATUS_PATH
     result_out: str = DEFAULT_RESULT_OUT
     heartbeat_interval_seconds: int = 300
     checkpoint_interval_seconds: int = 1800
     checkpoint_command_timeout_seconds: int = 900
-    timeout_seconds: int = 1800
+    timeout_seconds: int = DEFAULT_RUNTIME_SECONDS
     resume_from_checkpoint: bool = False
     resume_command: str = ""
     policy_path: str | None = None
@@ -89,6 +103,7 @@ class GoalRuntimeRunnerRequest:
     monotonic_clock: Callable[[], float] | None = None
     checkpoint_backend: ProcessBackend | None = None
     checkpoint_command_executor: CheckpointCommandExecutor | None = None
+    workspace_lock_path: str = DEFAULT_WORKSPACE_LOCK_PATH
 
 
 @dataclass(frozen=True)
@@ -99,6 +114,56 @@ class GoalRuntimeRunnerLock:
 
 class GoalRuntimeRunnerAlreadyRunning(RuntimeError):
     pass
+
+
+class _WorkspaceLockProcessBackend:
+    def __init__(
+        self,
+        wrapped: ProcessBackend,
+        workspace_lock: GoalRuntimeWorkspaceLock,
+    ) -> None:
+        self.wrapped = wrapped
+        self.workspace_lock = workspace_lock
+        self.start_new_session = wrapped.start_new_session
+
+    def start(
+        self,
+        argv: list[str],
+        *,
+        cwd: Path,
+        input_text: str | None,
+        env: Mapping[str, str] | None = None,
+    ) -> ProcessHandle:
+        process = self.wrapped.start(argv, cwd=cwd, input_text=input_text, env=env)
+        child_pid = int(getattr(process, "pid", 0) or 0)
+        child_pgid = process_group_id_for_pid(child_pid)
+        if child_pgid == 0 and self.start_new_session:
+            child_pgid = child_pid
+        update_workspace_lock_child(
+            self.workspace_lock,
+            child_pid=child_pid,
+            child_pgid=child_pgid,
+        )
+        return process
+
+    def send_signal(self, process: ProcessHandle, sig: SignalValue) -> str:
+        return self.wrapped.send_signal(process, sig)
+
+    def kill_signal(self) -> SignalValue:
+        return self.wrapped.kill_signal()
+
+
+def _default_process_backend() -> ProcessBackend:
+    if os.name == "nt":
+        return WindowsProcessBackend()
+    return PosixProcessBackend()
+
+
+def _workspace_lock_process_backend(
+    backend: ProcessBackend | None,
+    workspace_lock: GoalRuntimeWorkspaceLock,
+) -> ProcessBackend:
+    return _WorkspaceLockProcessBackend(backend or _default_process_backend(), workspace_lock)
 
 
 def _iso_z(value: dt.datetime) -> str:
@@ -147,7 +212,7 @@ def _status_report(
             run_id=request.run_id,
             goal_contract_path=request.goal_contract_path,
             status=run_status,
-            profile=request.profile,
+            runtime_mode=request.runtime_mode,
             started_at=started_at,
             completed_at=completed_at,
             heartbeat_interval_seconds=request.heartbeat_interval_seconds,
@@ -223,7 +288,7 @@ def _acquire_runner_lock(
     token = f"{os.getpid()}:{request.run_id}:{started_at}"
     payload = {
         "run_id": request.run_id,
-        "profile": request.profile,
+        "runtime_mode": request.runtime_mode,
         "pid": os.getpid(),
         "started_at": started_at,
         "token": token,
@@ -504,8 +569,22 @@ def run_goal_runtime_command(request: GoalRuntimeRunnerRequest) -> int:
     started_at_dt = runtime_context.utcnow().replace(microsecond=0)
     started_at = _iso_z(started_at_dt)
     try:
+        workspace_lock = acquire_workspace_lock(
+            request.vault,
+            lock_path=request.workspace_lock_path,
+            run_id=request.run_id,
+            runtime_mode=request.runtime_mode,
+            started_at=started_at,
+            command_argv=list(request.command_argv),
+        )
+    except GoalRuntimeWorkspaceLockActive as exc:
+        print(str(exc), file=sys.stderr)
+        return RUNNER_LOCK_EXIT_CODE
+
+    try:
         runner_lock = _acquire_runner_lock(request, started_at=started_at)
     except GoalRuntimeRunnerAlreadyRunning as exc:
+        release_workspace_lock(workspace_lock)
         print(str(exc), file=sys.stderr)
         return RUNNER_LOCK_EXIT_CODE
 
@@ -561,7 +640,7 @@ def run_goal_runtime_command(request: GoalRuntimeRunnerRequest) -> int:
             list(request.command_argv),
             cwd=vault,
             timeout_seconds=request.timeout_seconds,
-            backend=request.backend,
+            backend=_workspace_lock_process_backend(request.backend, workspace_lock),
             heartbeat_interval_seconds=request.heartbeat_interval_seconds,
             heartbeat_callback=heartbeat_callback,
             monotonic_clock=request.monotonic_clock,
@@ -619,6 +698,7 @@ def run_goal_runtime_command(request: GoalRuntimeRunnerRequest) -> int:
         return _exit_code(result.returncode, timed_out=result.timed_out)
     finally:
         _release_runner_lock(runner_lock)
+        release_workspace_lock(workspace_lock)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -626,15 +706,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--vault", default=".", help="Repository/vault root.")
     parser.add_argument("--goal-contract", required=True)
     parser.add_argument("--run-id", required=True)
-    parser.add_argument("--profile", default="30m_trial")
+    parser.add_argument("--runtime-mode", default=DEFAULT_RUNTIME_MODE)
+    parser.add_argument("--profile", dest="runtime_mode", default=argparse.SUPPRESS)
     parser.add_argument("--status-report-path", default=DEFAULT_STATUS_PATH)
     parser.add_argument("--result-out", default=DEFAULT_RESULT_OUT)
     parser.add_argument("--heartbeat-interval-seconds", type=int, default=300)
     parser.add_argument("--checkpoint-interval-seconds", type=int, default=1800)
     parser.add_argument("--checkpoint-command-timeout-seconds", type=int, default=900)
-    parser.add_argument("--timeout-seconds", type=int, default=1800)
+    parser.add_argument("--timeout-seconds", type=int, default=DEFAULT_RUNTIME_SECONDS)
     parser.add_argument("--resume-from-checkpoint", action="store_true")
     parser.add_argument("--resume-command", default="")
+    parser.add_argument("--workspace-lock-path", default=DEFAULT_WORKSPACE_LOCK_PATH)
     parser.add_argument("command", nargs=argparse.REMAINDER)
     return parser.parse_args(argv)
 
@@ -650,7 +732,7 @@ def main(argv: list[str] | None = None) -> int:
             command_argv=command,
             run_id=args.run_id,
             goal_contract_path=args.goal_contract,
-            profile=args.profile,
+            runtime_mode=args.runtime_mode,
             status_report_path=args.status_report_path,
             result_out=args.result_out,
             heartbeat_interval_seconds=args.heartbeat_interval_seconds,
@@ -659,6 +741,7 @@ def main(argv: list[str] | None = None) -> int:
             timeout_seconds=args.timeout_seconds,
             resume_from_checkpoint=args.resume_from_checkpoint,
             resume_command=args.resume_command,
+            workspace_lock_path=args.workspace_lock_path,
         )
     )
 

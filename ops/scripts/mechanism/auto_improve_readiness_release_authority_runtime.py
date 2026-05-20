@@ -73,6 +73,7 @@ def _release_gate_summaries(reports: dict[str, dict[str, Any]]) -> dict[str, dic
         release_closeout = {
             **release_closeout,
             "status": "pass",
+            "source_status": "pass",
             "release_blocking": False,
             "summary": f"{release_closeout['summary']} (overridden by finality_attested_pass)",
         }
@@ -84,6 +85,7 @@ def _release_gate_summaries(reports: dict[str, dict[str, Any]]) -> dict[str, dic
         release_evidence_cohort = {
             **release_evidence_cohort,
             "status": "pass",
+            "source_status": "pass",
             "release_blocking": False,
             "summary": f"{release_evidence_cohort['summary']} (overridden by finality_attested_pass)",
         }

@@ -15,7 +15,7 @@
     "created_at",
     "created_by",
     "status",
-    "runtime_profile",
+    "runtime",
     "goal_backend",
     "stop_conditions",
     "required_evidence",
@@ -53,40 +53,14 @@
         "max_proposals",
         "max_consecutive_failures",
         "heartbeat_interval_seconds",
-        "checkpoint_interval_seconds",
-        "profile_ladder"
+        "checkpoint_interval_seconds"
       ],
       "properties": {
         "max_wall_clock_seconds": { "type": "integer", "minimum": 1 },
         "max_proposals": { "type": "integer", "minimum": 1 },
         "max_consecutive_failures": { "type": "integer", "minimum": 1 },
         "heartbeat_interval_seconds": { "type": "integer", "minimum": 1 },
-        "checkpoint_interval_seconds": { "type": "integer", "minimum": 1 },
-        "profile_ladder": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "profile",
-              "max_wall_clock_seconds",
-              "max_proposals",
-              "max_consecutive_failures",
-              "required_before_next_profile"
-            ],
-            "properties": {
-              "profile": {
-                "type": "string",
-                "enum": ["30m_trial", "6h_ramp", "2d_candidate", "5d_sustained"]
-              },
-              "max_wall_clock_seconds": { "type": "integer", "minimum": 1 },
-              "max_proposals": { "type": "integer", "minimum": 1 },
-              "max_consecutive_failures": { "type": "integer", "minimum": 1 },
-              "required_before_next_profile": { "type": "string", "minLength": 1 }
-            }
-          }
-        }
+        "checkpoint_interval_seconds": { "type": "integer", "minimum": 1 }
       }
     },
     "created_at": { "type": "string", "format": "date-time" },
@@ -95,33 +69,28 @@
       "type": "string",
       "enum": ["active", "paused", "completed", "failed", "stopped"]
     },
-    "runtime_profile": {
+    "runtime": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "current_profile",
-        "verified_profiles",
-        "next_profile",
-        "max_unattended_seconds"
+        "mode",
+        "duration_seconds",
+        "max_unattended_seconds",
+        "certificate_status",
+        "verified_at"
       ],
       "properties": {
-        "current_profile": {
+        "mode": {
           "type": "string",
-          "enum": ["30m_trial", "6h_ramp", "2d_candidate", "5d_sustained"]
+          "enum": ["self_improvement_loop"]
         },
-        "verified_profiles": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": ["30m_trial", "6h_ramp", "2d_candidate", "5d_sustained"]
-          },
-          "uniqueItems": true
-        },
-        "next_profile": {
+        "duration_seconds": { "type": "integer", "minimum": 1 },
+        "max_unattended_seconds": { "type": "integer", "minimum": 1 },
+        "certificate_status": {
           "type": "string",
-          "enum": ["30m_trial", "6h_ramp", "2d_candidate", "5d_sustained", "none"]
+          "enum": ["unverified", "verified"]
         },
-        "max_unattended_seconds": { "type": "integer", "minimum": 1 }
+        "verified_at": { "type": "string" }
       }
     },
     "goal_backend": {
@@ -187,9 +156,9 @@
         "can_promote_result",
         "promotion_blockers",
         "sealed_authority_clean",
-        "profile_verified",
+        "runtime_certificate_verified",
         "sustained_runtime_claimed",
-        "no_sustained_claim_before_profile_verified"
+        "no_sustained_claim_before_certificate_verified"
       ],
       "properties": {
         "can_promote_result": { "type": "boolean" },
@@ -199,12 +168,9 @@
           "uniqueItems": true
         },
         "sealed_authority_clean": { "type": "boolean" },
-        "profile_verified": {
-          "type": "string",
-          "enum": ["unverified", "30m_trial", "6h_ramp", "2d_candidate", "5d_sustained"]
-        },
+        "runtime_certificate_verified": { "type": "boolean" },
         "sustained_runtime_claimed": { "type": "boolean" },
-        "no_sustained_claim_before_profile_verified": { "type": "boolean", "const": true }
+        "no_sustained_claim_before_certificate_verified": { "type": "boolean", "const": true }
       },
       "allOf": [
         {
@@ -228,7 +194,7 @@
             "properties": {
               "can_promote_result": { "const": true },
               "sealed_authority_clean": { "const": true },
-              "profile_verified": { "const": "5d_sustained" }
+              "runtime_certificate_verified": { "const": true }
             }
           }
         }

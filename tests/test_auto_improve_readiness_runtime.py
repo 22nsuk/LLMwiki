@@ -626,16 +626,16 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                 },
                 "items": [
                     {
-                        "item_id": "active_blocker_goal_status_profile_ladder_incomplete",
-                        "blocker_id": "goal_status_profile_ladder_incomplete",
+                        "item_id": "active_blocker_goal_status_self_improvement_loop_certificate_incomplete",
+                        "blocker_id": "goal_status_self_improvement_loop_certificate_incomplete",
                         "source": "goal_run_status.blockers",
                         "item_type": "active_blocker",
                         "status": "open",
                         "severity": "blocks_promotion",
                         "occurrence_count": 1,
                         "evidence_paths": ["ops/reports/session-synopsis.json"],
-                        "repair_target": "Collect bounded runtime evidence for next_profile_required=30m_trial.",
-                        "next_action": "Collect bounded runtime evidence for next_profile_required=30m_trial.",
+                        "repair_target": "Run the bounded self-improvement loop and full gates.",
+                        "next_action": "Run the bounded self-improvement loop and full gates.",
                     }
                 ],
                 "inputs": {
@@ -655,11 +655,84 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         blockers = {item["id"]: item for item in report["promotion_blockers"]}
         blocker = blockers["promotion_blocked_by_remediation_backlog_open"]
         self.assertEqual(blocker["scope"], "remediation_backlog")
-        self.assertEqual(blocker["signal_ids"], ["goal_status_profile_ladder_incomplete"])
+        self.assertEqual(
+            blocker["signal_ids"],
+            ["goal_status_self_improvement_loop_certificate_incomplete"],
+        )
         self.assertIn("open_item_count=1", blocker["reason"])
         self.assertEqual(report["diagnostics"]["remediation_backlog_summary"]["status"], "fail")
         self.assertTrue(report["diagnostics"]["remediation_backlog_summary"]["release_blocking"])
         self.assertIn("Trial only; do not promote.", report["next_action"])
+
+    def test_run_local_remediation_backlog_override_controls_promotion_blocker(self) -> None:
+        self._write_ready_queue_reports()
+        self._write_report(
+            "ops/reports/remediation-backlog.json",
+            {
+                "status": "attention",
+                "summary": {
+                    "backlog_item_count": 1,
+                    "repeated_blocker_count": 0,
+                    "active_blocker_count": 1,
+                    "open_item_count": 1,
+                    "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
+                    "next_action": "Close canonical backlog items.",
+                },
+                "items": [
+                    {
+                        "item_id": "active_blocker_stale_canonical",
+                        "blocker_id": "stale_canonical",
+                        "source": "session_synopsis.recent_blockers",
+                        "item_type": "active_blocker",
+                        "status": "open",
+                        "severity": "blocks_promotion",
+                        "occurrence_count": 1,
+                        "evidence_paths": ["ops/reports/session-synopsis.json"],
+                        "repair_target": "Canonical stale blocker.",
+                        "next_action": "Canonical stale blocker.",
+                    }
+                ],
+                "inputs": {},
+            },
+        )
+        local_payload = self._canonical_report_payload(
+            "ops/reports/remediation-backlog.json",
+            {
+                "status": "pass",
+                "summary": {
+                    "backlog_item_count": 0,
+                    "repeated_blocker_count": 0,
+                    "active_blocker_count": 0,
+                    "open_item_count": 0,
+                    "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
+                    "next_action": "No run-local backlog items detected.",
+                },
+                "items": [],
+                "inputs": {},
+            },
+        )
+        self._write_report(
+            "runs/goal-local/state/remediation-backlog.json",
+            local_payload,
+            enveloped=False,
+        )
+
+        report = build_readiness_report(
+            self.vault,
+            context=fixed_context(),
+            remediation_backlog_path="runs/goal-local/state/remediation-backlog.json",
+        )
+
+        blocker_ids = {item["id"] for item in report["promotion_blockers"]}
+        self.assertNotIn("promotion_blocked_by_remediation_backlog_open", blocker_ids)
+        self.assertEqual(
+            report["inputs"]["remediation_backlog_report"],
+            "runs/goal-local/state/remediation-backlog.json",
+        )
+        self.assertEqual(
+            report["diagnostics"]["remediation_backlog_summary"]["path"],
+            "runs/goal-local/state/remediation-backlog.json",
+        )
 
     def test_missing_goal_worktree_guard_blocks_promotion_not_trial(self) -> None:
         (self.vault / "tmp" / "goal-worktree-guard.json").unlink()
@@ -1260,6 +1333,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(artifact_finalization["status"], "pass")
         self.assertEqual(artifact_finalization["source_status"], "finality_attested_pass")
         self.assertIn("release closeout finality attestation passed", artifact_finalization["summary"])
+        closeout_summary = report["diagnostics"]["release_closeout_summary"]
+        self.assertEqual(closeout_summary["status"], "pass")
+        self.assertEqual(closeout_summary["source_status"], "pass")
         blocker_ids = {item["id"] for item in report["promotion_blockers"]}
         self.assertNotIn("promotion_blocked_by_selected_contract_failure", blocker_ids)
 
@@ -1631,6 +1707,94 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         )
         self.assertIn("attempts=4", loop_health_summary["summary"])
         self.assertIn("alerts:", loop_health_summary["summary"])
+
+    def test_build_readiness_report_prefers_telemetry_aggregate_over_empty_latest_session(self) -> None:
+        self._write_report(
+            "ops/reports/outcome-metrics.json",
+            {
+                "summary": {
+                    "attempts_considered": 12,
+                    "recent_window": 20,
+                    "recent_attempt_count": 12,
+                    "session_reports_considered": 2,
+                }
+            },
+        )
+        self._write_report(
+            "ops/reports/mechanism-review-candidates.json",
+            {
+                "summary": {"candidates_emitted": 1},
+                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+            },
+        )
+        self._write_report(
+            "ops/reports/mutation-proposals.json",
+            {
+                "summary": {
+                    "source_candidates_read": 1,
+                    "proposals_emitted": 1,
+                    "blocked_proposals": 0,
+                    "queue_pressure_summary": "ready",
+                },
+                "diagnostics": {"evidence_gaps": []},
+                "proposals": [{"proposal_id": "proposal-ready", "blocked_by": [], "priority": 55}],
+            },
+        )
+        self._write_report(
+            "ops/reports/routing-provenance-aggregates/auto-session-empty-newer.json",
+            {
+                "session_id": "auto-session-empty-newer",
+                "generated_at": "2026-04-22T05:00:00Z",
+                "audit_rollup": {
+                    "loop_health": {
+                        "attempt_count": 0,
+                        "rework_count": 0,
+                        "rollback_signal_count": 0,
+                        "defect_escape_count": 0,
+                        "finalized_run_count": 0,
+                        "executor_failure_count": 0,
+                        "routing_report_parse_gap_count": 0,
+                        "executor_report_parse_gap_count": 0,
+                        "coverage_ratios": {"telemetry": 0.0},
+                        "health_flags": ["missing_telemetry_coverage"],
+                    }
+                },
+            },
+        )
+        self._write_report(
+            "ops/reports/routing-provenance-aggregates/standalone-run-telemetry.json",
+            {
+                "session_id": "standalone-run-telemetry",
+                "generated_at": "2026-04-22T04:00:00Z",
+                "audit_rollup": {
+                    "loop_health": {
+                        "attempt_count": 28,
+                        "rework_count": 3,
+                        "rollback_signal_count": 1,
+                        "defect_escape_count": 0,
+                        "finalized_run_count": 24,
+                        "executor_failure_count": 0,
+                        "routing_report_parse_gap_count": 0,
+                        "executor_report_parse_gap_count": 0,
+                        "coverage_ratios": {"telemetry": 0.8571},
+                        "health_flags": ["partial_telemetry_coverage"],
+                    }
+                },
+            },
+        )
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        loop_health_summary = report["diagnostics"]["loop_health_summary"]
+        self.assertEqual(
+            loop_health_summary["source_report"],
+            "ops/reports/routing-provenance-aggregates/standalone-run-telemetry.json",
+        )
+        self.assertEqual(loop_health_summary["session_id"], "standalone-run-telemetry")
+        self.assertEqual(loop_health_summary["attempt_count"], 28)
+        self.assertEqual(loop_health_summary["telemetry_coverage_ratio"], 0.8571)
+        self.assertEqual(report["learning_readiness"]["status"], "learning_likely")
+        self.assertEqual(report["learning_readiness"]["signals"], [])
 
     def test_build_readiness_report_requires_review_when_loop_health_telemetry_is_missing(self) -> None:
         self._write_report(

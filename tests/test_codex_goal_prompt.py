@@ -33,15 +33,15 @@ class CodexGoalPromptTests(unittest.TestCase):
 Goal contract:
 - contract_id: goal-20260517-auto-improve-runtime
 - status: active
-- profile: 30m_trial
+- runtime_mode: self_improvement_loop
 - backend_storage: ops/reports/codex-goal-contract.json
 
 Objective:
-Run bounded auto-improve only after profile evidence is durable.
+Run bounded auto-improve only after the loop certificate is durable.
 
 Budget limits:
-- max_wall_clock_seconds: 1800
-- max_unattended_seconds: 1800
+- max_wall_clock_seconds: 3600
+- max_unattended_seconds: 3600
 - max_proposals: 1
 - max_consecutive_failures: 1
 - heartbeat_interval_seconds: 300
@@ -53,28 +53,48 @@ Allowed roots:
 
 Required evidence:
 - ops/reports/auto-improve-readiness.json
+- ops/reports/goal-run-status.json
+- ops/reports/session-synopsis.json
+- ops/reports/remediation-backlog.json
+- ops/reports/source-package-clean-extract.json
+- ops/reports/public-check-summary.json
+- ops/reports/release-closeout-summary.json
+- tmp/goal-worktree-guard.json
 
 Promotion guard:
 - can_promote_result: false
 - sealed_authority_clean: false
-- profile_verified: unverified
+- runtime_certificate_verified: false
 
 PROMOTION BAN: can_promote_result=false.
 Do not promote release, learning, or improvement claims.
-Do not claim 5-day sustained operation.
+Do not claim sustained unattended operation.
 Do not call update_goal complete until blockers are cleared by evidence.
 
 Promotion blockers:
-- profile ladder incomplete
+- self-improvement loop certificate incomplete
 
-SUSTAINED CLAIM BAN: profile_verified is not 5d_sustained.
-Do not claim 5-day sustained operation until the full profile ladder is verified.
+SUSTAINED CLAIM BAN: runtime_certificate_verified=false.
+Do not claim sustained unattended operation until the self-improvement loop certificate is verified.
+
+Promotion gate guidance:
+- Work toward promotion by making required evidence current and blocker-free.
+- Treat readiness, source-package, public-check, release closeout, goal status, session synopsis, and remediation backlog as independent evidence surfaces.
+- Fix underlying code, tests, docs, or report generators that create blockers.
+- Do not lower thresholds, remove guard checks, edit output-only reports, or relabel risks merely to make can_promote_result true.
+- If blockers remain, record the next repair in remediation/session evidence and keep promotion banned.
 
 Resume discipline:
 - Keep the same contract digest across resume.
-- Stop with time_budget_exhausted only when the wall-clock budget is reached.
+- Treat the wall-clock duration as a maximum budget, not as proof by itself.
 - Stop with proposal_budget_exhausted or failure_budget_exhausted when those separate caps are reached.
-- Write heartbeat, checkpoint, and status evidence before widening the run profile.
+- Write heartbeat, checkpoint, status, readiness, source-package, public-check, and release evidence before certifying the loop.
+
+Generated artifact convergence:
+- After code or report-generator edits, do not use test failure -> patch -> full rerun as the auto-improve loop.
+- First converge `make script-output-surfaces`, `make generated-artifact-index`, and `make artifact-freshness`.
+- Run `make release-smoke-full-reuse` when release source-tree evidence may have changed.
+- Run artifact finalization only after that convergence, through `make report-contract-closeout` or `make test-artifact-finalization`.
 """,
         )
 
@@ -103,6 +123,37 @@ Resume discipline:
             self.assertTrue(persisted["prompt"]["includes_promotion_ban"])
             self.assertTrue(persisted["prompt"]["includes_sustained_claim_ban"])
             self.assertIn("PROMOTION BAN: can_promote_result=false.", persisted["prompt"]["text"])
+            self.assertIn("Promotion gate guidance:", persisted["prompt"]["text"])
+            self.assertIn("Do not lower thresholds", persisted["prompt"]["text"])
+            self.assertIn("Generated artifact convergence:", persisted["prompt"]["text"])
+            self.assertIn("make script-output-surfaces", persisted["prompt"]["text"])
+            self.assertIn("make test-artifact-finalization", persisted["prompt"]["text"])
+
+    def test_prompt_guides_promotion_work_without_reward_hacking(self) -> None:
+        prompt = build_prompt_text(sample_goal_contract())
+
+        self.assertIn("Work toward promotion by making required evidence current", prompt)
+        self.assertIn("Fix underlying code, tests, docs, or report generators", prompt)
+        self.assertIn("Do not lower thresholds", prompt)
+        self.assertIn("keep promotion banned", prompt)
+
+    def test_self_improvement_docs_name_generated_artifact_convergence_order(self) -> None:
+        required_phrases = (
+            "make script-output-surfaces",
+            "make generated-artifact-index",
+            "make artifact-freshness",
+            "make release-smoke-full-reuse",
+            "make test-artifact-finalization",
+        )
+        surfaces = {
+            "prompt": build_prompt_text(sample_goal_contract()),
+            "README.md": (REPO_ROOT / "README.md").read_text(encoding="utf-8"),
+            "ops/README.md": (REPO_ROOT / "ops" / "README.md").read_text(encoding="utf-8"),
+        }
+        for name, text in surfaces.items():
+            for phrase in required_phrases:
+                with self.subTest(surface=name, phrase=phrase):
+                    self.assertIn(phrase, text)
 
 
 if __name__ == "__main__":

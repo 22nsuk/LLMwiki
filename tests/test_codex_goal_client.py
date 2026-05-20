@@ -113,27 +113,11 @@ class CodexGoalClientTests(unittest.TestCase):
 
         self.assertIn("non_goals", contract)
         self.assertIn("allowed_roots", contract)
-        self.assertEqual(contract["budgets"]["max_wall_clock_seconds"], 1800)
+        self.assertEqual(contract["budgets"]["max_wall_clock_seconds"], 21600)
         self.assertEqual(contract["budgets"]["max_proposals"], 1)
-        self.assertEqual(
-            [
-                (
-                    item["profile"],
-                    item["max_wall_clock_seconds"],
-                    item["max_proposals"],
-                    item["max_consecutive_failures"],
-                )
-                for item in contract["budgets"]["profile_ladder"]
-            ],
-            [
-                ("30m_trial", 1800, 1, 1),
-                ("6h_ramp", 21600, 6, 2),
-                ("2d_candidate", 172800, 24, 3),
-                ("5d_sustained", 432000, 60, 3),
-            ],
-        )
-        self.assertEqual(contract["runtime_profile"]["verified_profiles"], [])
-        self.assertEqual(contract["runtime_profile"]["next_profile"], "30m_trial")
+        self.assertEqual(contract["runtime"]["mode"], "self_improvement_loop")
+        self.assertEqual(contract["runtime"]["duration_seconds"], 21600)
+        self.assertEqual(contract["runtime"]["certificate_status"], "unverified")
         self.assertEqual(contract["promotion_guard"]["can_promote_result"], False)
         self.assertEqual(contract["promotion_guard"]["sustained_runtime_claimed"], False)
         self.assertEqual(set_goal(contract, vault=self.vault), contract)
@@ -299,7 +283,7 @@ class CodexGoalClientTests(unittest.TestCase):
         self.assertTrue(loaded["promotion_guard"]["can_promote_result"])
         self.assertTrue(loaded["promotion_guard"]["sealed_authority_clean"])
         self.assertEqual(loaded["promotion_guard"]["promotion_blockers"], [])
-        self.assertEqual(loaded["promotion_guard"]["profile_verified"], "unverified")
+        self.assertFalse(loaded["promotion_guard"]["runtime_certificate_verified"])
         self.assertFalse(loaded["promotion_guard"]["sustained_runtime_claimed"])
         envelope = json.loads(
             next(
@@ -386,20 +370,20 @@ class CodexGoalClientTests(unittest.TestCase):
             "missing",
         )
 
-    def test_cli_preserves_existing_verified_profile_ladder_state(self) -> None:
+    def test_cli_preserves_existing_runtime_certificate_state(self) -> None:
         contract_path = "ops/reports/preserved-goal-contract.json"
         contract = build_auto_improve_goal_contract(
             created_at="2026-05-17T00:00:00Z",
             storage_path=contract_path,
         )
-        contract["objective"] = "Keep the operator-requested 5-day goal wording stable."
+        contract["objective"] = "Keep the operator-requested runtime goal wording stable."
         contract["metadata"] = {
             "requested_by": "user",
             "source_reports_reviewed": ["external-reports/long-run.md"],
         }
-        contract["runtime_profile"]["verified_profiles"] = ["30m_trial"]
-        contract["runtime_profile"]["next_profile"] = "6h_ramp"
-        contract["promotion_guard"]["profile_verified"] = "30m_trial"
+        contract["runtime"]["certificate_status"] = "verified"
+        contract["runtime"]["verified_at"] = "2026-05-17T01:00:00Z"
+        contract["promotion_guard"]["runtime_certificate_verified"] = True
         set_goal(contract, vault=self.vault, contract_path=contract_path)
 
         exit_code = main(
@@ -415,13 +399,13 @@ class CodexGoalClientTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         loaded = get_goal(vault=self.vault, contract_path=contract_path)
-        self.assertEqual(loaded["runtime_profile"]["verified_profiles"], ["30m_trial"])
-        self.assertEqual(loaded["runtime_profile"]["next_profile"], "6h_ramp")
-        self.assertEqual(loaded["promotion_guard"]["profile_verified"], "30m_trial")
+        self.assertEqual(loaded["runtime"]["certificate_status"], "verified")
+        self.assertEqual(loaded["runtime"]["verified_at"], "2026-05-17T01:00:00Z")
+        self.assertTrue(loaded["promotion_guard"]["runtime_certificate_verified"])
         self.assertFalse(loaded["promotion_guard"]["sustained_runtime_claimed"])
         self.assertEqual(
             loaded["objective"],
-            "Keep the operator-requested 5-day goal wording stable.",
+            "Keep the operator-requested runtime goal wording stable.",
         )
         self.assertEqual(loaded["metadata"]["requested_by"], "user")
         self.assertEqual(

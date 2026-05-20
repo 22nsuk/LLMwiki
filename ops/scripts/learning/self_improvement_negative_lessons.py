@@ -102,9 +102,14 @@ def _lesson_from_synopsis(pattern: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def collect_lessons(vault: Path) -> list[dict[str, Any]]:
-    activation = load_optional_json_object(vault / ACTIVATION_REPORT_PATH)
-    synopsis = load_optional_json_object(vault / SESSION_SYNOPSIS_PATH)
+def collect_lessons(
+    vault: Path,
+    *,
+    activation_report_path: str = ACTIVATION_REPORT_PATH,
+    session_synopsis_path: str = SESSION_SYNOPSIS_PATH,
+) -> list[dict[str, Any]]:
+    activation = load_optional_json_object(vault / activation_report_path)
+    synopsis = load_optional_json_object(vault / session_synopsis_path)
     lessons_by_id: dict[str, dict[str, Any]] = {}
     ledger = activation.get("negative_learning_ledger")
     ledger = ledger if isinstance(ledger, dict) else {}
@@ -145,10 +150,16 @@ def build_report(
     *,
     context: RuntimeContext | None = None,
     policy_path: str | None = None,
+    activation_report_path: str = ACTIVATION_REPORT_PATH,
+    session_synopsis_path: str = SESSION_SYNOPSIS_PATH,
 ) -> dict[str, Any]:
     policy, resolved_policy_path = load_policy(vault, policy_path)
     runtime_context = context or RuntimeContext.from_policy(policy)
-    lessons = collect_lessons(vault)
+    lessons = collect_lessons(
+        vault,
+        activation_report_path=activation_report_path,
+        session_synopsis_path=session_synopsis_path,
+    )
     backlog_candidates = [lesson for lesson in lessons if lesson["backlog_candidate"]]
     return {
         **build_canonical_report_envelope(
@@ -161,8 +172,8 @@ def build_report(
             schema_path=SCHEMA_PATH,
             source_paths=SOURCE_PATHS,
             file_inputs={
-                "learning_claim_activation": ACTIVATION_REPORT_PATH,
-                "session_synopsis": SESSION_SYNOPSIS_PATH,
+                "learning_claim_activation": activation_report_path,
+                "session_synopsis": session_synopsis_path,
             },
             source_tree_excluded_files=(DEFAULT_OUT,),
         ),
@@ -177,19 +188,21 @@ def build_report(
         "summary": {
             "lesson_count": len(lessons),
             "backlog_candidate_count": len(backlog_candidates),
-            "source_activation_status": str(activation_status(vault)),
+            "source_activation_status": str(
+                activation_status(vault, activation_report_path=activation_report_path)
+            ),
             "next_action": _next_action(lessons, backlog_candidates),
         },
         "lessons": lessons,
         "inputs": {
-            "learning_claim_activation": ACTIVATION_REPORT_PATH,
-            "session_synopsis": SESSION_SYNOPSIS_PATH,
+            "learning_claim_activation": activation_report_path,
+            "session_synopsis": session_synopsis_path,
         },
     }
 
 
-def activation_status(vault: Path) -> str:
-    activation = load_optional_json_object(vault / ACTIVATION_REPORT_PATH)
+def activation_status(vault: Path, *, activation_report_path: str = ACTIVATION_REPORT_PATH) -> str:
+    activation = load_optional_json_object(vault / activation_report_path)
     return str(activation.get("status", "missing")).strip() or "missing"
 
 
@@ -211,13 +224,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--vault", default=".")
     parser.add_argument("--policy-path")
     parser.add_argument("--out", default=DEFAULT_OUT)
+    parser.add_argument("--learning-claim-activation", default=ACTIVATION_REPORT_PATH)
+    parser.add_argument("--session-synopsis", default=SESSION_SYNOPSIS_PATH)
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
-    report = build_report(vault, policy_path=args.policy_path)
+    report = build_report(
+        vault,
+        policy_path=args.policy_path,
+        activation_report_path=args.learning_claim_activation,
+        session_synopsis_path=args.session_synopsis,
+    )
     destination = write_report(vault, report, args.out)
     print(display_path(vault, destination))
     return 0

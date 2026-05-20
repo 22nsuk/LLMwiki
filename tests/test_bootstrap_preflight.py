@@ -35,6 +35,7 @@ class BootstrapPreflightTests(unittest.TestCase):
         self.assertEqual(report["environment"]["environment_class"], "developer")
         self.assertEqual(report["environment"]["dependency_source"], "current_python_environment")
         self.assertIn("bootstrap preflight: pass", format_text(report))
+        self.assertIn("interpreter:", format_text(report))
 
     def test_dev_report_fails_with_guidance_when_dependency_is_missing(self) -> None:
         report = build_report(

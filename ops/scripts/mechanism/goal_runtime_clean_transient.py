@@ -35,7 +35,7 @@ PROTECTED_REPORT_SURFACES = (
     "ops/reports/codex-goal-contract.json",
     "ops/reports/codex-goal-prompt.json",
     "ops/reports/goal-run-status.json",
-    "ops/reports/goal-profile-verification.json",
+    "ops/reports/goal-runtime-certificate.json",
 )
 GOAL_SESSION_RESULT_FILENAME = "auto-improve-goal-session-result.json"
 GOAL_SESSION_RESULT_CATEGORY = "stale_goal_session_result"

@@ -491,6 +491,7 @@ def mutation_proposal_report(primary_target: str) -> dict:
             "log_entries_scanned": 0,
             "proposals_emitted": 1,
             "blocked_proposals": 0,
+            "next_run_repair_proposals": 0,
             "queue_pressure_summary": "session unavailable | contract_regression_signals 1 proposal",
         },
         "diagnostics": {
@@ -520,6 +521,15 @@ def mutation_proposal_report(primary_target: str) -> dict:
                         "high_risk_routing_sessions": 0,
                     }
                 ],
+            },
+            "next_run_decision_queue": {
+                "session_reports_scanned": 0,
+                "decisions_considered": 0,
+                "open_carry_forward_decisions": 0,
+                "repair_proposals_emitted": 0,
+                "decision_counts": {},
+                "action_counts": {},
+                "selected_target_proposal_ids": [],
             },
             "queue_selection": {
                 "available_proposal_count": 1,

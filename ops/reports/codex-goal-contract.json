@@ -1,10 +1,10 @@
 {
   "$schema": "ops/schemas/codex-goal-contract.schema.json",
   "schema_version": 1,
-  "contract_id": "goal-5day-auto-improve-runtime",
-  "objective": "Achieve a verified 5-day sustained LLMwiki auto-improve runtime test through the profile ladder, preserving public/private boundaries and keeping promotion blocked until readiness, sealed authority, remediation backlog, and profile evidence are clean.",
+  "contract_id": "auto-improve-goal",
+  "objective": "Run a bounded self-improvement loop whose result is certified by current readiness, release, source-package, public-check, status, and session evidence.",
   "non_goals": [
-    "Do not claim 5-day sustained operation before the 5d_sustained profile is verified.",
+    "Do not treat wall-clock duration as proof without the self-improvement loop certificate.",
     "Do not promote release, learning, or improvement claims while promotion blockers remain.",
     "Do not mutate private corpus surfaces from a public/runtime maintenance goal."
   ],
@@ -39,55 +39,26 @@
     }
   ],
   "budgets": {
-    "max_wall_clock_seconds": 1800,
+    "max_wall_clock_seconds": 21600,
     "max_proposals": 1,
     "max_consecutive_failures": 1,
     "heartbeat_interval_seconds": 300,
-    "checkpoint_interval_seconds": 1800,
-    "profile_ladder": [
-      {
-        "profile": "30m_trial",
-        "max_wall_clock_seconds": 1800,
-        "max_proposals": 1,
-        "max_consecutive_failures": 1,
-        "required_before_next_profile": "30m wall-clock one-proposal trial evidence with a successful improvement, repeated runtime maintenance work, status, audit, checkpoint, heartbeat, and no promotion claim"
-      },
-      {
-        "profile": "6h_ramp",
-        "max_wall_clock_seconds": 21600,
-        "max_proposals": 6,
-        "max_consecutive_failures": 2,
-        "required_before_next_profile": "30m trial evidence plus 6h repeated improvement session evidence and current release/readiness blockers"
-      },
-      {
-        "profile": "2d_candidate",
-        "max_wall_clock_seconds": 172800,
-        "max_proposals": 24,
-        "max_consecutive_failures": 3,
-        "required_before_next_profile": "6h ramp evidence plus 2d repeated improvement session evidence, resume, and backoff evidence"
-      },
-      {
-        "profile": "5d_sustained",
-        "max_wall_clock_seconds": 432000,
-        "max_proposals": 60,
-        "max_consecutive_failures": 3,
-        "required_before_next_profile": "2d candidate evidence plus 5d repeated improvement session evidence and sealed authority clean pass"
-      }
-    ]
+    "checkpoint_interval_seconds": 1800
   },
-  "created_at": "2026-05-20T02:33:30Z",
+  "created_at": "2026-05-20T14:22:25Z",
   "created_by": "codex",
   "status": "active",
-  "runtime_profile": {
-    "current_profile": "30m_trial",
-    "verified_profiles": [],
-    "next_profile": "30m_trial",
-    "max_unattended_seconds": 1800
+  "runtime": {
+    "mode": "self_improvement_loop",
+    "duration_seconds": 21600,
+    "max_unattended_seconds": 21600,
+    "certificate_status": "unverified",
+    "verified_at": ""
   },
   "goal_backend": {
     "backend_type": "run_local_file",
     "process_persistent": true,
-    "storage_path": "runs/goal-5day-auto-improve-runtime/state/codex-goal-contract.json"
+    "storage_path": "runs/goal-auto-improve-trial/state/codex-goal-contract.json"
   },
   "stop_conditions": [
     {
@@ -96,8 +67,8 @@
       "severity": "stop"
     },
     {
-      "condition_id": "profile_budget_exhausted",
-      "description": "Pause when the active profile wall-clock or proposal budget is exhausted.",
+      "condition_id": "runtime_budget_exhausted",
+      "description": "Pause when the runtime wall-clock or proposal budget is exhausted.",
       "severity": "pause"
     },
     {
@@ -116,9 +87,37 @@
     },
     {
       "evidence_id": "goal_run_status",
-      "path": "runs/goal-5day-auto-improve-runtime/state/goal-run-status.json",
+      "path": "runs/goal-auto-improve-trial/state/goal-run-status.json",
       "description": "Goal status records heartbeat, checkpoint, resume, and promotion blockers.",
       "freshness": "current_run",
+      "required_for_promotion": true
+    },
+    {
+      "evidence_id": "session_synopsis",
+      "path": "ops/reports/session-synopsis.json",
+      "description": "Session synopsis confirms the loop state, blockers, and next action.",
+      "freshness": "current_source_tree",
+      "required_for_promotion": true
+    },
+    {
+      "evidence_id": "remediation_backlog",
+      "path": "ops/reports/remediation-backlog.json",
+      "description": "Remediation backlog must agree with readiness and session state.",
+      "freshness": "current_source_tree",
+      "required_for_promotion": true
+    },
+    {
+      "evidence_id": "source_package_clean_extract",
+      "path": "ops/reports/source-package-clean-extract.json",
+      "description": "Source package replay proves packaged-copy parity for the loop output.",
+      "freshness": "current_source_tree",
+      "required_for_promotion": true
+    },
+    {
+      "evidence_id": "public_check_summary",
+      "path": "ops/reports/public-check-summary.json",
+      "description": "Public mirror checks must pass for the loop output.",
+      "freshness": "current_source_tree",
       "required_for_promotion": true
     },
     {
@@ -140,28 +139,22 @@
     "can_promote_result": false,
     "promotion_blockers": [
       "learning_blocked_by_review_required",
-      "promotion_blocked_by_remediation_backlog_open"
+      "promotion_blocked_by_goal_worktree_guard_failure",
+      "promotion_blocked_by_remediation_backlog_open",
+      "git_worktree_dirty"
     ],
     "sealed_authority_clean": true,
-    "profile_verified": "unverified",
+    "runtime_certificate_verified": false,
     "sustained_runtime_claimed": false,
-    "no_sustained_claim_before_profile_verified": true
+    "no_sustained_claim_before_certificate_verified": true
   },
   "metadata": {
     "contract_family": "bounded_auto_improve",
-    "claim_policy": "trial_only_until_profile_and_release_authority_are_clean",
-    "requested_by": "user",
-    "source_reports_reviewed": [
-      "external-reports/llmwiki_code_change_implementation_report_20260516.md",
-      "external-reports/llmwiki_goal_runtime_comparison_report.md",
-      "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
-      "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
-    ],
-    "archive_action_completed": "external-reports/archive/llmwiki_review_reconciled_improvement_report.md",
+    "claim_policy": "loop_certificate_and_release_authority_required_for_claims",
     "properties": [
       {
         "name": "urn:openai:artifact-envelope",
-        "value": "{\"$schema\": \"ops/schemas/codex-goal-contract.schema.json\", \"artifact_kind\": \"codex_goal_contract\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-20T10:05:33Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-20T10:05:33Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"auto_improve_readiness\": \"49867129e5bd96e7091995504a8c16a55a572e738a35331b019936d7d4c3bd92\", \"contract_id\": \"9ec0b63f3aaa921def5fbe2c83b9b88c01f79b3d47ec3cb6a839f49065480962\", \"goal_worktree_guard_report\": \"e719b8730013067ff727a50e0ea1d47f3716cd776297edd1344a70fc719b5a58\", \"policy\": \"9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3\", \"schema\": \"cf26e46d79af52c7038096664bc878959de9cb0107d8673fe58f0d33f0e25b6e\", \"source_paths\": \"24fc54460b1ef2f39cb9ba71bb17c7ebd9ce41b3455e7d13a5acac6c7a2d780e\"}, \"producer\": \"ops.scripts.codex_goal_client\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.codex_goal_client --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"879604165ee9586eaf9779a2da13ef7b95245074953a1ec6d40f224e3330eb70\"}"
+        "value": "{\"$schema\": \"ops/schemas/codex-goal-contract.schema.json\", \"artifact_kind\": \"codex_goal_contract\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-20T14:22:32Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-20T14:22:32Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"auto_improve_readiness\": \"fa06edd7b2657b4d9db1efa150a8d1bd5696f2993171fb61a3d58bfcb5e57095\", \"contract_id\": \"d6dee5d74cf954a24559fc821001ef3dc5c693b768134ad20fe8924060b7adfe\", \"goal_worktree_guard_report\": \"4393eb6ded3fa44312cbdac61af4743988829c601bfae2c9037e6c9d4919b184\", \"policy\": \"5f97cf7619b458d6e8aa229fa3f318d888cf78c4a806b6b72a552c360ceb0894\", \"schema\": \"a1601bdfb503b41bc6fc4f93585cc130d12974e1fadb297ea53ef5c4aa148329\", \"source_paths\": \"c02692597eff09d2eb319b88016ba5284b0e77af40644443e795655181453480\"}, \"producer\": \"ops.scripts.codex_goal_client\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.codex_goal_client --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"d541e61340fd2e0c695da020652b2fa3026ed29e928b5795b616c00b3a84ad1e\"}"
       }
     ]
   }

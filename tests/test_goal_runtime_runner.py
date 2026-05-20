@@ -64,7 +64,8 @@ class GoalRuntimeRunnerTests(unittest.TestCase):
             "ops/scripts/mechanism/goal_run_status.py",
             "ops/scripts/mechanism/goal_runtime_backoff.py",
             "ops/scripts/mechanism/goal_runtime_maintenance.py",
-            "ops/scripts/mechanism/goal_runtime_profile.py",
+            "ops/scripts/mechanism/goal_runtime_certificate.py",
+            "ops/scripts/mechanism/goal_runtime_lock.py",
             "ops/scripts/mechanism/goal_runtime_resume.py",
             "ops/scripts/mechanism/goal_runtime_runner.py",
         ):
@@ -222,6 +223,47 @@ class GoalRuntimeRunnerTests(unittest.TestCase):
             json.loads(lock_path.read_text(encoding="utf-8")),
             {"pid": os.getpid(), "run_id": "20260517-trial", "token": "active"},
         )
+
+    def test_runner_rejects_active_workspace_lock_before_status_overwrite(self) -> None:
+        lock_path = self.vault / "build" / "goal-runs" / "goal-runtime.lock.json"
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        lock_path.write_text(
+            json.dumps(
+                {
+                    "artifact_kind": "goal_runtime_workspace_lock",
+                    "producer": "ops.scripts.goal_runtime_lock",
+                    "pid": os.getpid(),
+                    "pgid": 0,
+                    "child_pid": 0,
+                    "child_pgid": 0,
+                    "run_id": "other-run",
+                    "token": "active",
+                }
+            ),
+            encoding="utf-8",
+        )
+        process = FakeProcess(communicate_side_effect=[('{"ok": true}\n', "")])
+        backend = FakeProcessBackend(process)
+
+        exit_code = run_goal_runtime_command(
+            GoalRuntimeRunnerRequest(
+                vault=self.vault,
+                command_argv=["python", "-m", "ops.scripts.auto_improve_loop"],
+                run_id="20260517-trial",
+                goal_contract_path="ops/reports/codex-goal-contract.json",
+                result_out="tmp/session-result.json",
+                heartbeat_interval_seconds=1,
+                checkpoint_interval_seconds=2,
+                timeout_seconds=5,
+                context=fixed_context(),
+                backend=backend,
+                monotonic_clock=SteppedClock([0.0]),
+            )
+        )
+
+        self.assertEqual(exit_code, 75)
+        self.assertEqual(backend.start_calls, [])
+        self.assertFalse((self.vault / "ops" / "reports" / "goal-run-status.json").exists())
 
     def test_runner_replaces_stale_run_id_lock(self) -> None:
         lock_path = self.vault / "runs" / "goal-20260517-trial" / "runner.lock.json"
@@ -397,7 +439,6 @@ class GoalRuntimeRunnerTests(unittest.TestCase):
                 command_argv=["python", "-m", "ops.scripts.auto_improve_loop"],
                 run_id="20260517-ramp",
                 goal_contract_path="ops/reports/codex-goal-contract.json",
-                profile="6h_ramp",
                 result_out="tmp/session-result.json",
                 heartbeat_interval_seconds=21600,
                 checkpoint_interval_seconds=21600,

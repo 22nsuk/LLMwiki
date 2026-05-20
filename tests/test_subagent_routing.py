@@ -253,6 +253,20 @@ class SubagentRoutingTest(unittest.TestCase):
                 "fixed_role_floor",
             )
 
+    def test_scope_gate_reviewer_defaults_to_read_only_high_rung(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_subagent_profiles(vault, ["scope-gate-reviewer"])
+
+            report = self.run_selector(vault, "--role", "scope-gate-reviewer")
+
+            self.assertEqual(report["routing_decision"]["allowed_rungs"], [2, 3])
+            self.assertEqual(report["routing_decision"]["selected_rung"], 2)
+            self.assertEqual(report["routing_decision"]["reasoning_effort"], "high")
+            self.assertEqual(report["routing_decision"]["sandbox_mode"], "read-only")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -227,6 +227,7 @@ def write_report(vault: Path, report: dict[str, Any], out_path: str | None = Non
 def format_text(report: dict[str, Any]) -> str:
     lines = [
         f"bootstrap preflight: {report['status']}",
+        f"interpreter: {report['environment']['interpreter']}",
         f"python: {report['python']['version']} (minimum {report['python']['minimum']}) "
         f"[{report['python']['status']}]",
     ]

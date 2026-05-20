@@ -27,7 +27,11 @@ from .goal_runtime_maintenance import (
     build_periodic_evidence,
     health_blockers,
 )
-from .goal_runtime_profile import build_profile_ladder, profile_ladder_blockers
+from .goal_runtime_certificate import (
+    DEFAULT_RUNTIME_MODE,
+    build_runtime_certificate,
+    runtime_certificate_blockers,
+)
 from .goal_runtime_resume import mapping_field, resume_metadata_from_report
 
 
@@ -45,7 +49,7 @@ class GoalRunStatusRequest:
     run_id: str
     goal_contract_path: str = DEFAULT_CONTRACT_PATH
     status: str = "running"
-    profile: str = "30m_trial"
+    runtime_mode: str = DEFAULT_RUNTIME_MODE
     started_at: str = ""
     completed_at: str = ""
     heartbeat_interval_seconds: int = 300
@@ -321,17 +325,17 @@ def build_report(
         checkpoint_command_log_path=paths.checkpoint_command_log_path,
         checkpoints_config=PERIODIC_EVIDENCE_CHECKPOINTS,
     )
-    profile_ladder = build_profile_ladder(
+    runtime_certificate = build_runtime_certificate(
         vault,
         contract=contract,
-        run_profile=request.profile,
+        run_mode=request.runtime_mode,
     )
     session_synopsis = _session_synopsis_link(vault)
     blockers = list(
         dict.fromkeys(
             [
                 *promotion_blockers,
-                *profile_ladder_blockers(profile_ladder),
+                *runtime_certificate_blockers(runtime_certificate),
                 *health_blockers(
                     health,
                     run_status=request.status,
@@ -353,7 +357,7 @@ def build_report(
                 "ops/scripts/mechanism/goal_run_status.py",
                 "ops/scripts/mechanism/goal_runtime_backoff.py",
                 "ops/scripts/mechanism/goal_runtime_maintenance.py",
-                "ops/scripts/mechanism/goal_runtime_profile.py",
+                "ops/scripts/mechanism/goal_runtime_certificate.py",
                 "ops/scripts/mechanism/goal_runtime_resume.py",
                 "ops/scripts/core/codex_goal_client.py",
                 "ops/schemas/goal-run-status.schema.json",
@@ -378,7 +382,7 @@ def build_report(
         "run": {
             "run_id": request.run_id,
             "status": request.status,
-            "profile": request.profile,
+            "runtime_mode": request.runtime_mode,
             "started_at": started_at,
             "updated_at": generated_at,
             "completed_at": request.completed_at,
@@ -405,7 +409,7 @@ def build_report(
             "resume_command": resume_command,
         },
         "health": health,
-        "profile_ladder": profile_ladder,
+        "runtime_certificate": runtime_certificate,
         "periodic_evidence": periodic_evidence,
         "session_synopsis": session_synopsis,
         "artifacts": {
@@ -440,7 +444,7 @@ def build_status_markdown(report: Mapping[str, Any]) -> str:
     run = mapping_field(report, "run")
     observability = mapping_field(report, "observability")
     health = mapping_field(report, "health")
-    profile_ladder = mapping_field(report, "profile_ladder")
+    runtime_certificate = mapping_field(report, "runtime_certificate")
     periodic_evidence = mapping_field(report, "periodic_evidence")
     session_synopsis = mapping_field(report, "session_synopsis")
     blockers = report.get("blockers") if isinstance(report.get("blockers"), list) else []
@@ -456,7 +460,7 @@ def build_status_markdown(report: Mapping[str, Any]) -> str:
             f"# Goal Run {run.get('run_id', '')}",
             "",
             f"- status: {run.get('status', '')}",
-            f"- profile: {run.get('profile', '')}",
+            f"- runtime_mode: {run.get('runtime_mode', '')}",
             f"- goal: {goal.get('contract_id', '')}",
             f"- contract_sha256: {goal.get('contract_sha256', '')}",
             f"- last_heartbeat_at: {observability.get('last_heartbeat_at', '')}",
@@ -474,10 +478,9 @@ def build_status_markdown(report: Mapping[str, Any]) -> str:
             f"- backoff_status: {health.get('backoff_status', '')}",
             f"- resume_status: {health.get('resume_status', '')}",
             f"- promotion_status: {health.get('promotion_status', '')}",
-            f"- profile_ladder_status: {profile_ladder.get('status', '')}",
-            f"- highest_verified_profile: {profile_ladder.get('highest_verified_profile', '')}",
-            f"- next_profile_required: {profile_ladder.get('next_profile_required', '')}",
-            f"- sustained_claim_allowed: {profile_ladder.get('sustained_claim_allowed', False)}",
+            f"- runtime_certificate_status: {runtime_certificate.get('status', '')}",
+            f"- runtime_certificate_verified: {runtime_certificate.get('certificate_status', '')}",
+            f"- full_gate_clean: {runtime_certificate.get('full_gate_clean', False)}",
             f"- periodic_evidence_status: {periodic_evidence.get('status', '')}",
             f"- missing_due_checkpoints: {missing_due_text}",
             f"- checkpoint_command_log: {checkpoint_command_log}",
@@ -553,7 +556,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--goal-contract", default=DEFAULT_CONTRACT_PATH)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--status", default="running")
-    parser.add_argument("--profile", default="30m_trial")
+    parser.add_argument("--runtime-mode", default=DEFAULT_RUNTIME_MODE)
+    parser.add_argument("--profile", dest="runtime_mode", default=argparse.SUPPRESS)
     parser.add_argument("--started-at", default="")
     parser.add_argument("--completed-at", default="")
     parser.add_argument("--heartbeat-interval-seconds", type=int, default=300)
@@ -581,7 +585,7 @@ def main(argv: list[str] | None = None) -> int:
             run_id=args.run_id,
             goal_contract_path=args.goal_contract,
             status=args.status,
-            profile=args.profile,
+            runtime_mode=args.runtime_mode,
             started_at=args.started_at,
             completed_at=args.completed_at,
             heartbeat_interval_seconds=args.heartbeat_interval_seconds,

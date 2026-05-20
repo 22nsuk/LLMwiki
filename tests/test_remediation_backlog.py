@@ -202,6 +202,59 @@ class RemediationBacklogTests(unittest.TestCase):
             self.assertEqual(report["summary"]["open_item_count"], 2)
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_build_report_can_read_run_local_session_and_negative_lessons(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_backlog_inputs(vault)
+            write_json(
+                vault,
+                "runs/goal-local/state/self-improvement-negative-lessons.json",
+                {
+                    "status": "pass",
+                    "lessons": [],
+                },
+            )
+            write_json(
+                vault,
+                "runs/goal-local/state/session-synopsis.json",
+                {
+                    "recent_blockers": [
+                        {
+                            "id": "local_release_blocker",
+                            "source": "auto_improve_readiness.promotion_blockers",
+                            "status": "open",
+                            "reason": "local evidence has not converged",
+                            "repair_target": "Converge run-local readiness and backlog.",
+                        }
+                    ]
+                },
+            )
+
+            report = build_report(
+                vault,
+                context=fixed_context(),
+                negative_lessons_path="runs/goal-local/state/self-improvement-negative-lessons.json",
+                session_synopsis_path="runs/goal-local/state/session-synopsis.json",
+            )
+
+            items = {item["item_id"]: item for item in report["items"]}
+            self.assertIn("active_blocker_local_release_blocker", items)
+            self.assertEqual(
+                items["active_blocker_local_release_blocker"]["evidence_paths"],
+                ["runs/goal-local/state/session-synopsis.json"],
+            )
+            self.assertEqual(
+                report["inputs"]["self_improvement_negative_lessons"],
+                "runs/goal-local/state/self-improvement-negative-lessons.json",
+            )
+            self.assertEqual(
+                report["inputs"]["session_synopsis"],
+                "runs/goal-local/state/session-synopsis.json",
+            )
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_stale_zero_iteration_backlog_guard_stop_does_not_recreate_closed_lesson(
         self,
     ) -> None:

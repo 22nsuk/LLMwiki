@@ -4,6 +4,7 @@ PYTEST_FLAGS ?= $(PYTEST_PARALLEL_FLAGS)
 PYTEST_DISABLE_PLUGIN_AUTOLOAD ?= 1
 PYTEST_FAST_MARK_EXPR ?= not slow and not integration and not integration_heavy and not public and not report_contract and not artifact_finalization and not release_sealing and not subprocess
 PYTEST_FAST_SMOKE_MARK_EXPR ?= not slow and not integration_heavy
+PYTEST_DEVELOPER_FULL_MARK_EXPR ?= not artifact_finalization
 PYTEST_SLOW_MARK_EXPR ?= slow and not integration and not integration_heavy and not public
 PYTEST_INTEGRATION_MARK_EXPR ?= integration and not integration_heavy and not public
 PYTEST_INTEGRATION_HEAVY_MARK_EXPR ?= integration_heavy and not public
@@ -162,8 +163,8 @@ report-contract-closeout-precheck:
 	done
 
 report-contract-closeout:
-	$(MAKE) release-smoke-full-reuse
 	$(MAKE) report-contract-closeout-precheck
+	$(MAKE) release-smoke-full-reuse
 	$(MAKE) test-execution-summary
 	$(MAKE) generated-artifact-index
 	$(MAKE) artifact-freshness
@@ -227,13 +228,13 @@ unit-tests-parallel:
 	$(PYTHON) -m pytest -m "$(PYTEST_FAST_MARK_EXPR)" $(PYTEST_PARALLEL_FLAGS)
 
 unit-tests-all:
-	$(PYTHON) -m pytest $(PYTEST_FLAGS)
+	$(PYTHON) -m pytest -m "$(PYTEST_DEVELOPER_FULL_MARK_EXPR)" $(PYTEST_FLAGS)
 
 unit-tests-all-serial:
-	$(PYTHON) -m pytest $(PYTEST_SERIAL_FLAGS)
+	$(PYTHON) -m pytest -m "$(PYTEST_DEVELOPER_FULL_MARK_EXPR)" $(PYTEST_SERIAL_FLAGS)
 
 unit-tests-all-parallel:
-	$(PYTHON) -m pytest $(PYTEST_PARALLEL_FLAGS)
+	$(PYTHON) -m pytest -m "$(PYTEST_DEVELOPER_FULL_MARK_EXPR)" $(PYTEST_PARALLEL_FLAGS)
 
 test: test-fast
 

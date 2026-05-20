@@ -1925,6 +1925,154 @@ class MutationProposalTest(unittest.TestCase):
                 },
             )
 
+    def test_open_next_run_decision_emits_priority_repair_proposal(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            (vault / "ops" / "scripts" / "mechanism" / "example_runtime.py").parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+            (vault / "ops" / "scripts" / "mechanism" / "example_runtime.py").write_text(
+                "VALUE = 1\n",
+                encoding="utf-8",
+            )
+            (vault / "tests" / "test_example_runtime.py").write_text(
+                "def test_example_runtime():\n    assert True\n",
+                encoding="utf-8",
+            )
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:review",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": "auto-session-a-run-01-example-runtime",
+                            "proposal_id": "original-proposal",
+                            "source_candidate_id": "original-candidate",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__example-runtime__review-blocked"
+                            ),
+                            "proposal_family": "contract_regression_signals",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "review_blocked",
+                            "blocking_role": "reviewer",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "review failure should become next-run repair work",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [
+                                "ops/scripts/mechanism/example_runtime.py"
+                            ],
+                            "supporting_targets": ["ops/script-output-surfaces.json"],
+                            "must_change_tests": ["tests/test_example_runtime.py"],
+                            "evidence_paths": [
+                                "runs/auto-session-a-run-01-example-runtime/run-telemetry.json",
+                                (
+                                    "runs/auto-session-a-run-01-example-runtime/"
+                                    "reviewer-executor-report.json"
+                                ),
+                            ],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            repair_proposals = [
+                proposal
+                for proposal in proposal_report["proposals"]
+                if proposal["failure_mode"] == "next_run_failure_repair"
+            ]
+
+            self.assertEqual(len(repair_proposals), 1)
+            repair = repair_proposals[0]
+            self.assertEqual(
+                repair["proposal_id"],
+                "next_run_failure_repair__example-runtime__review-blocked",
+            )
+            self.assertEqual(repair["priority"], 100)
+            self.assertEqual(
+                repair["source_candidate_type"],
+                "auto_improve_next_run_decision_candidate",
+            )
+            self.assertEqual(repair["run_ids"], ["auto-session-a-run-01-example-runtime"])
+            self.assertEqual(repair["blocked_by"], [])
+            self.assertEqual(proposal_report["summary"]["next_run_repair_proposals"], 1)
+            self.assertEqual(
+                proposal_report["diagnostics"]["next_run_decision_queue"],
+                {
+                    "session_reports_scanned": 1,
+                    "decisions_considered": 1,
+                    "open_carry_forward_decisions": 1,
+                    "repair_proposals_emitted": 1,
+                    "decision_counts": {"carry_forward": 1},
+                    "action_counts": {"repair_failure": 1},
+                    "selected_target_proposal_ids": [
+                        "next_run_failure_repair__example-runtime__review-blocked"
+                    ],
+                },
+            )
+
+    def test_closed_next_run_decision_does_not_emit_repair_proposal(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:capacity",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": "auto-session-a-run-01-example-runtime",
+                            "proposal_id": "original-proposal",
+                            "source_candidate_id": "original-candidate",
+                            "target_proposal_id": "",
+                            "proposal_family": "contract_regression_signals",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "executor_usage_limited",
+                            "blocking_role": "",
+                            "decision": "ignore_retryable",
+                            "next_run_action": "wait_for_executor_capacity",
+                            "status": "closed",
+                            "reason": "capacity issue should not become repair work",
+                            "quarantined_source_proposal": False,
+                            "primary_targets": [
+                                "ops/scripts/mechanism/example_runtime.py"
+                            ],
+                            "supporting_targets": [],
+                            "must_change_tests": [],
+                            "evidence_paths": [
+                                "runs/auto-session-a-run-01-example-runtime/run-telemetry.json"
+                            ],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+
+            self.assertEqual(proposal_report["summary"]["next_run_repair_proposals"], 0)
+            self.assertFalse(
+                any(
+                    proposal["failure_mode"] == "next_run_failure_repair"
+                    for proposal in proposal_report["proposals"]
+                )
+            )
+
     def test_disallowed_failure_mode_is_skipped(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

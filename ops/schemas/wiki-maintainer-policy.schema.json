@@ -2115,7 +2115,8 @@
               "repeated_same_eval_after_promote",
               "repeated_discard_runs",
               "bootstrap_history_insufficient",
-              "recent_log_overlap_queue_blocked"
+              "recent_log_overlap_queue_blocked",
+              "next_run_failure_repair"
             ]
           }
         }

@@ -1,13 +1,13 @@
 {
   "$schema": "ops/schemas/release-smoke-report.schema.json",
   "artifact_kind": "release_smoke_report",
-  "generated_at": "2026-05-20T10:52:34Z",
+  "generated_at": "2026-05-20T17:23:39Z",
   "producer": "ops.scripts.release_smoke",
   "source_command": "python -m ops.scripts.release.release_smoke --vault . --profile full",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "5ade0e0ef37079eaf129f91f9f3ef44eaf3d3f0cbd1f60a92ef6e195aa875de9",
+  "source_tree_fingerprint": "9408f01472eb1c07a29ae6656fdb87418f61dfd2ff7b3612d5a076de47a61ee6",
   "input_fingerprints": {
-    "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
+    "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "6f14f899e0f4dce979d6152079ccd87ca44a19716266452a0f497b5fb3275d93",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "6e1fbd154051dd07c0227569fa0285bd836236a24e184713e602ffe960bf66ca"
@@ -18,7 +18,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:52:34Z"
+    "checked_at": "2026-05-20T17:23:39Z"
   },
   "vault": ".",
   "policy": {
@@ -31,8 +31,8 @@
   "archive_file": {
     "path": "<tmp>/LLMwiki-release-smoke.zip",
     "exists": true,
-    "size_bytes": 190559658,
-    "sha256": "d854fcca1bcd553b8dcb8f471784f8cae3fabb32a6e7c48384f614c8e79bd240"
+    "size_bytes": 190578432,
+    "sha256": "36cf4aa5c0b1229292cef64d4d7ec1e17538929b33b579860cb14d028ff11bc8"
   },
   "archive_class": {
     "name": "release_smoke_zip",
@@ -245,11 +245,11 @@
   "archive_reproducibility": {
     "status": "pass",
     "run_count": 2,
-    "first_archive_sha256": "d854fcca1bcd553b8dcb8f471784f8cae3fabb32a6e7c48384f614c8e79bd240",
-    "second_archive_sha256": "d854fcca1bcd553b8dcb8f471784f8cae3fabb32a6e7c48384f614c8e79bd240",
+    "first_archive_sha256": "36cf4aa5c0b1229292cef64d4d7ec1e17538929b33b579860cb14d028ff11bc8",
+    "second_archive_sha256": "36cf4aa5c0b1229292cef64d4d7ec1e17538929b33b579860cb14d028ff11bc8",
     "same_archive_sha256": true,
-    "first_source_manifest_digest": "fa415d4c7369380d679be5d85075a09bb448fe256511a65bef2fcf8f304bc850",
-    "second_source_manifest_digest": "fa415d4c7369380d679be5d85075a09bb448fe256511a65bef2fcf8f304bc850",
+    "first_source_manifest_digest": "335f3869656413326d931eb6b80298e02f0018986ffa33937212818123c25cb5",
+    "second_source_manifest_digest": "335f3869656413326d931eb6b80298e02f0018986ffa33937212818123c25cb5",
     "same_source_manifest_digest": true,
     "summary": "archive_reproducibility=pass; same_archive_sha256=true; same_source_manifest_digest=true"
   },
@@ -257,11 +257,11 @@
     "path": "release-archive-self-description.json",
     "archive_root_name": "LLMwiki",
     "archive_member_path": "LLMwiki/release-archive-self-description.json",
-    "sha256": "dc7722c7ae2018c4eea2823e7cfadae8844988724f287871d390e4b39376c417",
+    "sha256": "45164fe3aecd4772c078776417a466a274c6545228614d73cca43684537aa475",
     "size_bytes": 4096,
     "profile": "full",
-    "source_manifest_digest": "ac1864db243d456dbdc15a198bcff0340d40dbc3aa68d30d041777bfefe3f2e9",
-    "source_manifest_file_count": 1604,
+    "source_manifest_digest": "8b4bc4727c7c17eef8397e81abb1c2591bae83d512a5c5f27d56a91a876d4c6f",
+    "source_manifest_file_count": 1609,
     "tmp_included": false,
     "external_reports_included": false,
     "evidence_linkage_phase": "pre_seal_package_build_snapshot",
@@ -269,11 +269,11 @@
     "evidence_linked_artifact_count": 8
   },
   "extracted_vault": "<tmp>/unpacked/LLMwiki",
-  "packed_file_count": 1605,
+  "packed_file_count": 1610,
   "manifest_comparison": {
     "pass": true,
-    "expected_file_count": 1605,
-    "extracted_file_count": 1605,
+    "expected_file_count": 1610,
+    "extracted_file_count": 1610,
     "missing_paths": [],
     "unexpected_paths": [],
     "sha_mismatches": [],
@@ -288,7 +288,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 1338,
+      "duration_ms": 1289,
       "stdout_tail": "      \"path_list_separator\": \":\",\n      \"path_separator\": \"/\",\n      \"platform_system\": \"Linux\",\n      \"posix_escape_expanded_component_byte_limit\": \"255\",\n      \"preferred_encoding\": \"UTF-8\"\n    }\n  },\n  \"metric_semantics\": {\n    \"entry_count\": {\n      \"scope\": \"registry_entries\",\n      \"description\": \"Parsed raw registry entries after inventory enrichment.\"\n    },\n    \"error_count\": {\n      \"scope\": \"diagnostics\",\n      \"description\": \"Number of preflight diagnostics emitted with fail severity.\"\n    },\n    \"warning_count\": {\n      \"scope\": \"diagnostics\",\n      \"description\": \"Number of preflight diagnostics emitted with warn severity.\"\n    },\n    \"path_alias_match_count\": {\n      \"scope\": \"entries_with_missing_canonical_storage_path\",\n      \"description\": \"Entries whose canonical storage_path was absent but a manual, exported, or deterministic environment alias existed on disk.\"\n    },\n    \"content_hash_fallback_count\": {\n      \"scope\": \"entries_with_missing_canonical_storage_path_and_aliases\",\n      \"description\": \"Entries whose path locators were absent but exactly one raw inventory file matched the entry content_sha256.\"\n    }\n  },\n  \"unsupported_environment\": false,\n  \"errors\": [],\n  \"warnings\": [],\n  \"stats\": {\n    \"entry_count\": 446,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"path_alias_match_count\": 0,\n    \"content_hash_fallback_count\": 0\n  }\n}",
       "stderr_tail": ""
     },
@@ -300,8 +300,8 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 2635,
-      "stdout_tail": "        \"function_lines\": 350,\n        \"parameter_count\": 0,\n        \"branch_node_count\": 3\n      },\n      \"threshold\": {\n        \"function_lines\": 180,\n        \"parameter_count\": 12,\n        \"branch_node_count\": 12\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    },\n    {\n      \"type\": \"python_function_budget_candidate\",\n      \"page\": \"tests/test_run_mechanism_experiment.py\",\n      \"symbol\": \"RunMechanismExperimentTests.test_wrapper_ignores_ephemeral_workspace_noise_in_changed_manifest\",\n      \"line\": 933,\n      \"profile\": \"tests\",\n      \"triggered_budgets\": [\n        \"function_lines\"\n      ],\n      \"value\": {\n        \"function_lines\": 192,\n        \"parameter_count\": 0,\n        \"branch_node_count\": 2\n      },\n      \"threshold\": {\n        \"function_lines\": 180,\n        \"parameter_count\": 12,\n        \"branch_node_count\": 12\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    }\n  ],\n  \"stats\": {\n    \"page_count\": 487,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"review_candidate_count\": 27\n  }\n}",
+      "duration_ms": 2696,
+      "stdout_tail": "        \"function_lines\": 493,\n        \"parameter_count\": 0,\n        \"branch_node_count\": 3\n      },\n      \"threshold\": {\n        \"function_lines\": 180,\n        \"parameter_count\": 12,\n        \"branch_node_count\": 12\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    },\n    {\n      \"type\": \"python_function_budget_candidate\",\n      \"page\": \"tests/test_run_mechanism_experiment.py\",\n      \"symbol\": \"RunMechanismExperimentTests.test_wrapper_ignores_ephemeral_workspace_noise_in_changed_manifest\",\n      \"line\": 950,\n      \"profile\": \"tests\",\n      \"triggered_budgets\": [\n        \"function_lines\"\n      ],\n      \"value\": {\n        \"function_lines\": 192,\n        \"parameter_count\": 0,\n        \"branch_node_count\": 2\n      },\n      \"threshold\": {\n        \"function_lines\": 180,\n        \"parameter_count\": 12,\n        \"branch_node_count\": 12\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    }\n  ],\n  \"stats\": {\n    \"page_count\": 487,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"review_candidate_count\": 28\n  }\n}",
       "stderr_tail": ""
     },
     {
@@ -312,7 +312,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 1159,
+      "duration_ms": 1141,
       "stdout_tail": "        {\n          \"eval\": \"frontmatter_contract\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"required_sections_present\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"source_trace_present\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"source_trace_targets_exist\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"link_integration\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"high_severity_open_questions_within_budget\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"medium_severity_open_questions_within_budget\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"broken_link_free\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"placeholder_discipline\",\n          \"pass\": true\n        }\n      ]\n    }\n  ]\n}",
       "stderr_tail": ""
     },
@@ -324,7 +324,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 552,
+      "duration_ms": 553,
       "stdout_tail": "        {\n          \"eval\": \"declared_source_count_matches_evidence\",\n          \"pass\": true,\n          \"detail\": {\n            \"declared_source_count\": 7,\n            \"evidence_source_count\": 7,\n            \"evidence_source_links\": [\n              \"source--ai-memory-boom-and-supply-constraints-2026-04-13\",\n              \"source--asml-ai-chip-demand-and-semiconductor-capex-resilience-2026-04-16\",\n              \"source--memory-product-mix-upside-for-samsung-and-sk-hynix-2026-04-21\",\n              \"source--samsung-labor-bonus-dispute-and-semiconductor-workforce-risk-2026-04-17\",\n              \"source--samsung-process-blueprint-trade-secret-case-2026-04-21\",\n              \"source--samsung-strategic-output-increase-and-preorders-2026-04-21\",\n              \"source--sk-hynix-socamm2-ai-memory-scaleup-2026-04-21\"\n            ]\n          }\n        }\n      ]\n    },\n    {\n      \"page\": \"system/synthesis--stage1-planning-harness-bridge.md\",\n      \"score\": 1,\n      \"max_score\": 1,\n      \"results\": [\n        {\n          \"eval\": \"declared_source_count_matches_evidence\",\n          \"pass\": true,\n          \"detail\": {\n            \"declared_source_count\": 2,\n            \"evidence_source_count\": 2,\n            \"evidence_source_links\": [\n              \"source--ouroboros-repo\",\n              \"source--stage1-planning-harness-mvp\"\n            ]\n          }\n        }\n      ]\n    }\n  ]\n}",
       "stderr_tail": ""
     },
@@ -336,7 +336,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 259,
+      "duration_ms": 267,
       "stdout_tail": "    },\n    {\n      \"artifact\": \"planning-validation.json\",\n      \"schema\": \"ops/schemas/planning-validation.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"run-ledger.json\",\n      \"schema\": \"ops/schemas/run-ledger.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"promotion-report.json\",\n      \"schema\": \"ops/schemas/promotion-report.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"improvement-observations.json\",\n      \"schema\": \"ops/schemas/improvement-observations.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    }\n  ],\n  \"cross_checks\": [\n    {\n      \"check\": \"run_id_alignment\",\n      \"pass\": true,\n      \"detail\": {\n        \"seed.yaml\": \"run-YYYYMMDD-slug\",\n        \"planning-validation.json\": \"run-YYYYMMDD-slug\",\n        \"run-ledger.json\": \"run-YYYYMMDD-slug\",\n        \"promotion-report.json\": \"run-YYYYMMDD-slug\"\n      }\n    }\n  ],\n  \"phase_checks\": []\n}",
       "stderr_tail": ""
     }

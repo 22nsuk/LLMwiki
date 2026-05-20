@@ -101,6 +101,7 @@ class ReadinessInputs:
     active_release_authority_preflight: dict[str, Any]
     active_goal_worktree_guard: dict[str, Any]
     active_remediation_backlog: dict[str, Any]
+    remediation_backlog_path: str
     artifact_freshness_summary: dict[str, Any]
     selected_contract_summary: dict[str, Any]
     source_package_clean_extract_summary: dict[str, Any]
@@ -242,6 +243,7 @@ def _load_readiness_report_payloads(
     outcome_metrics_report: dict[str, Any] | None,
     mechanism_review_report: dict[str, Any] | None,
     mutation_proposal_report: dict[str, Any] | None,
+    remediation_backlog_path: str,
 ) -> dict[str, dict[str, Any]]:
     return {
         "outcome_metrics": (
@@ -271,7 +273,7 @@ def _load_readiness_report_payloads(
         "artifact_finalization": _load_json(vault / RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH),
         "release_authority_preflight": _load_release_authority_preflight_json(vault),
         "goal_worktree_guard": _load_optional_json(vault / GOAL_WORKTREE_GUARD_REPORT_REL_PATH),
-        "remediation_backlog": _load_json(vault / REMEDIATION_BACKLOG_REPORT_REL_PATH),
+        "remediation_backlog": _load_json(vault / remediation_backlog_path),
     }
 
 
@@ -305,10 +307,14 @@ def _queue_evidence_gaps(
     return [*evidence_gaps, blocked_detail]
 
 
-def _remediation_backlog_summary(payload: dict[str, Any]) -> dict[str, Any]:
+def _remediation_backlog_summary(
+    payload: dict[str, Any],
+    *,
+    remediation_backlog_path: str,
+) -> dict[str, Any]:
     if not payload:
         return {
-            "path": REMEDIATION_BACKLOG_REPORT_REL_PATH,
+            "path": remediation_backlog_path,
             "expected_artifact_kind": "remediation_backlog",
             "artifact_kind": "",
             "status": "fail",
@@ -350,7 +356,7 @@ def _remediation_backlog_summary(payload: dict[str, Any]) -> dict[str, Any]:
         ["remediation_backlog_open"] if release_blocking else []
     )
     return {
-        "path": REMEDIATION_BACKLOG_REPORT_REL_PATH,
+        "path": remediation_backlog_path,
         "expected_artifact_kind": "remediation_backlog",
         "artifact_kind": str(payload.get("artifact_kind", "")).strip(),
         "status": "fail" if release_blocking else "pass",
@@ -378,6 +384,7 @@ def load_readiness_inputs(
     outcome_metrics_report: dict[str, Any] | None = None,
     mechanism_review_report: dict[str, Any] | None = None,
     mutation_proposal_report: dict[str, Any] | None = None,
+    remediation_backlog_path: str = REMEDIATION_BACKLOG_REPORT_REL_PATH,
 ) -> ReadinessInputs:
     policy, resolved_policy_path = load_policy(vault, policy_path)
     runtime_context = context or RuntimeContext.from_policy(policy)
@@ -386,6 +393,7 @@ def load_readiness_inputs(
         outcome_metrics_report=outcome_metrics_report,
         mechanism_review_report=mechanism_review_report,
         mutation_proposal_report=mutation_proposal_report,
+        remediation_backlog_path=remediation_backlog_path,
     )
     release_summaries = _release_gate_summaries(reports)
 
@@ -440,6 +448,7 @@ def load_readiness_inputs(
         active_release_authority_preflight=reports["release_authority_preflight"],
         active_goal_worktree_guard=reports["goal_worktree_guard"],
         active_remediation_backlog=reports["remediation_backlog"],
+        remediation_backlog_path=remediation_backlog_path,
         artifact_freshness_summary=release_summaries["artifact_freshness"],
         selected_contract_summary=release_summaries["selected_contract"],
         source_package_clean_extract_summary=release_summaries["source_package"],
@@ -452,7 +461,10 @@ def load_readiness_inputs(
             "release_authority_preflight"
         ],
         goal_worktree_guard_summary=_goal_worktree_guard_summary(reports["goal_worktree_guard"]),
-        remediation_backlog_summary=_remediation_backlog_summary(reports["remediation_backlog"]),
+        remediation_backlog_summary=_remediation_backlog_summary(
+            reports["remediation_backlog"],
+            remediation_backlog_path=remediation_backlog_path,
+        ),
         loop_health_summary=loop_health_summary,
         same_eval_telemetry_summary=same_eval_telemetry_summary,
         reports_present=reports_present,
@@ -645,7 +657,7 @@ def _readiness_promotion_blockers(
     return learning_blockers, promotion_blockers
 
 
-def _readiness_inputs_payload() -> dict[str, str]:
+def _readiness_inputs_payload(*, remediation_backlog_path: str) -> dict[str, str]:
     return {
         "refresh_generated_target": REFRESH_GENERATED_TARGET,
         "outcome_metrics_report": OUTCOME_METRICS_REPORT_REL_PATH,
@@ -661,7 +673,7 @@ def _readiness_inputs_payload() -> dict[str, str]:
         "release_closeout_post_check_finalizer_report": RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH,
         "release_authority_preflight_report": RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
         "goal_worktree_guard_report": GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
-        "remediation_backlog_report": REMEDIATION_BACKLOG_REPORT_REL_PATH,
+        "remediation_backlog_report": remediation_backlog_path,
     }
 
 
@@ -770,7 +782,7 @@ def render_readiness_report(
                 "release_closeout_post_check_finalizer_report": RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH,
                 "release_authority_preflight_report": RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
                 "goal_worktree_guard_report": GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
-                "remediation_backlog_report": REMEDIATION_BACKLOG_REPORT_REL_PATH,
+                "remediation_backlog_report": inputs.remediation_backlog_path,
             },
             path_group_inputs={
                 "release_authority_preflight_report_candidates": list(
@@ -790,7 +802,9 @@ def render_readiness_report(
         "learning_blockers": learning_blockers,
         "promotion_blockers": promotion_blockers,
         "release_blockers": learning_blockers,
-        "inputs": _readiness_inputs_payload(),
+        "inputs": _readiness_inputs_payload(
+            remediation_backlog_path=inputs.remediation_backlog_path
+        ),
         "diagnostics": _readiness_diagnostics_payload(inputs),
         "queue": queue.to_wire(),
         "fallback": _readiness_fallback_payload(inputs, fallback_status),
@@ -808,6 +822,7 @@ def build_readiness_report(
     outcome_metrics_report: dict[str, Any] | None = None,
     mechanism_review_report: dict[str, Any] | None = None,
     mutation_proposal_report: dict[str, Any] | None = None,
+    remediation_backlog_path: str = REMEDIATION_BACKLOG_REPORT_REL_PATH,
 ) -> dict[str, Any]:
     inputs = load_readiness_inputs(
         vault,
@@ -816,6 +831,7 @@ def build_readiness_report(
         outcome_metrics_report=outcome_metrics_report,
         mechanism_review_report=mechanism_review_report,
         mutation_proposal_report=mutation_proposal_report,
+        remediation_backlog_path=remediation_backlog_path,
     )
     execution = assess_execution_readiness(inputs)
     learning = assess_learning_readiness(inputs)

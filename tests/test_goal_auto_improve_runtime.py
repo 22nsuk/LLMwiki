@@ -53,20 +53,3 @@ def test_auto_improve_loop_goal_contract_uses_canonical_session_path() -> None:
     assert kwargs["maintenance_interval_seconds"] == 300
     payload = json.loads(printed.call_args.args[0])
     assert payload["session_id"] == "goal-session"
-
-
-def test_auto_improve_loop_retires_legacy_goal_wrapper_flags() -> None:
-    with pytest.raises(SystemExit) as exc:
-        auto_improve_loop_main(
-            [
-                "--vault",
-                ".",
-                "--goal-contract",
-                "ops/reports/codex-goal-contract.json",
-                "--goal-profile",
-                "30-minute-trial",
-                "--goal-dry-run",
-            ]
-        )
-
-    assert exc.value.code == 2

@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/artifact-relocation-audit.schema.json",
   "artifact_kind": "artifact_relocation_audit",
-  "generated_at": "2026-05-20T10:53:08Z",
+  "generated_at": "2026-05-20T17:23:47Z",
   "producer": "ops.scripts.artifact_relocation_audit",
   "source_command": "python -m ops.scripts.artifact_relocation_audit --vault . --out ops/operator/artifact-relocation-audit.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "5ade0e0ef37079eaf129f91f9f3ef44eaf3d3f0cbd1f60a92ef6e195aa875de9",
+  "source_tree_fingerprint": "9408f01472eb1c07a29ae6656fdb87418f61dfd2ff7b3612d5a076de47a61ee6",
   "input_fingerprints": {
-    "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
+    "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "2bca24a2fb1f0a7c49b35b6df2aac4e0676e137502b48691d033ad62e3769173",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "1ffc3cd808f7848d5e07c33875f5b587f2c166346a1e07e6617ac6b127df422c",
     "candidate_spec": "b1200b347913aa0fd79d57373d7874415448511a26db8629fc55c649d860c9c2",
-    "dependency_paths": "b3874829e7a6e3134fa1a5bca635ea5294e3de156ff348bb573bae27765e5d6e",
+    "dependency_paths": "9e155279e257dcac40fb01d7c78a60e3cebfc2c3ee5840a1a2cecd7f45c078d0",
     "dependency_roots": "be545ec75d1f4e02ad9ba08e5ac7019a5c4bf7d0baa3aa348395f93db732be97",
     "excluded_scan_paths": "fd1a01cc9a3c77d51ba8bec1c7117e110d4c742ac36077133fbb3b0b3d4b90bd",
     "excluded_scan_prefixes": "e957c42e176e00f268bb61a907a17e555ae0d84924fcabe7c04d0ab207727581"
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:53:08Z"
+    "checked_at": "2026-05-20T17:23:47Z"
   },
   "vault": ".",
   "policy": {
@@ -67,7 +67,7 @@
       "system/",
       "external-reports/"
     ],
-    "file_count": 638,
+    "file_count": 642,
     "files": [
       ".github/workflows/ci.yml",
       ".github/workflows/release.yml",
@@ -132,10 +132,10 @@
       "ops/schemas/external-report-reference-manifest.schema.json",
       "ops/schemas/function-budget-refactor-proposals.schema.json",
       "ops/schemas/generated-artifact-index.schema.json",
-      "ops/schemas/goal-profile-verification.schema.json",
       "ops/schemas/goal-resume-metadata.schema.json",
       "ops/schemas/goal-run-resume-metadata.schema.json",
       "ops/schemas/goal-run-status.schema.json",
+      "ops/schemas/goal-runtime-certificate.schema.json",
       "ops/schemas/goal-runtime-clean-transient.schema.json",
       "ops/schemas/goal-runtime-fixed-point-check.schema.json",
       "ops/schemas/goal-worktree-guard.schema.json",
@@ -351,6 +351,7 @@
       "ops/scripts/mechanism/auto_improve_iteration_runtime.py",
       "ops/scripts/mechanism/auto_improve_iteration_telemetry_runtime.py",
       "ops/scripts/mechanism/auto_improve_loop.py",
+      "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
       "ops/scripts/mechanism/auto_improve_outcome_runtime.py",
       "ops/scripts/mechanism/auto_improve_queue_runtime.py",
       "ops/scripts/mechanism/auto_improve_readiness.py",
@@ -373,13 +374,14 @@
       "ops/scripts/mechanism/finalize_run_runtime.py",
       "ops/scripts/mechanism/finalize_run_state_runtime.py",
       "ops/scripts/mechanism/finalize_run_write_runtime.py",
-      "ops/scripts/mechanism/goal_profile_verification.py",
       "ops/scripts/mechanism/goal_run_status.py",
       "ops/scripts/mechanism/goal_runtime_backoff.py",
+      "ops/scripts/mechanism/goal_runtime_certificate.py",
+      "ops/scripts/mechanism/goal_runtime_certificate_report.py",
       "ops/scripts/mechanism/goal_runtime_clean_transient.py",
       "ops/scripts/mechanism/goal_runtime_fixed_point_check.py",
+      "ops/scripts/mechanism/goal_runtime_lock.py",
       "ops/scripts/mechanism/goal_runtime_maintenance.py",
-      "ops/scripts/mechanism/goal_runtime_profile.py",
       "ops/scripts/mechanism/goal_runtime_resume.py",
       "ops/scripts/mechanism/goal_runtime_runner.py",
       "ops/scripts/mechanism/goal_worktree_guard.py",
@@ -529,6 +531,7 @@
       "tests/test_artifact_relocation_audit.py",
       "tests/test_auto_improve_execution_runtime.py",
       "tests/test_auto_improve_iteration_runtime.py",
+      "tests/test_auto_improve_next_run_decision_runtime.py",
       "tests/test_auto_improve_outcome_runtime.py",
       "tests/test_auto_improve_queue_runtime.py",
       "tests/test_auto_improve_readiness_release_authority_runtime.py",
@@ -567,10 +570,11 @@
       "tests/test_generated_artifact_index.py",
       "tests/test_generated_report_contracts.py",
       "tests/test_goal_auto_improve_runtime.py",
-      "tests/test_goal_profile_verification.py",
       "tests/test_goal_run_status.py",
+      "tests/test_goal_runtime_certificate.py",
       "tests/test_goal_runtime_clean_transient.py",
       "tests/test_goal_runtime_fixed_point_check.py",
+      "tests/test_goal_runtime_lock.py",
       "tests/test_goal_runtime_runner.py",
       "tests/test_goal_worktree_guard.py",
       "tests/test_import_fallback_contract.py",
@@ -716,7 +720,7 @@
     "blocking_candidate_count": 0,
     "old_reference_count": 0,
     "new_reference_count": 28,
-    "dependency_file_count": 638
+    "dependency_file_count": 642
   },
   "candidates": [
     {
@@ -749,7 +753,7 @@
           "match_count": 1,
           "matches": [
             {
-              "line": 103,
+              "line": 104,
               "excerpt": "- `make operator-release-summary`는 closeout, batch manifest, self-check, test summary, learning revalidation, learning delta scoreboard를 한 장짜리 JSON으로 모아 `semantic_release_status`, `sealed_release_status`, `source_zip_policy_status`, full-su"
             }
           ]
@@ -821,7 +825,7 @@
           "match_count": 1,
           "matches": [
             {
-              "line": 1787,
+              "line": 1797,
               "excerpt": "\"path\": \"ops/operator/operator-release-summary.json\","
             }
           ]

@@ -13,6 +13,7 @@ from ops.scripts.promotion_decision_registry_runtime import (
     decision_outcome,
     decision_record_from_report,
 )
+from .auto_improve_next_run_decision_runtime import normalize_next_run_decisions
 
 TERMINAL_NON_BLOCKING_OUTCOMES = frozenset({"promoted"})
 TERMINAL_SUCCESS_OUTCOMES = frozenset({"promoted"})
@@ -496,6 +497,9 @@ def normalize_session_report(vault: Path, session: dict) -> dict[str, Any]:
     normalized["run_ids"] = list_strings(session.get("run_ids"))
     normalized["queue_snapshot"] = list_strings(session.get("queue_snapshot"))
     normalized["iterations"] = normalize_session_iterations(vault, session)
+    normalized["next_run_decisions"] = normalize_next_run_decisions(
+        session.get("next_run_decisions")
+    )
     normalized["learning_summary"] = build_learning_summary(vault, normalized)
     return normalized
 

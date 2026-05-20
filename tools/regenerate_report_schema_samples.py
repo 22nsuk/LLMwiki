@@ -365,13 +365,23 @@ def _seed_readiness_queue_reports(vault: Path) -> None:
                 "source_candidates_read": 0,
                 "proposals_emitted": 0,
                 "blocked_proposals": 0,
+                "next_run_repair_proposals": 0,
                 "queue_pressure_summary": "no proposals emitted | mechanism review emitted zero candidates",
             },
             "diagnostics": {
                 "evidence_gaps": [
                     "mechanism review emitted zero candidates",
                     "outcome_metrics: attempts_considered=3 is below min_attempts_considered=10",
-                ]
+                ],
+                "next_run_decision_queue": {
+                    "session_reports_scanned": 0,
+                    "decisions_considered": 0,
+                    "open_carry_forward_decisions": 0,
+                    "repair_proposals_emitted": 0,
+                    "decision_counts": {},
+                    "action_counts": {},
+                    "selected_target_proposal_ids": [],
+                },
             },
             "proposals": [],
         },

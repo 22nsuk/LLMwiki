@@ -59,14 +59,14 @@ def _budget_value(budgets: Mapping[str, Any], key: str) -> int:
 
 def build_prompt_text(contract: Mapping[str, Any]) -> str:
     budgets = _mapping_value(contract, "budgets")
-    runtime_profile = _mapping_value(contract, "runtime_profile")
+    runtime = _mapping_value(contract, "runtime")
     promotion_guard = _mapping_value(contract, "promotion_guard")
     goal_backend = _mapping_value(contract, "goal_backend")
     allowed_roots = _goal_path_items(contract.get("allowed_roots"))
     required_evidence = _goal_path_items(contract.get("required_evidence"))
     promotion_blockers = _list_text(promotion_guard.get("promotion_blockers"))
     can_promote_result = bool(promotion_guard.get("can_promote_result", False))
-    profile_verified = str(promotion_guard.get("profile_verified", "")).strip()
+    certificate_verified = bool(promotion_guard.get("runtime_certificate_verified", False))
 
     lines = [
         "You are Codex continuing a bounded auto-improve goal for this repository.",
@@ -74,7 +74,7 @@ def build_prompt_text(contract: Mapping[str, Any]) -> str:
         "Goal contract:",
         f"- contract_id: {str(contract.get('contract_id', '')).strip()}",
         f"- status: {str(contract.get('status', '')).strip()}",
-        f"- profile: {str(runtime_profile.get('current_profile', '')).strip()}",
+        f"- runtime_mode: {str(runtime.get('mode', '')).strip()}",
         f"- backend_storage: {str(goal_backend.get('storage_path', '')).strip()}",
         "",
         "Objective:",
@@ -82,7 +82,7 @@ def build_prompt_text(contract: Mapping[str, Any]) -> str:
         "",
         "Budget limits:",
         f"- max_wall_clock_seconds: {_budget_value(budgets, 'max_wall_clock_seconds')}",
-        f"- max_unattended_seconds: {_budget_value(runtime_profile, 'max_unattended_seconds')}",
+        f"- max_unattended_seconds: {_budget_value(runtime, 'max_unattended_seconds')}",
         f"- max_proposals: {_budget_value(budgets, 'max_proposals')}",
         f"- max_consecutive_failures: {_budget_value(budgets, 'max_consecutive_failures')}",
         f"- heartbeat_interval_seconds: {_budget_value(budgets, 'heartbeat_interval_seconds')}",
@@ -97,7 +97,7 @@ def build_prompt_text(contract: Mapping[str, Any]) -> str:
         "Promotion guard:",
         f"- can_promote_result: {str(can_promote_result).lower()}",
         f"- sealed_authority_clean: {str(bool(promotion_guard.get('sealed_authority_clean', False))).lower()}",
-        f"- profile_verified: {profile_verified}",
+        f"- runtime_certificate_verified: {str(certificate_verified).lower()}",
     ]
     if can_promote_result:
         lines.extend(
@@ -111,29 +111,42 @@ def build_prompt_text(contract: Mapping[str, Any]) -> str:
                 "",
                 "PROMOTION BAN: can_promote_result=false.",
                 "Do not promote release, learning, or improvement claims.",
-                "Do not claim 5-day sustained operation.",
+                "Do not claim sustained unattended operation.",
                 "Do not call update_goal complete until blockers are cleared by evidence.",
                 "",
                 "Promotion blockers:",
                 *[f"- {blocker}" for blocker in promotion_blockers],
             ]
         )
-    if profile_verified != "5d_sustained":
+    if not certificate_verified:
         lines.extend(
             [
                 "",
-                "SUSTAINED CLAIM BAN: profile_verified is not 5d_sustained.",
-                "Do not claim 5-day sustained operation until the full profile ladder is verified.",
+                "SUSTAINED CLAIM BAN: runtime_certificate_verified=false.",
+                "Do not claim sustained unattended operation until the self-improvement loop certificate is verified.",
             ]
         )
     lines.extend(
         [
             "",
+            "Promotion gate guidance:",
+            "- Work toward promotion by making required evidence current and blocker-free.",
+            "- Treat readiness, source-package, public-check, release closeout, goal status, session synopsis, and remediation backlog as independent evidence surfaces.",
+            "- Fix underlying code, tests, docs, or report generators that create blockers.",
+            "- Do not lower thresholds, remove guard checks, edit output-only reports, or relabel risks merely to make can_promote_result true.",
+            "- If blockers remain, record the next repair in remediation/session evidence and keep promotion banned.",
+            "",
             "Resume discipline:",
             "- Keep the same contract digest across resume.",
-            "- Stop with time_budget_exhausted only when the wall-clock budget is reached.",
+            "- Treat the wall-clock duration as a maximum budget, not as proof by itself.",
             "- Stop with proposal_budget_exhausted or failure_budget_exhausted when those separate caps are reached.",
-            "- Write heartbeat, checkpoint, and status evidence before widening the run profile.",
+            "- Write heartbeat, checkpoint, status, readiness, source-package, public-check, and release evidence before certifying the loop.",
+            "",
+            "Generated artifact convergence:",
+            "- After code or report-generator edits, do not use test failure -> patch -> full rerun as the auto-improve loop.",
+            "- First converge `make script-output-surfaces`, `make generated-artifact-index`, and `make artifact-freshness`.",
+            "- Run `make release-smoke-full-reuse` when release source-tree evidence may have changed.",
+            "- Run artifact finalization only after that convergence, through `make report-contract-closeout` or `make test-artifact-finalization`.",
         ]
     )
     return "\n".join(lines).strip() + "\n"
@@ -152,7 +165,7 @@ def build_report(
     backend = FileGoalBackend(vault=resolved_vault, contract_path=goal_contract_path)
     contract = backend.get_goal()
     budgets = _mapping_value(contract, "budgets")
-    runtime_profile = _mapping_value(contract, "runtime_profile")
+    runtime = _mapping_value(contract, "runtime")
     promotion_guard = _mapping_value(contract, "promotion_guard")
     goal_backend = _mapping_value(contract, "goal_backend")
     prompt_text = build_prompt_text(contract)
@@ -181,12 +194,12 @@ def build_report(
             "contract_id": str(contract.get("contract_id", "")).strip(),
             "status": str(contract.get("status", "")).strip(),
             "objective": str(contract.get("objective", "")).strip(),
-            "current_profile": str(runtime_profile.get("current_profile", "")).strip(),
+            "runtime_mode": str(runtime.get("mode", "")).strip(),
             "process_persistent_backend": bool(goal_backend.get("process_persistent", False)),
         },
         "budget": {
             "max_wall_clock_seconds": _budget_value(budgets, "max_wall_clock_seconds"),
-            "max_unattended_seconds": _budget_value(runtime_profile, "max_unattended_seconds"),
+            "max_unattended_seconds": _budget_value(runtime, "max_unattended_seconds"),
             "max_proposals": _budget_value(budgets, "max_proposals"),
             "max_consecutive_failures": _budget_value(budgets, "max_consecutive_failures"),
             "heartbeat_interval_seconds": _budget_value(budgets, "heartbeat_interval_seconds"),
@@ -197,7 +210,9 @@ def build_report(
             "promotion_ban_required": promotion_ban_required,
             "promotion_blockers": _list_text(promotion_guard.get("promotion_blockers")),
             "sealed_authority_clean": bool(promotion_guard.get("sealed_authority_clean", False)),
-            "profile_verified": str(promotion_guard.get("profile_verified", "")).strip(),
+            "runtime_certificate_verified": bool(
+                promotion_guard.get("runtime_certificate_verified", False)
+            ),
             "sustained_runtime_claimed": bool(
                 promotion_guard.get("sustained_runtime_claimed", False)
             ),

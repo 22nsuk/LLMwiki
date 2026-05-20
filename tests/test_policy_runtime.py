@@ -71,6 +71,14 @@ class PolicyRuntimeTest(unittest.TestCase):
             3,
         )
         self.assertEqual(
+            policy["subagent_routing_policy"]["roles"]["scope-gate-reviewer"]["sandbox_mode"],
+            "read-only",
+        )
+        self.assertEqual(
+            policy["subagent_routing_policy"]["roles"]["scope-gate-reviewer"]["allowed_rungs"],
+            [2, 3],
+        )
+        self.assertEqual(
             policy["system_refactor_policy"]["python_function_review"]["profiles"]["runtime"],
             {
                 "include_prefixes": ["ops/", "tools/"],
@@ -278,6 +286,7 @@ class PolicyRuntimeTest(unittest.TestCase):
                 "repeated_discard_runs",
                 "bootstrap_history_insufficient",
                 "recent_log_overlap_queue_blocked",
+                "next_run_failure_repair",
             ],
         )
 

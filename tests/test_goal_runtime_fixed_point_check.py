@@ -66,7 +66,7 @@ class GoalRuntimeFixedPointCheckTests(unittest.TestCase):
             {
                 "contract_id": "auto-improve-goal",
                 "status": "active",
-                "runtime_profile": {"current_profile": "30m_trial"},
+                "runtime": {"mode": "self_improvement_loop"},
                 "promotion_guard": {
                     "can_promote_result": False,
                     "promotion_blockers": promotion_blockers,
@@ -80,7 +80,7 @@ class GoalRuntimeFixedPointCheckTests(unittest.TestCase):
                 "run": {
                     "run_id": "auto-improve-trial",
                     "status": "blocked",
-                    "profile": "30m_trial",
+                    "runtime_mode": "self_improvement_loop",
                 },
                 "promotion_guard": {
                     "can_promote_result": False,
@@ -111,7 +111,7 @@ class GoalRuntimeFixedPointCheckTests(unittest.TestCase):
                     "contract_id": "auto-improve-goal",
                     "run_id": "auto-improve-trial",
                     "run_status": "blocked",
-                    "profile": "30m_trial",
+                    "runtime_mode": "self_improvement_loop",
                     "can_promote_result": False,
                 },
                 "recent_blockers": [
@@ -161,7 +161,7 @@ class GoalRuntimeFixedPointCheckTests(unittest.TestCase):
                     "contract_id": "auto-improve-goal",
                     "run_id": "auto-improve-trial",
                     "run_status": "blocked",
-                    "profile": "30m_trial",
+                    "runtime_mode": "self_improvement_loop",
                     "can_promote_result": False,
                 },
                 "recent_blockers": [
@@ -233,6 +233,47 @@ class GoalRuntimeFixedPointCheckTests(unittest.TestCase):
                 "learning_claim_unlock_review_not_approved",
             ],
         )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_build_report_can_check_run_local_goal_runtime_surfaces(self) -> None:
+        for rel_path in (
+            "codex-goal-contract.json",
+            "goal-run-status.json",
+            "auto-improve-readiness.json",
+            "session-synopsis.json",
+            "remediation-backlog.json",
+        ):
+            source = self.vault / "ops" / "reports" / rel_path
+            destination = self.vault / "runs" / "goal-local" / "state" / rel_path
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+        self._write_json(
+            "ops/reports/session-synopsis.json",
+            {
+                "active_goal": {},
+                "recent_blockers": [
+                    {
+                        "id": "stale_canonical_blocker",
+                        "source": "auto_improve_readiness.promotion_blockers",
+                    }
+                ],
+            },
+        )
+
+        report = build_report(
+            GoalRuntimeFixedPointCheckRequest(
+                vault=self.vault,
+                context=fixed_context(),
+                codex_goal_contract_path="runs/goal-local/state/codex-goal-contract.json",
+                goal_run_status_path="runs/goal-local/state/goal-run-status.json",
+                auto_improve_readiness_path="runs/goal-local/state/auto-improve-readiness.json",
+                session_synopsis_path="runs/goal-local/state/session-synopsis.json",
+                remediation_backlog_path="runs/goal-local/state/remediation-backlog.json",
+            )
+        )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertNotEqual(report["input_fingerprints"]["session_synopsis"], "missing")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_write_report_uses_schema_backed_output(self) -> None:

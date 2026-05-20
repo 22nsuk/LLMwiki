@@ -253,6 +253,34 @@
       ]
     },
     {
+      "pack_id": "developer_full",
+      "authority": "derived",
+      "status": "derived_from_registry",
+      "semantics": "Developer full regression suite that excludes checked-in generated artifact finalization, which must run only after canonical report refresh.",
+      "backing_targets": [
+        "unit-tests-all",
+        "unit-tests-all-serial",
+        "unit-tests-all-parallel",
+        "test-all",
+        "test-all-serial",
+        "test-all-parallel",
+        "check-all",
+        "check-all-serial"
+      ],
+      "selection": {
+        "mode": "marker_expression",
+        "pytest_mark_expr": "not artifact_finalization"
+      },
+      "ci_entrypoint": "test-all",
+      "ci_steps": [
+        "make test-all"
+      ],
+      "documented_entrypoints": [
+        "make test-all",
+        "make check-all"
+      ]
+    },
+    {
       "pack_id": "report_contract_core",
       "authority": "derived",
       "status": "derived_from_registry",
@@ -519,6 +547,46 @@
     },
     {
       "kind": "make_target",
+      "name": "unit-tests-all",
+      "maps_to": "developer_full"
+    },
+    {
+      "kind": "make_target",
+      "name": "unit-tests-all-serial",
+      "maps_to": "developer_full"
+    },
+    {
+      "kind": "make_target",
+      "name": "unit-tests-all-parallel",
+      "maps_to": "developer_full"
+    },
+    {
+      "kind": "make_target",
+      "name": "test-all",
+      "maps_to": "developer_full"
+    },
+    {
+      "kind": "make_target",
+      "name": "test-all-serial",
+      "maps_to": "developer_full"
+    },
+    {
+      "kind": "make_target",
+      "name": "test-all-parallel",
+      "maps_to": "developer_full"
+    },
+    {
+      "kind": "make_target",
+      "name": "check-all",
+      "maps_to": "developer_full"
+    },
+    {
+      "kind": "make_target",
+      "name": "check-all-serial",
+      "maps_to": "developer_full"
+    },
+    {
+      "kind": "make_target",
       "name": "report-contracts",
       "maps_to": "report_contract_core"
     },
@@ -666,6 +734,16 @@
       "kind": "documented_entrypoint",
       "name": "make unit-tests",
       "maps_to": "fast"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make test-all",
+      "maps_to": "developer_full"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make check-all",
+      "maps_to": "developer_full"
     },
     {
       "kind": "documented_entrypoint",

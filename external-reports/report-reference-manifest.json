@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/external-report-reference-manifest.schema.json",
   "artifact_kind": "external_report_reference_manifest",
-  "generated_at": "2026-05-20T06:10:51Z",
+  "generated_at": "2026-05-20T16:56:47Z",
   "producer": "ops.scripts.external_report_reference_manifest",
   "source_command": "python -m ops.scripts.external_report_reference_manifest --vault . --out external-reports/report-reference-manifest.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "227bd9d6d2769fc2ef84dfeaea9991898645931919d80b6d5ad27f598a592b39",
+  "source_tree_fingerprint": "ac46b5999a4ffeeda7ba9d12e642f0a3a8ebbcb21484279381042a613041f99f",
   "input_fingerprints": {
-    "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
+    "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "1d6f04ca255e308a81818f56c8abffc20fb6bd6b56145cbde9dbed29b1637437",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "6da186ae7de647a7a24cf53aa44e0f4507522e360f6229d505e76d1ec154890c",
-    "external_reports": "483ec03b0a64a4be49e98d322b9406ac5bc33dfb398bfddc58e925102e3bf12e",
+    "external_reports": "6365edbf63aa59004ea72144324122a5d1d302e0072a3165ba5404c56c02b28b",
     "active_reference_set_status": "97b0560280ed60a5a1eaa1bc45492543c8a986ad5a25b468c427eb83c3e88191",
     "basis_zip_entry_count": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "basis_zip_name": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -28,7 +28,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T06:10:51Z"
+    "checked_at": "2026-05-20T16:56:47Z"
   },
   "vault": ".",
   "policy": {
@@ -62,15 +62,15 @@
   },
   "active_reference_set": {
     "status": "current",
-    "previous_report_count": 3,
-    "current_report_count": 3,
+    "previous_report_count": 1,
+    "current_report_count": 1,
     "added_paths": [],
     "removed_paths": []
   },
   "archive_exclusion_policy": "external-reports/archive is excluded from active reference provenance; root external-reports files are the operator-facing evidence set",
-  "excluded_file_count": 68,
+  "excluded_file_count": 70,
   "summary": {
-    "report_count": 3,
+    "report_count": 1,
     "basis_zip_known": false,
     "review_basis_zip_known": false,
     "current_distribution_zip_known": false,
@@ -78,7 +78,7 @@
     "zip_provenance_status": "current_distribution_missing",
     "active_reference_set_status": "current",
     "archive_included": false,
-    "excluded_file_count": 68
+    "excluded_file_count": 70
   },
   "references": [
     {
@@ -88,9 +88,9 @@
       "path_aliases": [
         "external-reports/llmwiki_code_change_implementation_report_20260516.md"
       ],
-      "sha256": "6055647ee4a35b2845fb307e00c61711e0913a72fb9d999b8d71602412828b09",
-      "content_sha256": "6055647ee4a35b2845fb307e00c61711e0913a72fb9d999b8d71602412828b09",
-      "byte_count": 30089,
+      "sha256": "560f906d67d1fbb9f72ca19058f7774a5a62d3c6d9e1ca5b666c3a034d0cbcfc",
+      "content_sha256": "560f906d67d1fbb9f72ca19058f7774a5a62d3c6d9e1ca5b666c3a034d0cbcfc",
+      "byte_count": 30081,
       "line_count": 790,
       "evidence_role": "active_external_report",
       "normalization_form": "NFC",
@@ -102,52 +102,6 @@
         "python_unicode_escape_filename_bytes": 53,
         "posix_escape_expanded_filename_bytes": 53,
         "infozip_c_locale_escape_filename_bytes": 53
-      }
-    },
-    {
-      "path": "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
-      "storage_path": "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
-      "display_name": "llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
-      "path_aliases": [
-        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
-      ],
-      "sha256": "6818e37303703636bf49075a4c9757666794712f8af01bc2dcb8b43051e5425c",
-      "content_sha256": "6818e37303703636bf49075a4c9757666794712f8af01bc2dcb8b43051e5425c",
-      "byte_count": 41365,
-      "line_count": 667,
-      "evidence_role": "release_review",
-      "normalization_form": "NFC",
-      "escape_diagnostics": {
-        "display_path": "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
-        "archive_path": "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
-        "escape_expanded_diagnostic_path": "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
-        "utf8_path_bytes": 88,
-        "python_unicode_escape_filename_bytes": 71,
-        "posix_escape_expanded_filename_bytes": 71,
-        "infozip_c_locale_escape_filename_bytes": 71
-      }
-    },
-    {
-      "path": "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
-      "storage_path": "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
-      "display_name": "llmwiki_long_run_integrated_improvement_plan_20260519.md",
-      "path_aliases": [
-        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
-      ],
-      "sha256": "fee9ef965f66aefae548665b3cd0f9bd48392823a7e3ca8b84208158abfbcde6",
-      "content_sha256": "fee9ef965f66aefae548665b3cd0f9bd48392823a7e3ca8b84208158abfbcde6",
-      "byte_count": 45107,
-      "line_count": 1015,
-      "evidence_role": "release_review",
-      "normalization_form": "NFC",
-      "escape_diagnostics": {
-        "display_path": "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
-        "archive_path": "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
-        "escape_expanded_diagnostic_path": "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
-        "utf8_path_bytes": 73,
-        "python_unicode_escape_filename_bytes": 56,
-        "posix_escape_expanded_filename_bytes": 56,
-        "infozip_c_locale_escape_filename_bytes": 56
       }
     }
   ]

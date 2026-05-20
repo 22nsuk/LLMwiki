@@ -267,6 +267,42 @@ def test_backfill_run_artifacts_supports_top_level_historical_run_tranche() -> N
             assert record.get("issues") == []
 
 
+def test_backfill_run_artifacts_supports_promotion_report_variant_filename() -> None:
+    _require_full_vault_run_fixtures()
+    variant_filename = "promotion-report.equal-score-policy-rerun.json"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        seed_minimal_vault(vault)
+        run_dir = vault / ARCHIVED_RUN_REL
+        run_dir.mkdir(parents=True, exist_ok=True)
+        payload = _read_json(ARCHIVED_RUN_SOURCE / "promotion-report.json")
+        payload.pop("metadata", None)
+        _write_json(run_dir / variant_filename, payload)
+
+        variant_rel_path = (ARCHIVED_RUN_REL / variant_filename).as_posix()
+        written = backfill_archived_run_artifacts(vault, rel_paths=[variant_rel_path], context=fixed_context())
+
+        assert written == [variant_rel_path]
+        payload = _read_json(vault / variant_rel_path)
+        embedded_envelope = json.loads(_metadata_property(payload, EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY) or "{}")
+        provenance = json.loads(_metadata_property(payload, BACKFILL_PROVENANCE_PROPERTY) or "{}")
+        freshness_report = build_report(vault, context=fixed_context())
+        record = next(
+            item
+            for item in freshness_report.get("artifact_records", [])
+            if item.get("path") == variant_rel_path
+        )
+
+        assert embedded_envelope.get("artifact_kind") == "promotion_report"
+        assert embedded_envelope.get("artifact_status") == "archived"
+        assert embedded_envelope.get("retention_policy") == "archive"
+        assert provenance.get("source_artifact") == variant_rel_path
+        assert record.get("has_artifact_envelope") is True
+        assert record.get("has_generated_at") is True
+        assert "missing_artifact_envelope" not in record.get("issues", [])
+
+
 def test_backfill_run_artifacts_supports_raw_intake_safe_backfill_tranche() -> None:
     _require_full_vault_run_fixtures()
     with tempfile.TemporaryDirectory() as temp_dir:

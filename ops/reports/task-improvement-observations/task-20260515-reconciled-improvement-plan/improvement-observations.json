@@ -107,7 +107,7 @@
       "problem": "Long-running self-improvement work previously relied on scattered readiness, activation, scoreboard, source-package, and observation artifacts to reconstruct the next session entrypoint.",
       "why_it_matters": "A 4-day-plus plan should not depend on conversational memory. The next agent needs compact blocker, success-pattern, forbidden-repeat, seed-run, and evidence-gap state with explicit stop conditions.",
       "automation_candidate": "Generate a schema-backed session_synopsis artifact that compresses current long-run state without changing promotion or claim gates.",
-      "suggested_followup": "Automated in Day 4+. make session-synopsis now promotes ops/reports/session-synopsis.json through a candidate path, release phase 2 refreshes it after learning-claim activation, and the current synopsis records promotion_allowed=false, claim_wording_allowed=false, five recent blockers, five forbidden repeat patterns, source-package replay status=pass, goal_profile_ladder.status=incomplete, next_profile_required=30m_trial, sustained_claim_allowed=false, and first commands for the next session.",
+      "suggested_followup": "Updated in this task. make session-synopsis now promotes ops/reports/session-synopsis.json through a candidate path, release phase 2 refreshes it after learning-claim activation, and the current synopsis records promotion_allowed=false, claim_wording_allowed=false, recent blockers, forbidden repeat patterns, source-package replay status=pass, goal_runtime_certificate.status=pending, target_runtime_mode=self_improvement_loop, sustained_claim_allowed=false, and first commands for the next session.",
       "status": "automated"
     },
     {
@@ -132,27 +132,27 @@
       "observation_id": "goal_periodic_checkpoint_command_scheduler",
       "surface": "ops/scripts/mechanism/goal_runtime_runner.py, ops/scripts/mechanism/goal_runtime_maintenance.py, ops/reports/goal-run-status.json",
       "problem": "Goal periodic checkpoints now reject stale due evidence, but the runner still records heartbeat/status checkpoints rather than executing the configured periodic maintenance command bundles.",
-      "why_it_matters": "The 6h, 12h, 24h, and 5d profiles should not depend on a human remembering to refresh readiness, synopsis, report-contract, source-package, public-check, and sealed-authority evidence during an unattended run.",
+      "why_it_matters": "The bounded self-improvement loop should not depend on a human remembering to refresh readiness, synopsis, report-contract, source-package, public-check, and sealed-authority evidence during an unattended run.",
       "automation_candidate": "Add a bounded checkpoint scheduler that runs or delegates the configured periodic checkpoint commands at due intervals and records command results separately from heartbeat liveness.",
-      "suggested_followup": "Automated in the goal-runtime runner: due periodic checkpoints now execute the configured bounded command bundle, append a run-local checkpoint-command event, and are only observed when that pass event and fresh generated_at evidence are both present. Keep profile verification blocked until a real completed 30m trial and the later 6h/2d/5d ladder evidence exist.",
+      "suggested_followup": "Updated in this task: due periodic checkpoints remain runner-owned command evidence, but goal progression is now blocked by the single self-improvement loop certificate until a completed runtime, session maintenance, and full readiness/source-package/public-check/release evidence are current.",
       "status": "automated"
     },
     {
       "observation_id": "goal_status_run_artifact_persistence",
-      "surface": "mk/mechanism.mk, tests/test_makefile_static_gates.py, ops/reports/goal-run-status.json, ops/reports/goal-profile-verification.json, runs/goal-auto-improve-trial/status.md, runs/goal-auto-improve-trial/resume-metadata.json, runs/goal-auto-improve-trial/audit-log.jsonl",
-      "problem": "The goal status target refreshed the canonical status report but did not persist the run-local status, resume metadata, and audit log artifacts that profile verification treats as required runtime evidence.",
-      "why_it_matters": "A 30m trial should fail only on real runtime evidence gaps, not because the preflight/status refresh path forgot to materialize its own audit artifacts.",
-      "automation_candidate": "Make goal status/finalize targets write run artifacts whenever they promote a goal-run-status report, and keep profile verification checking those artifacts independently of elapsed-time eligibility.",
-      "suggested_followup": "Automated on 2026-05-18 by adding --write-run-artifacts to auto-improve-goal-status and auto-improve-goal-finalize. Focused Makefile, goal status, and profile verification tests passed; make auto-improve-goal-status goal-profile-verification now leaves run_artifacts.status=clean while correctly preserving blockers for incomplete elapsed runtime and missing process heartbeat command evidence.",
+      "surface": "mk/mechanism.mk, tests/test_makefile_static_gates.py, ops/reports/goal-run-status.json, ops/reports/goal-runtime-certificate.json, runs/goal-auto-improve-trial/status.md, runs/goal-auto-improve-trial/resume-metadata.json, runs/goal-auto-improve-trial/audit-log.jsonl",
+      "problem": "The goal status target refreshed the canonical status report but did not persist the run-local status, resume metadata, and audit log artifacts that runtime certificate verification treats as required evidence.",
+      "why_it_matters": "A bounded self-improvement loop should fail only on real runtime evidence gaps, not because the preflight/status refresh path forgot to materialize its own audit artifacts.",
+      "automation_candidate": "Make goal status/finalize targets write run artifacts whenever they promote a goal-run-status report, and keep runtime certificate checking those artifacts independently of elapsed-time eligibility.",
+      "suggested_followup": "Updated in this task: auto-improve-goal-status and auto-improve-goal-finalize still materialize run artifacts, and goal-runtime-certificate now keeps run_artifacts.status=clean separate from blockers for incomplete runtime/session/command evidence.",
       "status": "automated"
     },
     {
-      "observation_id": "goal_profile_runner_origin_command_evidence",
-      "surface": "ops/scripts/mechanism/goal_runtime_runner.py, ops/scripts/mechanism/goal_run_status.py, ops/scripts/mechanism/goal_profile_verification.py, ops/schemas/goal-profile-verification.schema.json",
+      "observation_id": "goal_runtime_certificate_runner_origin_command_evidence",
+      "surface": "ops/scripts/mechanism/goal_runtime_runner.py, ops/scripts/mechanism/goal_run_status.py, ops/scripts/mechanism/goal_runtime_certificate_report.py, ops/schemas/goal-runtime-certificate.schema.json",
       "problem": "Once report-only status/finalize targets persist run-local artifacts, those artifacts can be clean for resume purposes even though they were not written by the command runner.",
-      "why_it_matters": "Profile verification should keep 30m/6h/2d/5d progression tied to observed runner command execution, not to a report-only status refresh that can keep breadcrumbs current.",
+      "why_it_matters": "Runtime certificate verification should keep sustained self-improvement claims tied to observed runner command execution, not to a report-only status refresh that can keep breadcrumbs current.",
       "automation_candidate": "Stamp run-local audit events with their writer and require a current ops.scripts.goal_runtime_runner command audit before command observability can be clean.",
-      "suggested_followup": "Automated on 2026-05-18 by adding writer provenance to goal-run audit events and making goal-profile-verification report runner_audit_current=false for status-only artifacts. Report-only artifacts can remain run_artifacts.status=clean, but profile command observability now blocks until runner-origin command evidence exists.",
+      "suggested_followup": "Updated in this task: goal-runtime-certificate reports runner_audit_current=false for status-only artifacts. Report-only artifacts can remain run_artifacts.status=clean, but command observability now blocks until runner-origin command evidence exists.",
       "status": "automated"
     },
     {

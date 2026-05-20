@@ -24,6 +24,7 @@ from ops.scripts.test_lane_registry_runtime import (
     pack_ci_steps,
     pack_deselection_policy,
     pack_deselects,
+    pack_mark_expr,
     pack_selectors,
     pack_summary_suite,
     pack_by_id,
@@ -1111,6 +1112,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn(
             "PYTEST_ARTIFACT_FINALIZATION_MARK_EXPR ?= artifact_finalization", text
         )
+        self.assertIn(
+            "PYTEST_DEVELOPER_FULL_MARK_EXPR ?= not artifact_finalization", text
+        )
         self.assertIn("PYTEST_RELEASE_SEALING_MARK_EXPR ?= release_sealing", text)
         self.assertIn("PYTEST_SUBPROCESS_MARK_EXPR ?= subprocess", text)
         self.assertIn("not report_contract and not artifact_finalization", text)
@@ -1119,6 +1123,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn(
             '$(PYTHON) -m pytest -m "$(PYTEST_FAST_MARK_EXPR)" $(PYTEST_FLAGS)',
             _target_block(text, "test-fast"),
+        )
+        self.assertIn(
+            '$(PYTHON) -m pytest -m "$(PYTEST_DEVELOPER_FULL_MARK_EXPR)" $(PYTEST_FLAGS)',
+            _target_block(text, "unit-tests-all"),
         )
         self.assertIn("test: test-fast", text)
         self.assertIn("unit-tests: test-fast", text)
@@ -1188,6 +1196,29 @@ class MakefileStaticGateTests(unittest.TestCase):
             post_check_artifact,
         )
         self.assertIn("--no-fail", post_check_artifact)
+
+    def test_developer_full_suite_excludes_artifact_finalization_lane(self) -> None:
+        registry = _test_lane_registry()
+        text = _makefile_text()
+        developer_full_expr = pack_mark_expr(registry, "developer_full")
+
+        _assert_assignment_exists(
+            self,
+            text,
+            "PYTEST_DEVELOPER_FULL_MARK_EXPR",
+            developer_full_expr,
+        )
+        self.assertEqual(developer_full_expr, "not artifact_finalization")
+        for target, flags in (
+            ("unit-tests-all", "$(PYTEST_FLAGS)"),
+            ("unit-tests-all-serial", "$(PYTEST_SERIAL_FLAGS)"),
+            ("unit-tests-all-parallel", "$(PYTEST_PARALLEL_FLAGS)"),
+        ):
+            with self.subTest(target=target):
+                self.assertIn(
+                    f'$(PYTHON) -m pytest -m "$(PYTEST_DEVELOPER_FULL_MARK_EXPR)" {flags}',
+                    _target_block(text, target),
+                )
 
     def test_source_package_targets_pin_clean_extract_test_lane(self) -> None:
         registry = _test_lane_registry()
@@ -1776,6 +1807,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("finalization self-checks", block)
         self.assertLess(
             block.index("$(MAKE) report-contract-closeout-precheck"),
+            block.index("$(MAKE) release-smoke-full-reuse"),
+        )
+        self.assertLess(
+            block.index("$(MAKE) release-smoke-full-reuse"),
             block.index("$(MAKE) test-execution-summary"),
         )
 
@@ -2526,7 +2561,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         _assert_function_budget_and_outcome_targets(self, text)
         _assert_external_report_action_matrix_target(self, text)
 
-    def test_auto_improve_readiness_target_wraps_core_refresh_generated(self) -> None:
+    def test_auto_improve_readiness_target_does_not_self_dirty_with_core_refresh(self) -> None:
         text = _makefile_text()
 
         self.assertIn(
@@ -2538,7 +2573,11 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "auto-improve-readiness: refresh-generated-core auto-improve-readiness-worktree-guard",
+            "auto-improve-readiness: auto-improve-readiness-worktree-guard",
+            text,
+        )
+        self.assertNotIn(
+            "auto-improve-readiness: refresh-generated-core",
             text,
         )
         self.assertIn(
@@ -2549,7 +2588,16 @@ class MakefileStaticGateTests(unittest.TestCase):
             "ops.scripts.canonical_artifact_promote",
             _target_block(text, "auto-improve-readiness"),
         )
-        self.assertIn("auto-improve-readiness-report: refresh-generated-core", text)
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-readiness-report",
+            (
+                "$(MAKE) auto-improve-readiness-worktree-guard",
+                "$(MAKE) refresh-generated-core",
+                "$(MAKE) auto-improve-readiness-report-body",
+            ),
+        )
         self.assertIn(
             "auto-improve-readiness-report-body: auto-improve-readiness-worktree-guard",
             text,
@@ -2590,10 +2638,42 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "GOAL_RUN_STATUS_CANDIDATE_OUT",
                 "$(GOAL_ACTIVE_STATE_DIR)/goal-run-status.candidate.json",
             ),
-            ("GOAL_PROFILE_VERIFICATION_OUT", "ops/reports/goal-profile-verification.json"),
             (
-                "GOAL_PROFILE_VERIFICATION_CANDIDATE_OUT",
-                "tmp/goal-profile-verification.candidate.json",
+                "GOAL_LOCAL_READINESS_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/auto-improve-readiness.json",
+            ),
+            (
+                "GOAL_LOCAL_READINESS_CANDIDATE_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/auto-improve-readiness.candidate.json",
+            ),
+            (
+                "GOAL_LOCAL_SESSION_SYNOPSIS_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/session-synopsis.json",
+            ),
+            (
+                "GOAL_LOCAL_SESSION_SYNOPSIS_CANDIDATE_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/session-synopsis.candidate.json",
+            ),
+            (
+                "GOAL_LOCAL_NEGATIVE_LESSONS_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/self-improvement-negative-lessons.json",
+            ),
+            (
+                "GOAL_LOCAL_NEGATIVE_LESSONS_CANDIDATE_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/self-improvement-negative-lessons.candidate.json",
+            ),
+            (
+                "GOAL_LOCAL_REMEDIATION_BACKLOG_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/remediation-backlog.json",
+            ),
+            (
+                "GOAL_LOCAL_REMEDIATION_BACKLOG_CANDIDATE_OUT",
+                "$(GOAL_ACTIVE_STATE_DIR)/remediation-backlog.candidate.json",
+            ),
+            ("GOAL_RUNTIME_CERTIFICATE_OUT", "ops/reports/goal-runtime-certificate.json"),
+            (
+                "GOAL_RUNTIME_CERTIFICATE_CANDIDATE_OUT",
+                "tmp/goal-runtime-certificate.candidate.json",
             ),
             ("GOAL_RUNTIME_CLEAN_TRANSIENT_OUT", "tmp/goal-runtime-clean-transient.json"),
             ("GOAL_RUNTIME_CLEAN_TRANSIENT_APPLY", "1"),
@@ -2605,16 +2685,21 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "GOAL_RUNTIME_FIXED_POINT_CHECK_OUT",
                 "tmp/goal-runtime-fixed-point-check.json",
             ),
+            ("GOAL_RUNTIME_LOCK_PATH", "$(GOAL_RUN_LOG_DIR)/goal-runtime.lock.json"),
+            (
+                "GOAL_RUNTIME_PYTHON_PREFLIGHT_OUT",
+                "tmp/goal-runtime-python-preflight.json",
+            ),
             (
                 "GOAL_SESSION_RESULT_OUT",
                 "$(GOAL_ACTIVE_STATE_DIR)/auto-improve-goal-session-result.json",
             ),
             ("GOAL_RUN_STATUS", "blocked"),
-            ("GOAL_RUN_PROFILE", "30m_trial"),
-            ("GOAL_MAX_UNATTENDED_SECONDS", "1800"),
-            ("GOAL_RUNNER_TIMEOUT_SECONDS", "9000"),
-            ("GOAL_RUNNER_TIMEOUT_GRACE_SECONDS", "7200"),
-            ("GOAL_MAX_MINUTES", "30"),
+            ("GOAL_RUNTIME_MODE", "self_improvement_loop"),
+            ("GOAL_RUNTIME_SECONDS", "21600"),
+            ("GOAL_MAX_UNATTENDED_SECONDS", "$(GOAL_RUNTIME_SECONDS)"),
+            ("GOAL_RUNNER_TIMEOUT_SECONDS", "28800"),
+            ("GOAL_MAX_MINUTES", "360"),
             ("GOAL_MAX_PROPOSALS", "1"),
             ("GOAL_MAX_CONSECUTIVE_FAILURES", "1"),
             ("GOAL_MAINTAIN_UNTIL_BUDGET", "1"),
@@ -2622,17 +2707,15 @@ class MakefileStaticGateTests(unittest.TestCase):
             ("GOAL_EXECUTOR", "codex_exec"),
             ("GOAL_ARTIFACT_CLASS", "system_mechanism"),
             ("GOAL_FINAL_STATUS", "stopped"),
-            ("GOAL_LADDER_PROFILES", "30m_trial 6h_ramp 2d_candidate 5d_sustained"),
             ("GOAL_RUN_LOG_DIR", "build/goal-runs"),
-            ("GOAL_LADDER_CONTRACT_RUN_ID", "$(GOAL_LADDER_RUN_ID)"),
         ):
             _assert_assignment_exists(self, text, variable, expected)
         for variable in (
             "GOAL_WORKTREE_ALLOW_DIRTY",
             "GOAL_WORKTREE_STRICT",
             "GOAL_ALLOW_LEARNING_UNCERTAIN",
-            "GOAL_PROFILE_VERIFICATION_PROFILE",
-            "GOAL_PROFILE_VERIFICATION_APPLY",
+            "GOAL_RUNTIME_CERTIFICATE_MODE",
+            "GOAL_RUNTIME_CERTIFICATE_APPLY",
         ):
             _assert_assignment_exists(self, text, variable, "")
         run_command = _assert_assignment_exists(self, text, "GOAL_RUN_COMMAND")
@@ -2665,9 +2748,20 @@ class MakefileStaticGateTests(unittest.TestCase):
             "auto-improve-goal-contract",
             "goal-runtime-refresh",
             "goal-runtime-publish-snapshot",
+            "goal-runtime-local-readiness",
+            "goal-runtime-local-session-synopsis",
+            "goal-runtime-local-negative-lessons",
+            "goal-runtime-local-remediation-backlog",
+            "goal-runtime-local-fixed-point-check",
+            "goal-runtime-local-evidence-converge",
+            "goal-runtime-publish-local-evidence",
             "goal-runtime-reconcile",
             "goal-runtime-clean-transient",
             "goal-runtime-fixed-point-check",
+            "goal-runtime-lock-check",
+            "goal-runtime-lock-status",
+            "goal-runtime-lock-stop",
+            "goal-runtime-python-preflight",
             "long-run-preflight-clean",
             "auto-improve-goal-preflight",
             "auto-improve-goal-run",
@@ -2675,9 +2769,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "auto-improve-goal-resume",
             "auto-improve-goal-finalize",
             "auto-improve-goal-run-artifacts",
-            "auto-improve-goal-ladder-run",
-            "auto-improve-goal-ladder-start",
-            "goal-profile-verification",
+            "goal-runtime-certificate",
             "goal-worktree-guard",
         ):
             self.assertIn(target, phony)
@@ -2685,9 +2777,23 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertNotIn("auto-improve-goal-contract", codex_contract_header)
         _assert_target_depends_on(self, text, "codex-goal-prompt", "codex-goal-contract")
         _assert_target_depends_on(self, text, "goal-runtime-refresh", "auto-improve-goal-status")
+        _assert_target_depends_on(self, text, "long-run-preflight-clean", "goal-runtime-lock-check")
+        _assert_target_depends_on(
+            self,
+            text,
+            "long-run-preflight-clean",
+            "goal-runtime-python-preflight",
+        )
         _assert_target_depends_on(self, text, "long-run-preflight-clean", "goal-runtime-clean-transient")
         _assert_target_depends_on(self, text, "long-run-preflight-clean", "goal-runtime-fixed-point-check")
         _assert_target_depends_on(self, text, "long-run-preflight-clean", "auto-improve-goal-preflight")
+        _assert_target_depends_on(self, text, "auto-improve-goal-preflight", "goal-runtime-lock-check")
+        _assert_target_depends_on(
+            self,
+            text,
+            "auto-improve-goal-preflight",
+            "goal-runtime-python-preflight",
+        )
         _assert_target_depends_on(self, text, "auto-improve-goal-run", "auto-improve-goal-preflight")
         _assert_target_depends_on(self, text, "auto-improve-goal-run", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "auto-improve-goal-status", "auto-improve-goal-contract")
@@ -2695,9 +2801,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         _assert_target_depends_on(self, text, "auto-improve-goal-resume", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "auto-improve-goal-finalize", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "auto-improve-goal-run-artifacts", "auto-improve-goal-status")
-        _assert_target_depends_on(self, text, "auto-improve-goal-ladder-run", "auto-improve-goal-preflight")
-        _assert_target_depends_on(self, text, "auto-improve-goal-ladder-start", "auto-improve-goal-preflight")
-        _assert_target_depends_on(self, text, "goal-profile-verification", "auto-improve-goal-contract")
+        _assert_target_depends_on(self, text, "goal-runtime-certificate", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "goal-worktree-guard", "auto-improve-goal-preflight")
         _assert_recipe_contains_tokens(
             self,
@@ -2717,7 +2821,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "ops.scripts.codex_goal_client",
                 "--out \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"",
                 "--backend-type run_local_file",
-                "--current-profile \"$(GOAL_RUN_PROFILE)\"",
+                "--runtime-mode \"$(GOAL_RUNTIME_MODE)\"",
                 "--max-unattended-seconds \"$(GOAL_MAX_UNATTENDED_SECONDS)\"",
                 "--max-proposals \"$(GOAL_MAX_PROPOSALS)\"",
                 "--max-consecutive-failures \"$(GOAL_MAX_CONSECUTIVE_FAILURES)\"",
@@ -2744,6 +2848,47 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "ops.scripts.codex_goal_prompt",
                 "--goal-contract \"$(CODEX_GOAL_CONTRACT_OUT)\"",
                 "--out \"$(CODEX_GOAL_PROMPT_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-lock-check",
+            (
+                "ops.scripts.goal_runtime_lock check",
+                "--lock-path \"$(GOAL_RUNTIME_LOCK_PATH)\"",
+                "--cleanup-stale",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-lock-status",
+            (
+                "ops.scripts.goal_runtime_lock status",
+                "--lock-path \"$(GOAL_RUNTIME_LOCK_PATH)\"",
+                "--json",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-lock-stop",
+            (
+                "ops.scripts.goal_runtime_lock stop",
+                "--lock-path \"$(GOAL_RUNTIME_LOCK_PATH)\"",
+                "--json",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-python-preflight",
+            (
+                "ops.scripts.bootstrap_preflight",
+                "--dev",
+                "--environment-class goal-runtime",
+                "--out \"$(GOAL_RUNTIME_PYTHON_PREFLIGHT_OUT)\"",
             ),
         )
         _assert_recipe_contains_tokens(
@@ -2804,18 +2949,77 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "--out \"$(GOAL_RUNTIME_FIXED_POINT_CHECK_OUT)\"",
             ),
         )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-local-readiness",
+            (
+                "ops.scripts.auto_improve_readiness",
+                "--out \"$(GOAL_LOCAL_READINESS_CANDIDATE_OUT)\"",
+                "--remediation-backlog \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\"",
+                "--out \"$(GOAL_LOCAL_READINESS_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-local-session-synopsis",
+            (
+                "ops.scripts.session_synopsis",
+                "--out \"$(GOAL_LOCAL_SESSION_SYNOPSIS_CANDIDATE_OUT)\"",
+                "--auto-improve-readiness \"$(GOAL_LOCAL_READINESS_OUT)\"",
+                "--goal-run-status \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
+                "--out \"$(GOAL_LOCAL_SESSION_SYNOPSIS_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-local-negative-lessons",
+            (
+                "ops.scripts.self_improvement_negative_lessons",
+                "--out \"$(GOAL_LOCAL_NEGATIVE_LESSONS_CANDIDATE_OUT)\"",
+                "--session-synopsis \"$(GOAL_LOCAL_SESSION_SYNOPSIS_OUT)\"",
+                "--out \"$(GOAL_LOCAL_NEGATIVE_LESSONS_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-local-remediation-backlog",
+            (
+                "ops.scripts.remediation_backlog",
+                "--out \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_CANDIDATE_OUT)\"",
+                "--self-improvement-negative-lessons \"$(GOAL_LOCAL_NEGATIVE_LESSONS_OUT)\"",
+                "--session-synopsis \"$(GOAL_LOCAL_SESSION_SYNOPSIS_OUT)\"",
+                "--out \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-local-fixed-point-check",
+            (
+                "--codex-goal-contract \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"",
+                "--goal-run-status \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
+                "--auto-improve-readiness \"$(GOAL_LOCAL_READINESS_OUT)\"",
+                "--session-synopsis \"$(GOAL_LOCAL_SESSION_SYNOPSIS_OUT)\"",
+                "--remediation-backlog \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\"",
+            ),
+        )
         reconcile_block = _target_block(text, "goal-runtime-reconcile")
-        self.assertEqual(reconcile_block.count("$(MAKE) goal-runtime-refresh"), 2)
-        self.assertEqual(reconcile_block.count("$(MAKE) goal-runtime-publish-snapshot"), 2)
+        self.assertNotIn("$(MAKE) goal-runtime-publish-snapshot", reconcile_block)
+        self.assertNotIn("$(MAKE) session-synopsis", reconcile_block)
+        self.assertNotIn("$(MAKE) remediation-backlog", reconcile_block)
+        self.assertNotIn("$(MAKE) auto-improve-readiness-report-body", reconcile_block)
         _assert_recipe_contains_tokens(
             self,
             text,
             "goal-runtime-reconcile",
             (
                 "$(MAKE) goal-runtime-clean-transient",
-                "$(MAKE) session-synopsis",
-                "$(MAKE) remediation-backlog",
-                "$(MAKE) auto-improve-readiness-report-body",
+                "$(MAKE) goal-runtime-local-evidence-converge",
+                "$(MAKE) goal-runtime-publish-local-evidence",
                 "$(MAKE) goal-runtime-fixed-point-check",
                 "$(MAKE) external-report-action-matrix",
                 "$(MAKE) generated-artifact-index",
@@ -2825,16 +3029,37 @@ class MakefileStaticGateTests(unittest.TestCase):
         _assert_recipe_contains_tokens(
             self,
             text,
+            "goal-runtime-local-evidence-converge",
+            (
+                "$(MAKE) goal-runtime-refresh",
+                "$(MAKE) goal-runtime-local-readiness",
+                "$(MAKE) goal-runtime-local-session-synopsis",
+                "$(MAKE) goal-runtime-local-negative-lessons",
+                "$(MAKE) goal-runtime-local-remediation-backlog",
+                "$(MAKE) goal-runtime-local-fixed-point-check",
+            ),
+        )
+        self.assertEqual(
+            _target_block(text, "goal-runtime-publish-local-evidence").count(
+                "ops.scripts.canonical_artifact_promote"
+            ),
+            6,
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
             "auto-improve-goal-run",
             (
                 "ops.scripts.goal_runtime_runner",
                 "--goal-contract \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"",
                 "--run-id \"$(GOAL_RUN_ID)\"",
+                "--runtime-mode \"$(GOAL_RUNTIME_MODE)\"",
                 "--status-report-path \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
                 "--result-out \"$(GOAL_SESSION_RESULT_OUT)\"",
                 "--heartbeat-interval-seconds \"$(GOAL_HEARTBEAT_INTERVAL_SECONDS)\"",
                 "--checkpoint-interval-seconds \"$(GOAL_CHECKPOINT_INTERVAL_SECONDS)\"",
                 "--timeout-seconds \"$(GOAL_RUNNER_TIMEOUT_SECONDS)\"",
+                "--workspace-lock-path \"$(GOAL_RUNTIME_LOCK_PATH)\"",
                 "-- $(GOAL_RUN_COMMAND)",
             ),
         )
@@ -2849,6 +3074,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "--heartbeat-interval-seconds \"$(GOAL_HEARTBEAT_INTERVAL_SECONDS)\"",
                 "--checkpoint-interval-seconds \"$(GOAL_CHECKPOINT_INTERVAL_SECONDS)\"",
                 "--timeout-seconds \"$(GOAL_RUNNER_TIMEOUT_SECONDS)\"",
+                "--workspace-lock-path \"$(GOAL_RUNTIME_LOCK_PATH)\"",
                 "-- $(GOAL_RESUME_COMMAND)",
             ),
         )
@@ -2869,51 +3095,16 @@ class MakefileStaticGateTests(unittest.TestCase):
         _assert_recipe_contains_tokens(
             self,
             text,
-            "goal-profile-verification",
+            "goal-runtime-certificate",
             (
-                "ops.scripts.goal_profile_verification",
+                "ops.scripts.goal_runtime_certificate_report",
                 "--goal-contract \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"",
                 "--status-report \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
-                "--out \"$(GOAL_PROFILE_VERIFICATION_CANDIDATE_OUT)\"",
-                "$(if $(GOAL_PROFILE_VERIFICATION_PROFILE),--profile \"$(GOAL_PROFILE_VERIFICATION_PROFILE)\",)",
-                "$(if $(GOAL_PROFILE_VERIFICATION_APPLY),--apply,)",
-                "ops/schemas/goal-profile-verification.schema.json",
-                "--expected-artifact-kind goal_profile_verification",
-            ),
-        )
-        _assert_recipe_contains_tokens(
-            self,
-            text,
-            "auto-improve-goal-ladder-run",
-            (
-                "runner_timeout_grace=\"$(GOAL_RUNNER_TIMEOUT_GRACE_SECONDS)\"",
-                "30m_trial) profile_seconds=1800; profile_minutes=30; profile_proposals=1; profile_failures=1",
-                "6h_ramp) profile_seconds=21600; profile_minutes=360; profile_proposals=6; profile_failures=2",
-                "2d_candidate) profile_seconds=172800; profile_minutes=2880; profile_proposals=24; profile_failures=3",
-                "5d_sustained) profile_seconds=432000; profile_minutes=7200; profile_proposals=60; profile_failures=3",
-                "runner_timeout=$$((profile_seconds + runner_timeout_grace))",
-                "GOAL_CONTRACT_RUN_ID=\"$(GOAL_CONTRACT_RUN_ID)\"",
-                "GOAL_RUN_ID=\"$(GOAL_RUN_ID)-$$profile\"",
-                "GOAL_RUN_PROFILE=\"$$profile\"",
-                "GOAL_MAX_PROPOSALS=\"$$profile_proposals\"",
-                "GOAL_MAX_CONSECUTIVE_FAILURES=\"$$profile_failures\"",
-                "$(MAKE) goal-runtime-reconcile",
-                "GOAL_PROFILE_VERIFICATION_APPLY=1",
-                "GOAL_PROFILE_VERIFICATION_OUT",
-                "contract_update",
-                "verification_status",
-                "raise SystemExit(0 if ok else 1)",
-            ),
-        )
-        _assert_recipe_contains_tokens(
-            self,
-            text,
-            "auto-improve-goal-ladder-start",
-            (
-                "GOAL_RUN_ID=\"$(GOAL_LADDER_RUN_ID)\"",
-                "GOAL_CONTRACT_RUN_ID=\"$(GOAL_LADDER_CONTRACT_RUN_ID)\"",
-                "CODEX_GOAL_CONTRACT_ID=\"$(CODEX_GOAL_CONTRACT_ID)\"",
-                "GOAL_ALLOW_LEARNING_UNCERTAIN=\"$(GOAL_ALLOW_LEARNING_UNCERTAIN)\"",
+                "--out \"$(GOAL_RUNTIME_CERTIFICATE_CANDIDATE_OUT)\"",
+                "$(if $(GOAL_RUNTIME_CERTIFICATE_MODE),--runtime-mode \"$(GOAL_RUNTIME_CERTIFICATE_MODE)\",)",
+                "$(if $(GOAL_RUNTIME_CERTIFICATE_APPLY),--apply,)",
+                "ops/schemas/goal-runtime-certificate.schema.json",
+                "--expected-artifact-kind goal_runtime_certificate",
             ),
         )
 

@@ -85,7 +85,7 @@
         "contract_id",
         "status",
         "objective",
-        "current_profile",
+        "runtime_mode",
         "process_persistent_backend"
       ],
       "properties": {
@@ -94,9 +94,9 @@
         "contract_id": { "type": "string", "minLength": 1 },
         "status": { "type": "string", "minLength": 1 },
         "objective": { "type": "string", "minLength": 1 },
-        "current_profile": {
+        "runtime_mode": {
           "type": "string",
-          "enum": ["30m_trial", "6h_ramp", "2d_candidate", "5d_sustained"]
+          "enum": ["self_improvement_loop"]
         },
         "process_persistent_backend": { "type": "boolean" }
       }
@@ -129,7 +129,7 @@
         "promotion_ban_required",
         "promotion_blockers",
         "sealed_authority_clean",
-        "profile_verified",
+        "runtime_certificate_verified",
         "sustained_runtime_claimed"
       ],
       "properties": {
@@ -140,7 +140,7 @@
           "items": { "type": "string", "minLength": 1 }
         },
         "sealed_authority_clean": { "type": "boolean" },
-        "profile_verified": { "type": "string", "minLength": 1 },
+        "runtime_certificate_verified": { "type": "boolean" },
         "sustained_runtime_claimed": { "type": "boolean" }
       }
     },

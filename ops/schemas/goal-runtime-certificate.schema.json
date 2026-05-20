@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://llmwiki.local/schemas/goal-profile-verification.schema.json",
-  "title": "Goal profile verification report",
+  "$id": "https://llmwiki.local/schemas/goal-runtime-certificate.schema.json",
+  "title": "Goal runtime certificate report",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -20,7 +20,7 @@
     "currentness",
     "vault",
     "goal",
-    "profile",
+    "certificate",
     "run",
     "run_artifacts",
     "session_evidence",
@@ -31,10 +31,10 @@
     "status"
   ],
   "properties": {
-    "$schema": { "type": "string", "const": "ops/schemas/goal-profile-verification.schema.json" },
-    "artifact_kind": { "type": "string", "const": "goal_profile_verification" },
+    "$schema": { "type": "string", "const": "ops/schemas/goal-runtime-certificate.schema.json" },
+    "artifact_kind": { "type": "string", "const": "goal_runtime_certificate" },
     "generated_at": { "type": "string", "minLength": 1 },
-    "producer": { "type": "string", "const": "ops.scripts.goal_profile_verification" },
+    "producer": { "type": "string", "const": "ops.scripts.goal_runtime_certificate_report" },
     "source_command": { "type": "string", "minLength": 1 },
     "source_revision": { "type": "string" },
     "source_tree_fingerprint": { "type": "string", "minLength": 1 },
@@ -61,27 +61,27 @@
         "contract_sha256_after": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
       }
     },
-    "profile": {
+    "certificate": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "target_profile",
+        "target_runtime_mode",
         "verification_status",
-        "minimum_elapsed_seconds",
+        "max_runtime_seconds",
         "observed_elapsed_seconds",
         "already_verified",
         "eligible"
       ],
       "properties": {
-        "target_profile": {
+        "target_runtime_mode": {
           "type": "string",
-          "enum": ["30m_trial", "6h_ramp", "2d_candidate", "5d_sustained", "none"]
+          "enum": ["self_improvement_loop"]
         },
         "verification_status": {
           "type": "string",
-          "enum": ["blocked", "eligible", "already_verified", "already_complete"]
+          "enum": ["blocked", "eligible", "already_verified"]
         },
-        "minimum_elapsed_seconds": { "type": "integer", "minimum": 0 },
+        "max_runtime_seconds": { "type": "integer", "minimum": 1 },
         "observed_elapsed_seconds": { "type": "integer", "minimum": 0 },
         "already_verified": { "type": "boolean" },
         "eligible": { "type": "boolean" }
@@ -94,7 +94,7 @@
         "status_report_path",
         "run_id",
         "run_status",
-        "run_profile",
+        "run_runtime_mode",
         "started_at",
         "completed_at"
       ],
@@ -102,7 +102,7 @@
         "status_report_path": { "type": "string", "minLength": 1 },
         "run_id": { "type": "string" },
         "run_status": { "type": "string" },
-        "run_profile": { "type": "string" },
+        "run_runtime_mode": { "type": "string" },
         "started_at": { "type": "string" },
         "completed_at": { "type": "string" }
       }
@@ -212,31 +212,19 @@
         "apply_requested",
         "apply_allowed",
         "applied",
-        "verified_profiles_before",
-        "verified_profiles_after",
-        "profile_verified_before",
-        "profile_verified_after",
-        "next_profile_before",
-        "next_profile_after"
+        "certificate_status_before",
+        "certificate_status_after",
+        "runtime_certificate_verified_before",
+        "runtime_certificate_verified_after"
       ],
       "properties": {
         "apply_requested": { "type": "boolean" },
         "apply_allowed": { "type": "boolean" },
         "applied": { "type": "boolean" },
-        "verified_profiles_before": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/profile_name" },
-          "uniqueItems": true
-        },
-        "verified_profiles_after": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/profile_name" },
-          "uniqueItems": true
-        },
-        "profile_verified_before": { "$ref": "#/$defs/profile_or_unverified" },
-        "profile_verified_after": { "$ref": "#/$defs/profile_or_unverified" },
-        "next_profile_before": { "$ref": "#/$defs/profile_or_none" },
-        "next_profile_after": { "$ref": "#/$defs/profile_or_none" }
+        "certificate_status_before": { "$ref": "#/$defs/certificate_status" },
+        "certificate_status_after": { "$ref": "#/$defs/certificate_status" },
+        "runtime_certificate_verified_before": { "type": "boolean" },
+        "runtime_certificate_verified_after": { "type": "boolean" }
       }
     },
     "blockers": {
@@ -247,17 +235,9 @@
     "status": { "type": "string", "enum": ["pass", "attention"] }
   },
   "$defs": {
-    "profile_name": {
+    "certificate_status": {
       "type": "string",
-      "enum": ["30m_trial", "6h_ramp", "2d_candidate", "5d_sustained"]
-    },
-    "profile_or_unverified": {
-      "type": "string",
-      "enum": ["unverified", "30m_trial", "6h_ramp", "2d_candidate", "5d_sustained"]
-    },
-    "profile_or_none": {
-      "type": "string",
-      "enum": ["30m_trial", "6h_ramp", "2d_candidate", "5d_sustained", "none"]
+      "enum": ["unverified", "verified"]
     },
     "artifact_check": {
       "type": "object",
@@ -274,6 +254,7 @@
       "additionalProperties": false,
       "required": ["path", "status"],
       "properties": {
+        "evidence_id": { "type": "string" },
         "path": { "type": "string", "minLength": 1 },
         "status": { "type": "string", "enum": ["present", "missing"] },
         "report_status": { "type": "string" },

@@ -22,6 +22,9 @@
 - `research-analyst.toml`
 - `llm-architect.toml`
 
+추가로 cross-project profile seed를 검토해 이 저장소에 맞게 재작성한 것:
+- `Headline_Rush/.codex/agents/hr-scope-gate-reviewer.toml` -> `scope-gate-reviewer.toml`
+
 의도적으로 제외한 것:
 - frontend/mobile/cloud/business 도메인 특화 에이전트
 - 이 저장소의 flat wiki + maintainer runtime 구조와 직접 맞닿지 않는 범용 product 역할
@@ -80,6 +83,7 @@ repo-shared defaults는 아래 rung만 사용한다.
 | `parity-replay-auditor.toml` | `gpt-5.5` + `xhigh` | `make check`, packaged-copy parity, baseline/candidate replayability를 따질 때 |
 | `benchmark-evidence-analyst.toml` | `gpt-5.5` + `xhigh` | eval/lint/stage2/promotion artifact가 keep/discard를 정당화하는지 판단할 때 |
 | `owner-boundary-mapper.toml` | `gpt-5.5` + `medium` | `wiki/`, `system/`, `ops/`, `tests/`, `runs/` 사이의 canonical owner boundary를 잡을 때 |
+| `scope-gate-reviewer.toml` | `gpt-5.5` + `high` | 작업이 public/private/generated/release/runtime 경계를 넘는지 구현 전에 차단하거나 좁힐 때 |
 | `valuation-policy-auditor.toml` | `gpt-5.5` + `xhigh` | same-eval promotion, policy exception, decision-weight 과대평가 여부를 감사할 때 |
 
 ## Routing guidance for this repo
@@ -89,6 +93,8 @@ repo-shared defaults는 아래 rung만 사용한다.
 - light discovery:
   - `explorer`
   - `owner-boundary-mapper`
+- scope gating before edits:
+  - `scope-gate-reviewer`
 - bounded implementation:
   - `worker`
 - acceptance and generic risk review:
@@ -104,6 +110,7 @@ repo-shared defaults는 아래 rung만 사용한다.
 
 간단한 규칙:
 - 경계가 불명확하면 먼저 `explorer`나 `owner-boundary-mapper`로 좁힌다.
+- 요청 자체가 현재 task surface에 허용되는지 불명확하면 `scope-gate-reviewer`로 먼저 허용/축소/보류를 판단한다.
 - 실제 수정은 기본적으로 `worker`가 맡는다.
 - merge or signoff 전에는 `reviewer` 또는 `validator`를 붙인다.
 - specialized add-on은 특정 리스크를 깊게 보는 sidecar로 쓰고, generic review/validation을 생략하지 않는다.

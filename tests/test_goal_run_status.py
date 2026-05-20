@@ -22,7 +22,7 @@ from ops.scripts.goal_runtime_maintenance import (
     append_checkpoint_command_event,
     build_periodic_evidence,
 )
-from ops.scripts.goal_runtime_profile import build_profile_ladder
+from ops.scripts.goal_runtime_certificate import build_runtime_certificate
 from ops.scripts.goal_runtime_resume import resume_metadata_from_report, resume_status
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
@@ -62,7 +62,7 @@ class GoalRunStatusTests(unittest.TestCase):
         self._copy_support_file("ops/scripts/mechanism/goal_run_status.py")
         self._copy_support_file("ops/scripts/mechanism/goal_runtime_backoff.py")
         self._copy_support_file("ops/scripts/mechanism/goal_runtime_maintenance.py")
-        self._copy_support_file("ops/scripts/mechanism/goal_runtime_profile.py")
+        self._copy_support_file("ops/scripts/mechanism/goal_runtime_certificate.py")
         self._copy_support_file("ops/scripts/mechanism/goal_runtime_resume.py")
 
     def tearDown(self) -> None:
@@ -88,6 +88,37 @@ class GoalRunStatusTests(unittest.TestCase):
                         "recent_blocker_count": 2,
                         "evidence_gap_count": 1,
                         "next_action": "Trial only; do not promote.",
+                    },
+                },
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+
+    def _seed_full_gate_reports(self) -> None:
+        reports = self.vault / "ops" / "reports"
+        reports.mkdir(parents=True, exist_ok=True)
+        for name in (
+            "auto-improve-readiness.json",
+            "goal-run-status.json",
+            "session-synopsis.json",
+            "remediation-backlog.json",
+            "source-package-clean-extract.json",
+            "public-check-summary.json",
+            "release-closeout-summary.json",
+        ):
+            (reports / name).write_text(json.dumps({"status": "pass"}), encoding="utf-8")
+        guard = self.vault / "tmp" / "goal-worktree-guard.json"
+        guard.parent.mkdir(parents=True, exist_ok=True)
+        guard.write_text(
+            json.dumps(
+                {
+                    "artifact_kind": "goal_worktree_guard",
+                    "status": "pass",
+                    "decisions": {
+                        "can_promote_result": True,
+                        "promotion_blockers": [],
+                        "fatal_blockers": [],
                     },
                 },
                 sort_keys=True,
@@ -166,11 +197,10 @@ class GoalRunStatusTests(unittest.TestCase):
         self.assertEqual(report["health"]["resume_status"], "ready")
         self.assertEqual(report["health"]["promotion_status"], "blocked")
         self.assertEqual(report["health"]["can_promote_result"], False)
-        self.assertEqual(report["profile_ladder"]["status"], "incomplete")
-        self.assertEqual(report["profile_ladder"]["highest_verified_profile"], "unverified")
-        self.assertEqual(report["profile_ladder"]["next_profile_required"], "30m_trial")
-        self.assertEqual(report["profile_ladder"]["sustained_claim_allowed"], False)
-        self.assertEqual(len(report["profile_ladder"]["profiles"]), 4)
+        self.assertEqual(report["runtime_certificate"]["status"], "pending")
+        self.assertEqual(report["runtime_certificate"]["mode"], "self_improvement_loop")
+        self.assertEqual(report["runtime_certificate"]["certificate_status"], "unverified")
+        self.assertEqual(report["runtime_certificate"]["full_gate_clean"], False)
         self.assertEqual(report["periodic_evidence"]["status"], "not_due")
         self.assertEqual(report["periodic_evidence"]["next_checkpoint_id"], "checkpoint_6h")
         self.assertEqual(report["session_synopsis"]["link_status"], "linked")
@@ -181,7 +211,7 @@ class GoalRunStatusTests(unittest.TestCase):
             report["artifacts"]["checkpoint_command_log_path"],
             "runs/goal-20260517-trial/checkpoint-command-events.jsonl",
         )
-        self.assertEqual(report["blockers"], ["profile ladder incomplete"])
+        self.assertEqual(report["blockers"], ["self-improvement loop certificate incomplete"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_goal_run_status_marks_stale_command_heartbeat_as_attention_blocker(self) -> None:
@@ -215,7 +245,6 @@ class GoalRunStatusTests(unittest.TestCase):
             GoalRunStatusRequest(
                 vault=self.vault,
                 run_id="20260517-ramp",
-                profile="6h_ramp",
                 started_at="2026-05-17T05:00:00Z",
                 last_heartbeat_at="2026-05-17T11:59:00Z",
                 last_checkpoint_at="2026-05-17T10:30:00Z",
@@ -249,7 +278,6 @@ class GoalRunStatusTests(unittest.TestCase):
             GoalRunStatusRequest(
                 vault=self.vault,
                 run_id="20260517-ramp",
-                profile="6h_ramp",
                 started_at="2026-05-17T05:00:00Z",
                 last_heartbeat_at="2026-05-17T11:59:00Z",
                 last_checkpoint_at="2026-05-17T11:30:00Z",
@@ -283,7 +311,6 @@ class GoalRunStatusTests(unittest.TestCase):
             GoalRunStatusRequest(
                 vault=self.vault,
                 run_id="20260517-ramp",
-                profile="6h_ramp",
                 started_at="2026-05-17T05:00:00Z",
                 last_heartbeat_at="2026-05-17T11:59:00Z",
                 last_checkpoint_at="2026-05-17T11:30:00Z",
@@ -324,7 +351,6 @@ class GoalRunStatusTests(unittest.TestCase):
             GoalRunStatusRequest(
                 vault=self.vault,
                 run_id="20260517-ramp",
-                profile="6h_ramp",
                 started_at="2026-05-17T05:00:00Z",
                 last_heartbeat_at="2026-05-17T17:59:00Z",
                 last_checkpoint_at="2026-05-17T17:30:00Z",
@@ -501,7 +527,7 @@ class GoalRunStatusTests(unittest.TestCase):
             self.vault
             / "ops"
             / "reports"
-            / "release-closeout-sealed-rehearsal-check.json"
+            / "release-closeout-summary.json"
         ).write_text(
             json.dumps(
                 {
@@ -548,17 +574,17 @@ class GoalRunStatusTests(unittest.TestCase):
             resume_status(resume_from_checkpoint=True, resume_command=""),
             "missing_resume_command",
         )
-        profile_ladder = build_profile_ladder(
+        runtime_certificate = build_runtime_certificate(
             self.vault,
             contract=sample_goal_contract(),
-            run_profile="30m_trial",
+            run_mode="self_improvement_loop",
         )
-        self.assertEqual(profile_ladder["status"], "incomplete")
-        self.assertEqual(profile_ladder["profiles"][0]["profile"], "30m_trial")
+        self.assertEqual(runtime_certificate["status"], "pending")
+        self.assertEqual(runtime_certificate["mode"], "self_improvement_loop")
         sealed_evidence = next(
             item
-            for item in profile_ladder["profiles"][3]["evidence_paths"]
-            if item["path"] == "ops/reports/release-closeout-sealed-rehearsal-check.json"
+            for item in runtime_certificate["required_evidence"]
+            if item["path"] == "ops/reports/release-closeout-summary.json"
         )
         self.assertEqual(sealed_evidence["status"], "present")
         self.assertEqual(sealed_evidence["report_status"], "fail")
@@ -580,36 +606,26 @@ class GoalRunStatusTests(unittest.TestCase):
             "python -m ops.scripts.auto_improve_loop --resume",
         )
 
-    def test_goal_run_status_allows_sustained_claim_only_after_full_ladder_and_clean_guard(self) -> None:
+    def test_goal_run_status_allows_sustained_claim_after_certificate_and_clean_guard(self) -> None:
         contract = sample_goal_contract()
-        contract["runtime_profile"].update(
-            {
-                "current_profile": "5d_sustained",
-                "verified_profiles": [
-                    "30m_trial",
-                    "6h_ramp",
-                    "2d_candidate",
-                    "5d_sustained",
-                ],
-                "next_profile": "none",
-            }
-        )
+        contract["runtime"]["certificate_status"] = "verified"
+        contract["runtime"]["verified_at"] = "2026-05-17T11:00:00Z"
         contract["promotion_guard"].update(
             {
                 "can_promote_result": True,
                 "promotion_blockers": [],
                 "sealed_authority_clean": True,
-                "profile_verified": "5d_sustained",
+                "runtime_certificate_verified": True,
                 "sustained_runtime_claimed": True,
             }
         )
         set_goal(contract, vault=self.vault)
+        self._seed_full_gate_reports()
 
         report = build_report(
             GoalRunStatusRequest(
                 vault=self.vault,
                 run_id="20260522-sustained",
-                profile="5d_sustained",
                 status="completed",
                 last_heartbeat_at="2026-05-17T11:59:00Z",
                 last_checkpoint_at="2026-05-17T11:59:00Z",
@@ -618,10 +634,8 @@ class GoalRunStatusTests(unittest.TestCase):
             )
         )
 
-        self.assertEqual(report["profile_ladder"]["status"], "complete")
-        self.assertEqual(report["profile_ladder"]["highest_verified_profile"], "5d_sustained")
-        self.assertEqual(report["profile_ladder"]["next_profile_required"], "none")
-        self.assertEqual(report["profile_ladder"]["sustained_claim_allowed"], True)
+        self.assertEqual(report["runtime_certificate"]["status"], "complete")
+        self.assertTrue(report["runtime_certificate"]["full_gate_clean"])
         self.assertEqual(report["blockers"], [])
         self.assertEqual(report["status"], "pass")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
