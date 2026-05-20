@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/self-improvement-negative-lessons.schema.json",
   "artifact_kind": "self_improvement_negative_lessons",
-  "generated_at": "2026-05-20T10:00:48Z",
+  "generated_at": "2026-05-20T10:03:22Z",
   "producer": "ops.scripts.self_improvement_negative_lessons",
   "source_command": "python -m ops.scripts.self_improvement_negative_lessons --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "2c47a600ed0cfbfe30c39e65eb4b1988b6cfb0796d68d8be63c41203da46d9e7",
+  "source_tree_fingerprint": "ee58bb62e535b970b7137585bd983a2a42fb4ab60d10e5bfe573865a88d1f509",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "47b79b46ef1a89257481eb0fa0b41f96e2765bb833dd8fe9b2f718d71cf470e2",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "6be541617f1774d9faca7c41ea0669ff4fe4b3b5780ad2b04b1c585c96dc8653",
-    "learning_claim_activation": "b0a864e02685717577b0689a44370049fb99cd1eaa31ff1cb5b63ac5924abfc7",
-    "session_synopsis": "8c155191bdc5ef973b02e0eb7937cb58df4df7b24204ad0838dff416810692da"
+    "learning_claim_activation": "2cbad8c40fcf1bf52417c637de714c45ff1471e8babd02bec625131e2e790e6a",
+    "session_synopsis": "a289422b8b30ba2781a8530c488142979d57255b55c9a7bcfe3a65ba05f6deb3"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:00:48Z"
+    "checked_at": "2026-05-20T10:03:22Z"
   },
   "vault": ".",
   "policy": {
@@ -31,33 +31,12 @@
   "mode": "advisory",
   "gate_effect": "blocks_repeat_only",
   "summary": {
-    "lesson_count": 6,
-    "backlog_candidate_count": 1,
+    "lesson_count": 4,
+    "backlog_candidate_count": 0,
     "source_activation_status": "pass",
-    "next_action": "Promote backlog candidates to remediation-backlog before rerunning the same blocker pattern."
+    "next_action": "Negative lessons are advisory only; no repeated backlog candidates detected."
   },
   "lessons": [
-    {
-      "lesson_id": "blocked_queue_recent_log_overlap",
-      "source": "learning_claim_activation.negative_learning_ledger+session_synopsis",
-      "decisions": [
-        "BLOCKED"
-      ],
-      "run_ids": [],
-      "occurrence_count": 2,
-      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
-      "repair_target": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane.",
-      "evidence_digests": [
-        {
-          "path": "ops/reports/auto-improve-readiness.json",
-          "exists": true,
-          "sha256": "2905a24ce3c8ee0e8d34b85becf43389394725766577c780c06fb47e5bfc9748",
-          "status": "present"
-        }
-      ],
-      "repeat_policy": "do_not_repeat_until_repaired",
-      "backlog_candidate": true
-    },
     {
       "lesson_id": "discard_behavior_delta_before_after_evidence_missing",
       "source": "learning_claim_activation.negative_learning_ledger+session_synopsis",
@@ -74,7 +53,7 @@
         {
           "path": "ops/reports/learning-delta-scoreboard.json",
           "exists": true,
-          "sha256": "56898fe629e4279e93a62716a0cef82175bfc4947c9bb7eec50ca617f711b3b2",
+          "sha256": "4e7175e8d5fa48a1b48719c9021e8367acb6efa43ec56b0a488bd99baba24f55",
           "status": "present"
         }
       ],
@@ -144,29 +123,6 @@
           "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/run-telemetry.json",
           "exists": true,
           "sha256": "370f77f245e56c0572e6542a94c5dbf3257f9d533d78da70f01507d83a8007d4",
-          "status": "present"
-        }
-      ],
-      "repeat_policy": "do_not_repeat_until_repaired",
-      "backlog_candidate": false
-    },
-    {
-      "lesson_id": "hold_legacy_promotion_report",
-      "source": "learning_claim_activation.negative_learning_ledger",
-      "decisions": [
-        "HOLD"
-      ],
-      "run_ids": [
-        "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime"
-      ],
-      "occurrence_count": 1,
-      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
-      "repair_target": "Change the mechanism or evidence predicate before rerunning another HOLD attempt with same_eval_reason_code=legacy_promotion_report.",
-      "evidence_digests": [
-        {
-          "path": "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
-          "exists": true,
-          "sha256": "b794847bc291b86254b24ed2d92e859ebbfa153ebb8fdf61255e99b79e5b6986",
           "status": "present"
         }
       ],

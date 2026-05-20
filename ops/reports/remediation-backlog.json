@@ -1,19 +1,19 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-20T10:00:49Z",
+  "generated_at": "2026-05-20T10:03:22Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "7bea2948b720a969d7a8350c24a4a3a7494471feb2d44c616d6b22978132e66d",
+  "source_tree_fingerprint": "897711e7399445e60615358ab4780680e0d7ece9a3a9660e39b0c77bab1d96e8",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "a1944bd8f56639f8342b31ff9812a2d20d6995e3cccbcdfbbdf42467807cffe2",
-    "learning_claim_activation": "b0a864e02685717577b0689a44370049fb99cd1eaa31ff1cb5b63ac5924abfc7",
-    "self_improvement_negative_lessons": "168634c3fab64f354794ed8a45adc8bc8338773580fcf4a9bf9e93a0230d09fe",
-    "session_synopsis": "8c155191bdc5ef973b02e0eb7937cb58df4df7b24204ad0838dff416810692da",
+    "learning_claim_activation": "2cbad8c40fcf1bf52417c637de714c45ff1471e8babd02bec625131e2e790e6a",
+    "self_improvement_negative_lessons": "6fe78ebefdf9ad6e9b06b31805124c181a399fb35c7ecd51640813b47279c98e",
+    "session_synopsis": "a289422b8b30ba2781a8530c488142979d57255b55c9a7bcfe3a65ba05f6deb3",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
     "auto_improve_sessions": "be03d1b1c1a4b7110b30b3c1f90e109b1f2d40143baf585ec86d90aaf7ae0d8b"
   },
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:00:49Z"
+    "checked_at": "2026-05-20T10:03:22Z"
   },
   "vault": ".",
   "policy": {
@@ -32,18 +32,18 @@
   },
   "status": "attention",
   "summary": {
-    "backlog_item_count": 8,
-    "repeated_blocker_count": 1,
-    "active_blocker_count": 7,
-    "open_item_count": 8,
+    "backlog_item_count": 5,
+    "repeated_blocker_count": 0,
+    "active_blocker_count": 5,
+    "open_item_count": 5,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
     "next_action": "Close or explicitly defer remediation backlog items before promotion."
   },
   "items": [
     {
-      "item_id": "active_blocker_execution_blocked_by_no_runnable_proposal",
-      "blocker_id": "execution_blocked_by_no_runnable_proposal",
-      "source": "auto_improve_readiness.promotion_blockers",
+      "item_id": "active_blocker_goal_status_git_worktree_dirty",
+      "blocker_id": "goal_status_git_worktree_dirty",
+      "source": "goal_run_status.blockers",
       "item_type": "active_blocker",
       "status": "open",
       "severity": "blocks_promotion",
@@ -51,8 +51,8 @@
       "evidence_paths": [
         "ops/reports/session-synopsis.json"
       ],
-      "repair_target": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap.",
-      "next_action": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
+      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
+      "next_action": "Refresh goal run status and close the active blocker before resuming."
     },
     {
       "item_id": "active_blocker_goal_status_profile_ladder_incomplete",
@@ -69,8 +69,8 @@
       "next_action": "Collect bounded runtime evidence for next_profile_required=30m_trial."
     },
     {
-      "item_id": "active_blocker_learning_blocked_by_execution_not_runnable",
-      "blocker_id": "learning_blocked_by_execution_not_runnable",
+      "item_id": "active_blocker_learning_blocked_by_review_required",
+      "blocker_id": "learning_blocked_by_review_required",
       "source": "auto_improve_readiness.promotion_blockers",
       "item_type": "active_blocker",
       "status": "open",
@@ -79,8 +79,8 @@
       "evidence_paths": [
         "ops/reports/session-synopsis.json"
       ],
-      "repair_target": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty.",
-      "next_action": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty."
+      "repair_target": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete.",
+      "next_action": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
     },
     {
       "item_id": "active_blocker_learning_claim_unlock_review_not_approved",
@@ -97,20 +97,6 @@
       "next_action": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean."
     },
     {
-      "item_id": "active_blocker_promotion_blocked_by_artifact_contract_failure",
-      "blocker_id": "promotion_blocked_by_artifact_contract_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Resolve artifact freshness blockers, then rerun make auto-improve-readiness.",
-      "next_action": "Resolve artifact freshness blockers, then rerun make auto-improve-readiness."
-    },
-    {
       "item_id": "active_blocker_promotion_blocked_by_goal_worktree_guard_failure",
       "blocker_id": "promotion_blocked_by_goal_worktree_guard_failure",
       "source": "auto_improve_readiness.promotion_blockers",
@@ -123,34 +109,6 @@
       ],
       "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness.",
       "next_action": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
-    },
-    {
-      "item_id": "active_blocker_promotion_blocked_by_selected_contract_failure",
-      "blocker_id": "promotion_blocked_by_selected_contract_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Refresh selected contract evidence, then rerun make auto-improve-readiness.",
-      "next_action": "Refresh selected contract evidence, then rerun make auto-improve-readiness."
-    },
-    {
-      "item_id": "negative_lesson_blocked_queue_recent_log_overlap",
-      "blocker_id": "blocked_queue_recent_log_overlap",
-      "source": "self_improvement_negative_lessons.lessons",
-      "item_type": "repeated_negative_lesson",
-      "status": "open",
-      "severity": "blocks_repeat",
-      "occurrence_count": 2,
-      "evidence_paths": [
-        "ops/reports/auto-improve-readiness.json"
-      ],
-      "repair_target": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane.",
-      "next_action": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane."
     }
   ],
   "inputs": {

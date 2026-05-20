@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-20T10:03:16Z",
+  "generated_at": "2026-05-20T10:03:22Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
@@ -11,10 +11,10 @@
     "schema": "8c91343f30427af06d94db468c972889a09ff0185c7db529c93733a70f373b82",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "f66d87472e0e2e1b03b99437ccbadec98a2fd769c9cf08e6924573dcac8ab784",
-    "auto_improve_readiness": "2b4d1f4dd1a03327ead430042f5b33bcbdcfae1b7899c8d654999e26cce40066",
+    "auto_improve_readiness": "721f3ab8e2718b524d1a85a5c435ddea2fc23264b878cc94ca3b8ec4ad456ee0",
     "goal_run_status": "d0a7de2a070bf4d72d175b0d53f0e3590b68de94e1337ea25ad1b2699e7487a4",
-    "learning_claim_activation": "b2467c92210d1d3271e300a25031ba6470cfea7db9d09868547fd1536b3f48ab",
-    "learning_delta_scoreboard": "3afcebff36ddb3ff17a3bfb8c7a67b4d2735233be0cf6bd0d86b3e1a1e3ec3b9",
+    "learning_claim_activation": "2cbad8c40fcf1bf52417c637de714c45ff1471e8babd02bec625131e2e790e6a",
+    "learning_delta_scoreboard": "4e7175e8d5fa48a1b48719c9021e8367acb6efa43ec56b0a488bd99baba24f55",
     "source_package_clean_extract": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "task_observations": "71013a0efaa510f93ecdb4cb6a3cbc18ff61d60d8fc093c6521a4aea80829677"
   },
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:03:16Z"
+    "checked_at": "2026-05-20T10:03:22Z"
   },
   "vault": ".",
   "policy": {
@@ -73,7 +73,7 @@
       "id": "promotion_blocked_by_goal_worktree_guard_failure",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=8",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=2",
       "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     },
     {
