@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-20T06:19:45Z",
+  "generated_at": "2026-05-20T06:24:33Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -11,8 +11,8 @@
     "schema": "834eb6cfec958f35d3989a742cfd58414bb50bb75040ab9283e4c90ed61f1657",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "3090e8825cf76941fff0428cae33626bf250f99e0ab497ee5c0c5883b415cffe",
-    "run_promotion_reports": "0297bd23b7bf2596611fc0996cb7af28059789a9a7ee157207eb4623160a95b0",
-    "external_report_inventory": "805060fdf319ebbb5a06eea1a5d5ff5dadf81cc384eb1a4689a390f9771b518b",
+    "run_promotion_reports": "47308e6ead45e6366547bffe91c993d0d224544c2a4fb589d598b124c76a0a5f",
+    "external_report_inventory": "8500649368cfaba258623f14fdb3e14f3b149ee174603d4be00ba71bcf77b11b",
     "operator_report_inventory": "0479590a186415fa72ba934ab4431828124b8ca576b06322a6eae193e9627721",
     "ops_report_inventory": "42888319f0fa00ed45687b2461bda3d2739588b931ba8c665afa1e1be992c762",
     "task_improvement_observation_inventory": "65cf114b98e80d7ee0a50dba1d6ecd9f398d1b78e52cb68cd336d619b29c2b74"
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T06:19:45Z"
+    "checked_at": "2026-05-20T06:24:33Z"
   },
   "vault": ".",
   "policy": {
@@ -58,7 +58,7 @@
     }
   ],
   "now": [
-    "91 canonical artifact(s) are currently indexed.",
+    "87 canonical artifact(s) are currently indexed.",
     "1 archive candidate(s) remain in active namespaces."
   ],
   "next": [
@@ -73,9 +73,9 @@
     "operator_reports_root_file_count": 2,
     "external_reports_root_file_count": 4,
     "external_reports_archive_file_count": 68,
-    "run_directory_count": 18,
+    "run_directory_count": 14,
     "run_archive_directory_count": 4,
-    "canonical_report_count": 91,
+    "canonical_report_count": 87,
     "archive_candidate_count": 1
   },
   "canonical_reports": [
@@ -883,50 +883,6 @@
       "supersedes": [],
       "superseded_by": [],
       "decision_relevance": "review_context"
-    },
-    {
-      "surface": "runs",
-      "family": "mechanism_run",
-      "path": "runs/5day-auto-improve-runtime-30m_trial-run-01-auto-improve-readiness-queue-runtime",
-      "role": "run_history_record",
-      "date": "",
-      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
-      "supersedes": [],
-      "superseded_by": [],
-      "decision_relevance": "run_history"
-    },
-    {
-      "surface": "runs",
-      "family": "mechanism_run",
-      "path": "runs/5day-auto-improve-runtime-rerun1-30m_trial-run-01-auto-improve-readiness-queue-runtime",
-      "role": "run_history_record",
-      "date": "",
-      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
-      "supersedes": [],
-      "superseded_by": [],
-      "decision_relevance": "run_history"
-    },
-    {
-      "surface": "runs",
-      "family": "mechanism_run",
-      "path": "runs/5day-auto-improve-runtime-rerun2-30m_trial-run-01-auto-improve-readiness-queue-runtime",
-      "role": "run_history_record",
-      "date": "",
-      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
-      "supersedes": [],
-      "superseded_by": [],
-      "decision_relevance": "run_history"
-    },
-    {
-      "surface": "runs",
-      "family": "mechanism_run",
-      "path": "runs/5day-auto-improve-runtime-rerun4-30m_trial-run-01-auto-improve-readiness-queue-runtime",
-      "role": "run_history_record",
-      "date": "",
-      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
-      "supersedes": [],
-      "superseded_by": [],
-      "decision_relevance": "run_history"
     },
     {
       "surface": "runs",

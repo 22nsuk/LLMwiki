@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-20T06:19:43Z",
+  "generated_at": "2026-05-20T06:26:47Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
@@ -11,11 +11,11 @@
     "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ac89dead9a209f58ec98e9f5a02446afe66adf70edbba3f94c9c88d59e3386cb",
-    "learning_claim_activation": "f01eeaea714b2e235e3f594238e9be36c548d716ea8653f37ee25c49675a111a",
-    "self_improvement_negative_lessons": "e13308a09a534946c558a0f104ca4f7fd7614cba9c18047a3154790dd7497f0a",
-    "session_synopsis": "ccfaad4121145b5033a406750ea933747acc2f9e6eeab4e4714cf27122d9555c",
+    "learning_claim_activation": "438aeaceec9b492f79cf3df37c6174ce9e19acde762fe1b789f5752dab7059c1",
+    "self_improvement_negative_lessons": "60f525b80fede3a52faf6d6c8a5aaa4d306b9f574ac2fd783fc3c2578ff6569a",
+    "session_synopsis": "dea7cf0fb242fc58b42ebcfc738b8fbee7a99b9aa146019b08d340e02bc10666",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
-    "auto_improve_sessions": "6d6eb9f525b4f123196393fd0eb50b731b467a24591028d35236968327dcee1b"
+    "auto_improve_sessions": "1925dde86f50c5677d40e25ef84c5ac951abb89143978db02bb2b5894b5a6638"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T06:19:43Z"
+    "checked_at": "2026-05-20T06:26:47Z"
   },
   "vault": ".",
   "policy": {
@@ -32,10 +32,10 @@
   },
   "status": "attention",
   "summary": {
-    "backlog_item_count": 5,
+    "backlog_item_count": 4,
     "repeated_blocker_count": 0,
-    "active_blocker_count": 5,
-    "open_item_count": 5,
+    "active_blocker_count": 4,
+    "open_item_count": 4,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
     "next_action": "Close or explicitly defer remediation backlog items before promotion."
   },
@@ -67,20 +67,6 @@
       ],
       "repair_target": "Collect bounded runtime evidence for next_profile_required=30m_trial.",
       "next_action": "Collect bounded runtime evidence for next_profile_required=30m_trial."
-    },
-    {
-      "item_id": "active_blocker_learning_blocked_by_review_required",
-      "blocker_id": "learning_blocked_by_review_required",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete.",
-      "next_action": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
     },
     {
       "item_id": "active_blocker_learning_claim_unlock_review_not_approved",
