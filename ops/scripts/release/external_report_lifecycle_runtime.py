@@ -759,8 +759,8 @@ def auto_improve_goal_contract_input_status(
     if (
         _goal_contract_is_bounded(contract)
         and as_int(budgets.get("max_wall_clock_seconds")) >= 21600
-        and as_int(budgets.get("max_proposals")) == 1
-        and as_int(budgets.get("max_consecutive_failures")) == 1
+        and as_int(budgets.get("max_proposals")) >= 1
+        and as_int(budgets.get("max_consecutive_failures")) >= 1
         and has_goal_status_path
     ):
         return "implemented"

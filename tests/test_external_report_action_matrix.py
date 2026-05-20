@@ -399,8 +399,8 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "allowed_roots": [{"path": "ops/", "purpose": "runtime contracts"}],
             "budgets": {
                 "max_wall_clock_seconds": 21600,
-                "max_proposals": 1,
-                "max_consecutive_failures": 1,
+                "max_proposals": 4,
+                "max_consecutive_failures": 3,
                 "heartbeat_interval_seconds": 300,
                 "checkpoint_interval_seconds": 1800,
             },

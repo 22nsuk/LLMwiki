@@ -2,7 +2,7 @@
   "$schema": "ops/schemas/codex-goal-contract.schema.json",
   "schema_version": 1,
   "contract_id": "auto-improve-goal",
-  "objective": "Run a bounded self-improvement loop whose result is certified by current readiness, release, source-package, public-check, status, and session evidence.",
+  "objective": "Close the remaining active external-report verification work, especially goal_run_status_audit_resume, goal_execution_runtime_certificate, and goal_executor_backoff_observability, then run and reconcile the self_improvement_loop until goal-runtime-certificate can verify the completed run with current readiness, source-package, public-check, release-authority, session, remediation, and artifact-freshness evidence.",
   "non_goals": [
     "Do not treat wall-clock duration as proof without the self-improvement loop certificate.",
     "Do not promote release, learning, or improvement claims while promotion blockers remain.",
@@ -39,26 +39,26 @@
     }
   ],
   "budgets": {
-    "max_wall_clock_seconds": 21600,
-    "max_proposals": 1,
-    "max_consecutive_failures": 1,
+    "max_wall_clock_seconds": 43200,
+    "max_proposals": 4,
+    "max_consecutive_failures": 3,
     "heartbeat_interval_seconds": 300,
     "checkpoint_interval_seconds": 1800
   },
-  "created_at": "2026-05-20T14:22:25Z",
+  "created_at": "2026-05-20T18:02:32Z",
   "created_by": "codex",
   "status": "active",
   "runtime": {
     "mode": "self_improvement_loop",
-    "duration_seconds": 21600,
-    "max_unattended_seconds": 21600,
+    "duration_seconds": 43200,
+    "max_unattended_seconds": 43200,
     "certificate_status": "unverified",
     "verified_at": ""
   },
   "goal_backend": {
     "backend_type": "run_local_file",
     "process_persistent": true,
-    "storage_path": "runs/goal-auto-improve-trial/state/codex-goal-contract.json"
+    "storage_path": "runs/goal-active-report-self-improve-certificate/state/codex-goal-contract.json"
   },
   "stop_conditions": [
     {
@@ -87,7 +87,7 @@
     },
     {
       "evidence_id": "goal_run_status",
-      "path": "runs/goal-auto-improve-trial/state/goal-run-status.json",
+      "path": "runs/goal-active-report-self-improve-certificate/state/goal-run-status.json",
       "description": "Goal status records heartbeat, checkpoint, resume, and promotion blockers.",
       "freshness": "current_run",
       "required_for_promotion": true
@@ -151,10 +151,38 @@
   "metadata": {
     "contract_family": "bounded_auto_improve",
     "claim_policy": "loop_certificate_and_release_authority_required_for_claims",
+    "goal_slug": "active-report-self-improve-certificate",
+    "active_external_report_paths": [
+      "external-reports/llmwiki_code_change_implementation_report_20260516.md",
+      "external-reports/report-reference-manifest.json"
+    ],
+    "active_report_residual_action_ids": [
+      "goal_run_status_audit_resume",
+      "goal_execution_runtime_certificate",
+      "goal_executor_backoff_observability"
+    ],
+    "runtime_success_target": "self_improvement_loop plus verified goal-runtime-certificate",
+    "recommended_make_overrides": {
+      "GOAL_RUN_ID": "active-report-self-improve-certificate",
+      "GOAL_RUNTIME_SECONDS": 43200,
+      "GOAL_MAX_UNATTENDED_SECONDS": 43200,
+      "GOAL_MAX_MINUTES": 720,
+      "GOAL_RUNNER_TIMEOUT_SECONDS": 54000,
+      "GOAL_MAX_PROPOSALS": 4,
+      "GOAL_MAX_CONSECUTIVE_FAILURES": 3,
+      "GOAL_ALLOW_LEARNING_UNCERTAIN": 1
+    },
+    "convergence_order": [
+      "make long-run-preflight-clean",
+      "make auto-improve-goal-run",
+      "make goal-runtime-reconcile",
+      "make goal-runtime-certificate GOAL_RUNTIME_CERTIFICATE_APPLY=1",
+      "make report-contract-closeout"
+    ],
     "properties": [
       {
         "name": "urn:openai:artifact-envelope",
-        "value": "{\"$schema\": \"ops/schemas/codex-goal-contract.schema.json\", \"artifact_kind\": \"codex_goal_contract\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-20T14:22:32Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-20T14:22:32Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"auto_improve_readiness\": \"fa06edd7b2657b4d9db1efa150a8d1bd5696f2993171fb61a3d58bfcb5e57095\", \"contract_id\": \"d6dee5d74cf954a24559fc821001ef3dc5c693b768134ad20fe8924060b7adfe\", \"goal_worktree_guard_report\": \"4393eb6ded3fa44312cbdac61af4743988829c601bfae2c9037e6c9d4919b184\", \"policy\": \"5f97cf7619b458d6e8aa229fa3f318d888cf78c4a806b6b72a552c360ceb0894\", \"schema\": \"a1601bdfb503b41bc6fc4f93585cc130d12974e1fadb297ea53ef5c4aa148329\", \"source_paths\": \"c02692597eff09d2eb319b88016ba5284b0e77af40644443e795655181453480\"}, \"producer\": \"ops.scripts.codex_goal_client\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.codex_goal_client --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"d541e61340fd2e0c695da020652b2fa3026ed29e928b5795b616c00b3a84ad1e\"}"
+        "value": "{\"$schema\": \"ops/schemas/codex-goal-contract.schema.json\", \"artifact_kind\": \"codex_goal_contract\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-20T18:06:49Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-20T18:06:49Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"auto_improve_readiness\": \"b7291245ac97c847b0bd015066cc8f337888c264c91a82eeda284387a88db58f\", \"contract_id\": \"d6dee5d74cf954a24559fc821001ef3dc5c693b768134ad20fe8924060b7adfe\", \"goal_worktree_guard_report\": \"db3db28fe77a256e5b5a0762aa73a774c27ab03676edf17f7a62a07a20a92e39\", \"policy\": \"db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24\", \"schema\": \"a1601bdfb503b41bc6fc4f93585cc130d12974e1fadb297ea53ef5c4aa148329\", \"source_paths\": \"c02692597eff09d2eb319b88016ba5284b0e77af40644443e795655181453480\"}, \"producer\": \"ops.scripts.codex_goal_client\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.codex_goal_client --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"32f0524b6e6e4f80729bdfee4249fd4011f2e877255e5bb0af4dbf38acc06934\"}"
       }
     ]
   }

@@ -1,16 +1,16 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-20T16:56:48Z",
+  "generated_at": "2026-05-20T18:06:56Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "ac46b5999a4ffeeda7ba9d12e642f0a3a8ebbcb21484279381042a613041f99f",
+  "source_tree_fingerprint": "40edcaa1959fe55280fdb49d09106664043af487557a977ff76c2826bfb3aa6d",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "2754ce18b53c7b3640f27d43e8fee908637aff0857e4f6078e5328a2c59a1468",
+    "source_paths": "41b7f2349197838c51b19b1f1320a4317d899cd0e033c33e6f1a8f8e8ac11009",
     "active_external_reports": "decefdb771e3808785a78eb721ff084e1dfc0bdded112da50ac993f59e815985",
     "action_catalog": "84ec1fd0f7b48c1ff39c7cb33430799005c0dc31849a6f9e6c2c475ce1da10f4"
   },
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T16:56:48Z"
+    "checked_at": "2026-05-20T18:06:56Z"
   },
   "vault": ".",
   "status": "attention",
