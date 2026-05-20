@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-19T20:47:45Z",
+  "generated_at": "2026-05-20T02:35:44Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "7b3ccfa9e257862df5a402d14944e2c87925c6d809cf34bbbc82f269450211fc",
+  "source_tree_fingerprint": "607290458796684e94ce743b6505911314a98e5650fdf4ec4c612228a60d0263",
   "input_fingerprints": {
     "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "b07ea4db25e1e00c9ecce8026872b299d5f6df21f7edd396dce9af266ed48c42",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "fbec8d2540f7bfdd887c5750efa39eb9a0f4192cd8402ffd7859676e07b85ae6",
     "artifact_freshness_report": "ef05ce0d4e63d092dc12226a4ea2fda7deb0a0082ff15c18caefb35b0898d913",
-    "goal_worktree_guard_report": "badb0e51a12de35fedb76a058df9065106ab93bdeda024436b869db86fb9856d",
+    "goal_worktree_guard_report": "67b02322171d692774cb8c528e05d976022c07b3a8e49fe6bad8f5cabc4a17e4",
     "mechanism_review_report": "64561bdd6dc2d8b573125b5f0aeed17decc44190b5ce43e63a686fe290d4f21d",
     "mutation_proposal_report": "354eb3a46b7b2dfd3726a67f5f9c8cd4cd84572e604316f4e766a2402b01b072",
     "outcome_metrics_report": "b806956fae85996d7ef66e28c63e4ede38d114d1d5279b02c4365ec71b559ef3",
@@ -22,7 +22,7 @@
     "release_closeout_post_check_finalizer_report": "missing",
     "release_closeout_summary_report": "44a45b6591a17a02b77fe5ce3f9f6b292b6e82b9163125a9436d119f476c2ad2",
     "release_evidence_cohort_report": "e2d2076c043dbd15cbe06d8c57d6f9b6bc1c854e62f3a6728016f6582f2d184e",
-    "remediation_backlog_report": "e40c1241956e11b64b0c1bae099301ef90c1d27e5e313d2794feaafead98e8bb",
+    "remediation_backlog_report": "81e8467cd9eb4a87033edc3ea1299a5dfcc47bccc9b6e4b79c58b190006ad7db",
     "selected_contract_summary_report": "a26f12921ce79e4f7525db2161b3667a977ce59ecae50e207bf9752ca907deaa",
     "source_package_clean_extract_report": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "release_authority_preflight_report_candidates": "145f23a10e25dfcf0b9eb8875753adc591ca775e5c55cdea7926a32a5e51bebd"
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-19T20:47:45Z"
+    "checked_at": "2026-05-20T02:35:44Z"
   },
   "vault": ".",
   "policy": {
@@ -174,10 +174,8 @@
       "accepted_risk": false,
       "gate_effect": "active",
       "source_status": "attention",
-      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=5; active_blocker_count=5; blocking_item_count=5",
+      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=3; active_blocker_count=3; blocking_item_count=3",
       "signal_ids": [
-        "goal_status_execution_blocked_by_no_runnable_proposal",
-        "goal_status_learning_blocked_by_execution_not_runnable",
         "goal_status_profile_ladder_incomplete",
         "learning_blocked_by_review_required",
         "learning_claim_unlock_review_not_approved"
@@ -398,18 +396,16 @@
       "status": "fail",
       "source_status": "attention",
       "release_blocking": true,
-      "open_item_count": 5,
-      "active_blocker_count": 5,
-      "blocking_item_count": 5,
+      "open_item_count": 3,
+      "active_blocker_count": 3,
+      "blocking_item_count": 3,
       "signal_ids": [
-        "goal_status_execution_blocked_by_no_runnable_proposal",
-        "goal_status_learning_blocked_by_execution_not_runnable",
         "goal_status_profile_ladder_incomplete",
         "learning_blocked_by_review_required",
         "learning_claim_unlock_review_not_approved"
       ],
       "currentness_status": "current",
-      "summary": "remediation backlog status=attention; open_item_count=5; active_blocker_count=5; blocking_item_count=5"
+      "summary": "remediation backlog status=attention; open_item_count=3; active_blocker_count=3; blocking_item_count=3"
     }
   },
   "queue": {
