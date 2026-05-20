@@ -58,6 +58,7 @@ class ChangedFilesScopeState:
 @dataclass(frozen=True)
 class EventSequenceState:
     observed_event_types: list[str]
+    observed_required_event_types: list[str]
     missing_event_types: list[str]
     expected_sequence: list[str]
     expected_terminal_event: str
@@ -559,26 +560,22 @@ def event_sequence_state(run_ledger_report: dict, *, phase: str) -> EventSequenc
     missing_event_types = [
         event_type for event_type in expected_sequence if event_type not in observed_event_types
     ]
-    event_positions = [
-        observed_event_types.index(event_type)
-        for event_type in expected_sequence
-        if event_type in observed_event_types
+    observed_required_event_types = [
+        event_type for event_type in observed_event_types if event_type in expected_sequence
     ]
     expected_terminal_event = (
         "finalized" if phase == "mechanism_finalized" else "promotion_evaluated"
     )
     return EventSequenceState(
         observed_event_types=observed_event_types,
+        observed_required_event_types=observed_required_event_types,
         missing_event_types=missing_event_types,
         expected_sequence=expected_sequence,
         expected_terminal_event=expected_terminal_event,
-        order_pass=(
-            len(event_positions) == len(expected_sequence)
-            and event_positions == sorted(event_positions)
-        ),
+        order_pass=observed_required_event_types == expected_sequence,
         terminal_pass=(
-            bool(observed_event_types)
-            and observed_event_types[-1] == expected_terminal_event
+            bool(observed_required_event_types)
+            and observed_required_event_types[-1] == expected_terminal_event
         ),
     )
 
@@ -605,18 +602,18 @@ def build_event_sequence_phase_checks(
             (
                 f"run-ledger event order matches canonical sequence through {state.expected_terminal_event}"
                 if state.order_pass
-                else f"observed event order={state.observed_event_types}"
+                else f"observed required event order={state.observed_required_event_types}"
             ),
         ),
         mechanism_phase_check(
             "mechanism_run_terminal_event",
             state.terminal_pass,
             (
-                f"last run-ledger event is {state.expected_terminal_event}"
+                f"last required run-ledger event is {state.expected_terminal_event}"
                 if state.terminal_pass
                 else (
                     f"expected terminal event {state.expected_terminal_event}, "
-                    f"observed {state.observed_event_types[-1] if state.observed_event_types else 'none'}"
+                    f"observed {state.observed_required_event_types[-1] if state.observed_required_event_types else 'none'}"
                 )
             ),
         ),

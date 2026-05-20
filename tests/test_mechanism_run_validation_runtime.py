@@ -207,6 +207,76 @@ class MechanismRunValidationRuntimeTests(unittest.TestCase):
         self.assertFalse(order_check["pass"])
         self.assertIn("baseline_captured", order_check["detail"])
 
+    def test_event_sequence_checks_allow_history_update_after_finalized(self) -> None:
+        ledger = evaluated_run_ledger("ops/scripts/example.py")
+        ledger["events"].append(
+            {
+                "ts": "2026-04-13T00:00:07Z",
+                "type": "finalized",
+                "summary": "",
+                "artifacts": [],
+                "decision": "PROMOTE",
+            }
+        )
+        ledger["events"].append(
+            {
+                "ts": "2026-04-13T00:00:08Z",
+                "type": "history_status_updated",
+                "summary": "Marked mechanism run history as archived.",
+                "artifacts": [],
+                "decision": "archived",
+            }
+        )
+        bundle = normalize_mechanism_artifact_bundle(
+            {
+                "baseline_eval_report": {},
+                "candidate_eval_report": {},
+                "baseline_lint_report": {},
+                "candidate_lint_report": {},
+                "baseline_mechanism_report": {},
+                "candidate_mechanism_report": {},
+                "changed_files_manifest_report": {},
+                "run_ledger_report": ledger,
+            }
+        )
+
+        checks = build_event_sequence_phase_checks(bundle, phase="mechanism_finalized")
+
+        by_check = {check["check"]: check for check in checks}
+        self.assertTrue(by_check["mechanism_run_event_order"]["pass"])
+        self.assertTrue(by_check["mechanism_run_terminal_event"]["pass"])
+
+    def test_event_sequence_checks_reject_required_event_replay_after_terminal(self) -> None:
+        ledger = evaluated_run_ledger("ops/scripts/example.py")
+        ledger["events"].append(
+            {
+                "ts": "2026-04-13T00:00:07Z",
+                "type": "baseline_captured",
+                "summary": "invalid replay",
+                "artifacts": [],
+                "decision": "",
+            }
+        )
+        bundle = normalize_mechanism_artifact_bundle(
+            {
+                "baseline_eval_report": {},
+                "candidate_eval_report": {},
+                "baseline_lint_report": {},
+                "candidate_lint_report": {},
+                "baseline_mechanism_report": {},
+                "candidate_mechanism_report": {},
+                "changed_files_manifest_report": {},
+                "run_ledger_report": ledger,
+            }
+        )
+
+        checks = build_event_sequence_phase_checks(bundle, phase="mechanism_evaluated")
+
+        by_check = {check["check"]: check for check in checks}
+        self.assertFalse(by_check["mechanism_run_event_order"]["pass"])
+        self.assertFalse(by_check["mechanism_run_terminal_event"]["pass"])
+        self.assertIn("baseline_captured", by_check["mechanism_run_event_order"]["detail"])
+
     def test_rule_registry_decision_flow_keeps_discard_before_hold(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

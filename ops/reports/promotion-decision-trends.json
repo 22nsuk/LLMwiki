@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/promotion-decision-trends.schema.json",
   "artifact_kind": "promotion_decision_trends",
-  "generated_at": "2026-05-20T07:12:09Z",
+  "generated_at": "2026-05-20T08:04:50Z",
   "producer": "ops.scripts.observability_decision_metrics_runtime",
   "source_command": "python -m ops.scripts.run_mechanism_experiment --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "b61c1cf1492c34c9b9f57c25af1f525746f1567fa4bec22ed2db54d00b774bb3",
+  "source_tree_fingerprint": "27c8028105f2008f77c1491b69a846e8eb5f5a5433d9382805e224fb09c8e3b8",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "c0740070a0961037b7e620c138bffb215749f063d8c97be659cfae1391b62399",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "f573cd90bbcac67836d1d4a0c8b0dd8ff4c7ac8856f03a2ba0b075cdd72fffa5",
-    "promotion_reports": "fe1ef30683670944ecec80d53416a90a3ce6f615796b0f865d8401acf0e9d877",
+    "promotion_reports": "d019825ae3750d9146e84e59977a1385afff34e10d5c2b74c9691a9f57e0c7a0",
     "recent_window": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T07:12:09Z"
+    "checked_at": "2026-05-20T08:04:50Z"
   },
   "vault": ".",
   "policy": {
@@ -28,23 +28,101 @@
     "version": 4
   },
   "summary": {
-    "runs_discovered": 18,
-    "promotion_reports_considered": 11,
+    "runs_discovered": 20,
+    "promotion_reports_considered": 13,
     "finalized_count": 5,
     "recent_window": 20
   },
   "decision_counts": {
-    "HOLD": 3,
+    "HOLD": 5,
     "PROMOTE": 6,
     "DISCARD": 2
   },
   "artifact_class_counts": {
-    "system_mechanism": 11
+    "system_mechanism": 13
   },
   "recent_runs": [
     {
+      "run_id": "5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime",
+      "observed_at": "2026-05-20T08:04:44Z",
+      "decision": "HOLD",
+      "decision_record": {
+        "decision_id": "decision:5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime:cc177cb02798c602",
+        "subject_id": "5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 0,
+        "source_rule": "legacy_top_level_decision",
+        "source_pass": "legacy_promotion_report",
+        "actor": "legacy_promotion_report",
+        "reason_code": "legacy_promotion_report",
+        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+        "evidence_refs": [],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/mechanism_run_validation_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime/promotion-report.json"
+    },
+    {
+      "run_id": "5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime",
+      "observed_at": "2026-05-20T07:33:00Z",
+      "decision": "HOLD",
+      "decision_record": {
+        "decision_id": "decision:5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime:973445c22e311e54",
+        "subject_id": "5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 0,
+        "source_rule": "legacy_top_level_decision",
+        "source_pass": "legacy_promotion_report",
+        "actor": "legacy_promotion_report",
+        "reason_code": "legacy_promotion_report",
+        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+        "evidence_refs": [],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/mechanism_run_validation_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime/promotion-report.json"
+    },
+    {
       "run_id": "5day-auto-improve-runtime-rerun6-30m_trial-run-01-mechanism-run-validation-runtime",
-      "observed_at": "2026-05-20T07:12:06Z",
+      "observed_at": "2026-05-20T07:15:00Z",
       "decision": "HOLD",
       "decision_record": {
         "decision_id": "decision:5day-auto-improve-runtime-rerun6-30m_trial-run-01-mechanism-run-validation-runtime:a0bdef812194b90e",
