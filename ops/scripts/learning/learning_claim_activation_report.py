@@ -45,6 +45,7 @@ ANTI_SLOP_AXES = [
     "operator_override_pressure",
 ]
 HEX_SAFE_RE = re.compile(r"[^a-z0-9_]+")
+RESOLVED_PROMOTION_HISTORY_STATUSES = {"archived", "quarantined"}
 
 
 @dataclass(frozen=True)
@@ -517,6 +518,27 @@ def _confirmed_rejection_pattern_suffix(
     return "confirmed_evidence_rejected_without_specific_reason"
 
 
+def _promotion_history_resolved_for_telemetry(
+    telemetry_path: Path,
+    *,
+    run_id: str,
+) -> bool:
+    promotion_path = telemetry_path.with_name("promotion-report.json")
+    promotion_report = load_optional_json_object(promotion_path)
+    if not promotion_report:
+        return False
+
+    report_run_id = str(promotion_report.get("run_id", "")).strip()
+    if report_run_id and run_id and report_run_id != run_id:
+        return False
+
+    history = promotion_report.get("history")
+    if not isinstance(history, dict):
+        return False
+    status = str(history.get("status", "active")).strip().lower()
+    return status in RESOLVED_PROMOTION_HISTORY_STATUSES
+
+
 def _negative_learning_ledger(vault: Path, inputs: ActivationInputs) -> dict[str, Any]:
     patterns: dict[str, dict[str, Any]] = {}
     telemetry_reason_by_run_id: dict[str, str] = {}
@@ -526,6 +548,8 @@ def _negative_learning_ledger(vault: Path, inputs: ActivationInputs) -> dict[str
         if decision not in {"HOLD", "DISCARD"}:
             continue
         run_id = str(telemetry.get("run_id", telemetry_path.parent.name)).strip()
+        if _promotion_history_resolved_for_telemetry(telemetry_path, run_id=run_id):
+            continue
         reason = str(telemetry.get("same_eval_reason_code", "")).strip()
         if not reason:
             decision_record = telemetry.get("decision_record")

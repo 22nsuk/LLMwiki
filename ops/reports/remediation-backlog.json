@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-20T05:46:41Z",
+  "generated_at": "2026-05-20T05:51:09Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "5aee44bc14e6aabc5f2dc18a588e534e5fd7b370e3ca99e2f5ff85d8dd308f0a",
+  "source_tree_fingerprint": "344138bbd036e02fcce99bfd1a8d63bc51d06309ffd68ef620298c10bc8e8978",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ac89dead9a209f58ec98e9f5a02446afe66adf70edbba3f94c9c88d59e3386cb",
-    "learning_claim_activation": "f11f7e1f2b3adfbf01de9740de44f482e6579e3d3fe83aaf3300846d5e6537b2",
-    "self_improvement_negative_lessons": "7f9ac52cf7f2ab6a0121c433bb14bd31dcb92209a7432b0c931da8e9f5c05f98",
-    "session_synopsis": "5bf193019e1e732ae75f30b174cf2f6382fc7f9eea3450ab2f99829e84274618",
+    "learning_claim_activation": "3e5086b5ded628bd2ab6af556b9ce0c8b62140abb2e24dea4b3266db9b0ce474",
+    "self_improvement_negative_lessons": "8f3680204adcf4862b66c816d819630c1789b8a3fbab7af9a912f547cd58d5b1",
+    "session_synopsis": "98afaf134c43770484045d844e845b36fe6ef0a7f07b11f1a04cb32442cfbbda",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
-    "auto_improve_sessions": "eed83f7c884e458e6d0dc0466e0eaefc67924a1f45ab28b6ae914d543534197e"
+    "auto_improve_sessions": "98a68f2e1f1d652e1dbd3d551dcc199c3355630a5d697956ca88911fad90b461"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T05:46:41Z"
+    "checked_at": "2026-05-20T05:51:09Z"
   },
   "vault": ".",
   "policy": {
@@ -32,10 +32,10 @@
   },
   "status": "attention",
   "summary": {
-    "backlog_item_count": 5,
-    "repeated_blocker_count": 1,
+    "backlog_item_count": 4,
+    "repeated_blocker_count": 0,
     "active_blocker_count": 4,
-    "open_item_count": 5,
+    "open_item_count": 4,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
     "next_action": "Close or explicitly defer remediation backlog items before promotion."
   },
@@ -95,21 +95,6 @@
       ],
       "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness.",
       "next_action": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
-    },
-    {
-      "item_id": "negative_lesson_hold_legacy_promotion_report",
-      "blocker_id": "hold_legacy_promotion_report",
-      "source": "self_improvement_negative_lessons.lessons",
-      "item_type": "repeated_negative_lesson",
-      "status": "open",
-      "severity": "blocks_repeat",
-      "occurrence_count": 2,
-      "evidence_paths": [
-        "runs/5day-auto-improve-runtime-30m_trial-run-01-auto-improve-readiness-queue-runtime/run-telemetry.json",
-        "runs/5day-auto-improve-runtime-rerun2-30m_trial-run-01-auto-improve-readiness-queue-runtime/run-telemetry.json"
-      ],
-      "repair_target": "Change the mechanism or evidence predicate before rerunning another HOLD attempt with same_eval_reason_code=legacy_promotion_report.",
-      "next_action": "Change the mechanism or evidence predicate before rerunning another HOLD attempt with same_eval_reason_code=legacy_promotion_report."
     }
   ],
   "inputs": {

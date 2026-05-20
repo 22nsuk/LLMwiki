@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/outcome-metrics.schema.json",
   "artifact_kind": "outcome_metrics_report",
-  "generated_at": "2026-05-20T05:44:56Z",
+  "generated_at": "2026-05-20T05:48:09Z",
   "producer": "ops.scripts.observability_decision_metrics_runtime",
   "source_command": "python -m ops.scripts.outcome_metrics --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -14,7 +14,7 @@
     "defect_escape_closures": "e16bb891b199557eecbe0886ab71ee6fb975f3eb6ca17d648c598a1fd00e0e91",
     "rework_closures": "0bcc1afd5180e75b2004a826159147b1e9134a6f6aedfd608d01bb87d3ab9f5c",
     "run_inputs": "e6fee057b2c9c4ae3a718a0ed97dafba57ed6fa94f8d2c0556ddeb35109edb57",
-    "session_reports": "eed83f7c884e458e6d0dc0466e0eaefc67924a1f45ab28b6ae914d543534197e",
+    "session_reports": "98a68f2e1f1d652e1dbd3d551dcc199c3355630a5d697956ca88911fad90b461",
     "recent_window": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T05:44:56Z"
+    "checked_at": "2026-05-20T05:48:09Z"
   },
   "vault": ".",
   "policy": {
@@ -34,7 +34,7 @@
     "attempts_considered": 16,
     "recent_window": 20,
     "recent_attempt_count": 16,
-    "session_reports_considered": 7
+    "session_reports_considered": 8
   },
   "metrics": {
     "attempt_count": 16,

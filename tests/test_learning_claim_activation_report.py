@@ -268,6 +268,57 @@ class LearningClaimActivationReportTests(unittest.TestCase):
             )
             self.assertNotIn("discard_unspecified", patterns)
 
+    def test_negative_learning_ignores_resolved_promotion_history_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_activation_inputs(vault)
+            write_json(
+                vault,
+                "runs/run-archived-hold/run-telemetry.json",
+                {
+                    "run_id": "run-archived-hold",
+                    "decision": "HOLD",
+                    "same_eval_reason_code": "archived_reason",
+                },
+            )
+            write_json(
+                vault,
+                "runs/run-archived-hold/promotion-report.json",
+                {
+                    "run_id": "run-archived-hold",
+                    "history": {"status": "archived"},
+                },
+            )
+            write_json(
+                vault,
+                "runs/run-quarantined-hold/run-telemetry.json",
+                {
+                    "run_id": "run-quarantined-hold",
+                    "decision": "HOLD",
+                    "same_eval_reason_code": "quarantined_reason",
+                },
+            )
+            write_json(
+                vault,
+                "runs/run-quarantined-hold/promotion-report.json",
+                {
+                    "run_id": "run-quarantined-hold",
+                    "history": {"status": "quarantined"},
+                },
+            )
+
+            report = build_report(vault, context=fixed_context())
+            patterns = {
+                item["pattern_id"]: item
+                for item in report["negative_learning_ledger"]["patterns"]
+            }
+
+            self.assertIn("hold_same_eval_no_secondary_improvement", patterns)
+            self.assertNotIn("hold_archived_reason", patterns)
+            self.assertNotIn("hold_quarantined_reason", patterns)
+
 
 if __name__ == "__main__":
     unittest.main()
