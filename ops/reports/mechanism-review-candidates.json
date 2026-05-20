@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/mechanism-review-candidates.schema.json",
   "artifact_kind": "mechanism_review_candidates_report",
-  "generated_at": "2026-05-20T09:34:08Z",
+  "generated_at": "2026-05-20T09:37:01Z",
   "producer": "ops.scripts.mechanism_review_runtime",
   "source_command": "python -m ops.scripts.mechanism_review",
   "source_revision": "unknown",
@@ -13,7 +13,7 @@
     "source_paths": "b6a97e444164d60ea21111ba0d6068ce8e345c212c78dd4070013da1d67097f4",
     "excluded_promotion_reports": "4243b44bc29cd7f9f5b91dc662255ed62700a4c439e7d38bfb5418db5e5c52b8",
     "promotion_reports": "d63fdff8c967123b30e5291b3cab7462e23a4253b7cd22a9fe0fbd831bcbc210",
-    "skipped_artifacts": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "skipped_artifacts": "0f22fd03987d603ddd3eabecd695b7d2e4045f24a7c4ed59e6465dd6d6d41f31",
     "mechanism_review_enabled": "3cbc87c7681f34db4617feaa2c8801931bc5e42d8d0f560e756dd4cd92885f18",
     "mechanism_review_max_candidates": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
     "mechanism_review_max_runs": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T09:34:08Z"
+    "checked_at": "2026-05-20T09:37:01Z"
   },
   "vault": ".",
   "policy": {
@@ -33,14 +33,31 @@
   },
   "status": "pass",
   "summary": {
-    "runs_discovered": 19,
+    "runs_discovered": 20,
     "runs_considered": 10,
     "runs_excluded": 9,
-    "runs_skipped": 0,
+    "runs_skipped": 1,
     "candidates_emitted": 1
   },
   "diagnostics": {
-    "skipped_runs": [],
+    "skipped_runs": [
+      {
+        "run_id": "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
+        "reason": "run_artifact_invalid",
+        "path": "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/candidate-eval.json",
+        "detail": "missing artifact: runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/candidate-eval.json",
+        "triage": {
+          "status": "operator_decision_required",
+          "problem": "missing_promotion_input_artifact",
+          "recommended_action": "restore_missing_artifact_or_archive_run_history",
+          "options": [
+            "restore the missing artifact from ledgered evidence",
+            "archive or quarantine the promotion report history",
+            "mark the run non-history if superseded by a later run"
+          ]
+        }
+      }
+    ],
     "excluded_runs": [
       {
         "run_id": "run-20260422-auto-improve-decision-record-fallback-retry2",
@@ -244,11 +261,11 @@
         "defect_escape_pair_count": 1
       },
       "global_signals": {
-        "attempt_count": 19,
-        "recent_attempt_count": 19,
+        "attempt_count": 20,
+        "recent_attempt_count": 20,
         "moving_averages": {
-          "hold": 0.4211,
-          "discard": 0.2105,
+          "hold": 0.45,
+          "discard": 0.2,
           "rollback_signal": 0.0
         },
         "rework_count": 3,
@@ -273,18 +290,19 @@
             "contract_regression_signals": 1
           },
           "current_priority_max": 100,
-          "attempt_count": 5,
+          "attempt_count": 6,
           "source_run_ids": [
+            "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
             "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
             "run-20260422-auto-improve-timeout-telemetry-fallback",
             "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
             "run-20260507-auto-improve-iteration-persistence-discard-path",
             "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
           ],
-          "hold_count": 0,
+          "hold_count": 1,
           "discard_count": 2,
-          "hold_moving_average": 0.0,
-          "discard_moving_average": 0.4,
+          "hold_moving_average": 0.1667,
+          "discard_moving_average": 0.3333,
           "rollback_signal_count": 0,
           "rollback_signal_ratio": 0.0,
           "rework_count": 0,
@@ -299,8 +317,8 @@
           "family": "contract_regression_signals",
           "target_count": 1,
           "candidate_count": 1,
-          "attempt_count": 5,
-          "hold_count": 0,
+          "attempt_count": 6,
+          "hold_count": 1,
           "discard_count": 2,
           "rollback_signal_count": 0,
           "rework_count": 0,
@@ -308,8 +326,8 @@
           "preview_flags": [
             "recent_discard_moving_average"
           ],
-          "hold_moving_average": 0.0,
-          "discard_moving_average": 0.4,
+          "hold_moving_average": 0.1667,
+          "discard_moving_average": 0.3333,
           "rollback_signal_ratio": 0.0
         }
       ],
@@ -321,7 +339,7 @@
         "min_attempts_considered": 10,
         "min_target_attempts": 2,
         "shadow_priority_max_delta": 10,
-        "attempts_considered": 19,
+        "attempts_considered": 20,
         "current_order": [
           "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime"
         ],
