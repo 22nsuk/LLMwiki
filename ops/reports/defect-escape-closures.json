@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/defect-escape-closures.schema.json",
   "artifact_kind": "defect_escape_closures",
-  "generated_at": "2026-05-20T08:56:31Z",
+  "generated_at": "2026-05-20T08:59:03Z",
   "producer": "ops.scripts.closure_registry_envelope",
   "source_command": "python -m ops.scripts.closure_registry_envelope --vault . --registry defect_escape",
   "source_revision": "unknown",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T08:56:31Z"
+    "checked_at": "2026-05-20T08:59:03Z"
   },
   "summary": {
     "closure_count": 5

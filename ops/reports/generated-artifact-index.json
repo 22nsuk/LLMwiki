@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-20T08:56:32Z",
+  "generated_at": "2026-05-20T08:59:05Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T08:56:32Z"
+    "checked_at": "2026-05-20T08:59:05Z"
   },
   "vault": ".",
   "policy": {
@@ -58,7 +58,7 @@
     }
   ],
   "now": [
-    "91 canonical artifact(s) are currently indexed.",
+    "92 canonical artifact(s) are currently indexed.",
     "2 archive candidate(s) remain in active namespaces."
   ],
   "next": [
@@ -74,9 +74,9 @@
     "operator_reports_root_file_count": 2,
     "external_reports_root_file_count": 4,
     "external_reports_archive_file_count": 68,
-    "run_directory_count": 19,
+    "run_directory_count": 20,
     "run_archive_directory_count": 4,
-    "canonical_report_count": 91,
+    "canonical_report_count": 92,
     "archive_candidate_count": 2
   },
   "canonical_reports": [
@@ -933,6 +933,17 @@
       "surface": "runs",
       "family": "mechanism_run",
       "path": "runs/goal-5day-auto-improve-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary. Load issues: promotion-report.json:missing, run-ledger.json:missing.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/goal-auto-improve-trial",
       "role": "run_history_record",
       "date": "",
       "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary. Load issues: promotion-report.json:missing, run-ledger.json:missing.",
