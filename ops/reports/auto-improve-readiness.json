@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-20T08:10:57Z",
+  "generated_at": "2026-05-20T08:11:32Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -12,7 +12,7 @@
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e8a26558749ee2fc8d615020caccd4b12d32e2354739c58e8a580ff43a3cbc10",
     "artifact_freshness_report": "e3bbb5e34af7999063cf11559edb5f6b17d5364891acc7dfd9a03eb407299bc2",
-    "goal_worktree_guard_report": "25ab374cf1a7e1d6ea26d780c28918fd55c273719ee16585c7b86e1426f7b0d0",
+    "goal_worktree_guard_report": "751d3a13176a9a25be62156f184ca582e6bd6e3183fe9ab80dace764b138478d",
     "mechanism_review_report": "279e48c0fa29e4a8e6b13a8591d4cf61d6adf02c7db758c27813eb1177556a80",
     "mutation_proposal_report": "ed4ff887c6910203e0e9ca97f3091ed030782dba3c4e4c5b1ebcca397795554f",
     "outcome_metrics_report": "575e9573f530109578be00282325e826940b2b650f85e070a86b058ae52181f2",
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T08:10:57Z"
+    "checked_at": "2026-05-20T08:11:32Z"
   },
   "vault": ".",
   "policy": {
@@ -149,26 +149,6 @@
         "or an operator must record accepted risk for this named learning review blocker"
       ],
       "recommended_next_step": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
-    },
-    {
-      "id": "promotion_blocked_by_goal_worktree_guard_failure",
-      "scope": "worktree_guard",
-      "status": "open",
-      "severity": "blocker",
-      "release_blocker": true,
-      "accepted_risk": false,
-      "gate_effect": "active",
-      "source_status": "attention",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=12",
-      "signal_ids": [
-        "git_worktree_dirty"
-      ],
-      "required_evidence": [
-        "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
-        "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
-        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal."
-      ],
-      "recommended_next_step": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     },
     {
       "id": "promotion_blocked_by_remediation_backlog_open",
@@ -391,19 +371,17 @@
     "goal_worktree_guard_summary": {
       "path": "tmp/goal-worktree-guard.json",
       "artifact_kind": "goal_worktree_guard",
-      "status": "attention",
+      "status": "pass",
       "requested_mode": "git",
       "detected_mode": "git_worktree",
       "can_execute_goal_runtime": true,
-      "can_promote_result": false,
+      "can_promote_result": true,
       "zip_mode_replay_only": false,
       "dirty_worktree_allowed": false,
-      "dirty_entry_count": 12,
+      "dirty_entry_count": 0,
       "fatal_blockers": [],
-      "promotion_blockers": [
-        "git_worktree_dirty"
-      ],
-      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=12"
+      "promotion_blockers": [],
+      "summary": "goal worktree guard status=pass; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=true; dirty_entry_count=0"
     },
     "remediation_backlog_summary": {
       "path": "ops/reports/remediation-backlog.json",
