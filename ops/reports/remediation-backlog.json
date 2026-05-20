@@ -1,19 +1,19 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-19T20:47:50Z",
+  "generated_at": "2026-05-20T02:35:16Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "5bb31e427dd65a2f2ce699e7376aeff7947374317a719ff5aedd9b4b76c74476",
+  "source_tree_fingerprint": "a84d76ff848417212c979dbc7e4c91e5c0212d5f4ebf4b70adeeb230d7f27ba3",
   "input_fingerprints": {
     "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ac89dead9a209f58ec98e9f5a02446afe66adf70edbba3f94c9c88d59e3386cb",
-    "learning_claim_activation": "95a0272da139611820d6d41b64f64debf8fd3d4b67202e032bb53015a1357899",
-    "self_improvement_negative_lessons": "821fc23875920c1b83b0a1540eca537ada7cd8546042a7d4d1b907d9dab05f3a",
-    "session_synopsis": "3d8a139a0c397103cd64c873e1eea8b6cbd89609462c0fb7aa20ba823e3cd67a",
+    "learning_claim_activation": "a518198eda7905573fa689d18a8a681618ab225ec5010987ed15d820f5894216",
+    "self_improvement_negative_lessons": "6e766e4ef5d25a7c449e46d16750996b9eb5d7093296539608d176ec96d5a73e",
+    "session_synopsis": "3d11e9d78db4ac3e62771549392be32e57c17429fb56ceeae6f7c2579aea19c6",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
     "auto_improve_sessions": "84aafcc0231159c213758a92cba55facf41c628d464ae1794e42d435bfa1f626"
   },
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-19T20:47:50Z"
+    "checked_at": "2026-05-20T02:35:16Z"
   },
   "vault": ".",
   "policy": {
@@ -32,42 +32,14 @@
   },
   "status": "attention",
   "summary": {
-    "backlog_item_count": 5,
+    "backlog_item_count": 3,
     "repeated_blocker_count": 0,
-    "active_blocker_count": 5,
-    "open_item_count": 5,
+    "active_blocker_count": 3,
+    "open_item_count": 3,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
     "next_action": "Close or explicitly defer remediation backlog items before promotion."
   },
   "items": [
-    {
-      "item_id": "active_blocker_goal_status_execution_blocked_by_no_runnable_proposal",
-      "blocker_id": "goal_status_execution_blocked_by_no_runnable_proposal",
-      "source": "goal_run_status.blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
-      "next_action": "Refresh goal run status and close the active blocker before resuming."
-    },
-    {
-      "item_id": "active_blocker_goal_status_learning_blocked_by_execution_not_runnable",
-      "blocker_id": "goal_status_learning_blocked_by_execution_not_runnable",
-      "source": "goal_run_status.blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
-      "next_action": "Refresh goal run status and close the active blocker before resuming."
-    },
     {
       "item_id": "active_blocker_goal_status_profile_ladder_incomplete",
       "blocker_id": "goal_status_profile_ladder_incomplete",
