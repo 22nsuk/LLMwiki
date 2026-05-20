@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/external-report-reference-manifest.schema.json",
   "artifact_kind": "external_report_reference_manifest",
-  "generated_at": "2026-05-19T21:01:48Z",
+  "generated_at": "2026-05-20T02:32:02Z",
   "producer": "ops.scripts.external_report_reference_manifest",
   "source_command": "python -m ops.scripts.external_report_reference_manifest --vault . --out external-reports/report-reference-manifest.json",
   "source_revision": "unknown",
@@ -11,7 +11,7 @@
     "schema": "1d6f04ca255e308a81818f56c8abffc20fb6bd6b56145cbde9dbed29b1637437",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "6da186ae7de647a7a24cf53aa44e0f4507522e360f6229d505e76d1ec154890c",
-    "external_reports": "0805866b473b0233b784f8f97facae6986f7172f7458011d3d723988a00668d2",
+    "external_reports": "c98d801d3fca8ad04533d3a495b3a8e756a032bd16b1a1265e0a32f86f62ed58",
     "active_reference_set_status": "97b0560280ed60a5a1eaa1bc45492543c8a986ad5a25b468c427eb83c3e88191",
     "basis_zip_entry_count": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "basis_zip_name": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -28,7 +28,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-19T21:01:48Z"
+    "checked_at": "2026-05-20T02:32:02Z"
   },
   "vault": ".",
   "policy": {
@@ -62,15 +62,15 @@
   },
   "active_reference_set": {
     "status": "current",
-    "previous_report_count": 5,
-    "current_report_count": 5,
+    "previous_report_count": 4,
+    "current_report_count": 4,
     "added_paths": [],
     "removed_paths": []
   },
   "archive_exclusion_policy": "external-reports/archive is excluded from active reference provenance; root external-reports files are the operator-facing evidence set",
-  "excluded_file_count": 66,
+  "excluded_file_count": 67,
   "summary": {
-    "report_count": 5,
+    "report_count": 4,
     "basis_zip_known": false,
     "review_basis_zip_known": false,
     "current_distribution_zip_known": false,
@@ -78,7 +78,7 @@
     "zip_provenance_status": "current_distribution_missing",
     "active_reference_set_status": "current",
     "archive_included": false,
-    "excluded_file_count": 66
+    "excluded_file_count": 67
   },
   "references": [
     {
@@ -171,29 +171,6 @@
         "python_unicode_escape_filename_bytes": 56,
         "posix_escape_expanded_filename_bytes": 56,
         "infozip_c_locale_escape_filename_bytes": 56
-      }
-    },
-    {
-      "path": "external-reports/llmwiki_review_reconciled_improvement_report.md",
-      "storage_path": "external-reports/llmwiki_review_reconciled_improvement_report.md",
-      "display_name": "llmwiki_review_reconciled_improvement_report.md",
-      "path_aliases": [
-        "external-reports/llmwiki_review_reconciled_improvement_report.md"
-      ],
-      "sha256": "1fd30714fef78201a8c493e919860b7f3737fd511160cd856da5f49b3cb499a5",
-      "content_sha256": "1fd30714fef78201a8c493e919860b7f3737fd511160cd856da5f49b3cb499a5",
-      "byte_count": 26713,
-      "line_count": 581,
-      "evidence_role": "active_external_report",
-      "normalization_form": "NFC",
-      "escape_diagnostics": {
-        "display_path": "external-reports/llmwiki_review_reconciled_improvement_report.md",
-        "archive_path": "external-reports/llmwiki_review_reconciled_improvement_report.md",
-        "escape_expanded_diagnostic_path": "external-reports/llmwiki_review_reconciled_improvement_report.md",
-        "utf8_path_bytes": 64,
-        "python_unicode_escape_filename_bytes": 47,
-        "posix_escape_expanded_filename_bytes": 47,
-        "infozip_c_locale_escape_filename_bytes": 47
       }
     }
   ]

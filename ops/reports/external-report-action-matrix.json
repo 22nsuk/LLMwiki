@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-19T21:01:51Z",
+  "generated_at": "2026-05-20T02:32:07Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
@@ -11,7 +11,7 @@
     "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "950d52b6d82ae018bbf55e537ed59bfa33da8dab31407b495abe69e2cfe628a2",
-    "active_external_reports": "651d452cfa64988d17de10d0dd1ff7c3253f8827cc0a169634029a156a15c715",
+    "active_external_reports": "3683a3951e08b91ce694d6cafbc3c17cd2b2dfbd9d32f590bf1ae1ff246456eb",
     "action_catalog": "6cf299a899fcc1b22432c36188c37e05c090b0af5e917e043fd7e739cbe0cf7b"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-19T21:01:51Z"
+    "checked_at": "2026-05-20T02:32:07Z"
   },
   "vault": ".",
   "status": "attention",
@@ -29,8 +29,8 @@
     "version": 4
   },
   "summary": {
-    "active_report_count": 6,
-    "archived_report_count": 63,
+    "active_report_count": 5,
+    "archived_report_count": 64,
     "action_item_count": 24,
     "implemented_count": 21,
     "partially_automated_count": 0,
@@ -47,15 +47,13 @@
       "external-reports/llmwiki_code_change_implementation_report_20260516.md",
       "external-reports/llmwiki_goal_runtime_comparison_report.md",
       "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
-      "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
-      "external-reports/llmwiki_review_reconciled_improvement_report.md"
+      "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
     ],
     "manifest_reference_paths": [
       "external-reports/llmwiki_code_change_implementation_report_20260516.md",
       "external-reports/llmwiki_goal_runtime_comparison_report.md",
       "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
-      "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
-      "external-reports/llmwiki_review_reconciled_improvement_report.md"
+      "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
     ],
     "missing_active_report_paths": [],
     "stale_reference_paths": []
@@ -169,26 +167,6 @@
       "matched_action_count": 17
     },
     {
-      "path": "external-reports/llmwiki_review_reconciled_improvement_report.md",
-      "report_type": "narrative_report",
-      "priority_mentions": {
-        "P0": 1,
-        "P1": 1,
-        "P2": 1
-      },
-      "matched_action_ids": [
-        "script_output_surfaces_currentness",
-        "outcome_provenance_gate_policy",
-        "source_package_distribution_binding",
-        "release_evidence_bundle_and_attestation",
-        "full_suite_evidence_currentness",
-        "promotion_truth_ladder",
-        "negative_learning_ledger",
-        "remediation_backlog"
-      ],
-      "matched_action_count": 8
-    },
-    {
       "path": "external-reports/report-reference-manifest.json",
       "report_type": "reference_manifest",
       "priority_mentions": {
@@ -210,8 +188,7 @@
       "current_status": "implemented",
       "source_report_paths": [
         "external-reports/llmwiki_code_change_implementation_report_20260516.md",
-        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
-        "external-reports/llmwiki_review_reconciled_improvement_report.md"
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
       ],
       "recommended_target": "script-output-surfaces",
       "evidence": [
@@ -301,8 +278,7 @@
       "source_report_paths": [
         "external-reports/llmwiki_code_change_implementation_report_20260516.md",
         "external-reports/llmwiki_goal_runtime_comparison_report.md",
-        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
-        "external-reports/llmwiki_review_reconciled_improvement_report.md"
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
       ],
       "recommended_target": "outcome-provenance-gate-policy",
       "evidence": [
@@ -348,8 +324,7 @@
         "external-reports/llmwiki_code_change_implementation_report_20260516.md",
         "external-reports/llmwiki_goal_runtime_comparison_report.md",
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
-        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
-        "external-reports/llmwiki_review_reconciled_improvement_report.md"
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
       ],
       "recommended_target": "release-source-package-check",
       "evidence": [
@@ -381,8 +356,7 @@
       "source_report_paths": [
         "external-reports/llmwiki_code_change_implementation_report_20260516.md",
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
-        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
-        "external-reports/llmwiki_review_reconciled_improvement_report.md"
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
       ],
       "recommended_target": "release-evidence-closeout-sealed-dry-run",
       "evidence": [
@@ -407,8 +381,7 @@
       "current_status": "implemented",
       "source_report_paths": [
         "external-reports/llmwiki_code_change_implementation_report_20260516.md",
-        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
-        "external-reports/llmwiki_review_reconciled_improvement_report.md"
+        "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
       ],
       "recommended_target": "test-execution-summary-full-refresh",
       "evidence": [
@@ -428,8 +401,7 @@
       "source_report_paths": [
         "external-reports/llmwiki_goal_runtime_comparison_report.md",
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
-        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
-        "external-reports/llmwiki_review_reconciled_improvement_report.md"
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
       ],
       "recommended_target": "auto-improve-readiness-report",
       "evidence": [
@@ -917,8 +889,7 @@
       "source_report_paths": [
         "external-reports/llmwiki_goal_runtime_comparison_report.md",
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
-        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
-        "external-reports/llmwiki_review_reconciled_improvement_report.md"
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
       ],
       "recommended_target": "self-improvement-negative-lessons",
       "evidence": [
@@ -950,8 +921,7 @@
       "source_report_paths": [
         "external-reports/llmwiki_goal_runtime_comparison_report.md",
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
-        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md",
-        "external-reports/llmwiki_review_reconciled_improvement_report.md"
+        "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
       ],
       "recommended_target": "remediation-backlog",
       "evidence": [

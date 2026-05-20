@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-19T21:13:58Z",
+  "generated_at": "2026-05-20T02:32:12Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -12,7 +12,7 @@
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "3090e8825cf76941fff0428cae33626bf250f99e0ab497ee5c0c5883b415cffe",
     "run_promotion_reports": "47308e6ead45e6366547bffe91c993d0d224544c2a4fb589d598b124c76a0a5f",
-    "external_report_inventory": "8dfe21600c65fb17bd4fd251179637d8b98d978e15ebea99a24beb6651ec2e34",
+    "external_report_inventory": "b8d3cf848d84f38abc3ad11696d741713bca1f94f5e461b4df8cc8ac3fd10e8d",
     "operator_report_inventory": "0479590a186415fa72ba934ab4431828124b8ca576b06322a6eae193e9627721",
     "ops_report_inventory": "42888319f0fa00ed45687b2461bda3d2739588b931ba8c665afa1e1be992c762",
     "task_improvement_observation_inventory": "65cf114b98e80d7ee0a50dba1d6ecd9f398d1b78e52cb68cd336d619b29c2b74"
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-19T21:13:58Z"
+    "checked_at": "2026-05-20T02:32:12Z"
   },
   "vault": ".",
   "policy": {
@@ -59,25 +59,24 @@
   ],
   "now": [
     "88 canonical artifact(s) are currently indexed.",
-    "3 archive candidate(s) remain in active namespaces."
+    "2 archive candidate(s) remain in active namespaces."
   ],
   "next": [
     "Archive the root-level candidates after confirming their content lifecycle decision and linked replacement evidence."
   ],
   "why_blocked": [
-    "All structured action themes from this external report are implemented in canonical evidence.",
     "External report has no unique unresolved action themes; remaining open themes are covered by a broader active external report."
   ],
   "summary": {
     "ops_reports_root_file_count": 68,
     "task_improvement_observation_count": 62,
     "operator_reports_root_file_count": 2,
-    "external_reports_root_file_count": 6,
-    "external_reports_archive_file_count": 66,
+    "external_reports_root_file_count": 5,
+    "external_reports_archive_file_count": 67,
     "run_directory_count": 15,
     "run_archive_directory_count": 4,
     "canonical_report_count": 88,
-    "archive_candidate_count": 3
+    "archive_candidate_count": 2
   },
   "canonical_reports": [
     {
@@ -1077,17 +1076,6 @@
         "external-reports/llmwiki_goal_runtime_comparison_report.md",
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
       ],
-      "supersedes": [],
-      "decision_relevance": "review_context"
-    },
-    {
-      "surface": "external_reports",
-      "family": "llmwiki_review_reconciled_improvement_report",
-      "path": "external-reports/llmwiki_review_reconciled_improvement_report.md",
-      "suggested_archive_path": "external-reports/archive/llmwiki_review_reconciled_improvement_report.md",
-      "date": "",
-      "reason": "All structured action themes from this external report are implemented in canonical evidence.",
-      "superseded_by": [],
       "supersedes": [],
       "decision_relevance": "review_context"
     }
