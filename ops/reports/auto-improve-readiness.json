@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-20T08:11:32Z",
+  "generated_at": "2026-05-20T08:14:32Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "0697bf275d20acb79c13db6d2efa0d512cf54745581f1a183315f5c2d81ed412",
+  "source_tree_fingerprint": "518b36d47ca6bb09a61cbf1c7fe908ec943776e91584d628e6bb8604afb9fb6f",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "b07ea4db25e1e00c9ecce8026872b299d5f6df21f7edd396dce9af266ed48c42",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e8a26558749ee2fc8d615020caccd4b12d32e2354739c58e8a580ff43a3cbc10",
-    "artifact_freshness_report": "e3bbb5e34af7999063cf11559edb5f6b17d5364891acc7dfd9a03eb407299bc2",
-    "goal_worktree_guard_report": "751d3a13176a9a25be62156f184ca582e6bd6e3183fe9ab80dace764b138478d",
-    "mechanism_review_report": "279e48c0fa29e4a8e6b13a8591d4cf61d6adf02c7db758c27813eb1177556a80",
-    "mutation_proposal_report": "ed4ff887c6910203e0e9ca97f3091ed030782dba3c4e4c5b1ebcca397795554f",
+    "artifact_freshness_report": "a8649032e5ae550efa7fbcbc4d50d8d23dfc8e7415504104141d052c68233a5d",
+    "goal_worktree_guard_report": "f22a2a76fbe0d6bccb40bdada8153a8cd0156a836698029c42d730209d7e5f7e",
+    "mechanism_review_report": "ee3c8ad361663bd5bddfe764fba58312052b149fd4748134f2b0006f9015ec2e",
+    "mutation_proposal_report": "9009f59a5d3c283a2bcdb04e3419892db7f5104327e1c9249ce201bd91a1a27d",
     "outcome_metrics_report": "575e9573f530109578be00282325e826940b2b650f85e070a86b058ae52181f2",
     "release_authority_preflight_report": "8771a6022db09e525cf4c8a22c99725d1e3539f340aca5db6445f8d675705b8e",
     "release_closeout_batch_manifest_report": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T08:11:32Z"
+    "checked_at": "2026-05-20T08:14:32Z"
   },
   "vault": ".",
   "policy": {
