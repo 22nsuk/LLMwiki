@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/artifact-freshness-report.schema.json",
   "artifact_kind": "artifact_freshness_report",
-  "generated_at": "2026-05-20T07:02:30Z",
+  "generated_at": "2026-05-20T07:03:52Z",
   "producer": "ops.scripts.artifact_freshness_runtime",
   "source_command": "python -m ops.scripts.artifact_freshness_runtime",
   "source_revision": "unknown",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T07:02:30Z"
+    "checked_at": "2026-05-20T07:03:52Z"
   },
   "vault": ".",
   "policy": {
@@ -465,7 +465,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T07:02:08Z",
+      "generated_at": "2026-05-20T07:02:30Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -497,7 +497,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T06:59:54Z",
+      "generated_at": "2026-05-20T07:02:31Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -4849,7 +4849,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T06:28:51Z",
+      "generated_at": "2026-05-20T07:03:41Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
