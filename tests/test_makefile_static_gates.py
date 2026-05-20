@@ -2572,7 +2572,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         for variable, expected in (
             ("CODEX_GOAL_CONTRACT_OUT", "ops/reports/codex-goal-contract.json"),
             ("CODEX_GOAL_PROMPT_OUT", "ops/reports/codex-goal-prompt.json"),
-            ("GOAL_ACTIVE_STATE_DIR", "runs/goal-$(GOAL_RUN_ID)/state"),
+            ("GOAL_RUN_ID", "auto-improve-trial"),
+            ("GOAL_CONTRACT_RUN_ID", "$(GOAL_RUN_ID)"),
+            ("GOAL_ACTIVE_STATE_DIR", "runs/goal-$(GOAL_CONTRACT_RUN_ID)/state"),
             (
                 "CODEX_GOAL_ACTIVE_CONTRACT_OUT",
                 "$(GOAL_ACTIVE_STATE_DIR)/codex-goal-contract.json",
@@ -2621,6 +2623,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             ("GOAL_FINAL_STATUS", "stopped"),
             ("GOAL_LADDER_PROFILES", "30m_trial 6h_ramp 2d_candidate 5d_sustained"),
             ("GOAL_RUN_LOG_DIR", "build/goal-runs"),
+            ("GOAL_LADDER_CONTRACT_RUN_ID", "$(GOAL_LADDER_RUN_ID)"),
         ):
             _assert_assignment_exists(self, text, variable, expected)
         for variable in (
@@ -2886,6 +2889,9 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "6h_ramp) profile_seconds=21600; profile_minutes=360; runner_timeout=21660; profile_proposals=6; profile_failures=2",
                 "2d_candidate) profile_seconds=172800; profile_minutes=2880; runner_timeout=172860; profile_proposals=24; profile_failures=3",
                 "5d_sustained) profile_seconds=432000; profile_minutes=7200; runner_timeout=432060; profile_proposals=60; profile_failures=3",
+                "GOAL_CONTRACT_RUN_ID=\"$(GOAL_CONTRACT_RUN_ID)\"",
+                "GOAL_RUN_ID=\"$(GOAL_RUN_ID)-$$profile\"",
+                "GOAL_RUN_PROFILE=\"$$profile\"",
                 "GOAL_MAX_PROPOSALS=\"$$profile_proposals\"",
                 "GOAL_MAX_CONSECUTIVE_FAILURES=\"$$profile_failures\"",
                 "$(MAKE) goal-runtime-reconcile",
@@ -2894,6 +2900,17 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "contract_update",
                 "verification_status",
                 "raise SystemExit(0 if ok else 1)",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-goal-ladder-start",
+            (
+                "GOAL_RUN_ID=\"$(GOAL_LADDER_RUN_ID)\"",
+                "GOAL_CONTRACT_RUN_ID=\"$(GOAL_LADDER_CONTRACT_RUN_ID)\"",
+                "CODEX_GOAL_CONTRACT_ID=\"$(CODEX_GOAL_CONTRACT_ID)\"",
+                "GOAL_ALLOW_LEARNING_UNCERTAIN=\"$(GOAL_ALLOW_LEARNING_UNCERTAIN)\"",
             ),
         )
 

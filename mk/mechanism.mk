@@ -6,15 +6,15 @@ AUTO_IMPROVE_READINESS_CANDIDATE_OUT ?= tmp/auto-improve-readiness.candidate.jso
 CODEX_GOAL_CONTRACT_OUT ?= ops/reports/codex-goal-contract.json
 CODEX_GOAL_CONTRACT_ID ?= auto-improve-goal
 CODEX_GOAL_PROMPT_OUT ?= ops/reports/codex-goal-prompt.json
-GOAL_ACTIVE_STATE_DIR ?= runs/goal-$(GOAL_RUN_ID)/state
+GOAL_RUN_ID ?= auto-improve-trial
+GOAL_CONTRACT_RUN_ID ?= $(GOAL_RUN_ID)
+GOAL_ACTIVE_STATE_DIR ?= runs/goal-$(GOAL_CONTRACT_RUN_ID)/state
 CODEX_GOAL_ACTIVE_CONTRACT_OUT ?= $(GOAL_ACTIVE_STATE_DIR)/codex-goal-contract.json
 GOAL_WORKTREE_GUARD_OUT ?= tmp/goal-worktree-guard.json
 GOAL_WORKTREE_MODE ?= git
 GOAL_WORKTREE_ALLOW_DIRTY ?=
 GOAL_WORKTREE_STRICT ?=
 GOAL_RUN_STATUS_OUT ?= ops/reports/goal-run-status.json
-GOAL_ACTIVE_RUN_STATUS_OUT ?= $(GOAL_ACTIVE_STATE_DIR)/goal-run-status.json
-GOAL_RUN_STATUS_CANDIDATE_OUT ?= $(GOAL_ACTIVE_STATE_DIR)/goal-run-status.candidate.json
 GOAL_PROFILE_VERIFICATION_OUT ?= ops/reports/goal-profile-verification.json
 GOAL_PROFILE_VERIFICATION_CANDIDATE_OUT ?= tmp/goal-profile-verification.candidate.json
 GOAL_PROFILE_VERIFICATION_PROFILE ?=
@@ -24,7 +24,8 @@ GOAL_RUNTIME_CLEAN_TRANSIENT_APPLY ?= 1
 GOAL_RUNTIME_CLEAN_TRANSIENT_STATUS_REPORT ?= $(GOAL_RUN_STATUS_OUT)
 GOAL_RUNTIME_FIXED_POINT_CHECK_OUT ?= tmp/goal-runtime-fixed-point-check.json
 GOAL_SESSION_RESULT_OUT ?= $(GOAL_ACTIVE_STATE_DIR)/auto-improve-goal-session-result.json
-GOAL_RUN_ID ?= auto-improve-trial
+GOAL_ACTIVE_RUN_STATUS_OUT ?= $(GOAL_ACTIVE_STATE_DIR)/goal-run-status.json
+GOAL_RUN_STATUS_CANDIDATE_OUT ?= $(GOAL_ACTIVE_STATE_DIR)/goal-run-status.candidate.json
 GOAL_RUN_STATUS ?= blocked
 GOAL_RUN_PROFILE ?= 30m_trial
 GOAL_MAX_UNATTENDED_SECONDS ?= 1800
@@ -47,6 +48,7 @@ GOAL_COMPLETED_AT ?=
 GOAL_LADDER_PROFILES ?= 30m_trial 6h_ramp 2d_candidate 5d_sustained
 GOAL_RUN_LOG_DIR ?= build/goal-runs
 GOAL_LADDER_RUN_ID ?= goal-ladder-$(shell date -u +%Y%m%dT%H%M%SZ)
+GOAL_LADDER_CONTRACT_RUN_ID ?= $(GOAL_LADDER_RUN_ID)
 GOAL_LADDER_LOG ?= $(GOAL_RUN_LOG_DIR)/$(GOAL_LADDER_RUN_ID).log
 GOAL_LADDER_PID ?= $(GOAL_RUN_LOG_DIR)/$(GOAL_LADDER_RUN_ID).pid
 MECHANISM_RUN_ARGS ?=
@@ -141,10 +143,17 @@ auto-improve-goal-ladder-run: auto-improve-goal-preflight
 			*) echo "unsupported goal profile: $$profile" >&2; exit 2 ;; \
 		esac; \
 		if [ "$$profile" != "30m_trial" ]; then \
-			$(MAKE) goal-runtime-reconcile; \
+			$(MAKE) goal-runtime-reconcile \
+				GOAL_CONTRACT_RUN_ID="$(GOAL_CONTRACT_RUN_ID)" \
+				GOAL_RUN_ID="$(GOAL_RUN_ID)-$$profile" \
+				GOAL_RUN_PROFILE="$$profile" \
+				GOAL_MAX_UNATTENDED_SECONDS="$$profile_seconds" \
+				GOAL_MAX_PROPOSALS="$$profile_proposals" \
+				GOAL_MAX_CONSECUTIVE_FAILURES="$$profile_failures"; \
 		fi; \
 		echo "Starting goal auto-improve profile: $$profile"; \
 		$(MAKE) auto-improve-goal-run \
+			GOAL_CONTRACT_RUN_ID="$(GOAL_CONTRACT_RUN_ID)" \
 			GOAL_RUN_PROFILE="$$profile" \
 			GOAL_RUN_ID="$(GOAL_RUN_ID)-$$profile" \
 			GOAL_MAX_UNATTENDED_SECONDS="$$profile_seconds" \
@@ -152,13 +161,21 @@ auto-improve-goal-ladder-run: auto-improve-goal-preflight
 			GOAL_RUNNER_TIMEOUT_SECONDS="$$runner_timeout" \
 			GOAL_MAX_PROPOSALS="$$profile_proposals" \
 			GOAL_MAX_CONSECUTIVE_FAILURES="$$profile_failures"; \
-		$(MAKE) goal-profile-verification GOAL_PROFILE_VERIFICATION_PROFILE="$$profile" GOAL_PROFILE_VERIFICATION_APPLY=1; \
+		$(MAKE) goal-profile-verification \
+			GOAL_CONTRACT_RUN_ID="$(GOAL_CONTRACT_RUN_ID)" \
+			GOAL_RUN_ID="$(GOAL_RUN_ID)-$$profile" \
+			GOAL_RUN_PROFILE="$$profile" \
+			GOAL_MAX_UNATTENDED_SECONDS="$$profile_seconds" \
+			GOAL_MAX_PROPOSALS="$$profile_proposals" \
+			GOAL_MAX_CONSECUTIVE_FAILURES="$$profile_failures" \
+			GOAL_PROFILE_VERIFICATION_PROFILE="$$profile" \
+			GOAL_PROFILE_VERIFICATION_APPLY=1; \
 		$(PYTHON) -c 'import json, sys; report = json.load(open("$(GOAL_PROFILE_VERIFICATION_OUT)", encoding="utf-8")); profile = sys.argv[1]; verification = report.get("profile", {}); update = report.get("contract_update", {}); status = verification.get("verification_status", ""); applied = update.get("applied"); ok = report.get("status") == "pass" and verification.get("target_profile") == profile and (applied is True or status in {"already_verified", "already_complete"}); sys.stderr.write("" if ok else "goal ladder profile verification failed: profile=%s status=%s applied=%s\n" % (profile, status, applied)); raise SystemExit(0 if ok else 1)' "$$profile"; \
 	done
 
 auto-improve-goal-ladder-start: auto-improve-goal-preflight
 	@mkdir -p "$(GOAL_RUN_LOG_DIR)"
-	@setsid $(MAKE) auto-improve-goal-ladder-run PYTHON=$(PYTHON) VAULT="$(VAULT)" GOAL_LADDER_PROFILES="$(GOAL_LADDER_PROFILES)" GOAL_RUN_ID="$(GOAL_LADDER_RUN_ID)" > "$(GOAL_LADDER_LOG)" 2>&1 < /dev/null & echo $$! > "$(GOAL_LADDER_PID)"
+	@setsid $(MAKE) auto-improve-goal-ladder-run PYTHON=$(PYTHON) VAULT="$(VAULT)" GOAL_LADDER_PROFILES="$(GOAL_LADDER_PROFILES)" GOAL_RUN_ID="$(GOAL_LADDER_RUN_ID)" GOAL_CONTRACT_RUN_ID="$(GOAL_LADDER_CONTRACT_RUN_ID)" CODEX_GOAL_CONTRACT_ID="$(CODEX_GOAL_CONTRACT_ID)" GOAL_ALLOW_LEARNING_UNCERTAIN="$(GOAL_ALLOW_LEARNING_UNCERTAIN)" > "$(GOAL_LADDER_LOG)" 2>&1 < /dev/null & echo $$! > "$(GOAL_LADDER_PID)"
 	@printf 'started goal ladder pid=%s log=%s\n' "$$(cat "$(GOAL_LADDER_PID)")" "$(GOAL_LADDER_LOG)"
 
 goal-prompt: codex-goal-prompt
