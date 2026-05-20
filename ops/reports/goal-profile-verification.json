@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/goal-profile-verification.schema.json",
   "artifact_kind": "goal_profile_verification",
-  "generated_at": "2026-05-20T07:00:14Z",
+  "generated_at": "2026-05-20T07:12:10Z",
   "producer": "ops.scripts.goal_profile_verification",
   "source_command": "python -m ops.scripts.goal_profile_verification --vault .",
   "source_revision": "unknown",
@@ -11,12 +11,12 @@
     "schema": "000805baed93135799368ffc434adc981e3b59dfcef3b290061356cf4e4e41cb",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "43d085e233b7b75700f408275b53c03bae7ab852739d2c574b5b14df112e6152",
-    "auto_improve_session": "0c0ffa9e09c1a4779683e95048811b4eb2c7d9a57d6a8ac138f91e1662fefb93",
-    "goal_contract": "64367208a889a45403c0b027d6ea5921a941d4ef9fc567320857ec9b278e1f68",
-    "goal_run_status": "dc30989511bc5005ce141ddaf37a1427d421f9c1979baebc31b5ca40745e6542",
-    "run_audit_log": "ac7b61c580ee8d7a098b1f178604f757c0e68b81d32147a0aa700e8f42132399",
-    "run_resume_metadata": "3512d7908298d9bf708409e553ec85ba7cfd201fd86784ca95b1f860ea00d025",
-    "run_status_markdown": "845f898add6e9454c161326755ed0417013ae41fdeca10297429d9bbea8214da"
+    "auto_improve_session": "ce10770cc4b39ab719241f7149a8250488c9230733785fd659ff6ddf1753bbdb",
+    "goal_contract": "e11693edf3715fe5fad052231d39480772ec856e16a9f3fc99c4fd0acc95a4c2",
+    "goal_run_status": "1f71ebf83eeaae0a66fcf5e6f870f71f7e515627784a0b7cae6fe24ed04d4bd9",
+    "run_audit_log": "1ba043fbf0afd587bf49f68570a4602d83241787e02778e00675c4933e74c769",
+    "run_resume_metadata": "fe31eb35db1b052ce191835566ea7d4a133cbf50c45cdae2789b221972423695",
+    "run_status_markdown": "9eb158ff63312109cac8216ee6c10eee868e2ee78803fa32a6795150892d6c7d"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -24,76 +24,76 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T07:00:14Z"
+    "checked_at": "2026-05-20T07:12:10Z"
   },
   "vault": ".",
   "goal": {
     "contract_path": "runs/goal-5day-auto-improve-runtime/state/codex-goal-contract.json",
     "contract_id": "goal-5day-auto-improve-runtime",
-    "contract_sha256_before": "e85831b93b6c96348bfc46311b0de74108693b664a2464bd5676f6ed9fe7d23a",
-    "contract_sha256_after": "e85831b93b6c96348bfc46311b0de74108693b664a2464bd5676f6ed9fe7d23a"
+    "contract_sha256_before": "91a5e4d566e83d72916c8fcfa5ba70a6d33dfd90ac281d0857e10eaa1df91948",
+    "contract_sha256_after": "91a5e4d566e83d72916c8fcfa5ba70a6d33dfd90ac281d0857e10eaa1df91948"
   },
   "profile": {
     "target_profile": "30m_trial",
     "verification_status": "blocked",
     "minimum_elapsed_seconds": 1800,
-    "observed_elapsed_seconds": 1069,
+    "observed_elapsed_seconds": 137,
     "already_verified": false,
     "eligible": false
   },
   "run": {
     "status_report_path": "runs/goal-5day-auto-improve-runtime/state/goal-run-status.json",
-    "run_id": "5day-auto-improve-runtime-rerun5-30m_trial",
+    "run_id": "5day-auto-improve-runtime-rerun6-30m_trial",
     "run_status": "completed",
     "run_profile": "30m_trial",
-    "started_at": "2026-05-20T06:31:09Z",
-    "completed_at": "2026-05-20T06:48:58Z"
+    "started_at": "2026-05-20T07:09:52Z",
+    "completed_at": "2026-05-20T07:12:09Z"
   },
   "run_artifacts": {
     "status": "clean",
     "checks": [
       {
         "artifact": "status_markdown_path",
-        "path": "runs/goal-5day-auto-improve-runtime-rerun5-30m_trial/status.md",
+        "path": "runs/goal-5day-auto-improve-runtime-rerun6-30m_trial/status.md",
         "status": "present"
       },
       {
         "artifact": "resume_metadata_path",
-        "path": "runs/goal-5day-auto-improve-runtime-rerun5-30m_trial/resume-metadata.json",
+        "path": "runs/goal-5day-auto-improve-runtime-rerun6-30m_trial/resume-metadata.json",
         "status": "present"
       },
       {
         "artifact": "audit_log_path",
-        "path": "runs/goal-5day-auto-improve-runtime-rerun5-30m_trial/audit-log.jsonl",
+        "path": "runs/goal-5day-auto-improve-runtime-rerun6-30m_trial/audit-log.jsonl",
         "status": "present"
       },
       {
         "artifact": "status_markdown_current",
-        "path": "runs/goal-5day-auto-improve-runtime-rerun5-30m_trial/status.md",
+        "path": "runs/goal-5day-auto-improve-runtime-rerun6-30m_trial/status.md",
         "status": "pass"
       },
       {
         "artifact": "resume_metadata_current",
-        "path": "runs/goal-5day-auto-improve-runtime-rerun5-30m_trial/resume-metadata.json",
+        "path": "runs/goal-5day-auto-improve-runtime-rerun6-30m_trial/resume-metadata.json",
         "status": "pass"
       },
       {
         "artifact": "audit_log_current",
-        "path": "runs/goal-5day-auto-improve-runtime-rerun5-30m_trial/audit-log.jsonl",
+        "path": "runs/goal-5day-auto-improve-runtime-rerun6-30m_trial/audit-log.jsonl",
         "status": "pass"
       },
       {
         "artifact": "audit_log_command_observability_current",
-        "path": "runs/goal-5day-auto-improve-runtime-rerun5-30m_trial/audit-log.jsonl",
+        "path": "runs/goal-5day-auto-improve-runtime-rerun6-30m_trial/audit-log.jsonl",
         "status": "pass"
       }
     ],
-    "audit_event_count": 5,
+    "audit_event_count": 2,
     "runner_command_audit_current": true
   },
   "session_evidence": {
     "status": "incomplete",
-    "path": "ops/reports/auto-improve-sessions/5day-auto-improve-runtime-rerun5-30m_trial.json",
+    "path": "ops/reports/auto-improve-sessions/5day-auto-improve-runtime-rerun6-30m_trial.json",
     "session_status": "complete",
     "stop_reason": "failure_budget_exhausted",
     "iteration_count": 1,
@@ -115,13 +115,13 @@
   },
   "command_observability": {
     "mode": "process_heartbeat",
-    "heartbeat_count": 3,
-    "expected_min_heartbeat_count": 2,
+    "heartbeat_count": 0,
+    "expected_min_heartbeat_count": 0,
     "timeout_seconds": 2700,
     "last_command_returncode": 0,
     "last_command_timed_out": false,
     "last_command_termination_reason": "completed",
-    "last_command_heartbeat_at": "2026-05-20T06:48:58Z",
+    "last_command_heartbeat_at": "2026-05-20T07:12:09Z",
     "runner_audit_current": true,
     "status": "clean"
   },
@@ -142,7 +142,7 @@
     }
   ],
   "contract_update": {
-    "apply_requested": false,
+    "apply_requested": true,
     "apply_allowed": false,
     "applied": false,
     "verified_profiles_before": [],

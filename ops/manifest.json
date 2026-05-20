@@ -1057,8 +1057,8 @@
     },
     {
       "path": "ops/scripts/core/executor.py",
-      "sha256": "f668083db176ecbffa8e8c6f8b18b2792a81d1159f9e1d4a442bb52931232189",
-      "size_bytes": 408
+      "sha256": "dac7db21f0ceb74770663f72f0ad27efdadbf43977294edb51b25957fa8fcea5",
+      "size_bytes": 413
     },
     {
       "path": "ops/scripts/core/executor_runtime.py",
@@ -1497,8 +1497,8 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_execution_runtime.py",
-      "sha256": "e390b2455b8112085fb19d15e174f1bf61e54fe4a44f8474f5f3856d57d33e3c",
-      "size_bytes": 962
+      "sha256": "f715eb05805a5bf7d5bc7834877d577037cfc15aa95ddb3d764ae5187829eb07",
+      "size_bytes": 965
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
@@ -4999,6 +4999,11 @@
       "path": "tests/test_artifact_relocation_audit.py",
       "sha256": "ea605ee94da6f72a25dd7738f701cea65550f7a4e9dc8da08234f3f828af3ad5",
       "size_bytes": 4024
+    },
+    {
+      "path": "tests/test_auto_improve_execution_runtime.py",
+      "sha256": "a000b38650c8d50a5d18b51bfaae2ee467b3eae475372f9ed8f6f94df21d2c3e",
+      "size_bytes": 1085
     },
     {
       "path": "tests/test_auto_improve_iteration_runtime.py",

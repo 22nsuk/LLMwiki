@@ -18,7 +18,7 @@ def mutation_command(
     parts = [
         shlex.quote(sys.executable),
         "-m",
-        "ops.scripts.executor",
+        "ops.scripts.core.executor",
         "--vault",
         shlex.quote(str(artifact_root)),
         "--run-id",

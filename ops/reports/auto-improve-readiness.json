@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-20T07:08:35Z",
+  "generated_at": "2026-05-20T07:19:23Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "b61c1cf1492c34c9b9f57c25af1f525746f1567fa4bec22ed2db54d00b774bb3",
+  "source_tree_fingerprint": "9c055b406ed3413d44c30d0fbef0b71dbf5dabaea65ecfddc34b3e6b4384c0df",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "b07ea4db25e1e00c9ecce8026872b299d5f6df21f7edd396dce9af266ed48c42",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e8a26558749ee2fc8d615020caccd4b12d32e2354739c58e8a580ff43a3cbc10",
-    "artifact_freshness_report": "b142739ed51b923816b3a9759c6007440d5bbe5c05dc6ad96ef89f05b87b525a",
-    "goal_worktree_guard_report": "1cb2dd0b514a18e4310107b92f21aa332231cac811a8ac99b95fa84816c38e08",
-    "mechanism_review_report": "e029cd7c2a22db19bdf677916751cf9b8e3ad6443820e743ed6a9e241c44fbe7",
-    "mutation_proposal_report": "df68af1aa303479adcc2432a8476b4833d041d07d1edabe7dd512d7cf1a0898c",
-    "outcome_metrics_report": "ed15d8f88e273f11d0e02c259b79a605109fc4430ee4acbe58959bd7f8243d53",
+    "artifact_freshness_report": "b29974a7aed04d36904199a552a7e889e440e9f018353ee25f4ea5d4cb0167c1",
+    "goal_worktree_guard_report": "aa78dba2e5e55083996c22d0df9b8ed6d8b0ee3d8ed1511cc06978cfb984d914",
+    "mechanism_review_report": "f8c438215f88a49b10e70339f8cb3582e2c3b2d23727c1fda96f5409cbf09e31",
+    "mutation_proposal_report": "4cf9f032ad5585de1ba7fdd93985e130ed03be5f116904c152f9ea3064ddea0d",
+    "outcome_metrics_report": "d786584d8285ff4d3c23696f04cb95a29a2b96adf7280cc16bcc8fef523d4481",
     "release_authority_preflight_report": "8771a6022db09e525cf4c8a22c99725d1e3539f340aca5db6445f8d675705b8e",
     "release_closeout_batch_manifest_report": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
     "release_closeout_finality_attestation_report": "7dd3b5e276deee3a02a3e664f5e2c8e28adf36ed7e19eacedd884942521c03ea",
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T07:08:35Z"
+    "checked_at": "2026-05-20T07:19:23Z"
   },
   "vault": ".",
   "policy": {
@@ -63,9 +63,9 @@
       "shadow learning signals require operator review before this run can count as confirmed learning"
     ],
     "metrics": {
-      "attempts_considered": 14,
+      "attempts_considered": 15,
       "min_attempts_considered": 10,
-      "session_reports_considered": 4,
+      "session_reports_considered": 5,
       "session_calibration_status": "active",
       "telemetry_coverage_ratio": 1.0,
       "same_eval_run_count": 2,
@@ -73,15 +73,15 @@
       "strict_secondary_improvement_coverage_ratio": 1.0,
       "behavior_delta_digest_coverage_ratio": 1.0,
       "rework_count": 0,
-      "hold_moving_average": 0.2857,
-      "discard_moving_average": 0.2143,
+      "hold_moving_average": 0.3333,
+      "discard_moving_average": 0.2,
       "defect_escape_pair_count": 0
     },
     "signals": [
       {
         "id": "recent_hold_moving_average",
         "severity": "warn",
-        "detail": "hold_moving_average=0.2857 is at or above threshold=0.2500",
+        "detail": "hold_moving_average=0.3333 is at or above threshold=0.2500",
         "owner": "runtime-maintainer",
         "required_evidence": [
           "ops/reports/outcome-metrics.json metrics.moving_averages.hold is below the configured threshold.",
@@ -134,6 +134,45 @@
         "or an operator must record accepted risk for this named learning review blocker"
       ],
       "recommended_next_step": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
+    },
+    {
+      "id": "promotion_blocked_by_artifact_contract_failure",
+      "scope": "artifact_contract",
+      "status": "open",
+      "severity": "blocker",
+      "release_blocker": true,
+      "accepted_risk": false,
+      "gate_effect": "active",
+      "source_status": "fail",
+      "reason": "artifact freshness status=attention; schema_invalid_artifact_count=0",
+      "signal_ids": [
+        "artifact_freshness_status_not_pass"
+      ],
+      "required_evidence": [
+        "Run make artifact-freshness-check and confirm status=pass.",
+        "Resolve artifact freshness blockers before promoting an auto-improve result."
+      ],
+      "recommended_next_step": "Resolve artifact freshness blockers, then rerun make auto-improve-readiness."
+    },
+    {
+      "id": "promotion_blocked_by_goal_worktree_guard_failure",
+      "scope": "worktree_guard",
+      "status": "open",
+      "severity": "blocker",
+      "release_blocker": true,
+      "accepted_risk": false,
+      "gate_effect": "active",
+      "source_status": "attention",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=16",
+      "signal_ids": [
+        "git_worktree_dirty"
+      ],
+      "required_evidence": [
+        "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
+        "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
+        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal."
+      ],
+      "recommended_next_step": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     },
     {
       "id": "promotion_blocked_by_remediation_backlog_open",
@@ -200,9 +239,9 @@
     "loop_health_summary": {
       "status": "available",
       "gate_effect": "none",
-      "source_report": "ops/reports/routing-provenance-aggregates/5day-auto-improve-runtime-rerun5-30m_trial.json",
-      "source_generated_at": "2026-05-20T06:59:43Z",
-      "session_id": "5day-auto-improve-runtime-rerun5-30m_trial",
+      "source_report": "ops/reports/routing-provenance-aggregates/5day-auto-improve-runtime-rerun6-30m_trial.json",
+      "source_generated_at": "2026-05-20T07:19:20Z",
+      "session_id": "5day-auto-improve-runtime-rerun6-30m_trial",
       "summary": "attempts=1, finalized=0, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=1.00 | alerts: unfinalized runs present, recent HOLD trend",
       "health_flags": [
         "unfinalized_runs_present",
@@ -254,9 +293,9 @@
     },
     "artifact_freshness_summary": {
       "path": "ops/reports/artifact-freshness-report.json",
-      "status": "pass",
+      "status": "attention",
       "schema_invalid_artifact_count": 0,
-      "stable_contract_debt_issue_count": 0,
+      "stable_contract_debt_issue_count": 17,
       "schema_invalid_artifacts": []
     },
     "selected_contract_summary": {
@@ -354,17 +393,19 @@
     "goal_worktree_guard_summary": {
       "path": "tmp/goal-worktree-guard.json",
       "artifact_kind": "goal_worktree_guard",
-      "status": "pass",
+      "status": "attention",
       "requested_mode": "git",
       "detected_mode": "git_worktree",
       "can_execute_goal_runtime": true,
-      "can_promote_result": true,
+      "can_promote_result": false,
       "zip_mode_replay_only": false,
       "dirty_worktree_allowed": false,
-      "dirty_entry_count": 0,
+      "dirty_entry_count": 16,
       "fatal_blockers": [],
-      "promotion_blockers": [],
-      "summary": "goal worktree guard status=pass; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=true; dirty_entry_count=0"
+      "promotion_blockers": [
+        "git_worktree_dirty"
+      ],
+      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=16"
     },
     "remediation_backlog_summary": {
       "path": "ops/reports/remediation-backlog.json",
@@ -401,8 +442,8 @@
     ],
     "source_candidates_read": 1,
     "candidates_emitted": 1,
-    "attempts_considered": 14,
-    "session_reports_considered": 4,
+    "attempts_considered": 15,
+    "session_reports_considered": 5,
     "queue_pressure_summary": "contract_regression_signals 1 proposal, 1 blocked; queue_unblock 1 proposal",
     "review_bootstrap_summary": "comparable mechanism run history는 trend-based candidate를 평가할 수 있을 만큼 확보됐다.",
     "evidence_gaps": []
@@ -439,7 +480,7 @@
     {
       "id": "outcome_metrics_session_rollup_present",
       "pass": true,
-      "detail": "session_reports_considered=4"
+      "detail": "session_reports_considered=5"
     },
     {
       "id": "fallback_target_history_requirement_met",
