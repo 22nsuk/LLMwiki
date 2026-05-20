@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/mutation-proposals.schema.json",
   "artifact_kind": "mutation_proposals_report",
-  "generated_at": "2026-05-20T06:31:14Z",
+  "generated_at": "2026-05-20T06:59:46Z",
   "producer": "ops.scripts.mutation_proposal_runtime",
   "source_command": "python -m ops.scripts.mutation_proposal --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
+  "source_tree_fingerprint": "b61c1cf1492c34c9b9f57c25af1f525746f1567fa4bec22ed2db54d00b774bb3",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "353b4d7e2eae002662a75b043aec091b55b0eca7e339590e79088043c0bbba8f",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "aedebcf3a7bdd78f684e29b746c493d64fec82d08b02e45c1aec04ac63a53f23",
-    "mechanism_review_report": "63e9a48ac2f6d195e7b74fa1828ff86e64135d55b8315e4dd156925d7974646b",
-    "outcome_metrics": "62f8526d48fbd62e3f466860e81f8d7d0d427f20c2a1d8469b1438350317f7aa",
+    "source_paths": "2e5ead20c02ce4c282ffb96a4ff4f13bcc97d772e06b3136636790d77756d0af",
+    "mechanism_review_report": "e029cd7c2a22db19bdf677916751cf9b8e3ad6443820e743ed6a9e241c44fbe7",
+    "outcome_metrics": "ed15d8f88e273f11d0e02c259b79a605109fc4430ee4acbe58959bd7f8243d53",
     "system_log": "ba9d72dab51712154d2713e628d98f08c795683c76142b712b1601f852babc80",
     "mutation_dedupe_window": "ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d",
     "mutation_max_proposals": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T06:31:14Z"
+    "checked_at": "2026-05-20T06:59:46Z"
   },
   "vault": ".",
   "policy": {
@@ -119,14 +119,14 @@
   },
   "proposals": [
     {
-      "proposal_id": "recent_log_overlap_queue_blocked__auto-improve-readiness-queue-runtime",
-      "source_candidate_id": "recent_log_overlap_queue_unblock__auto-improve-readiness-queue-runtime",
+      "proposal_id": "recent_log_overlap_queue_blocked__mechanism-run-validation-runtime",
+      "source_candidate_id": "recent_log_overlap_queue_unblock__mechanism-run-validation-runtime",
       "source_candidate_type": "mechanism_recent_log_overlap_queue_unblock_candidate",
       "family": "queue_unblock",
       "tier": "supporting",
       "priority": 91,
       "primary_targets": [
-        "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py"
+        "ops/scripts/mechanism/mechanism_run_validation_runtime.py"
       ],
       "supporting_targets": [
         "ops/script-output-surfaces.json"
@@ -138,12 +138,12 @@
         "recent-log-overlap-queue-blocked"
       ],
       "failure_mode": "recent_log_overlap_queue_blocked",
-      "single_mechanism_scope": "keep the unblock experiment scoped to `ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py` and `tests/test_auto_improve_readiness_runtime.py` so all existing recent-log-overlap-blocked proposals remain diagnostic evidence while one runnable rotation target reopens the queue",
+      "single_mechanism_scope": "keep the unblock experiment scoped to `ops/scripts/mechanism/mechanism_run_validation_runtime.py` and `tests/test_mechanism_run_validation_runtime.py` so all existing recent-log-overlap-blocked proposals remain diagnostic evidence while one runnable rotation target reopens the queue",
       "change_hypothesis": "If mutation proposal runtime emits a narrow non-overlapping fallback when every candidate is blocked only by recent_log_overlap, auto-improve readiness can keep a runnable queue without weakening the chronology overlap guardrail.",
       "expected_binary_signal": "mutation proposal diagnostics retain recent_log_overlap blocked candidates and queue_selection.runnable_available_count becomes greater than zero",
       "blast_radius_score": 28,
       "must_change_tests": [
-        "tests/test_auto_improve_readiness_runtime.py"
+        "tests/test_mechanism_run_validation_runtime.py"
       ],
       "must_change_budget_signal": {
         "signal": "mutation_proposal.queue_selection.runnable_available_count",

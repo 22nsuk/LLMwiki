@@ -69,6 +69,12 @@ RECENT_LOG_OVERLAP_UNBLOCK_TARGET_OPTIONS = [
     },
     {
         "primary_targets": [
+            "ops/scripts/mechanism/mechanism_run_validation_runtime.py"
+        ],
+        "test_files": ["tests/test_mechanism_run_validation_runtime.py"],
+    },
+    {
+        "primary_targets": [
             "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py"
         ],
         "test_files": ["tests/test_auto_improve_readiness_runtime.py"],
@@ -77,6 +83,7 @@ RECENT_LOG_OVERLAP_UNBLOCK_TARGET_OPTIONS = [
 RECENT_LOG_OVERLAP_UNBLOCK_RUN_ID = "recent-log-overlap-queue-blocked"
 RECENT_OUTCOME_REWORK_BLOCKER = "recent_outcome_rework"
 RECENT_OUTCOME_REWORK_MIN_ATTEMPTS = 2
+RECENT_LOG_OVERLAP_UNBLOCK_REWORK_MIN_ATTEMPTS = 1
 RESOLVED_PROMOTION_HISTORY_STATUSES = {"archived", "quarantined"}
 SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
 
@@ -1048,13 +1055,14 @@ def _recent_outcome_rework_blockers(
     outcome_metrics_report: dict,
     *,
     proposal_id: str,
+    min_attempts: int = RECENT_OUTCOME_REWORK_MIN_ATTEMPTS,
 ) -> list[str]:
     unresolved_count = _recent_unresolved_outcome_attempt_count(
         vault,
         outcome_metrics_report,
         proposal_id=proposal_id,
     )
-    if unresolved_count < RECENT_OUTCOME_REWORK_MIN_ATTEMPTS:
+    if unresolved_count < min_attempts:
         return []
     return [RECENT_OUTCOME_REWORK_BLOCKER]
 
@@ -1181,6 +1189,7 @@ def _recent_log_overlap_queue_unblock_proposal(
             vault,
             outcome_metrics_report,
             proposal_id=proposal_id,
+            min_attempts=RECENT_LOG_OVERLAP_UNBLOCK_REWORK_MIN_ATTEMPTS,
         )
         if blocker not in blocked_by
     )

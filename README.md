@@ -198,7 +198,7 @@
    - `routing-provenance-aggregates/<session-id>.json`은 session report, run telemetry, routing report, executor report, artifact fingerprint를 한 번에 엮고, routing/executor/telemetry `audit_rollup`을 함께 담는 schema-backed audit entrypoint다.
    - session report는 운영 상태의 canonical source이고, routing provenance aggregate는 그 값을 감사자가 빠르게 읽을 수 있게 고정한 normalized snapshot이다.
    - `promotion-decision-trends.json`은 `runs/*/promotion-report.json`을 훑어 decision/artifact class trend와 최근 promotion window를 schema-backed report로 남긴다.
-   - `outcome-metrics.json`은 session rollup과 run telemetry를 합쳐 rework count, HOLD/DISCARD moving average, rollback signal, operator effort proxy, defect escape proxy를 audit-oriented report로 남긴다. 이 값은 아직 `mechanism_review` priority, promotion gate, release gate 판정을 바꾸지 않는다. 단, `mutation_proposal`의 synthetic recent-log-overlap queue-unblock rotation은 같은 proposal의 최근 unresolved outcome이 반복되면 `recent_outcome_rework`로 runnable queue에서 내린다.
+   - `outcome-metrics.json`은 session rollup과 run telemetry를 합쳐 rework count, HOLD/DISCARD moving average, rollback signal, operator effort proxy, defect escape proxy를 audit-oriented report로 남긴다. 이 값은 아직 `mechanism_review` priority, promotion gate, release gate 판정을 바꾸지 않는다. 단, `mutation_proposal`의 synthetic recent-log-overlap queue-unblock rotation은 같은 proposal의 최근 unresolved outcome이 남아 있으면 `recent_outcome_rework`로 runnable queue에서 내린다.
    - session report는 iteration 목록만이 아니라 routing/executor/telemetry rollup도 함께 담아, 어떤 role이 어떤 rung로 얼마나 dispatch됐고 어디서 block됐는지 세션 단위로 바로 읽을 수 있게 한다.
 
 ## 현재 상태

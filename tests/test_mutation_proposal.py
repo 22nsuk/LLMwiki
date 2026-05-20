@@ -711,17 +711,65 @@ class MutationProposalTest(unittest.TestCase):
             self.assertEqual(rotation["failure_mode"], "recent_log_overlap_queue_blocked")
             self.assertEqual(
                 rotation["proposal_id"],
-                "recent_log_overlap_queue_blocked__auto-improve-readiness-queue-runtime",
+                "recent_log_overlap_queue_blocked__mechanism-run-validation-runtime",
             )
             self.assertEqual(
                 rotation["primary_targets"],
-                ["ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py"],
+                ["ops/scripts/mechanism/mechanism_run_validation_runtime.py"],
             )
             self.assertEqual(
                 rotation["must_change_tests"],
-                ["tests/test_auto_improve_readiness_runtime.py"],
+                ["tests/test_mechanism_run_validation_runtime.py"],
             )
             self.assertEqual(rotation["blocked_by"], [])
+
+    def test_recent_log_overlap_rotation_blocks_after_single_unresolved_queue_unblock_outcome(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            write_json(
+                vault / "ops" / "reports" / "outcome-metrics.json",
+                {
+                    "recent_attempts": [
+                        {
+                            "run_id": "auto-improve-trial-rerun-1",
+                            "proposal_id": "recent_log_overlap_queue_blocked__mutation-proposal-runtime",
+                            "outcome": "mutation_failed",
+                            "decision": "HOLD",
+                        },
+                    ],
+                },
+            )
+            (vault / "system" / "system-log.md").write_text(
+                "# System Log\n\n"
+                "## [2026-04-14 00:00] decision | prior overlapping experiments\n\n"
+                "### Artifacts\n"
+                "- `ops/scripts/promotion_gate.py`\n"
+                "- `ops/scripts/wiki_lint.py`\n"
+                "- `ops/scripts/mechanism_assess.py`\n",
+                encoding="utf-8",
+            )
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            schema = load_schema(vault / "ops" / "schemas" / "mutation-proposals.schema.json")
+
+            self.assertEqual(validate_with_schema(proposal_report, schema), [])
+            self.assertEqual(proposal_report["status"], "attention")
+            self.assertEqual(
+                proposal_report["diagnostics"]["queue_selection"][
+                    "blocked_reason_counts"
+                ],
+                [
+                    {"reason": "recent_log_overlap", "count": 3},
+                    {"reason": "recent_outcome_rework", "count": 1},
+                ],
+            )
+
+            rotation = proposal_report["proposals"][0]
+            self.assertEqual(rotation["failure_mode"], "recent_log_overlap_queue_blocked")
+            self.assertEqual(rotation["blocked_by"], ["recent_outcome_rework"])
 
     def test_recent_log_overlap_rotation_blocks_after_repeated_recent_outcome_rework(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -872,6 +920,7 @@ class MutationProposalTest(unittest.TestCase):
                 "- `ops/scripts/wiki_lint.py`\n"
                 "- `ops/scripts/mechanism_assess.py`\n"
                 "- `ops/scripts/mechanism/mutation_proposal_runtime.py`\n"
+                "- `ops/scripts/mechanism/mechanism_run_validation_runtime.py`\n"
                 "- `ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py`\n",
                 encoding="utf-8",
             )
