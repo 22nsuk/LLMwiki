@@ -30,6 +30,7 @@ GOAL_RUN_STATUS ?= blocked
 GOAL_RUN_PROFILE ?= 30m_trial
 GOAL_MAX_UNATTENDED_SECONDS ?= 1800
 GOAL_RUNNER_TIMEOUT_SECONDS ?= 1860
+GOAL_RUNNER_TIMEOUT_GRACE_SECONDS ?= 900
 GOAL_MAX_MINUTES ?= 30
 GOAL_MAX_PROPOSALS ?= 1
 GOAL_MAX_CONSECUTIVE_FAILURES ?= 1
@@ -134,14 +135,15 @@ goal-profile-verification: auto-improve-goal-contract
 	@status=0; $(PYTHON) -m ops.scripts.goal_profile_verification --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --status-report "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_PROFILE_VERIFICATION_CANDIDATE_OUT)" $(if $(GOAL_PROFILE_VERIFICATION_PROFILE),--profile "$(GOAL_PROFILE_VERIFICATION_PROFILE)",) $(if $(GOAL_PROFILE_VERIFICATION_APPLY),--apply,) || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_PROFILE_VERIFICATION_CANDIDATE_OUT)" --out "$(GOAL_PROFILE_VERIFICATION_OUT)" --schema ops/schemas/goal-profile-verification.schema.json --expected-artifact-kind goal_profile_verification --expected-producer ops.scripts.goal_profile_verification || status=$$?; exit $$status
 
 auto-improve-goal-ladder-run: auto-improve-goal-preflight
-	@set -e; for profile in $(GOAL_LADDER_PROFILES); do \
+	@set -e; runner_timeout_grace="$(GOAL_RUNNER_TIMEOUT_GRACE_SECONDS)"; for profile in $(GOAL_LADDER_PROFILES); do \
 		case "$$profile" in \
-			30m_trial) profile_seconds=1800; profile_minutes=30; runner_timeout=1860; profile_proposals=1; profile_failures=1 ;; \
-			6h_ramp) profile_seconds=21600; profile_minutes=360; runner_timeout=21660; profile_proposals=6; profile_failures=2 ;; \
-			2d_candidate) profile_seconds=172800; profile_minutes=2880; runner_timeout=172860; profile_proposals=24; profile_failures=3 ;; \
-			5d_sustained) profile_seconds=432000; profile_minutes=7200; runner_timeout=432060; profile_proposals=60; profile_failures=3 ;; \
+			30m_trial) profile_seconds=1800; profile_minutes=30; profile_proposals=1; profile_failures=1 ;; \
+			6h_ramp) profile_seconds=21600; profile_minutes=360; profile_proposals=6; profile_failures=2 ;; \
+			2d_candidate) profile_seconds=172800; profile_minutes=2880; profile_proposals=24; profile_failures=3 ;; \
+			5d_sustained) profile_seconds=432000; profile_minutes=7200; profile_proposals=60; profile_failures=3 ;; \
 			*) echo "unsupported goal profile: $$profile" >&2; exit 2 ;; \
 		esac; \
+		runner_timeout=$$((profile_seconds + runner_timeout_grace)); \
 		if [ "$$profile" != "30m_trial" ]; then \
 			$(MAKE) goal-runtime-reconcile \
 				GOAL_CONTRACT_RUN_ID="$(GOAL_CONTRACT_RUN_ID)" \
