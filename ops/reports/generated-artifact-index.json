@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-20T02:32:12Z",
+  "generated_at": "2026-05-20T03:23:09Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "607290458796684e94ce743b6505911314a98e5650fdf4ec4c612228a60d0263",
+  "source_tree_fingerprint": "e1f8a771f028b7186c36836a07f58d2d058e8f6fda5432412df2f7006136d8b5",
   "input_fingerprints": {
     "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "834eb6cfec958f35d3989a742cfd58414bb50bb75040ab9283e4c90ed61f1657",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "3090e8825cf76941fff0428cae33626bf250f99e0ab497ee5c0c5883b415cffe",
-    "run_promotion_reports": "47308e6ead45e6366547bffe91c993d0d224544c2a4fb589d598b124c76a0a5f",
+    "run_promotion_reports": "0781c48d5cf55e914698152b4b792d1a3ddf67a7f0ca197d0034e72873cfed84",
     "external_report_inventory": "b8d3cf848d84f38abc3ad11696d741713bca1f94f5e461b4df8cc8ac3fd10e8d",
     "operator_report_inventory": "0479590a186415fa72ba934ab4431828124b8ca576b06322a6eae193e9627721",
     "ops_report_inventory": "42888319f0fa00ed45687b2461bda3d2739588b931ba8c665afa1e1be992c762",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T02:32:12Z"
+    "checked_at": "2026-05-20T03:23:09Z"
   },
   "vault": ".",
   "policy": {
@@ -58,7 +58,7 @@
     }
   ],
   "now": [
-    "88 canonical artifact(s) are currently indexed.",
+    "90 canonical artifact(s) are currently indexed.",
     "2 archive candidate(s) remain in active namespaces."
   ],
   "next": [
@@ -73,9 +73,9 @@
     "operator_reports_root_file_count": 2,
     "external_reports_root_file_count": 5,
     "external_reports_archive_file_count": 67,
-    "run_directory_count": 15,
+    "run_directory_count": 17,
     "run_archive_directory_count": 4,
-    "canonical_report_count": 88,
+    "canonical_report_count": 90,
     "archive_candidate_count": 2
   },
   "canonical_reports": [
@@ -888,6 +888,17 @@
     {
       "surface": "runs",
       "family": "mechanism_run",
+      "path": "runs/5day-auto-improve-runtime-30m_trial-run-01-auto-improve-readiness-queue-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
       "path": "runs/auto-improve-trial-run-01-mutation-proposal-runtime",
       "role": "run_history_record",
       "date": "",
@@ -899,7 +910,18 @@
     {
       "surface": "runs",
       "family": "mechanism_run",
-      "path": "runs/goal-auto-improve-trial",
+      "path": "runs/goal-5day-auto-improve-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary. Load issues: promotion-report.json:missing, run-ledger.json:missing.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/goal-5day-auto-improve-runtime-30m_trial",
       "role": "run_history_record",
       "date": "",
       "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary. Load issues: promotion-report.json:missing, run-ledger.json:missing.",
@@ -1073,7 +1095,6 @@
       "date": "2026-05-19",
       "reason": "External report has no unique unresolved action themes; remaining open themes are covered by a broader active external report.",
       "superseded_by": [
-        "external-reports/llmwiki_goal_runtime_comparison_report.md",
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
       ],
       "supersedes": [],

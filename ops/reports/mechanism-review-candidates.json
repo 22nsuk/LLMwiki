@@ -1,19 +1,19 @@
 {
   "$schema": "ops/schemas/mechanism-review-candidates.schema.json",
   "artifact_kind": "mechanism_review_candidates_report",
-  "generated_at": "2026-05-19T16:07:04Z",
+  "generated_at": "2026-05-20T03:22:01Z",
   "producer": "ops.scripts.mechanism_review_runtime",
   "source_command": "python -m ops.scripts.mechanism_review",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "81d6acebfae87091e9e60a9ee0042c2398a7159a5bd603b84b77b14fe4c10533",
+  "source_tree_fingerprint": "e1f8a771f028b7186c36836a07f58d2d058e8f6fda5432412df2f7006136d8b5",
   "input_fingerprints": {
     "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "c730a4570492eaf5cb038d51227064a8c9404069f62cb3920049a985951e876a",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "da3776a205b1f1f07765b538aa4dc4093e31f68f04dcc435134fccf7e48fae2a",
-    "excluded_promotion_reports": "0cea36f82d75138fd0af63c28851bf875cb397f537ddb85f35a1bcd8a270825a",
-    "promotion_reports": "0d1c28b79dbdd571e001746a862f51a7d55b39d662523cd283704a581b8f42ca",
-    "skipped_artifacts": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_paths": "b6a97e444164d60ea21111ba0d6068ce8e345c212c78dd4070013da1d67097f4",
+    "excluded_promotion_reports": "537937b42d9eb22a3babdeba680d221f58a70de44d3e3640a55d49301edd827d",
+    "promotion_reports": "47308e6ead45e6366547bffe91c993d0d224544c2a4fb589d598b124c76a0a5f",
+    "skipped_artifacts": "39bce51c0493df01e8d297be859dfba0257d6b0f6c6d0524aecfe0ba661ee283",
     "mechanism_review_enabled": "3cbc87c7681f34db4617feaa2c8801931bc5e42d8d0f560e756dd4cd92885f18",
     "mechanism_review_max_candidates": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
     "mechanism_review_max_runs": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-19T16:07:04Z"
+    "checked_at": "2026-05-20T03:22:01Z"
   },
   "vault": ".",
   "policy": {
@@ -33,14 +33,31 @@
   },
   "status": "pass",
   "summary": {
-    "runs_discovered": 24,
-    "runs_considered": 11,
-    "runs_excluded": 13,
-    "runs_skipped": 0,
+    "runs_discovered": 14,
+    "runs_considered": 9,
+    "runs_excluded": 4,
+    "runs_skipped": 1,
     "candidates_emitted": 1
   },
   "diagnostics": {
-    "skipped_runs": [],
+    "skipped_runs": [
+      {
+        "run_id": "5day-auto-improve-runtime-30m_trial-run-01-auto-improve-readiness-queue-runtime",
+        "reason": "run_artifact_invalid",
+        "path": "runs/5day-auto-improve-runtime-30m_trial-run-01-auto-improve-readiness-queue-runtime/candidate-eval.json",
+        "detail": "missing artifact: runs/5day-auto-improve-runtime-30m_trial-run-01-auto-improve-readiness-queue-runtime/candidate-eval.json",
+        "triage": {
+          "status": "operator_decision_required",
+          "problem": "missing_promotion_input_artifact",
+          "recommended_action": "restore_missing_artifact_or_archive_run_history",
+          "options": [
+            "restore the missing artifact from ledgered evidence",
+            "archive or quarantine the promotion report history",
+            "mark the run non-history if superseded by a later run"
+          ]
+        }
+      }
+    ],
     "excluded_runs": [
       {
         "run_id": "run-20260422-auto-improve-decision-record-fallback-retry2",
@@ -59,60 +76,6 @@
         "status": "archived",
         "reason": "false discard from runner defect; excluded from active mechanism history",
         "path": "runs/archive/run-20260415-mechanism-planning-gate-second-retry/promotion-report.json"
-      },
-      {
-        "run_id": "auto-improve-trial-run-01-mutation-proposal-runtime",
-        "status": "archived",
-        "reason": "30m trial rerun discarded because the selected queue-unblock proposal was already satisfied in the parent workspace; archived from active mechanism history before maintenance-runtime rerun.",
-        "path": "runs/archive/auto-improve-trial-run-01-mutation-proposal-runtime-noop-discard-20260519t091216z/promotion-report.json"
-      },
-      {
-        "run_id": "auto-improve-trial-run-01-mutation-proposal-runtime",
-        "status": "archived",
-        "reason": "30m trial proposal was validator-rejected before candidate evaluation; archived from active mechanism history and superseded by recent-log fallback guardrail fix.",
-        "path": "runs/archive/auto-improve-trial-run-01-mutation-proposal-runtime/promotion-report.json"
-      },
-      {
-        "run_id": "auto-improve-trial-p1-20260519T113538Z-run-01-auto-improve-iteration-persistence-runtime",
-        "status": "archived",
-        "reason": "30m trial held because reviewer reported discard evidence source/path fidelity as a blocking issue; archived from active mechanism history before parent remediation rerun.",
-        "path": "runs/archive/auto-improve-trial-p1-20260519T113538Z-run-01-auto-improve-iteration-persistence-runtime-reviewer-evidence-fidelity-hold-20260519t115301z/promotion-report.json"
-      },
-      {
-        "run_id": "auto-improve-trial-maintenance-rerun-run-01-mutation-proposal-runtime",
-        "status": "archived",
-        "reason": "30m trial rerun held because read-only validator used bare Python and reported missing dependencies despite a prepared workspace; archived before validator command guidance rerun.",
-        "path": "runs/archive/auto-improve-trial-maintenance-rerun-run-01-mutation-proposal-runtime-validator-blocked-20260519t0939z/promotion-report.json"
-      },
-      {
-        "run_id": "auto-improve-trial-maintenance-rerun-4-run-01-mutation-proposal-runtime",
-        "status": "archived",
-        "reason": "discarded no-op trial; maintenance-after-discard contract was invalid and has been redesigned",
-        "path": "runs/archive/auto-improve-trial-maintenance-rerun-4-run-01-mutation-proposal-runtime-discard-maintenance-redesign-20260519t103553z/promotion-report.json"
-      },
-      {
-        "run_id": "auto-improve-trial-maintenance-rerun-3-run-01-mutation-proposal-runtime",
-        "status": "archived",
-        "reason": "30m trial rerun held because validator treated post-executor candidate/promotion artifacts as missing during executor phase; superseded by executor phase-boundary validator prompt.",
-        "path": "runs/archive/auto-improve-trial-maintenance-rerun-3-run-01-mutation-proposal-runtime-validator-phase-boundary-20260519t1007z/promotion-report.json"
-      },
-      {
-        "run_id": "auto-improve-trial-maintenance-rerun-2-run-01-mutation-proposal-runtime",
-        "status": "archived",
-        "reason": "30m trial rerun held because read-only validator could not execute tempfile-backed pytest; superseded by temp-workspace validator sandbox plus non-worker integrity guard.",
-        "path": "runs/archive/auto-improve-trial-maintenance-rerun-2-run-01-mutation-proposal-runtime-validator-tempfile-blocked-20260519t0954z/promotion-report.json"
-      },
-      {
-        "run_id": "auto-improve-remediation-p1d-20260519T140010Z-run-01-auto-improve-iteration-persistence-runtime",
-        "status": "archived",
-        "reason": "remediation verification held at reviewer before candidate evaluation; retained as review-blocking evidence, not active promotion history",
-        "path": "runs/auto-improve-remediation-p1d-20260519T140010Z-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
-      },
-      {
-        "run_id": "auto-improve-remediation-p1c-20260519T132655Z-run-01-auto-improve-iteration-persistence-runtime",
-        "status": "archived",
-        "reason": "remediation verification held at reviewer before candidate evaluation; retained as review-blocking evidence, not active promotion history",
-        "path": "runs/auto-improve-remediation-p1c-20260519T132655Z-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
       },
       {
         "run_id": "auto-improve-2026-05-02t03-27-31z-run-01-auto-improve-iteration-persistence-runtime",
@@ -239,14 +202,14 @@
         "defect_escape_pair_count": 1
       },
       "global_signals": {
-        "attempt_count": 29,
-        "recent_attempt_count": 20,
+        "attempt_count": 14,
+        "recent_attempt_count": 14,
         "moving_averages": {
-          "hold": 0.4,
-          "discard": 0.35,
+          "hold": 0.2857,
+          "discard": 0.2143,
           "rollback_signal": 0.0
         },
-        "rework_count": 14,
+        "rework_count": 0,
         "rollback_signal_count": 0,
         "defect_escape_pair_count": 0
       },
@@ -268,30 +231,23 @@
             "contract_regression_signals": 1
           },
           "current_priority_max": 100,
-          "attempt_count": 10,
+          "attempt_count": 5,
           "source_run_ids": [
-            "auto-improve-remediation-p1b-20260519T124442Z-run-01-auto-improve-iteration-persistence-runtime",
-            "auto-improve-remediation-p1c-20260519T132655Z-run-01-auto-improve-iteration-persistence-runtime",
-            "auto-improve-remediation-p1d-20260519T140010Z-run-01-auto-improve-iteration-persistence-runtime",
-            "auto-improve-remediation-p1e-20260519T142130Z-run-01-auto-improve-iteration-persistence-runtime",
-            "auto-improve-trial-p1-20260519T113538Z-run-01-auto-improve-iteration-persistence-runtime-reviewer-evidence-fidelity-hold-20260519t115301z",
             "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
             "run-20260422-auto-improve-timeout-telemetry-fallback",
             "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
             "run-20260507-auto-improve-iteration-persistence-discard-path",
             "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
           ],
-          "hold_count": 3,
-          "discard_count": 4,
-          "hold_moving_average": 0.3,
+          "hold_count": 0,
+          "discard_count": 2,
+          "hold_moving_average": 0.0,
           "discard_moving_average": 0.4,
           "rollback_signal_count": 0,
           "rollback_signal_ratio": 0.0,
-          "rework_count": 5,
+          "rework_count": 0,
           "defect_escape_pair_count": 0,
           "preview_flags": [
-            "high_rework",
-            "recent_hold_moving_average",
             "recent_discard_moving_average"
           ]
         }
@@ -301,45 +257,21 @@
           "family": "contract_regression_signals",
           "target_count": 1,
           "candidate_count": 1,
-          "attempt_count": 10,
-          "hold_count": 3,
-          "discard_count": 4,
+          "attempt_count": 5,
+          "hold_count": 0,
+          "discard_count": 2,
           "rollback_signal_count": 0,
-          "rework_count": 5,
+          "rework_count": 0,
           "defect_escape_pair_count": 0,
           "preview_flags": [
-            "high_rework",
-            "recent_discard_moving_average",
-            "recent_hold_moving_average"
+            "recent_discard_moving_average"
           ],
-          "hold_moving_average": 0.3,
+          "hold_moving_average": 0.0,
           "discard_moving_average": 0.4,
           "rollback_signal_ratio": 0.0
         }
       ],
-      "high_rework_targets": [
-        {
-          "primary_targets": [
-            "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
-          ],
-          "families": [
-            "contract_regression_signals"
-          ],
-          "rework_count": 5,
-          "source_run_ids": [
-            "auto-improve-remediation-p1b-20260519T124442Z-run-01-auto-improve-iteration-persistence-runtime",
-            "auto-improve-remediation-p1c-20260519T132655Z-run-01-auto-improve-iteration-persistence-runtime",
-            "auto-improve-remediation-p1d-20260519T140010Z-run-01-auto-improve-iteration-persistence-runtime",
-            "auto-improve-remediation-p1e-20260519T142130Z-run-01-auto-improve-iteration-persistence-runtime",
-            "auto-improve-trial-p1-20260519T113538Z-run-01-auto-improve-iteration-persistence-runtime-reviewer-evidence-fidelity-hold-20260519t115301z",
-            "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp",
-            "run-20260422-auto-improve-timeout-telemetry-fallback",
-            "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
-            "run-20260507-auto-improve-iteration-persistence-discard-path",
-            "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
-          ]
-        }
-      ],
+      "high_rework_targets": [],
       "defect_escape_pairs": [],
       "shadow_priority": {
         "status": "disabled",
@@ -347,7 +279,7 @@
         "min_attempts_considered": 10,
         "min_target_attempts": 2,
         "shadow_priority_max_delta": 10,
-        "attempts_considered": 29,
+        "attempts_considered": 14,
         "current_order": [
           "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime"
         ],

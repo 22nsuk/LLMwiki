@@ -2181,6 +2181,12 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertIn("make auto-improve-readiness", remediation["retry_condition"])
         self.assertIn("none are runnable yet", report["next_action"])
         self.assertIn("recent_log_overlap", report["next_action"])
+        checks = {check["id"]: check for check in report["checks"]}
+        self.assertTrue(checks["fallback_target_history_requirement_met"]["pass"])
+        self.assertIn(
+            "fallback history depth is not needed",
+            checks["fallback_target_history_requirement_met"]["detail"],
+        )
 
     def test_build_readiness_report_surfaces_recent_outcome_rework_remediation(self) -> None:
         self._write_report(
@@ -2382,6 +2388,12 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             {blocker["id"] for blocker in report["release_blockers"]},
         )
         self.assertIn("Queue is non-empty", report["next_action"])
+        checks = {check["id"]: check for check in report["checks"]}
+        self.assertTrue(checks["fallback_target_history_requirement_met"]["pass"])
+        self.assertIn(
+            "fallback history depth is not needed",
+            checks["fallback_target_history_requirement_met"]["detail"],
+        )
 
     def test_write_readiness_report_uses_bundled_schema_when_vault_schema_is_absent(self) -> None:
         report = build_readiness_report(

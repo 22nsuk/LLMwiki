@@ -527,7 +527,10 @@ def _checks(
         },
         {
             "id": "fallback_target_history_requirement_met",
-            "pass": len(seed_runs) >= history_requirement if history_requirement else bool(seed_runs),
+            "pass": (
+                proposals_emitted > 0
+                or (len(seed_runs) >= history_requirement if history_requirement else bool(seed_runs))
+            ),
             "detail": (
                 "queue is already non-empty, so fallback history depth is not needed."
                 if proposals_emitted > 0
