@@ -201,19 +201,40 @@ def _active_run_status(status: dict[str, Any]) -> str:
 
 
 def _goal_session_result_candidates(status: dict[str, Any]) -> list[tuple[str, str, str]]:
-    run_id = _active_run_id(status)
-    if not run_id or _active_run_status(status) == "running":
+    if _active_run_status(status) == "running":
+        return []
+    state_dirs = _goal_state_dirs(status)
+    if not state_dirs:
         return []
     return [
         (
-            f"runs/goal-{run_id}/state/{GOAL_SESSION_RESULT_FILENAME}",
+            f"{state_dir}/{GOAL_SESSION_RESULT_FILENAME}",
             GOAL_SESSION_RESULT_CATEGORY,
             (
                 "goal runner result-out is a transient child stdout copy; "
                 "canonical session evidence lives in schema-backed auto-improve session reports"
             ),
         )
+        for state_dir in state_dirs
     ]
+
+
+def _goal_state_dirs(status: dict[str, Any]) -> list[str]:
+    state_dirs: set[str] = set()
+    goal = status.get("goal")
+    if isinstance(goal, dict):
+        contract_path = goal.get("contract_path")
+        if isinstance(contract_path, str) and contract_path:
+            state_dirs.add(str(Path(contract_path).parent).strip("."))
+    artifacts = status.get("artifacts")
+    if isinstance(artifacts, dict):
+        status_report_path = artifacts.get("status_report_path")
+        if isinstance(status_report_path, str) and status_report_path:
+            state_dirs.add(str(Path(status_report_path).parent).strip("."))
+    run_id = _active_run_id(status)
+    if run_id:
+        state_dirs.add(f"runs/goal-{run_id}/state")
+    return sorted(path.strip("/") for path in state_dirs if path.strip("/"))
 
 
 def _goal_tree_candidates(

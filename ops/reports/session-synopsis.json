@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-20T09:57:35Z",
+  "generated_at": "2026-05-20T10:00:48Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "1993032233a5f0ad0e88ebeb764d53b5be6b481dd6744ff71449074e83a6c228",
+  "source_tree_fingerprint": "bbc221f6691d48bca1924f91c72e755d825cf792d74627604a38e39844f4196c",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "8c91343f30427af06d94db468c972889a09ff0185c7db529c93733a70f373b82",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "f66d87472e0e2e1b03b99437ccbadec98a2fd769c9cf08e6924573dcac8ab784",
-    "auto_improve_readiness": "6623bc8a10bbcd96f9f04017fdd44582bf2c28ed1d9a5cd46261aa4210327d2a",
-    "goal_run_status": "16817a031db1608c29d49d2a3d0347f90879afae23032534446386b94bf353e9",
-    "learning_claim_activation": "de47b0d438d7acc6146d5bc17c251b1646a1d58e30aaf9fb61df353f4868bfcb",
-    "learning_delta_scoreboard": "bd468ef53e4921d8c061fe855175c3138ea7f1f3e313fe2656db155629c8140d",
+    "auto_improve_readiness": "2905a24ce3c8ee0e8d34b85becf43389394725766577c780c06fb47e5bfc9748",
+    "goal_run_status": "f105f6e2ac0994b74160e241c7d59726da6f8389f232ee4a8e350e171769a535",
+    "learning_claim_activation": "b0a864e02685717577b0689a44370049fb99cd1eaa31ff1cb5b63ac5924abfc7",
+    "learning_delta_scoreboard": "56898fe629e4279e93a62716a0cef82175bfc4947c9bb7eec50ca617f711b3b2",
     "source_package_clean_extract": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "task_observations": "71013a0efaa510f93ecdb4cb6a3cbc18ff61d60d8fc093c6521a4aea80829677"
   },
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T09:57:35Z"
+    "checked_at": "2026-05-20T10:00:48Z"
   },
   "vault": ".",
   "policy": {
@@ -33,14 +33,14 @@
   },
   "status": "attention",
   "summary": {
-    "recent_blocker_count": 8,
+    "recent_blocker_count": 7,
     "last_success_pattern_count": 5,
     "forbidden_repeat_pattern_count": 5,
     "recommended_seed_run_count": 3,
     "evidence_gap_count": 2,
     "source_package_replay_status": "pass",
     "active_goal_id": "goal-5day-auto-improve-runtime",
-    "active_goal_run_id": "auto-improve-trial",
+    "active_goal_run_id": "5day-auto-improve-runtime-rerun12-30m_trial",
     "active_goal_link_status": "linked",
     "goal_profile_ladder_status": "incomplete",
     "goal_next_profile_required": "30m_trial",
@@ -48,13 +48,6 @@
     "next_action": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
   },
   "recent_blockers": [
-    {
-      "id": "goal_status_git_worktree_dirty",
-      "source": "goal_run_status.blockers",
-      "status": "open",
-      "reason": "git_worktree_dirty",
-      "repair_target": "Refresh goal run status and close the active blocker before resuming."
-    },
     {
       "id": "goal_status_profile_ladder_incomplete",
       "source": "goal_run_status.blockers",
@@ -94,7 +87,7 @@
       "id": "promotion_blocked_by_goal_worktree_guard_failure",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=25",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=7",
       "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     },
     {
@@ -251,15 +244,15 @@
     "link_status": "linked",
     "report_path": "ops/reports/goal-run-status.json",
     "contract_id": "goal-5day-auto-improve-runtime",
-    "run_id": "auto-improve-trial",
+    "run_id": "5day-auto-improve-runtime-rerun12-30m_trial",
     "run_status": "blocked",
     "profile": "30m_trial",
     "promotion_status": "blocked",
     "can_promote_result": false,
     "checkpoint_status": "current",
     "periodic_evidence_status": "not_due",
-    "audit_log_path": "runs/goal-auto-improve-trial/audit-log.jsonl",
-    "resume_metadata_path": "runs/goal-auto-improve-trial/resume-metadata.json",
+    "audit_log_path": "runs/goal-5day-auto-improve-runtime-rerun12-30m_trial/audit-log.jsonl",
+    "resume_metadata_path": "runs/goal-5day-auto-improve-runtime-rerun12-30m_trial/resume-metadata.json",
     "next_action": "Resume via the linked goal status artifacts before starting a separate session."
   },
   "goal_profile_ladder": {
@@ -298,7 +291,7 @@
     "target_profile": "30m_trial",
     "profile_ladder_status": "incomplete",
     "sustained_claim_allowed": false,
-    "open_blocker_count": 8,
+    "open_blocker_count": 7,
     "forbidden_pattern_count": 5,
     "evidence_gap_count": 2
   },

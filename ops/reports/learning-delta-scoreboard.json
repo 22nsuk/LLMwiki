@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-delta-scoreboard.schema.json",
   "artifact_kind": "learning_delta_scoreboard",
-  "generated_at": "2026-05-20T09:57:34Z",
+  "generated_at": "2026-05-20T10:00:47Z",
   "producer": "ops.scripts.learning_delta_scoreboard",
   "source_command": "python -m ops.scripts.learning_delta_scoreboard --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "1993032233a5f0ad0e88ebeb764d53b5be6b481dd6744ff71449074e83a6c228",
+  "source_tree_fingerprint": "bbc221f6691d48bca1924f91c72e755d825cf792d74627604a38e39844f4196c",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "27d4da175fb390b9e8aa35ec13404af61fb32cfef4fcefee316d1e9557b89ae2",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "f4549dd5b13ac715af49224e9ee0822e13f9e0feac17df335f0df02abbf01b11",
-    "learning_delta_inputs": "34417577122a0a16ce46694fadbed15f7473eeb813b6784a533e8e61863585bb"
+    "learning_delta_inputs": "9d7f66f625169cf295d4082dc334d0b0dc0c858af3addcd3f4f484884cb9e132"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T09:57:34Z"
+    "checked_at": "2026-05-20T10:00:47Z"
   },
   "vault": ".",
   "policy": {
@@ -484,7 +484,7 @@
     ],
     "bundle_status": "stale",
     "bundle_sha256": "197a6c46809897c6545d8b15dd54cb9f3f78bfda9390bf79b222864aea8c1500",
-    "current_bundle_sha256": "70ac17d359be9732a78813b3d862bad14417d63494f021d9e4bc2358ad0bf8a2",
+    "current_bundle_sha256": "c8c1b2e76c1f1306b3771dfd930898e579cbbc803386a0b85a12400f70cdee7e",
     "revocation_status": "stale",
     "confirmed_evidence_cohort_path": "ops/reports/learning-confirmed-evidence-cohort.json",
     "confirmed_evidence_cohort_sha256": "fd616f2c2f4c7801ce235fba597529d8c341c71eb021e94d7f3503dcc51e1178",

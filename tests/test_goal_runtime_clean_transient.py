@@ -133,6 +133,41 @@ class GoalRuntimeCleanTransientTests(unittest.TestCase):
         self.assertTrue((self.vault / "ops/reports/codex-goal-prompt.json").is_file())
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_apply_removes_contract_state_session_result_when_run_id_differs(self) -> None:
+        self._write(
+            "ops/reports/goal-run-status.json",
+            json.dumps(
+                {
+                    "goal": {
+                        "contract_path": "runs/goal-active/state/codex-goal-contract.json",
+                    },
+                    "run": {"run_id": "active-rerun12-30m_trial", "status": "blocked"},
+                    "artifacts": {
+                        "status_report_path": "runs/goal-active/state/goal-run-status.json",
+                    },
+                },
+                sort_keys=True,
+            ),
+        )
+
+        report = build_report(
+            GoalRuntimeCleanTransientRequest(
+                vault=self.vault,
+                apply=True,
+                context=fixed_context(),
+            )
+        )
+
+        removed_paths = {
+            item["path"]
+            for item in report["cleanup_candidates"]
+            if item["action"] == "removed"
+        }
+        self.assertIn("runs/goal-active/state/auto-improve-goal-session-result.json", removed_paths)
+        self.assertFalse(
+            (self.vault / "runs/goal-active/state/auto-improve-goal-session-result.json").exists()
+        )
+
     def test_write_report_uses_schema_backed_output(self) -> None:
         report = build_report(
             GoalRuntimeCleanTransientRequest(
