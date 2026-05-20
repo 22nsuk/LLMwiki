@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-20T06:30:18Z",
+  "generated_at": "2026-05-20T06:46:17Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
@@ -11,10 +11,10 @@
     "schema": "8c91343f30427af06d94db468c972889a09ff0185c7db529c93733a70f373b82",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "1b3dc9e7a915a19253d410de18eaaaf886a7ff3ed065da0c66c496fb7e0f9ae4",
-    "auto_improve_readiness": "747d61c9f926abedfe53feac044b0e559193a4daf658f53077f9cf628c5ec3eb",
+    "auto_improve_readiness": "1d3d1f786898a048c1be4bb4c864baba573fac39e9c606773ccd140d8d086e28",
     "goal_run_status": "6bc7468cb0db61dfbbef869ea1aec8de18bd05f85a673ba83ee9bc85e613bce8",
-    "learning_claim_activation": "19440a547cf737cff6316275d95457ab7c23d71c5189b14a95ac105404790f50",
-    "learning_delta_scoreboard": "ae61479554ae5332d7712891adc4504b29dc73b20aa6bd301feea9e51dc08f53",
+    "learning_claim_activation": "c92ad431c052b411c2f73a825abd595a4870ac31a1baadb2c5cd77f92399115a",
+    "learning_delta_scoreboard": "a3bab586e851cca6ae4ea2871e6767399fca8dc242fbd0119deab7ea23fd0a78",
     "source_package_clean_extract": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "task_observations": "71013a0efaa510f93ecdb4cb6a3cbc18ff61d60d8fc093c6521a4aea80829677"
   },
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T06:30:18Z"
+    "checked_at": "2026-05-20T06:46:17Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
   },
   "status": "attention",
   "summary": {
-    "recent_blocker_count": 4,
+    "recent_blocker_count": 5,
     "last_success_pattern_count": 5,
     "forbidden_repeat_pattern_count": 4,
     "recommended_seed_run_count": 3,
@@ -45,9 +45,16 @@
     "goal_profile_ladder_status": "incomplete",
     "goal_next_profile_required": "30m_trial",
     "sustained_claim_allowed": false,
-    "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
+    "next_action": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
   },
   "recent_blockers": [
+    {
+      "id": "goal_status_promotion_blocked_by_goal_worktree_guard_failure",
+      "source": "goal_run_status.blockers",
+      "status": "open",
+      "reason": "promotion_blocked_by_goal_worktree_guard_failure",
+      "repair_target": "Refresh goal run status and close the active blocker before resuming."
+    },
     {
       "id": "goal_status_git_worktree_dirty",
       "source": "goal_run_status.blockers",
@@ -63,11 +70,11 @@
       "repair_target": "Collect bounded runtime evidence for next_profile_required=30m_trial."
     },
     {
-      "id": "promotion_blocked_by_goal_worktree_guard_failure",
+      "id": "learning_blocked_by_review_required",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=7",
-      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
+      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: loop_health_telemetry_coverage_missing",
+      "repair_target": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
     },
     {
       "id": "learning_claim_unlock_review_not_approved",
@@ -237,7 +244,7 @@
   "next_session_entrypoint": {
     "promotion_allowed": false,
     "claim_wording_allowed": false,
-    "recommended_next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness.",
+    "recommended_next_action": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete.",
     "first_commands": [
       "make auto-improve-goal-status",
       "make session-synopsis",
@@ -258,7 +265,7 @@
     "target_profile": "30m_trial",
     "profile_ladder_status": "incomplete",
     "sustained_claim_allowed": false,
-    "open_blocker_count": 4,
+    "open_blocker_count": 5,
     "forbidden_pattern_count": 4,
     "evidence_gap_count": 2
   },
