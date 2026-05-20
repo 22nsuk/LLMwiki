@@ -6023,3 +6023,58 @@ The validated worker change was applied directly in the main workspace: `discard
 - Rerun11 remains blocked evidence, not goal progress, because it ended before the minimum elapsed profile duration and had no successful improvement iteration.
 - The material validator blocker is addressed in the main workspace: iteration telemetry can no longer invent discard non-regression evidence from a DISCARD report unless the runtime outcome is also `discarded`.
 - The next 30m trial should rerun after report refresh from this corrected code and must produce current registry evidence before validator promotion.
+
+---
+
+## [2026-05-20 18:56 KST] improve | Seal rerun11 blocker evidence
+
+### Summary
+The blocked trial evidence was preserved as diagnostic history, and the corresponding code/test repair was committed with the generated registry refresh. The trial remains excluded from profile success evidence.
+
+### Consequence
+- Goal progress is still at the first ladder rung.
+- Future trials should rely on the repaired telemetry contract and fresh generated evidence.
+
+---
+
+## [2026-05-20 18:57 KST] improve | Refresh clean goal snapshot inputs
+
+### Summary
+The goal contract and status snapshot were regenerated from a clean checkout so the next operator handoff points at the active run-local state instead of stale dirty-worktree evidence.
+
+### Consequence
+- The active goal remains bound to the 30m trial rung.
+- Snapshot evidence now reflects the corrected contract digest.
+
+---
+
+## [2026-05-20 18:58 KST] improve | Refresh queue source reports
+
+### Summary
+The core generated queue inputs were rebuilt after the telemetry repair so candidate selection, outcome metrics, raw-registry diagnostics, and generated surface fingerprints share the same source tree.
+
+### Consequence
+- The queue can be evaluated from a single current report cohort.
+- Stale currentness fingerprints from the blocked validator path are no longer an independent blocker.
+
+---
+
+## [2026-05-20 18:59 KST] improve | Reconcile clean handoff ledgers
+
+### Summary
+The session handoff and remediation ledgers were prepared for a clean follow-up pass, with the blocked trial retained only as negative evidence and not as a verified profile.
+
+### Consequence
+- The next trial must still earn successful iteration and maintenance evidence.
+- Previously captured local run artifacts remain preserved for audit.
+
+---
+
+## [2026-05-20 19:00 KST] improve | Prepare next trial readiness refresh
+
+### Summary
+The next readiness refresh is intentionally separated from earlier report generation so the worktree guard observes a clean checkout before the readiness report is written.
+
+### Consequence
+- Readiness should report the true queue state rather than self-induced tracked report dirtiness.
+- If execution remains blocked, the remaining blocker will be a real candidate-selection issue rather than a generated-report ordering artifact.
