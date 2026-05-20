@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-20T07:00:12Z",
+  "generated_at": "2026-05-20T07:04:42Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
@@ -11,10 +11,10 @@
     "schema": "8c91343f30427af06d94db468c972889a09ff0185c7db529c93733a70f373b82",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "1b3dc9e7a915a19253d410de18eaaaf886a7ff3ed065da0c66c496fb7e0f9ae4",
-    "auto_improve_readiness": "eabd5ff7dd7c9e1d3f5822e62dce77d7c3d94ed5f09393f1c7bd48d515b79ebc",
-    "goal_run_status": "6bc7468cb0db61dfbbef869ea1aec8de18bd05f85a673ba83ee9bc85e613bce8",
-    "learning_claim_activation": "11dfe4b414e1b22a94a49eb8fa0adc8e4284187887bf0d7dc042502aa73fa849",
-    "learning_delta_scoreboard": "16faa60c317314197ddfd6c1319329deb71a7feed6ef964e49a720bcc1f98a9f",
+    "auto_improve_readiness": "b2dd8820e6af50ff909291de6739d9432a372d591b68668eabd6a26677dd72f4",
+    "goal_run_status": "c1330d1c743f71f174e47eade7a45cc854709933ec2263b5ceefbd72dcd7bd97",
+    "learning_claim_activation": "007056c7a9612c7909f78c8ae70dba09f133d080f5b8377f952d9c6df24d0bb0",
+    "learning_delta_scoreboard": "d25e74fa62fe2949c814267f1ea1002f9741f2c60801ecb77340be1e045b4ce1",
     "source_package_clean_extract": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "task_observations": "71013a0efaa510f93ecdb4cb6a3cbc18ff61d60d8fc093c6521a4aea80829677"
   },
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T07:00:12Z"
+    "checked_at": "2026-05-20T07:04:42Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
   },
   "status": "attention",
   "summary": {
-    "recent_blocker_count": 5,
+    "recent_blocker_count": 4,
     "last_success_pattern_count": 5,
     "forbidden_repeat_pattern_count": 4,
     "recommended_seed_run_count": 3,
@@ -49,13 +49,6 @@
   },
   "recent_blockers": [
     {
-      "id": "goal_status_git_worktree_dirty",
-      "source": "goal_run_status.blockers",
-      "status": "open",
-      "reason": "git_worktree_dirty",
-      "repair_target": "Refresh goal run status and close the active blocker before resuming."
-    },
-    {
       "id": "goal_status_profile_ladder_incomplete",
       "source": "goal_run_status.blockers",
       "status": "open",
@@ -70,18 +63,18 @@
       "repair_target": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
     },
     {
-      "id": "promotion_blocked_by_artifact_contract_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "status": "open",
-      "reason": "artifact freshness status=attention; schema_invalid_artifact_count=0",
-      "repair_target": "Resolve artifact freshness blockers, then rerun make auto-improve-readiness."
-    },
-    {
       "id": "promotion_blocked_by_goal_worktree_guard_failure",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=22",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=28",
       "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
+    },
+    {
+      "id": "learning_claim_unlock_review_not_approved",
+      "source": "learning_claim_activation.blocked_predicates",
+      "status": "stale",
+      "reason": "",
+      "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean."
     }
   ],
   "last_success_patterns": [
@@ -265,7 +258,7 @@
     "target_profile": "30m_trial",
     "profile_ladder_status": "incomplete",
     "sustained_claim_allowed": false,
-    "open_blocker_count": 5,
+    "open_blocker_count": 4,
     "forbidden_pattern_count": 4,
     "evidence_gap_count": 2
   },

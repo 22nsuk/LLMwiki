@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-20T07:02:31Z",
+  "generated_at": "2026-05-20T07:04:44Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -11,8 +11,8 @@
     "schema": "b07ea4db25e1e00c9ecce8026872b299d5f6df21f7edd396dce9af266ed48c42",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e8a26558749ee2fc8d615020caccd4b12d32e2354739c58e8a580ff43a3cbc10",
-    "artifact_freshness_report": "d9073f22e4d7b974c10fe96079dced97266f45b552a2f1d5207e8d9b52b7cba2",
-    "goal_worktree_guard_report": "7f19b1722e8c4bbd9fe9816d834d5ad70632c48928de04641f3c332d5fa87ee1",
+    "artifact_freshness_report": "6fbb1e84bac9ab5b38b2561049c85167b865125d3ca064ff42a9425f0a37f37a",
+    "goal_worktree_guard_report": "1ea82c84876f5e183aa1158e3a0b5aeaf2ee3a8430c50d783ce6a64846669563",
     "mechanism_review_report": "e029cd7c2a22db19bdf677916751cf9b8e3ad6443820e743ed6a9e241c44fbe7",
     "mutation_proposal_report": "df68af1aa303479adcc2432a8476b4833d041d07d1edabe7dd512d7cf1a0898c",
     "outcome_metrics_report": "ed15d8f88e273f11d0e02c259b79a605109fc4430ee4acbe58959bd7f8243d53",
@@ -22,8 +22,8 @@
     "release_closeout_post_check_finalizer_report": "missing",
     "release_closeout_summary_report": "f511d1dd30d1260128a104d2cdceadd1c93b1b739cbbc38592615899476fc280",
     "release_evidence_cohort_report": "2453e05b9020f0be30f529dcb63b2b54ff01b6e6c895a4c6999dd06f69b93656",
-    "remediation_backlog_report": "bdb121855f1fb288c2d13df49a3c0a74e90208bd22a4232b041fbdc0f73f7862",
-    "selected_contract_summary_report": "d25f3ab447fd39e9a953698f1845e8bfbdae1b4cb968b275df992368c53c5470",
+    "remediation_backlog_report": "6110519ab2a2d619e5e79fc501a3db703a2d3e6e214f9ad374ade4bbf206a0af",
+    "selected_contract_summary_report": "c7de1aee49c3cc92d10d5890f377c8a6c2e5d37724a1a9b206bc0bcdf4ce49cf",
     "source_package_clean_extract_report": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "release_authority_preflight_report_candidates": "145f23a10e25dfcf0b9eb8875753adc591ca775e5c55cdea7926a32a5e51bebd"
   },
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T07:02:31Z"
+    "checked_at": "2026-05-20T07:04:44Z"
   },
   "vault": ".",
   "policy": {
@@ -144,7 +144,7 @@
       "accepted_risk": false,
       "gate_effect": "active",
       "source_status": "attention",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=28",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=7",
       "signal_ids": [
         "git_worktree_dirty"
       ],
@@ -164,12 +164,11 @@
       "accepted_risk": false,
       "gate_effect": "active",
       "source_status": "attention",
-      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=5; active_blocker_count=5; blocking_item_count=5",
+      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=4; active_blocker_count=4; blocking_item_count=4",
       "signal_ids": [
-        "goal_status_git_worktree_dirty",
         "goal_status_profile_ladder_incomplete",
         "learning_blocked_by_review_required",
-        "promotion_blocked_by_artifact_contract_failure",
+        "learning_claim_unlock_review_not_approved",
         "promotion_blocked_by_goal_worktree_guard_failure"
       ],
       "required_evidence": [
@@ -383,12 +382,12 @@
       "can_promote_result": false,
       "zip_mode_replay_only": false,
       "dirty_worktree_allowed": false,
-      "dirty_entry_count": 28,
+      "dirty_entry_count": 7,
       "fatal_blockers": [],
       "promotion_blockers": [
         "git_worktree_dirty"
       ],
-      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=28"
+      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=7"
     },
     "remediation_backlog_summary": {
       "path": "ops/reports/remediation-backlog.json",
@@ -397,18 +396,17 @@
       "status": "fail",
       "source_status": "attention",
       "release_blocking": true,
-      "open_item_count": 5,
-      "active_blocker_count": 5,
-      "blocking_item_count": 5,
+      "open_item_count": 4,
+      "active_blocker_count": 4,
+      "blocking_item_count": 4,
       "signal_ids": [
-        "goal_status_git_worktree_dirty",
         "goal_status_profile_ladder_incomplete",
         "learning_blocked_by_review_required",
-        "promotion_blocked_by_artifact_contract_failure",
+        "learning_claim_unlock_review_not_approved",
         "promotion_blocked_by_goal_worktree_guard_failure"
       ],
       "currentness_status": "current",
-      "summary": "remediation backlog status=attention; open_item_count=5; active_blocker_count=5; blocking_item_count=5"
+      "summary": "remediation backlog status=attention; open_item_count=4; active_blocker_count=4; blocking_item_count=4"
     }
   },
   "queue": {
