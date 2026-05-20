@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/goal-run-status.schema.json",
   "artifact_kind": "goal_run_status",
-  "generated_at": "2026-05-20T10:04:19Z",
+  "generated_at": "2026-05-20T10:05:34Z",
   "producer": "ops.scripts.goal_run_status",
   "source_command": "python -m ops.scripts.goal_run_status --vault .",
   "source_revision": "unknown",
@@ -11,7 +11,7 @@
     "schema": "88ae1d2a6f77cad197342016f545d78ebc7dc204fed9dddac8fef09bcc648725",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "6c8f2f86ae6498da8c32d0a6b83f221f0c98a58cab3a6b176fc21a2b627da5e5",
-    "goal_contract": "d2f601268a33479b39b0b2038c81bfd0ad0df3fd8c6b92721b19a70451afbcd0",
+    "goal_contract": "687d2c9d19a3428492466d2d79ed64007a26946e1fbceb6ae33fe46be6244866",
     "session_synopsis_link": "7cbf10072f9b38b0b7b209442fe7e61976148ae82e700c307dc8c735ff054848"
   },
   "schema_version": 1,
@@ -20,11 +20,11 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:04:19Z"
+    "checked_at": "2026-05-20T10:05:34Z"
   },
   "goal": {
     "contract_path": "runs/goal-5day-auto-improve-runtime/state/codex-goal-contract.json",
-    "contract_sha256": "e8881e019c30e2c4da8539d3234bc98b141972895de61790e5feace7b7ce6446",
+    "contract_sha256": "27289ca5585d738bb6f17e49c9786655f39124bf9d7bef3761db466b6e560b3b",
     "contract_status": "loaded",
     "contract_id": "goal-5day-auto-improve-runtime",
     "objective": "Achieve a verified 5-day sustained LLMwiki auto-improve runtime test through the profile ladder, preserving public/private boundaries and keeping promotion blocked until readiness, sealed authority, remediation backlog, and profile evidence are clean.",
@@ -38,15 +38,15 @@
     "run_id": "auto-improve-trial",
     "status": "blocked",
     "profile": "30m_trial",
-    "started_at": "2026-05-20T10:04:19Z",
-    "updated_at": "2026-05-20T10:04:19Z",
+    "started_at": "2026-05-20T10:05:34Z",
+    "updated_at": "2026-05-20T10:05:34Z",
     "completed_at": ""
   },
   "observability": {
     "heartbeat_interval_seconds": 300,
     "checkpoint_interval_seconds": 1800,
-    "last_heartbeat_at": "2026-05-20T10:04:19Z",
-    "last_checkpoint_at": "2026-05-20T10:04:19Z",
+    "last_heartbeat_at": "2026-05-20T10:05:34Z",
+    "last_checkpoint_at": "2026-05-20T10:05:34Z",
     "last_command_heartbeat_at": "",
     "quiet_seconds": 0,
     "command_observation_mode": "",
@@ -208,7 +208,7 @@
       {
         "checkpoint_id": "checkpoint_6h",
         "due_after_seconds": 21600,
-        "due_at": "2026-05-20T16:04:19Z",
+        "due_at": "2026-05-20T16:05:34Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -227,7 +227,7 @@
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "status": "present",
-            "generated_at": "2026-05-20T10:03:56Z",
+            "generated_at": "2026-05-20T10:05:08Z",
             "freshness_status": "not_due"
           },
           {
@@ -241,7 +241,7 @@
       {
         "checkpoint_id": "checkpoint_12h",
         "due_after_seconds": 43200,
-        "due_at": "2026-05-20T22:04:19Z",
+        "due_at": "2026-05-20T22:05:34Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -273,7 +273,7 @@
       {
         "checkpoint_id": "checkpoint_24h",
         "due_after_seconds": 86400,
-        "due_at": "2026-05-21T10:04:19Z",
+        "due_at": "2026-05-21T10:05:34Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -324,7 +324,6 @@
     "can_promote_result": false,
     "promotion_blockers": [
       "learning_blocked_by_review_required",
-      "promotion_blocked_by_goal_worktree_guard_failure",
       "promotion_blocked_by_remediation_backlog_open"
     ],
     "sealed_authority_clean": true,
@@ -334,7 +333,6 @@
   },
   "blockers": [
     "learning_blocked_by_review_required",
-    "promotion_blocked_by_goal_worktree_guard_failure",
     "promotion_blocked_by_remediation_backlog_open",
     "profile ladder incomplete"
   ],
