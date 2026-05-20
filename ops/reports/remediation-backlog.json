@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-20T07:04:43Z",
+  "generated_at": "2026-05-20T07:08:11Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
@@ -11,9 +11,9 @@
     "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ac89dead9a209f58ec98e9f5a02446afe66adf70edbba3f94c9c88d59e3386cb",
-    "learning_claim_activation": "007056c7a9612c7909f78c8ae70dba09f133d080f5b8377f952d9c6df24d0bb0",
-    "self_improvement_negative_lessons": "ab5265e28b5b8e2ad22869c8a8cbddd8ba1761d1cb8a461664b111f988cb7f2c",
-    "session_synopsis": "e950bcb80942f4faa1d153aff080b61fef2bd6d0f3cf8afcaf910d80cf854e30",
+    "learning_claim_activation": "723a99531f88002ada74fec078571c2cd5f64184245a4dddec4e9232bc23d25c",
+    "self_improvement_negative_lessons": "1f6b8f38b28bd9cf82a7e160ec72a12142efc387c99424b6b25cf7bdd201acc0",
+    "session_synopsis": "6a9b4aae503e84ce6f34ac7aeba0b1f98f670f1c0b78ccf120fdc2ff3ef6ddc0",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
     "auto_improve_sessions": "50324ef3d707c4972bb078da54197906ffd601d03486b97a3c102d6530f4830b"
   },
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T07:04:43Z"
+    "checked_at": "2026-05-20T07:08:11Z"
   },
   "vault": ".",
   "policy": {
@@ -32,10 +32,10 @@
   },
   "status": "attention",
   "summary": {
-    "backlog_item_count": 4,
+    "backlog_item_count": 3,
     "repeated_blocker_count": 0,
-    "active_blocker_count": 4,
-    "open_item_count": 4,
+    "active_blocker_count": 3,
+    "open_item_count": 3,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
     "next_action": "Close or explicitly defer remediation backlog items before promotion."
   },
@@ -81,20 +81,6 @@
       ],
       "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean.",
       "next_action": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean."
-    },
-    {
-      "item_id": "active_blocker_promotion_blocked_by_goal_worktree_guard_failure",
-      "blocker_id": "promotion_blocked_by_goal_worktree_guard_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness.",
-      "next_action": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     }
   ],
   "inputs": {
