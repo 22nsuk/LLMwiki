@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-20T07:38:05Z",
+  "generated_at": "2026-05-20T07:40:59Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -11,10 +11,10 @@
     "schema": "b07ea4db25e1e00c9ecce8026872b299d5f6df21f7edd396dce9af266ed48c42",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e8a26558749ee2fc8d615020caccd4b12d32e2354739c58e8a580ff43a3cbc10",
-    "artifact_freshness_report": "9af8191683a9f780b6fe04a5852fa15c904e94d92c5033ee657918705984ce5c",
-    "goal_worktree_guard_report": "d62fadec9fa4ba219e97a5a59c1d97670222631b68352297a00da378e995f662",
-    "mechanism_review_report": "6f559e91d047c0035ee5d1e5bca51335ca8820f11e46dcb9e82f97dc836dec63",
-    "mutation_proposal_report": "6af7910566d084c90a334ae4a985a0b9dfe6555d196b78c53186ce3b365e17a9",
+    "artifact_freshness_report": "e3bbb5e34af7999063cf11559edb5f6b17d5364891acc7dfd9a03eb407299bc2",
+    "goal_worktree_guard_report": "a8d9a89fb284b1b5b95bc4d19f54397bdf5e8425829a561cbcf087f695cb8ab0",
+    "mechanism_review_report": "8876c55f698f3278571a89e06950f32b75622f94756cf782f95caf384e973486",
+    "mutation_proposal_report": "ade1c2c26976f4e2901758b54812e738f3cf86b19021e06424c8bcd9f8134255",
     "outcome_metrics_report": "66e79e14077fedb26d9cd19c90ced7ea7cf9bc923d4de27f9d85908baa344aab",
     "release_authority_preflight_report": "8771a6022db09e525cf4c8a22c99725d1e3539f340aca5db6445f8d675705b8e",
     "release_closeout_batch_manifest_report": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T07:38:05Z"
+    "checked_at": "2026-05-20T07:40:59Z"
   },
   "vault": ".",
   "policy": {
