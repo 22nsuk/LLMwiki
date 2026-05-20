@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-20T06:31:12Z",
+  "generated_at": "2026-05-20T06:41:30Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -12,9 +12,9 @@
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e8a26558749ee2fc8d615020caccd4b12d32e2354739c58e8a580ff43a3cbc10",
     "artifact_freshness_report": "e01701bbf3da99030a2c5d271330ae61c6aa5bdaf0f538ee7138e33eec4d69f7",
-    "goal_worktree_guard_report": "7df3ca89f9d46ebcc5ebd026f5bdac0e90587b41f48baf69bc618b2a1a13883f",
-    "mechanism_review_report": "2032440c77cfa52dd49e0d57987fe8f1f1c4fd58fa069edd45da566561c41088",
-    "mutation_proposal_report": "19895bab7126ae396170e9552adac19165702ae56adea0dad0ca6ee1163bd24e",
+    "goal_worktree_guard_report": "98a8cfe0a18c56622c23c67c940daaed81bc71c668a9cd79d3044b5eaeddb91d",
+    "mechanism_review_report": "63e9a48ac2f6d195e7b74fa1828ff86e64135d55b8315e4dd156925d7974646b",
+    "mutation_proposal_report": "1f23896e99d4635c8a99aecd8a2ccd9231f02ae32c17e984cb18858dfb2bd6c9",
     "outcome_metrics_report": "62f8526d48fbd62e3f466860e81f8d7d0d427f20c2a1d8469b1438350317f7aa",
     "release_authority_preflight_report": "8771a6022db09e525cf4c8a22c99725d1e3539f340aca5db6445f8d675705b8e",
     "release_closeout_batch_manifest_report": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T06:31:12Z"
+    "checked_at": "2026-05-20T06:41:30Z"
   },
   "vault": ".",
   "policy": {
@@ -54,20 +54,20 @@
     "recommended_next_step": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured."
   },
   "learning_readiness": {
-    "status": "learning_likely",
-    "gate_effect": "active",
+    "status": "learning_uncertain",
+    "gate_effect": "review_required",
     "can_run": true,
-    "likely_to_learn": true,
+    "likely_to_learn": false,
     "reasons": [
       "runnable proposal queue is non-empty",
-      "runnable queue has enough outcome/session evidence and no shadow learning warnings"
+      "shadow learning signals require operator review before this run can count as confirmed learning"
     ],
     "metrics": {
       "attempts_considered": 13,
       "min_attempts_considered": 10,
       "session_reports_considered": 3,
       "session_calibration_status": "active",
-      "telemetry_coverage_ratio": 1.0,
+      "telemetry_coverage_ratio": 0.0,
       "same_eval_run_count": 2,
       "same_eval_reason_code_coverage_ratio": 1.0,
       "strict_secondary_improvement_coverage_ratio": 1.0,
@@ -77,11 +77,64 @@
       "discard_moving_average": 0.2308,
       "defect_escape_pair_count": 0
     },
-    "signals": [],
-    "recommended_next_step": "Learning readiness is clean enough for bounded live auto-improve; keep the run narrow and continue monitoring the shadow signals."
+    "signals": [
+      {
+        "id": "loop_health_telemetry_coverage_missing",
+        "severity": "warn",
+        "detail": "loop_health.telemetry_coverage_ratio=0.0000 so routing provenance still lacks telemetry-backed learning evidence",
+        "owner": "runtime-maintainer",
+        "required_evidence": [
+          "latest routing provenance aggregate reports loop_health.coverage_ratios.telemetry greater than zero.",
+          "latest routing provenance aggregate no longer emits missing_telemetry_coverage."
+        ],
+        "minimum_sample_size": 1,
+        "next_evaluation_command": "make routing-provenance-aggregate auto-improve-readiness",
+        "closure_strategy": "ensure run telemetry is discoverable in the latest loop-health aggregate."
+      }
+    ],
+    "recommended_next_step": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
   },
-  "learning_blockers": [],
+  "learning_blockers": [
+    {
+      "id": "learning_blocked_by_review_required",
+      "scope": "learning_readiness",
+      "status": "open",
+      "severity": "blocker",
+      "release_blocker": true,
+      "accepted_risk": false,
+      "gate_effect": "review_required",
+      "source_status": "learning_uncertain",
+      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: loop_health_telemetry_coverage_missing",
+      "signal_ids": [
+        "loop_health_telemetry_coverage_missing"
+      ],
+      "required_evidence": [
+        "learning_readiness.likely_to_learn must be true before release readiness can pass",
+        "or an operator must record accepted risk for this named learning review blocker"
+      ],
+      "recommended_next_step": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
+    }
+  ],
   "promotion_blockers": [
+    {
+      "id": "learning_blocked_by_review_required",
+      "scope": "learning_readiness",
+      "status": "open",
+      "severity": "blocker",
+      "release_blocker": true,
+      "accepted_risk": false,
+      "gate_effect": "review_required",
+      "source_status": "learning_uncertain",
+      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: loop_health_telemetry_coverage_missing",
+      "signal_ids": [
+        "loop_health_telemetry_coverage_missing"
+      ],
+      "required_evidence": [
+        "learning_readiness.likely_to_learn must be true before release readiness can pass",
+        "or an operator must record accepted risk for this named learning review blocker"
+      ],
+      "recommended_next_step": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
+    },
     {
       "id": "promotion_blocked_by_remediation_backlog_open",
       "scope": "remediation_backlog",
@@ -106,7 +159,27 @@
       "recommended_next_step": "Close or explicitly defer remediation backlog items, rerun make remediation-backlog, then rerun make auto-improve-readiness."
     }
   ],
-  "release_blockers": [],
+  "release_blockers": [
+    {
+      "id": "learning_blocked_by_review_required",
+      "scope": "learning_readiness",
+      "status": "open",
+      "severity": "blocker",
+      "release_blocker": true,
+      "accepted_risk": false,
+      "gate_effect": "review_required",
+      "source_status": "learning_uncertain",
+      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: loop_health_telemetry_coverage_missing",
+      "signal_ids": [
+        "loop_health_telemetry_coverage_missing"
+      ],
+      "required_evidence": [
+        "learning_readiness.likely_to_learn must be true before release readiness can pass",
+        "or an operator must record accepted risk for this named learning review blocker"
+      ],
+      "recommended_next_step": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
+    }
+  ],
   "inputs": {
     "refresh_generated_target": "make refresh-generated-core",
     "outcome_metrics_report": "ops/reports/outcome-metrics.json",
@@ -128,15 +201,14 @@
     "loop_health_summary": {
       "status": "available",
       "gate_effect": "none",
-      "source_report": "ops/reports/routing-provenance-aggregates/auto-improve-2026-05-02t03-27-31z.json",
-      "source_generated_at": "2026-05-15T11:37:48Z",
-      "session_id": "auto-improve-2026-05-02t03-27-31z",
-      "summary": "attempts=1, finalized=0, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=1.00 | alerts: unfinalized runs present, recent HOLD trend",
+      "source_report": "ops/reports/routing-provenance-aggregates/5day-auto-improve-runtime-rerun5-30m_trial.json",
+      "source_generated_at": "2026-05-20T06:31:12Z",
+      "session_id": "5day-auto-improve-runtime-rerun5-30m_trial",
+      "summary": "attempts=0, finalized=0, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=0.00 | alerts: telemetry coverage missing",
       "health_flags": [
-        "unfinalized_runs_present",
-        "recent_hold_present"
+        "missing_telemetry_coverage"
       ],
-      "attempt_count": 1,
+      "attempt_count": 0,
       "finalized_run_count": 0,
       "rework_count": 0,
       "rollback_signal_count": 0,
@@ -144,7 +216,7 @@
       "executor_failure_count": 0,
       "routing_report_parse_gap_count": 0,
       "executor_report_parse_gap_count": 0,
-      "telemetry_coverage_ratio": 1.0
+      "telemetry_coverage_ratio": 0.0
     },
     "same_eval_telemetry_summary": {
       "status": "pass",
@@ -377,5 +449,5 @@
     }
   ],
   "remediations": [],
-  "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Close or explicitly defer remediation backlog items, rerun make remediation-backlog, then rerun make auto-improve-readiness."
+  "next_action": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
 }
