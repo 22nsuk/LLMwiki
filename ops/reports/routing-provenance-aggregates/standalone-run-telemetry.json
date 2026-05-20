@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/routing-provenance-aggregate.schema.json",
   "artifact_kind": "routing_provenance_aggregate",
-  "generated_at": "2026-05-20T07:36:52Z",
+  "generated_at": "2026-05-20T11:45:00Z",
   "producer": "ops.scripts.observability_routing_provenance_runtime",
   "source_command": "python -m ops.scripts.observability_routing_provenance_runtime --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "27c8028105f2008f77c1491b69a846e8eb5f5a5433d9382805e224fb09c8e3b8",
+  "source_tree_fingerprint": "6e63cb431fd28ad9732f1e75856b8c507aa6e5ef916ed7ba58fbcf1b14efa322",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "d1020425815581b2e5ba63d8e577aa169eeb759773d42063844263ef84a3e78f",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b4a1a3de468aa500d941eb1ceb9eccc6e27bf819354e9120952fdf2bdb36e852",
-    "source_session_report": "e4f43e89b49445cfe75e84af9752b6306feaef45efe4e16a30d1bb04331c6e31",
-    "run_ids": "9790665f0975490258e8d473b7d265794a40dee1224df059bca250d33f437938"
+    "source_session_report": "da74cd4c116bb7eabdc5056540055f91b292cd91836c491ae2cf16731a06f023",
+    "run_ids": "5750efacef8e5b1a1518d1b61793123065de673e44dc11f57f939f6cb629f75e"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T07:36:52Z"
+    "checked_at": "2026-05-20T11:45:00Z"
   },
   "session_id": "standalone-run-telemetry",
   "policy": {
@@ -29,109 +29,121 @@
   },
   "source_session_report": "ops/reports/auto-improve-sessions/standalone-run-telemetry.json",
   "summary": {
-    "run_count": 16,
-    "routing_report_count": 12,
-    "executor_report_count": 1,
-    "telemetry_report_count": 12,
-    "promotion_report_count": 16,
-    "artifact_fingerprint_count": 11
+    "run_count": 23,
+    "routing_report_count": 40,
+    "executor_report_count": 17,
+    "telemetry_report_count": 19,
+    "promotion_report_count": 23,
+    "artifact_fingerprint_count": 18
   },
   "audit_rollup": {
     "routing": {
-      "report_count": 12,
+      "report_count": 40,
       "role_counts": {
-        "provenance-auditor": 3,
-        "reviewer": 3,
-        "validator": 3,
-        "worker": 3
+        "provenance-auditor": 10,
+        "reviewer": 10,
+        "validator": 10,
+        "worker": 10
       },
       "selected_rung_counts": {
-        "3": 12
+        "3": 40
       },
       "score_band_counts": {
-        "high": 12
+        "high": 32,
+        "extreme": 8
       },
       "sandbox_mode_counts": {
-        "read-only": 3,
-        "workspace-write": 9
+        "read-only": 10,
+        "workspace-write": 30
       },
       "model_counts": {
-        "gpt-5.5": 12
+        "gpt-5.5": 40
       },
       "reasoning_effort_counts": {
-        "xhigh": 12
+        "xhigh": 40
       },
       "risk_flag_counts": {
-        "schema_change": 12
+        "schema_change": 40
       }
     },
     "executor": {
-      "report_count": 1,
+      "report_count": 17,
       "role_counts": {
-        "worker": 1
+        "worker": 8,
+        "reviewer": 5,
+        "validator": 3,
+        "provenance-auditor": 1
       },
       "status_counts": {
-        "pass": 1
+        "pass": 14,
+        "fail": 3
       },
-      "blocking_role_counts": {},
+      "blocking_role_counts": {
+        "validator": 1,
+        "reviewer": 2
+      },
       "returncode_counts": {
-        "0": 1
+        "0": 17
       }
     },
     "telemetry": {
-      "report_count": 12,
+      "report_count": 19,
       "failure_taxonomy_counts": {
-        "mutation_failed": 2,
+        "mutation_failed": 4,
+        "validation_blocked": 1,
+        "review_blocked": 2,
+        "discarded": 1,
         "scope_blocked": 1,
         "legacy_backfill_incomplete": 1
       },
       "phase_totals_seconds": {
-        "scope_freeze": 0.032,
-        "routing": 1.705,
-        "scaffold": 1.519,
-        "experiment": 1236.355,
+        "scope_freeze": 0.111,
+        "routing": 5.511,
+        "scaffold": 4.52,
+        "experiment": 7915.572,
         "typed_same_eval_evidence": 0.0
       },
       "phase_max_seconds": {
-        "scope_freeze": 0.013,
-        "routing": 0.659,
+        "scope_freeze": 0.016,
+        "routing": 0.746,
         "scaffold": 0.529,
-        "experiment": 1100.745,
+        "experiment": 1857.65,
         "typed_same_eval_evidence": 0.0
       }
     },
     "coverage": {
-      "run_count": 16,
-      "runs_with_routing": 3,
-      "runs_with_executor": 1,
-      "runs_with_telemetry": 12,
-      "runs_with_promotion_report": 16,
-      "runs_with_artifact_fingerprint": 11
+      "run_count": 23,
+      "runs_with_routing": 10,
+      "runs_with_executor": 8,
+      "runs_with_telemetry": 19,
+      "runs_with_promotion_report": 23,
+      "runs_with_artifact_fingerprint": 18
     },
     "loop_health": {
-      "attempt_count": 16,
-      "rework_count": 6,
+      "attempt_count": 23,
+      "rework_count": 11,
       "rollback_signal_count": 0,
       "rollback_rehearsal_coverage_count": 3,
       "defect_escape_count": 4,
       "finalized_run_count": 6,
-      "executor_failure_count": 0,
+      "executor_failure_count": 3,
       "routing_report_parse_gap_count": 0,
       "executor_report_parse_gap_count": 0,
       "moving_averages": {
-        "hold": 0.375,
-        "discard": 0.1875,
+        "hold": 0.6,
+        "discard": 0.15,
         "rollback_signal": 0.0
       },
       "coverage_ratios": {
-        "routing": 0.1875,
-        "executor": 0.0625,
-        "telemetry": 0.75,
+        "routing": 0.4348,
+        "executor": 0.3478,
+        "telemetry": 0.8261,
         "promotion_report": 1.0,
-        "artifact_fingerprint": 0.6875
+        "artifact_fingerprint": 0.7826
       },
       "health_flags": [
         "partial_telemetry_coverage",
+        "executor_failures_present",
         "rework_detected",
         "defect_escape_signals_present",
         "unfinalized_runs_present",
@@ -141,6 +153,176 @@
     }
   },
   "runs": [
+    {
+      "run_id": "5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime",
+      "proposal_id": "recent_log_overlap_queue_blocked__auto-improve-readiness-queue-runtime",
+      "source_candidate_id": "recent_log_overlap_queue_unblock__auto-improve-readiness-queue-runtime",
+      "decision": "HOLD",
+      "outcome": "mutation_failed",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/script-output-surfaces.json"
+      ],
+      "test_files": [
+        "tests/test_auto_improve_readiness_runtime.py"
+      ],
+      "risk_flags": [
+        "schema_change"
+      ],
+      "roles": [
+        "provenance-auditor",
+        "reviewer",
+        "validator",
+        "worker"
+      ],
+      "artifacts": {
+        "proposal_snapshot": "runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/proposal-snapshot.json",
+        "scope_freeze": "runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/scope-freeze.json",
+        "routing_reports": [
+          "runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/subagent-routing.provenance-auditor.json",
+          "runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/subagent-routing.reviewer.json",
+          "runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/subagent-routing.validator.json",
+          "runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/subagent-routing.worker.json"
+        ],
+        "executor_reports": [
+          "runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/worker-executor-report.json"
+        ],
+        "run_telemetry": "runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/run-telemetry.json",
+        "promotion_report": "runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/promotion-report.json",
+        "run_artifact_fingerprint": "runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/run-artifact-fingerprint.json"
+      }
+    },
+    {
+      "run_id": "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
+      "proposal_id": "repeated_discard_runs__auto-improve-iteration-persistence-runtime",
+      "source_candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
+      "decision": "HOLD",
+      "outcome": "validation_blocked",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/schemas/run-telemetry.schema.json",
+        "ops/script-output-surfaces.json"
+      ],
+      "test_files": [
+        "tests/test_auto_improve_iteration_runtime.py"
+      ],
+      "risk_flags": [
+        "schema_change"
+      ],
+      "roles": [
+        "provenance-auditor",
+        "reviewer",
+        "validator",
+        "worker"
+      ],
+      "artifacts": {
+        "proposal_snapshot": "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/proposal-snapshot.json",
+        "scope_freeze": "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/scope-freeze.json",
+        "routing_reports": [
+          "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.provenance-auditor.json",
+          "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.reviewer.json",
+          "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.validator.json",
+          "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.worker.json"
+        ],
+        "executor_reports": [
+          "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/reviewer-executor-report.json",
+          "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/validator-executor-report.json",
+          "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/worker-executor-report.json"
+        ],
+        "run_telemetry": "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+        "promotion_report": "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json",
+        "run_artifact_fingerprint": "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/run-artifact-fingerprint.json"
+      }
+    },
+    {
+      "run_id": "5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
+      "proposal_id": "repeated_discard_runs__auto-improve-iteration-persistence-runtime",
+      "source_candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
+      "decision": "HOLD",
+      "outcome": "review_blocked",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/schemas/run-telemetry.schema.json",
+        "ops/script-output-surfaces.json"
+      ],
+      "test_files": [
+        "tests/test_auto_improve_iteration_runtime.py"
+      ],
+      "risk_flags": [
+        "schema_change"
+      ],
+      "roles": [
+        "provenance-auditor",
+        "reviewer",
+        "validator",
+        "worker"
+      ],
+      "artifacts": {
+        "proposal_snapshot": "runs/5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime/proposal-snapshot.json",
+        "scope_freeze": "runs/5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime/scope-freeze.json",
+        "routing_reports": [
+          "runs/5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.provenance-auditor.json",
+          "runs/5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.reviewer.json",
+          "runs/5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.validator.json",
+          "runs/5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.worker.json"
+        ],
+        "executor_reports": [
+          "runs/5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime/reviewer-executor-report.json",
+          "runs/5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime/worker-executor-report.json"
+        ],
+        "run_telemetry": "runs/5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+        "promotion_report": "runs/5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json",
+        "run_artifact_fingerprint": "runs/5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime/run-artifact-fingerprint.json"
+      }
+    },
+    {
+      "run_id": "5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime",
+      "proposal_id": "recent_log_overlap_queue_blocked__mutation-proposal-runtime",
+      "source_candidate_id": "recent_log_overlap_queue_unblock__mutation-proposal-runtime",
+      "decision": "HOLD",
+      "outcome": "mutation_failed",
+      "primary_targets": [
+        "ops/scripts/mechanism/mutation_proposal_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/script-output-surfaces.json"
+      ],
+      "test_files": [
+        "tests/test_mutation_proposal.py",
+        "tests/test_report_generation_smoke.py"
+      ],
+      "risk_flags": [
+        "schema_change"
+      ],
+      "roles": [
+        "provenance-auditor",
+        "reviewer",
+        "validator",
+        "worker"
+      ],
+      "artifacts": {
+        "proposal_snapshot": "runs/5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime/proposal-snapshot.json",
+        "scope_freeze": "runs/5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime/scope-freeze.json",
+        "routing_reports": [
+          "runs/5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime/subagent-routing.provenance-auditor.json",
+          "runs/5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime/subagent-routing.reviewer.json",
+          "runs/5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime/subagent-routing.validator.json",
+          "runs/5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime/subagent-routing.worker.json"
+        ],
+        "executor_reports": [
+          "runs/5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime/worker-executor-report.json"
+        ],
+        "run_telemetry": "runs/5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime/run-telemetry.json",
+        "promotion_report": "runs/5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime/promotion-report.json",
+        "run_artifact_fingerprint": "runs/5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime/run-artifact-fingerprint.json"
+      }
+    },
     {
       "run_id": "5day-auto-improve-runtime-rerun5-30m_trial-run-01-auto-improve-readiness-queue-runtime",
       "proposal_id": "recent_log_overlap_queue_blocked__auto-improve-readiness-queue-runtime",
@@ -219,6 +401,92 @@
         "run_telemetry": "runs/5day-auto-improve-runtime-rerun6-30m_trial-run-01-mechanism-run-validation-runtime/run-telemetry.json",
         "promotion_report": "runs/5day-auto-improve-runtime-rerun6-30m_trial-run-01-mechanism-run-validation-runtime/promotion-report.json",
         "run_artifact_fingerprint": "runs/5day-auto-improve-runtime-rerun6-30m_trial-run-01-mechanism-run-validation-runtime/run-artifact-fingerprint.json"
+      }
+    },
+    {
+      "run_id": "5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime",
+      "proposal_id": "recent_log_overlap_queue_blocked__mechanism-run-validation-runtime",
+      "source_candidate_id": "recent_log_overlap_queue_unblock__mechanism-run-validation-runtime",
+      "decision": "HOLD",
+      "outcome": "review_blocked",
+      "primary_targets": [
+        "ops/scripts/mechanism/mechanism_run_validation_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/script-output-surfaces.json"
+      ],
+      "test_files": [
+        "tests/test_mechanism_run_validation_runtime.py"
+      ],
+      "risk_flags": [
+        "schema_change"
+      ],
+      "roles": [
+        "provenance-auditor",
+        "reviewer",
+        "validator",
+        "worker"
+      ],
+      "artifacts": {
+        "proposal_snapshot": "runs/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime/proposal-snapshot.json",
+        "scope_freeze": "runs/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime/scope-freeze.json",
+        "routing_reports": [
+          "runs/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime/subagent-routing.provenance-auditor.json",
+          "runs/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime/subagent-routing.reviewer.json",
+          "runs/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime/subagent-routing.validator.json",
+          "runs/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime/subagent-routing.worker.json"
+        ],
+        "executor_reports": [
+          "runs/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime/reviewer-executor-report.json",
+          "runs/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime/worker-executor-report.json"
+        ],
+        "run_telemetry": "runs/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime/run-telemetry.json",
+        "promotion_report": "runs/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime/promotion-report.json",
+        "run_artifact_fingerprint": "runs/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime/run-artifact-fingerprint.json"
+      }
+    },
+    {
+      "run_id": "5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime",
+      "proposal_id": "recent_log_overlap_queue_blocked__mechanism-run-validation-runtime",
+      "source_candidate_id": "recent_log_overlap_queue_unblock__mechanism-run-validation-runtime",
+      "decision": "DISCARD",
+      "outcome": "discarded",
+      "primary_targets": [
+        "ops/scripts/mechanism/mechanism_run_validation_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/script-output-surfaces.json"
+      ],
+      "test_files": [
+        "tests/test_mechanism_run_validation_runtime.py"
+      ],
+      "risk_flags": [
+        "schema_change"
+      ],
+      "roles": [
+        "provenance-auditor",
+        "reviewer",
+        "validator",
+        "worker"
+      ],
+      "artifacts": {
+        "proposal_snapshot": "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/proposal-snapshot.json",
+        "scope_freeze": "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/scope-freeze.json",
+        "routing_reports": [
+          "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/subagent-routing.provenance-auditor.json",
+          "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/subagent-routing.reviewer.json",
+          "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/subagent-routing.validator.json",
+          "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/subagent-routing.worker.json"
+        ],
+        "executor_reports": [
+          "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/provenance-auditor-executor-report.json",
+          "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/reviewer-executor-report.json",
+          "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/validator-executor-report.json",
+          "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/worker-executor-report.json"
+        ],
+        "run_telemetry": "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/run-telemetry.json",
+        "promotion_report": "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/promotion-report.json",
+        "run_artifact_fingerprint": "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/run-artifact-fingerprint.json"
       }
     },
     {
@@ -585,6 +853,49 @@
         "run_telemetry": "runs/5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime/run-telemetry.json",
         "promotion_report": "runs/5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime/promotion-report.json",
         "run_artifact_fingerprint": "runs/5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime/run-artifact-fingerprint.json"
+      }
+    },
+    {
+      "run_id": "5day-auto-improve-runtime-rerun14-30m_trial-run-01-mechanism-run-validation-runtime",
+      "proposal_id": "",
+      "source_candidate_id": "recent_log_overlap_queue_unblock__mechanism-run-validation-runtime",
+      "decision": "HOLD",
+      "outcome": "hold",
+      "primary_targets": [
+        "ops/scripts/mechanism/mechanism_run_validation_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/script-output-surfaces.json"
+      ],
+      "test_files": [
+        "tests/test_mechanism_run_validation_runtime.py"
+      ],
+      "risk_flags": [
+        "schema_change"
+      ],
+      "roles": [
+        "provenance-auditor",
+        "reviewer",
+        "validator",
+        "worker"
+      ],
+      "artifacts": {
+        "proposal_snapshot": "runs/5day-auto-improve-runtime-rerun14-30m_trial-run-01-mechanism-run-validation-runtime/proposal-snapshot.json",
+        "scope_freeze": "runs/5day-auto-improve-runtime-rerun14-30m_trial-run-01-mechanism-run-validation-runtime/scope-freeze.json",
+        "routing_reports": [
+          "runs/5day-auto-improve-runtime-rerun14-30m_trial-run-01-mechanism-run-validation-runtime/subagent-routing.provenance-auditor.json",
+          "runs/5day-auto-improve-runtime-rerun14-30m_trial-run-01-mechanism-run-validation-runtime/subagent-routing.reviewer.json",
+          "runs/5day-auto-improve-runtime-rerun14-30m_trial-run-01-mechanism-run-validation-runtime/subagent-routing.validator.json",
+          "runs/5day-auto-improve-runtime-rerun14-30m_trial-run-01-mechanism-run-validation-runtime/subagent-routing.worker.json"
+        ],
+        "executor_reports": [
+          "runs/5day-auto-improve-runtime-rerun14-30m_trial-run-01-mechanism-run-validation-runtime/reviewer-executor-report.json",
+          "runs/5day-auto-improve-runtime-rerun14-30m_trial-run-01-mechanism-run-validation-runtime/validator-executor-report.json",
+          "runs/5day-auto-improve-runtime-rerun14-30m_trial-run-01-mechanism-run-validation-runtime/worker-executor-report.json"
+        ],
+        "run_telemetry": "runs/5day-auto-improve-runtime-rerun14-30m_trial-run-01-mechanism-run-validation-runtime/run-telemetry.json",
+        "promotion_report": "runs/5day-auto-improve-runtime-rerun14-30m_trial-run-01-mechanism-run-validation-runtime/promotion-report.json",
+        "run_artifact_fingerprint": "runs/5day-auto-improve-runtime-rerun14-30m_trial-run-01-mechanism-run-validation-runtime/run-artifact-fingerprint.json"
       }
     }
   ]

@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/mechanism-review-candidates.schema.json",
   "artifact_kind": "mechanism_review_candidates_report",
-  "generated_at": "2026-05-20T10:54:16Z",
+  "generated_at": "2026-05-20T11:45:02Z",
   "producer": "ops.scripts.mechanism_review_runtime",
   "source_command": "python -m ops.scripts.mechanism_review",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "5ade0e0ef37079eaf129f91f9f3ef44eaf3d3f0cbd1f60a92ef6e195aa875de9",
+  "source_tree_fingerprint": "6e63cb431fd28ad9732f1e75856b8c507aa6e5ef916ed7ba58fbcf1b14efa322",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "c730a4570492eaf5cb038d51227064a8c9404069f62cb3920049a985951e876a",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b6a97e444164d60ea21111ba0d6068ce8e345c212c78dd4070013da1d67097f4",
-    "excluded_promotion_reports": "e82d04852e85a7f02c959113cf2be24db5ae3cd5692a0e358028d6a3eb15e077",
+    "excluded_promotion_reports": "8da2448b56bb6f0cf532fb962cb066e70a2657999c9793302bf5d534583bc99b",
     "promotion_reports": "47308e6ead45e6366547bffe91c993d0d224544c2a4fb589d598b124c76a0a5f",
     "skipped_artifacts": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "mechanism_review_enabled": "3cbc87c7681f34db4617feaa2c8801931bc5e42d8d0f560e756dd4cd92885f18",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:54:16Z"
+    "checked_at": "2026-05-20T11:45:02Z"
   },
   "vault": ".",
   "policy": {
@@ -33,9 +33,9 @@
   },
   "status": "pass",
   "summary": {
-    "runs_discovered": 22,
+    "runs_discovered": 23,
     "runs_considered": 9,
-    "runs_excluded": 13,
+    "runs_excluded": 14,
     "runs_skipped": 0,
     "candidates_emitted": 1
   },
@@ -95,6 +95,12 @@
         "status": "quarantined",
         "reason": "superseded infrastructure failure: queue-unblock rotation selected an already-satisfied auto-readiness target; rotation target list now advances to mechanism run validation before retry",
         "path": "runs/5day-auto-improve-runtime-rerun5-30m_trial-run-01-auto-improve-readiness-queue-runtime/promotion-report.json"
+      },
+      {
+        "run_id": "5day-auto-improve-runtime-rerun14-30m_trial-run-01-mechanism-run-validation-runtime",
+        "status": "quarantined",
+        "reason": "superseded timeout evidence: goal runner envelope terminated before executor closeout and candidate artifacts could be generated; retry after runner timeout grace fix",
+        "path": "runs/5day-auto-improve-runtime-rerun14-30m_trial-run-01-mechanism-run-validation-runtime/promotion-report.json"
       },
       {
         "run_id": "5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime",
@@ -187,11 +193,11 @@
       "runs_with_session_context": 5,
       "sessions_considered": 2,
       "sessions_with_rollups": 1,
-      "validation_blocked_sessions": 0,
-      "review_blocked_sessions": 0,
+      "validation_blocked_sessions": 1,
+      "review_blocked_sessions": 1,
       "mutation_failed_sessions": 1,
-      "validator_dispatch_sessions": 0,
-      "reviewer_dispatch_sessions": 0,
+      "validator_dispatch_sessions": 1,
+      "reviewer_dispatch_sessions": 1,
       "high_risk_routing_sessions": 1,
       "total_priority_delta": 0,
       "boosted_candidates": 0,
@@ -208,11 +214,11 @@
           "runs_with_session_context": 5,
           "sessions_considered": 2,
           "sessions_with_rollups": 1,
-          "validation_blocked_sessions": 0,
-          "review_blocked_sessions": 0,
+          "validation_blocked_sessions": 1,
+          "review_blocked_sessions": 1,
           "mutation_failed_sessions": 1,
-          "validator_dispatch_sessions": 0,
-          "reviewer_dispatch_sessions": 0,
+          "validator_dispatch_sessions": 1,
+          "reviewer_dispatch_sessions": 1,
           "high_risk_routing_sessions": 1,
           "total_priority_delta": 0,
           "boosted_candidates": 0,
@@ -239,14 +245,14 @@
         "defect_escape_pair_count": 1
       },
       "global_signals": {
-        "attempt_count": 22,
+        "attempt_count": 23,
         "recent_attempt_count": 20,
         "moving_averages": {
-          "hold": 0.55,
-          "discard": 0.2,
+          "hold": 0.6,
+          "discard": 0.15,
           "rollback_signal": 0.0
         },
-        "rework_count": 4,
+        "rework_count": 5,
         "rollback_signal_count": 0,
         "defect_escape_pair_count": 0
       },
@@ -341,7 +347,7 @@
         "min_attempts_considered": 10,
         "min_target_attempts": 2,
         "shadow_priority_max_delta": 10,
-        "attempts_considered": 22,
+        "attempts_considered": 23,
         "current_order": [
           "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime"
         ],
@@ -425,11 +431,11 @@
         "runs_with_session_context": 5,
         "sessions_considered": 2,
         "sessions_with_rollups": 1,
-        "validation_blocked_sessions": 0,
-        "review_blocked_sessions": 0,
+        "validation_blocked_sessions": 1,
+        "review_blocked_sessions": 1,
         "mutation_failed_sessions": 1,
-        "validator_dispatch_sessions": 0,
-        "reviewer_dispatch_sessions": 0,
+        "validator_dispatch_sessions": 1,
+        "reviewer_dispatch_sessions": 1,
         "high_risk_routing_sessions": 1,
         "priority_before_calibration": 100,
         "priority_delta": 0,

@@ -6161,3 +6161,23 @@ The rerun13 promotion report was quarantined because it did not produce candidat
 ### Consequence
 - Rerun9 is preserved as diagnostic evidence but no longer blocks current mechanism-review or queue-rotation history as an active promotion attempt.
 - Current queue selection can distinguish genuinely unresolved targets from failed candidates whose remediation already landed outside the auto-improve promotion path.
+
+---
+
+## [2026-05-20 20:44 KST] improve | Extend goal runner closeout timeout
+
+### Summary
+`5day-auto-improve-runtime-rerun14-30m_trial` filled the 30m wall-clock window and reached the final executor role output, but the enclosing goal runner hit its 45m timeout before executor closeout, candidate artifact capture, and profile verification could finish. The run is timeout evidence only, not profile progress.
+
+The ladder runner now gives profile runs a larger closeout grace so a multi-role executor chain can finish and write its schema-backed artifacts after the profile minimum has elapsed. The direct goal-run default timeout now matches the 30m profile plus that closeout grace.
+
+### Artifacts
+- `mk/mechanism.mk`
+- `tests/test_makefile_static_gates.py`
+- `ops/README.md`
+- `runs/goal-5day-auto-improve-runtime/state/goal-run-status.json`
+- `build/goal-runs/5day-auto-improve-runtime-rerun14.log`
+
+### Consequence
+- Rerun14 remains blocked timeout evidence.
+- The next trial should not be terminated solely because normal multi-role executor closeout exceeds the old 900s grace window.

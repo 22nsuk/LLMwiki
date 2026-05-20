@@ -167,8 +167,8 @@
     },
     {
       "path": "mk/mechanism.mk",
-      "sha256": "abcaa776395d6cb535cdb233d4b0781bc8527c2259ec54cb1cb073c7f7ea0d00",
-      "size_bytes": 18667
+      "sha256": "d5f960da4966860c0f524fce86fc3938a2452e24ae2cbe82a1dae5ea06caf3db",
+      "size_bytes": 18668
     },
     {
       "path": "mk/public.mk",
@@ -202,8 +202,8 @@
     },
     {
       "path": "ops/README.md",
-      "sha256": "bd7cd10dc26f8431d4b3e5ac7d0cf278c376360f3a88aefbd24bc6f75095b9db",
-      "size_bytes": 110342
+      "sha256": "c42451ec00325cae196a4c2e87d579b3c36e653eb8dda8a77b636036c2d88d51",
+      "size_bytes": 110526
     },
     {
       "path": "ops/__init__.py",
@@ -4812,8 +4812,8 @@
     },
     {
       "path": "system/system-log.md",
-      "sha256": "c92726fde5c8b22439f13f1367f66186c0580ff9bbee65b54d8ce44919159020",
-      "size_bytes": 412772
+      "sha256": "aa44ab231e069e9fe20f0594975ca22bc16cf97defcdf84ed2d92647947729d4",
+      "size_bytes": 413867
     },
     {
       "path": "system/system-raw-registry.md",
@@ -5292,8 +5292,8 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "5f46a36b417732d809c727d190cea4c0c53c19a2a23b830ec0a0d9589306b7ce",
-      "size_bytes": 147888
+      "sha256": "c9a7b0142011d80a3333f6fcb7c225167a6b12db8ec1316d229885e386af2b8c",
+      "size_bytes": 147889
     },
     {
       "path": "tests/test_manifest_export_symlink_safety.py",
