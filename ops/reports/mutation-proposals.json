@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/mutation-proposals.schema.json",
   "artifact_kind": "mutation_proposals_report",
-  "generated_at": "2026-05-20T22:30:54Z",
+  "generated_at": "2026-05-20T23:36:38Z",
   "producer": "ops.scripts.mutation_proposal_runtime",
   "source_command": "python -m ops.scripts.mutation_proposal --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "4d4ddb351214ee0dda539f46a7326751806351c8127cc37a465afc015d8ba815",
+  "source_tree_fingerprint": "f4f48d9f5c39daa41d8269e07551f35d4ea359b255dde572241117150e1c8c23",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "45c5c7af5d8210fc6cbe07d6c5aeb5d3ff286b38a5606e71269eef9bb900fab3",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "8d23c7bb11c9c489efec644f0e7a31ff06aabdf0e1dc80c5e2679238b1580007",
-    "mechanism_review_report": "8ca2fbdfb3cc5bf3af0618a85afdd5233eb137628844802e332165b1944e0845",
-    "outcome_metrics": "aba54c957f06e2cb03259b1c751bcb205e2820af859b974f006524558eb27512",
+    "mechanism_review_report": "c9daab440cd9baf609ac61de7b42e561e52c261b7d70ca5d12f3b461acc168cc",
+    "outcome_metrics": "0a17f2611058fa1a16ba50da9dc66f510632720f6464cc6f9b2232ddf7a5f1c5",
     "system_log": "ea2ae8e4ca3addf46a1af9fe74defbd9abb9aedd2e7a22661f5f023c5ae5167e",
-    "auto_improve_session_reports": "e3c2a6383e879ce1ee3d8e79cf6d818252b921e78391d4a9f294aa51cd4a329a",
+    "auto_improve_session_reports": "86173e00f4a8f4bdb91c546ae275f3982c065c09be25e87882fcb156b2024c82",
     "mutation_dedupe_window": "ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d",
     "mutation_max_proposals": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
     "mutation_recent_log_overlap_max_age_days": "7902699be42c8a8e46fbbb4501726517e86b22c56a189f7625a6da49081b2451"
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T22:30:54Z"
+    "checked_at": "2026-05-20T23:36:38Z"
   },
   "vault": ".",
   "policy": {
@@ -87,18 +87,18 @@
       ]
     },
     "next_run_decision_queue": {
-      "session_reports_scanned": 22,
-      "decisions_considered": 9,
+      "session_reports_scanned": 23,
+      "decisions_considered": 12,
       "open_carry_forward_decisions": 1,
       "repair_proposals_emitted": 1,
       "decision_counts": {
-        "carry_forward": 9
+        "carry_forward": 12
       },
       "action_counts": {
-        "repair_failure": 9
+        "repair_failure": 12
       },
       "selected_target_proposal_ids": [
-        "next_run_failure_repair__auto-improve-iteration-persistence-runtime__repo-health-blocked"
+        "next_run_failure_repair__auto-improve-iteration-persistence-runtime__review-blocked"
       ]
     },
     "queue_selection": {
@@ -126,8 +126,8 @@
   },
   "proposals": [
     {
-      "proposal_id": "next_run_failure_repair__auto-improve-iteration-persistence-runtime__repo-health-blocked",
-      "source_candidate_id": "next-run-decision:active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime:322d469224bfc46d",
+      "proposal_id": "next_run_failure_repair__auto-improve-iteration-persistence-runtime__review-blocked",
+      "source_candidate_id": "next-run-decision:active-report-self-improve-certificate-rerun4-run-03-auto-improve-iteration-persistence-runtime:70e3f966b2d0c99b",
       "source_candidate_type": "auto_improve_next_run_decision_candidate",
       "family": "next_run_failure_repair",
       "tier": "supporting",
@@ -142,22 +142,22 @@
       ],
       "metrics_triggered": [
         "next_run_failure_repair",
-        "repo_health_blocked"
+        "review_blocked"
       ],
       "run_ids": [
-        "active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime"
+        "active-report-self-improve-certificate-rerun4-run-03-auto-improve-iteration-persistence-runtime"
       ],
       "failure_mode": "next_run_failure_repair",
-      "single_mechanism_scope": "repair the `repo_health_blocked` failure from repo_health on `ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py`; keep the next mutation bounded to the failed run evidence and do not resume unrelated queue work first",
-      "change_hypothesis": "If the next run addresses `repo_health_blocked` from `active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime` before broad discovery, the same target set can reach a finalized outcome or expose a narrower follow-up reason.",
-      "expected_binary_signal": "the next auto-improve attempt for `repeated_discard_runs__auto-improve-iteration-persistence-runtime` no longer records `repo_health_blocked` as its failure_taxonomy",
+      "single_mechanism_scope": "repair the `review_blocked` failure from reviewer on `ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py`; keep the next mutation bounded to the failed run evidence and do not resume unrelated queue work first",
+      "change_hypothesis": "If the next run addresses `review_blocked` from `active-report-self-improve-certificate-rerun4-run-03-auto-improve-iteration-persistence-runtime` before broad discovery, the same target set can reach a finalized outcome or expose a narrower follow-up reason.",
+      "expected_binary_signal": "the next auto-improve attempt for `repeated_discard_runs__auto-improve-iteration-persistence-runtime` no longer records `review_blocked` as its failure_taxonomy",
       "blast_radius_score": 51,
       "must_change_tests": [
         "tests/test_auto_improve_iteration_runtime.py",
         "tests/test_report_schema_sample_regeneration.py"
       ],
       "must_change_budget_signal": {
-        "signal": "auto_improve_session.next_run_decisions.repo_health_blocked",
+        "signal": "auto_improve_session.next_run_decisions.review_blocked",
         "expected_change": "resolved_or_superseded"
       },
       "must_not_expand_apply_roots": true,
@@ -168,7 +168,7 @@
         "runs/<run-id>/candidate-mechanism-assessment.json"
       ],
       "blocked_by": [],
-      "why_now": "`active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime` failed with `repo_health_blocked` and the session decision marked it carry_forward. Evidence: `runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json`, `runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/scope-freeze.json`, `runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.worker.json`, +8 more.",
+      "why_now": "`active-report-self-improve-certificate-rerun4-run-03-auto-improve-iteration-persistence-runtime` failed with `review_blocked` and the session decision marked it carry_forward. Evidence: `runs/active-report-self-improve-certificate-rerun4-run-03-auto-improve-iteration-persistence-runtime/run-telemetry.json`, `runs/active-report-self-improve-certificate-rerun4-run-03-auto-improve-iteration-persistence-runtime/scope-freeze.json`, `runs/active-report-self-improve-certificate-rerun4-run-03-auto-improve-iteration-persistence-runtime/subagent-routing.worker.json`, +5 more.",
       "priority_breakdown": {
         "base_priority": 100,
         "historical_calibration_delta": 0,

@@ -271,6 +271,13 @@ class ReportSchemaContractTest(unittest.TestCase):
             "lint_non_regression": True,
             "structural_complexity_non_regression": True,
             "tests_non_regression": True,
+            "non_regression_check_statuses": {
+                "candidate_eval_pass": "PASS",
+                "eval_score_improves": "WARN",
+                "lint_non_regression": "PASS",
+                "structural_complexity_non_regression": "PASS",
+                "tests_non_regression": "PASS",
+            },
             "blocking_check_ids": ["equal_score_secondary_eligibility"],
             "decision_record_reason_code": "equal_score_secondary_eligibility",
         }

@@ -267,6 +267,167 @@ def test_backfill_run_artifacts_supports_top_level_historical_run_tranche() -> N
             assert record.get("issues") == []
 
 
+def test_backfill_run_telemetry_restores_legacy_discard_check_statuses() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        seed_minimal_vault(vault)
+        run_id = "legacy-discard-run"
+        run_dir = vault / "runs" / run_id
+        run_dir.mkdir(parents=True)
+        promotion_report_rel = f"runs/{run_id}/promotion-report.json"
+        _write_json(
+            vault / promotion_report_rel,
+            {
+                "checks": [
+                    {"id": "candidate_eval_pass", "status": "PASS"},
+                    {"id": "eval_score_improves", "status": "WARN"},
+                    {"id": "lint_non_regression", "status": "PASS"},
+                    {"id": "structural_complexity_non_regression", "status": "FAIL"},
+                    {"id": "tests_non_regression", "status": "not-a-gate-status"},
+                ]
+            },
+        )
+        run_telemetry_rel = f"runs/{run_id}/run-telemetry.json"
+        _write_json(
+            vault / run_telemetry_rel,
+            {
+                "$schema": "ops/schemas/run-telemetry.schema.json",
+                "run_id": run_id,
+                "generated_at": "2026-04-28T06:00:00Z",
+                "proposal_snapshot": f"runs/{run_id}/proposal-snapshot.json",
+                "scope_freeze": f"runs/{run_id}/scope-freeze.json",
+                "routing_reports": [],
+                "executor_reports": [],
+                "decision": "DISCARD",
+                "finalized": True,
+                "finalize_result": {},
+                "discard_non_regression_evidence": {
+                    "promotion_report_source": "path",
+                    "promotion_report": promotion_report_rel,
+                    "candidate_eval_pass": True,
+                    "eval_score_improves": False,
+                    "lint_non_regression": True,
+                    "structural_complexity_non_regression": False,
+                    "tests_non_regression": False,
+                    "blocking_check_ids": [
+                        "structural_complexity_non_regression",
+                    ],
+                    "decision_record_reason_code": "structural_complexity_non_regression",
+                },
+            },
+        )
+
+        written = backfill_archived_run_artifacts(
+            vault,
+            rel_paths=[run_telemetry_rel],
+            context=fixed_context(),
+        )
+
+        assert written == [run_telemetry_rel]
+        payload = _read_json(vault / run_telemetry_rel)
+        evidence = payload["discard_non_regression_evidence"]
+        assert evidence["non_regression_check_statuses"] == {
+            "candidate_eval_pass": "PASS",
+            "eval_score_improves": "WARN",
+            "lint_non_regression": "PASS",
+            "structural_complexity_non_regression": "FAIL",
+            "tests_non_regression": "UNKNOWN",
+        }
+        assert _metadata_property(payload, EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY)
+        assert validate_with_schema(
+            payload,
+            load_schema(REPO_ROOT / "ops" / "schemas" / "run-telemetry.schema.json"),
+        ) == []
+
+        stale_payload = dict(payload)
+        stale_evidence = dict(stale_payload["discard_non_regression_evidence"])
+        stale_evidence.pop("non_regression_check_statuses")
+        stale_payload["discard_non_regression_evidence"] = stale_evidence
+        _write_json(vault / run_telemetry_rel, stale_payload)
+
+        rewritten = backfill_archived_run_artifacts(
+            vault,
+            rel_paths=[run_telemetry_rel],
+            context=fixed_context(),
+        )
+
+        assert rewritten == [run_telemetry_rel]
+        repaired = _read_json(vault / run_telemetry_rel)
+        assert repaired["discard_non_regression_evidence"]["non_regression_check_statuses"] == evidence[
+            "non_regression_check_statuses"
+        ]
+
+
+def test_backfill_run_telemetry_does_not_read_traversal_promotion_report_path() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        seed_minimal_vault(vault)
+        run_id = "legacy-discard-run"
+        other_run_id = "legacy-discard-other"
+        (vault / "runs" / run_id).mkdir(parents=True)
+        other_run_dir = vault / "runs" / other_run_id
+        other_run_dir.mkdir(parents=True)
+        _write_json(
+            other_run_dir / "promotion-report.json",
+            {
+                "checks": [
+                    {"id": "candidate_eval_pass", "status": "PASS"},
+                    {"id": "eval_score_improves", "status": "PASS"},
+                    {"id": "lint_non_regression", "status": "PASS"},
+                    {"id": "structural_complexity_non_regression", "status": "PASS"},
+                    {"id": "tests_non_regression", "status": "PASS"},
+                ]
+            },
+        )
+        run_telemetry_rel = f"runs/{run_id}/run-telemetry.json"
+        _write_json(
+            vault / run_telemetry_rel,
+            {
+                "$schema": "ops/schemas/run-telemetry.schema.json",
+                "run_id": run_id,
+                "generated_at": "2026-04-28T06:00:00Z",
+                "proposal_snapshot": f"runs/{run_id}/proposal-snapshot.json",
+                "scope_freeze": f"runs/{run_id}/scope-freeze.json",
+                "routing_reports": [],
+                "executor_reports": [],
+                "decision": "DISCARD",
+                "finalized": True,
+                "finalize_result": {},
+                "discard_non_regression_evidence": {
+                    "promotion_report_source": "path",
+                    "promotion_report": f"runs/{run_id}/../{other_run_id}/promotion-report.json",
+                    "candidate_eval_pass": False,
+                    "eval_score_improves": False,
+                    "lint_non_regression": False,
+                    "structural_complexity_non_regression": False,
+                    "tests_non_regression": False,
+                    "blocking_check_ids": [
+                        "candidate_eval_pass",
+                    ],
+                    "decision_record_reason_code": "candidate_eval_pass",
+                },
+            },
+        )
+
+        written = backfill_archived_run_artifacts(
+            vault,
+            rel_paths=[run_telemetry_rel],
+            context=fixed_context(),
+        )
+
+        assert written == [run_telemetry_rel]
+        payload = _read_json(vault / run_telemetry_rel)
+        assert payload["discard_non_regression_evidence"]["non_regression_check_statuses"] == {
+            "candidate_eval_pass": "UNKNOWN",
+            "eval_score_improves": "UNKNOWN",
+            "lint_non_regression": "UNKNOWN",
+            "structural_complexity_non_regression": "UNKNOWN",
+            "tests_non_regression": "UNKNOWN",
+        }
+
+
 def test_backfill_run_artifacts_supports_promotion_report_variant_filename() -> None:
     _require_full_vault_run_fixtures()
     variant_filename = "promotion-report.equal-score-policy-rerun.json"

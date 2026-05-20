@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/promotion-decision-trends.schema.json",
   "artifact_kind": "promotion_decision_trends",
-  "generated_at": "2026-05-20T21:06:11Z",
+  "generated_at": "2026-05-20T23:18:21Z",
   "producer": "ops.scripts.observability_decision_metrics_runtime",
   "source_command": "python -m ops.scripts.run_mechanism_experiment --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "b4b2f600e6f8dbbe1b37cdb915de8ef7972d7a53120c1a07d26c6c2b80dbf32f",
+  "source_tree_fingerprint": "4d4ddb351214ee0dda539f46a7326751806351c8127cc37a465afc015d8ba815",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "c0740070a0961037b7e620c138bffb215749f063d8c97be659cfae1391b62399",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "f573cd90bbcac67836d1d4a0c8b0dd8ff4c7ac8856f03a2ba0b075cdd72fffa5",
-    "promotion_reports": "b07ea61d8ace8241a0d521eb5164f16c7f6a15713aa63a82a35ab1b371e63c37",
+    "promotion_reports": "f39c53334a42ae42502b634cdd80465eae1da7ab676204be1357d6d317137f40",
     "recent_window": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T21:06:11Z"
+    "checked_at": "2026-05-20T23:18:21Z"
   },
   "vault": ".",
   "policy": {
@@ -28,23 +28,374 @@
     "version": 4
   },
   "summary": {
-    "runs_discovered": 36,
-    "promotion_reports_considered": 30,
+    "runs_discovered": 44,
+    "promotion_reports_considered": 38,
     "finalized_count": 5,
     "recent_window": 20
   },
   "decision_counts": {
-    "HOLD": 18,
+    "HOLD": 26,
     "DISCARD": 6,
     "PROMOTE": 6
   },
   "artifact_class_counts": {
-    "system_mechanism": 30
+    "system_mechanism": 38
   },
   "recent_runs": [
     {
+      "run_id": "active-report-self-improve-certificate-rerun4-run-03-auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-20T23:18:20Z",
+      "decision": "HOLD",
+      "decision_record": {
+        "decision_id": "decision:active-report-self-improve-certificate-rerun4-run-03-auto-improve-iteration-persistence-runtime:fc7388bfb9cb87ee",
+        "subject_id": "active-report-self-improve-certificate-rerun4-run-03-auto-improve-iteration-persistence-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 0,
+        "source_rule": "legacy_top_level_decision",
+        "source_pass": "legacy_promotion_report",
+        "actor": "legacy_promotion_report",
+        "reason_code": "legacy_promotion_report",
+        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+        "evidence_refs": [],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "active-report-self-improve-certificate-rerun4-run-03-auto-improve-iteration-persistence-runtime:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "active-report-self-improve-certificate-rerun4-run-03-auto-improve-iteration-persistence-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/active-report-self-improve-certificate-rerun4-run-03-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
+    {
+      "run_id": "active-report-self-improve-certificate-rerun4-run-02-auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-20T23:01:57Z",
+      "decision": "HOLD",
+      "decision_record": {
+        "decision_id": "decision:active-report-self-improve-certificate-rerun4-run-02-auto-improve-iteration-persistence-runtime:7deb8b69086bac23",
+        "subject_id": "active-report-self-improve-certificate-rerun4-run-02-auto-improve-iteration-persistence-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 0,
+        "source_rule": "legacy_top_level_decision",
+        "source_pass": "legacy_promotion_report",
+        "actor": "legacy_promotion_report",
+        "reason_code": "legacy_promotion_report",
+        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+        "evidence_refs": [],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "active-report-self-improve-certificate-rerun4-run-02-auto-improve-iteration-persistence-runtime:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "active-report-self-improve-certificate-rerun4-run-02-auto-improve-iteration-persistence-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/active-report-self-improve-certificate-rerun4-run-02-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
+    {
+      "run_id": "active-report-self-improve-certificate-rerun4-run-01-auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-20T22:52:10Z",
+      "decision": "HOLD",
+      "decision_record": {
+        "decision_id": "decision:active-report-self-improve-certificate-rerun4-run-01-auto-improve-iteration-persistence-runtime:b7f7ad7137d9aac2",
+        "subject_id": "active-report-self-improve-certificate-rerun4-run-01-auto-improve-iteration-persistence-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 0,
+        "source_rule": "legacy_top_level_decision",
+        "source_pass": "legacy_promotion_report",
+        "actor": "legacy_promotion_report",
+        "reason_code": "legacy_promotion_report",
+        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+        "evidence_refs": [],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "active-report-self-improve-certificate-rerun4-run-01-auto-improve-iteration-persistence-runtime:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "active-report-self-improve-certificate-rerun4-run-01-auto-improve-iteration-persistence-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/active-report-self-improve-certificate-rerun4-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
+    {
+      "run_id": "active-report-self-improve-certificate-run-03-auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-20T22:29:10Z",
+      "decision": "HOLD",
+      "decision_record": {
+        "decision_id": "decision:active-report-self-improve-certificate-run-03-auto-improve-iteration-persistence-runtime:ef21c8ca3244b35f",
+        "subject_id": "active-report-self-improve-certificate-run-03-auto-improve-iteration-persistence-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 0,
+        "source_rule": "legacy_top_level_decision",
+        "source_pass": "legacy_promotion_report",
+        "actor": "legacy_promotion_report",
+        "reason_code": "legacy_promotion_report",
+        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+        "evidence_refs": [],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "active-report-self-improve-certificate-run-03-auto-improve-iteration-persistence-runtime:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "active-report-self-improve-certificate-run-03-auto-improve-iteration-persistence-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/active-report-self-improve-certificate-run-03-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
+    {
+      "run_id": "active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-20T22:29:10Z",
+      "decision": "HOLD",
+      "decision_record": {
+        "decision_id": "decision:active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime:311b431ece84f3f0",
+        "subject_id": "active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 0,
+        "source_rule": "legacy_top_level_decision",
+        "source_pass": "legacy_promotion_report",
+        "actor": "legacy_promotion_report",
+        "reason_code": "legacy_promotion_report",
+        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+        "evidence_refs": [],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
+    {
+      "run_id": "active-report-self-improve-certificate-rerun3-run-02-auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-20T22:29:10Z",
+      "decision": "HOLD",
+      "decision_record": {
+        "decision_id": "decision:active-report-self-improve-certificate-rerun3-run-02-auto-improve-iteration-persistence-runtime:263ab3642e8be34f",
+        "subject_id": "active-report-self-improve-certificate-rerun3-run-02-auto-improve-iteration-persistence-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 0,
+        "source_rule": "legacy_top_level_decision",
+        "source_pass": "legacy_promotion_report",
+        "actor": "legacy_promotion_report",
+        "reason_code": "legacy_promotion_report",
+        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+        "evidence_refs": [],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "active-report-self-improve-certificate-rerun3-run-02-auto-improve-iteration-persistence-runtime:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "active-report-self-improve-certificate-rerun3-run-02-auto-improve-iteration-persistence-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/active-report-self-improve-certificate-rerun3-run-02-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
+    {
+      "run_id": "active-report-self-improve-certificate-rerun2-run-03-auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-20T22:29:10Z",
+      "decision": "HOLD",
+      "decision_record": {
+        "decision_id": "decision:active-report-self-improve-certificate-rerun2-run-03-auto-improve-iteration-persistence-runtime:01e2316e2672446c",
+        "subject_id": "active-report-self-improve-certificate-rerun2-run-03-auto-improve-iteration-persistence-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 0,
+        "source_rule": "legacy_top_level_decision",
+        "source_pass": "legacy_promotion_report",
+        "actor": "legacy_promotion_report",
+        "reason_code": "legacy_promotion_report",
+        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+        "evidence_refs": [],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "active-report-self-improve-certificate-rerun2-run-03-auto-improve-iteration-persistence-runtime:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "active-report-self-improve-certificate-rerun2-run-03-auto-improve-iteration-persistence-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/active-report-self-improve-certificate-rerun2-run-03-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
+    {
+      "run_id": "active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-20T22:29:09Z",
+      "decision": "HOLD",
+      "decision_record": {
+        "decision_id": "decision:active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime:6337446ad149f824",
+        "subject_id": "active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 0,
+        "source_rule": "legacy_top_level_decision",
+        "source_pass": "legacy_promotion_report",
+        "actor": "legacy_promotion_report",
+        "reason_code": "legacy_promotion_report",
+        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+        "evidence_refs": [],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
+    {
+      "run_id": "active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-20T22:29:09Z",
+      "decision": "HOLD",
+      "decision_record": {
+        "decision_id": "decision:active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime:f42f2432fb7c3013",
+        "subject_id": "active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 0,
+        "source_rule": "legacy_top_level_decision",
+        "source_pass": "legacy_promotion_report",
+        "actor": "legacy_promotion_report",
+        "reason_code": "legacy_promotion_report",
+        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+        "evidence_refs": [],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
+    {
       "run_id": "active-report-self-improve-certificate-rerun-run-03-auto-improve-iteration-persistence-runtime",
-      "observed_at": "2026-05-20T21:06:10Z",
+      "observed_at": "2026-05-20T22:29:09Z",
       "decision": "HOLD",
       "decision_record": {
         "decision_id": "decision:active-report-self-improve-certificate-rerun-run-03-auto-improve-iteration-persistence-runtime:be09559eb26509d4",
@@ -80,6 +431,84 @@
       ],
       "finalized": false,
       "promotion_report": "runs/active-report-self-improve-certificate-rerun-run-03-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
+    {
+      "run_id": "active-report-self-improve-certificate-rerun-run-01-auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-20T22:29:09Z",
+      "decision": "HOLD",
+      "decision_record": {
+        "decision_id": "decision:active-report-self-improve-certificate-rerun-run-01-auto-improve-iteration-persistence-runtime:26870d91dc4c8695",
+        "subject_id": "active-report-self-improve-certificate-rerun-run-01-auto-improve-iteration-persistence-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 0,
+        "source_rule": "legacy_top_level_decision",
+        "source_pass": "legacy_promotion_report",
+        "actor": "legacy_promotion_report",
+        "reason_code": "legacy_promotion_report",
+        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+        "evidence_refs": [],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "active-report-self-improve-certificate-rerun-run-01-auto-improve-iteration-persistence-runtime:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "active-report-self-improve-certificate-rerun-run-01-auto-improve-iteration-persistence-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/active-report-self-improve-certificate-rerun-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
+    {
+      "run_id": "active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-20T22:12:03Z",
+      "decision": "HOLD",
+      "decision_record": {
+        "decision_id": "decision:active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime:f79e49272727b52d",
+        "subject_id": "active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 0,
+        "source_rule": "legacy_top_level_decision",
+        "source_pass": "legacy_promotion_report",
+        "actor": "legacy_promotion_report",
+        "reason_code": "legacy_promotion_report",
+        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+        "evidence_refs": [],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
     },
     {
       "run_id": "active-report-self-improve-certificate-rerun-run-02-auto-improve-iteration-persistence-runtime",
@@ -120,84 +549,6 @@
       "promotion_report": "runs/active-report-self-improve-certificate-rerun-run-02-auto-improve-iteration-persistence-runtime/promotion-report.json"
     },
     {
-      "run_id": "active-report-self-improve-certificate-rerun-run-01-auto-improve-iteration-persistence-runtime",
-      "observed_at": "2026-05-20T20:36:25Z",
-      "decision": "HOLD",
-      "decision_record": {
-        "decision_id": "decision:active-report-self-improve-certificate-rerun-run-01-auto-improve-iteration-persistence-runtime:26870d91dc4c8695",
-        "subject_id": "active-report-self-improve-certificate-rerun-run-01-auto-improve-iteration-persistence-runtime",
-        "subject_kind": "system_mechanism",
-        "decision": "HOLD",
-        "decision_stage": "promotion_gate",
-        "is_terminal": false,
-        "policy_version": 0,
-        "source_rule": "legacy_top_level_decision",
-        "source_pass": "legacy_promotion_report",
-        "actor": "legacy_promotion_report",
-        "reason_code": "legacy_promotion_report",
-        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
-        "evidence_refs": [],
-        "decided_at": "",
-        "effective_at": "",
-        "supersedes": [],
-        "reducer_key": "promotion_decision_registry_v1",
-        "precedence_key": "0050:HOLD",
-        "dedupe_key": "active-report-self-improve-certificate-rerun-run-01-auto-improve-iteration-persistence-runtime:promotion_gate",
-        "finalizable": false,
-        "finalize_blockers": [
-          "decision_not_finalizable",
-          "required_signoff_not_approved"
-        ],
-        "ledger_event_type": "promotion_evaluated",
-        "ledger_partition_key": "active-report-self-improve-certificate-rerun-run-01-auto-improve-iteration-persistence-runtime"
-      },
-      "artifact_class": "system_mechanism",
-      "primary_targets": [
-        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
-      ],
-      "finalized": false,
-      "promotion_report": "runs/active-report-self-improve-certificate-rerun-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
-    },
-    {
-      "run_id": "active-report-self-improve-certificate-run-03-auto-improve-iteration-persistence-runtime",
-      "observed_at": "2026-05-20T20:07:28Z",
-      "decision": "HOLD",
-      "decision_record": {
-        "decision_id": "decision:active-report-self-improve-certificate-run-03-auto-improve-iteration-persistence-runtime:ef21c8ca3244b35f",
-        "subject_id": "active-report-self-improve-certificate-run-03-auto-improve-iteration-persistence-runtime",
-        "subject_kind": "system_mechanism",
-        "decision": "HOLD",
-        "decision_stage": "promotion_gate",
-        "is_terminal": false,
-        "policy_version": 0,
-        "source_rule": "legacy_top_level_decision",
-        "source_pass": "legacy_promotion_report",
-        "actor": "legacy_promotion_report",
-        "reason_code": "legacy_promotion_report",
-        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
-        "evidence_refs": [],
-        "decided_at": "",
-        "effective_at": "",
-        "supersedes": [],
-        "reducer_key": "promotion_decision_registry_v1",
-        "precedence_key": "0050:HOLD",
-        "dedupe_key": "active-report-self-improve-certificate-run-03-auto-improve-iteration-persistence-runtime:promotion_gate",
-        "finalizable": false,
-        "finalize_blockers": [
-          "decision_not_finalizable",
-          "required_signoff_not_approved"
-        ],
-        "ledger_event_type": "promotion_evaluated",
-        "ledger_partition_key": "active-report-self-improve-certificate-run-03-auto-improve-iteration-persistence-runtime"
-      },
-      "artifact_class": "system_mechanism",
-      "primary_targets": [
-        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
-      ],
-      "finalized": false,
-      "promotion_report": "runs/active-report-self-improve-certificate-run-03-auto-improve-iteration-persistence-runtime/promotion-report.json"
-    },
-    {
       "run_id": "active-report-self-improve-certificate-run-02-auto-improve-iteration-persistence-runtime",
       "observed_at": "2026-05-20T19:44:15Z",
       "decision": "DISCARD",
@@ -234,45 +585,6 @@
       ],
       "finalized": false,
       "promotion_report": "runs/active-report-self-improve-certificate-run-02-auto-improve-iteration-persistence-runtime/promotion-report.json"
-    },
-    {
-      "run_id": "active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime",
-      "observed_at": "2026-05-20T19:19:21Z",
-      "decision": "HOLD",
-      "decision_record": {
-        "decision_id": "decision:active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime:311b431ece84f3f0",
-        "subject_id": "active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime",
-        "subject_kind": "system_mechanism",
-        "decision": "HOLD",
-        "decision_stage": "promotion_gate",
-        "is_terminal": false,
-        "policy_version": 0,
-        "source_rule": "legacy_top_level_decision",
-        "source_pass": "legacy_promotion_report",
-        "actor": "legacy_promotion_report",
-        "reason_code": "legacy_promotion_report",
-        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
-        "evidence_refs": [],
-        "decided_at": "",
-        "effective_at": "",
-        "supersedes": [],
-        "reducer_key": "promotion_decision_registry_v1",
-        "precedence_key": "0050:HOLD",
-        "dedupe_key": "active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime:promotion_gate",
-        "finalizable": false,
-        "finalize_blockers": [
-          "decision_not_finalizable",
-          "required_signoff_not_approved"
-        ],
-        "ledger_event_type": "promotion_evaluated",
-        "ledger_partition_key": "active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime"
-      },
-      "artifact_class": "system_mechanism",
-      "primary_targets": [
-        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
-      ],
-      "finalized": false,
-      "promotion_report": "runs/active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
     },
     {
       "run_id": "5day-auto-improve-runtime-rerun21-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
@@ -507,318 +819,6 @@
       ],
       "finalized": false,
       "promotion_report": "runs/5day-auto-improve-runtime-rerun16-30m_trial-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
-    },
-    {
-      "run_id": "5day-auto-improve-runtime-rerun15-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
-      "observed_at": "2026-05-20T11:46:20Z",
-      "decision": "HOLD",
-      "decision_record": {
-        "decision_id": "decision:5day-auto-improve-runtime-rerun15-30m_trial-run-01-auto-improve-iteration-persistence-runtime:491a5c8fe351eb53",
-        "subject_id": "5day-auto-improve-runtime-rerun15-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
-        "subject_kind": "system_mechanism",
-        "decision": "HOLD",
-        "decision_stage": "promotion_gate",
-        "is_terminal": false,
-        "policy_version": 0,
-        "source_rule": "legacy_top_level_decision",
-        "source_pass": "legacy_promotion_report",
-        "actor": "legacy_promotion_report",
-        "reason_code": "legacy_promotion_report",
-        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
-        "evidence_refs": [],
-        "decided_at": "",
-        "effective_at": "",
-        "supersedes": [],
-        "reducer_key": "promotion_decision_registry_v1",
-        "precedence_key": "0050:HOLD",
-        "dedupe_key": "5day-auto-improve-runtime-rerun15-30m_trial-run-01-auto-improve-iteration-persistence-runtime:promotion_gate",
-        "finalizable": false,
-        "finalize_blockers": [
-          "decision_not_finalizable",
-          "required_signoff_not_approved"
-        ],
-        "ledger_event_type": "promotion_evaluated",
-        "ledger_partition_key": "5day-auto-improve-runtime-rerun15-30m_trial-run-01-auto-improve-iteration-persistence-runtime"
-      },
-      "artifact_class": "system_mechanism",
-      "primary_targets": [
-        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
-      ],
-      "finalized": false,
-      "promotion_report": "runs/5day-auto-improve-runtime-rerun15-30m_trial-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
-    },
-    {
-      "run_id": "5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime",
-      "observed_at": "2026-05-20T10:45:00Z",
-      "decision": "HOLD",
-      "decision_record": {
-        "decision_id": "decision:5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime:503d76a07d0f4008",
-        "subject_id": "5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime",
-        "subject_kind": "system_mechanism",
-        "decision": "HOLD",
-        "decision_stage": "promotion_gate",
-        "is_terminal": false,
-        "policy_version": 0,
-        "source_rule": "legacy_top_level_decision",
-        "source_pass": "legacy_promotion_report",
-        "actor": "legacy_promotion_report",
-        "reason_code": "legacy_promotion_report",
-        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
-        "evidence_refs": [],
-        "decided_at": "",
-        "effective_at": "",
-        "supersedes": [],
-        "reducer_key": "promotion_decision_registry_v1",
-        "precedence_key": "0050:HOLD",
-        "dedupe_key": "5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime:promotion_gate",
-        "finalizable": false,
-        "finalize_blockers": [
-          "decision_not_finalizable",
-          "required_signoff_not_approved"
-        ],
-        "ledger_event_type": "promotion_evaluated",
-        "ledger_partition_key": "5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime"
-      },
-      "artifact_class": "system_mechanism",
-      "primary_targets": [
-        "ops/scripts/mechanism/mutation_proposal_runtime.py"
-      ],
-      "finalized": false,
-      "promotion_report": "runs/5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime/promotion-report.json"
-    },
-    {
-      "run_id": "5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
-      "observed_at": "2026-05-20T10:32:00Z",
-      "decision": "HOLD",
-      "decision_record": {
-        "decision_id": "decision:5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime:8e16ad26bd9424a5",
-        "subject_id": "5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
-        "subject_kind": "system_mechanism",
-        "decision": "HOLD",
-        "decision_stage": "promotion_gate",
-        "is_terminal": false,
-        "policy_version": 0,
-        "source_rule": "legacy_top_level_decision",
-        "source_pass": "legacy_promotion_report",
-        "actor": "legacy_promotion_report",
-        "reason_code": "legacy_promotion_report",
-        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
-        "evidence_refs": [],
-        "decided_at": "",
-        "effective_at": "",
-        "supersedes": [],
-        "reducer_key": "promotion_decision_registry_v1",
-        "precedence_key": "0050:HOLD",
-        "dedupe_key": "5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime:promotion_gate",
-        "finalizable": false,
-        "finalize_blockers": [
-          "decision_not_finalizable",
-          "required_signoff_not_approved"
-        ],
-        "ledger_event_type": "promotion_evaluated",
-        "ledger_partition_key": "5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime"
-      },
-      "artifact_class": "system_mechanism",
-      "primary_targets": [
-        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
-      ],
-      "finalized": false,
-      "promotion_report": "runs/5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
-    },
-    {
-      "run_id": "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
-      "observed_at": "2026-05-20T10:00:00Z",
-      "decision": "HOLD",
-      "decision_record": {
-        "decision_id": "decision:5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime:f4e7d60da63fbac2",
-        "subject_id": "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
-        "subject_kind": "system_mechanism",
-        "decision": "HOLD",
-        "decision_stage": "promotion_gate",
-        "is_terminal": false,
-        "policy_version": 0,
-        "source_rule": "legacy_top_level_decision",
-        "source_pass": "legacy_promotion_report",
-        "actor": "legacy_promotion_report",
-        "reason_code": "legacy_promotion_report",
-        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
-        "evidence_refs": [],
-        "decided_at": "",
-        "effective_at": "",
-        "supersedes": [],
-        "reducer_key": "promotion_decision_registry_v1",
-        "precedence_key": "0050:HOLD",
-        "dedupe_key": "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime:promotion_gate",
-        "finalizable": false,
-        "finalize_blockers": [
-          "decision_not_finalizable",
-          "required_signoff_not_approved"
-        ],
-        "ledger_event_type": "promotion_evaluated",
-        "ledger_partition_key": "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime"
-      },
-      "artifact_class": "system_mechanism",
-      "primary_targets": [
-        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
-      ],
-      "finalized": false,
-      "promotion_report": "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
-    },
-    {
-      "run_id": "5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime",
-      "observed_at": "2026-05-20T09:09:54Z",
-      "decision": "HOLD",
-      "decision_record": {
-        "decision_id": "decision:5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime:2dba0e167721afb9",
-        "subject_id": "5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime",
-        "subject_kind": "system_mechanism",
-        "decision": "HOLD",
-        "decision_stage": "promotion_gate",
-        "is_terminal": false,
-        "policy_version": 0,
-        "source_rule": "legacy_top_level_decision",
-        "source_pass": "legacy_promotion_report",
-        "actor": "legacy_promotion_report",
-        "reason_code": "legacy_promotion_report",
-        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
-        "evidence_refs": [],
-        "decided_at": "",
-        "effective_at": "",
-        "supersedes": [],
-        "reducer_key": "promotion_decision_registry_v1",
-        "precedence_key": "0050:HOLD",
-        "dedupe_key": "5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime:promotion_gate",
-        "finalizable": false,
-        "finalize_blockers": [
-          "decision_not_finalizable",
-          "required_signoff_not_approved"
-        ],
-        "ledger_event_type": "promotion_evaluated",
-        "ledger_partition_key": "5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime"
-      },
-      "artifact_class": "system_mechanism",
-      "primary_targets": [
-        "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py"
-      ],
-      "finalized": false,
-      "promotion_report": "runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/promotion-report.json"
-    },
-    {
-      "run_id": "5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime",
-      "observed_at": "2026-05-20T08:08:00Z",
-      "decision": "HOLD",
-      "decision_record": {
-        "decision_id": "decision:5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime:cc177cb02798c602",
-        "subject_id": "5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime",
-        "subject_kind": "system_mechanism",
-        "decision": "HOLD",
-        "decision_stage": "promotion_gate",
-        "is_terminal": false,
-        "policy_version": 0,
-        "source_rule": "legacy_top_level_decision",
-        "source_pass": "legacy_promotion_report",
-        "actor": "legacy_promotion_report",
-        "reason_code": "legacy_promotion_report",
-        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
-        "evidence_refs": [],
-        "decided_at": "",
-        "effective_at": "",
-        "supersedes": [],
-        "reducer_key": "promotion_decision_registry_v1",
-        "precedence_key": "0050:HOLD",
-        "dedupe_key": "5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime:promotion_gate",
-        "finalizable": false,
-        "finalize_blockers": [
-          "decision_not_finalizable",
-          "required_signoff_not_approved"
-        ],
-        "ledger_event_type": "promotion_evaluated",
-        "ledger_partition_key": "5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime"
-      },
-      "artifact_class": "system_mechanism",
-      "primary_targets": [
-        "ops/scripts/mechanism/mechanism_run_validation_runtime.py"
-      ],
-      "finalized": false,
-      "promotion_report": "runs/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime/promotion-report.json"
-    },
-    {
-      "run_id": "5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime",
-      "observed_at": "2026-05-20T07:33:00Z",
-      "decision": "HOLD",
-      "decision_record": {
-        "decision_id": "decision:5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime:973445c22e311e54",
-        "subject_id": "5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime",
-        "subject_kind": "system_mechanism",
-        "decision": "HOLD",
-        "decision_stage": "promotion_gate",
-        "is_terminal": false,
-        "policy_version": 0,
-        "source_rule": "legacy_top_level_decision",
-        "source_pass": "legacy_promotion_report",
-        "actor": "legacy_promotion_report",
-        "reason_code": "legacy_promotion_report",
-        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
-        "evidence_refs": [],
-        "decided_at": "",
-        "effective_at": "",
-        "supersedes": [],
-        "reducer_key": "promotion_decision_registry_v1",
-        "precedence_key": "0050:HOLD",
-        "dedupe_key": "5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime:promotion_gate",
-        "finalizable": false,
-        "finalize_blockers": [
-          "decision_not_finalizable",
-          "required_signoff_not_approved"
-        ],
-        "ledger_event_type": "promotion_evaluated",
-        "ledger_partition_key": "5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime"
-      },
-      "artifact_class": "system_mechanism",
-      "primary_targets": [
-        "ops/scripts/mechanism/mechanism_run_validation_runtime.py"
-      ],
-      "finalized": false,
-      "promotion_report": "runs/5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime/promotion-report.json"
-    },
-    {
-      "run_id": "5day-auto-improve-runtime-rerun6-30m_trial-run-01-mechanism-run-validation-runtime",
-      "observed_at": "2026-05-20T07:15:00Z",
-      "decision": "HOLD",
-      "decision_record": {
-        "decision_id": "decision:5day-auto-improve-runtime-rerun6-30m_trial-run-01-mechanism-run-validation-runtime:a0bdef812194b90e",
-        "subject_id": "5day-auto-improve-runtime-rerun6-30m_trial-run-01-mechanism-run-validation-runtime",
-        "subject_kind": "system_mechanism",
-        "decision": "HOLD",
-        "decision_stage": "promotion_gate",
-        "is_terminal": false,
-        "policy_version": 0,
-        "source_rule": "legacy_top_level_decision",
-        "source_pass": "legacy_promotion_report",
-        "actor": "legacy_promotion_report",
-        "reason_code": "legacy_promotion_report",
-        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
-        "evidence_refs": [],
-        "decided_at": "",
-        "effective_at": "",
-        "supersedes": [],
-        "reducer_key": "promotion_decision_registry_v1",
-        "precedence_key": "0050:HOLD",
-        "dedupe_key": "5day-auto-improve-runtime-rerun6-30m_trial-run-01-mechanism-run-validation-runtime:promotion_gate",
-        "finalizable": false,
-        "finalize_blockers": [
-          "decision_not_finalizable",
-          "required_signoff_not_approved"
-        ],
-        "ledger_event_type": "promotion_evaluated",
-        "ledger_partition_key": "5day-auto-improve-runtime-rerun6-30m_trial-run-01-mechanism-run-validation-runtime"
-      },
-      "artifact_class": "system_mechanism",
-      "primary_targets": [
-        "ops/scripts/mechanism/mechanism_run_validation_runtime.py"
-      ],
-      "finalized": false,
-      "promotion_report": "runs/5day-auto-improve-runtime-rerun6-30m_trial-run-01-mechanism-run-validation-runtime/promotion-report.json"
     }
   ]
 }

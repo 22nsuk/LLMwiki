@@ -81,6 +81,14 @@ SCRIPT_PATH = "ops/scripts/backfill_archived_run_artifacts.py"
 RUN_ARTIFACT_SCAN_ROOT = Path("runs")
 BACKFILL_PROVENANCE_PROPERTY = "urn:openai:archived-run-backfill"
 ARCHIVE_REASON = "run_artifact_embedded_envelope_backfill"
+RUN_TELEMETRY_DISCARD_NON_REGRESSION_CHECK_IDS = (
+    "candidate_eval_pass",
+    "eval_score_improves",
+    "lint_non_regression",
+    "structural_complexity_non_regression",
+    "tests_non_regression",
+)
+RUN_TELEMETRY_PROMOTION_CHECK_STATUS_VALUES = frozenset({"PASS", "WARN", "FAIL"})
 
 
 @dataclass(frozen=True)
@@ -177,6 +185,113 @@ def _payload_generated_at(
     del vault, artifact_path
     generated_at = _normalized_timestamp(str(payload.get("generated_at", "")), context=f"{rel_path}:generated_at")
     return generated_at, "payload.generated_at"
+
+
+def _promotion_check_statuses(payload: dict[str, Any]) -> dict[str, str]:
+    checks = payload.get("checks")
+    if not isinstance(checks, list):
+        return {}
+    statuses: dict[str, str] = {}
+    for check in checks:
+        if not isinstance(check, dict):
+            continue
+        check_id = str(check.get("id", "")).strip()
+        if not check_id:
+            continue
+        statuses[check_id] = str(check.get("status", "")).strip().upper()
+    return statuses
+
+
+def _non_regression_statuses(statuses: dict[str, str]) -> dict[str, str]:
+    normalized: dict[str, str] = {}
+    for check_id in RUN_TELEMETRY_DISCARD_NON_REGRESSION_CHECK_IDS:
+        status = str(statuses.get(check_id, "")).strip().upper()
+        if not status:
+            normalized[check_id] = "MISSING"
+        elif status in RUN_TELEMETRY_PROMOTION_CHECK_STATUS_VALUES:
+            normalized[check_id] = status
+        else:
+            normalized[check_id] = "UNKNOWN"
+    return normalized
+
+
+def _normalized_repo_relative_path(rel_path: object) -> str:
+    if not isinstance(rel_path, str) or not rel_path.strip():
+        return ""
+    normalized = rel_path.strip().replace("\\", "/")
+    if normalized.startswith("/") or Path(normalized).is_absolute():
+        return ""
+    parts = normalized.split("/")
+    if any(part in ("", ".", "..") for part in parts):
+        return ""
+    return "/".join(parts)
+
+
+def _same_run_report_path(vault: Path, run_id: str, rel_path: object) -> Path | None:
+    normalized = _normalized_repo_relative_path(rel_path)
+    if not normalized:
+        return None
+    if not normalized.startswith(f"runs/{run_id}/"):
+        return None
+    vault_root = vault.resolve()
+    resolved_path = (vault_root / normalized).resolve()
+    if not resolved_path.is_relative_to(vault_root):
+        return None
+    if not resolved_path.is_relative_to((vault_root / "runs" / run_id).resolve()):
+        return None
+    return resolved_path
+
+
+def _run_telemetry_non_regression_statuses_from_promotion_report(
+    vault: Path,
+    run_id: str,
+    evidence: dict[str, Any],
+) -> dict[str, str] | None:
+    promotion_report_path = _same_run_report_path(vault, run_id, evidence.get("promotion_report"))
+    if promotion_report_path is None or not promotion_report_path.is_file():
+        return None
+    promotion_report = read_json_object(
+        promotion_report_path,
+        context=report_path(vault, promotion_report_path),
+    )
+    return _non_regression_statuses(_promotion_check_statuses(promotion_report))
+
+
+def _run_telemetry_non_regression_statuses_from_booleans(
+    evidence: dict[str, Any],
+) -> dict[str, str]:
+    statuses: dict[str, str] = {}
+    for check_id in RUN_TELEMETRY_DISCARD_NON_REGRESSION_CHECK_IDS:
+        value = evidence.get(check_id)
+        statuses[check_id] = "PASS" if value is True else "UNKNOWN"
+    return statuses
+
+
+def _normalize_legacy_run_telemetry_payload(
+    vault: Path,
+    rel_path: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    if Path(rel_path).name != "run-telemetry.json":
+        return payload
+    evidence = payload.get("discard_non_regression_evidence")
+    if not isinstance(evidence, dict) or "non_regression_check_statuses" in evidence:
+        return payload
+    run_id = str(payload.get("run_id", "")).strip()
+    statuses = (
+        _run_telemetry_non_regression_statuses_from_promotion_report(vault, run_id, evidence)
+        if run_id
+        else None
+    )
+    normalized_payload = dict(payload)
+    normalized_evidence = dict(evidence)
+    normalized_evidence["non_regression_check_statuses"] = (
+        statuses
+        if statuses is not None
+        else _run_telemetry_non_regression_statuses_from_booleans(evidence)
+    )
+    normalized_payload["discard_non_regression_evidence"] = normalized_evidence
+    return normalized_payload
 
 
 def _date_suffix_timestamp(rel_path: str) -> tuple[str, str]:
@@ -697,9 +812,20 @@ def backfill_archived_run_artifacts(
         if not _is_supported_run_artifact_path(rel_path):
             raise ValueError(f"run artifact backfill only supports runs/ paths: {rel_path}")
         original_text = artifact_path.read_text(encoding="utf-8")
-        payload = read_json_object(artifact_path, context=rel_path)
+        original_payload = read_json_object(artifact_path, context=rel_path)
+        payload = _normalize_legacy_run_telemetry_payload(vault, rel_path, original_payload)
         _validate_existing_payload(vault, rel_path, payload, spec.schema_path)
         if _has_artifact_envelope(payload):
+            if payload != original_payload:
+                schema = load_schema_with_vault_override(vault, spec.schema_path)
+                write_schema_validated_json(
+                    artifact_path,
+                    payload,
+                    schema,
+                    context=rel_path,
+                    trailing_newline=True,
+                )
+                written.append(_report_path(vault, artifact_path))
             continue
         generated_at, generated_at_source = spec.derive_generated_at(vault, artifact_path, rel_path, payload)
         backfilled_payload = _build_backfilled_payload(

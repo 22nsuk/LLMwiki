@@ -231,6 +231,7 @@
         "lint_non_regression",
         "structural_complexity_non_regression",
         "tests_non_regression",
+        "non_regression_check_statuses",
         "blocking_check_ids",
         "decision_record_reason_code"
       ],
@@ -261,6 +262,69 @@
         },
         "tests_non_regression": {
           "type": "boolean"
+        },
+        "non_regression_check_statuses": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "candidate_eval_pass",
+            "eval_score_improves",
+            "lint_non_regression",
+            "structural_complexity_non_regression",
+            "tests_non_regression"
+          ],
+          "properties": {
+            "candidate_eval_pass": {
+              "type": "string",
+              "enum": [
+                "PASS",
+                "WARN",
+                "FAIL",
+                "MISSING",
+                "UNKNOWN"
+              ]
+            },
+            "eval_score_improves": {
+              "type": "string",
+              "enum": [
+                "PASS",
+                "WARN",
+                "FAIL",
+                "MISSING",
+                "UNKNOWN"
+              ]
+            },
+            "lint_non_regression": {
+              "type": "string",
+              "enum": [
+                "PASS",
+                "WARN",
+                "FAIL",
+                "MISSING",
+                "UNKNOWN"
+              ]
+            },
+            "structural_complexity_non_regression": {
+              "type": "string",
+              "enum": [
+                "PASS",
+                "WARN",
+                "FAIL",
+                "MISSING",
+                "UNKNOWN"
+              ]
+            },
+            "tests_non_regression": {
+              "type": "string",
+              "enum": [
+                "PASS",
+                "WARN",
+                "FAIL",
+                "MISSING",
+                "UNKNOWN"
+              ]
+            }
+          }
         },
         "blocking_check_ids": {
           "type": "array",

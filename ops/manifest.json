@@ -807,8 +807,8 @@
     },
     {
       "path": "ops/schemas/run-telemetry.schema.json",
-      "sha256": "beeb2930404c5f5135e96c607fc3ec257ef47a2709eca406a2d217b511806067",
-      "size_bytes": 10519
+      "sha256": "a1aeb37d93e64e98ce9cf1936f7e1aff861d0bb584902037beeab912232c1c40",
+      "size_bytes": 12212
     },
     {
       "path": "ops/schemas/runtime-event.schema.json",
@@ -1007,8 +1007,8 @@
     },
     {
       "path": "ops/scripts/core/backfill_archived_run_artifacts.py",
-      "sha256": "9c2f24085824037b8ed054053e6c7338fe425a81419a2cfd0336fe3cfea84b10",
-      "size_bytes": 30993
+      "sha256": "ec64fb5dee8bc34995027ba210cebde8f71f06f286aadf2aeb0165c796c77e9c",
+      "size_bytes": 35643
     },
     {
       "path": "ops/scripts/core/backfill_historical_bootstrap_reports.py",
@@ -1507,8 +1507,8 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
-      "sha256": "03c65abaaeac057d70b62e56ef279d334cbb9a0eeaeb179ed5e76435d9807304",
-      "size_bytes": 24916
+      "sha256": "16949d081734da06ff235b3f9389817344a56863d9ce5e3c582e43940b1ba816",
+      "size_bytes": 27913
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_iteration_runtime.py",
@@ -4957,7 +4957,7 @@
     },
     {
       "path": "tests/fixtures/report_schema_samples.json",
-      "sha256": "2399c81cd8339495aac06d4695b10cd6ae4b7f7e84a3b65d0466db72d329b4e2",
+      "sha256": "28011c7e8fde673f5cb0891d629e0b5c4164ae2fa52cbbb5f19d6f327baa3ef8",
       "size_bytes": 137615
     },
     {
@@ -5022,8 +5022,8 @@
     },
     {
       "path": "tests/test_auto_improve_iteration_runtime.py",
-      "sha256": "504da92afffdba138190ce9f491fc4af944d1373c578fd60605a707da3395dfd",
-      "size_bytes": 55717
+      "sha256": "381a6129545b696a6c05325845b338f51eb40bd1c22c2667b88b22909cb70597",
+      "size_bytes": 64625
     },
     {
       "path": "tests/test_auto_improve_next_run_decision_runtime.py",
@@ -5067,8 +5067,8 @@
     },
     {
       "path": "tests/test_backfill_archived_run_artifacts.py",
-      "sha256": "8eb61d81f2947806f69dedf853584b0386f59418bbfbdc9958646ac17c51f41c",
-      "size_bytes": 17371
+      "sha256": "29ee027f97f01c3453b4477c36feadeccebcdeb624d47d7d8197ea93eb440bcd",
+      "size_bytes": 24221
     },
     {
       "path": "tests/test_backfill_historical_bootstrap_reports.py",
@@ -5652,8 +5652,8 @@
     },
     {
       "path": "tests/test_report_schemas.py",
-      "sha256": "e56c972d2cfee75927419475cdcc0a3c4ec2ebdff307f7bc669dcc4dcfe9ddc7",
-      "size_bytes": 33274
+      "sha256": "f867da6b92ea2561d101835cd6277725172277fa6ddf48e48398cda706d81893",
+      "size_bytes": 33589
     },
     {
       "path": "tests/test_ruff_strict_preview.py",

@@ -80,6 +80,14 @@ PRE_PROMOTION_FAILURE_LOG_NAMES = (
     "repo-health.stderr.txt",
     "repo-health-artifact-freshness-report-check.json",
 )
+DISCARD_NON_REGRESSION_CHECK_IDS = (
+    "candidate_eval_pass",
+    "eval_score_improves",
+    "lint_non_regression",
+    "structural_complexity_non_regression",
+    "tests_non_regression",
+)
+PROMOTION_CHECK_STATUS_VALUES = frozenset({"PASS", "WARN", "FAIL"})
 
 
 @dataclass(frozen=True)
@@ -227,6 +235,43 @@ def _load_repo_relative_json(vault: Path, rel_path: object) -> dict | None:
     return payload if isinstance(payload, dict) else None
 
 
+def _normalized_repo_relative_path(rel_path: object) -> str:
+    if not isinstance(rel_path, str) or not rel_path.strip():
+        return ""
+    normalized = rel_path.strip().replace("\\", "/")
+    if normalized.startswith("/") or Path(normalized).is_absolute():
+        return ""
+    parts = normalized.split("/")
+    if any(part in ("", ".", "..") for part in parts):
+        return ""
+    return "/".join(parts)
+
+
+def _promotion_report_path_matches_run(rel_path: object, run_id: str) -> bool:
+    if not isinstance(rel_path, str) or not rel_path.strip():
+        return True
+    normalized = _normalized_repo_relative_path(rel_path)
+    if not normalized:
+        return False
+    return normalized == run_rel(run_id, "promotion-report.json") or normalized.startswith(
+        run_rel(run_id, "")
+    )
+
+
+def _decision_record_matches_run(decision_record: object, run_id: str) -> bool:
+    if not isinstance(decision_record, dict):
+        return True
+    subject_id = str(decision_record.get("subject_id", "")).strip()
+    return not subject_id or subject_id == run_id
+
+
+def _promotion_report_matches_run(promotion_report: dict[str, Any], run_id: str) -> bool:
+    report_run_id = str(promotion_report.get("run_id", "")).strip()
+    if report_run_id and report_run_id != run_id:
+        return False
+    return _decision_record_matches_run(promotion_report.get("decision_record"), run_id)
+
+
 def _iteration_executor_report_rels(vault: Path, run_id: str, roles: list[str]) -> list[str]:
     report_rels: list[str] = []
     for role in roles:
@@ -259,10 +304,15 @@ def _load_promotion_report_from_rel(
     vault: Path,
     rel_path: object,
     *,
+    run_id: str,
     source_kind: str,
 ) -> LoadedPromotionReport | None:
+    if not _promotion_report_path_matches_run(rel_path, run_id):
+        return None
     payload = _load_repo_relative_json(vault, rel_path)
     if payload is None:
+        return None
+    if not _promotion_report_matches_run(payload, run_id):
         return None
     return LoadedPromotionReport(
         payload=payload,
@@ -271,17 +321,28 @@ def _load_promotion_report_from_rel(
     )
 
 
-def _promotion_report_from_source(vault: Path, source: object) -> LoadedPromotionReport | None:
+def _promotion_report_from_source(
+    vault: Path,
+    run_id: str,
+    source: object,
+) -> LoadedPromotionReport | None:
     if not isinstance(source, dict):
         return None
     promotion_report = source.get("promotion_report")
     if isinstance(promotion_report, dict):
+        if not _promotion_report_matches_run(promotion_report, run_id):
+            return None
         return LoadedPromotionReport(
             payload=promotion_report,
             source_kind="inline",
             source_path="",
         )
-    return _load_promotion_report_from_rel(vault, promotion_report, source_kind="path")
+    return _load_promotion_report_from_rel(
+        vault,
+        promotion_report,
+        run_id=run_id,
+        source_kind="path",
+    )
 
 
 def _iteration_promotion_report(
@@ -291,33 +352,38 @@ def _iteration_promotion_report(
     existing_report: dict,
 ) -> LoadedPromotionReport | None:
     for source in (result, existing_report):
-        promotion_report = _promotion_report_from_source(vault, source)
+        promotion_report = _promotion_report_from_source(vault, run_id, source)
         if promotion_report is not None:
             return promotion_report
     return _load_promotion_report_from_rel(
         vault,
         run_rel(run_id, "promotion-report.json"),
+        run_id=run_id,
         source_kind="default_path",
     )
 
 
-def _decision_record_from_source(vault: Path, source: object) -> dict | None:
+def _decision_record_from_source(vault: Path, run_id: str, source: object) -> dict | None:
     if not isinstance(source, dict):
         return None
-    promotion_report = source.get("promotion_report")
-    if isinstance(promotion_report, dict):
+    promotion_report = _promotion_report_from_source(vault, run_id, source)
+    if promotion_report is not None:
         try:
-            return decision_record_from_report(promotion_report, require_record=False)
-        except PromotionDecisionRegistryError:
-            pass
-    promotion_payload = _load_repo_relative_json(vault, promotion_report)
-    if promotion_payload is not None:
-        try:
-            return decision_record_from_report(promotion_payload, require_record=False)
+            decision_record = decision_record_from_report(
+                promotion_report.payload,
+                require_record=False,
+            )
+            return (
+                decision_record
+                if _decision_record_matches_run(decision_record, run_id)
+                else None
+            )
         except PromotionDecisionRegistryError:
             pass
     decision_record = source.get("decision_record")
     if isinstance(decision_record, dict):
+        if not _decision_record_matches_run(decision_record, run_id):
+            return None
         try:
             return decision_record_from_payload(
                 {"decision_record": decision_record},
@@ -361,6 +427,19 @@ def _blocking_promotion_check_ids(
     return sorted(blocking_ids)
 
 
+def _non_regression_check_statuses(statuses: dict[str, str]) -> dict[str, str]:
+    normalized: dict[str, str] = {}
+    for check_id in DISCARD_NON_REGRESSION_CHECK_IDS:
+        raw_status = str(statuses.get(check_id, "")).strip().upper()
+        if not raw_status:
+            normalized[check_id] = "MISSING"
+        elif raw_status in PROMOTION_CHECK_STATUS_VALUES:
+            normalized[check_id] = raw_status
+        else:
+            normalized[check_id] = "UNKNOWN"
+    return normalized
+
+
 def _discard_non_regression_evidence(
     vault: Path,
     run_id: str,
@@ -395,6 +474,7 @@ def _discard_non_regression_evidence(
             statuses.get("structural_complexity_non_regression") == "PASS"
         ),
         "tests_non_regression": statuses.get("tests_non_regression") == "PASS",
+        "non_regression_check_statuses": _non_regression_check_statuses(statuses),
         "blocking_check_ids": _blocking_promotion_check_ids(statuses, decision_record),
         "decision_record_reason_code": str(
             (decision_record or {}).get("reason_code", "")
@@ -412,14 +492,27 @@ def _iteration_decision_record(
     existing_report: dict,
 ) -> dict | None:
     for source in (result, existing_report):
-        decision_record = _decision_record_from_source(vault, source)
+        decision_record = _decision_record_from_source(vault, run_id, source)
         if decision_record is not None:
             return decision_record
-    promotion_payload = _load_repo_relative_json(vault, run_rel(run_id, "promotion-report.json"))
-    if promotion_payload is None:
+    promotion_report = _load_promotion_report_from_rel(
+        vault,
+        run_rel(run_id, "promotion-report.json"),
+        run_id=run_id,
+        source_kind="default_path",
+    )
+    if promotion_report is None:
         return None
     try:
-        return decision_record_from_report(promotion_payload, require_record=False)
+        decision_record = decision_record_from_report(
+            promotion_report.payload,
+            require_record=False,
+        )
+        return (
+            decision_record
+            if _decision_record_matches_run(decision_record, run_id)
+            else None
+        )
     except PromotionDecisionRegistryError:
         return None
 
