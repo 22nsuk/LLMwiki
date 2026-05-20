@@ -6181,3 +6181,21 @@ The ladder runner now gives profile runs a larger closeout grace so a multi-role
 ### Consequence
 - Rerun14 remains blocked timeout evidence.
 - The next trial should not be terminated solely because normal multi-role executor closeout exceeds the old 900s grace window.
+
+---
+
+## [2026-05-20 20:58 KST] improve | Isolate ladder process from monitors
+
+### Summary
+`5day-auto-improve-runtime-rerun15-30m_trial` was interrupted by an external monitor termination before worker completion, so it is operator-aborted diagnostic evidence only.
+
+The next attempt will use the existing `auto-improve-goal-ladder-start` target, which launches the ladder runner under `setsid` with detached stdin and a pid/log file. This keeps long-running trial execution independent from short-lived status polling shells.
+
+### Artifacts
+- `mk/mechanism.mk`
+- `build/goal-runs/5day-auto-improve-runtime-rerun15.log`
+- `runs/goal-5day-auto-improve-runtime/state/goal-run-status.json`
+
+### Consequence
+- Rerun15 remains blocked evidence, not profile progress.
+- Future status checks should be short, read-only polls against pid/log/status artifacts rather than long sleep wrappers.
