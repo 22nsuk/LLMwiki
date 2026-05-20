@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-20T09:30:59Z",
+  "generated_at": "2026-05-20T09:35:34Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
@@ -11,10 +11,10 @@
     "schema": "8c91343f30427af06d94db468c972889a09ff0185c7db529c93733a70f373b82",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "f66d87472e0e2e1b03b99437ccbadec98a2fd769c9cf08e6924573dcac8ab784",
-    "auto_improve_readiness": "281f3da20bc3226b472b61e9e5946fefd99030ad90c7eb29fd09e2598aa06ed5",
-    "goal_run_status": "97cad69721d695527290451f0a5724b79f046fa53267e4d199e61896fa6441b5",
-    "learning_claim_activation": "60904bb6c1a9a78e6c7b41ecc9c0f3faee50687de4f09d39e40d1d9b101344f7",
-    "learning_delta_scoreboard": "b51ca2d2e678e739e354ed03124734d633df54510f764e731a2876bc8e809e72",
+    "auto_improve_readiness": "0511c28a24ff99b71e89e7861c8304d4b099ce63d5c6bebb13baa755e2f432f0",
+    "goal_run_status": "4a2b0ffea75def14b53d194e42d098a6ee3e3ca905735d9b10d9bad57e5fd808",
+    "learning_claim_activation": "5b19f3dfead85352e6d631485153c2a024400b3a25b0bb30d0b42847bab35468",
+    "learning_delta_scoreboard": "ca703cce42b853fbbf72b28969cc331f64035e403791aaafebe374dc414a446b",
     "source_package_clean_extract": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "task_observations": "71013a0efaa510f93ecdb4cb6a3cbc18ff61d60d8fc093c6521a4aea80829677"
   },
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T09:30:59Z"
+    "checked_at": "2026-05-20T09:35:34Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
   },
   "status": "attention",
   "summary": {
-    "recent_blocker_count": 5,
+    "recent_blocker_count": 4,
     "last_success_pattern_count": 5,
     "forbidden_repeat_pattern_count": 4,
     "recommended_seed_run_count": 3,
@@ -49,13 +49,6 @@
   },
   "recent_blockers": [
     {
-      "id": "goal_status_git_worktree_dirty",
-      "source": "goal_run_status.blockers",
-      "status": "open",
-      "reason": "git_worktree_dirty",
-      "repair_target": "Refresh goal run status and close the active blocker before resuming."
-    },
-    {
       "id": "goal_status_profile_ladder_incomplete",
       "source": "goal_run_status.blockers",
       "status": "open",
@@ -66,7 +59,7 @@
       "id": "learning_blocked_by_review_required",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
-      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: recent_hold_moving_average, high_rework",
+      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: loop_health_telemetry_coverage_missing, recent_hold_moving_average, high_rework",
       "repair_target": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
     },
     {
@@ -267,7 +260,7 @@
     "target_profile": "30m_trial",
     "profile_ladder_status": "incomplete",
     "sustained_claim_allowed": false,
-    "open_blocker_count": 5,
+    "open_blocker_count": 4,
     "forbidden_pattern_count": 4,
     "evidence_gap_count": 2
   },

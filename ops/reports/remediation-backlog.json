@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-20T09:31:00Z",
+  "generated_at": "2026-05-20T09:35:35Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
@@ -11,11 +11,11 @@
     "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "a1944bd8f56639f8342b31ff9812a2d20d6995e3cccbcdfbbdf42467807cffe2",
-    "learning_claim_activation": "60904bb6c1a9a78e6c7b41ecc9c0f3faee50687de4f09d39e40d1d9b101344f7",
-    "self_improvement_negative_lessons": "ed7e7a78c206940967c9c484bd1ee1107091d1f5f42a7a4a5d201be5ae83f809",
-    "session_synopsis": "4cd8efd56fa7fea78f1d262b04ab58d13d31263883540135caf7063bd3a9dcf8",
+    "learning_claim_activation": "5b19f3dfead85352e6d631485153c2a024400b3a25b0bb30d0b42847bab35468",
+    "self_improvement_negative_lessons": "9e50c39479eda269667e8684048db4f88016ecbc704f39e72893d2dd9376206b",
+    "session_synopsis": "d81803a015888464e53e6ea5de1554d9f5ebf928060fd78eae707d4c8e3fb1fd",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
-    "auto_improve_sessions": "0aab87aed19f18d30b745ad1e1d4e7c9792fe00f39d0a754682d2ae252ee97dc"
+    "auto_improve_sessions": "4e723aaf64908d5bfac791b94d41982ac76dd94319718cc57f32ac9380ab665b"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T09:31:00Z"
+    "checked_at": "2026-05-20T09:35:35Z"
   },
   "vault": ".",
   "policy": {
@@ -32,28 +32,14 @@
   },
   "status": "attention",
   "summary": {
-    "backlog_item_count": 5,
+    "backlog_item_count": 4,
     "repeated_blocker_count": 0,
-    "active_blocker_count": 5,
-    "open_item_count": 5,
+    "active_blocker_count": 4,
+    "open_item_count": 4,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
     "next_action": "Close or explicitly defer remediation backlog items before promotion."
   },
   "items": [
-    {
-      "item_id": "active_blocker_goal_status_git_worktree_dirty",
-      "blocker_id": "goal_status_git_worktree_dirty",
-      "source": "goal_run_status.blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
-      "next_action": "Refresh goal run status and close the active blocker before resuming."
-    },
     {
       "item_id": "active_blocker_goal_status_profile_ladder_incomplete",
       "blocker_id": "goal_status_profile_ladder_incomplete",

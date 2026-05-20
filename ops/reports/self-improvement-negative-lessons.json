@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/self-improvement-negative-lessons.schema.json",
   "artifact_kind": "self_improvement_negative_lessons",
-  "generated_at": "2026-05-20T09:30:59Z",
+  "generated_at": "2026-05-20T09:35:34Z",
   "producer": "ops.scripts.self_improvement_negative_lessons",
   "source_command": "python -m ops.scripts.self_improvement_negative_lessons --vault .",
   "source_revision": "unknown",
@@ -11,8 +11,8 @@
     "schema": "47b79b46ef1a89257481eb0fa0b41f96e2765bb833dd8fe9b2f718d71cf470e2",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "6be541617f1774d9faca7c41ea0669ff4fe4b3b5780ad2b04b1c585c96dc8653",
-    "learning_claim_activation": "60904bb6c1a9a78e6c7b41ecc9c0f3faee50687de4f09d39e40d1d9b101344f7",
-    "session_synopsis": "4cd8efd56fa7fea78f1d262b04ab58d13d31263883540135caf7063bd3a9dcf8"
+    "learning_claim_activation": "5b19f3dfead85352e6d631485153c2a024400b3a25b0bb30d0b42847bab35468",
+    "session_synopsis": "d81803a015888464e53e6ea5de1554d9f5ebf928060fd78eae707d4c8e3fb1fd"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T09:30:59Z"
+    "checked_at": "2026-05-20T09:35:34Z"
   },
   "vault": ".",
   "policy": {
@@ -53,7 +53,7 @@
         {
           "path": "ops/reports/learning-delta-scoreboard.json",
           "exists": true,
-          "sha256": "b51ca2d2e678e739e354ed03124734d633df54510f764e731a2876bc8e809e72",
+          "sha256": "ca703cce42b853fbbf72b28969cc331f64035e403791aaafebe374dc414a446b",
           "status": "present"
         }
       ],

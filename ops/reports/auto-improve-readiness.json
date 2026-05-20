@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-20T09:30:55Z",
+  "generated_at": "2026-05-20T09:35:32Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -11,10 +11,10 @@
     "schema": "b07ea4db25e1e00c9ecce8026872b299d5f6df21f7edd396dce9af266ed48c42",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e8a26558749ee2fc8d615020caccd4b12d32e2354739c58e8a580ff43a3cbc10",
-    "artifact_freshness_report": "0559bd8416727b11aa99957a75d0b453dd4f3fa04ef9018950890e173236e7c4",
-    "goal_worktree_guard_report": "818af7dfdde566b3e60abf3f95d5a6375b931409b8235b0c1fd3a84a643a128a",
-    "mechanism_review_report": "c51777ce4391d02bb2109bfce570c31e9d4d7f60fb5bf78ee9a64b4f5f42df33",
-    "mutation_proposal_report": "ffaa2a40b52f46e9fa7cd63637f66a21aea0af914a898c217742e5dfe564e9e4",
+    "artifact_freshness_report": "e06fe17c78d7351f52b47f32482f91ebf0a52ed96e01a823efc867a1042dce96",
+    "goal_worktree_guard_report": "bda03895ee5051014b75f33e9fb498f0eb74c877b0f99653e0f86d2d1205a4e3",
+    "mechanism_review_report": "9b0b381fab1fb0b01de7a85e0b3c0e1f095c70219a7b31972e2dfe33e2e91807",
+    "mutation_proposal_report": "1ac34841619c1eb21d74456e07c132c22f2d06febf5892174b5b0c6d79d0002e",
     "outcome_metrics_report": "80df303c37a5772af9586e9b0c53926b03b43959211be9553dcffa248426eadf",
     "release_authority_preflight_report": "8771a6022db09e525cf4c8a22c99725d1e3539f340aca5db6445f8d675705b8e",
     "release_closeout_batch_manifest_report": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
@@ -22,7 +22,7 @@
     "release_closeout_post_check_finalizer_report": "missing",
     "release_closeout_summary_report": "f06aa971b5007f9d2391a8bf3e6f94ec1bd94f9e96d0ff6d542e49bae01a490c",
     "release_evidence_cohort_report": "58fc47f3fdb8fac9651f4315371cad23ee5394e83d6f992f66ff59ab0ecf0bdd",
-    "remediation_backlog_report": "e06ea3daaa47bfdcba7306346364e2c9afaa477d6e7857ef4c018796cd92f9dc",
+    "remediation_backlog_report": "07817a8d801dcf04e98f399f0484fa50755e708b1bf68eb5ede441f7e4582a6f",
     "selected_contract_summary_report": "c7de1aee49c3cc92d10d5890f377c8a6c2e5d37724a1a9b206bc0bcdf4ce49cf",
     "source_package_clean_extract_report": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "release_authority_preflight_report_candidates": "145f23a10e25dfcf0b9eb8875753adc591ca775e5c55cdea7926a32a5e51bebd"
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T09:30:55Z"
+    "checked_at": "2026-05-20T09:35:32Z"
   },
   "vault": ".",
   "policy": {
@@ -67,7 +67,7 @@
       "min_attempts_considered": 10,
       "session_reports_considered": 9,
       "session_calibration_status": "active",
-      "telemetry_coverage_ratio": 1.0,
+      "telemetry_coverage_ratio": 0.0,
       "same_eval_run_count": 2,
       "same_eval_reason_code_coverage_ratio": 1.0,
       "strict_secondary_improvement_coverage_ratio": 1.0,
@@ -78,6 +78,19 @@
       "defect_escape_pair_count": 0
     },
     "signals": [
+      {
+        "id": "loop_health_telemetry_coverage_missing",
+        "severity": "warn",
+        "detail": "loop_health.telemetry_coverage_ratio=0.0000 so routing provenance still lacks telemetry-backed learning evidence",
+        "owner": "runtime-maintainer",
+        "required_evidence": [
+          "latest routing provenance aggregate reports loop_health.coverage_ratios.telemetry greater than zero.",
+          "latest routing provenance aggregate no longer emits missing_telemetry_coverage."
+        ],
+        "minimum_sample_size": 1,
+        "next_evaluation_command": "make routing-provenance-aggregate auto-improve-readiness",
+        "closure_strategy": "ensure run telemetry is discoverable in the latest loop-health aggregate."
+      },
       {
         "id": "recent_hold_moving_average",
         "severity": "warn",
@@ -117,8 +130,9 @@
       "accepted_risk": false,
       "gate_effect": "review_required",
       "source_status": "learning_uncertain",
-      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: recent_hold_moving_average, high_rework",
+      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: loop_health_telemetry_coverage_missing, recent_hold_moving_average, high_rework",
       "signal_ids": [
+        "loop_health_telemetry_coverage_missing",
         "recent_hold_moving_average",
         "high_rework"
       ],
@@ -139,8 +153,9 @@
       "accepted_risk": false,
       "gate_effect": "review_required",
       "source_status": "learning_uncertain",
-      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: recent_hold_moving_average, high_rework",
+      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: loop_health_telemetry_coverage_missing, recent_hold_moving_average, high_rework",
       "signal_ids": [
+        "loop_health_telemetry_coverage_missing",
         "recent_hold_moving_average",
         "high_rework"
       ],
@@ -179,13 +194,12 @@
       "accepted_risk": false,
       "gate_effect": "active",
       "source_status": "attention",
-      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=5; active_blocker_count=5; blocking_item_count=5",
+      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=4; active_blocker_count=4; blocking_item_count=4",
       "signal_ids": [
-        "goal_status_git_worktree_dirty",
         "goal_status_profile_ladder_incomplete",
+        "goal_status_promotion_blocked_by_goal_worktree_guard_failure",
         "learning_blocked_by_review_required",
-        "learning_claim_unlock_review_not_approved",
-        "promotion_blocked_by_goal_worktree_guard_failure"
+        "learning_claim_unlock_review_not_approved"
       ],
       "required_evidence": [
         "Run make remediation-backlog and confirm status=pass with open_item_count=0.",
@@ -205,8 +219,9 @@
       "accepted_risk": false,
       "gate_effect": "review_required",
       "source_status": "learning_uncertain",
-      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: recent_hold_moving_average, high_rework",
+      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: loop_health_telemetry_coverage_missing, recent_hold_moving_average, high_rework",
       "signal_ids": [
+        "loop_health_telemetry_coverage_missing",
         "recent_hold_moving_average",
         "high_rework"
       ],
@@ -238,15 +253,14 @@
     "loop_health_summary": {
       "status": "available",
       "gate_effect": "none",
-      "source_report": "ops/reports/routing-provenance-aggregates/5day-auto-improve-runtime-rerun10-30m_trial.json",
-      "source_generated_at": "2026-05-20T09:15:26Z",
-      "session_id": "5day-auto-improve-runtime-rerun10-30m_trial",
-      "summary": "attempts=1, finalized=0, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=1.00 | alerts: unfinalized runs present, recent HOLD trend",
+      "source_report": "ops/reports/routing-provenance-aggregates/5day-auto-improve-runtime-rerun11-30m_trial.json",
+      "source_generated_at": "2026-05-20T09:34:07Z",
+      "session_id": "5day-auto-improve-runtime-rerun11-30m_trial",
+      "summary": "attempts=0, finalized=0, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=0.00 | alerts: telemetry coverage missing",
       "health_flags": [
-        "unfinalized_runs_present",
-        "recent_hold_present"
+        "missing_telemetry_coverage"
       ],
-      "attempt_count": 1,
+      "attempt_count": 0,
       "finalized_run_count": 0,
       "rework_count": 0,
       "rollback_signal_count": 0,
@@ -254,7 +268,7 @@
       "executor_failure_count": 0,
       "routing_report_parse_gap_count": 0,
       "executor_report_parse_gap_count": 0,
-      "telemetry_coverage_ratio": 1.0
+      "telemetry_coverage_ratio": 0.0
     },
     "same_eval_telemetry_summary": {
       "status": "pass",
@@ -412,18 +426,17 @@
       "status": "fail",
       "source_status": "attention",
       "release_blocking": true,
-      "open_item_count": 5,
-      "active_blocker_count": 5,
-      "blocking_item_count": 5,
+      "open_item_count": 4,
+      "active_blocker_count": 4,
+      "blocking_item_count": 4,
       "signal_ids": [
-        "goal_status_git_worktree_dirty",
         "goal_status_profile_ladder_incomplete",
+        "goal_status_promotion_blocked_by_goal_worktree_guard_failure",
         "learning_blocked_by_review_required",
-        "learning_claim_unlock_review_not_approved",
-        "promotion_blocked_by_goal_worktree_guard_failure"
+        "learning_claim_unlock_review_not_approved"
       ],
       "currentness_status": "current",
-      "summary": "remediation backlog status=attention; open_item_count=5; active_blocker_count=5; blocking_item_count=5"
+      "summary": "remediation backlog status=attention; open_item_count=4; active_blocker_count=4; blocking_item_count=4"
     }
   },
   "queue": {
