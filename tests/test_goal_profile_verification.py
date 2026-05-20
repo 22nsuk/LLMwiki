@@ -576,6 +576,42 @@ class GoalProfileVerificationTests(unittest.TestCase):
         )
         self.assertEqual(validate_with_schema(verification, load_schema(SCHEMA_PATH)), [])
 
+    def test_profile_verification_records_signal_returncode_as_blocker(self) -> None:
+        self._seed_goal_contract()
+        self._seed_profile_evidence()
+        report = build_goal_run_status_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="failed",
+                profile="30m_trial",
+                started_at="2026-05-17T11:30:00Z",
+                completed_at="2026-05-17T12:00:00Z",
+                last_heartbeat_at="2026-05-17T12:00:00Z",
+                last_checkpoint_at="2026-05-17T12:00:00Z",
+                last_command_heartbeat_at="2026-05-17T12:00:00Z",
+                command_observation_mode="process_heartbeat",
+                command_heartbeat_count=6,
+                command_timeout_seconds=1860,
+                last_command_returncode=-15,
+                last_command_timed_out=False,
+                last_command_termination_reason="completed",
+                context=fixed_context(),
+            )
+        )
+        write_goal_run_status_report(self.vault, report)
+        write_run_artifacts(self.vault, report, writer=RUNNER_PRODUCER)
+        self._write_session_evidence("20260517-trial")
+
+        verification = build_profile_verification_report(
+            GoalProfileVerificationRequest(vault=self.vault, context=fixed_context())
+        )
+
+        self.assertEqual(verification["command_observability"]["last_command_returncode"], -15)
+        self.assertEqual(verification["command_observability"]["status"], "incomplete")
+        self.assertIn("goal run command returncode is not zero", verification["blockers"])
+        self.assertEqual(validate_with_schema(verification, load_schema(SCHEMA_PATH)), [])
+
     def test_completed_profile_requires_runner_origin_command_audit(self) -> None:
         self._seed_goal_contract()
         self._seed_profile_evidence()

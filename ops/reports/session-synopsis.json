@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-20T03:23:09Z",
+  "generated_at": "2026-05-20T04:15:04Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e1f8a771f028b7186c36836a07f58d2d058e8f6fda5432412df2f7006136d8b5",
+  "source_tree_fingerprint": "da7b807ff61e03f04218cf66f876df43550257049f169bacad395159c3644f54",
   "input_fingerprints": {
     "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "8c91343f30427af06d94db468c972889a09ff0185c7db529c93733a70f373b82",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "1b3dc9e7a915a19253d410de18eaaaf886a7ff3ed065da0c66c496fb7e0f9ae4",
-    "auto_improve_readiness": "65b2507736e4c98935319524631400555f3dc283a24278c103c1156f1320adb9",
+    "auto_improve_readiness": "91a13018b8d324f6cdc7b27af803c9333eb0239a7c7ae79e895a5440bf1638db",
     "goal_run_status": "d5fbe74cdac1c0aa29588fb2525838c27ea25243e6d998913034166d59e23b20",
-    "learning_claim_activation": "3903f6154147fa4d61be9371c0971a0bdb9a9f5b931f32ccc4b467a2d1cf7df0",
-    "learning_delta_scoreboard": "cf3a6b4bd9a592c04d5ff01e88887d9dbbae3de0543aa84662fde3f03345a541",
+    "learning_claim_activation": "26fa8f6f7178ae50abfa18e2810768f9699d980f558839a73d79069201319271",
+    "learning_delta_scoreboard": "61b78cf80ec8995e64242f95512be169f69137ed5b5677bb888961ef98646693",
     "source_package_clean_extract": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "task_observations": "71013a0efaa510f93ecdb4cb6a3cbc18ff61d60d8fc093c6521a4aea80829677"
   },
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T03:23:09Z"
+    "checked_at": "2026-05-20T04:15:04Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
   },
   "status": "attention",
   "summary": {
-    "recent_blocker_count": 3,
+    "recent_blocker_count": 4,
     "last_success_pattern_count": 5,
     "forbidden_repeat_pattern_count": 5,
     "recommended_seed_run_count": 3,
@@ -59,8 +59,15 @@
       "id": "learning_blocked_by_review_required",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
-      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: recent_hold_moving_average",
+      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: loop_health_telemetry_coverage_missing, recent_hold_moving_average",
       "repair_target": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
+    },
+    {
+      "id": "promotion_blocked_by_goal_worktree_guard_failure",
+      "source": "auto_improve_readiness.promotion_blockers",
+      "status": "open",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=4",
+      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     },
     {
       "id": "learning_claim_unlock_review_not_approved",
@@ -263,7 +270,7 @@
     "target_profile": "30m_trial",
     "profile_ladder_status": "incomplete",
     "sustained_claim_allowed": false,
-    "open_blocker_count": 3,
+    "open_blocker_count": 4,
     "forbidden_pattern_count": 5,
     "evidence_gap_count": 2
   },

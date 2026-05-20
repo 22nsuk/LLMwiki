@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/outcome-metrics.schema.json",
   "artifact_kind": "outcome_metrics_report",
-  "generated_at": "2026-05-20T03:21:59Z",
+  "generated_at": "2026-05-20T04:14:59Z",
   "producer": "ops.scripts.observability_decision_metrics_runtime",
   "source_command": "python -m ops.scripts.outcome_metrics --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e1f8a771f028b7186c36836a07f58d2d058e8f6fda5432412df2f7006136d8b5",
+  "source_tree_fingerprint": "da7b807ff61e03f04218cf66f876df43550257049f169bacad395159c3644f54",
   "input_fingerprints": {
     "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "aadbf232f7dc6bf40f35290f0dabcc4e9320b93c70cc2f0177f1167b24ecff29",
@@ -13,8 +13,8 @@
     "source_paths": "c364e1ed667cd810b07ae3d6b09e9de4431804a8db70852d444664e6939e289d",
     "defect_escape_closures": "e16bb891b199557eecbe0886ab71ee6fb975f3eb6ca17d648c598a1fd00e0e91",
     "rework_closures": "e733c2e2b460bdf4e5431372338d546c2603d7c37da059478925db9be74ff046",
-    "run_inputs": "731d41ac4e5603ae632ac2b5c01a1b4d74483db089c83413ffd4d65fade77006",
-    "session_reports": "38b203eb3546e4e52e5e87de86d85a5fe05bf5eb9fbf6126abc93ea518ec0f75",
+    "run_inputs": "fdd5967409219e2f829b78c2cbfc29e3a84d366473f5c10af29931024a18a546",
+    "session_reports": "daa37bcf4c505c6f3fb584cb1a3af881d3072e2743f27ddb06e8542aa1eb0c5b",
     "recent_window": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T03:21:59Z"
+    "checked_at": "2026-05-20T04:14:59Z"
   },
   "vault": ".",
   "policy": {
@@ -31,21 +31,21 @@
     "version": 4
   },
   "summary": {
-    "attempts_considered": 14,
+    "attempts_considered": 15,
     "recent_window": 20,
-    "recent_attempt_count": 14,
-    "session_reports_considered": 5
+    "recent_attempt_count": 15,
+    "session_reports_considered": 6
   },
   "metrics": {
-    "attempt_count": 14,
+    "attempt_count": 15,
     "recent_window": 20,
-    "recent_attempt_count": 14,
+    "recent_attempt_count": 15,
     "rework_count": 0,
     "rollback_signal_count": 0,
     "rollback_rehearsal_coverage_count": 3,
     "moving_averages": {
-      "hold": 0.2857,
-      "discard": 0.2143,
+      "hold": 0.3333,
+      "discard": 0.2,
       "rollback_signal": 0.0
     },
     "operator_effort_proxy": {
@@ -56,11 +56,11 @@
         "experiment": 1322.739,
         "typed_same_eval_evidence": 0.0
       },
-      "executor_report_count": 2,
-      "reviewer_dispatch_count": 1,
-      "validator_dispatch_count": 0,
-      "auditor_dispatch_count": 0,
-      "hold_count": 4
+      "executor_report_count": 6,
+      "reviewer_dispatch_count": 2,
+      "validator_dispatch_count": 1,
+      "auditor_dispatch_count": 1,
+      "hold_count": 5
     },
     "rework_keys": [],
     "defect_escape_proxy": {
@@ -200,6 +200,23 @@
     ]
   },
   "recent_attempts": [
+    {
+      "run_id": "5day-auto-improve-runtime-rerun1-30m_trial-run-01-auto-improve-readiness-queue-runtime",
+      "session_id": "",
+      "proposal_id": "",
+      "source_candidate_id": "recent_log_overlap_queue_unblock__auto-improve-readiness-queue-runtime",
+      "observed_at": "2026-05-20T03:26:30Z",
+      "decision": "HOLD",
+      "outcome": "hold",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py"
+      ],
+      "rework_key": "targets:ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py",
+      "rollback_rehearsal_covered": false,
+      "rollback_signal": false,
+      "run_telemetry": "runs/5day-auto-improve-runtime-rerun1-30m_trial-run-01-auto-improve-readiness-queue-runtime/run-telemetry.json",
+      "promotion_report": "runs/5day-auto-improve-runtime-rerun1-30m_trial-run-01-auto-improve-readiness-queue-runtime/promotion-report.json"
+    },
     {
       "run_id": "5day-auto-improve-runtime-30m_trial-run-01-auto-improve-readiness-queue-runtime",
       "session_id": "5day-auto-improve-runtime-30m_trial",

@@ -188,6 +188,42 @@ class GoalRuntimeRunnerTests(unittest.TestCase):
         self.assertEqual([event["run_status"] for event in audit_events], ["running", "failed"])
         self.assertEqual(audit_events[-1]["writer"], "ops.scripts.goal_runtime_runner")
 
+    def test_runner_records_signal_returncode_without_schema_failure(self) -> None:
+        process = FakeProcess(communicate_side_effect=[("", "terminated\n")])
+        process.returncode = -15
+        exit_code = run_goal_runtime_command(
+            GoalRuntimeRunnerRequest(
+                vault=self.vault,
+                command_argv=["python", "-m", "ops.scripts.auto_improve_loop"],
+                run_id="20260517-trial",
+                goal_contract_path="ops/reports/codex-goal-contract.json",
+                result_out="tmp/session-result.json",
+                heartbeat_interval_seconds=1,
+                checkpoint_interval_seconds=2,
+                timeout_seconds=5,
+                context=fixed_context(),
+                backend=FakeProcessBackend(process),
+                monotonic_clock=SteppedClock([0.0, 0.0, 0.0]),
+            )
+        )
+
+        self.assertEqual(exit_code, -15)
+        status = json.loads(
+            (self.vault / "ops" / "reports" / "goal-run-status.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(status["run"]["status"], "failed")
+        self.assertEqual(status["observability"]["last_command_returncode"], -15)
+        self.assertFalse(status["observability"]["last_command_timed_out"])
+        self.assertEqual(status["observability"]["last_command_termination_reason"], "completed")
+        audit_events = [
+            json.loads(line)
+            for line in (
+                self.vault / "runs" / "goal-20260517-trial" / "audit-log.jsonl"
+            ).read_text(encoding="utf-8").splitlines()
+        ]
+        self.assertEqual([event["run_status"] for event in audit_events], ["running", "failed"])
+        self.assertEqual(audit_events[-1]["last_command_returncode"], -15)
+
     def test_runner_preserves_usage_limit_retry_after_in_goal_status(self) -> None:
         run_id = "run-usage-limited"
         run_dir = self.vault / "runs" / run_id

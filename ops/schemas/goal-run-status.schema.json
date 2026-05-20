@@ -142,7 +142,7 @@
         "last_stdout_at": { "type": "string" },
         "last_stderr_at": { "type": "string" },
         "last_artifact_touch_at": { "type": "string" },
-        "last_command_returncode": { "type": "integer", "minimum": -1 },
+        "last_command_returncode": { "type": "integer" },
         "last_command_timed_out": { "type": "boolean" },
         "last_command_termination_reason": { "type": "string" },
         "last_backoff_until": { "type": "string" },

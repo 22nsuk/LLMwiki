@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-claim-activation-report.schema.json",
   "artifact_kind": "learning_claim_activation_report",
-  "generated_at": "2026-05-20T03:23:09Z",
+  "generated_at": "2026-05-20T04:15:03Z",
   "producer": "ops.scripts.learning_claim_activation_report",
   "source_command": "python -m ops.scripts.learning_claim_activation_report --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e1f8a771f028b7186c36836a07f58d2d058e8f6fda5432412df2f7006136d8b5",
+  "source_tree_fingerprint": "da7b807ff61e03f04218cf66f876df43550257049f169bacad395159c3644f54",
   "input_fingerprints": {
     "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "d366a06d6c9fbade9f99a3a702f7e88409d8e793328122ab6b196c4d7d670305",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "9879aa6dea2f107086d381aec9d1ab487d1ad7ceab74981f697ec14fee9ccd3b",
-    "learning_claim_activation_inputs": "c53814410924c1151bf604cd57ef21bfe279012138ba7ad790820282be0ec529"
+    "learning_claim_activation_inputs": "11344824abfd3693edd96f338212827fd6b882142dbf2a8775e6ab8adf72c090"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T03:23:09Z"
+    "checked_at": "2026-05-20T04:15:03Z"
   },
   "vault": ".",
   "policy": {
@@ -58,7 +58,7 @@
     "evidence_digest": {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "cf3a6b4bd9a592c04d5ff01e88887d9dbbae3de0543aa84662fde3f03345a541",
+      "sha256": "61b78cf80ec8995e64242f95512be169f69137ed5b5677bb888961ef98646693",
       "status": "present"
     },
     "post_seal_linkage": {
@@ -80,7 +80,7 @@
       "evidence_digest": {
         "path": "ops/reports/learning-delta-scoreboard.json",
         "exists": true,
-        "sha256": "cf3a6b4bd9a592c04d5ff01e88887d9dbbae3de0543aa84662fde3f03345a541",
+        "sha256": "61b78cf80ec8995e64242f95512be169f69137ed5b5677bb888961ef98646693",
         "status": "present"
       },
       "post_seal_linkage": {
@@ -94,13 +94,13 @@
     {
       "path": "ops/reports/auto-improve-readiness.json",
       "exists": true,
-      "sha256": "65b2507736e4c98935319524631400555f3dc283a24278c103c1156f1320adb9",
+      "sha256": "91a13018b8d324f6cdc7b27af803c9333eb0239a7c7ae79e895a5440bf1638db",
       "status": "present"
     },
     {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "cf3a6b4bd9a592c04d5ff01e88887d9dbbae3de0543aa84662fde3f03345a541",
+      "sha256": "61b78cf80ec8995e64242f95512be169f69137ed5b5677bb888961ef98646693",
       "status": "present"
     },
     {
@@ -220,7 +220,7 @@
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "exists": true,
-            "sha256": "65b2507736e4c98935319524631400555f3dc283a24278c103c1156f1320adb9",
+            "sha256": "91a13018b8d324f6cdc7b27af803c9333eb0239a7c7ae79e895a5440bf1638db",
             "status": "present"
           }
         ]
@@ -240,7 +240,7 @@
           {
             "path": "ops/reports/learning-delta-scoreboard.json",
             "exists": true,
-            "sha256": "cf3a6b4bd9a592c04d5ff01e88887d9dbbae3de0543aa84662fde3f03345a541",
+            "sha256": "61b78cf80ec8995e64242f95512be169f69137ed5b5677bb888961ef98646693",
             "status": "present"
           }
         ]

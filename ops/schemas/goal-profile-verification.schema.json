@@ -193,7 +193,7 @@
         "heartbeat_count": { "type": "integer", "minimum": 0 },
         "expected_min_heartbeat_count": { "type": "integer", "minimum": 0 },
         "timeout_seconds": { "type": "integer", "minimum": 0 },
-        "last_command_returncode": { "type": "integer", "minimum": -1 },
+        "last_command_returncode": { "type": "integer" },
         "last_command_timed_out": { "type": "boolean" },
         "last_command_termination_reason": { "type": "string" },
         "last_command_heartbeat_at": { "type": "string" },
