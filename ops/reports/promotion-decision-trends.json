@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/promotion-decision-trends.schema.json",
   "artifact_kind": "promotion_decision_trends",
-  "generated_at": "2026-05-20T09:10:00Z",
+  "generated_at": "2026-05-20T09:53:06Z",
   "producer": "ops.scripts.observability_decision_metrics_runtime",
   "source_command": "python -m ops.scripts.run_mechanism_experiment --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "db54d282fb6d36be74f680047e16d21eb312a38f5fca7b617583350e340a838a",
+  "source_tree_fingerprint": "a0eb1f14b9f1868fe8fbacc68511c70444bfa4c3cfb7c9d67000e9ab0e7515b3",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "c0740070a0961037b7e620c138bffb215749f063d8c97be659cfae1391b62399",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "f573cd90bbcac67836d1d4a0c8b0dd8ff4c7ac8856f03a2ba0b075cdd72fffa5",
-    "promotion_reports": "08ef79bdca6c2e2a292a82e935f7564015548b764b3d3345f472d518db05cce0",
+    "promotion_reports": "d19fa628b98bcc0953d3967df35d8fc1e91534645403aa499be6fadea4543ec5",
     "recent_window": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T09:10:00Z"
+    "checked_at": "2026-05-20T09:53:06Z"
   },
   "vault": ".",
   "policy": {
@@ -28,20 +28,59 @@
     "version": 4
   },
   "summary": {
-    "runs_discovered": 23,
-    "promotion_reports_considered": 15,
+    "runs_discovered": 24,
+    "promotion_reports_considered": 16,
     "finalized_count": 5,
     "recent_window": 20
   },
   "decision_counts": {
-    "HOLD": 6,
+    "HOLD": 7,
     "DISCARD": 3,
     "PROMOTE": 6
   },
   "artifact_class_counts": {
-    "system_mechanism": 15
+    "system_mechanism": 16
   },
   "recent_runs": [
+    {
+      "run_id": "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-20T09:53:06Z",
+      "decision": "HOLD",
+      "decision_record": {
+        "decision_id": "decision:5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime:f4e7d60da63fbac2",
+        "subject_id": "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 0,
+        "source_rule": "legacy_top_level_decision",
+        "source_pass": "legacy_promotion_report",
+        "actor": "legacy_promotion_report",
+        "reason_code": "legacy_promotion_report",
+        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+        "evidence_refs": [],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
     {
       "run_id": "5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime",
       "observed_at": "2026-05-20T09:09:54Z",

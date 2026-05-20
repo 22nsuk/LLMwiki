@@ -6000,3 +6000,26 @@ The reconcile target also refreshes session synopsis and remediation backlog aft
 - Queue-unblock rotation is now limited to mutation proposal runtime and mechanism run validation runtime, which prevents the already-satisfied readiness-queue target from being retried as a synthetic runnable proposal.
 - If both queue-unblock rotation targets overlap recent chronology, the queue remains honestly blocked instead of falling through to a known stale target.
 - The additional log closeout advances current chronology without weakening the recent-log-overlap guardrail; the next proposal refresh must decide from current evidence whether the real iteration-persistence candidate is runnable.
+
+---
+
+## [2026-05-20 18:55 KST] improve | Gate discard telemetry on actual discarded outcome
+
+### Summary
+`5day-auto-improve-runtime-rerun11-30m_trial` selected the real iteration-persistence proposal and completed worker/reviewer execution, but the validator blocked promotion because the candidate's supporting `ops/script-output-surfaces.json` registry was stale against the live AST fingerprint. The run therefore closed as `validation_blocked` and is not successful 30m profile evidence.
+
+The validated worker change was applied directly in the main workspace: `discard_non_regression_evidence` is now emitted only when the persisted iteration outcome is actually `discarded`, preventing stale DISCARD promotion-report evidence from being attached to non-discard iteration telemetry. The writer-output surface registry was regenerated after the source change.
+
+### Artifacts
+- `runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/validator-executor-report.json`
+- `ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py`
+- `tests/test_auto_improve_iteration_runtime.py`
+- `ops/script-output-surfaces.json`
+- `ops/reports/auto-improve-sessions/5day-auto-improve-runtime-rerun11-30m_trial.json`
+- `ops/reports/goal-profile-verification.json`
+- `system/system-log.md`
+
+### Consequence
+- Rerun11 remains blocked evidence, not goal progress, because it ended before the minimum elapsed profile duration and had no successful improvement iteration.
+- The material validator blocker is addressed in the main workspace: iteration telemetry can no longer invent discard non-regression evidence from a DISCARD report unless the runtime outcome is also `discarded`.
+- The next 30m trial should rerun after report refresh from this corrected code and must produce current registry evidence before validator promotion.

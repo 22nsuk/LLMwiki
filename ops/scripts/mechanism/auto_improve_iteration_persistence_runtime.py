@@ -307,9 +307,12 @@ def _blocking_promotion_check_ids(
 def _discard_non_regression_evidence(
     vault: Path,
     run_id: str,
+    outcome: str,
     result: dict | None,
     existing_report: dict,
 ) -> dict[str, Any] | None:
+    if outcome != "discarded":
+        return None
     promotion_report = _iteration_promotion_report(vault, run_id, result, existing_report)
     if promotion_report is None:
         return None
@@ -452,6 +455,7 @@ def write_iteration_telemetry(
     discard_evidence = _discard_non_regression_evidence(
         request.vault,
         request.run_id,
+        request.outcome,
         request.result,
         existing_report,
     )

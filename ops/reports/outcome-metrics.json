@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/outcome-metrics.schema.json",
   "artifact_kind": "outcome_metrics_report",
-  "generated_at": "2026-05-20T09:37:00Z",
+  "generated_at": "2026-05-20T09:53:06Z",
   "producer": "ops.scripts.observability_decision_metrics_runtime",
   "source_command": "python -m ops.scripts.outcome_metrics --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -13,8 +13,8 @@
     "source_paths": "c364e1ed667cd810b07ae3d6b09e9de4431804a8db70852d444664e6939e289d",
     "defect_escape_closures": "341d6430923b3b957af3065c16eb4f4c7a1c430d93441dbececb05b33afbccc9",
     "rework_closures": "3517f6b3c7de1db7e2e5218a1a3db2f129eb5dfe30ede2444e0825a8421496c9",
-    "run_inputs": "79bd9821d217aa499f59250a9baa6bce1c8e60fe245dfd712704bae52f6ae1d7",
-    "session_reports": "4e723aaf64908d5bfac791b94d41982ac76dd94319718cc57f32ac9380ab665b",
+    "run_inputs": "c8384e87fd26359f58d8bc4afcc43df0b4ce80cb490b8e47818ebdd35fad9fb6",
+    "session_reports": "be03d1b1c1a4b7110b30b3c1f90e109b1f2d40143baf585ec86d90aaf7ae0d8b",
     "recent_window": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T09:37:00Z"
+    "checked_at": "2026-05-20T09:53:06Z"
   },
   "vault": ".",
   "policy": {
@@ -50,15 +50,15 @@
     },
     "operator_effort_proxy": {
       "phase_totals_seconds": {
-        "scope_freeze": 0.071,
-        "routing": 3.542,
-        "scaffold": 3.029,
-        "experiment": 5150.176,
+        "scope_freeze": 0.083,
+        "routing": 4.162,
+        "scaffold": 3.531,
+        "experiment": 6329.155,
         "typed_same_eval_evidence": 0.0
       },
-      "executor_report_count": 8,
-      "reviewer_dispatch_count": 2,
-      "validator_dispatch_count": 1,
+      "executor_report_count": 11,
+      "reviewer_dispatch_count": 3,
+      "validator_dispatch_count": 2,
       "auditor_dispatch_count": 1,
       "hold_count": 9
     },
@@ -222,16 +222,16 @@
   "recent_attempts": [
     {
       "run_id": "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
-      "session_id": "",
-      "proposal_id": "",
+      "session_id": "5day-auto-improve-runtime-rerun11-30m_trial",
+      "proposal_id": "repeated_discard_runs__auto-improve-iteration-persistence-runtime",
       "source_candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
-      "observed_at": "2026-05-20T09:34:09Z",
+      "observed_at": "2026-05-20T09:53:06Z",
       "decision": "HOLD",
-      "outcome": "hold",
+      "outcome": "validation_blocked",
       "primary_targets": [
         "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
       ],
-      "rework_key": "targets:ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
+      "rework_key": "proposal:repeated_discard_runs__auto-improve-iteration-persistence-runtime",
       "rollback_rehearsal_covered": false,
       "rollback_signal": false,
       "run_telemetry": "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
