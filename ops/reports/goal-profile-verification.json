@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/goal-profile-verification.schema.json",
   "artifact_kind": "goal_profile_verification",
-  "generated_at": "2026-05-20T06:16:55Z",
+  "generated_at": "2026-05-20T06:27:45Z",
   "producer": "ops.scripts.goal_profile_verification",
   "source_command": "python -m ops.scripts.goal_profile_verification --vault .",
   "source_revision": "unknown",
@@ -12,11 +12,11 @@
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "43d085e233b7b75700f408275b53c03bae7ab852739d2c574b5b14df112e6152",
     "auto_improve_session": "missing",
-    "goal_contract": "7ae53a874d3a30c88636d35c806f24f2aef9a0352984061b4155194cdc45ecf7",
-    "goal_run_status": "c2e4796f776c6d87f2c75210997fada4d89d7c4a35afb240afb4eb7c9f6fa5ca",
-    "run_audit_log": "a733c7a59b8e87e052fc558d857e7900b2634a547264a61fc39c79d1d507e62d",
-    "run_resume_metadata": "c2f485ddad5ae658509b9fe614811e08788d3cb7e378c407a98a6d00d18eccc3",
-    "run_status_markdown": "8732cbda37ffd8e6711408e4d65018e17efece1f7aef1db1e84229090dec5cc2"
+    "goal_contract": "a28e095430205072121c6b99d6170905a528997158b613bba269cd727e1ca2f4",
+    "goal_run_status": "1250521c4e943e24328aed9252b1162614dd935b2d4364fd3e0e925051320a2a",
+    "run_audit_log": "4b5ea2e2fd20f33f1d3d8498f0ae1d43595e2fa1e3053f1d901e9e1014b2344d",
+    "run_resume_metadata": "f9613a3035455d17b193d1e4ac391cf1b6c2ee2454d354b3a1a9f850a2cc7ee2",
+    "run_status_markdown": "86029d5d2ddbf491a1fe0cb6c1bab6077bf91f61c531da09fa0eeda026e5c2da"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -24,14 +24,14 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T06:16:55Z"
+    "checked_at": "2026-05-20T06:27:45Z"
   },
   "vault": ".",
   "goal": {
     "contract_path": "runs/goal-5day-auto-improve-runtime/state/codex-goal-contract.json",
     "contract_id": "goal-5day-auto-improve-runtime",
-    "contract_sha256_before": "8f4b0d08fb5338480efe2063c7a5b6e26517fdc59e65be35274c2d8b78825d2a",
-    "contract_sha256_after": "8f4b0d08fb5338480efe2063c7a5b6e26517fdc59e65be35274c2d8b78825d2a"
+    "contract_sha256_before": "a99a68afd17f4b7ab035c7eff333fd03bd4a03bc09e80c4be789bd705f55f574",
+    "contract_sha256_after": "a99a68afd17f4b7ab035c7eff333fd03bd4a03bc09e80c4be789bd705f55f574"
   },
   "profile": {
     "target_profile": "30m_trial",
@@ -46,7 +46,7 @@
     "run_id": "5day-auto-improve-runtime",
     "run_status": "blocked",
     "run_profile": "30m_trial",
-    "started_at": "2026-05-20T06:16:51Z",
+    "started_at": "2026-05-20T06:26:50Z",
     "completed_at": ""
   },
   "run_artifacts": {
@@ -88,7 +88,7 @@
         "status": "pass"
       }
     ],
-    "audit_event_count": 6,
+    "audit_event_count": 10,
     "runner_command_audit_current": false
   },
   "session_evidence": {
