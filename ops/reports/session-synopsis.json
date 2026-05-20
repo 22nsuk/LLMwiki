@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-20T06:26:52Z",
+  "generated_at": "2026-05-20T06:26:54Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
@@ -13,8 +13,8 @@
     "source_paths": "1b3dc9e7a915a19253d410de18eaaaf886a7ff3ed065da0c66c496fb7e0f9ae4",
     "auto_improve_readiness": "279cc14b54c6d30c7f237b239cc09e2b48506ce6583fe38dea81042e50b8b06c",
     "goal_run_status": "1250521c4e943e24328aed9252b1162614dd935b2d4364fd3e0e925051320a2a",
-    "learning_claim_activation": "f8a87cdcaafb7ca7de2536f8b0451a275b8922853e5b3a8bc4e3cb51772b1ccc",
-    "learning_delta_scoreboard": "c10821049dde2747fb8edcd204ee5d6e5a4cb8b32662b630a537bc7766040ec1",
+    "learning_claim_activation": "43e4b922d61102f08c4a1c6c1bf1d99150a445e13bb4999a0516e9c69e0aed16",
+    "learning_delta_scoreboard": "d413acef3a06b0967b98d0e13e0bc9838db01a7ed9dc786665f1cd5270c0f5f9",
     "source_package_clean_extract": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "task_observations": "71013a0efaa510f93ecdb4cb6a3cbc18ff61d60d8fc093c6521a4aea80829677"
   },
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T06:26:52Z"
+    "checked_at": "2026-05-20T06:26:54Z"
   },
   "vault": ".",
   "policy": {

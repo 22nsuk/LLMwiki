@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-20T06:18:50Z",
+  "generated_at": "2026-05-20T06:26:57Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
@@ -11,7 +11,7 @@
     "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "950d52b6d82ae018bbf55e537ed59bfa33da8dab31407b495abe69e2cfe628a2",
-    "active_external_reports": "44423c9a2f5ea38c3921c9ec51622f46229f30152dad05ee464cc9da7e805ff1",
+    "active_external_reports": "bf89f94aba0d06e2b4a5ad3a6d5505812f72a77e28535ac73f6fd5055b83fdb6",
     "action_catalog": "6cf299a899fcc1b22432c36188c37e05c090b0af5e917e043fd7e739cbe0cf7b"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T06:18:50Z"
+    "checked_at": "2026-05-20T06:26:57Z"
   },
   "vault": ".",
   "status": "attention",
@@ -32,9 +32,9 @@
     "active_report_count": 4,
     "archived_report_count": 65,
     "action_item_count": 24,
-    "implemented_count": 21,
+    "implemented_count": 17,
     "partially_automated_count": 0,
-    "requires_release_run_verification_count": 3,
+    "requires_release_run_verification_count": 7,
     "planned_count": 0,
     "unmatched_active_report_count": 0,
     "reference_manifest_alignment_status": "current",
@@ -289,7 +289,7 @@
       "action_id": "source_package_distribution_binding",
       "priority": "P0",
       "theme": "source package and distribution ZIP binding",
-      "current_status": "implemented",
+      "current_status": "requires_release_run_verification",
       "source_report_paths": [
         "external-reports/llmwiki_code_change_implementation_report_20260516.md",
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
@@ -321,7 +321,7 @@
       "action_id": "release_evidence_bundle_and_attestation",
       "priority": "P1",
       "theme": "release evidence bundle and attestation",
-      "current_status": "implemented",
+      "current_status": "requires_release_run_verification",
       "source_report_paths": [
         "external-reports/llmwiki_code_change_implementation_report_20260516.md",
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
@@ -347,7 +347,7 @@
       "action_id": "full_suite_evidence_currentness",
       "priority": "P1",
       "theme": "full-suite evidence currentness",
-      "current_status": "implemented",
+      "current_status": "requires_release_run_verification",
       "source_report_paths": [
         "external-reports/llmwiki_code_change_implementation_report_20260516.md",
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md"
@@ -366,7 +366,7 @@
       "action_id": "promotion_truth_ladder",
       "priority": "P0",
       "theme": "live gate and promotion truth ladder",
-      "current_status": "implemented",
+      "current_status": "requires_release_run_verification",
       "source_report_paths": [
         "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
         "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
@@ -382,13 +382,13 @@
         {
           "path": "ops/reports/release-closeout-summary.json",
           "exists": true,
-          "status": "pass",
+          "status": "fail",
           "producer": "ops.scripts.release_closeout_summary"
         },
         {
           "path": "ops/reports/release-evidence-dashboard.json",
           "exists": true,
-          "status": "attention",
+          "status": "fail",
           "producer": "ops.scripts.release_evidence_dashboard"
         }
       ]
