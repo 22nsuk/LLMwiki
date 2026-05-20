@@ -1,8 +1,8 @@
 {
   "$schema": "ops/schemas/codex-goal-contract.schema.json",
   "schema_version": 1,
-  "contract_id": "auto-improve-goal",
-  "objective": "Build a bounded auto-improve goal runtime only after profile-ladder evidence, release authority, and promotion guards are current.",
+  "contract_id": "goal-5day-auto-improve-runtime",
+  "objective": "Achieve a verified 5-day sustained LLMwiki auto-improve runtime test through the profile ladder, preserving public/private boundaries and keeping promotion blocked until readiness, sealed authority, remediation backlog, and profile verification are clean.",
   "non_goals": [
     "Do not claim 5-day sustained operation before the 5d_sustained profile is verified.",
     "Do not promote release, learning, or improvement claims while promotion blockers remain.",
@@ -39,9 +39,9 @@
     }
   ],
   "budgets": {
-    "max_wall_clock_seconds": 1800,
-    "max_proposals": 1,
-    "max_consecutive_failures": 1,
+    "max_wall_clock_seconds": 432000,
+    "max_proposals": 60,
+    "max_consecutive_failures": 3,
     "heartbeat_interval_seconds": 300,
     "checkpoint_interval_seconds": 1800,
     "profile_ladder": [
@@ -75,19 +75,19 @@
       }
     ]
   },
-  "created_at": "2026-05-19T20:47:08Z",
+  "created_at": "2026-05-20T02:33:30Z",
   "created_by": "codex",
   "status": "active",
   "runtime_profile": {
-    "current_profile": "30m_trial",
+    "current_profile": "5d_sustained",
     "verified_profiles": [],
     "next_profile": "30m_trial",
-    "max_unattended_seconds": 1800
+    "max_unattended_seconds": 432000
   },
   "goal_backend": {
     "backend_type": "run_local_file",
     "process_persistent": true,
-    "storage_path": "runs/goal-auto-improve-trial/state/codex-goal-contract.json"
+    "storage_path": "runs/goal-5day-auto-improve-runtime/state/codex-goal-contract.json"
   },
   "stop_conditions": [
     {
@@ -116,7 +116,7 @@
     },
     {
       "evidence_id": "goal_run_status",
-      "path": "runs/goal-auto-improve-trial/state/goal-run-status.json",
+      "path": "runs/goal-5day-auto-improve-runtime/state/goal-run-status.json",
       "description": "Goal status records heartbeat, checkpoint, resume, and promotion blockers.",
       "freshness": "current_run",
       "required_for_promotion": true
@@ -150,11 +150,13 @@
   "metadata": {
     "contract_family": "bounded_auto_improve",
     "claim_policy": "trial_only_until_profile_and_release_authority_are_clean",
-    "properties": [
-      {
-        "name": "urn:openai:artifact-envelope",
-        "value": "{\"$schema\": \"ops/schemas/codex-goal-contract.schema.json\", \"artifact_kind\": \"codex_goal_contract\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-19T20:48:07Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-19T20:48:07Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"auto_improve_readiness\": \"726278485f928cf92a7f07194719b62971086f070e83dccbba3a0a475f79e148\", \"contract_id\": \"d6dee5d74cf954a24559fc821001ef3dc5c693b768134ad20fe8924060b7adfe\", \"goal_worktree_guard_report\": \"badb0e51a12de35fedb76a058df9065106ab93bdeda024436b869db86fb9856d\", \"policy\": \"21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc\", \"schema\": \"cf26e46d79af52c7038096664bc878959de9cb0107d8673fe58f0d33f0e25b6e\", \"source_paths\": \"15ddd337697f327e58418d6eb64901ecc9b51ad5f55d9f9d01c3fb239be3d57c\"}, \"producer\": \"ops.scripts.codex_goal_client\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.codex_goal_client --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"e96e34b147b56bfe63b1160c79cb00c872d93b02492cf8719bd781e94abbfaa9\"}"
-      }
-    ]
+    "requested_by": "user",
+    "source_reports_reviewed": [
+      "external-reports/llmwiki_code_change_implementation_report_20260516.md",
+      "external-reports/llmwiki_goal_runtime_comparison_report.md",
+      "external-reports/llmwiki_integrated_review_reconciliation_improvement_report_20260515.md",
+      "external-reports/llmwiki_long_run_integrated_improvement_plan_20260519.md"
+    ],
+    "archive_action_completed": "external-reports/archive/llmwiki_review_reconciled_improvement_report.md"
   }
 }
