@@ -139,9 +139,13 @@
   "promotion_guard": {
     "can_promote_result": false,
     "promotion_blockers": [
-      "learning_blocked_by_review_required",
+      "execution_blocked_by_no_runnable_proposal",
+      "learning_blocked_by_execution_not_runnable",
+      "promotion_blocked_by_selected_contract_failure",
+      "promotion_blocked_by_artifact_contract_failure",
       "promotion_blocked_by_goal_worktree_guard_failure",
-      "promotion_blocked_by_remediation_backlog_open"
+      "promotion_blocked_by_remediation_backlog_open",
+      "git_worktree_dirty"
     ],
     "sealed_authority_clean": true,
     "profile_verified": "unverified",
@@ -162,7 +166,7 @@
     "properties": [
       {
         "name": "urn:openai:artifact-envelope",
-        "value": "{\"$schema\": \"ops/schemas/codex-goal-contract.schema.json\", \"artifact_kind\": \"codex_goal_contract\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-20T09:32:32Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-20T09:32:32Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"auto_improve_readiness\": \"281f3da20bc3226b472b61e9e5946fefd99030ad90c7eb29fd09e2598aa06ed5\", \"contract_id\": \"9ec0b63f3aaa921def5fbe2c83b9b88c01f79b3d47ec3cb6a839f49065480962\", \"goal_worktree_guard_report\": \"a5a3e989324554c234154dae8c09fefd6e8fb67a648e9856933d939ac27e8e1d\", \"policy\": \"9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3\", \"schema\": \"cf26e46d79af52c7038096664bc878959de9cb0107d8673fe58f0d33f0e25b6e\", \"source_paths\": \"24fc54460b1ef2f39cb9ba71bb17c7ebd9ce41b3455e7d13a5acac6c7a2d780e\"}, \"producer\": \"ops.scripts.codex_goal_client\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.codex_goal_client --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"440e5a187bb92da009177e79e609058754edaf9b2d56b056888ff6f839fede09\"}"
+        "value": "{\"$schema\": \"ops/schemas/codex-goal-contract.schema.json\", \"artifact_kind\": \"codex_goal_contract\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-20T09:57:26Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-20T09:57:26Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"auto_improve_readiness\": \"c87aa6db1b256c8c865cbed7643b20c03dd3d09ab58e57d98b819fb8e60fd693\", \"contract_id\": \"9ec0b63f3aaa921def5fbe2c83b9b88c01f79b3d47ec3cb6a839f49065480962\", \"goal_worktree_guard_report\": \"da1258c00b80769ae7b6dd85ff70473b181af226aa0aaa9e33db7914202c9394\", \"policy\": \"9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3\", \"schema\": \"cf26e46d79af52c7038096664bc878959de9cb0107d8673fe58f0d33f0e25b6e\", \"source_paths\": \"24fc54460b1ef2f39cb9ba71bb17c7ebd9ce41b3455e7d13a5acac6c7a2d780e\"}, \"producer\": \"ops.scripts.codex_goal_client\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.codex_goal_client --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"987740b657c493bec7249b3dee787d23a9fce969400c3ae7146105670bfb04b0\"}"
       }
     ]
   }

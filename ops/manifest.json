@@ -1502,8 +1502,8 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
-      "sha256": "6d8f9fd2b72187186a60fa812ff79c66d25e2dbc936b98b0ee174679e9eb6620",
-      "size_bytes": 21762
+      "sha256": "8dc798796a363560e58c917a153662f15c8b98672715fc564d64c92dbb868dfc",
+      "size_bytes": 21856
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_iteration_runtime.py",
@@ -4812,8 +4812,8 @@
     },
     {
       "path": "system/system-log.md",
-      "sha256": "2544138634c9a25dfc05abc2dee95362fbddb3abb00861d0e6f5f4682f4c0743",
-      "size_bytes": 402777
+      "sha256": "14809268d6ed707c0fbd817e1ba8c8e6c233ed513dffeca566cc14a26555a424",
+      "size_bytes": 404648
     },
     {
       "path": "system/system-raw-registry.md",
@@ -5007,8 +5007,8 @@
     },
     {
       "path": "tests/test_auto_improve_iteration_runtime.py",
-      "sha256": "483abb6f4b5746c1443c56e1af47564e820f7620e9f8c02478f1e9643adc8fad",
-      "size_bytes": 41758
+      "sha256": "81d3d99e9676a8ceebac068fc50c09b485db9971a8a66324fa5561c4da321f5e",
+      "size_bytes": 44878
     },
     {
       "path": "tests/test_auto_improve_outcome_runtime.py",
