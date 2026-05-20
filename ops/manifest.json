@@ -4812,8 +4812,8 @@
     },
     {
       "path": "system/system-log.md",
-      "sha256": "14809268d6ed707c0fbd817e1ba8c8e6c233ed513dffeca566cc14a26555a424",
-      "size_bytes": 404648
+      "sha256": "85f1283ac5c6377003c138a9bbfed53b0bc7079db860310c37ace89314cc9449",
+      "size_bytes": 406943
     },
     {
       "path": "system/system-raw-registry.md",
