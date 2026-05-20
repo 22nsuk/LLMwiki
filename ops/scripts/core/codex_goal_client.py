@@ -211,6 +211,12 @@ def _preserve_existing_profile_state(
     merged = _copy_json_object(contract)
     if not existing_contract:
         return merged
+    existing_objective = existing_contract.get("objective")
+    if isinstance(existing_objective, str) and existing_objective.strip():
+        merged["objective"] = existing_objective
+    existing_metadata = existing_contract.get("metadata")
+    if isinstance(existing_metadata, Mapping):
+        merged["metadata"] = _copy_json_object(existing_metadata)
     existing_runtime = _mapping_value(existing_contract, "runtime_profile")
     verified_profiles = _profile_list(existing_runtime.get("verified_profiles"))
     runtime_profile = dict(_mapping_value(merged, "runtime_profile"))

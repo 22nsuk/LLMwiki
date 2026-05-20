@@ -392,6 +392,11 @@ class CodexGoalClientTests(unittest.TestCase):
             created_at="2026-05-17T00:00:00Z",
             storage_path=contract_path,
         )
+        contract["objective"] = "Keep the operator-requested 5-day goal wording stable."
+        contract["metadata"] = {
+            "requested_by": "user",
+            "source_reports_reviewed": ["external-reports/long-run.md"],
+        }
         contract["runtime_profile"]["verified_profiles"] = ["30m_trial"]
         contract["runtime_profile"]["next_profile"] = "6h_ramp"
         contract["promotion_guard"]["profile_verified"] = "30m_trial"
@@ -414,6 +419,15 @@ class CodexGoalClientTests(unittest.TestCase):
         self.assertEqual(loaded["runtime_profile"]["next_profile"], "6h_ramp")
         self.assertEqual(loaded["promotion_guard"]["profile_verified"], "30m_trial")
         self.assertFalse(loaded["promotion_guard"]["sustained_runtime_claimed"])
+        self.assertEqual(
+            loaded["objective"],
+            "Keep the operator-requested 5-day goal wording stable.",
+        )
+        self.assertEqual(loaded["metadata"]["requested_by"], "user")
+        self.assertEqual(
+            loaded["metadata"]["source_reports_reviewed"],
+            ["external-reports/long-run.md"],
+        )
 
     def test_run_local_contract_marks_backend_and_status_path(self) -> None:
         contract = build_auto_improve_goal_contract(
