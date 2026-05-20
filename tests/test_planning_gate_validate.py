@@ -11,6 +11,7 @@ from ops.scripts.promotion_decision_registry_runtime import (
     attach_decision_contract,
     decision_event_from_record,
 )
+from ops.scripts.set_mechanism_run_history import set_mechanism_run_history
 
 from tests.minimal_vault_runtime import seed_minimal_vault, seed_planning_artifacts
 from tests.test_promotion_gate_exit_codes import (
@@ -606,6 +607,32 @@ class PlanningGateValidateTests(unittest.TestCase):
             self.assertEqual(report["phase"], "mechanism_finalized")
             self.assertEqual(report["status"], "pass")
             self.assertTrue(all(item["pass"] for item in report["phase_checks"]))
+
+    def test_mechanism_finalized_phase_allows_history_update_after_finalize(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_dir = seed_mechanism_run_artifacts(vault, "run-mechanism-finalized-archived")
+
+            finalize_run(vault, "run-mechanism-finalized-archived")
+            set_mechanism_run_history(
+                vault,
+                "run-mechanism-finalized-archived",
+                status="archived",
+                reason="superseded by a later run",
+                by="human",
+                ts="2026-04-15T00:00:00Z",
+            )
+
+            report = validate_run_dir(vault, run_dir)
+
+            self.assertEqual(report["phase"], "mechanism_finalized")
+            self.assertEqual(report["status"], "pass")
+            terminal_check = next(
+                item for item in report["phase_checks"] if item["check"] == "mechanism_run_terminal_event"
+            )
+            self.assertTrue(terminal_check["pass"])
 
     def test_mechanism_evaluated_phase_fails_when_required_event_is_missing(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
