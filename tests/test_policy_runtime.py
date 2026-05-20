@@ -301,6 +301,10 @@ class PolicyRuntimeTest(unittest.TestCase):
             },
         )
         self.assertEqual(
+            policy["equal_score_promotion"]["nonempty_line_growth_budget_per_added_test_case"],
+            20,
+        )
+        self.assertEqual(
             policy["promotion_policy"]["decision_values"],
             ["PROMOTE", "HOLD", "DISCARD"],
         )

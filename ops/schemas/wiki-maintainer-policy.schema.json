@@ -988,6 +988,7 @@
         "allowed_artifact_classes",
         "require_secondary_non_regression",
         "require_any_secondary_improvement",
+        "nonempty_line_growth_budget_per_added_test_case",
         "secondary_axes"
       ],
       "additionalProperties": false,
@@ -1007,6 +1008,10 @@
         },
         "require_any_secondary_improvement": {
           "type": "boolean"
+        },
+        "nonempty_line_growth_budget_per_added_test_case": {
+          "type": "integer",
+          "minimum": 0
         },
         "secondary_axes": {
           "type": "array",

@@ -14,6 +14,7 @@ from ops.scripts.mechanism_run_common_runtime import (
 )
 from ops.scripts.mechanism_run_scaffold_resolution_runtime import (
     PreparedExecutionCommands,
+    command_argv,
     prepare_execution_commands,
     resolve_experiment_inputs,
 )
@@ -41,6 +42,17 @@ class MechanismRunScaffoldResolutionRuntimeTests(unittest.TestCase):
             self.assertEqual(prepared.mutation.timeout_seconds, 42)
             self.assertEqual(prepared.check.timeout_seconds, 42)
             self.assertEqual(prepared.mutation.argv[0], sys.executable)
+
+    def test_command_argv_preserves_relative_virtualenv_executable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            (vault / ".venv" / "bin").mkdir(parents=True)
+            (vault / ".venv" / "bin" / "python").symlink_to(sys.executable)
+
+            argv = command_argv(".venv/bin/python -m pytest -q", cwd=vault)
+
+            self.assertEqual(argv[0], ".venv/bin/python")
+            self.assertEqual(argv[1:], ["-m", "pytest", "-q"])
 
     def test_prepare_execution_commands_rejects_invalid_command_syntax(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

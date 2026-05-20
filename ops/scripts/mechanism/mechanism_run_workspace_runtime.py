@@ -135,6 +135,58 @@ def _snapshot_repo_file_count(root: Path, *, run_id: str) -> int:
     return count
 
 
+def _overlay_workspace_digest_changes(
+    workspace_vault: Path,
+    report_workspace_vault: Path,
+    *,
+    run_id: str,
+    baseline_file_digests: dict[str, str],
+) -> list[str]:
+    candidate_file_digests = _snapshot_repo_file_digests(workspace_vault, run_id=run_id)
+    changed_paths: list[str] = []
+    for rel_path in sorted(set(baseline_file_digests) | set(candidate_file_digests)):
+        baseline_digest = baseline_file_digests.get(rel_path)
+        candidate_digest = candidate_file_digests.get(rel_path)
+        if baseline_digest == candidate_digest:
+            continue
+        changed_paths.append(rel_path)
+        destination = report_workspace_vault / rel_path
+        if candidate_digest is None:
+            if destination.exists() or destination.is_symlink():
+                destination.unlink()
+                _remove_empty_parent_dirs(destination, stop_at=report_workspace_vault)
+            continue
+        source = workspace_vault / rel_path
+        if not source.is_file():
+            continue
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+    return changed_paths
+
+
+def _prepare_candidate_report_workspace(
+    vault: Path,
+    workspace_vault: Path,
+    *,
+    run_id: str,
+    workspace_root: str,
+    baseline_file_digests: dict[str, str],
+    diff_model: str,
+) -> Path:
+    if diff_model != COPIED_UNIVERSE_DIFF_MODEL:
+        return workspace_vault
+    report_workspace_vault = Path(workspace_root) / "vault"
+    shutil.copytree(vault, report_workspace_vault, ignore=_copytree_ignore)
+    _link_repo_virtualenv(vault, report_workspace_vault)
+    _overlay_workspace_digest_changes(
+        workspace_vault,
+        report_workspace_vault,
+        run_id=run_id,
+        baseline_file_digests=baseline_file_digests,
+    )
+    return report_workspace_vault
+
+
 def _changed_files_manifest_ignore_reason(rel_path: str) -> str:
     normalized = rel_path.replace("\\", "/")
     for prefix, reason in CHANGED_FILES_MANIFEST_IGNORED_PREFIX_REASONS.items():

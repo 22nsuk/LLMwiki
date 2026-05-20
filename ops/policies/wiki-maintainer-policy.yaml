@@ -751,6 +751,7 @@ equal_score_promotion:
     - system_mechanism
   require_secondary_non_regression: true
   require_any_secondary_improvement: true
+  nonempty_line_growth_budget_per_added_test_case: 20
   secondary_axes:
     - lint
     - complexity

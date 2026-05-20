@@ -40,6 +40,7 @@ from .mechanism_run_workspace_runtime import (
     _apply_or_discard_workspace_changes,
     _build_repo_health_blocked_result,
     _execute_mutation_step,
+    _prepare_candidate_report_workspace,
     _prepare_workspace_copy,
     _repo_health_step,
     _run_command,
@@ -270,12 +271,24 @@ def _run_workspace_experiment_phase(
             run_id=request.run_id,
             resolution=resolution,
         )
-        candidate_artifacts = _capture_candidate_step(
-            vault,
-            workspace_vault,
-            run_id=request.run_id,
-            resolution=resolution,
-        )
+        with tempfile.TemporaryDirectory(
+            prefix=f"{request.run_id}-candidate-report-workspace-"
+        ) as candidate_report_workspace_root:
+            candidate_report_vault = _prepare_candidate_report_workspace(
+                vault,
+                workspace_vault,
+                run_id=request.run_id,
+                workspace_root=candidate_report_workspace_root,
+                baseline_file_digests=workspace.baseline_file_digests,
+                diff_model=str(workspace.telemetry.get("diff_model", "full_workspace")),
+            )
+            candidate_artifacts = _capture_candidate_step(
+                vault,
+                workspace_vault,
+                run_id=request.run_id,
+                resolution=resolution,
+                report_source_vault=candidate_report_vault,
+            )
         repo_health = _repo_health_step(
             vault,
             workspace_vault,

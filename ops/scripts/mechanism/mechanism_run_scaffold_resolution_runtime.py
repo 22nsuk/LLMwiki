@@ -79,9 +79,8 @@ def resolve_command_executable(token: str, *, cwd: Path) -> str | None:
         return None
     if any(separator in token for separator in ("/", "\\")) or token.startswith("."):
         candidate = Path(token)
-        if not candidate.is_absolute():
-            candidate = (cwd / candidate).resolve()
-        if candidate.exists() and candidate.is_file():
+        check_path = candidate if candidate.is_absolute() else cwd / candidate
+        if check_path.exists() and check_path.is_file():
             return str(candidate)
         return None
     return shutil.which(token)

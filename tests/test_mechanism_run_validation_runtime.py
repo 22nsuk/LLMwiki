@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from ops.scripts.mechanism_run_validation_runtime import (
+    build_changed_files_scope_gate_check,
     build_event_sequence_phase_checks,
     build_report_consistency_checks,
     normalize_mechanism_artifact_bundle,
@@ -307,6 +308,33 @@ class MechanismRunValidationRuntimeTests(unittest.TestCase):
         self.assertTrue(by_check["mechanism_run_event_order"]["pass"])
         self.assertFalse(by_check["mechanism_run_terminal_event"]["pass"])
         self.assertIn("finalized", by_check["mechanism_run_terminal_event"]["detail"])
+
+    def test_changed_files_scope_normalizes_manifest_paths_before_matching(self) -> None:
+        bundle = normalize_mechanism_artifact_bundle(
+            {
+                "baseline_eval_report": {},
+                "candidate_eval_report": {},
+                "baseline_lint_report": {},
+                "candidate_lint_report": {},
+                "baseline_mechanism_report": {},
+                "candidate_mechanism_report": {},
+                "changed_files_manifest_report": changed_files_manifest(
+                    "ops/scripts/example.py",
+                    changed_files=[
+                        {
+                            "path": "ops/scripts/example.py/../other.py",
+                            "change_type": "modified",
+                        }
+                    ],
+                ),
+                "run_ledger_report": run_ledger("ops/scripts/example.py"),
+            }
+        )
+
+        check = build_changed_files_scope_gate_check(bundle)
+
+        self.assertEqual(check["status"], "FAIL")
+        self.assertIn("ops/scripts/other.py", check["detail"])
 
     def test_rule_registry_decision_flow_keeps_discard_before_hold(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

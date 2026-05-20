@@ -153,6 +153,11 @@ STRUCTURAL_METRIC_KEYS = (
     "python_branch_node_count",
     "markdown_heading_count",
 )
+SEMANTIC_STRUCTURAL_METRIC_KEYS = (
+    "python_function_count",
+    "python_branch_node_count",
+    "markdown_heading_count",
+)
 
 
 def collect_mechanism_gate_inputs(
@@ -307,15 +312,47 @@ def _lint_state(bundle: MechanismArtifactBundle) -> LintState:
     )
 
 
-def _structural_state(bundle: MechanismArtifactBundle) -> StructuralState:
+def _nonempty_line_growth_within_equal_score_budget(
+    *,
+    baseline_metrics: dict[str, int],
+    candidate_metrics: dict[str, int],
+    equal_score_policy: dict,
+) -> bool:
+    nonempty_line_growth = (
+        candidate_metrics["nonempty_line_count_total"]
+        - baseline_metrics["nonempty_line_count_total"]
+    )
+    if nonempty_line_growth <= 0:
+        return True
+    added_test_cases = max(
+        0,
+        candidate_metrics["test_case_count"] - baseline_metrics["test_case_count"],
+    )
+    line_budget_per_test_case = int(
+        equal_score_policy.get("nonempty_line_growth_budget_per_added_test_case", 0)
+    )
+    return nonempty_line_growth <= added_test_cases * line_budget_per_test_case
+
+
+def _structural_state(
+    bundle: MechanismArtifactBundle,
+    *,
+    equal_score_policy: dict,
+) -> StructuralState:
     baseline_metrics = total_structural_metrics(bundle.baseline_mechanism_report)
     candidate_metrics = total_structural_metrics(bundle.candidate_mechanism_report)
+    semantic_non_regression = all(
+        candidate_metrics[key] <= baseline_metrics[key] for key in SEMANTIC_STRUCTURAL_METRIC_KEYS
+    )
+    nonempty_line_non_regression = _nonempty_line_growth_within_equal_score_budget(
+        baseline_metrics=baseline_metrics,
+        candidate_metrics=candidate_metrics,
+        equal_score_policy=equal_score_policy,
+    )
     return StructuralState(
         baseline_metrics=baseline_metrics,
         candidate_metrics=candidate_metrics,
-        non_regression=all(
-            candidate_metrics[key] <= baseline_metrics[key] for key in STRUCTURAL_METRIC_KEYS
-        ),
+        non_regression=semantic_non_regression and nonempty_line_non_regression,
         improves=any(candidate_metrics[key] < baseline_metrics[key] for key in STRUCTURAL_METRIC_KEYS),
     )
 
@@ -422,7 +459,7 @@ def build_mechanism_promotion_state(
     )
     score = _score_state(bundle)
     lint = _lint_state(bundle)
-    structural = _structural_state(bundle)
+    structural = _structural_state(bundle, equal_score_policy=equal_score_policy)
     tests = _test_coverage_state(structural)
     risk = _risk_state(bundle)
     secondary = _secondary_axis_state(

@@ -277,14 +277,18 @@ class RunMechanismExperimentTests(unittest.TestCase):
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
             seed_wrapper_vault(vault)
+            (vault / "README.md").write_text("full universe sentinel\n", encoding="utf-8")
             set_policy_value(
                 vault,
                 ("auto_improve_policy", "workspace_preparation"),
                 {"mode": "sparse_manifest", "declared_dependencies": ["tools/"]},
             )
 
+            capture_sources: list[tuple[str, Path]] = []
+            candidate_report_workspace_checks: list[bool] = []
+
             def fake_capture_reports(
-                _vault: Path,
+                source_vault: Path,
                 *,
                 run_id: str,
                 phase: str,
@@ -300,6 +304,7 @@ class RunMechanismExperimentTests(unittest.TestCase):
                 self.assertEqual(policy_path_text, "ops/policies/wiki-maintainer-policy.yaml")
                 self.assertTrue(policy)
                 self.assertIn(artifact_vault, {None, vault.resolve()})
+                capture_sources.append((phase, source_vault))
                 artifacts = write_stubbed_capture_artifacts(
                     vault,
                     run_id=run_id,
@@ -309,6 +314,13 @@ class RunMechanismExperimentTests(unittest.TestCase):
                     test_files=test_files,
                 )
                 if phase == "candidate":
+                    candidate_report_workspace_checks.append(
+                        (source_vault / "README.md").exists()
+                        and "return 1 if value > 0 else -1"
+                        in (source_vault / "ops" / "scripts" / "example.py").read_text(
+                            encoding="utf-8"
+                        )
+                    )
                     mechanism_path = vault / artifacts["mechanism"]
                     mechanism_report = json.loads(mechanism_path.read_text(encoding="utf-8"))
                     for key in ("structural_metrics", "total_structural_metrics"):
@@ -403,6 +415,11 @@ class RunMechanismExperimentTests(unittest.TestCase):
                 [item["path"] for item in changed_manifest["files"]],
                 ["ops/scripts/example.py", "tests/test_example.py"],
             )
+            baseline_source = next(source for phase, source in capture_sources if phase == "baseline")
+            candidate_source = next(source for phase, source in capture_sources if phase == "candidate")
+            self.assertEqual(baseline_source, vault.resolve())
+            self.assertNotEqual(candidate_source, vault.resolve())
+            self.assertEqual(candidate_report_workspace_checks, [True])
             self.assertIn("return 1\n", example_text)
             self.assertNotIn("test_subject_zero", test_text)
 

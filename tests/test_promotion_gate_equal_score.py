@@ -928,6 +928,137 @@ class PromotionGateEqualScoreTest(unittest.TestCase):
             self.assertEqual(complexity_check["status"], "FAIL")
             self.assertIn("baseline_total=", complexity_check["detail"])
 
+    def test_same_eval_allows_test_backed_nonempty_growth_within_policy_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_promotion_vault(vault)
+            self.seed_reports(
+                vault,
+                baseline_eval=eval_report(vault, 10),
+                candidate_eval=eval_report(vault, 10),
+                baseline_lint=lint_report(vault),
+                candidate_lint=lint_report(vault),
+                baseline_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=3052,
+                    functions=27,
+                    branches=22,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=5,
+                    complexity_score=57,
+                ),
+                candidate_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=3065,
+                    functions=27,
+                    branches=22,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=6,
+                    complexity_score=57,
+                ),
+                include_behavior_delta=True,
+            )
+
+            report = self.run_module(vault, *self.base_args(vault, behavior_delta=True))
+
+            self.assertEqual(report["decision"], "PROMOTE")
+            complexity_check = next(
+                item for item in report["checks"] if item["id"] == "structural_complexity_non_regression"
+            )
+            self.assertEqual(complexity_check["status"], "PASS")
+
+    def test_same_eval_discards_when_test_backed_nonempty_growth_exceeds_policy_budget(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_promotion_vault(vault)
+            self.seed_reports(
+                vault,
+                baseline_eval=eval_report(vault, 10),
+                candidate_eval=eval_report(vault, 10),
+                baseline_lint=lint_report(vault),
+                candidate_lint=lint_report(vault),
+                baseline_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=3052,
+                    functions=27,
+                    branches=22,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=5,
+                    complexity_score=57,
+                ),
+                candidate_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=3073,
+                    functions=27,
+                    branches=22,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=6,
+                    complexity_score=57,
+                ),
+                include_behavior_delta=True,
+            )
+
+            report = self.run_module(vault, *self.base_args(vault, behavior_delta=True))
+
+            self.assertEqual(report["decision"], "DISCARD")
+            complexity_check = next(
+                item for item in report["checks"] if item["id"] == "structural_complexity_non_regression"
+            )
+            self.assertEqual(complexity_check["status"], "FAIL")
+
+    def test_same_eval_discards_when_semantic_complexity_grows_with_tests(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_promotion_vault(vault)
+            self.seed_reports(
+                vault,
+                baseline_eval=eval_report(vault, 10),
+                candidate_eval=eval_report(vault, 10),
+                baseline_lint=lint_report(vault),
+                candidate_lint=lint_report(vault),
+                baseline_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=3052,
+                    functions=27,
+                    branches=22,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=5,
+                    complexity_score=57,
+                ),
+                candidate_mechanism=mechanism_report(
+                    vault,
+                    primary_targets=["ops/scripts/example.py"],
+                    nonempty=3124,
+                    functions=30,
+                    branches=33,
+                    headings=0,
+                    test_file_count=1,
+                    test_case_count=6,
+                    complexity_score=61,
+                ),
+                include_behavior_delta=True,
+            )
+
+            report = self.run_module(vault, *self.base_args(vault, behavior_delta=True))
+
+            self.assertEqual(report["decision"], "DISCARD")
+            complexity_check = next(
+                item for item in report["checks"] if item["id"] == "structural_complexity_non_regression"
+            )
+            self.assertEqual(complexity_check["status"], "FAIL")
+
     def test_same_eval_without_secondary_improvement_discards(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

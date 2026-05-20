@@ -113,6 +113,7 @@ POLICY_RUNTIME_REQUIRED_PATHS = (
     (("behavior_delta", "required_for_system_mechanism"), bool),
     (("behavior_delta", "required_for_auto_improve"), bool),
     (("behavior_delta", "required_for_equal_score_promotion"), bool),
+    (("equal_score_promotion", "nonempty_line_growth_budget_per_added_test_case"), int),
     (("auto_improve_policy", "artifact_class"), str),
     (("auto_improve_policy", "session_reports_dir"), str),
     (("auto_improve_policy", "defaults", "executor_timeout_seconds"), int),

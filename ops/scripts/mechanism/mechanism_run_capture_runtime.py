@@ -133,9 +133,10 @@ def _capture_candidate_step(
     *,
     run_id: str,
     resolution: ExperimentResolution,
+    report_source_vault: Path | None = None,
 ) -> dict:
     candidate_artifacts = _capture_reports(
-        workspace_vault,
+        report_source_vault or workspace_vault,
         run_id=run_id,
         phase="candidate",
         policy=resolution.policy,

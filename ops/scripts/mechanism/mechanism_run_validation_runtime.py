@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Mapping
 
 from ops.scripts.filesystem_runtime import manifest_apply_guard_state
+from ops.scripts.path_runtime import normalize_repo_path_text
 from .promotion_gate_common_runtime import (
     extract_policy_identity,
     ledger_artifact_targets,
@@ -123,6 +124,15 @@ def path_in_declared_scope(path: str, declared_targets: list[str]) -> bool:
     return any(declared_target_matches(path, target) for target in declared_targets)
 
 
+def normalize_changed_file_path(path: str) -> str:
+    normalized = normalize_repo_path_text(path)
+    if normalized is None or normalized in {".", ".."} or normalized.startswith("../"):
+        return path
+    if Path(normalized).is_absolute():
+        return path
+    return normalized
+
+
 def manifest_declared_targets(bundle: MechanismArtifactBundle) -> DeclaredTargetSet:
     declared_targets = bundle.changed_files_manifest_report.get("declared_targets", {})
     return DeclaredTargetSet(
@@ -164,7 +174,7 @@ def changed_file_paths(bundle: MechanismArtifactBundle) -> list[str]:
     if not isinstance(changed_files, list):
         return []
     return sorted(
-        entry["path"]
+        normalize_changed_file_path(entry["path"])
         for entry in changed_files
         if isinstance(entry, dict) and isinstance(entry.get("path"), str)
     )
