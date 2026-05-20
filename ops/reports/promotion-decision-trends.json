@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/promotion-decision-trends.schema.json",
   "artifact_kind": "promotion_decision_trends",
-  "generated_at": "2026-05-20T03:14:23Z",
+  "generated_at": "2026-05-20T04:43:55Z",
   "producer": "ops.scripts.observability_decision_metrics_runtime",
   "source_command": "python -m ops.scripts.run_mechanism_experiment --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "4b8a7b8084c2f79f23802a53dd1e7a5064b08088e29c30dd298587137d918e81",
+  "source_tree_fingerprint": "61509135b50c5e7c9722b0503e4d2cd7cd166c2ed0bdf9decc7dfde7660321f9",
   "input_fingerprints": {
     "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "c0740070a0961037b7e620c138bffb215749f063d8c97be659cfae1391b62399",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "f573cd90bbcac67836d1d4a0c8b0dd8ff4c7ac8856f03a2ba0b075cdd72fffa5",
-    "promotion_reports": "0781c48d5cf55e914698152b4b792d1a3ddf67a7f0ca197d0034e72873cfed84",
+    "promotion_reports": "91518eacee7e1d7e66efeba72e28a0a49ac518c7c3c426154d235fbe3bed757a",
     "recent_window": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T03:14:23Z"
+    "checked_at": "2026-05-20T04:43:55Z"
   },
   "vault": ".",
   "policy": {
@@ -28,20 +28,98 @@
     "version": 4
   },
   "summary": {
-    "runs_discovered": 18,
-    "promotion_reports_considered": 10,
+    "runs_discovered": 22,
+    "promotion_reports_considered": 12,
     "finalized_count": 5,
     "recent_window": 20
   },
   "decision_counts": {
-    "HOLD": 2,
+    "HOLD": 4,
     "PROMOTE": 6,
     "DISCARD": 2
   },
   "artifact_class_counts": {
-    "system_mechanism": 10
+    "system_mechanism": 12
   },
   "recent_runs": [
+    {
+      "run_id": "5day-auto-improve-runtime-rerun2-30m_trial-run-01-auto-improve-readiness-queue-runtime",
+      "observed_at": "2026-05-20T04:43:50Z",
+      "decision": "HOLD",
+      "decision_record": {
+        "decision_id": "decision:5day-auto-improve-runtime-rerun2-30m_trial-run-01-auto-improve-readiness-queue-runtime:9ed18f962f0f0670",
+        "subject_id": "5day-auto-improve-runtime-rerun2-30m_trial-run-01-auto-improve-readiness-queue-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 0,
+        "source_rule": "legacy_top_level_decision",
+        "source_pass": "legacy_promotion_report",
+        "actor": "legacy_promotion_report",
+        "reason_code": "legacy_promotion_report",
+        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+        "evidence_refs": [],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "5day-auto-improve-runtime-rerun2-30m_trial-run-01-auto-improve-readiness-queue-runtime:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "5day-auto-improve-runtime-rerun2-30m_trial-run-01-auto-improve-readiness-queue-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/5day-auto-improve-runtime-rerun2-30m_trial-run-01-auto-improve-readiness-queue-runtime/promotion-report.json"
+    },
+    {
+      "run_id": "5day-auto-improve-runtime-rerun1-30m_trial-run-01-auto-improve-readiness-queue-runtime",
+      "observed_at": "2026-05-20T04:03:35Z",
+      "decision": "HOLD",
+      "decision_record": {
+        "decision_id": "decision:5day-auto-improve-runtime-rerun1-30m_trial-run-01-auto-improve-readiness-queue-runtime:5e82f442969d703a",
+        "subject_id": "5day-auto-improve-runtime-rerun1-30m_trial-run-01-auto-improve-readiness-queue-runtime",
+        "subject_kind": "system_mechanism",
+        "decision": "HOLD",
+        "decision_stage": "promotion_gate",
+        "is_terminal": false,
+        "policy_version": 0,
+        "source_rule": "legacy_top_level_decision",
+        "source_pass": "legacy_promotion_report",
+        "actor": "legacy_promotion_report",
+        "reason_code": "legacy_promotion_report",
+        "reason_detail": "Synthesized from legacy top-level promotion_report.decision.",
+        "evidence_refs": [],
+        "decided_at": "",
+        "effective_at": "",
+        "supersedes": [],
+        "reducer_key": "promotion_decision_registry_v1",
+        "precedence_key": "0050:HOLD",
+        "dedupe_key": "5day-auto-improve-runtime-rerun1-30m_trial-run-01-auto-improve-readiness-queue-runtime:promotion_gate",
+        "finalizable": false,
+        "finalize_blockers": [
+          "decision_not_finalizable",
+          "required_signoff_not_approved"
+        ],
+        "ledger_event_type": "promotion_evaluated",
+        "ledger_partition_key": "5day-auto-improve-runtime-rerun1-30m_trial-run-01-auto-improve-readiness-queue-runtime"
+      },
+      "artifact_class": "system_mechanism",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py"
+      ],
+      "finalized": false,
+      "promotion_report": "runs/5day-auto-improve-runtime-rerun1-30m_trial-run-01-auto-improve-readiness-queue-runtime/promotion-report.json"
+    },
     {
       "run_id": "5day-auto-improve-runtime-30m_trial-run-01-auto-improve-readiness-queue-runtime",
       "observed_at": "2026-05-20T03:14:19Z",
