@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/mechanism-review-candidates.schema.json",
   "artifact_kind": "mechanism_review_candidates_report",
-  "generated_at": "2026-05-20T08:56:04Z",
+  "generated_at": "2026-05-20T09:21:32Z",
   "producer": "ops.scripts.mechanism_review_runtime",
   "source_command": "python -m ops.scripts.mechanism_review",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "db54d282fb6d36be74f680047e16d21eb312a38f5fca7b617583350e340a838a",
+  "source_tree_fingerprint": "a0eb1f14b9f1868fe8fbacc68511c70444bfa4c3cfb7c9d67000e9ab0e7515b3",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "c730a4570492eaf5cb038d51227064a8c9404069f62cb3920049a985951e876a",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b6a97e444164d60ea21111ba0d6068ce8e345c212c78dd4070013da1d67097f4",
-    "excluded_promotion_reports": "37ae6dd0e225f063f878cf542ef37ab7f846be1b1ef044afcf54acd4d16a624f",
-    "promotion_reports": "78f2a79baaf822d037acad3bdb268e90c6b5fbe0da04ea7c21e90e6165f8e2e3",
+    "excluded_promotion_reports": "4243b44bc29cd7f9f5b91dc662255ed62700a4c439e7d38bfb5418db5e5c52b8",
+    "promotion_reports": "d63fdff8c967123b30e5291b3cab7462e23a4253b7cd22a9fe0fbd831bcbc210",
     "skipped_artifacts": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "mechanism_review_enabled": "3cbc87c7681f34db4617feaa2c8801931bc5e42d8d0f560e756dd4cd92885f18",
     "mechanism_review_max_candidates": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T08:56:04Z"
+    "checked_at": "2026-05-20T09:21:32Z"
   },
   "vault": ".",
   "policy": {
@@ -33,9 +33,9 @@
   },
   "status": "pass",
   "summary": {
-    "runs_discovered": 18,
+    "runs_discovered": 19,
     "runs_considered": 10,
-    "runs_excluded": 8,
+    "runs_excluded": 9,
     "runs_skipped": 0,
     "candidates_emitted": 1
   },
@@ -89,6 +89,12 @@
         "status": "quarantined",
         "reason": "superseded infrastructure failure: queue-unblock rotation selected an already-satisfied auto-readiness target; rotation target list now advances to mechanism run validation before retry",
         "path": "runs/5day-auto-improve-runtime-rerun5-30m_trial-run-01-auto-improve-readiness-queue-runtime/promotion-report.json"
+      },
+      {
+        "run_id": "5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime",
+        "status": "quarantined",
+        "reason": "superseded no-op queue-unblock failure: auto-readiness rotation selected an already-satisfied target and ended before candidate artifacts were generated",
+        "path": "runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/promotion-report.json"
       }
     ],
     "bootstrap": {
@@ -238,14 +244,14 @@
         "defect_escape_pair_count": 1
       },
       "global_signals": {
-        "attempt_count": 18,
-        "recent_attempt_count": 18,
+        "attempt_count": 19,
+        "recent_attempt_count": 19,
         "moving_averages": {
-          "hold": 0.3889,
-          "discard": 0.2222,
+          "hold": 0.4211,
+          "discard": 0.2105,
           "rollback_signal": 0.0
         },
-        "rework_count": 2,
+        "rework_count": 3,
         "rollback_signal_count": 0,
         "defect_escape_pair_count": 0
       },
@@ -315,7 +321,7 @@
         "min_attempts_considered": 10,
         "min_target_attempts": 2,
         "shadow_priority_max_delta": 10,
-        "attempts_considered": 18,
+        "attempts_considered": 19,
         "current_order": [
           "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime"
         ],

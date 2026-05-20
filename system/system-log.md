@@ -5948,3 +5948,55 @@ The fixed-point check now passes with the refreshed blocked-state reports. The n
 - Active reports now agree that rerun9 is closed as DISCARD evidence, not promoted runtime progress.
 - `goal-runtime-fixed-point-check` is the current semantic alignment proof for the blocked goal state.
 - Further runtime attempts should be based on freshly generated queue readiness, not on preserved pre-merge safety artifacts.
+
+---
+
+## [2026-05-20 18:18 KST] improve | Record rerun10 no-op queue-unblock failure
+
+### Summary
+`5day-auto-improve-runtime-rerun10-30m_trial` executed the queue-unblock rotation proposal for `ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py`. The worker role reported `pass`, but it did not modify any declared primary target because the selected readiness-queue runtime behavior was already satisfied in the current code. The executor primary-target gate therefore stopped the run as `mutation_failed`, and the session closed with `failure_budget_exhausted` and decision `HOLD`.
+
+This is not successful 30m profile evidence. It is evidence that the queue-unblock fallback can still surface a stale/no-op rotation target when outcome metrics and mutation proposals are not regenerated after a fresh mutation failure.
+
+### Artifacts
+- `ops/reports/auto-improve-sessions/5day-auto-improve-runtime-rerun10-30m_trial.json`
+- `runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/promotion-report.json`
+- `runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/run-ledger.json`
+- `runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/run-telemetry.json`
+- `runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/worker-executor-report.json`
+- `runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/mutation-command.stdout.txt`
+- `ops/reports/outcome-metrics.json`
+- `ops/reports/mutation-proposals.json`
+- `ops/reports/auto-improve-readiness.json`
+- `system/system-log.md`
+
+### Consequence
+- The rerun10 candidate is a no-op mutation failure and must not count toward the 5-day runtime goal.
+- Fresh outcome metrics should mark `recent_log_overlap_queue_blocked__auto-improve-readiness-queue-runtime` as unresolved rework, so the same stale fallback is blocked before another trial.
+- Local-only run artifacts were preserved only as pre-merge/diagnostic evidence; they should be normalized for freshness checks or cleaned once their summary evidence has been captured.
+
+---
+
+## [2026-05-20 18:19 KST] improve | Retire stale auto-readiness queue-unblock rotation
+
+### Summary
+The recent-log-overlap queue-unblock rotation no longer offers `ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py` as a fallback target. That target has now produced no-op mutation failures twice, so keeping it in the fallback list lets a goal trial spend its bounded profile on behavior that is already satisfied instead of surfacing a real runnable proposal.
+
+The reconcile target also refreshes session synopsis and remediation backlog after readiness body generation so the tracked goal snapshot reflects the final readiness-derived blocker set before the fixed-point check. Session synopsis now keeps the full deduped readiness blocker set instead of truncating it before goal-status pressure is merged, which preserves the no-runnable-proposal blocker when multiple promotion blockers are active.
+
+### Artifacts
+- `ops/scripts/mechanism/mutation_proposal_runtime.py`
+- `ops/scripts/learning/session_synopsis.py`
+- `tests/test_mutation_proposal.py`
+- `tests/test_session_synopsis.py`
+- `mk/mechanism.mk`
+- `ops/reports/mutation-proposals.json`
+- `ops/reports/auto-improve-readiness.json`
+- `ops/reports/session-synopsis.json`
+- `ops/reports/remediation-backlog.json`
+- `system/system-log.md`
+
+### Consequence
+- Queue-unblock rotation is now limited to mutation proposal runtime and mechanism run validation runtime, which prevents the already-satisfied readiness-queue target from being retried as a synthetic runnable proposal.
+- If both queue-unblock rotation targets overlap recent chronology, the queue remains honestly blocked instead of falling through to a known stale target.
+- The additional log closeout advances current chronology without weakening the recent-log-overlap guardrail; the next proposal refresh must decide from current evidence whether the real iteration-persistence candidate is runnable.

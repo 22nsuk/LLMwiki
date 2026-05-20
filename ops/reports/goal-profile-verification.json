@@ -1,22 +1,22 @@
 {
   "$schema": "ops/schemas/goal-profile-verification.schema.json",
   "artifact_kind": "goal_profile_verification",
-  "generated_at": "2026-05-20T08:53:35Z",
+  "generated_at": "2026-05-20T09:10:01Z",
   "producer": "ops.scripts.goal_profile_verification",
   "source_command": "python -m ops.scripts.goal_profile_verification --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "670596f6edc352fca2dfaa7afe5b981bc5af05ff466cc0a425de511113268887",
+  "source_tree_fingerprint": "03f855d7686619181570360aecf691530bdb40feddb96abef486755ebc30e662",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "000805baed93135799368ffc434adc981e3b59dfcef3b290061356cf4e4e41cb",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "43d085e233b7b75700f408275b53c03bae7ab852739d2c574b5b14df112e6152",
-    "auto_improve_session": "missing",
-    "goal_contract": "f81f26fae001f26828322a1ea76edd8acc75df43d928dad5235046170f949e41",
-    "goal_run_status": "fce1b571b3fea554fd75de623efb9ff96d8afbd6a8b97ede1cdc902ceaf5199b",
-    "run_audit_log": "ded94162b2095fd442be20cf163ac0721abd7df3a09d14f24ff90aee5c2141ab",
-    "run_resume_metadata": "a4f645f04f9739e49e480b01888105b907597611d05a9340e37677587f03b3c8",
-    "run_status_markdown": "90e01fd9db43ae946d2d04cb45dd69184ef6374a7a4fa8d19867f589901e673a"
+    "auto_improve_session": "0aa5a5de0db206cad451f9bc1896c6d1b0a38d72862af3a92074eb02c557a42a",
+    "goal_contract": "bc10afd1ed83b70c29e75e09dd50fd4fa28766083eca23f8dd8a312dc0e93709",
+    "goal_run_status": "d4259ac4c67936de06bfedb1fe34bc9233201ed5c9cf75ec3ce35afcd4293de0",
+    "run_audit_log": "3440f3ec1c3cc4133be9550aec02fdc2ad54675754ac17bfa4c341e72c3f5f62",
+    "run_resume_metadata": "0afd1e6437571c75c1e0344de0c04de284ea4ecae8a639d25cff08651ae6108d",
+    "run_status_markdown": "2a1db90137c05cde71e566cc18ac918490c12f6f219f5a088da72f7c4d412414"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -24,79 +24,79 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T08:53:35Z"
+    "checked_at": "2026-05-20T09:10:01Z"
   },
   "vault": ".",
   "goal": {
     "contract_path": "runs/goal-5day-auto-improve-runtime/state/codex-goal-contract.json",
     "contract_id": "goal-5day-auto-improve-runtime",
-    "contract_sha256_before": "21c5ee00a8db864f6c11620a505aca4aff7945373face069d678f35731509ac4",
-    "contract_sha256_after": "21c5ee00a8db864f6c11620a505aca4aff7945373face069d678f35731509ac4"
+    "contract_sha256_before": "31c610adfc74a53788fcc3e854f6fb91d0668db1eae63d0034818605202b8360",
+    "contract_sha256_after": "31c610adfc74a53788fcc3e854f6fb91d0668db1eae63d0034818605202b8360"
   },
   "profile": {
     "target_profile": "30m_trial",
     "verification_status": "blocked",
     "minimum_elapsed_seconds": 1800,
-    "observed_elapsed_seconds": 0,
+    "observed_elapsed_seconds": 567,
     "already_verified": false,
     "eligible": false
   },
   "run": {
     "status_report_path": "runs/goal-5day-auto-improve-runtime/state/goal-run-status.json",
-    "run_id": "5day-auto-improve-runtime",
-    "run_status": "blocked",
+    "run_id": "5day-auto-improve-runtime-rerun10-30m_trial",
+    "run_status": "completed",
     "run_profile": "30m_trial",
-    "started_at": "2026-05-20T08:53:34Z",
-    "completed_at": ""
+    "started_at": "2026-05-20T09:00:33Z",
+    "completed_at": "2026-05-20T09:10:00Z"
   },
   "run_artifacts": {
     "status": "clean",
     "checks": [
       {
         "artifact": "status_markdown_path",
-        "path": "runs/goal-5day-auto-improve-runtime/state/status.md",
+        "path": "runs/goal-5day-auto-improve-runtime-rerun10-30m_trial/status.md",
         "status": "present"
       },
       {
         "artifact": "resume_metadata_path",
-        "path": "runs/goal-5day-auto-improve-runtime/state/resume-metadata.json",
+        "path": "runs/goal-5day-auto-improve-runtime-rerun10-30m_trial/resume-metadata.json",
         "status": "present"
       },
       {
         "artifact": "audit_log_path",
-        "path": "runs/goal-5day-auto-improve-runtime/state/audit-log.jsonl",
+        "path": "runs/goal-5day-auto-improve-runtime-rerun10-30m_trial/audit-log.jsonl",
         "status": "present"
       },
       {
         "artifact": "status_markdown_current",
-        "path": "runs/goal-5day-auto-improve-runtime/state/status.md",
+        "path": "runs/goal-5day-auto-improve-runtime-rerun10-30m_trial/status.md",
         "status": "pass"
       },
       {
         "artifact": "resume_metadata_current",
-        "path": "runs/goal-5day-auto-improve-runtime/state/resume-metadata.json",
+        "path": "runs/goal-5day-auto-improve-runtime-rerun10-30m_trial/resume-metadata.json",
         "status": "pass"
       },
       {
         "artifact": "audit_log_current",
-        "path": "runs/goal-5day-auto-improve-runtime/state/audit-log.jsonl",
+        "path": "runs/goal-5day-auto-improve-runtime-rerun10-30m_trial/audit-log.jsonl",
         "status": "pass"
       },
       {
         "artifact": "audit_log_command_observability_current",
-        "path": "runs/goal-5day-auto-improve-runtime/state/audit-log.jsonl",
+        "path": "runs/goal-5day-auto-improve-runtime-rerun10-30m_trial/audit-log.jsonl",
         "status": "pass"
       }
     ],
-    "audit_event_count": 15,
-    "runner_command_audit_current": false
+    "audit_event_count": 3,
+    "runner_command_audit_current": true
   },
   "session_evidence": {
-    "status": "missing",
-    "path": "ops/reports/auto-improve-sessions/5day-auto-improve-runtime.json",
-    "session_status": "",
-    "stop_reason": "",
-    "iteration_count": 0,
+    "status": "incomplete",
+    "path": "ops/reports/auto-improve-sessions/5day-auto-improve-runtime-rerun10-30m_trial.json",
+    "session_status": "complete",
+    "stop_reason": "failure_budget_exhausted",
+    "iteration_count": 1,
     "successful_iteration_count": 0,
     "has_success_then_followup": false,
     "maintenance_status": "missing",
@@ -114,16 +114,16 @@
     "requires_meaningful_maintenance": true
   },
   "command_observability": {
-    "mode": "",
-    "heartbeat_count": 0,
-    "expected_min_heartbeat_count": 0,
-    "timeout_seconds": 0,
-    "last_command_returncode": -1,
+    "mode": "process_heartbeat",
+    "heartbeat_count": 1,
+    "expected_min_heartbeat_count": 1,
+    "timeout_seconds": 2700,
+    "last_command_returncode": 0,
     "last_command_timed_out": false,
-    "last_command_termination_reason": "",
-    "last_command_heartbeat_at": "",
-    "runner_audit_current": false,
-    "status": "incomplete"
+    "last_command_termination_reason": "completed",
+    "last_command_heartbeat_at": "2026-05-20T09:10:00Z",
+    "runner_audit_current": true,
+    "status": "clean"
   },
   "evidence_paths": [
     {
@@ -142,7 +142,7 @@
     }
   ],
   "contract_update": {
-    "apply_requested": false,
+    "apply_requested": true,
     "apply_allowed": false,
     "applied": false,
     "verified_profiles_before": [],
@@ -153,15 +153,10 @@
     "next_profile_after": "30m_trial"
   },
   "blockers": [
-    "goal run is not completed",
     "profile minimum elapsed time not met",
-    "auto-improve session evidence missing",
-    "goal run command heartbeat is not current",
-    "goal run command observation mode is not process_heartbeat",
-    "goal run command audit was not written by goal runtime runner",
-    "goal run command timeout is missing",
-    "goal run command returncode is not zero",
-    "goal run command termination reason is not completed"
+    "auto-improve session stop reason is not accepted for profile",
+    "auto-improve session has no successful improvement iteration",
+    "auto-improve session lacks meaningful runtime maintenance evidence"
   ],
   "status": "attention"
 }

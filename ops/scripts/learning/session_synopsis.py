@@ -250,7 +250,7 @@ def _recent_blockers(inputs: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     deduped: dict[str, dict[str, Any]] = {}
     for blocker in blockers:
         deduped.setdefault(blocker["id"], blocker)
-    return list(deduped.values())[:5]
+    return list(deduped.values())
 
 
 def _last_success_patterns(inputs: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:

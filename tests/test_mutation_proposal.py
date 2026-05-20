@@ -920,8 +920,7 @@ class MutationProposalTest(unittest.TestCase):
                 "- `ops/scripts/wiki_lint.py`\n"
                 "- `ops/scripts/mechanism_assess.py`\n"
                 "- `ops/scripts/mechanism/mutation_proposal_runtime.py`\n"
-                "- `ops/scripts/mechanism/mechanism_run_validation_runtime.py`\n"
-                "- `ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py`\n",
+                "- `ops/scripts/mechanism/mechanism_run_validation_runtime.py`\n",
                 encoding="utf-8",
             )
 

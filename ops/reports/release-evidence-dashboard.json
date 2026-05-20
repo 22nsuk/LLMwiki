@@ -1,23 +1,23 @@
 {
   "$schema": "ops/schemas/release-evidence-dashboard.schema.json",
   "artifact_kind": "release_evidence_dashboard",
-  "generated_at": "2026-05-20T06:24:30Z",
+  "generated_at": "2026-05-20T09:22:19Z",
   "producer": "ops.scripts.release_evidence_dashboard",
   "source_command": "python -m ops.scripts.release_evidence_dashboard --vault . --out ops/reports/release-evidence-dashboard.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
+  "source_tree_fingerprint": "a0eb1f14b9f1868fe8fbacc68511c70444bfa4c3cfb7c9d67000e9ab0e7515b3",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "3d201c44c8525de4f9e7af11e9bcba6a5572a46b2f246bc43324bf377c45ab56",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "4ef6c467c6746a683c510fda7ddea7fbf283b179aa5920ced99b61a6def7d268",
-    "artifact_freshness": "619689613a44f2a2c9b3ff97381075ebc3c3eef6bf998093c8972aa3979cdf14",
-    "learning_delta_scoreboard": "ab9c8e4496ee724aaee3814edf34db1ca95a0e23bbe80244a37be870efb5bfeb",
+    "artifact_freshness": "82a62201da7739b39115038db768817d4497f4c950a655ad836478bc60c69302",
+    "learning_delta_scoreboard": "15a17ffc60d38634f66f2de261fbb5b6fbd9965e3b0cb1edc716e4911734a188",
     "learning_readiness_signoff_revalidation": "d082dc702fb5c7539b8fff77e9fcc09fa024db6edf940bc0282e86c2c66345ad",
     "release_closeout_fixed_point": "03ae1ca1e6d1fcfe5bd4934cdb4db2935538520f5a8cef2f294a731ea8949ee1",
     "release_closeout_fixed_point_cost_trend": "4ad9945123b2cb8856267681013cf7200acf64fef40079a738488071907344ef",
-    "release_closeout_summary": "f511d1dd30d1260128a104d2cdceadd1c93b1b739cbbc38592615899476fc280",
-    "current_source_tree_fingerprint": "ca0f779ce070bb7611ba1ef7dd877515fc1849c185b842f0d1aa963a57c35e92"
+    "release_closeout_summary": "3f7d5e7fc5192fffe9ef963b70f393ccf1aad153c1d1d23ef4b9d5891c552781",
+    "current_source_tree_fingerprint": "1494a0409e4008eef8e045d765ada9fbff2fee2210170c1ad27d4cf1c93af764"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T06:24:30Z"
+    "checked_at": "2026-05-20T09:22:19Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
     "version": 4
   },
   "status": "fail",
-  "source_tree_fingerprint_current": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
+  "source_tree_fingerprint_current": "a0eb1f14b9f1868fe8fbacc68511c70444bfa4c3cfb7c9d67000e9ab0e7515b3",
   "inputs": {
     "release_closeout_summary": {
       "path": "ops/reports/release-closeout-summary.json",
@@ -77,8 +77,8 @@
     },
     "artifact_freshness": {
       "load_status": "ok",
-      "status": "attention",
-      "stable_debt_count": 56,
+      "status": "pass",
+      "stable_debt_count": 0,
       "schema_invalid_artifact_count": 0
     },
     "learning_delta_scoreboard": {
@@ -653,28 +653,27 @@
     }
   },
   "accepted_risk_delta": {
-    "status": "changed",
-    "previous_report_generated_at": "2026-05-20T06:19:24Z",
-    "added_count": 1,
+    "status": "unchanged",
+    "previous_report_generated_at": "2026-05-20T06:24:29Z",
+    "added_count": 0,
     "removed_count": 0,
-    "unchanged_count": 3,
-    "added": [
-      "artifact_freshness::artifact_freshness_attention"
-    ],
+    "unchanged_count": 4,
+    "added": [],
     "removed": [],
     "unchanged": [
+      "artifact_freshness::artifact_freshness_attention",
       "external_report_reference_manifest::external_report_strict_unavailable",
       "generated_index::generated_index_archive_advisory",
       "source_tree_coherence::source_tree_coherence_attention"
     ],
-    "summary": "accepted_risk_delta status=changed; added=1; removed=0; unchanged=3"
+    "summary": "accepted_risk_delta status=unchanged; added=0; removed=0; unchanged=4"
   },
   "summary": {
     "gate_count": 16,
-    "authoritative_gate_count": 7,
+    "authoritative_gate_count": 4,
     "checked_in_fail_count": 2,
-    "live_rerun_fail_count": 2,
-    "live_rerun_not_run_count": 6,
+    "live_rerun_fail_count": 1,
+    "live_rerun_not_run_count": 10,
     "accepted_risk_count": 4,
     "gate_attention_count": 1,
     "required_input_fail_count": 0,
@@ -1026,7 +1025,7 @@
         ]
       },
       "owner": "runtime-maintainer",
-      "expiry": "2026-05-27T06:24:29Z",
+      "expiry": "2026-05-27T09:16:22Z",
       "next_action": "Rerun the sealed closeout lane with a current distribution ZIP before external review signoff.",
       "required_evidence": [],
       "claims": [
@@ -1101,10 +1100,10 @@
       "source_path": "ops/reports/raw-registry-preflight-report.json",
       "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "pass",
-        "reason": "checked-in component matches current source tree"
+        "status": "not_run",
+        "reason": "component fingerprint differs from current source tree"
       },
-      "authoritative_for_release": true,
+      "authoritative_for_release": false,
       "accepted_risk": {
         "count": 0,
         "codes": []
@@ -1119,8 +1118,8 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "raw_registry fingerprint/currentness diagnostic state is pass",
-          "provenance_label": "fingerprint_equivalent_to_checked_in"
+          "claim": "raw_registry fingerprint/currentness diagnostic state is not_run",
+          "provenance_label": "diagnostic_workspace_only"
         }
       ]
     },
@@ -1129,10 +1128,10 @@
       "source_path": "ops/reports/artifact-freshness-report.json",
       "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "pass",
-        "reason": "checked-in component matches current source tree"
+        "status": "not_run",
+        "reason": "component fingerprint differs from current source tree"
       },
-      "authoritative_for_release": true,
+      "authoritative_for_release": false,
       "accepted_risk": {
         "count": 1,
         "codes": [
@@ -1140,7 +1139,7 @@
         ]
       },
       "owner": "runtime-maintainer",
-      "expiry": "2026-05-27T06:24:29Z",
+      "expiry": "2026-05-27T09:16:22Z",
       "next_action": "Rerun artifact-freshness before the next release closeout.",
       "required_evidence": [],
       "claims": [
@@ -1149,8 +1148,8 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "artifact_freshness fingerprint/currentness diagnostic state is pass",
-          "provenance_label": "fingerprint_equivalent_to_checked_in"
+          "claim": "artifact_freshness fingerprint/currentness diagnostic state is not_run",
+          "provenance_label": "diagnostic_workspace_only"
         }
       ]
     },
@@ -1159,10 +1158,10 @@
       "source_path": "ops/reports/generated-artifact-index.json",
       "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "pass",
-        "reason": "checked-in component matches current source tree"
+        "status": "not_run",
+        "reason": "component fingerprint differs from current source tree"
       },
-      "authoritative_for_release": true,
+      "authoritative_for_release": false,
       "accepted_risk": {
         "count": 1,
         "codes": [
@@ -1170,7 +1169,7 @@
         ]
       },
       "owner": "runtime-maintainer",
-      "expiry": "2026-05-27T06:24:29Z",
+      "expiry": "2026-05-27T09:16:22Z",
       "next_action": "Rerun generated-artifact-index before the next release closeout.",
       "required_evidence": [],
       "claims": [
@@ -1179,8 +1178,8 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "generated_index fingerprint/currentness diagnostic state is pass",
-          "provenance_label": "fingerprint_equivalent_to_checked_in"
+          "claim": "generated_index fingerprint/currentness diagnostic state is not_run",
+          "provenance_label": "diagnostic_workspace_only"
         }
       ]
     },
@@ -1189,8 +1188,8 @@
       "source_path": "ops/reports/auto-improve-readiness.json",
       "checked_in_state": "fail",
       "live_rerun_state": {
-        "status": "fail",
-        "reason": "checked-in component matches current source tree but is not ready"
+        "status": "not_run",
+        "reason": "component fingerprint differs from current source tree"
       },
       "authoritative_for_release": false,
       "accepted_risk": {
@@ -1203,9 +1202,6 @@
       "required_evidence": [
         "Run make artifact-freshness-check and confirm status=pass.",
         "Resolve artifact freshness blockers before promoting an auto-improve result.",
-        "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
-        "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
-        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal.",
         "Run make remediation-backlog and confirm status=pass with open_item_count=0.",
         "Close or explicitly defer blocks_promotion backlog items before promotion.",
         "can_promote_result must stay false while remediation backlog items are open."
@@ -1216,8 +1212,8 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "auto_improve_readiness fingerprint/currentness diagnostic state is fail",
-          "provenance_label": "fingerprint_equivalent_to_checked_in"
+          "claim": "auto_improve_readiness fingerprint/currentness diagnostic state is not_run",
+          "provenance_label": "diagnostic_workspace_only"
         }
       ]
     },
@@ -1310,7 +1306,7 @@
         ]
       },
       "owner": "runtime-maintainer",
-      "expiry": "2026-05-27T06:24:29Z",
+      "expiry": "2026-05-27T09:16:22Z",
       "next_action": "Review advisory accepted-risk lifecycle before operator signoff.",
       "required_evidence": [
         "Rerun generated-artifact-index before the next release closeout.",

@@ -73,12 +73,6 @@ RECENT_LOG_OVERLAP_UNBLOCK_TARGET_OPTIONS = [
         ],
         "test_files": ["tests/test_mechanism_run_validation_runtime.py"],
     },
-    {
-        "primary_targets": [
-            "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py"
-        ],
-        "test_files": ["tests/test_auto_improve_readiness_runtime.py"],
-    },
 ]
 RECENT_LOG_OVERLAP_UNBLOCK_RUN_ID = "recent-log-overlap-queue-blocked"
 RECENT_OUTCOME_REWORK_BLOCKER = "recent_outcome_rework"

@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/raw-registry-cross-environment-matrix.schema.json",
   "artifact_kind": "raw_registry_cross_environment_matrix",
-  "generated_at": "2026-05-20T08:55:59Z",
+  "generated_at": "2026-05-20T09:15:23Z",
   "producer": "ops.scripts.raw_registry_cross_environment_matrix",
   "source_command": "python -m ops.scripts.raw_registry_cross_environment_matrix --vault . --out ops/reports/raw-registry-cross-environment-matrix.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "db54d282fb6d36be74f680047e16d21eb312a38f5fca7b617583350e340a838a",
+  "source_tree_fingerprint": "f13f7b66941e91264e8f2635eb7fe623f81d38914241385cc1da10194cd03ee0",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "493eae8316f22f152cd49f2a3a166759a2c9e278e72601188a8d1faac7f84593",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b7c24c6a7cbdbd00661f0dbf539a93a1a10398e53d31ccc48fcdd5d7ce42d3e4",
-    "stored_preflight_report": "69e90aa13caed559166930e80eb3c51769cbb17dfe6d34a7564ecba5a4e458aa",
+    "stored_preflight_report": "499da01dcfac014640ddc2d365ead5773d640489aecdc3fc857747fd634b364a",
     "ci_environments": "090a0819932f9b4346266efb48279713ec41ea1ac568bdada4c2c37c4a0c1cbe",
     "profile": "7277a3cdb6fe3c4c46ca64759bbccacfe12fbfa49f0bfbce733ff9a8e0e03df5",
     "semantic_compare_fields": "44ed69139422db6edd727770a7973798882da843614b3f91899bb3dd77f9f5b3"
@@ -22,7 +22,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T08:55:59Z"
+    "checked_at": "2026-05-20T09:15:23Z"
   },
   "vault": ".",
   "policy": {
@@ -43,8 +43,8 @@
       "status": "ok"
     },
     "summary": {
-      "generated_at": "2026-05-20T08:55:58Z",
-      "source_tree_fingerprint": "db54d282fb6d36be74f680047e16d21eb312a38f5fca7b617583350e340a838a",
+      "generated_at": "2026-05-20T09:15:22Z",
+      "source_tree_fingerprint": "f13f7b66941e91264e8f2635eb7fe623f81d38914241385cc1da10194cd03ee0",
       "input_fingerprints": {
         "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
         "schema": "27a2dbc3dbb66d6dc0ec6fead8aad5a81f79e21bc9cff2c9eabb7af84541c082",
@@ -338,8 +338,8 @@
         }
       ],
       "live_report_summary": {
-        "generated_at": "2026-05-20T08:56:00Z",
-        "source_tree_fingerprint": "db54d282fb6d36be74f680047e16d21eb312a38f5fca7b617583350e340a838a",
+        "generated_at": "2026-05-20T09:15:24Z",
+        "source_tree_fingerprint": "f13f7b66941e91264e8f2635eb7fe623f81d38914241385cc1da10194cd03ee0",
         "input_fingerprints": {
           "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
           "schema": "27a2dbc3dbb66d6dc0ec6fead8aad5a81f79e21bc9cff2c9eabb7af84541c082",

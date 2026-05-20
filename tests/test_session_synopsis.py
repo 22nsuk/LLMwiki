@@ -290,6 +290,73 @@ class SessionSynopsisTests(unittest.TestCase):
             self.assertIn("goal_status_profile_ladder_incomplete", blocker_ids)
             self.assertEqual(blocker_ids.count("learning_blocked_by_review_required"), 1)
 
+    def test_readiness_blockers_are_not_dropped_when_goal_status_adds_pressure(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_synopsis_inputs(vault)
+            write_json(
+                vault,
+                "ops/reports/auto-improve-readiness.json",
+                {
+                    "can_promote_result": False,
+                    "next_action": "Trial only; do not promote.",
+                    "promotion_blockers": [
+                        {
+                            "id": "execution_blocked_by_no_runnable_proposal",
+                            "status": "open",
+                            "reason": "no runnable proposal is available",
+                            "recommended_next_step": "Refresh mutation proposals.",
+                        },
+                        {
+                            "id": "learning_blocked_by_execution_not_runnable",
+                            "status": "open",
+                            "reason": "execution is not runnable",
+                            "recommended_next_step": "Wait for a runnable proposal.",
+                        },
+                        {
+                            "id": "promotion_blocked_by_artifact_contract_failure",
+                            "status": "open",
+                            "reason": "artifact freshness attention",
+                            "recommended_next_step": "Refresh generated artifacts.",
+                        },
+                        {
+                            "id": "promotion_blocked_by_goal_worktree_guard_failure",
+                            "status": "open",
+                            "reason": "git worktree dirty",
+                            "recommended_next_step": "Commit or clear the worktree.",
+                        },
+                        {
+                            "id": "promotion_blocked_by_remediation_backlog_open",
+                            "status": "open",
+                            "reason": "remediation backlog is not clear for promotion",
+                            "recommended_next_step": "Close remediation backlog items.",
+                        },
+                    ],
+                    "fallback": {"seed_runs": []},
+                },
+            )
+            goal_status = json.loads(
+                (vault / "ops/reports/goal-run-status.json").read_text(encoding="utf-8")
+            )
+            goal_status["blockers"] = [
+                "git_worktree_dirty",
+                "profile ladder incomplete",
+            ]
+            write_json(vault, "ops/reports/goal-run-status.json", goal_status)
+
+            report = build_report(vault, context=fixed_context())
+            blocker_ids = {blocker["id"] for blocker in report["recent_blockers"]}
+
+            self.assertIn("goal_status_git_worktree_dirty", blocker_ids)
+            self.assertIn("goal_status_profile_ladder_incomplete", blocker_ids)
+            self.assertIn("execution_blocked_by_no_runnable_proposal", blocker_ids)
+            self.assertIn("learning_blocked_by_execution_not_runnable", blocker_ids)
+            self.assertIn("promotion_blocked_by_artifact_contract_failure", blocker_ids)
+            self.assertIn("promotion_blocked_by_goal_worktree_guard_failure", blocker_ids)
+            self.assertNotIn("promotion_blocked_by_remediation_backlog_open", blocker_ids)
+
     def test_write_report_validates_schema(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

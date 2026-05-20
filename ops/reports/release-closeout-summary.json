@@ -1,32 +1,32 @@
 {
   "$schema": "ops/schemas/release-closeout-summary.schema.json",
   "artifact_kind": "release_closeout_summary",
-  "generated_at": "2026-05-20T06:24:29Z",
+  "generated_at": "2026-05-20T09:22:19Z",
   "producer": "ops.scripts.release_closeout_summary",
   "source_command": "python -m ops.scripts.release_closeout_summary --vault . --profile base",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
+  "source_tree_fingerprint": "a0eb1f14b9f1868fe8fbacc68511c70444bfa4c3cfb7c9d67000e9ab0e7515b3",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "f4047cd5134ec0ce15e6f44a62f7d1b3d7022afdbffcfb0d700e753cc7611150",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "66d8c129dc3570c92f8e08dec4307eeadc55a3d6802d78a24e25c985d9c593d7",
-    "artifact_freshness": "619689613a44f2a2c9b3ff97381075ebc3c3eef6bf998093c8972aa3979cdf14",
-    "auto_improve_readiness": "eed0c3e431a31d2c9a88532fa27b96c7a43bd91f4a626989d585bc1b162338a4",
+    "artifact_freshness": "82a62201da7739b39115038db768817d4497f4c950a655ad836478bc60c69302",
+    "auto_improve_readiness": "987c5a527a162d40e32701c7a72c7d19d5c9d99e5c62387536520d84e49ce23e",
     "bootstrap_preflight": "121ff3337eb7f147cb7f57ba01e25be73bd5e0c2827bbf45191daedaba6049a5",
     "dependency::pyproject.toml": "54c7fe3ad082e9263bb07a87eefb0eeb6de5ea8a8ed0fec5d820fae3253cb6c1",
     "dependency::requirements-dev.txt": "4f64be7876c48bf45f8fc18ecea7b9c3b8d784e105dbf471cea625683eff7cd4",
     "dependency::requirements.txt": "c16d522f6854b2f51ea3acbefd7d6b808eaecbd6757f37bc5adfa7d89f732682",
     "dependency::uv.lock": "105bd979168f475bf28d6c304fa9eea4b7ea41198332f59b74be93c65b91e208",
     "external_report_reference_manifest": "fc9813af181ca69e48c09561321807e78480337d7c551449df7c347859672cb1",
-    "generated_index": "6237a2491f061a52d05c6e3b43575a0021882ed007efb5ec961422ff90516656",
-    "learning_delta_scoreboard": "ab9c8e4496ee724aaee3814edf34db1ca95a0e23bbe80244a37be870efb5bfeb",
+    "generated_index": "6324598897a971093d770491cdc7cc5112a41cfc0e67b8ae328bd12f095d1b98",
+    "learning_delta_scoreboard": "15a17ffc60d38634f66f2de261fbb5b6fbd9965e3b0cb1edc716e4911734a188",
     "live_make_check": "8529387d5cd28d2bfae1b2345d296cdabd50f3db26843b106a556a25f69cf6b9",
-    "raw_registry": "049938d796eb2af1e587756e9b84ebdfa85c5cf0d59cb51db28999b8ec3dd572",
+    "raw_registry": "499da01dcfac014640ddc2d365ead5773d640489aecdc3fc857747fd634b364a",
     "release_risk_taxonomy": "03e1c9015389ebac078be42f611e672a1f922d96552bd16980f9900f78d6b2e6",
-    "release_smoke": "50b729d9d744366bbc1b64ba34ef33b29b59eee612f3f8957ef837b32cf62de9",
+    "release_smoke": "14409538974863309cceb73c5117f5af87733380d1efd4e25a30c2241fde3667",
     "source_package_clean_extract": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
-    "test_summary": "2ca7d1c2634baeac185d0507451d4e444910012ba2a89a12ed871c9ff244a216",
+    "test_summary": "c7de1aee49c3cc92d10d5890f377c8a6c2e5d37724a1a9b206bc0bcdf4ce49cf",
     "learning_claim_context": "49d6dfe7f7b85894b40b17f9c610b5db038ba0bc2ced236549a7de21edd15a17",
     "learning_signoff_path": "03fb45d24de7e61d2df6dc40e7fd155a1690c2d136218c8d7cbd3e891cd036ee",
     "learning_signoff_status": "fa64ea1e82e1206f828ab2a02917c7e92accb98e3b95881a1b4ad52b914b66e3",
@@ -39,7 +39,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T06:24:29Z"
+    "checked_at": "2026-05-20T09:22:19Z"
   },
   "vault": ".",
   "policy": {
@@ -47,22 +47,22 @@
     "version": 4
   },
   "profile": "base",
-  "checked_in_release_ready": false,
+  "checked_in_release_ready": true,
   "live_rerun_release_ready": false,
-  "conditional_release_ready": false,
+  "conditional_release_ready": true,
   "clean_release_ready": false,
-  "release_readiness_state": "blocked",
+  "release_readiness_state": "conditional_pass",
   "machine_release_allowed": false,
-  "operator_release_allowed": false,
-  "requires_accepted_risk_review": false,
+  "operator_release_allowed": true,
+  "requires_accepted_risk_review": true,
   "artifact_freshness_gate": {
     "path": "ops/reports/artifact-freshness-report.json",
     "load_status": "ok",
-    "status": "attention",
-    "ready": false,
+    "status": "pass",
+    "ready": true,
     "schema_invalid_artifact_count": 0,
-    "stable_contract_debt_issue_count": 56,
-    "blocking": true
+    "stable_contract_debt_issue_count": 0,
+    "blocking": false
   },
   "live_make_check": {
     "path": "ops/reports/test-execution-summary-full.json",
@@ -117,23 +117,23 @@
     "summary": "dependency_reproducibility status=locked; canonical_lockfile=uv.lock; dependency_file_count=4"
   },
   "accepted_risk_count_by_scope": {
-    "total": 4,
-    "policy": 4,
+    "total": 3,
+    "policy": 3,
     "test_deselection_policy": 0,
     "operator_signoff": 0,
     "upstream_report": 0,
-    "instances": 4,
-    "families": 4,
-    "release_blocking_family_count": 2,
+    "instances": 3,
+    "families": 3,
+    "release_blocking_family_count": 1,
     "advisory_only_family_count": 2,
-    "clean_lane_blocking_family_count": 2,
-    "conditional_operator_review_family_count": 3,
+    "clean_lane_blocking_family_count": 1,
+    "conditional_operator_review_family_count": 2,
     "learning_claim_blocking_family_count": 0,
     "advisory_lifecycle_family_count": 2
   },
-  "clean_lane_blocking_risk_family_count": 2,
+  "clean_lane_blocking_risk_family_count": 1,
   "snapshot_phase": "pre_finalization",
-  "status": "fail",
+  "status": "pass",
   "status_semantics": {
     "top_level_status_meaning": "legacy_checked_in_release_ready_claim",
     "release_authority_status_meaning": "semantic_release_authority_from_closeout",
@@ -145,119 +145,115 @@
     "schema_version": 2,
     "migration_readiness_status": "active",
     "compatibility_status_field": "status",
-    "compatibility_status_value": "fail",
+    "compatibility_status_value": "pass",
     "compatibility_status_deprecated": true,
     "compatibility_alias_retention": "one_to_two_releases",
     "status_axes": {
-      "release_authority_status": "blocked",
-      "semantic_release_status": "blocked",
-      "sealed_release_status": "unsealed_artifact_incomplete"
+      "release_authority_status": "conditional_pass",
+      "semantic_release_status": "conditional_pass",
+      "sealed_release_status": "unsealed_distribution_not_provided"
     },
     "release_authority_status_field": "release_authority_status",
-    "release_authority_status_value": "blocked",
+    "release_authority_status_value": "conditional_pass",
     "semantic_release_status_field": "semantic_release_status",
-    "semantic_release_status_value": "blocked",
+    "semantic_release_status_value": "conditional_pass",
     "sealed_status_field": "sealed_release_status",
-    "sealed_status_value": "unsealed_artifact_incomplete",
+    "sealed_status_value": "unsealed_distribution_not_provided",
     "proposed_top_level_status_replacement": "sealed_release_status",
-    "status_classification": "blocked_or_unknown",
+    "status_classification": "conditional_release",
     "authority_reason_ids": [
       "release_authority_not_clean_pass",
       "machine_release_not_allowed"
     ],
     "sealed_reason_ids": [
       "sealed_release_not_clean_pass",
-      "distribution_package_not_materialized",
-      "artifact_inventory_not_current"
+      "distribution_package_not_materialized"
     ],
     "blocker_reason_ids": [
       "release_authority_not_clean_pass",
       "machine_release_not_allowed",
       "sealed_release_not_clean_pass",
-      "distribution_package_not_materialized",
-      "artifact_inventory_not_current"
+      "distribution_package_not_materialized"
     ],
     "recommended_consumer_fields": [
       "release_authority_status",
       "sealed_release_status",
       "release_authority_vocabulary.blocker_reason_ids"
     ],
-    "summary": "status_v2=blocked_or_unknown; legacy status=fail; release_authority_status=blocked; sealed_release_status=unsealed_artifact_incomplete; blocker_reason_count=5"
+    "summary": "status_v2=conditional_release; legacy status=pass; release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided; blocker_reason_count=4"
   },
   "status_v2_preview": {
     "schema_version": 2,
     "migration_readiness_status": "active",
     "compatibility_status_field": "status",
-    "compatibility_status_value": "fail",
+    "compatibility_status_value": "pass",
     "compatibility_status_deprecated": true,
     "compatibility_alias_retention": "one_to_two_releases",
     "status_axes": {
-      "release_authority_status": "blocked",
-      "semantic_release_status": "blocked",
-      "sealed_release_status": "unsealed_artifact_incomplete"
+      "release_authority_status": "conditional_pass",
+      "semantic_release_status": "conditional_pass",
+      "sealed_release_status": "unsealed_distribution_not_provided"
     },
     "release_authority_status_field": "release_authority_status",
-    "release_authority_status_value": "blocked",
+    "release_authority_status_value": "conditional_pass",
     "semantic_release_status_field": "semantic_release_status",
-    "semantic_release_status_value": "blocked",
+    "semantic_release_status_value": "conditional_pass",
     "sealed_status_field": "sealed_release_status",
-    "sealed_status_value": "unsealed_artifact_incomplete",
+    "sealed_status_value": "unsealed_distribution_not_provided",
     "proposed_top_level_status_replacement": "sealed_release_status",
-    "status_classification": "blocked_or_unknown",
+    "status_classification": "conditional_release",
     "authority_reason_ids": [
       "release_authority_not_clean_pass",
       "machine_release_not_allowed"
     ],
     "sealed_reason_ids": [
       "sealed_release_not_clean_pass",
-      "distribution_package_not_materialized",
-      "artifact_inventory_not_current"
+      "distribution_package_not_materialized"
     ],
     "blocker_reason_ids": [
       "release_authority_not_clean_pass",
       "machine_release_not_allowed",
       "sealed_release_not_clean_pass",
-      "distribution_package_not_materialized",
-      "artifact_inventory_not_current"
+      "distribution_package_not_materialized"
     ],
     "recommended_consumer_fields": [
       "release_authority_status",
       "sealed_release_status",
       "release_authority_vocabulary.blocker_reason_ids"
     ],
-    "summary": "status_v2=blocked_or_unknown; legacy status=fail; release_authority_status=blocked; sealed_release_status=unsealed_artifact_incomplete; blocker_reason_count=5"
+    "summary": "status_v2=conditional_release; legacy status=pass; release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided; blocker_reason_count=4"
   },
   "summary": {
     "component_count": 10,
-    "ready_component_count": 9,
-    "blocker_count": 3,
-    "source_clean_blocker_count": 1,
-    "accepted_risk_instance_count": 4,
-    "accepted_risk_family_count": 4,
-    "release_blocking_risk_family_count": 2,
-    "conditional_operator_review_risk_family_count": 3,
+    "ready_component_count": 10,
+    "blocker_count": 2,
+    "source_clean_blocker_count": 0,
+    "accepted_risk_instance_count": 3,
+    "accepted_risk_family_count": 3,
+    "release_blocking_risk_family_count": 1,
+    "conditional_operator_review_risk_family_count": 2,
     "learning_claim_blocking_risk_family_count": 0,
     "advisory_lifecycle_risk_family_count": 2,
     "advisory_risk_family_count": 2,
     "source_tree_coherence_status": "attention",
-    "artifact_freshness_status": "attention",
+    "artifact_freshness_status": "pass",
     "release_smoke_boundedness_status": "pass",
     "live_make_check_status": "pass",
     "artifact_freshness_schema_invalid_artifact_count": 0,
     "test_failure_lane_fail_count": 0,
     "test_failure_lane_not_run_count": 0
   },
-  "release_authority_status": "blocked",
-  "semantic_release_status": "blocked",
-  "sealed_release_status": "unsealed_artifact_incomplete",
+  "release_authority_status": "conditional_pass",
+  "semantic_release_status": "conditional_pass",
+  "sealed_release_status": "unsealed_distribution_not_provided",
   "release_authority_vocabulary": {
     "schema_version": 1,
-    "release_authority_status": "blocked",
-    "semantic_release_status": "blocked",
-    "sealed_release_status": "unsealed_artifact_incomplete",
+    "release_authority_status": "conditional_pass",
+    "semantic_release_status": "conditional_pass",
+    "sealed_release_status": "unsealed_distribution_not_provided",
     "machine_release_allowed": false,
     "clean_release_ready": false,
-    "batch_integrity_status": "fail",
+    "batch_integrity_status": "pass",
     "distribution_package_status": "not_provided",
     "authority_reason_ids": [
       "release_authority_not_clean_pass",
@@ -265,27 +261,25 @@
     ],
     "sealed_reason_ids": [
       "sealed_release_not_clean_pass",
-      "distribution_package_not_materialized",
-      "artifact_inventory_not_current"
+      "distribution_package_not_materialized"
     ],
     "blocker_reason_ids": [
       "release_authority_not_clean_pass",
       "machine_release_not_allowed",
       "sealed_release_not_clean_pass",
-      "distribution_package_not_materialized",
-      "artifact_inventory_not_current"
+      "distribution_package_not_materialized"
     ],
-    "operator_summary": "release_authority_status=blocked; semantic_release_status=blocked; sealed_release_status=unsealed_artifact_incomplete; machine_release_allowed=false; clean_release_ready=false; batch_integrity_status=fail; distribution_package_status=not_provided; authority_reason_ids=release_authority_not_clean_pass,machine_release_not_allowed; sealed_reason_ids=sealed_release_not_clean_pass,distribution_package_not_materialized,artifact_inventory_not_current; blocker_reason_ids=release_authority_not_clean_pass,machine_release_not_allowed,sealed_release_not_clean_pass,distribution_package_not_materialized,artifact_inventory_not_current",
+    "operator_summary": "release_authority_status=conditional_pass; semantic_release_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided; machine_release_allowed=false; clean_release_ready=false; batch_integrity_status=pass; distribution_package_status=not_provided; authority_reason_ids=release_authority_not_clean_pass,machine_release_not_allowed; sealed_reason_ids=sealed_release_not_clean_pass,distribution_package_not_materialized; blocker_reason_ids=release_authority_not_clean_pass,machine_release_not_allowed,sealed_release_not_clean_pass,distribution_package_not_materialized",
     "operator_summary_round_trip": {
       "status": "pass",
       "parser": "release_authority_operator_summary_v1",
       "expected": {
-        "release_authority_status": "blocked",
-        "semantic_release_status": "blocked",
-        "sealed_release_status": "unsealed_artifact_incomplete",
+        "release_authority_status": "conditional_pass",
+        "semantic_release_status": "conditional_pass",
+        "sealed_release_status": "unsealed_distribution_not_provided",
         "machine_release_allowed": false,
         "clean_release_ready": false,
-        "batch_integrity_status": "fail",
+        "batch_integrity_status": "pass",
         "distribution_package_status": "not_provided",
         "authority_reason_ids": [
           "release_authority_not_clean_pass",
@@ -293,24 +287,22 @@
         ],
         "sealed_reason_ids": [
           "sealed_release_not_clean_pass",
-          "distribution_package_not_materialized",
-          "artifact_inventory_not_current"
+          "distribution_package_not_materialized"
         ],
         "blocker_reason_ids": [
           "release_authority_not_clean_pass",
           "machine_release_not_allowed",
           "sealed_release_not_clean_pass",
-          "distribution_package_not_materialized",
-          "artifact_inventory_not_current"
+          "distribution_package_not_materialized"
         ]
       },
       "parsed": {
-        "release_authority_status": "blocked",
-        "semantic_release_status": "blocked",
-        "sealed_release_status": "unsealed_artifact_incomplete",
+        "release_authority_status": "conditional_pass",
+        "semantic_release_status": "conditional_pass",
+        "sealed_release_status": "unsealed_distribution_not_provided",
         "machine_release_allowed": false,
         "clean_release_ready": false,
-        "batch_integrity_status": "fail",
+        "batch_integrity_status": "pass",
         "distribution_package_status": "not_provided",
         "authority_reason_ids": [
           "release_authority_not_clean_pass",
@@ -318,21 +310,19 @@
         ],
         "sealed_reason_ids": [
           "sealed_release_not_clean_pass",
-          "distribution_package_not_materialized",
-          "artifact_inventory_not_current"
+          "distribution_package_not_materialized"
         ],
         "blocker_reason_ids": [
           "release_authority_not_clean_pass",
           "machine_release_not_allowed",
           "sealed_release_not_clean_pass",
-          "distribution_package_not_materialized",
-          "artifact_inventory_not_current"
+          "distribution_package_not_materialized"
         ]
       },
       "mismatch_count": 0,
       "mismatches": []
     },
-    "summary": "release authority and sealed distribution use shared reason ids; blocker_reason_count=5"
+    "summary": "release authority and sealed distribution use shared reason ids; blocker_reason_count=4"
   },
   "learning_readiness_signoff": {
     "path": "ops/reports/learning-readiness-signoff.json",
@@ -353,7 +343,7 @@
     "policy": "allowed_divergence_with_fingerprints",
     "component_count": 10,
     "loaded_component_count": 10,
-    "component_fingerprint_count": 5,
+    "component_fingerprint_count": 6,
     "missing_fingerprint_component_count": 0,
     "release_relevant_file_modified_after_component_count": 3,
     "divergence_diagnostics": {
@@ -366,7 +356,7 @@
           "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
           "matches_current_source_tree_fingerprint": false,
           "modified_after_generated_at": true,
-          "changed_after_generated_at_count": 144,
+          "changed_after_generated_at_count": 150,
           "changed_after_generated_at": [
             {
               "path": ".serena/memories/memory_maintenance.md",
@@ -378,10 +368,6 @@
             },
             {
               "path": ".github/workflows/ci.yml",
-              "mtime": "2026-05-19T20:25:47Z"
-            },
-            {
-              "path": "README.md",
               "mtime": "2026-05-19T20:25:47Z"
             },
             {
@@ -397,67 +383,20 @@
               "mtime": "2026-05-19T20:25:47Z"
             },
             {
-              "path": "ops/README.md",
-              "mtime": "2026-05-19T20:25:47Z"
-            },
-            {
               "path": "ops/mypy-allowlist.txt",
               "mtime": "2026-05-19T20:25:47Z"
             },
             {
               "path": "ops/policies/release-risk-taxonomy.json",
               "mtime": "2026-05-19T20:25:47Z"
-            }
-          ]
-        },
-        {
-          "name": "release_smoke",
-          "path": "ops/reports/release-smoke-report.json",
-          "generated_at": "2026-05-19T21:01:08Z",
-          "source_tree_fingerprint": "607290458796684e94ce743b6505911314a98e5650fdf4ec4c612228a60d0263",
-          "matches_current_source_tree_fingerprint": false,
-          "modified_after_generated_at": false,
-          "changed_after_generated_at_count": 22,
-          "changed_after_generated_at": [
-            {
-              "path": "ops/scripts/core/codex_goal_client.py",
-              "mtime": "2026-05-20T02:51:07Z"
             },
             {
-              "path": "tests/test_codex_goal_client.py",
-              "mtime": "2026-05-20T02:51:58Z"
+              "path": "ops/policies/remediation-backlog-status-overrides.json",
+              "mtime": "2026-05-19T20:25:47Z"
             },
             {
-              "path": "ops/schemas/goal-profile-verification.schema.json",
-              "mtime": "2026-05-20T04:01:14Z"
-            },
-            {
-              "path": "ops/schemas/goal-run-status.schema.json",
-              "mtime": "2026-05-20T04:01:14Z"
-            },
-            {
-              "path": "tests/test_goal_profile_verification.py",
-              "mtime": "2026-05-20T04:01:14Z"
-            },
-            {
-              "path": "tests/test_goal_runtime_runner.py",
-              "mtime": "2026-05-20T04:01:14Z"
-            },
-            {
-              "path": "mk/mechanism.mk",
-              "mtime": "2026-05-20T04:17:14Z"
-            },
-            {
-              "path": "tests/test_makefile_static_gates.py",
-              "mtime": "2026-05-20T04:17:14Z"
-            },
-            {
-              "path": ".codex/agents/README.md",
-              "mtime": "2026-05-20T04:50:31Z"
-            },
-            {
-              "path": ".codex/agents/reviewer.toml",
-              "mtime": "2026-05-20T04:50:31Z"
+              "path": "ops/policies/source-package-test-deselections.json",
+              "mtime": "2026-05-19T20:25:47Z"
             }
           ]
         },
@@ -468,7 +407,7 @@
           "source_tree_fingerprint": "4d8c5f4ee54bb6f4131e9016befdfd25a6f83e17269958a2ad7147913e7b21e1",
           "matches_current_source_tree_fingerprint": false,
           "modified_after_generated_at": true,
-          "changed_after_generated_at_count": 144,
+          "changed_after_generated_at_count": 150,
           "changed_after_generated_at": [
             {
               "path": ".serena/memories/memory_maintenance.md",
@@ -480,10 +419,6 @@
             },
             {
               "path": ".github/workflows/ci.yml",
-              "mtime": "2026-05-19T20:25:47Z"
-            },
-            {
-              "path": "README.md",
               "mtime": "2026-05-19T20:25:47Z"
             },
             {
@@ -499,15 +434,19 @@
               "mtime": "2026-05-19T20:25:47Z"
             },
             {
-              "path": "ops/README.md",
-              "mtime": "2026-05-19T20:25:47Z"
-            },
-            {
               "path": "ops/mypy-allowlist.txt",
               "mtime": "2026-05-19T20:25:47Z"
             },
             {
               "path": "ops/policies/release-risk-taxonomy.json",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "ops/policies/remediation-backlog-status-overrides.json",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "ops/policies/source-package-test-deselections.json",
               "mtime": "2026-05-19T20:25:47Z"
             }
           ]
@@ -519,7 +458,7 @@
           "source_tree_fingerprint": "227bd9d6d2769fc2ef84dfeaea9991898645931919d80b6d5ad27f598a592b39",
           "matches_current_source_tree_fingerprint": false,
           "modified_after_generated_at": false,
-          "changed_after_generated_at_count": 2,
+          "changed_after_generated_at_count": 18,
           "changed_after_generated_at": [
             {
               "path": "ops/scripts/core/artifact_freshness_runtime.py",
@@ -528,25 +467,89 @@
             {
               "path": "tests/test_artifact_freshness_runtime.py",
               "mtime": "2026-05-20T06:12:00Z"
+            },
+            {
+              "path": "README.md",
+              "mtime": "2026-05-20T06:57:59Z"
+            },
+            {
+              "path": "ops/README.md",
+              "mtime": "2026-05-20T06:58:07Z"
+            },
+            {
+              "path": "ops/scripts/mechanism/auto_improve_execution_runtime.py",
+              "mtime": "2026-05-20T07:17:10Z"
+            },
+            {
+              "path": "ops/scripts/core/executor.py",
+              "mtime": "2026-05-20T07:17:18Z"
+            },
+            {
+              "path": "tests/test_auto_improve_execution_runtime.py",
+              "mtime": "2026-05-20T07:17:31Z"
+            },
+            {
+              "path": "ops/scripts/mechanism/goal_runtime_runner.py",
+              "mtime": "2026-05-20T07:32:44Z"
+            },
+            {
+              "path": "tests/test_goal_runtime_runner.py",
+              "mtime": "2026-05-20T07:33:04Z"
+            },
+            {
+              "path": "tests/test_planning_gate_validate.py",
+              "mtime": "2026-05-20T08:11:51Z"
             }
           ]
         },
         {
           "name": "test_summary",
           "path": "ops/reports/test-execution-summary.json",
-          "generated_at": "2026-05-20T06:08:14Z",
-          "source_tree_fingerprint": "227bd9d6d2769fc2ef84dfeaea9991898645931919d80b6d5ad27f598a592b39",
+          "generated_at": "2026-05-20T07:03:41Z",
+          "source_tree_fingerprint": "b61c1cf1492c34c9b9f57c25af1f525746f1567fa4bec22ed2db54d00b774bb3",
           "matches_current_source_tree_fingerprint": false,
           "modified_after_generated_at": false,
-          "changed_after_generated_at_count": 2,
+          "changed_after_generated_at_count": 14,
           "changed_after_generated_at": [
             {
-              "path": "ops/scripts/core/artifact_freshness_runtime.py",
-              "mtime": "2026-05-20T06:11:43Z"
+              "path": "ops/scripts/mechanism/auto_improve_execution_runtime.py",
+              "mtime": "2026-05-20T07:17:10Z"
             },
             {
-              "path": "tests/test_artifact_freshness_runtime.py",
-              "mtime": "2026-05-20T06:12:00Z"
+              "path": "ops/scripts/core/executor.py",
+              "mtime": "2026-05-20T07:17:18Z"
+            },
+            {
+              "path": "tests/test_auto_improve_execution_runtime.py",
+              "mtime": "2026-05-20T07:17:31Z"
+            },
+            {
+              "path": "ops/scripts/mechanism/goal_runtime_runner.py",
+              "mtime": "2026-05-20T07:32:44Z"
+            },
+            {
+              "path": "tests/test_goal_runtime_runner.py",
+              "mtime": "2026-05-20T07:33:04Z"
+            },
+            {
+              "path": "tests/test_planning_gate_validate.py",
+              "mtime": "2026-05-20T08:11:51Z"
+            },
+            {
+              "path": "tests/test_mechanism_run_validation_runtime.py",
+              "mtime": "2026-05-20T08:48:25Z"
+            },
+            {
+              "path": "ops/scripts/mechanism/mechanism_run_validation_runtime.py",
+              "mtime": "2026-05-20T08:54:41Z"
+            },
+            {
+              "path": "ops/scripts/mechanism/mutation_proposal_runtime.py",
+              "mtime": "2026-05-20T09:16:17Z"
+            },
+            {
+              "path": "tests/test_mutation_proposal.py",
+              "mtime": "2026-05-20T09:16:34Z"
             }
           ]
         },
@@ -557,7 +560,7 @@
           "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
           "matches_current_source_tree_fingerprint": false,
           "modified_after_generated_at": true,
-          "changed_after_generated_at_count": 144,
+          "changed_after_generated_at_count": 150,
           "changed_after_generated_at": [
             {
               "path": ".serena/memories/memory_maintenance.md",
@@ -569,10 +572,6 @@
             },
             {
               "path": ".github/workflows/ci.yml",
-              "mtime": "2026-05-19T20:25:47Z"
-            },
-            {
-              "path": "README.md",
               "mtime": "2026-05-19T20:25:47Z"
             },
             {
@@ -588,16 +587,55 @@
               "mtime": "2026-05-19T20:25:47Z"
             },
             {
-              "path": "ops/README.md",
-              "mtime": "2026-05-19T20:25:47Z"
-            },
-            {
               "path": "ops/mypy-allowlist.txt",
               "mtime": "2026-05-19T20:25:47Z"
             },
             {
               "path": "ops/policies/release-risk-taxonomy.json",
               "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "ops/policies/remediation-backlog-status-overrides.json",
+              "mtime": "2026-05-19T20:25:47Z"
+            },
+            {
+              "path": "ops/policies/source-package-test-deselections.json",
+              "mtime": "2026-05-19T20:25:47Z"
+            }
+          ]
+        },
+        {
+          "name": "raw_registry",
+          "path": "ops/reports/raw-registry-preflight-report.json",
+          "generated_at": "2026-05-20T09:15:22Z",
+          "source_tree_fingerprint": "f13f7b66941e91264e8f2635eb7fe623f81d38914241385cc1da10194cd03ee0",
+          "matches_current_source_tree_fingerprint": false,
+          "modified_after_generated_at": false,
+          "changed_after_generated_at_count": 6,
+          "changed_after_generated_at": [
+            {
+              "path": "ops/scripts/mechanism/mutation_proposal_runtime.py",
+              "mtime": "2026-05-20T09:16:17Z"
+            },
+            {
+              "path": "tests/test_mutation_proposal.py",
+              "mtime": "2026-05-20T09:16:34Z"
+            },
+            {
+              "path": "mk/mechanism.mk",
+              "mtime": "2026-05-20T09:17:14Z"
+            },
+            {
+              "path": "ops/scripts/learning/session_synopsis.py",
+              "mtime": "2026-05-20T09:18:49Z"
+            },
+            {
+              "path": "tests/test_session_synopsis.py",
+              "mtime": "2026-05-20T09:19:08Z"
+            },
+            {
+              "path": "system/system-log.md",
+              "mtime": "2026-05-20T09:19:55Z"
             }
           ]
         }
@@ -618,10 +656,10 @@
         "name": "release_smoke",
         "path": "ops/reports/release-smoke-report.json",
         "ready": true,
-        "source_tree_fingerprint": "607290458796684e94ce743b6505911314a98e5650fdf4ec4c612228a60d0263",
-        "producer_input_fingerprint": "1e5fff9cb6138c80fe4862f4b5525e040456e28ec5a262bebb08a5d8cf040ffd",
-        "generated_at": "2026-05-19T21:01:08Z",
-        "report_mtime": "2026-05-19T21:01:08Z",
+        "source_tree_fingerprint": "a0eb1f14b9f1868fe8fbacc68511c70444bfa4c3cfb7c9d67000e9ab0e7515b3",
+        "producer_input_fingerprint": "a73254600fbd9d0c9fe7bb87d14ca7c1026c98b11df97cf860bc4f06a4e3ba33",
+        "generated_at": "2026-05-20T09:22:10Z",
+        "report_mtime": "2026-05-20T09:22:10Z",
         "modified_after_generated_at": false
       },
       {
@@ -648,10 +686,10 @@
         "name": "test_summary",
         "path": "ops/reports/test-execution-summary.json",
         "ready": true,
-        "source_tree_fingerprint": "227bd9d6d2769fc2ef84dfeaea9991898645931919d80b6d5ad27f598a592b39",
-        "producer_input_fingerprint": "e73a63cb2219cdecd263c948e370d5a26ec8b1ef6b266612dab8d571872cc627",
-        "generated_at": "2026-05-20T06:08:14Z",
-        "report_mtime": "2026-05-20T06:08:14Z",
+        "source_tree_fingerprint": "b61c1cf1492c34c9b9f57c25af1f525746f1567fa4bec22ed2db54d00b774bb3",
+        "producer_input_fingerprint": "6543990c89b94bf29afb274d0b9568dd99fa0001d4b21283732ab3ac0d29a250",
+        "generated_at": "2026-05-20T07:03:41Z",
+        "report_mtime": "2026-05-20T07:03:41Z",
         "modified_after_generated_at": false
       },
       {
@@ -668,40 +706,40 @@
         "name": "raw_registry",
         "path": "ops/reports/raw-registry-preflight-report.json",
         "ready": true,
-        "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
+        "source_tree_fingerprint": "f13f7b66941e91264e8f2635eb7fe623f81d38914241385cc1da10194cd03ee0",
         "producer_input_fingerprint": "7e87a2e24f004c7fada44060218f49163836da60935f2e2ea75f75c6c23e97e0",
-        "generated_at": "2026-05-20T06:24:20Z",
-        "report_mtime": "2026-05-20T06:24:20Z",
+        "generated_at": "2026-05-20T09:15:22Z",
+        "report_mtime": "2026-05-20T09:15:22Z",
         "modified_after_generated_at": false
       },
       {
         "name": "artifact_freshness",
         "path": "ops/reports/artifact-freshness-report.json",
         "ready": true,
-        "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
+        "source_tree_fingerprint": "a0eb1f14b9f1868fe8fbacc68511c70444bfa4c3cfb7c9d67000e9ab0e7515b3",
         "producer_input_fingerprint": "efaf02f1dd0613d22ff3185699724135ad6e1f88795b7baaf68bc0983b9be3ac",
-        "generated_at": "2026-05-20T06:19:33Z",
-        "report_mtime": "2026-05-20T06:19:33Z",
+        "generated_at": "2026-05-20T09:21:01Z",
+        "report_mtime": "2026-05-20T09:21:01Z",
         "modified_after_generated_at": false
       },
       {
         "name": "generated_index",
         "path": "ops/reports/generated-artifact-index.json",
         "ready": true,
-        "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
-        "producer_input_fingerprint": "7234bf205097ef123574fa965d0140bc2568abc32853b3b4d293723b0c69d270",
-        "generated_at": "2026-05-20T06:19:45Z",
-        "report_mtime": "2026-05-20T06:19:45Z",
+        "source_tree_fingerprint": "a0eb1f14b9f1868fe8fbacc68511c70444bfa4c3cfb7c9d67000e9ab0e7515b3",
+        "producer_input_fingerprint": "0048fc01ad8befda4512274c8c7c2e0f53d82b05f82038316998aca122fa6e2c",
+        "generated_at": "2026-05-20T09:20:21Z",
+        "report_mtime": "2026-05-20T09:20:21Z",
         "modified_after_generated_at": false
       },
       {
         "name": "auto_improve_readiness",
         "path": "ops/reports/auto-improve-readiness.json",
-        "ready": false,
-        "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
-        "producer_input_fingerprint": "a8a9d53a39eecdf44de2882e38d26f8fe61c3f08aa6631775d377e40a8c52386",
-        "generated_at": "2026-05-20T06:24:28Z",
-        "report_mtime": "2026-05-20T06:24:28Z",
+        "ready": true,
+        "source_tree_fingerprint": "a0eb1f14b9f1868fe8fbacc68511c70444bfa4c3cfb7c9d67000e9ab0e7515b3",
+        "producer_input_fingerprint": "02cabe46c67ca83bba32b432e30f0c3687e129ddeedf5f75318b09f46d664a00",
+        "generated_at": "2026-05-20T09:21:34Z",
+        "report_mtime": "2026-05-20T09:21:34Z",
         "modified_after_generated_at": false
       }
     ]
@@ -721,28 +759,28 @@
     "mismatch_count": 4,
     "mismatches": [
       {
-        "input_name": "raw_registry",
-        "source_path": "ops/reports/raw-registry-preflight-report.json",
-        "expected_digest": "d37a0aebfa260339c120b8681337c2dd0df977cfc572534d8980eaf45a8e5d78",
-        "actual_digest": "049938d796eb2af1e587756e9b84ebdfa85c5cf0d59cb51db28999b8ec3dd572"
+        "input_name": "release_smoke",
+        "source_path": "ops/reports/release-smoke-report.json",
+        "expected_digest": "f02c49ffad4959307fd51937eaee4b09c8cd79482b7ad40d9fecdde361d165d6",
+        "actual_digest": "14409538974863309cceb73c5117f5af87733380d1efd4e25a30c2241fde3667"
       },
       {
         "input_name": "artifact_freshness",
         "source_path": "ops/reports/artifact-freshness-report.json",
-        "expected_digest": "1002c1a8e8ab730d202e87f38b26a8a34fb9404d9bbe7bb0c1144622beb5cf46",
-        "actual_digest": "619689613a44f2a2c9b3ff97381075ebc3c3eef6bf998093c8972aa3979cdf14"
+        "expected_digest": "f868d0da73adbe1f8ac7f9bd011d9823f331a32a6026abafdd64b21e79f76a78",
+        "actual_digest": "82a62201da7739b39115038db768817d4497f4c950a655ad836478bc60c69302"
       },
       {
         "input_name": "generated_index",
         "source_path": "ops/reports/generated-artifact-index.json",
-        "expected_digest": "fbffbccd0b78c0b1bad19836d57d26229eee36f2c6a9a17b379c6b2228e3419e",
-        "actual_digest": "6237a2491f061a52d05c6e3b43575a0021882ed007efb5ec961422ff90516656"
+        "expected_digest": "3df494f40bad48d4f182c31373c21f20e6d3eb172291c97d5a57cf2c18669912",
+        "actual_digest": "6324598897a971093d770491cdc7cc5112a41cfc0e67b8ae328bd12f095d1b98"
       },
       {
         "input_name": "auto_improve_readiness",
         "source_path": "ops/reports/auto-improve-readiness.json",
-        "expected_digest": "25d3888343da7052554b793f92cb496c0b85470a1ecdcc55fa4bbad2fa5c3692",
-        "actual_digest": "eed0c3e431a31d2c9a88532fa27b96c7a43bd91f4a626989d585bc1b162338a4"
+        "expected_digest": "8cfef46fc3891f9417663d4252faf6b214c571e7b6b7d5a88852bf2bde323107",
+        "actual_digest": "987c5a527a162d40e32701c7a72c7d19d5c9d99e5c62387536520d84e49ce23e"
       }
     ],
     "summary": "downstream_input_digest_mismatch status=mismatch; mismatch_count=4; compared_input_count=10"
@@ -771,20 +809,20 @@
   ],
   "accepted_risk_delta": {
     "status": "changed",
-    "previous_report_generated_at": "2026-05-20T06:19:24Z",
-    "added_count": 1,
-    "removed_count": 0,
+    "previous_report_generated_at": "2026-05-20T09:16:22Z",
+    "added_count": 0,
+    "removed_count": 1,
     "unchanged_count": 3,
-    "added": [
+    "added": [],
+    "removed": [
       "artifact_freshness::artifact_freshness_attention"
     ],
-    "removed": [],
     "unchanged": [
       "external_report_reference_manifest::external_report_strict_unavailable",
       "generated_index::generated_index_archive_advisory",
       "source_tree_coherence::source_tree_coherence_attention"
     ],
-    "summary": "accepted_risk_delta status=changed; added=1; removed=0; unchanged=3"
+    "summary": "accepted_risk_delta status=changed; added=0; removed=1; unchanged=3"
   },
   "components": [
     {
@@ -810,13 +848,13 @@
       "path": "ops/reports/release-smoke-report.json",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-19T21:01:08Z",
-      "source_tree_fingerprint": "607290458796684e94ce743b6505911314a98e5650fdf4ec4c612228a60d0263",
-      "producer_input_fingerprint": "1e5fff9cb6138c80fe4862f4b5525e040456e28ec5a262bebb08a5d8cf040ffd",
+      "generated_at": "2026-05-20T09:22:10Z",
+      "source_tree_fingerprint": "a0eb1f14b9f1868fe8fbacc68511c70444bfa4c3cfb7c9d67000e9ab0e7515b3",
+      "producer_input_fingerprint": "a73254600fbd9d0c9fe7bb87d14ca7c1026c98b11df97cf860bc4f06a4e3ba33",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-19T21:01:08Z",
-      "report_mtime": "2026-05-19T21:01:08Z",
+      "currentness_checked_at": "2026-05-20T09:22:10Z",
+      "report_mtime": "2026-05-20T09:22:10Z",
       "modified_after_generated_at": false,
       "ready": true,
       "blocker_count": 0,
@@ -864,13 +902,13 @@
       "path": "ops/reports/test-execution-summary.json",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-20T06:08:14Z",
-      "source_tree_fingerprint": "227bd9d6d2769fc2ef84dfeaea9991898645931919d80b6d5ad27f598a592b39",
-      "producer_input_fingerprint": "e73a63cb2219cdecd263c948e370d5a26ec8b1ef6b266612dab8d571872cc627",
+      "generated_at": "2026-05-20T07:03:41Z",
+      "source_tree_fingerprint": "b61c1cf1492c34c9b9f57c25af1f525746f1567fa4bec22ed2db54d00b774bb3",
+      "producer_input_fingerprint": "6543990c89b94bf29afb274d0b9568dd99fa0001d4b21283732ab3ac0d29a250",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-20T06:08:14Z",
-      "report_mtime": "2026-05-20T06:08:14Z",
+      "currentness_checked_at": "2026-05-20T07:03:41Z",
+      "report_mtime": "2026-05-20T07:03:41Z",
       "modified_after_generated_at": false,
       "ready": true,
       "blocker_count": 0,
@@ -900,13 +938,13 @@
       "path": "ops/reports/raw-registry-preflight-report.json",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-20T06:24:20Z",
-      "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
+      "generated_at": "2026-05-20T09:15:22Z",
+      "source_tree_fingerprint": "f13f7b66941e91264e8f2635eb7fe623f81d38914241385cc1da10194cd03ee0",
       "producer_input_fingerprint": "7e87a2e24f004c7fada44060218f49163836da60935f2e2ea75f75c6c23e97e0",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-20T06:24:20Z",
-      "report_mtime": "2026-05-20T06:24:20Z",
+      "currentness_checked_at": "2026-05-20T09:15:22Z",
+      "report_mtime": "2026-05-20T09:15:22Z",
       "modified_after_generated_at": false,
       "ready": true,
       "blocker_count": 0,
@@ -917,32 +955,32 @@
       "name": "artifact_freshness",
       "path": "ops/reports/artifact-freshness-report.json",
       "load_status": "ok",
-      "source_status": "attention",
-      "generated_at": "2026-05-20T06:19:33Z",
-      "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
+      "source_status": "pass",
+      "generated_at": "2026-05-20T09:21:01Z",
+      "source_tree_fingerprint": "a0eb1f14b9f1868fe8fbacc68511c70444bfa4c3cfb7c9d67000e9ab0e7515b3",
       "producer_input_fingerprint": "efaf02f1dd0613d22ff3185699724135ad6e1f88795b7baaf68bc0983b9be3ac",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-20T06:19:33Z",
-      "report_mtime": "2026-05-20T06:19:33Z",
+      "currentness_checked_at": "2026-05-20T09:21:01Z",
+      "report_mtime": "2026-05-20T09:21:01Z",
       "modified_after_generated_at": false,
       "ready": true,
       "blocker_count": 0,
-      "accepted_risk_family_count": 1,
-      "summary": "artifact_freshness status=attention"
+      "accepted_risk_family_count": 0,
+      "summary": "artifact_freshness status=pass"
     },
     {
       "name": "generated_index",
       "path": "ops/reports/generated-artifact-index.json",
       "load_status": "ok",
       "source_status": "attention",
-      "generated_at": "2026-05-20T06:19:45Z",
-      "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
-      "producer_input_fingerprint": "7234bf205097ef123574fa965d0140bc2568abc32853b3b4d293723b0c69d270",
+      "generated_at": "2026-05-20T09:20:21Z",
+      "source_tree_fingerprint": "a0eb1f14b9f1868fe8fbacc68511c70444bfa4c3cfb7c9d67000e9ab0e7515b3",
+      "producer_input_fingerprint": "0048fc01ad8befda4512274c8c7c2e0f53d82b05f82038316998aca122fa6e2c",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-20T06:19:45Z",
-      "report_mtime": "2026-05-20T06:19:45Z",
+      "currentness_checked_at": "2026-05-20T09:20:21Z",
+      "report_mtime": "2026-05-20T09:20:21Z",
       "modified_after_generated_at": false,
       "ready": true,
       "blocker_count": 0,
@@ -954,44 +992,28 @@
       "path": "ops/reports/auto-improve-readiness.json",
       "load_status": "ok",
       "source_status": "unknown",
-      "generated_at": "2026-05-20T06:24:28Z",
-      "source_tree_fingerprint": "0e67431e6cdb000e926d05c5652c74a014fce76a336a077f5f25c2f96d26095a",
-      "producer_input_fingerprint": "a8a9d53a39eecdf44de2882e38d26f8fe61c3f08aa6631775d377e40a8c52386",
+      "generated_at": "2026-05-20T09:21:34Z",
+      "source_tree_fingerprint": "a0eb1f14b9f1868fe8fbacc68511c70444bfa4c3cfb7c9d67000e9ab0e7515b3",
+      "producer_input_fingerprint": "02cabe46c67ca83bba32b432e30f0c3687e129ddeedf5f75318b09f46d664a00",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-20T06:24:28Z",
-      "report_mtime": "2026-05-20T06:24:28Z",
+      "currentness_checked_at": "2026-05-20T09:21:34Z",
+      "report_mtime": "2026-05-20T09:21:34Z",
       "modified_after_generated_at": false,
-      "ready": false,
-      "blocker_count": 3,
+      "ready": true,
+      "blocker_count": 2,
       "accepted_risk_family_count": 0,
-      "summary": "can_execute_trial=True; can_promote_result=False; learning_status=learning_likely; claims_learning_improved=False; skipped_learning_claim_blocker_count=0"
+      "summary": "can_execute_trial=True; can_promote_result=False; learning_status=learning_uncertain; claims_learning_improved=False; skipped_learning_claim_blocker_count=1"
     }
   ],
   "blockers": [
     {
       "source": "auto_improve_readiness",
       "source_path": "ops/reports/auto-improve-readiness.json",
-      "code": "promotion_blocked_by_artifact_contract_failure",
-      "severity": "blocker",
-      "gate_effect": "active",
-      "message": "artifact freshness status=attention; schema_invalid_artifact_count=0",
-      "required_evidence": [
-        "Run make artifact-freshness-check and confirm status=pass.",
-        "Resolve artifact freshness blockers before promoting an auto-improve result."
-      ],
-      "clean_lane_effect": "blocks_clean_lane",
-      "conditional_lane_effect": "operator_review_required",
-      "learning_lane_effect": "blocks_learning_claim",
-      "advisory_lifecycle_effect": "not_applicable"
-    },
-    {
-      "source": "auto_improve_readiness",
-      "source_path": "ops/reports/auto-improve-readiness.json",
       "code": "promotion_blocked_by_goal_worktree_guard_failure",
       "severity": "blocker",
       "gate_effect": "active",
-      "message": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=39",
+      "message": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=37",
       "required_evidence": [
         "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
         "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
@@ -1008,7 +1030,7 @@
       "code": "promotion_blocked_by_remediation_backlog_open",
       "severity": "blocker",
       "gate_effect": "active",
-      "message": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=5; active_blocker_count=5; blocking_item_count=5",
+      "message": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=6; active_blocker_count=6; blocking_item_count=6",
       "required_evidence": [
         "Run make remediation-backlog and confirm status=pass with open_item_count=0.",
         "Close or explicitly defer blocks_promotion backlog items before promotion.",
@@ -1033,8 +1055,8 @@
       ],
       "risk_acceptance": {
         "accepted_by": "release_closeout_policy",
-        "accepted_at": "2026-05-20T06:24:29Z",
-        "expires_at": "2026-05-27T06:24:29Z",
+        "accepted_at": "2026-05-20T09:22:19Z",
+        "expires_at": "2026-05-27T09:22:19Z",
         "risk_owner": "runtime-maintainer",
         "revalidation_condition": "Rerun the sealed closeout lane with a current distribution ZIP before external review signoff.",
         "rollback_trigger": "Treat missing strict external report provenance as a blocker in sealed release lanes.",
@@ -1047,29 +1069,6 @@
       "advisory_lifecycle_effect": "review_backlog"
     },
     {
-      "source": "artifact_freshness",
-      "source_path": "ops/reports/artifact-freshness-report.json",
-      "code": "artifact_freshness_attention",
-      "severity": "warn",
-      "gate_effect": "accepted_risk",
-      "message": "artifact freshness has attention-level debt but no fail-level freshness blocker.",
-      "required_evidence": [],
-      "risk_acceptance": {
-        "accepted_by": "release_closeout_policy",
-        "accepted_at": "2026-05-20T06:24:29Z",
-        "expires_at": "2026-05-27T06:24:29Z",
-        "risk_owner": "runtime-maintainer",
-        "revalidation_condition": "Rerun artifact-freshness before the next release closeout.",
-        "rollback_trigger": "Treat artifact freshness attention as a blocker if it becomes fail-level debt.",
-        "acceptance_source": "ops/scripts/release_closeout_summary.py",
-        "linked_blocker_id": ""
-      },
-      "clean_lane_effect": "blocks_clean_lane",
-      "conditional_lane_effect": "operator_review_required",
-      "learning_lane_effect": "not_applicable",
-      "advisory_lifecycle_effect": "not_applicable"
-    },
-    {
       "source": "generated_index",
       "source_path": "ops/reports/generated-artifact-index.json",
       "code": "generated_index_archive_advisory",
@@ -1079,8 +1078,8 @@
       "required_evidence": [],
       "risk_acceptance": {
         "accepted_by": "release_closeout_policy",
-        "accepted_at": "2026-05-20T06:24:29Z",
-        "expires_at": "2026-05-27T06:24:29Z",
+        "accepted_at": "2026-05-20T09:22:19Z",
+        "expires_at": "2026-05-27T09:22:19Z",
         "risk_owner": "runtime-maintainer",
         "revalidation_condition": "Rerun generated-artifact-index before the next release closeout.",
         "rollback_trigger": "Treat generated artifact index advisory debt as a blocker if current artifacts go missing.",
@@ -1104,8 +1103,8 @@
       ],
       "risk_acceptance": {
         "accepted_by": "release_closeout_policy",
-        "accepted_at": "2026-05-20T06:24:29Z",
-        "expires_at": "2026-05-27T06:24:29Z",
+        "accepted_at": "2026-05-20T09:22:19Z",
+        "expires_at": "2026-05-27T09:22:19Z",
         "risk_owner": "runtime-maintainer",
         "revalidation_condition": "Rerun release evidence in one ordered closeout chain before release signoff.",
         "rollback_trigger": "Treat source tree coherence attention as a blocker if component fingerprints are missing.",

@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-20T08:59:36Z",
+  "generated_at": "2026-05-20T09:22:45Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "db54d282fb6d36be74f680047e16d21eb312a38f5fca7b617583350e340a838a",
+  "source_tree_fingerprint": "a0eb1f14b9f1868fe8fbacc68511c70444bfa4c3cfb7c9d67000e9ab0e7515b3",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "8c91343f30427af06d94db468c972889a09ff0185c7db529c93733a70f373b82",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "1b3dc9e7a915a19253d410de18eaaaf886a7ff3ed065da0c66c496fb7e0f9ae4",
-    "auto_improve_readiness": "7e102e40d2b4a2288df25ffb6a0b75e50004843c70deb06fd192f00ddfb67239",
-    "goal_run_status": "4370d2ecf084cb9cbb38c449d2c953106c8b7c00fc00ad67418fcf90f55a13fb",
-    "learning_claim_activation": "8d6feef4a8781b4cda803f93e2c3749b825b66a79c25da2faef2906a2b7576ab",
-    "learning_delta_scoreboard": "665fdf8e4f961fa1557b77f9c77b9eeb4b7985c4af7f4613a1e4f314a5d16e23",
+    "source_paths": "f66d87472e0e2e1b03b99437ccbadec98a2fd769c9cf08e6924573dcac8ab784",
+    "auto_improve_readiness": "a8fbba45aa50e56756e1bc5113e738b4ba7ecf2fe0de763fa026139cfaef3060",
+    "goal_run_status": "55d5d905853b30710a59ebc8774c8eb183813714e44f49ce5fa61f32cfbeba2d",
+    "learning_claim_activation": "f6b8f4b77d16862bbd92ef609777fc3f3816b829415f39c6442cdb5d7b5c0782",
+    "learning_delta_scoreboard": "7725222d5cc9ac720b9270dc8a6f6a7d2259ca5e1864c3b182887534a779a458",
     "source_package_clean_extract": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "task_observations": "71013a0efaa510f93ecdb4cb6a3cbc18ff61d60d8fc093c6521a4aea80829677"
   },
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T08:59:36Z"
+    "checked_at": "2026-05-20T09:22:45Z"
   },
   "vault": ".",
   "policy": {
@@ -35,12 +35,12 @@
   "summary": {
     "recent_blocker_count": 5,
     "last_success_pattern_count": 5,
-    "forbidden_repeat_pattern_count": 5,
+    "forbidden_repeat_pattern_count": 4,
     "recommended_seed_run_count": 3,
     "evidence_gap_count": 2,
     "source_package_replay_status": "pass",
     "active_goal_id": "goal-5day-auto-improve-runtime",
-    "active_goal_run_id": "5day-auto-improve-runtime",
+    "active_goal_run_id": "auto-improve-trial",
     "active_goal_link_status": "linked",
     "goal_profile_ladder_status": "incomplete",
     "goal_next_profile_required": "30m_trial",
@@ -70,18 +70,18 @@
       "repair_target": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
     },
     {
-      "id": "promotion_blocked_by_artifact_contract_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "status": "open",
-      "reason": "artifact freshness status=attention; schema_invalid_artifact_count=0",
-      "repair_target": "Resolve artifact freshness blockers, then rerun make auto-improve-readiness."
-    },
-    {
       "id": "promotion_blocked_by_goal_worktree_guard_failure",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=8",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=37",
       "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
+    },
+    {
+      "id": "learning_claim_unlock_review_not_approved",
+      "source": "learning_claim_activation.blocked_predicates",
+      "status": "stale",
+      "reason": "",
+      "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean."
     }
   ],
   "last_success_patterns": [
@@ -127,16 +127,6 @@
     }
   ],
   "forbidden_repeat_patterns": [
-    {
-      "id": "blocked_queue_recent_log_overlap",
-      "decisions": [
-        "BLOCKED"
-      ],
-      "run_ids": [],
-      "occurrence_count": 1,
-      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
-      "repair_target": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane."
-    },
     {
       "id": "discard_behavior_delta_before_after_evidence_missing",
       "decisions": [
@@ -230,15 +220,15 @@
     "link_status": "linked",
     "report_path": "ops/reports/goal-run-status.json",
     "contract_id": "goal-5day-auto-improve-runtime",
-    "run_id": "5day-auto-improve-runtime",
+    "run_id": "auto-improve-trial",
     "run_status": "blocked",
     "profile": "30m_trial",
     "promotion_status": "blocked",
     "can_promote_result": false,
     "checkpoint_status": "current",
     "periodic_evidence_status": "not_due",
-    "audit_log_path": "runs/goal-5day-auto-improve-runtime/state/audit-log.jsonl",
-    "resume_metadata_path": "runs/goal-5day-auto-improve-runtime/state/resume-metadata.json",
+    "audit_log_path": "runs/goal-auto-improve-trial/audit-log.jsonl",
+    "resume_metadata_path": "runs/goal-auto-improve-trial/resume-metadata.json",
     "next_action": "Resume via the linked goal status artifacts before starting a separate session."
   },
   "goal_profile_ladder": {
@@ -278,7 +268,7 @@
     "profile_ladder_status": "incomplete",
     "sustained_claim_allowed": false,
     "open_blocker_count": 5,
-    "forbidden_pattern_count": 5,
+    "forbidden_pattern_count": 4,
     "evidence_gap_count": 2
   },
   "inputs": {

@@ -167,8 +167,8 @@
     },
     {
       "path": "mk/mechanism.mk",
-      "sha256": "e48be9cadb67e14b21161f2dbe2d6356cfe548152286727707d4be33577840cc",
-      "size_bytes": 18612
+      "sha256": "abcaa776395d6cb535cdb233d4b0781bc8527c2259ec54cb1cb073c7f7ea0d00",
+      "size_bytes": 18667
     },
     {
       "path": "mk/public.mk",
@@ -1482,8 +1482,8 @@
     },
     {
       "path": "ops/scripts/learning/session_synopsis.py",
-      "sha256": "f46dcd9e89e8cd515a27e9ae55a337545409d406d7d7d47765e730c0c016ebae",
-      "size_bytes": 22551
+      "sha256": "31566a553709c4ee363112e00d6edb465693136221e3ecb4c2a1db8826d84807",
+      "size_bytes": 22547
     },
     {
       "path": "ops/scripts/mechanism/__init__.py",
@@ -1792,8 +1792,8 @@
     },
     {
       "path": "ops/scripts/mechanism/mutation_proposal_runtime.py",
-      "sha256": "b07ec7d17d7565796ac12ae6b5f349cef6b6e924d16a3e8e9f4a3c6fa9224c82",
-      "size_bytes": 77709
+      "sha256": "50fdb6baa144172ec97d24896631ec638892dab8851b2575f63946e759ec80b8",
+      "size_bytes": 77508
     },
     {
       "path": "ops/scripts/mechanism/outcome_metrics.py",
@@ -4812,8 +4812,8 @@
     },
     {
       "path": "system/system-log.md",
-      "sha256": "637f1e0c7f252f7e5a908f3a23fec8463bf650ef45b508115310fa9b93c8dc53",
-      "size_bytes": 398664
+      "sha256": "2544138634c9a25dfc05abc2dee95362fbddb3abb00861d0e6f5f4682f4c0743",
+      "size_bytes": 402777
     },
     {
       "path": "system/system-raw-registry.md",
@@ -5352,8 +5352,8 @@
     },
     {
       "path": "tests/test_mutation_proposal.py",
-      "sha256": "ac2c50f7ae20c3719f34e5e154dd4efd96eb8d402ebc5d7738cf73b464f58f90",
-      "size_bytes": 99298
+      "sha256": "ec1520a733deb79701ae6c9679d50b6ba041ffe1bbe2b34e3ff16b68dd22b7a2",
+      "size_bytes": 99212
     },
     {
       "path": "tests/test_observability_artifacts_runtime.py",
@@ -5697,8 +5697,8 @@
     },
     {
       "path": "tests/test_session_synopsis.py",
-      "sha256": "56dba2333fd703fd31db4ada481c39edfb10f7929ba6aa7069e51d0086b81b08",
-      "size_bytes": 13186
+      "sha256": "6e037b47d8f2e0dbedda71dc9016b2b484a5a271c440d514d9f6ed2f819b700b",
+      "size_bytes": 16674
     },
     {
       "path": "tests/test_set_mechanism_run_history.py",

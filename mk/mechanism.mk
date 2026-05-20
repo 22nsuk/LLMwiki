@@ -95,6 +95,8 @@ goal-runtime-reconcile:
 	$(MAKE) session-synopsis
 	$(MAKE) remediation-backlog
 	$(MAKE) auto-improve-readiness-report-body
+	$(MAKE) session-synopsis
+	$(MAKE) remediation-backlog
 	$(MAKE) goal-runtime-fixed-point-check
 	$(MAKE) external-report-action-matrix
 	$(MAKE) generated-artifact-index

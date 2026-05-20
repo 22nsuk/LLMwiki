@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-20T08:59:36Z",
+  "generated_at": "2026-05-20T09:22:46Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "3e635634dc6d4d69084d183cefe7b8121b149b3993704e3ba3e133e272356053",
+  "source_tree_fingerprint": "f3e6f001470ffefa62cdfb26bcc2a0128f2bb7505a8690eda9b729727b21c59c",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "ac89dead9a209f58ec98e9f5a02446afe66adf70edbba3f94c9c88d59e3386cb",
-    "learning_claim_activation": "8d6feef4a8781b4cda803f93e2c3749b825b66a79c25da2faef2906a2b7576ab",
-    "self_improvement_negative_lessons": "defd72e36090538f0d9cecd77d7739d6277bc8263c8f6217299b5e1f564c357b",
-    "session_synopsis": "b1451ed2fbcbbf05ce03fe5539a45f54144179fc8b7bb2a26f18ae053879f076",
+    "source_paths": "a1944bd8f56639f8342b31ff9812a2d20d6995e3cccbcdfbbdf42467807cffe2",
+    "learning_claim_activation": "f6b8f4b77d16862bbd92ef609777fc3f3816b829415f39c6442cdb5d7b5c0782",
+    "self_improvement_negative_lessons": "6e703b48cf96f15c3ed28456d1daa4ff3db46c95ea2a11f2396a1aae3782d9d5",
+    "session_synopsis": "5fecd2506a3235161a5b8ceb939ccbf78b720f69eeaf890add3df8569da501ea",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
-    "auto_improve_sessions": "c6c723a041277de609fceea4c1d7f2cf848c193f829366f73885deff6506c0ff"
+    "auto_improve_sessions": "0aab87aed19f18d30b745ad1e1d4e7c9792fe00f39d0a754682d2ae252ee97dc"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T08:59:36Z"
+    "checked_at": "2026-05-20T09:22:46Z"
   },
   "vault": ".",
   "policy": {
@@ -83,9 +83,9 @@
       "next_action": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
     },
     {
-      "item_id": "active_blocker_promotion_blocked_by_artifact_contract_failure",
-      "blocker_id": "promotion_blocked_by_artifact_contract_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
+      "item_id": "active_blocker_learning_claim_unlock_review_not_approved",
+      "blocker_id": "learning_claim_unlock_review_not_approved",
+      "source": "learning_claim_activation.blocked_predicates",
       "item_type": "active_blocker",
       "status": "open",
       "severity": "blocks_promotion",
@@ -93,8 +93,8 @@
       "evidence_paths": [
         "ops/reports/session-synopsis.json"
       ],
-      "repair_target": "Resolve artifact freshness blockers, then rerun make auto-improve-readiness.",
-      "next_action": "Resolve artifact freshness blockers, then rerun make auto-improve-readiness."
+      "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean.",
+      "next_action": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean."
     },
     {
       "item_id": "active_blocker_promotion_blocked_by_goal_worktree_guard_failure",
