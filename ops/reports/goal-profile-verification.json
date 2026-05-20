@@ -1,22 +1,22 @@
 {
   "$schema": "ops/schemas/goal-profile-verification.schema.json",
   "artifact_kind": "goal_profile_verification",
-  "generated_at": "2026-05-19T08:02:31Z",
+  "generated_at": "2026-05-20T02:26:10Z",
   "producer": "ops.scripts.goal_profile_verification",
   "source_command": "python -m ops.scripts.goal_profile_verification --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "52effdfe37ea67cd03fb9906ed8bbacadac2c8a399dd7306394e66f66859a105",
+  "source_tree_fingerprint": "3cf202165766115d52e27de8512b0442bcd5142ec6d281a07ee0e5052b68864d",
   "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "policy": "21f6fd5f218dcbd9b8ee7bc6450e0c83c2c6d0f8cff1ff5e6a311213349d1ddc",
     "schema": "abd775b5d29526962bb7428fbd6b8bfe2437357c0033611e79a9a835d0c0bb5c",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "8b6bdcfe7dcff8d20b256062564e5db5d0189fee9de6ff4ca1b2e89921445eba",
-    "auto_improve_session": "missing",
-    "goal_contract": "546132ac36d6d0df74bbeeca0acda32424dd3dd36e8183292793f3b0765910f0",
-    "goal_run_status": "f97c2fdd101a8409d0b99c367f77d87b93031c0a3325bc1d036304716699511a",
-    "run_audit_log": "e2cc6e5aec5042468117481c426466b4f4677c6cc9c9e23d07a0012de9305340",
-    "run_resume_metadata": "316fd3105ca46e77b7429f63738c5eba26d45a2927a8c3add55a37e5d3b532e4",
-    "run_status_markdown": "f63e09cab6b75977cb9907cad2b83f508ea9005e49ca26289d1c510a77e371d7"
+    "auto_improve_session": "78eade3a7e0328800d1e5c32b869cd9a9c27391a03df3f9b48f0a3c5430b17b5",
+    "goal_contract": "03b0469a9afcee9a07774998d592f31847a6ecff72c32c7b94be704b25dfe74a",
+    "goal_run_status": "53e935f7e241a4330c1651d60b49f9d9bf8f2c10d7a17d5a11b9a4c36d71efbb",
+    "run_audit_log": "5a249c500729fedf845528aeffbf274abff35457b800ff27dcfcb0da610c1534",
+    "run_resume_metadata": "1a7485c8a594130799fd734550637ee6b91bb29b66f0c47f58c61bd29b1f0468",
+    "run_status_markdown": "8ebeb4d2e07634a89e45489315b14337d2db312ab7f5d905a17c36325a6ac6d1"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -24,14 +24,14 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-19T08:02:31Z"
+    "checked_at": "2026-05-20T02:26:10Z"
   },
   "vault": ".",
   "goal": {
     "contract_path": "runs/goal-auto-improve-trial/state/codex-goal-contract.json",
     "contract_id": "auto-improve-goal",
-    "contract_sha256_before": "c41576bb9a8d5eb3e1dd3b4c7907749ed49fdcb1e3b8e8f27ac3f924af094282",
-    "contract_sha256_after": "c41576bb9a8d5eb3e1dd3b4c7907749ed49fdcb1e3b8e8f27ac3f924af094282"
+    "contract_sha256_before": "e184ccaba400f24f0927889d0e8afc6aca2cecd4461f18738c451a1077351bd4",
+    "contract_sha256_after": "e184ccaba400f24f0927889d0e8afc6aca2cecd4461f18738c451a1077351bd4"
   },
   "profile": {
     "target_profile": "30m_trial",
@@ -46,7 +46,7 @@
     "run_id": "auto-improve-trial",
     "run_status": "blocked",
     "run_profile": "30m_trial",
-    "started_at": "2026-05-19T08:02:08Z",
+    "started_at": "2026-05-19T20:48:08Z",
     "completed_at": ""
   },
   "run_artifacts": {
@@ -88,14 +88,14 @@
         "status": "pass"
       }
     ],
-    "audit_event_count": 13,
+    "audit_event_count": 1,
     "runner_command_audit_current": false
   },
   "session_evidence": {
-    "status": "missing",
+    "status": "incomplete",
     "path": "ops/reports/auto-improve-sessions/auto-improve-trial.json",
-    "session_status": "",
-    "stop_reason": "",
+    "session_status": "running",
+    "stop_reason": "running",
     "iteration_count": 0,
     "successful_iteration_count": 0,
     "has_success_then_followup": false,
@@ -155,7 +155,11 @@
   "blockers": [
     "goal run is not completed",
     "profile minimum elapsed time not met",
-    "auto-improve session evidence missing",
+    "auto-improve session did not complete",
+    "auto-improve session stop reason is not accepted for profile",
+    "auto-improve session has fewer than required improvement iterations",
+    "auto-improve session has no successful improvement iteration",
+    "auto-improve session lacks meaningful runtime maintenance evidence",
     "goal run command heartbeat is not current",
     "goal run command observation mode is not process_heartbeat",
     "goal run command audit was not written by goal runtime runner",
