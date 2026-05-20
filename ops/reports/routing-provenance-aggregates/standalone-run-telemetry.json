@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/routing-provenance-aggregate.schema.json",
   "artifact_kind": "routing_provenance_aggregate",
-  "generated_at": "2026-05-20T11:57:48Z",
+  "generated_at": "2026-05-20T12:07:09Z",
   "producer": "ops.scripts.observability_routing_provenance_runtime",
   "source_command": "python -m ops.scripts.observability_routing_provenance_runtime --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "882548b38d037112170672d20c861fdd3785a59e95658cf82d18de3176baeeef",
+  "source_tree_fingerprint": "9c7a2a83006cd9b5dfd80f7457fcfbb506d221fa2c79f22af577bb5e7152f94c",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "d1020425815581b2e5ba63d8e577aa169eeb759773d42063844263ef84a3e78f",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b4a1a3de468aa500d941eb1ceb9eccc6e27bf819354e9120952fdf2bdb36e852",
-    "source_session_report": "69dc163cde90e1e518a358bcf73169fe18153e3db828b92bba528c14a762e64d",
-    "run_ids": "6ce7160c7ecff5ba283e7609052b93200281eaf560fca1301b832552d0b2265c"
+    "source_session_report": "5bf5b2600582fab98c34ef530348b7547439cc587ded1b3e50f20ae99d5a91a9",
+    "run_ids": "3b2cb306a5903fa3e829f7d2e324e59af31d7ec6dd10554f8a5591cdfe35a6e9"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T11:57:48Z"
+    "checked_at": "2026-05-20T12:07:09Z"
   },
   "session_id": "standalone-run-telemetry",
   "policy": {
@@ -29,41 +29,41 @@
   },
   "source_session_report": "ops/reports/auto-improve-sessions/standalone-run-telemetry.json",
   "summary": {
-    "run_count": 24,
-    "routing_report_count": 44,
+    "run_count": 25,
+    "routing_report_count": 48,
     "executor_report_count": 18,
-    "telemetry_report_count": 20,
-    "promotion_report_count": 24,
-    "artifact_fingerprint_count": 19
+    "telemetry_report_count": 21,
+    "promotion_report_count": 25,
+    "artifact_fingerprint_count": 20
   },
   "audit_rollup": {
     "routing": {
-      "report_count": 44,
+      "report_count": 48,
       "role_counts": {
-        "provenance-auditor": 11,
-        "reviewer": 11,
-        "validator": 11,
-        "worker": 11
+        "provenance-auditor": 12,
+        "reviewer": 12,
+        "validator": 12,
+        "worker": 12
       },
       "selected_rung_counts": {
-        "3": 44
+        "3": 48
       },
       "score_band_counts": {
         "high": 32,
-        "extreme": 12
+        "extreme": 16
       },
       "sandbox_mode_counts": {
-        "read-only": 11,
-        "workspace-write": 33
+        "read-only": 12,
+        "workspace-write": 36
       },
       "model_counts": {
-        "gpt-5.5": 44
+        "gpt-5.5": 48
       },
       "reasoning_effort_counts": {
-        "xhigh": 44
+        "xhigh": 48
       },
       "risk_flag_counts": {
-        "schema_change": 44
+        "schema_change": 48
       }
     },
     "executor": {
@@ -87,7 +87,7 @@
       }
     },
     "telemetry": {
-      "report_count": 20,
+      "report_count": 21,
       "failure_taxonomy_counts": {
         "mutation_failed": 4,
         "validation_blocked": 1,
@@ -112,16 +112,16 @@
       }
     },
     "coverage": {
-      "run_count": 24,
-      "runs_with_routing": 11,
+      "run_count": 25,
+      "runs_with_routing": 12,
       "runs_with_executor": 8,
-      "runs_with_telemetry": 20,
-      "runs_with_promotion_report": 24,
-      "runs_with_artifact_fingerprint": 19
+      "runs_with_telemetry": 21,
+      "runs_with_promotion_report": 25,
+      "runs_with_artifact_fingerprint": 20
     },
     "loop_health": {
-      "attempt_count": 24,
-      "rework_count": 11,
+      "attempt_count": 25,
+      "rework_count": 12,
       "rollback_signal_count": 0,
       "rollback_rehearsal_coverage_count": 3,
       "defect_escape_count": 4,
@@ -130,16 +130,16 @@
       "routing_report_parse_gap_count": 0,
       "executor_report_parse_gap_count": 0,
       "moving_averages": {
-        "hold": 0.6,
+        "hold": 0.65,
         "discard": 0.15,
         "rollback_signal": 0.0
       },
       "coverage_ratios": {
-        "routing": 0.4583,
-        "executor": 0.3333,
-        "telemetry": 0.8333,
+        "routing": 0.48,
+        "executor": 0.32,
+        "telemetry": 0.84,
         "promotion_report": 1.0,
-        "artifact_fingerprint": 0.7917
+        "artifact_fingerprint": 0.8
       },
       "health_flags": [
         "partial_telemetry_coverage",
@@ -937,6 +937,46 @@
         "run_telemetry": "runs/5day-auto-improve-runtime-rerun15-30m_trial-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
         "promotion_report": "runs/5day-auto-improve-runtime-rerun15-30m_trial-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json",
         "run_artifact_fingerprint": "runs/5day-auto-improve-runtime-rerun15-30m_trial-run-01-auto-improve-iteration-persistence-runtime/run-artifact-fingerprint.json"
+      }
+    },
+    {
+      "run_id": "5day-auto-improve-runtime-rerun16-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
+      "proposal_id": "",
+      "source_candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
+      "decision": "HOLD",
+      "outcome": "hold",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/schemas/run-telemetry.schema.json",
+        "ops/script-output-surfaces.json"
+      ],
+      "test_files": [
+        "tests/test_auto_improve_iteration_runtime.py"
+      ],
+      "risk_flags": [
+        "schema_change"
+      ],
+      "roles": [
+        "provenance-auditor",
+        "reviewer",
+        "validator",
+        "worker"
+      ],
+      "artifacts": {
+        "proposal_snapshot": "runs/5day-auto-improve-runtime-rerun16-30m_trial-run-01-auto-improve-iteration-persistence-runtime/proposal-snapshot.json",
+        "scope_freeze": "runs/5day-auto-improve-runtime-rerun16-30m_trial-run-01-auto-improve-iteration-persistence-runtime/scope-freeze.json",
+        "routing_reports": [
+          "runs/5day-auto-improve-runtime-rerun16-30m_trial-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.provenance-auditor.json",
+          "runs/5day-auto-improve-runtime-rerun16-30m_trial-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.reviewer.json",
+          "runs/5day-auto-improve-runtime-rerun16-30m_trial-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.validator.json",
+          "runs/5day-auto-improve-runtime-rerun16-30m_trial-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.worker.json"
+        ],
+        "executor_reports": [],
+        "run_telemetry": "runs/5day-auto-improve-runtime-rerun16-30m_trial-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+        "promotion_report": "runs/5day-auto-improve-runtime-rerun16-30m_trial-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json",
+        "run_artifact_fingerprint": "runs/5day-auto-improve-runtime-rerun16-30m_trial-run-01-auto-improve-iteration-persistence-runtime/run-artifact-fingerprint.json"
       }
     }
   ]

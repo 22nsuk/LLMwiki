@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/outcome-metrics.schema.json",
   "artifact_kind": "outcome_metrics_report",
-  "generated_at": "2026-05-20T11:57:49Z",
+  "generated_at": "2026-05-20T12:07:10Z",
   "producer": "ops.scripts.observability_decision_metrics_runtime",
   "source_command": "python -m ops.scripts.outcome_metrics --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "882548b38d037112170672d20c861fdd3785a59e95658cf82d18de3176baeeef",
+  "source_tree_fingerprint": "9c7a2a83006cd9b5dfd80f7457fcfbb506d221fa2c79f22af577bb5e7152f94c",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "aadbf232f7dc6bf40f35290f0dabcc4e9320b93c70cc2f0177f1167b24ecff29",
@@ -13,8 +13,8 @@
     "source_paths": "c364e1ed667cd810b07ae3d6b09e9de4431804a8db70852d444664e6939e289d",
     "defect_escape_closures": "e40744ca516a4f003d68c624562f8661d7b4cfc8bdae682e2c820f21ec2d8bef",
     "rework_closures": "36256509d1f6630377de2170e80f6678cbb42d9e05ccc3302ec351a7a5e710d0",
-    "run_inputs": "7956ef3d042ccb6e49c6c545d896b689614dd871cb59cb1b21d6b3ca750a6e15",
-    "session_reports": "3f3e014691330732306c7ee9ff4582d9a17b8e9345410c1ffcde7975d48b3081",
+    "run_inputs": "bd044c2d2ec3c776a303b019663f07303700a5f19a0cf37861b9b7506c10b5f5",
+    "session_reports": "c78a8063c41a83d4abe0ea4bc35c283230d43e230beb929563215a1afdf7ce1a",
     "recent_window": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T11:57:49Z"
+    "checked_at": "2026-05-20T12:07:10Z"
   },
   "vault": ".",
   "policy": {
@@ -31,20 +31,20 @@
     "version": 4
   },
   "summary": {
-    "attempts_considered": 24,
+    "attempts_considered": 25,
     "recent_window": 20,
     "recent_attempt_count": 20,
-    "session_reports_considered": 14
+    "session_reports_considered": 15
   },
   "metrics": {
-    "attempt_count": 24,
+    "attempt_count": 25,
     "recent_window": 20,
     "recent_attempt_count": 20,
-    "rework_count": 5,
+    "rework_count": 6,
     "rollback_signal_count": 0,
     "rollback_rehearsal_coverage_count": 3,
     "moving_averages": {
-      "hold": 0.6,
+      "hold": 0.65,
       "discard": 0.15,
       "rollback_signal": 0.0
     },
@@ -60,7 +60,7 @@
       "reviewer_dispatch_count": 5,
       "validator_dispatch_count": 3,
       "auditor_dispatch_count": 2,
-      "hold_count": 13
+      "hold_count": 14
     },
     "rework_keys": [
       {
@@ -89,6 +89,15 @@
         "run_ids": [
           "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
           "5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime"
+        ]
+      },
+      {
+        "key": "targets:ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
+        "attempt_count": 2,
+        "rework_count": 1,
+        "run_ids": [
+          "5day-auto-improve-runtime-rerun15-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
+          "5day-auto-improve-runtime-rerun16-30m_trial-run-01-auto-improve-iteration-persistence-runtime"
         ]
       },
       {
@@ -171,7 +180,7 @@
         }
       ]
     },
-    "raw_rework_count": 11,
+    "raw_rework_count": 12,
     "closed_rework_count": 6,
     "closed_rework_keys": [
       {
@@ -238,6 +247,23 @@
     ]
   },
   "recent_attempts": [
+    {
+      "run_id": "5day-auto-improve-runtime-rerun16-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
+      "session_id": "standalone-run-telemetry",
+      "proposal_id": "",
+      "source_candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-20T11:58:57Z",
+      "decision": "HOLD",
+      "outcome": "hold",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "rework_key": "targets:ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
+      "rollback_rehearsal_covered": false,
+      "rollback_signal": false,
+      "run_telemetry": "runs/5day-auto-improve-runtime-rerun16-30m_trial-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+      "promotion_report": "runs/5day-auto-improve-runtime-rerun16-30m_trial-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
     {
       "run_id": "5day-auto-improve-runtime-rerun15-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
       "session_id": "standalone-run-telemetry",
@@ -560,23 +586,6 @@
       "rollback_signal": false,
       "run_telemetry": "runs/run-20260422-auto-improve-decision-record-fallback-retry/run-telemetry.json",
       "promotion_report": "runs/run-20260422-auto-improve-decision-record-fallback-retry/promotion-report.json"
-    },
-    {
-      "run_id": "run-20260422-auto-improve-timeout-telemetry-fallback",
-      "session_id": "standalone-run-telemetry",
-      "proposal_id": "",
-      "source_candidate_id": "",
-      "observed_at": "2026-04-22T12:55:37Z",
-      "decision": "PROMOTE",
-      "outcome": "promoted",
-      "primary_targets": [
-        "ops/scripts/auto_improve_iteration_persistence_runtime.py"
-      ],
-      "rework_key": "targets:ops/scripts/auto_improve_iteration_persistence_runtime.py",
-      "rollback_rehearsal_covered": true,
-      "rollback_signal": false,
-      "run_telemetry": "runs/run-20260422-auto-improve-timeout-telemetry-fallback/run-telemetry.json",
-      "promotion_report": "runs/run-20260422-auto-improve-timeout-telemetry-fallback/promotion-report.json"
     }
   ]
 }

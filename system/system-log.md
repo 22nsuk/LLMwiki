@@ -6199,3 +6199,21 @@ The next attempt will use the existing `auto-improve-goal-ladder-start` target, 
 ### Consequence
 - Rerun15 remains blocked evidence, not profile progress.
 - Future status checks should be short, read-only polls against pid/log/status artifacts rather than long sleep wrappers.
+
+---
+
+## [2026-05-20 21:06 KST] improve | Move long trial launch under systemd
+
+### Summary
+`5day-auto-improve-runtime-rerun16-30m_trial` confirmed that `setsid` alone is not enough isolation in this tool-hosted environment: a monitor termination still stopped the detached process group before worker completion. The run is operator-aborted diagnostic evidence only.
+
+The next attempt will be launched with `systemd-run --user --scope`, so the long-running ladder is owned by the user systemd manager instead of the transient shell used for status polling.
+
+### Artifacts
+- `build/goal-runs/5day-auto-improve-runtime-rerun16.log`
+- `runs/goal-5day-auto-improve-runtime/state/goal-run-status.json`
+- `system/system-log.md`
+
+### Consequence
+- Rerun16 remains blocked evidence, not profile progress.
+- Status polling must stay read-only and short; process lifetime should be delegated to the user service manager for long profile runs.
