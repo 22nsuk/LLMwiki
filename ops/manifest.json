@@ -1647,8 +1647,8 @@
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_clean_transient.py",
-      "sha256": "ffa2e904abc20623558ff2fdb17cbbd8f053c6a2f9d4501a41272d2f6555405f",
-      "size_bytes": 15294
+      "sha256": "78ee5efc7499bf6025315e32659c7c8e5077231496d308d1b296ef1672c3e68c",
+      "size_bytes": 16155
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_fixed_point_check.py",
@@ -5212,8 +5212,8 @@
     },
     {
       "path": "tests/test_goal_runtime_clean_transient.py",
-      "sha256": "3b35f01c872f3b6d19466fe51f5c83d2e3822b0f124c36590f4759f674fdc35f",
-      "size_bytes": 7256
+      "sha256": "b7cc1ad936357e4aacc06507529672d0069be6a25f996cccb7d78e8461be23d1",
+      "size_bytes": 8519
     },
     {
       "path": "tests/test_goal_runtime_fixed_point_check.py",

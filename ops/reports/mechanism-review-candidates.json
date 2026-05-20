@@ -1,19 +1,19 @@
 {
   "$schema": "ops/schemas/mechanism-review-candidates.schema.json",
   "artifact_kind": "mechanism_review_candidates_report",
-  "generated_at": "2026-05-20T10:00:30Z",
+  "generated_at": "2026-05-20T10:01:39Z",
   "producer": "ops.scripts.mechanism_review_runtime",
   "source_command": "python -m ops.scripts.mechanism_review",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "752b1a3197f896e9f773d571f21364c27ddda4262ec40d7f4d676fef45eafdf7",
+  "source_tree_fingerprint": "9c75dcffbc02f8474731d4870f71c503b225fc2f1b95b6d16aa1677559442e54",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "c730a4570492eaf5cb038d51227064a8c9404069f62cb3920049a985951e876a",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b6a97e444164d60ea21111ba0d6068ce8e345c212c78dd4070013da1d67097f4",
-    "excluded_promotion_reports": "4243b44bc29cd7f9f5b91dc662255ed62700a4c439e7d38bfb5418db5e5c52b8",
+    "excluded_promotion_reports": "6a2bc763e2449c7ec93e6eceeb00b05a4b5d9f75504403f2667f9a7dbbd81f34",
     "promotion_reports": "d63fdff8c967123b30e5291b3cab7462e23a4253b7cd22a9fe0fbd831bcbc210",
-    "skipped_artifacts": "0f22fd03987d603ddd3eabecd695b7d2e4045f24a7c4ed59e6465dd6d6d41f31",
+    "skipped_artifacts": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "mechanism_review_enabled": "3cbc87c7681f34db4617feaa2c8801931bc5e42d8d0f560e756dd4cd92885f18",
     "mechanism_review_max_candidates": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
     "mechanism_review_max_runs": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:00:30Z"
+    "checked_at": "2026-05-20T10:01:39Z"
   },
   "vault": ".",
   "policy": {
@@ -35,29 +35,12 @@
   "summary": {
     "runs_discovered": 20,
     "runs_considered": 10,
-    "runs_excluded": 9,
-    "runs_skipped": 1,
+    "runs_excluded": 10,
+    "runs_skipped": 0,
     "candidates_emitted": 1
   },
   "diagnostics": {
-    "skipped_runs": [
-      {
-        "run_id": "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
-        "reason": "run_artifact_invalid",
-        "path": "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/candidate-eval.json",
-        "detail": "missing artifact: runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/candidate-eval.json",
-        "triage": {
-          "status": "operator_decision_required",
-          "problem": "missing_promotion_input_artifact",
-          "recommended_action": "restore_missing_artifact_or_archive_run_history",
-          "options": [
-            "restore the missing artifact from ledgered evidence",
-            "archive or quarantine the promotion report history",
-            "mark the run non-history if superseded by a later run"
-          ]
-        }
-      }
-    ],
+    "skipped_runs": [],
     "excluded_runs": [
       {
         "run_id": "run-20260422-auto-improve-decision-record-fallback-retry2",
@@ -106,6 +89,12 @@
         "status": "quarantined",
         "reason": "superseded infrastructure failure: queue-unblock rotation selected an already-satisfied auto-readiness target; rotation target list now advances to mechanism run validation before retry",
         "path": "runs/5day-auto-improve-runtime-rerun5-30m_trial-run-01-auto-improve-readiness-queue-runtime/promotion-report.json"
+      },
+      {
+        "run_id": "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
+        "status": "quarantined",
+        "reason": "superseded validation-blocked candidate: supporting registry currentness blocker fixed directly in main; candidate artifacts absent before capture",
+        "path": "runs/5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
       },
       {
         "run_id": "5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime",

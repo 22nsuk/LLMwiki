@@ -1,23 +1,23 @@
 {
   "$schema": "ops/schemas/test-execution-summary.schema.json",
   "artifact_kind": "test_execution_summary",
-  "generated_at": "2026-05-20T09:59:27Z",
+  "generated_at": "2026-05-20T10:02:31Z",
   "producer": "ops.scripts.test_execution_summary",
   "source_command": "python -m ops.scripts.test_execution_summary --vault . --suite report-contract-summary --collect-nodeids --deselection-policy ops/policies/report-contract-deselections.json -- .venv/bin/python -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_clean_fixture_regeneration_guard.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_goal_runtime_clean_transient.py tests/test_goal_runtime_fixed_point_check.py tests/test_run_templates.py",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "1993032233a5f0ad0e88ebeb764d53b5be6b481dd6744ff71449074e83a6c228",
+  "source_tree_fingerprint": "9c75dcffbc02f8474731d4870f71c503b225fc2f1b95b6d16aa1677559442e54",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "9723184baf2c03d63eb746bd49cfab746f2a29e2b29f05ee97b2a3a802dae4bf",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b6a7530898be27f1c114dc37c64bb35558dff83186584c7cbfa96f0c4a181cd2",
     "deselection_policy": "304ab09b5d5d34ab1992a9b2ce54aa5a5f4e0b73f928db808de6e6df372fba91",
-    "test_targets": "8af7b8b17cb8f9fc341a2c7c89808f05da4a2b23c87244fb7fe726187f7a7370",
+    "test_targets": "b5146bc743e64ab3dd81bbbcf429687aeed5a249406069db9938d447b7c43986",
     "deselected_tests": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-    "deselection_lifecycle": "cacc1c017e3bf633e5ad17078c996422eebf4ac96dbe608fab38fdaab24706d1",
+    "deselection_lifecycle": "aaa795f2c860fa3657173376bba3fb8ec772cf73e55f6f94568f9b57cfebcae8",
     "evidence_artifact_consistency": "c05eee63c53707bc9495a70f7106f4f5382246ee11f9b76770a1c94d8eb8ffb9",
     "evidence_artifacts": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-    "nodeid_outcome_consistency": "b807ad4a0207602b1c4482d728e18754edfbb5118e8ea9911cbfaf4bde088354",
+    "nodeid_outcome_consistency": "c6b0609c19bf140c8d6526b422b95b3a8d58b61f3e811e3b025307a3f5d2efde",
     "suite": "e8806087007f73940192067c46554732289adb000251e116b8eda2437a0ff078",
     "suite_coverage": "b77ace30e3859d15a04208659cffabca258e1fcdfda97192c160769a041b2b7e",
     "wrapped_command": "21c46c78c967c47e76eb351081269d094e92a6e63557468d1b4024290913ce41"
@@ -28,7 +28,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T09:59:27Z"
+    "checked_at": "2026-05-20T10:02:31Z"
   },
   "vault": ".",
   "policy": {
@@ -45,16 +45,16 @@
     "release_builder_environment": ".venv clean release-builder",
     "reason": "report-contract-summary is a targeted report-contract subset; use full release-builder evidence before treating this as full-suite proof."
   },
-  "status": "partial-pass",
+  "status": "pass",
   "command": ".venv/bin/python -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_clean_fixture_regeneration_guard.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_goal_runtime_clean_transient.py tests/test_goal_runtime_fixed_point_check.py tests/test_run_templates.py",
-  "returncode": 1,
+  "returncode": 0,
   "timed_out": false,
   "timeout_seconds": 5400,
   "termination_reason": "completed",
-  "duration_ms": 25707,
+  "duration_ms": 25380,
   "counts": {
-    "passed": 182,
-    "failed": 4,
+    "passed": 187,
+    "failed": 0,
     "errors": 0,
     "skipped": 0,
     "xfailed": 0,
@@ -105,7 +105,7 @@
     },
     {
       "path": "tests/test_goal_runtime_clean_transient.py",
-      "sha256": "3b35f01c872f3b6d19466fe51f5c83d2e3822b0f124c36590f4759f674fdc35f"
+      "sha256": "b7cc1ad936357e4aacc06507529672d0069be6a25f996cccb7d78e8461be23d1"
     },
     {
       "path": "tests/test_goal_runtime_fixed_point_check.py",
@@ -143,7 +143,7 @@
   "deselected_tests": [],
   "deselection_lifecycle": {
     "status": "pass",
-    "checked_at": "2026-05-20T09:59:27Z",
+    "checked_at": "2026-05-20T10:02:31Z",
     "actual_deselected_count": 0,
     "max_allowed_deselected_count": 0,
     "over_budget": false,
@@ -164,22 +164,22 @@
   "pytest_collect_nodeid_digest": {
     "status": "collected",
     "command": ".venv/bin/python -m pytest -o addopts= --collect-only -q --capture=no tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_clean_fixture_regeneration_guard.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_goal_runtime_clean_transient.py tests/test_goal_runtime_fixed_point_check.py tests/test_run_templates.py -m 'report_contract and not artifact_finalization'",
-    "nodeid_count": 186,
-    "sha256": "9b446becabc6f713eb385e235d626a7eb7a83d6e81100b87bc7cc92c673096d7",
+    "nodeid_count": 187,
+    "sha256": "da4bd1ddec13097a6375b62a0aed9b6c431d7b18ed81e0808741500a35e03a55",
     "reason": ""
   },
   "nodeid_outcome_consistency": {
-    "status": "skipped",
-    "nodeid_count": 186,
-    "outcome_count": 182,
+    "status": "pass",
+    "nodeid_count": 187,
+    "outcome_count": 187,
     "counted_outcomes": {
-      "passed": 182,
+      "passed": 187,
       "skipped": 0,
       "xfailed": 0,
       "xpassed": 0
     },
-    "delta": 4,
-    "reason": "failed/error outcomes are excluded from the release non-failing nodeid consistency gate"
+    "delta": 0,
+    "reason": "collected nodeid count matches passed + skipped + xfailed/xpassed outcomes"
   },
   "evidence_artifacts": [],
   "evidence_artifact_consistency": {
@@ -188,16 +188,16 @@
     "checks": [],
     "blockers": []
   },
-  "stdout_tail": "    \n        report = _read_json(ARTIFACT_FRESHNESS_REPORT_PATH)\n        missing_schema_records = [\n            item for item in report.get(\"artifact_records\", []) if \"missing_schema\" in item.get(\"issues\", [])\n        ]\n        missing_schema_paths = {item.get(\"path\") for item in missing_schema_records}\n    \n>       assert missing_schema_paths == EXPECTED_MISSING_SCHEMA_PATHS\nE       AssertionError: assert {'runs/goal-5...-result.json'} == set()\nE         \nE         Extra items in the left set:\nE         'runs/goal-5day-auto-improve-runtime/state/auto-improve-goal-session-result.json'\nE         Use -v to get more diff\n\ntests/test_generated_report_contracts.py:388: AssertionError\n___ test_checked_in_mechanism_review_report_has_no_unclassified_skipped_runs ___\n\n    def test_checked_in_mechanism_review_report_has_no_unclassified_skipped_runs() -> None:\n        assert MECHANISM_REVIEW_REPORT_PATH.exists(), (\n            \"mechanism review canonical report is missing; regenerate ops/reports/mechanism-review-candidates.json\"\n        )\n    \n        report = _read_json(MECHANISM_REVIEW_REPORT_PATH)\n    \n>       assert report.get(\"summary\", {}).get(\"runs_skipped\") == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = <built-in method get of dict object at 0x7931777c8500>('runs_skipped')\nE        +    where <built-in method get of dict object at 0x7931777c8500> = {'candidates_emitted': 1, 'runs_considered': 10, 'runs_discovered': 20, 'runs_excluded': 9, ...}.get\nE        +      where {'candidates_emitted': 1, 'runs_considered': 10, 'runs_discovered': 20, 'runs_excluded': 9, ...} = <built-in method get of dict object at 0x7931777c8440>('summary', {})\nE        +        where <built-in method get of dict object at 0x7931777c8440> = {'$schema': 'ops/schemas/mechanism-review-candidates.schema.json', 'artifact_kind': 'mechanism_review_candidates_repor...92, 'latest_candidate_eval_score': 4792, 'runs_examined': 5, ...}, 'family': 'contract_regression_signals', ...}], ...}.get\n\ntests/test_generated_report_contracts.py:626: AssertionError\n____ test_checked_in_auto_improve_readiness_keeps_evidence_ledgers_in_sync _____\n\n    def test_checked_in_auto_improve_readiness_keeps_evidence_ledgers_in_sync() -> None:\n        readiness = _read_json(AUTO_IMPROVE_READINESS_REPORT_PATH)\n        mechanism_review = _read_json(MECHANISM_REVIEW_REPORT_PATH)\n        outcome_metrics = _read_json(OUTCOME_METRICS_REPORT_PATH)\n        routing_aggregate_path, routing_provenance_aggregate = _read_readiness_loop_health_aggregate(readiness)\n    \n        learning_metrics = readiness.get(\"learning_readiness\", {}).get(\"metrics\", {})\n        learning_signals = {\n            str(item.get(\"id\", \"\")).strip()\n            for item in readiness.get(\"learning_readiness\", {}).get(\"signals\", [])\n            if isinstance(item, dict)\n        }\n        session_calibration = mechanism_review.get(\"diagnostics\", {}).get(\"session_calibration\", {})\n        outcome_summary = outcome_metrics.get(\"summary\", {})\n        outcome_metric_block = outcome_metrics.get(\"metrics\", {})\n        loop_health_summary = readiness.get(\"diagnostics\", {}).get(\"loop_health_summary\", {})\n        aggregate_loop_health = routing_provenance_aggregate.get(\"audit_rollup\", {}).get(\"loop_health\", {})\n    \n        assert learning_metrics.get(\"attempts_considered\") == outcome_summary.get(\"attempts_considered\")\n        assert learning_metrics.get(\"session_reports_considered\") == outcome_summary.get(\"session_reports_considered\")\n        assert learning_metrics.get(\"session_calibration_status\") == session_calibration.get(\"status\")\n        assert learning_metrics.get(\"rework_count\") == outcome_metric_block.get(\"rework_count\")\n        assert learning_metrics.get(\"hold_moving_average\") == outcome_metric_block.get(\"moving_averages\", {}).get(\"hold\")\n        assert learning_metrics.get(\"discard_moving_average\") == outcome_metric_block.get(\"moving_averages\", {}).get(\n            \"discard\"\n        )\n        assert learning_metrics.get(\"defect_escape_pair_count\") == outcome_metric_block.get(\n            \"defect_escape_proxy\", {}\n        ).get(\"count\")\n    \n        assert loop_health_summary.get(\"source_report\") == routing_aggregate_path\n>       assert loop_health_summary.get(\"source_generated_at\") == routing_provenance_aggregate.get(\"generated_at\")\nE       AssertionError: assert '2026-05-20T09:58:33Z' == '2026-05-20T09:58:38Z'\nE         \nE         - 2026-05-20T09:58:38Z\nE         ?                   ^\nE         + 2026-05-20T09:58:33Z\nE         ?                   ^\n\ntests/test_generated_report_contracts.py:1328: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_generated_report_contracts.py::test_checked_in_artifact_freshness_report_has_retired_missing_generated_at_bucket\nFAILED tests/test_generated_report_contracts.py::test_checked_in_missing_schema_records_are_fully_retired\nFAILED tests/test_generated_report_contracts.py::test_checked_in_mechanism_review_report_has_no_unclassified_skipped_runs\nFAILED tests/test_generated_report_contracts.py::test_checked_in_auto_improve_readiness_keeps_evidence_ledgers_in_sync\n4 failed, 182 passed, 7 deselected in 25.49s",
+  "stdout_tail": "........................................................................ [ 38%]\n........................................................................ [ 77%]\n...........................................                              [100%]\n187 passed, 7 deselected in 25.16s\n",
   "stderr_tail": "",
   "release_contract_diagnosis": [
     {
       "name": "pytest_contract_summary",
-      "status": "blocked",
-      "lane": "blocked",
+      "status": "clean_pass",
+      "lane": "clean",
       "command": ".venv/bin/python -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_clean_fixture_regeneration_guard.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_goal_runtime_clean_transient.py tests/test_goal_runtime_fixed_point_check.py tests/test_run_templates.py",
-      "duration_seconds": 25.71,
-      "checked_at": "2026-05-20T09:59:27Z",
+      "duration_seconds": 25.38,
+      "checked_at": "2026-05-20T10:02:31Z",
       "blocker_conditions": [],
       "accepted_risk_family": null,
       "risk_acceptance_ref": null,

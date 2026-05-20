@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-20T09:59:30Z",
+  "generated_at": "2026-05-20T10:02:34Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "1993032233a5f0ad0e88ebeb764d53b5be6b481dd6744ff71449074e83a6c228",
+  "source_tree_fingerprint": "9c75dcffbc02f8474731d4870f71c503b225fc2f1b95b6d16aa1677559442e54",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "834eb6cfec958f35d3989a742cfd58414bb50bb75040ab9283e4c90ed61f1657",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "3090e8825cf76941fff0428cae33626bf250f99e0ab497ee5c0c5883b415cffe",
-    "run_promotion_reports": "06484be601088c42bc16cab4e4fad9931f4bfc2e3a5d3330859bd5f7a8925139",
+    "run_promotion_reports": "2ce32b7b51e237a7fb765293031d27e944ec2dcbc57b6da7377edde26b7fe85b",
     "external_report_inventory": "8500649368cfaba258623f14fdb3e14f3b149ee174603d4be00ba71bcf77b11b",
     "operator_report_inventory": "0479590a186415fa72ba934ab4431828124b8ca576b06322a6eae193e9627721",
     "ops_report_inventory": "42888319f0fa00ed45687b2461bda3d2739588b931ba8c665afa1e1be992c762",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T09:59:30Z"
+    "checked_at": "2026-05-20T10:02:34Z"
   },
   "vault": ".",
   "policy": {
@@ -58,7 +58,7 @@
     }
   ],
   "now": [
-    "95 canonical artifact(s) are currently indexed.",
+    "94 canonical artifact(s) are currently indexed.",
     "2 archive candidate(s) remain in active namespaces."
   ],
   "next": [
@@ -74,9 +74,9 @@
     "operator_reports_root_file_count": 2,
     "external_reports_root_file_count": 4,
     "external_reports_archive_file_count": 68,
-    "run_directory_count": 23,
+    "run_directory_count": 22,
     "run_archive_directory_count": 4,
-    "canonical_report_count": 95,
+    "canonical_report_count": 94,
     "archive_candidate_count": 2
   },
   "canonical_reports": [
@@ -966,17 +966,6 @@
       "surface": "runs",
       "family": "mechanism_run",
       "path": "runs/goal-5day-auto-improve-runtime-rerun12-30m_trial",
-      "role": "run_history_record",
-      "date": "",
-      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary. Load issues: promotion-report.json:missing, run-ledger.json:missing.",
-      "supersedes": [],
-      "superseded_by": [],
-      "decision_relevance": "run_history"
-    },
-    {
-      "surface": "runs",
-      "family": "mechanism_run",
-      "path": "runs/goal-auto-improve-trial",
       "role": "run_history_record",
       "date": "",
       "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary. Load issues: promotion-report.json:missing, run-ledger.json:missing.",

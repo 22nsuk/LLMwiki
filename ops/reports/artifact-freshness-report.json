@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/artifact-freshness-report.schema.json",
   "artifact_kind": "artifact_freshness_report",
-  "generated_at": "2026-05-20T09:59:35Z",
+  "generated_at": "2026-05-20T10:02:38Z",
   "producer": "ops.scripts.artifact_freshness_runtime",
   "source_command": "python -m ops.scripts.artifact_freshness_runtime",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "1993032233a5f0ad0e88ebeb764d53b5be6b481dd6744ff71449074e83a6c228",
+  "source_tree_fingerprint": "9c75dcffbc02f8474731d4870f71c503b225fc2f1b95b6d16aa1677559442e54",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "63bae82bad6d173af836afe3d4e6f0862ac28e39d151c2d6fd67c9b4ccc93eef",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T09:59:35Z"
+    "checked_at": "2026-05-20T10:02:38Z"
   },
   "vault": ".",
   "policy": {
@@ -29,115 +29,45 @@
   },
   "mtime_source": "embedded_currentness",
   "zip_metadata_path": "",
-  "status": "attention",
-  "recommended_next_action": "backfill_artifact_envelopes",
+  "status": "pass",
+  "recommended_next_action": "none",
   "safe_to_backfill": true,
   "mtime_sensitive": false,
   "summary": {
-    "artifact_count": 468,
-    "json_artifact_count": 468,
-    "scanned_text_artifact_count": 536,
+    "artifact_count": 466,
+    "json_artifact_count": 466,
+    "scanned_text_artifact_count": 534,
     "stale_artifact_count": 0,
     "mtime_sensitive_artifact_count": 0,
     "root_ephemeral_artifact_count": 0,
     "run_log_placeholder_count": 32,
-    "unknown_currentness_artifact_count": 1,
+    "unknown_currentness_artifact_count": 0,
     "non_utf8_text_artifact_count": 0,
-    "missing_schema_count": 1,
-    "missing_artifact_envelope_count": 1,
+    "missing_schema_count": 0,
+    "missing_artifact_envelope_count": 0,
     "schema_invalid_artifact_count": 0,
     "schema_unavailable_artifact_count": 0,
-    "safe_to_backfill_artifact_count": 468,
-    "stable_contract_debt_artifact_count": 1,
-    "stable_contract_debt_issue_count": 3,
+    "safe_to_backfill_artifact_count": 466,
+    "stable_contract_debt_artifact_count": 0,
+    "stable_contract_debt_issue_count": 0,
     "mtime_sensitive_attention_artifact_count": 0,
     "mtime_sensitive_attention_issue_count": 0,
     "operational_attention_artifact_count": 0,
     "operational_attention_issue_count": 0
   },
-  "top_debt": [
-    {
-      "issue": "missing_artifact_envelope",
-      "count": 1,
-      "owner_surface_counts": {
-        "runs": 1
-      },
-      "safe_to_backfill_count": 1,
-      "mtime_sensitive_count": 0,
-      "recommended_next_action": "backfill_artifact_envelope"
-    },
-    {
-      "issue": "missing_generated_at",
-      "count": 1,
-      "owner_surface_counts": {
-        "runs": 1
-      },
-      "safe_to_backfill_count": 1,
-      "mtime_sensitive_count": 0,
-      "recommended_next_action": "backfill_generated_at_or_mark_legacy_noncanonical"
-    },
-    {
-      "issue": "missing_schema",
-      "count": 1,
-      "owner_surface_counts": {
-        "runs": 1
-      },
-      "safe_to_backfill_count": 1,
-      "mtime_sensitive_count": 0,
-      "recommended_next_action": "add_schema_or_exclude_noncanonical_json"
-    },
-    {
-      "issue": "unknown_currentness",
-      "count": 1,
-      "owner_surface_counts": {
-        "runs": 1
-      },
-      "safe_to_backfill_count": 1,
-      "mtime_sensitive_count": 0,
-      "recommended_next_action": "backfill_currentness_metadata"
-    }
-  ],
-  "top_debt_files": [
-    {
-      "path": "runs/goal-5day-auto-improve-runtime/state/auto-improve-goal-session-result.json",
-      "owner_surface": "runs",
-      "primary_issue": "missing_artifact_envelope",
-      "issues": [
-        "missing_artifact_envelope",
-        "missing_generated_at",
-        "missing_schema",
-        "unknown_currentness"
-      ],
-      "recommended_next_action": "backfill_artifact_envelope",
-      "expected_debt_reduction": 4,
-      "safe_to_backfill": true,
-      "mtime_sensitive": false
-    }
-  ],
+  "top_debt": [],
+  "top_debt_files": [],
   "debt_queues": [
     {
       "queue": "runs_historical_archive",
-      "status": "open",
-      "item_count": 1,
-      "issue_count": 3,
-      "safe_to_backfill_count": 1,
+      "status": "complete",
+      "item_count": 0,
+      "issue_count": 0,
+      "safe_to_backfill_count": 0,
       "mtime_sensitive_count": 0,
       "exit_condition": "Run-local historical JSON artifacts are archived, classified as noncanonical, or gain schema-backed artifact envelope/currentness metadata.",
-      "recommended_next_action": "archive_or_classify_historical_run_artifacts",
-      "paths": [
-        {
-          "path": "runs/goal-5day-auto-improve-runtime/state/auto-improve-goal-session-result.json",
-          "owner_surface": "runs",
-          "primary_issue": "missing_artifact_envelope",
-          "issues": [
-            "missing_artifact_envelope",
-            "missing_schema",
-            "unknown_currentness"
-          ],
-          "safe_to_backfill": true,
-          "mtime_sensitive": false
-        }
-      ]
+      "recommended_next_action": "none",
+      "paths": []
     },
     {
       "queue": "ops_reports_producer_refresh",
@@ -175,14 +105,6 @@
   ],
   "owner_surface": [
     {
-      "surface": "runs",
-      "artifact_count": 313,
-      "issue_count": 4,
-      "safe_to_backfill_count": 313,
-      "mtime_sensitive_count": 0,
-      "recommended_next_action": "backfill_artifact_envelope"
-    },
-    {
       "surface": "operator_reports",
       "artifact_count": 2,
       "issue_count": 0,
@@ -195,6 +117,14 @@
       "artifact_count": 153,
       "issue_count": 0,
       "safe_to_backfill_count": 153,
+      "mtime_sensitive_count": 0,
+      "recommended_next_action": "none"
+    },
+    {
+      "surface": "runs",
+      "artifact_count": 311,
+      "issue_count": 0,
+      "safe_to_backfill_count": 311,
       "mtime_sensitive_count": 0,
       "recommended_next_action": "none"
     }
@@ -411,7 +341,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:59:28Z",
+      "generated_at": "2026-05-20T10:02:31Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -571,7 +501,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:59:01Z",
+      "generated_at": "2026-05-20T10:02:05Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -603,7 +533,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:58:37Z",
+      "generated_at": "2026-05-20T10:02:33Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1083,7 +1013,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:59:28Z",
+      "generated_at": "2026-05-20T10:02:32Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1179,7 +1109,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:59:30Z",
+      "generated_at": "2026-05-20T10:02:34Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1435,7 +1365,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:34Z",
+      "generated_at": "2026-05-20T10:00:47Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1531,7 +1461,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:35Z",
+      "generated_at": "2026-05-20T10:00:48Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1563,7 +1493,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:59:29Z",
+      "generated_at": "2026-05-20T10:02:32Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1595,7 +1525,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:58:39Z",
+      "generated_at": "2026-05-20T10:01:39Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1627,7 +1557,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:58:41Z",
+      "generated_at": "2026-05-20T10:01:40Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1691,7 +1621,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:58:39Z",
+      "generated_at": "2026-05-20T10:01:38Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1947,7 +1877,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:58:35Z",
+      "generated_at": "2026-05-20T10:01:34Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1979,7 +1909,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:58:35Z",
+      "generated_at": "2026-05-20T10:01:33Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -2011,7 +1941,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:58:35Z",
+      "generated_at": "2026-05-20T10:01:34Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -2331,7 +2261,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:59:29Z",
+      "generated_at": "2026-05-20T10:02:33Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -2395,7 +2325,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:58:54Z",
+      "generated_at": "2026-05-20T10:01:57Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -2427,7 +2357,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:36Z",
+      "generated_at": "2026-05-20T10:00:49Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -2491,7 +2421,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:59:28Z",
+      "generated_at": "2026-05-20T10:02:32Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -2555,7 +2485,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:58:38Z",
+      "generated_at": "2026-05-20T10:01:37Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -2939,7 +2869,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:36Z",
+      "generated_at": "2026-05-20T10:00:48Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -2971,7 +2901,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:35Z",
+      "generated_at": "2026-05-20T10:00:48Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -5339,7 +5269,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:59:27Z",
+      "generated_at": "2026-05-20T10:02:31Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -10675,49 +10605,6 @@
       "issues": []
     },
     {
-      "path": "runs/goal-5day-auto-improve-runtime/state/auto-improve-goal-session-result.json",
-      "owner_surface": "runs",
-      "artifact_kind": "json_artifact",
-      "utf8_ok": true,
-      "json_ok": true,
-      "has_schema": false,
-      "has_generated_at": false,
-      "has_artifact_envelope": false,
-      "generated_at": "",
-      "artifact_status": "",
-      "retention_policy": "",
-      "currentness_status": "unknown",
-      "file_mtime_utc": "",
-      "mtime_source": "embedded_currentness",
-      "mtime_status": "unknown",
-      "mtime_sensitive": false,
-      "schema_validation_status": "missing_schema",
-      "schema_validation_errors": [
-        "missing $schema"
-      ],
-      "safe_to_backfill": true,
-      "recommended_next_action": "backfill_artifact_envelope",
-      "contract_issue_class": "stable_contract_debt",
-      "stable_contract_issues": [
-        "missing_artifact_envelope",
-        "missing_schema",
-        "unknown_currentness"
-      ],
-      "mtime_sensitive_issues": [],
-      "schema_contract": {
-        "status": "missing",
-        "classification": "run_artifact_pending_schema_decision",
-        "reason": "run-local JSON artifact lacks a declared schema or noncanonical archive classification",
-        "recommended_next_action": "add_schema_or_exclude_noncanonical_json"
-      },
-      "issues": [
-        "missing_artifact_envelope",
-        "missing_generated_at",
-        "missing_schema",
-        "unknown_currentness"
-      ]
-    },
-    {
       "path": "runs/goal-5day-auto-improve-runtime/state/codex-goal-contract.json",
       "owner_surface": "runs",
       "artifact_kind": "codex_goal_contract",
@@ -10855,38 +10742,6 @@
       "has_generated_at": true,
       "has_artifact_envelope": true,
       "generated_at": "2026-05-20T09:58:03Z",
-      "artifact_status": "current",
-      "retention_policy": "run_local_state",
-      "currentness_status": "current",
-      "file_mtime_utc": "",
-      "mtime_source": "embedded_currentness",
-      "mtime_status": "unknown",
-      "mtime_sensitive": false,
-      "schema_validation_status": "pass",
-      "schema_validation_errors": [],
-      "safe_to_backfill": true,
-      "recommended_next_action": "none",
-      "contract_issue_class": "clean",
-      "stable_contract_issues": [],
-      "mtime_sensitive_issues": [],
-      "schema_contract": {
-        "status": "present",
-        "classification": "schema_backed",
-        "reason": "artifact declares a loadable schema and validates against it",
-        "recommended_next_action": "none"
-      },
-      "issues": []
-    },
-    {
-      "path": "runs/goal-auto-improve-trial/resume-metadata.json",
-      "owner_surface": "runs",
-      "artifact_kind": "goal_run_resume_metadata",
-      "utf8_ok": true,
-      "json_ok": true,
-      "has_schema": true,
-      "has_generated_at": true,
-      "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:26Z",
       "artifact_status": "current",
       "retention_policy": "run_local_state",
       "currentness_status": "current",
