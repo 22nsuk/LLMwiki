@@ -1777,8 +1777,8 @@
     },
     {
       "path": "ops/scripts/mechanism/mechanism_run_validation_runtime.py",
-      "sha256": "f8475ec307a5f89324502e72b6f5f00279f670c2ac64f80d32b6395a5f7ef56f",
-      "size_bytes": 25798
+      "sha256": "e4574e9f56d683885d2643048f44340e13adaf28020dbbf233b23e15637f9190",
+      "size_bytes": 25375
     },
     {
       "path": "ops/scripts/mechanism/mechanism_run_workspace_runtime.py",

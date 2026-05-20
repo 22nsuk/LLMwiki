@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-20T08:55:06Z",
+  "generated_at": "2026-05-20T08:56:29Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
@@ -11,10 +11,10 @@
     "schema": "8c91343f30427af06d94db468c972889a09ff0185c7db529c93733a70f373b82",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "1b3dc9e7a915a19253d410de18eaaaf886a7ff3ed065da0c66c496fb7e0f9ae4",
-    "auto_improve_readiness": "b3fc19bce7a03aaf535d4ae8ca252c5eb91051ba2f447d298cb014f06af33337",
-    "goal_run_status": "fce1b571b3fea554fd75de623efb9ff96d8afbd6a8b97ede1cdc902ceaf5199b",
-    "learning_claim_activation": "88a7d7419eb57e381d49f11a5d34e0bcae28535bd0788ed6df689205946c8f54",
-    "learning_delta_scoreboard": "4bb222e5e41d97d5ac6caa7cb47a0235caed1c3b492e4763825ee2b59d0c5167",
+    "auto_improve_readiness": "3f820f0de904ae49de91838e293d7f12689eb6f40bf945351efa38ea7e981b71",
+    "goal_run_status": "653b3fc87390ee99f9d83175d8a53e751306d0eb23b78217b37e3303722045e2",
+    "learning_claim_activation": "4d2e05a9bcc443d37d225339fdcb911be883a759e91f5a6482dce5dcec69fd98",
+    "learning_delta_scoreboard": "1b23110e50c9a13ea1bf406413f72718ea7d685dc5d45e83dfd5ef434d91df69",
     "source_package_clean_extract": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "task_observations": "71013a0efaa510f93ecdb4cb6a3cbc18ff61d60d8fc093c6521a4aea80829677"
   },
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T08:55:06Z"
+    "checked_at": "2026-05-20T08:56:29Z"
   },
   "vault": ".",
   "policy": {
@@ -80,7 +80,7 @@
       "id": "promotion_blocked_by_goal_worktree_guard_failure",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=30",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=15",
       "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     }
   ],
