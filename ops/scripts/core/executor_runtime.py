@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -12,6 +13,8 @@ from .runtime_context import RuntimeContext
 
 
 ROLE_ORDER = ("worker", "reviewer", "validator")
+SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
+OPS_SCRIPTS_PREFIX = "ops/scripts/"
 
 
 class ExecutorRuntimeError(Exception):
@@ -54,16 +57,20 @@ def _file_digest(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _primary_targets_from_scope_freeze(artifact_root: Path, scope_freeze_rel: str) -> list[str]:
+def _scope_freeze_targets(
+    artifact_root: Path,
+    scope_freeze_rel: str,
+    key: str,
+) -> list[str]:
     payload = json.loads((artifact_root / scope_freeze_rel).read_text(encoding="utf-8"))
     inputs = payload.get("inputs", {})
     if not isinstance(inputs, dict):
         return []
-    primary_targets = inputs.get("primary_targets", [])
-    if not isinstance(primary_targets, list):
+    targets = inputs.get(key, [])
+    if not isinstance(targets, list):
         return []
     normalized: list[str] = []
-    for value in primary_targets:
+    for value in targets:
         rel_path = str(value).strip().replace("\\", "/")
         if not rel_path:
             continue
@@ -72,6 +79,14 @@ def _primary_targets_from_scope_freeze(artifact_root: Path, scope_freeze_rel: st
             continue
         normalized.append(rel_path)
     return normalized
+
+
+def _primary_targets_from_scope_freeze(artifact_root: Path, scope_freeze_rel: str) -> list[str]:
+    return _scope_freeze_targets(artifact_root, scope_freeze_rel, "primary_targets")
+
+
+def _supporting_targets_from_scope_freeze(artifact_root: Path, scope_freeze_rel: str) -> list[str]:
+    return _scope_freeze_targets(artifact_root, scope_freeze_rel, "supporting_targets")
 
 
 def _target_digest_snapshot(workspace_root: Path, targets: list[str]) -> dict[str, str | None]:
@@ -87,6 +102,40 @@ def _changed_targets(
     after: dict[str, str | None],
 ) -> list[str]:
     return [target for target in sorted(before) if before.get(target) != after.get(target)]
+
+
+def _should_refresh_script_output_surfaces(
+    *,
+    changed_primary_targets: list[str],
+    supporting_targets: list[str],
+) -> bool:
+    if SCRIPT_OUTPUT_SURFACES_TARGET not in supporting_targets:
+        return False
+    return any(target.startswith(OPS_SCRIPTS_PREFIX) for target in changed_primary_targets)
+
+
+def _refresh_script_output_surfaces(workspace_root: Path) -> None:
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "ops.scripts.script_output_surfaces",
+            "--vault",
+            ".",
+            "--out",
+            SCRIPT_OUTPUT_SURFACES_TARGET,
+        ],
+        cwd=workspace_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        detail = (completed.stderr or completed.stdout or "").strip()
+        raise ExecutorRuntimeExecutionError(
+            "failed to refresh ops/script-output-surfaces.json after worker changed "
+            f"ops/scripts target: {detail}"
+        )
 
 
 def run_executor_pipeline(
@@ -113,6 +162,7 @@ def run_executor_pipeline(
         raise ExecutorRuntimeUsageError("at least one --role is required")
 
     primary_targets = _primary_targets_from_scope_freeze(artifact_root, scope_freeze_rel)
+    supporting_targets = _supporting_targets_from_scope_freeze(artifact_root, scope_freeze_rel)
     primary_before_worker = _target_digest_snapshot(workspace_root, primary_targets)
     for role in ordered_roles:
         routing_report_rel = routing_map.get(role)
@@ -141,6 +191,11 @@ def run_executor_pipeline(
                     "worker reported pass without modifying any declared primary target; "
                     f"primary_targets=[{joined_targets}]"
                 )
+            if _should_refresh_script_output_surfaces(
+                changed_primary_targets=changed_primary_targets,
+                supporting_targets=supporting_targets,
+            ):
+                _refresh_script_output_surfaces(workspace_root)
 
     return {
         "run_id": run_id,

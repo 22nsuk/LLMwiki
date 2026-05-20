@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-20T10:05:54Z",
+  "generated_at": "2026-05-20T10:35:29Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "9c75dcffbc02f8474731d4870f71c503b225fc2f1b95b6d16aa1677559442e54",
+  "source_tree_fingerprint": "66bdf3cc5a9bee980d7540dced4a045401d62130640b3f33212b057f1c2404ae",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "b07ea4db25e1e00c9ecce8026872b299d5f6df21f7edd396dce9af266ed48c42",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e8a26558749ee2fc8d615020caccd4b12d32e2354739c58e8a580ff43a3cbc10",
-    "artifact_freshness_report": "29ccc554d1b42df3b2ec24ac89686869093954f2d9b58acbd01c4933f1600674",
-    "goal_worktree_guard_report": "0d32ee3ed09995e07988b8861fe123785f5fd487b5934901919f1edeb6b99cde",
-    "mechanism_review_report": "3960fab170d8b0d4be52343e1e0b87553c9aa5b4352195cb64f2b5b70d682179",
-    "mutation_proposal_report": "17cd1e1359fc51183d434574ed984965e233e1021dbd92466ed625ca11be9350",
-    "outcome_metrics_report": "03748401877a0c28a99172886fba5c8b0be9e2960a4bd8ae37d67a4006ddcd5f",
+    "artifact_freshness_report": "a37ef63cc99a60facf0909ce2a47d87e6da43836f7c24e3774bc13e4d299f0a5",
+    "goal_worktree_guard_report": "0b05d422baf6e9728115d92699a71e0349bbdfb94dfeab01512147a3b2990dc7",
+    "mechanism_review_report": "d341055dedf7739d824abb8c04228f25701c8005268355515983f2afb441cbce",
+    "mutation_proposal_report": "0a3673bb6c38d95dfb048ab5bff6ec035192e4b9b7dfa91a3b2fcb6e0bfefc48",
+    "outcome_metrics_report": "c330e69ecadfd0bec779b6c9776e06dd87d40d2c6f318835146df5f3ef339362",
     "release_authority_preflight_report": "8771a6022db09e525cf4c8a22c99725d1e3539f340aca5db6445f8d675705b8e",
     "release_closeout_batch_manifest_report": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
     "release_closeout_finality_attestation_report": "7dd3b5e276deee3a02a3e664f5e2c8e28adf36ed7e19eacedd884942521c03ea",
@@ -23,7 +23,7 @@
     "release_closeout_summary_report": "f06aa971b5007f9d2391a8bf3e6f94ec1bd94f9e96d0ff6d542e49bae01a490c",
     "release_evidence_cohort_report": "58fc47f3fdb8fac9651f4315371cad23ee5394e83d6f992f66ff59ab0ecf0bdd",
     "remediation_backlog_report": "92606791d0ade071df50847a1e216b13746339a3ce07da0e58c6fca15c0130f2",
-    "selected_contract_summary_report": "1a22eda45a0b86c3436a3ca5142b7ca5262d76452244cd8ff6c004f49a8620fd",
+    "selected_contract_summary_report": "160608fdf88e1b7e8b71e07cee69c5855f838c672b7b592c90f20a6caa6344aa",
     "source_package_clean_extract_report": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "release_authority_preflight_report_candidates": "145f23a10e25dfcf0b9eb8875753adc591ca775e5c55cdea7926a32a5e51bebd"
   },
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:05:54Z"
+    "checked_at": "2026-05-20T10:35:29Z"
   },
   "vault": ".",
   "policy": {
@@ -50,7 +50,7 @@
       "runnable proposal queue is non-empty"
     ],
     "runnable_proposal_count": 1,
-    "blocked_proposal_count": 0,
+    "blocked_proposal_count": 1,
     "recommended_next_step": "Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured."
   },
   "learning_readiness": {
@@ -63,17 +63,17 @@
       "shadow learning signals require operator review before this run can count as confirmed learning"
     ],
     "metrics": {
-      "attempts_considered": 20,
+      "attempts_considered": 21,
       "min_attempts_considered": 10,
-      "session_reports_considered": 10,
+      "session_reports_considered": 11,
       "session_calibration_status": "active",
       "telemetry_coverage_ratio": 1.0,
       "same_eval_run_count": 2,
       "same_eval_reason_code_coverage_ratio": 1.0,
       "strict_secondary_improvement_coverage_ratio": 1.0,
       "behavior_delta_digest_coverage_ratio": 1.0,
-      "rework_count": 3,
-      "hold_moving_average": 0.45,
+      "rework_count": 4,
+      "hold_moving_average": 0.5,
       "discard_moving_average": 0.2,
       "defect_escape_pair_count": 0
     },
@@ -81,7 +81,7 @@
       {
         "id": "recent_hold_moving_average",
         "severity": "warn",
-        "detail": "hold_moving_average=0.4500 is at or above threshold=0.2500",
+        "detail": "hold_moving_average=0.5000 is at or above threshold=0.2500",
         "owner": "runtime-maintainer",
         "required_evidence": [
           "ops/reports/outcome-metrics.json metrics.moving_averages.hold is below the configured threshold.",
@@ -94,7 +94,7 @@
       {
         "id": "high_rework",
         "severity": "warn",
-        "detail": "rework_count=3 is at or above threshold=1",
+        "detail": "rework_count=4 is at or above threshold=1",
         "owner": "runtime-maintainer",
         "required_evidence": [
           "ops/reports/outcome-metrics.json metrics.rework_count is below the configured high_rework_count threshold.",
@@ -159,7 +159,7 @@
       "accepted_risk": false,
       "gate_effect": "active",
       "source_status": "attention",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=2",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=26",
       "signal_ids": [
         "git_worktree_dirty"
       ],
@@ -238,9 +238,9 @@
     "loop_health_summary": {
       "status": "available",
       "gate_effect": "none",
-      "source_report": "ops/reports/routing-provenance-aggregates/5day-auto-improve-runtime-rerun11-30m_trial.json",
-      "source_generated_at": "2026-05-20T10:01:37Z",
-      "session_id": "5day-auto-improve-runtime-rerun11-30m_trial",
+      "source_report": "ops/reports/routing-provenance-aggregates/5day-auto-improve-runtime-rerun12-30m_trial.json",
+      "source_generated_at": "2026-05-20T10:35:25Z",
+      "session_id": "5day-auto-improve-runtime-rerun12-30m_trial",
       "summary": "attempts=1, finalized=0, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=1.00, executor_failures=1 | alerts: executor failures present, unfinalized runs present, recent HOLD trend",
       "health_flags": [
         "executor_failures_present",
@@ -303,9 +303,9 @@
       "expected_artifact_kind": "test_execution_summary",
       "artifact_kind": "test_execution_summary",
       "status": "pass",
-      "source_status": "pass",
+      "source_status": "partial-pass",
       "release_blocking": false,
-      "summary": "selected contract summary status=pass",
+      "summary": "selected contract summary status=partial-pass",
       "currentness_status": "current"
     },
     "source_package_clean_extract_summary": {
@@ -399,12 +399,12 @@
       "can_promote_result": false,
       "zip_mode_replay_only": false,
       "dirty_worktree_allowed": false,
-      "dirty_entry_count": 2,
+      "dirty_entry_count": 26,
       "fatal_blockers": [],
       "promotion_blockers": [
         "git_worktree_dirty"
       ],
-      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=2"
+      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=26"
     },
     "remediation_backlog_summary": {
       "path": "ops/reports/remediation-backlog.json",
@@ -429,18 +429,23 @@
   },
   "queue": {
     "ready": true,
-    "proposals_emitted": 1,
+    "proposals_emitted": 2,
     "runnable_proposal_count": 1,
     "runnable_proposal_ids": [
-      "repeated_discard_runs__auto-improve-iteration-persistence-runtime"
+      "recent_log_overlap_queue_blocked__mutation-proposal-runtime"
     ],
-    "blocked_proposal_count": 0,
-    "blocked_reason_counts": [],
+    "blocked_proposal_count": 1,
+    "blocked_reason_counts": [
+      {
+        "reason": "recent_log_overlap",
+        "count": 1
+      }
+    ],
     "source_candidates_read": 1,
     "candidates_emitted": 1,
-    "attempts_considered": 20,
-    "session_reports_considered": 10,
-    "queue_pressure_summary": "contract_regression_signals 1 proposal, mutation 1, risk 1",
+    "attempts_considered": 21,
+    "session_reports_considered": 11,
+    "queue_pressure_summary": "contract_regression_signals 1 proposal, 1 blocked, mutation 1, risk 1; queue_unblock 1 proposal",
     "review_bootstrap_summary": "comparable mechanism run history는 trend-based candidate를 평가할 수 있을 만큼 확보됐다.",
     "evidence_gaps": []
   },
@@ -471,12 +476,12 @@
     {
       "id": "proposal_queue_nonempty",
       "pass": true,
-      "detail": "runnable_proposal_count=1 (proposals_emitted=1)"
+      "detail": "runnable_proposal_count=1 (proposals_emitted=2); retained blocked_proposal_count=1 (recent_log_overlap=1)"
     },
     {
       "id": "outcome_metrics_session_rollup_present",
       "pass": true,
-      "detail": "session_reports_considered=10"
+      "detail": "session_reports_considered=11"
     },
     {
       "id": "fallback_target_history_requirement_met",

@@ -1062,8 +1062,8 @@
     },
     {
       "path": "ops/scripts/core/executor_runtime.py",
-      "sha256": "061f73f92e99f0835370a524be57cba215c2b8e458b6fc1636830ce8d3222741",
-      "size_bytes": 6272
+      "sha256": "a692deac6a221270f70275c0d26d3bc15e309eecf22104cb63379b00c6127299",
+      "size_bytes": 8120
     },
     {
       "path": "ops/scripts/core/experiment_telemetry_runtime.py",
@@ -1502,8 +1502,8 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
-      "sha256": "8dc798796a363560e58c917a153662f15c8b98672715fc564d64c92dbb868dfc",
-      "size_bytes": 21856
+      "sha256": "308fe47a07056a2faeffc28e7c61e0043b3ec973a6167685eb52e881723e8542",
+      "size_bytes": 21877
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_iteration_runtime.py",
@@ -4812,8 +4812,8 @@
     },
     {
       "path": "system/system-log.md",
-      "sha256": "85f1283ac5c6377003c138a9bbfed53b0bc7079db860310c37ace89314cc9449",
-      "size_bytes": 406943
+      "sha256": "347e4bf7eaa4b0e5b0994a6eb5fde85e223965929eed64b5c897ca5ea0f9835a",
+      "size_bytes": 410648
     },
     {
       "path": "system/system-raw-registry.md",
@@ -5007,8 +5007,8 @@
     },
     {
       "path": "tests/test_auto_improve_iteration_runtime.py",
-      "sha256": "81d3d99e9676a8ceebac068fc50c09b485db9971a8a66324fa5561c4da321f5e",
-      "size_bytes": 44878
+      "sha256": "d96a1aa0e5fbe0e858139a9cc9bc3c32eb03427b2f847d7402a6766d67a85f99",
+      "size_bytes": 44880
     },
     {
       "path": "tests/test_auto_improve_outcome_runtime.py",
@@ -5137,8 +5137,8 @@
     },
     {
       "path": "tests/test_executor_runtime.py",
-      "sha256": "e6b2968aa0863a7bfd1f94d7457c760876069c75163011a3753a98fbd3b0118b",
-      "size_bytes": 41924
+      "sha256": "55b4f44cd914e39483a8c07f3becf57ac960bc921bee0a5025fdf327d46ee157",
+      "size_bytes": 46152
     },
     {
       "path": "tests/test_experiment_telemetry_runtime.py",

@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-20T10:03:25Z",
+  "generated_at": "2026-05-20T10:36:22Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "9c75dcffbc02f8474731d4870f71c503b225fc2f1b95b6d16aa1677559442e54",
+  "source_tree_fingerprint": "66bdf3cc5a9bee980d7540dced4a045401d62130640b3f33212b057f1c2404ae",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "834eb6cfec958f35d3989a742cfd58414bb50bb75040ab9283e4c90ed61f1657",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "3090e8825cf76941fff0428cae33626bf250f99e0ab497ee5c0c5883b415cffe",
-    "run_promotion_reports": "2ce32b7b51e237a7fb765293031d27e944ec2dcbc57b6da7377edde26b7fe85b",
+    "run_promotion_reports": "6157fca9b755e3a2b4112e2b85a66441746bc8efca133241df6673e75b34123c",
     "external_report_inventory": "8500649368cfaba258623f14fdb3e14f3b149ee174603d4be00ba71bcf77b11b",
     "operator_report_inventory": "0479590a186415fa72ba934ab4431828124b8ca576b06322a6eae193e9627721",
     "ops_report_inventory": "42888319f0fa00ed45687b2461bda3d2739588b931ba8c665afa1e1be992c762",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:03:25Z"
+    "checked_at": "2026-05-20T10:36:22Z"
   },
   "vault": ".",
   "policy": {
@@ -910,6 +910,17 @@
     {
       "surface": "runs",
       "family": "mechanism_run",
+      "path": "runs/5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
       "path": "runs/5day-auto-improve-runtime-rerun5-30m_trial-run-01-auto-improve-readiness-queue-runtime",
       "role": "run_history_record",
       "date": "",
@@ -955,17 +966,6 @@
       "surface": "runs",
       "family": "mechanism_run",
       "path": "runs/goal-5day-auto-improve-runtime",
-      "role": "run_history_record",
-      "date": "",
-      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary. Load issues: promotion-report.json:missing, run-ledger.json:missing.",
-      "supersedes": [],
-      "superseded_by": [],
-      "decision_relevance": "run_history"
-    },
-    {
-      "surface": "runs",
-      "family": "mechanism_run",
-      "path": "runs/goal-5day-auto-improve-runtime-rerun12-30m_trial",
       "role": "run_history_record",
       "date": "",
       "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary. Load issues: promotion-report.json:missing, run-ledger.json:missing.",

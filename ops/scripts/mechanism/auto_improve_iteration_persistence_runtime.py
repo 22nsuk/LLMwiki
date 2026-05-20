@@ -311,7 +311,7 @@ def _discard_non_regression_evidence(
     result: dict | None,
     existing_report: dict,
 ) -> dict[str, Any] | None:
-    if outcome != "discarded":
+    if str(outcome).strip().lower() != "discarded":
         return None
     promotion_report = _iteration_promotion_report(vault, run_id, result, existing_report)
     if promotion_report is None:

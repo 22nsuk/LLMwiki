@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/outcome-metrics.schema.json",
   "artifact_kind": "outcome_metrics_report",
-  "generated_at": "2026-05-20T10:01:38Z",
+  "generated_at": "2026-05-20T10:35:26Z",
   "producer": "ops.scripts.observability_decision_metrics_runtime",
   "source_command": "python -m ops.scripts.outcome_metrics --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "9c75dcffbc02f8474731d4870f71c503b225fc2f1b95b6d16aa1677559442e54",
+  "source_tree_fingerprint": "66bdf3cc5a9bee980d7540dced4a045401d62130640b3f33212b057f1c2404ae",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "aadbf232f7dc6bf40f35290f0dabcc4e9320b93c70cc2f0177f1167b24ecff29",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "c364e1ed667cd810b07ae3d6b09e9de4431804a8db70852d444664e6939e289d",
-    "defect_escape_closures": "7e48d6d4bae86c138940f610efda8dea73f0cc38b978bd5f5fb4f67e63863b62",
-    "rework_closures": "6910305c286396dee6f5c77b44a1b20895c04af9e0d67099f87614325e20edbe",
-    "run_inputs": "aff1da980c04c2e14ef3f01994fc7b3427e6894225f77ca94054eed33564aa3f",
-    "session_reports": "be03d1b1c1a4b7110b30b3c1f90e109b1f2d40143baf585ec86d90aaf7ae0d8b",
+    "defect_escape_closures": "8b9dcaa5b433b3948e5685dac41488c1ebdc93ae663f434fe2e5aeb7d7646220",
+    "rework_closures": "b73a125a365a0c17422ad5649ca0a241e80133d238c6f1440e3a2d6b4db7d6e3",
+    "run_inputs": "10055409ebcf4cb5aa99768995a210a606c229621f8d865898f3fb23fa13f284",
+    "session_reports": "4537c9c3e6a688c49efd7264d18b5f297c6595ea3737585886ecf714da5db373",
     "recent_window": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:01:38Z"
+    "checked_at": "2026-05-20T10:35:26Z"
   },
   "vault": ".",
   "policy": {
@@ -31,36 +31,36 @@
     "version": 4
   },
   "summary": {
-    "attempts_considered": 20,
+    "attempts_considered": 21,
     "recent_window": 20,
     "recent_attempt_count": 20,
-    "session_reports_considered": 10
+    "session_reports_considered": 11
   },
   "metrics": {
-    "attempt_count": 20,
+    "attempt_count": 21,
     "recent_window": 20,
     "recent_attempt_count": 20,
-    "rework_count": 3,
+    "rework_count": 4,
     "rollback_signal_count": 0,
     "rollback_rehearsal_coverage_count": 3,
     "moving_averages": {
-      "hold": 0.45,
+      "hold": 0.5,
       "discard": 0.2,
       "rollback_signal": 0.0
     },
     "operator_effort_proxy": {
       "phase_totals_seconds": {
-        "scope_freeze": 0.083,
-        "routing": 4.162,
-        "scaffold": 3.531,
-        "experiment": 6329.155,
+        "scope_freeze": 0.095,
+        "routing": 4.765,
+        "scaffold": 4.024,
+        "experiment": 7625.089,
         "typed_same_eval_evidence": 0.0
       },
-      "executor_report_count": 11,
-      "reviewer_dispatch_count": 3,
+      "executor_report_count": 13,
+      "reviewer_dispatch_count": 4,
       "validator_dispatch_count": 2,
       "auditor_dispatch_count": 1,
-      "hold_count": 9
+      "hold_count": 10
     },
     "rework_keys": [
       {
@@ -80,6 +80,15 @@
           "5day-auto-improve-runtime-rerun6-30m_trial-run-01-mechanism-run-validation-runtime",
           "5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime",
           "5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime"
+        ]
+      },
+      {
+        "key": "proposal:repeated_discard_runs__auto-improve-iteration-persistence-runtime",
+        "attempt_count": 2,
+        "rework_count": 1,
+        "run_ids": [
+          "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
+          "5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime"
         ]
       }
     ],
@@ -153,7 +162,7 @@
         }
       ]
     },
-    "raw_rework_count": 9,
+    "raw_rework_count": 10,
     "closed_rework_count": 6,
     "closed_rework_keys": [
       {
@@ -220,6 +229,23 @@
     ]
   },
   "recent_attempts": [
+    {
+      "run_id": "5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
+      "session_id": "5day-auto-improve-runtime-rerun12-30m_trial",
+      "proposal_id": "repeated_discard_runs__auto-improve-iteration-persistence-runtime",
+      "source_candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
+      "observed_at": "2026-05-20T10:26:43Z",
+      "decision": "HOLD",
+      "outcome": "review_blocked",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "rework_key": "proposal:repeated_discard_runs__auto-improve-iteration-persistence-runtime",
+      "rollback_rehearsal_covered": false,
+      "rollback_signal": false,
+      "run_telemetry": "runs/5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+      "promotion_report": "runs/5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
     {
       "run_id": "5day-auto-improve-runtime-rerun11-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
       "session_id": "5day-auto-improve-runtime-rerun11-30m_trial",
@@ -536,21 +562,6 @@
       "rollback_signal": false,
       "run_telemetry": "",
       "promotion_report": "runs/run-20260415-mechanism-planning-gate-second-clean/promotion-report.json"
-    },
-    {
-      "run_id": "run-20260414-mechanism-planning-gate",
-      "session_id": "standalone-run-telemetry",
-      "proposal_id": "",
-      "source_candidate_id": "",
-      "observed_at": "",
-      "decision": "PROMOTE",
-      "outcome": "promoted",
-      "primary_targets": [],
-      "rework_key": "",
-      "rollback_rehearsal_covered": false,
-      "rollback_signal": false,
-      "run_telemetry": "",
-      "promotion_report": "runs/run-20260414-mechanism-planning-gate/promotion-report.json"
     }
   ]
 }

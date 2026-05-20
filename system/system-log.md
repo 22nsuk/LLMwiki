@@ -6078,3 +6078,56 @@ The next readiness refresh is intentionally separated from earlier report genera
 ### Consequence
 - Readiness should report the true queue state rather than self-induced tracked report dirtiness.
 - If execution remains blocked, the remaining blocker will be a real candidate-selection issue rather than a generated-report ordering artifact.
+
+---
+
+## [2026-05-20 19:29 KST] improve | Resolve rerun12 review blocker in main
+
+### Summary
+`5day-auto-improve-runtime-rerun12-30m_trial` reached worker and reviewer execution but closed as `review_blocked` with decision `HOLD`. The reviewer found the worker's source edit left `ops/script-output-surfaces.json` stale, so the trial is negative evidence and is not a verified 30m profile success.
+
+The useful part of the candidate was applied directly in main: discard outcome matching now canonicalizes whitespace and case before deciding whether to attach `discard_non_regression_evidence`. The positive telemetry test now exercises a noncanonical `DISCARDED` spelling, and the script-output surface registry was regenerated from the current AST.
+
+### Artifacts
+- `ops/reports/auto-improve-sessions/5day-auto-improve-runtime-rerun12-30m_trial.json`
+- `runs/5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime/reviewer-executor-report.json`
+- `ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py`
+- `tests/test_auto_improve_iteration_runtime.py`
+- `ops/script-output-surfaces.json`
+
+### Consequence
+- Rerun12 remains blocked evidence because it did not pass review and observed elapsed time stayed below the 30m profile minimum.
+- The review blocker is resolved in the main workspace with fresh registry evidence instead of preserving a transient candidate workspace indefinitely.
+- Pre-merge preservation served its safety role; future cleanup may remove temporary/local copies once durable run evidence and committed public artifacts exist.
+
+---
+
+## [2026-05-20 19:31 KST] improve | Refresh generated support after worker script changes
+
+### Summary
+`5day-auto-improve-runtime-rerun12-30m_trial` reached worker success but stopped at reviewer review. The reviewer found that the worker changed an `ops/scripts` primary target while the supporting generated surface registry in the workspace stayed stale, so the writer-output currentness test failed. The run closed as `review_blocked` and is not successful 30m profile evidence.
+
+The executor now refreshes the generated output-surface registry inside the mutation workspace after a passing worker changes an `ops/scripts/` primary target and the proposal declares `ops/script-output-surfaces.json` as a supporting target. This keeps reviewer/validator checks on the same source tree the worker actually produced.
+
+### Artifacts
+- `runs/5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime/reviewer-executor-report.json`
+- `ops/scripts/core/executor_runtime.py`
+- `tests/test_executor_runtime.py`
+- `ops/script-output-surfaces.json`
+- `system/system-log.md`
+
+### Consequence
+- Rerun12 remains blocked evidence, not profile progress.
+- The next trial should no longer fail solely because a worker-side `ops/scripts` edit left `ops/script-output-surfaces.json` stale before reviewer execution.
+- The direct main iteration-persistence repair is covered by local tests, while future trial evidence must still be earned through the full worker/reviewer/validator/provenance path.
+
+---
+
+## [2026-05-20 19:32 KST] improve | Quarantine superseded rerun12 history
+
+### Summary
+The rerun12 promotion report was removed from active mechanism history with `history.status=quarantined` because the review-blocked candidate was superseded by direct main fixes and did not produce complete candidate eval artifacts.
+
+### Consequence
+- Mechanism review no longer skips rerun12 as an operator-decision artifact gap.
+- Rerun12 remains available as durable diagnostic evidence under `runs/`, but it no longer blocks current queue generation as active promotion history.
