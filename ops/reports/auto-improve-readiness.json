@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-20T10:53:37Z",
+  "generated_at": "2026-05-20T10:54:15Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -12,9 +12,9 @@
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e8a26558749ee2fc8d615020caccd4b12d32e2354739c58e8a580ff43a3cbc10",
     "artifact_freshness_report": "635443c3009322658f6f47d254352e7fe6e435e1b87d33722454997392914b6e",
-    "goal_worktree_guard_report": "4398f331ae575cfe205aa9b93b8399ade037f8d4fe120dd37b608f363fb50314",
-    "mechanism_review_report": "5057210ad1f610b2d8278615467f931215c7908d9a21587578ec407749b81d51",
-    "mutation_proposal_report": "64e516b77721b718f9594359a501044a97b249ee0370cfa46362040cf73120ad",
+    "goal_worktree_guard_report": "9fb7cbdb6d41d1c91930f4b7ae21842a9b6d0cf599f952310698ee394a7a9fd6",
+    "mechanism_review_report": "031baee00969ee82558e11098822678f7f85977b4fbd80e511b9b0445852e8c2",
+    "mutation_proposal_report": "556e1fc616432a6d2702f497fdf375e3901d2b0067facd76f3d3c2e48cec8ace",
     "outcome_metrics_report": "787058b3dd3fc4b22a7bfcc0fa2f35d207b91ed081cf9f5e564216344f42d578",
     "release_authority_preflight_report": "8771a6022db09e525cf4c8a22c99725d1e3539f340aca5db6445f8d675705b8e",
     "release_closeout_batch_manifest_report": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:53:37Z"
+    "checked_at": "2026-05-20T10:54:15Z"
   },
   "vault": ".",
   "policy": {
