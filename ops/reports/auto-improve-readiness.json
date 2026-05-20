@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-20T11:46:16Z",
+  "generated_at": "2026-05-20T11:58:19Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "6e63cb431fd28ad9732f1e75856b8c507aa6e5ef916ed7ba58fbcf1b14efa322",
+  "source_tree_fingerprint": "882548b38d037112170672d20c861fdd3785a59e95658cf82d18de3176baeeef",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "b07ea4db25e1e00c9ecce8026872b299d5f6df21f7edd396dce9af266ed48c42",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e8a26558749ee2fc8d615020caccd4b12d32e2354739c58e8a580ff43a3cbc10",
     "artifact_freshness_report": "635443c3009322658f6f47d254352e7fe6e435e1b87d33722454997392914b6e",
-    "goal_worktree_guard_report": "836e1ec7ad41e811c73109efef3aabfd5b14302124e4c082f40dfd560cc79766",
-    "mechanism_review_report": "72a4e4850d2fb0c1595c0db32b5d8dc137bcfcfa787cbf11a8b1f306d6a596ae",
-    "mutation_proposal_report": "e4f321cc66223796d7233a24d005839beb0b0e51b7075b2778cbcbeb7b8304a3",
-    "outcome_metrics_report": "4b65830e1d601024820943936c75f09b5694780f2cbf71d4f82d43ef3277b030",
+    "goal_worktree_guard_report": "cc645e517bd053f59b870e790ecd1337bfd1fbf2df8a07833bd0f90f5cc4ac98",
+    "mechanism_review_report": "ef64a6fe0addb17e99592b73a6b988876e0984f61c3b4be6681fd304f0c9230b",
+    "mutation_proposal_report": "62494ffea719936228bee2dbc7a9422aa30193aa0bd3966bb03952c70fc84276",
+    "outcome_metrics_report": "f7c3ae6ba53f56d96b2b3a6c986fabdf0a4f4bf602b81c1bda153446572115f3",
     "release_authority_preflight_report": "8771a6022db09e525cf4c8a22c99725d1e3539f340aca5db6445f8d675705b8e",
     "release_closeout_batch_manifest_report": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
     "release_closeout_finality_attestation_report": "7dd3b5e276deee3a02a3e664f5e2c8e28adf36ed7e19eacedd884942521c03ea",
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T11:46:16Z"
+    "checked_at": "2026-05-20T11:58:19Z"
   },
   "vault": ".",
   "policy": {
@@ -63,9 +63,9 @@
       "shadow learning signals require operator review before this run can count as confirmed learning"
     ],
     "metrics": {
-      "attempts_considered": 23,
+      "attempts_considered": 24,
       "min_attempts_considered": 10,
-      "session_reports_considered": 13,
+      "session_reports_considered": 14,
       "session_calibration_status": "active",
       "telemetry_coverage_ratio": 0.0,
       "same_eval_run_count": 2,
@@ -232,9 +232,9 @@
     "loop_health_summary": {
       "status": "available",
       "gate_effect": "none",
-      "source_report": "ops/reports/routing-provenance-aggregates/5day-auto-improve-runtime-rerun14-30m_trial.json",
-      "source_generated_at": "2026-05-20T10:54:15Z",
-      "session_id": "5day-auto-improve-runtime-rerun14-30m_trial",
+      "source_report": "ops/reports/routing-provenance-aggregates/5day-auto-improve-runtime-rerun15-30m_trial.json",
+      "source_generated_at": "2026-05-20T11:46:16Z",
+      "session_id": "5day-auto-improve-runtime-rerun15-30m_trial",
       "summary": "attempts=0, finalized=0, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=0.00 | alerts: telemetry coverage missing",
       "health_flags": [
         "missing_telemetry_coverage"
@@ -426,8 +426,8 @@
     "blocked_reason_counts": [],
     "source_candidates_read": 1,
     "candidates_emitted": 1,
-    "attempts_considered": 23,
-    "session_reports_considered": 13,
+    "attempts_considered": 24,
+    "session_reports_considered": 14,
     "queue_pressure_summary": "contract_regression_signals 1 proposal, validation 1, review 1",
     "review_bootstrap_summary": "comparable mechanism run history는 trend-based candidate를 평가할 수 있을 만큼 확보됐다.",
     "evidence_gaps": []
@@ -464,7 +464,7 @@
     {
       "id": "outcome_metrics_session_rollup_present",
       "pass": true,
-      "detail": "session_reports_considered=13"
+      "detail": "session_reports_considered=14"
     },
     {
       "id": "fallback_target_history_requirement_met",
