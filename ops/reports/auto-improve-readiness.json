@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-20T10:54:15Z",
+  "generated_at": "2026-05-20T10:58:01Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -12,9 +12,9 @@
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e8a26558749ee2fc8d615020caccd4b12d32e2354739c58e8a580ff43a3cbc10",
     "artifact_freshness_report": "635443c3009322658f6f47d254352e7fe6e435e1b87d33722454997392914b6e",
-    "goal_worktree_guard_report": "9fb7cbdb6d41d1c91930f4b7ae21842a9b6d0cf599f952310698ee394a7a9fd6",
-    "mechanism_review_report": "031baee00969ee82558e11098822678f7f85977b4fbd80e511b9b0445852e8c2",
-    "mutation_proposal_report": "556e1fc616432a6d2702f497fdf375e3901d2b0067facd76f3d3c2e48cec8ace",
+    "goal_worktree_guard_report": "3c644a2b0000deb319c15b6a0ea290ba8b2cd217f65993b50e03fb8a7cc1d8d4",
+    "mechanism_review_report": "209dd86ee18b04072a1d7e48086d03f93d8942fa68bb89175f23896113d76a5c",
+    "mutation_proposal_report": "1f2bb599f9d8e6eaa43065137715ace5311cd69a928aca1cfac4b0af471e32b6",
     "outcome_metrics_report": "787058b3dd3fc4b22a7bfcc0fa2f35d207b91ed081cf9f5e564216344f42d578",
     "release_authority_preflight_report": "8771a6022db09e525cf4c8a22c99725d1e3539f340aca5db6445f8d675705b8e",
     "release_closeout_batch_manifest_report": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
@@ -22,7 +22,7 @@
     "release_closeout_post_check_finalizer_report": "missing",
     "release_closeout_summary_report": "f06aa971b5007f9d2391a8bf3e6f94ec1bd94f9e96d0ff6d542e49bae01a490c",
     "release_evidence_cohort_report": "58fc47f3fdb8fac9651f4315371cad23ee5394e83d6f992f66ff59ab0ecf0bdd",
-    "remediation_backlog_report": "92606791d0ade071df50847a1e216b13746339a3ce07da0e58c6fca15c0130f2",
+    "remediation_backlog_report": "252119927e04cae8bbe3150a66f5703c050ec56a4b9cfe475868d7c3070a79b4",
     "selected_contract_summary_report": "0ae57f029c68f3329c1b1026bfe8378836ca26f350eef0aced8c3e585dba0fbd",
     "source_package_clean_extract_report": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
     "release_authority_preflight_report_candidates": "145f23a10e25dfcf0b9eb8875753adc591ca775e5c55cdea7926a32a5e51bebd"
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:54:15Z"
+    "checked_at": "2026-05-20T10:58:01Z"
   },
   "vault": ".",
   "policy": {
@@ -67,7 +67,7 @@
       "min_attempts_considered": 10,
       "session_reports_considered": 12,
       "session_calibration_status": "active",
-      "telemetry_coverage_ratio": 1.0,
+      "telemetry_coverage_ratio": 0.0,
       "same_eval_run_count": 2,
       "same_eval_reason_code_coverage_ratio": 1.0,
       "strict_secondary_improvement_coverage_ratio": 1.0,
@@ -78,6 +78,19 @@
       "defect_escape_pair_count": 0
     },
     "signals": [
+      {
+        "id": "loop_health_telemetry_coverage_missing",
+        "severity": "warn",
+        "detail": "loop_health.telemetry_coverage_ratio=0.0000 so routing provenance still lacks telemetry-backed learning evidence",
+        "owner": "runtime-maintainer",
+        "required_evidence": [
+          "latest routing provenance aggregate reports loop_health.coverage_ratios.telemetry greater than zero.",
+          "latest routing provenance aggregate no longer emits missing_telemetry_coverage."
+        ],
+        "minimum_sample_size": 1,
+        "next_evaluation_command": "make routing-provenance-aggregate auto-improve-readiness",
+        "closure_strategy": "ensure run telemetry is discoverable in the latest loop-health aggregate."
+      },
       {
         "id": "recent_hold_moving_average",
         "severity": "warn",
@@ -117,8 +130,9 @@
       "accepted_risk": false,
       "gate_effect": "review_required",
       "source_status": "learning_uncertain",
-      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: recent_hold_moving_average, high_rework",
+      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: loop_health_telemetry_coverage_missing, recent_hold_moving_average, high_rework",
       "signal_ids": [
+        "loop_health_telemetry_coverage_missing",
         "recent_hold_moving_average",
         "high_rework"
       ],
@@ -139,8 +153,9 @@
       "accepted_risk": false,
       "gate_effect": "review_required",
       "source_status": "learning_uncertain",
-      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: recent_hold_moving_average, high_rework",
+      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: loop_health_telemetry_coverage_missing, recent_hold_moving_average, high_rework",
       "signal_ids": [
+        "loop_health_telemetry_coverage_missing",
         "recent_hold_moving_average",
         "high_rework"
       ],
@@ -151,6 +166,26 @@
       "recommended_next_step": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded 30m trial with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
     },
     {
+      "id": "promotion_blocked_by_goal_worktree_guard_failure",
+      "scope": "worktree_guard",
+      "status": "open",
+      "severity": "blocker",
+      "release_blocker": true,
+      "accepted_risk": false,
+      "gate_effect": "active",
+      "source_status": "attention",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=5",
+      "signal_ids": [
+        "git_worktree_dirty"
+      ],
+      "required_evidence": [
+        "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
+        "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
+        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal."
+      ],
+      "recommended_next_step": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
+    },
+    {
       "id": "promotion_blocked_by_remediation_backlog_open",
       "scope": "remediation_backlog",
       "status": "open",
@@ -159,13 +194,11 @@
       "accepted_risk": false,
       "gate_effect": "active",
       "source_status": "attention",
-      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=5; active_blocker_count=5; blocking_item_count=5",
+      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=3; active_blocker_count=3; blocking_item_count=3",
       "signal_ids": [
-        "goal_status_git_worktree_dirty",
         "goal_status_profile_ladder_incomplete",
         "learning_blocked_by_review_required",
-        "learning_claim_unlock_review_not_approved",
-        "promotion_blocked_by_goal_worktree_guard_failure"
+        "learning_claim_unlock_review_not_approved"
       ],
       "required_evidence": [
         "Run make remediation-backlog and confirm status=pass with open_item_count=0.",
@@ -185,8 +218,9 @@
       "accepted_risk": false,
       "gate_effect": "review_required",
       "source_status": "learning_uncertain",
-      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: recent_hold_moving_average, high_rework",
+      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: loop_health_telemetry_coverage_missing, recent_hold_moving_average, high_rework",
       "signal_ids": [
+        "loop_health_telemetry_coverage_missing",
         "recent_hold_moving_average",
         "high_rework"
       ],
@@ -218,15 +252,14 @@
     "loop_health_summary": {
       "status": "available",
       "gate_effect": "none",
-      "source_report": "ops/reports/routing-provenance-aggregates/5day-auto-improve-runtime-rerun13-30m_trial.json",
-      "source_generated_at": "2026-05-20T10:52:13Z",
-      "session_id": "5day-auto-improve-runtime-rerun13-30m_trial",
-      "summary": "attempts=1, finalized=0, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=1.00 | alerts: unfinalized runs present, recent HOLD trend",
+      "source_report": "ops/reports/routing-provenance-aggregates/5day-auto-improve-runtime-rerun14-30m_trial.json",
+      "source_generated_at": "2026-05-20T10:54:15Z",
+      "session_id": "5day-auto-improve-runtime-rerun14-30m_trial",
+      "summary": "attempts=0, finalized=0, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=0.00 | alerts: telemetry coverage missing",
       "health_flags": [
-        "unfinalized_runs_present",
-        "recent_hold_present"
+        "missing_telemetry_coverage"
       ],
-      "attempt_count": 1,
+      "attempt_count": 0,
       "finalized_run_count": 0,
       "rework_count": 0,
       "rollback_signal_count": 0,
@@ -234,7 +267,7 @@
       "executor_failure_count": 0,
       "routing_report_parse_gap_count": 0,
       "executor_report_parse_gap_count": 0,
-      "telemetry_coverage_ratio": 1.0
+      "telemetry_coverage_ratio": 0.0
     },
     "same_eval_telemetry_summary": {
       "status": "pass",
@@ -371,17 +404,19 @@
     "goal_worktree_guard_summary": {
       "path": "tmp/goal-worktree-guard.json",
       "artifact_kind": "goal_worktree_guard",
-      "status": "pass",
+      "status": "attention",
       "requested_mode": "git",
       "detected_mode": "git_worktree",
       "can_execute_goal_runtime": true,
-      "can_promote_result": true,
+      "can_promote_result": false,
       "zip_mode_replay_only": false,
       "dirty_worktree_allowed": false,
-      "dirty_entry_count": 0,
+      "dirty_entry_count": 5,
       "fatal_blockers": [],
-      "promotion_blockers": [],
-      "summary": "goal worktree guard status=pass; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=true; dirty_entry_count=0"
+      "promotion_blockers": [
+        "git_worktree_dirty"
+      ],
+      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=5"
     },
     "remediation_backlog_summary": {
       "path": "ops/reports/remediation-backlog.json",
@@ -390,18 +425,16 @@
       "status": "fail",
       "source_status": "attention",
       "release_blocking": true,
-      "open_item_count": 5,
-      "active_blocker_count": 5,
-      "blocking_item_count": 5,
+      "open_item_count": 3,
+      "active_blocker_count": 3,
+      "blocking_item_count": 3,
       "signal_ids": [
-        "goal_status_git_worktree_dirty",
         "goal_status_profile_ladder_incomplete",
         "learning_blocked_by_review_required",
-        "learning_claim_unlock_review_not_approved",
-        "promotion_blocked_by_goal_worktree_guard_failure"
+        "learning_claim_unlock_review_not_approved"
       ],
       "currentness_status": "current",
-      "summary": "remediation backlog status=attention; open_item_count=5; active_blocker_count=5; blocking_item_count=5"
+      "summary": "remediation backlog status=attention; open_item_count=3; active_blocker_count=3; blocking_item_count=3"
     }
   },
   "queue": {

@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-20T10:03:22Z",
+  "generated_at": "2026-05-20T10:56:33Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "897711e7399445e60615358ab4780680e0d7ece9a3a9660e39b0c77bab1d96e8",
+  "source_tree_fingerprint": "d303239d035361c228064f90a37ceaafd81e06742a80e20817653e11c204b820",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "a1944bd8f56639f8342b31ff9812a2d20d6995e3cccbcdfbbdf42467807cffe2",
-    "learning_claim_activation": "2cbad8c40fcf1bf52417c637de714c45ff1471e8babd02bec625131e2e790e6a",
-    "self_improvement_negative_lessons": "6fe78ebefdf9ad6e9b06b31805124c181a399fb35c7ecd51640813b47279c98e",
-    "session_synopsis": "a289422b8b30ba2781a8530c488142979d57255b55c9a7bcfe3a65ba05f6deb3",
+    "learning_claim_activation": "ca4245da90e2f93291caf05b41ab85a79576a4a1b5ede41b2777007810c680b7",
+    "self_improvement_negative_lessons": "38d0105032ad03d8fadefec6d4f4cbce77b00efa19280764193f484f33675b28",
+    "session_synopsis": "9bec6fb704acc3659c6064495bb26ca025125a9dabc9bb8b91f31fe08c1c69cd",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
-    "auto_improve_sessions": "be03d1b1c1a4b7110b30b3c1f90e109b1f2d40143baf585ec86d90aaf7ae0d8b"
+    "auto_improve_sessions": "121a3cf9ab2460cd1998711c6a1a33ea4d5e1da74b4aee3132a2c9141d653036"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:03:22Z"
+    "checked_at": "2026-05-20T10:56:33Z"
   },
   "vault": ".",
   "policy": {
@@ -32,28 +32,14 @@
   },
   "status": "attention",
   "summary": {
-    "backlog_item_count": 5,
+    "backlog_item_count": 3,
     "repeated_blocker_count": 0,
-    "active_blocker_count": 5,
-    "open_item_count": 5,
+    "active_blocker_count": 3,
+    "open_item_count": 3,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
     "next_action": "Close or explicitly defer remediation backlog items before promotion."
   },
   "items": [
-    {
-      "item_id": "active_blocker_goal_status_git_worktree_dirty",
-      "blocker_id": "goal_status_git_worktree_dirty",
-      "source": "goal_run_status.blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
-      "next_action": "Refresh goal run status and close the active blocker before resuming."
-    },
     {
       "item_id": "active_blocker_goal_status_profile_ladder_incomplete",
       "blocker_id": "goal_status_profile_ladder_incomplete",
@@ -95,20 +81,6 @@
       ],
       "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean.",
       "next_action": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean."
-    },
-    {
-      "item_id": "active_blocker_promotion_blocked_by_goal_worktree_guard_failure",
-      "blocker_id": "promotion_blocked_by_goal_worktree_guard_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness.",
-      "next_action": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     }
   ],
   "inputs": {

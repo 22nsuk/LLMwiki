@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/self-improvement-negative-lessons.schema.json",
   "artifact_kind": "self_improvement_negative_lessons",
-  "generated_at": "2026-05-20T10:03:22Z",
+  "generated_at": "2026-05-20T10:56:33Z",
   "producer": "ops.scripts.self_improvement_negative_lessons",
   "source_command": "python -m ops.scripts.self_improvement_negative_lessons --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "ee58bb62e535b970b7137585bd983a2a42fb4ab60d10e5bfe573865a88d1f509",
+  "source_tree_fingerprint": "abe314a20269667ad8f6e78dd162a36135f3af16c559c7a2b9ed9c1f423974bd",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "47b79b46ef1a89257481eb0fa0b41f96e2765bb833dd8fe9b2f718d71cf470e2",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "6be541617f1774d9faca7c41ea0669ff4fe4b3b5780ad2b04b1c585c96dc8653",
-    "learning_claim_activation": "2cbad8c40fcf1bf52417c637de714c45ff1471e8babd02bec625131e2e790e6a",
-    "session_synopsis": "a289422b8b30ba2781a8530c488142979d57255b55c9a7bcfe3a65ba05f6deb3"
+    "learning_claim_activation": "ca4245da90e2f93291caf05b41ab85a79576a4a1b5ede41b2777007810c680b7",
+    "session_synopsis": "9bec6fb704acc3659c6064495bb26ca025125a9dabc9bb8b91f31fe08c1c69cd"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:03:22Z"
+    "checked_at": "2026-05-20T10:56:33Z"
   },
   "vault": ".",
   "policy": {
@@ -38,6 +38,27 @@
   },
   "lessons": [
     {
+      "lesson_id": "blocked_queue_recent_log_overlap",
+      "source": "learning_claim_activation.negative_learning_ledger+session_synopsis",
+      "decisions": [
+        "BLOCKED"
+      ],
+      "run_ids": [],
+      "occurrence_count": 1,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane.",
+      "evidence_digests": [
+        {
+          "path": "ops/reports/auto-improve-readiness.json",
+          "exists": true,
+          "sha256": "bc93571e75d33b0df8374add28a4c22cac3d9fdb7c692246b8c128262a1d1c37",
+          "status": "present"
+        }
+      ],
+      "repeat_policy": "do_not_repeat_until_repaired",
+      "backlog_candidate": false
+    },
+    {
       "lesson_id": "discard_behavior_delta_before_after_evidence_missing",
       "source": "learning_claim_activation.negative_learning_ledger+session_synopsis",
       "decisions": [
@@ -53,7 +74,7 @@
         {
           "path": "ops/reports/learning-delta-scoreboard.json",
           "exists": true,
-          "sha256": "4e7175e8d5fa48a1b48719c9021e8367acb6efa43ec56b0a488bd99baba24f55",
+          "sha256": "b44cda0c27c39b41ccc057ca5a5c69c9ab5d7d4f1a48cfce241899fc37c81c80",
           "status": "present"
         }
       ],
@@ -77,29 +98,6 @@
           "path": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/run-telemetry.json",
           "exists": true,
           "sha256": "9048eb29f9df2973099c992e7d5f5f920d21fbc05f258ce3625499e5dd26e7a6",
-          "status": "present"
-        }
-      ],
-      "repeat_policy": "do_not_repeat_until_repaired",
-      "backlog_candidate": false
-    },
-    {
-      "lesson_id": "discard_equal_score_secondary_eligibility",
-      "source": "learning_claim_activation.negative_learning_ledger+session_synopsis",
-      "decisions": [
-        "DISCARD"
-      ],
-      "run_ids": [
-        "5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime"
-      ],
-      "occurrence_count": 1,
-      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
-      "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=equal_score_secondary_eligibility.",
-      "evidence_digests": [
-        {
-          "path": "runs/5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime/run-telemetry.json",
-          "exists": true,
-          "sha256": "a5d148aad80dc842f1a00b7c2351299f00347b905552185d15d272f55630024d",
           "status": "present"
         }
       ],
