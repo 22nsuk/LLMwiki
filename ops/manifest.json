@@ -1792,8 +1792,8 @@
     },
     {
       "path": "ops/scripts/mechanism/mutation_proposal_runtime.py",
-      "sha256": "50fdb6baa144172ec97d24896631ec638892dab8851b2575f63946e759ec80b8",
-      "size_bytes": 77508
+      "sha256": "cb86c22b676f87ce7d2e6f6594b2cb839b913424f3cb19b33f0f276b662f7dcf",
+      "size_bytes": 78306
     },
     {
       "path": "ops/scripts/mechanism/outcome_metrics.py",
@@ -4812,8 +4812,8 @@
     },
     {
       "path": "system/system-log.md",
-      "sha256": "347e4bf7eaa4b0e5b0994a6eb5fde85e223965929eed64b5c897ca5ea0f9835a",
-      "size_bytes": 410648
+      "sha256": "c92726fde5c8b22439f13f1367f66186c0580ff9bbee65b54d8ce44919159020",
+      "size_bytes": 412772
     },
     {
       "path": "system/system-raw-registry.md",
@@ -5352,8 +5352,8 @@
     },
     {
       "path": "tests/test_mutation_proposal.py",
-      "sha256": "ec1520a733deb79701ae6c9679d50b6ba041ffe1bbe2b34e3ff16b68dd22b7a2",
-      "size_bytes": 99212
+      "sha256": "5d6730e2aac001acd26d545cc429497431cd220e05eb67fb826931edd4211d0e",
+      "size_bytes": 102525
     },
     {
       "path": "tests/test_observability_artifacts_runtime.py",

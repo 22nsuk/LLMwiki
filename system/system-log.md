@@ -6131,3 +6131,33 @@ The rerun12 promotion report was removed from active mechanism history with `his
 ### Consequence
 - Mechanism review no longer skips rerun12 as an operator-decision artifact gap.
 - Rerun12 remains available as durable diagnostic evidence under `runs/`, but it no longer blocks current queue generation as active promotion history.
+
+---
+
+## [2026-05-20 19:45 KST] improve | Rotate past no-op queue unblock target
+
+### Summary
+`5day-auto-improve-runtime-rerun13-30m_trial` selected `recent_log_overlap_queue_blocked__mutation-proposal-runtime`, but the worker reported pass without changing the declared primary target `ops/scripts/mechanism/mutation_proposal_runtime.py`. The executor correctly blocked the iteration as `mutation_failed`, so the trial is not profile progress.
+
+The rerun13 promotion report was quarantined because it did not produce candidate eval artifacts. The current mutation proposal runtime now treats recent unresolved queue-unblock outcome pressure as part of target rotation selection, so a just-failed queue-unblock target can be skipped in favor of a non-overlapping alternative instead of being selected again as a no-op.
+
+### Artifacts
+- `ops/reports/auto-improve-sessions/5day-auto-improve-runtime-rerun13-30m_trial.json`
+- `runs/5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime/worker-executor-report.json`
+- `ops/scripts/mechanism/mutation_proposal_runtime.py`
+- `tests/test_mutation_proposal.py`
+
+### Consequence
+- Rerun13 remains diagnostic evidence only.
+- The next queue refresh should exclude rerun13 from active promotion history while still allowing target rotation away from `ops/scripts/mechanism/mutation_proposal_runtime.py`.
+
+---
+
+## [2026-05-20 19:48 KST] improve | Quarantine superseded rerun9 discard
+
+### Summary
+`5day-auto-improve-runtime-rerun9-30m_trial` remained active as a discarded `mechanism_run_validation_runtime.py` queue-unblock attempt even though its useful change was later applied manually in main with a complexity-neutral shape. Keeping it active made the secondary queue-unblock rotation target look unresolved after rerun13.
+
+### Consequence
+- Rerun9 is preserved as diagnostic evidence but no longer blocks current mechanism-review or queue-rotation history as an active promotion attempt.
+- Current queue selection can distinguish genuinely unresolved targets from failed candidates whose remediation already landed outside the auto-improve promotion path.

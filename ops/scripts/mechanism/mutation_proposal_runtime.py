@@ -421,7 +421,11 @@ def _recent_log_overlap_matches(
     candidate: dict,
     recent_log_sections: list[RecentLogSection],
 ) -> list[RecentLogOverlapMatch]:
-    haystacks = [(section.heading, section.text.lower()) for section in recent_log_sections]
+    haystacks = [
+        (section.heading, section.text.lower())
+        for section in recent_log_sections
+        if "quarantine" not in section.heading.lower()
+    ]
     markers = _overlap_markers(candidate["primary_targets"], candidate["candidate_id"])
     matches: list[RecentLogOverlapMatch] = []
     for marker in sorted(markers):
@@ -1071,9 +1075,10 @@ def _recent_log_overlap_unblock_target_option(
     policy: dict,
     *,
     recent_log_sections: list[RecentLogSection],
-) -> tuple[list[str], list[str], list[str], list[RecentLogOverlapMatch], str]:
+    outcome_metrics_report: dict,
+) -> tuple[list[str], list[str], list[str], list[RecentLogOverlapMatch], str, list[str]]:
     options: list[
-        tuple[list[str], list[str], list[str], list[RecentLogOverlapMatch], str]
+        tuple[list[str], list[str], list[str], list[RecentLogOverlapMatch], str, list[str]]
     ] = []
     for index, option in enumerate(RECENT_LOG_OVERLAP_UNBLOCK_TARGET_OPTIONS):
         primary_targets = current_repo_target_paths(
@@ -1109,6 +1114,19 @@ def _recent_log_overlap_unblock_target_option(
             pseudo_candidate,
             recent_log_sections,
         )
+        proposal_id = _proposal_id(
+            {
+                "primary_targets": primary_targets,
+                "candidate_id": candidate_id,
+            },
+            RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE,
+        )
+        recent_outcome_blockers = _recent_outcome_rework_blockers(
+            vault,
+            outcome_metrics_report,
+            proposal_id=proposal_id,
+            min_attempts=RECENT_LOG_OVERLAP_UNBLOCK_REWORK_MIN_ATTEMPTS,
+        )
         options.append(
             (
                 primary_targets,
@@ -1116,17 +1134,24 @@ def _recent_log_overlap_unblock_target_option(
                 must_change_tests,
                 recent_log_matches,
                 candidate_id,
+                recent_outcome_blockers,
             )
         )
-        if not recent_log_matches:
+        if not recent_log_matches and not recent_outcome_blockers:
             return options[-1]
 
+    for option_candidate in options:
+        if not option_candidate[3] and not option_candidate[5]:
+            return option_candidate
+    for option_candidate in options:
+        if not option_candidate[5]:
+            return option_candidate
     for option_candidate in options:
         if not option_candidate[3]:
             return option_candidate
     if options:
         return options[0]
-    return ([], [], [], [], "recent_log_overlap_queue_unblock__unresolved")
+    return ([], [], [], [], "recent_log_overlap_queue_unblock__unresolved", [])
 
 
 def _recent_log_overlap_queue_unblock_proposal(
@@ -1153,10 +1178,12 @@ def _recent_log_overlap_queue_unblock_proposal(
         must_change_tests,
         recent_log_matches,
         candidate_id,
+        recent_outcome_blockers,
     ) = _recent_log_overlap_unblock_target_option(
         vault,
         policy,
         recent_log_sections=recent_log_sections,
+        outcome_metrics_report=outcome_metrics_report,
     )
     if not primary_targets:
         return None
@@ -1177,16 +1204,7 @@ def _recent_log_overlap_queue_unblock_proposal(
         RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE,
     )
     blocked_by = ["recent_log_overlap"] if recent_log_matches else []
-    blocked_by.extend(
-        blocker
-        for blocker in _recent_outcome_rework_blockers(
-            vault,
-            outcome_metrics_report,
-            proposal_id=proposal_id,
-            min_attempts=RECENT_LOG_OVERLAP_UNBLOCK_REWORK_MIN_ATTEMPTS,
-        )
-        if blocker not in blocked_by
-    )
+    blocked_by.extend(blocker for blocker in recent_outcome_blockers if blocker not in blocked_by)
     scoped_target_text = " and ".join(f"`{path}`" for path in primary_targets)
     scoped_test_text = " and ".join(f"`{path}`" for path in must_change_tests)
     return MutationProposal(

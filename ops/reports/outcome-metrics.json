@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/outcome-metrics.schema.json",
   "artifact_kind": "outcome_metrics_report",
-  "generated_at": "2026-05-20T10:35:26Z",
+  "generated_at": "2026-05-20T10:52:14Z",
   "producer": "ops.scripts.observability_decision_metrics_runtime",
   "source_command": "python -m ops.scripts.outcome_metrics --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "66bdf3cc5a9bee980d7540dced4a045401d62130640b3f33212b057f1c2404ae",
+  "source_tree_fingerprint": "5ade0e0ef37079eaf129f91f9f3ef44eaf3d3f0cbd1f60a92ef6e195aa875de9",
   "input_fingerprints": {
     "policy": "9d4ebed9b08cd4c9340a88a7d8cfefe17e2a46f7e63711418e4d6057f5b967d3",
     "schema": "aadbf232f7dc6bf40f35290f0dabcc4e9320b93c70cc2f0177f1167b24ecff29",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "c364e1ed667cd810b07ae3d6b09e9de4431804a8db70852d444664e6939e289d",
-    "defect_escape_closures": "8b9dcaa5b433b3948e5685dac41488c1ebdc93ae663f434fe2e5aeb7d7646220",
-    "rework_closures": "b73a125a365a0c17422ad5649ca0a241e80133d238c6f1440e3a2d6b4db7d6e3",
-    "run_inputs": "10055409ebcf4cb5aa99768995a210a606c229621f8d865898f3fb23fa13f284",
-    "session_reports": "4537c9c3e6a688c49efd7264d18b5f297c6595ea3737585886ecf714da5db373",
+    "defect_escape_closures": "9e8e1a4b1cc81a7c90b6415488c55e59b02e8aad337dbf3dad0543e55c16a2a0",
+    "rework_closures": "bf21a0383a024a7849dc96b8163d06764949513a45413d6ae4dd6844724d2624",
+    "run_inputs": "4b30ac698b7c67bd33936d1d07f8e6bcfa123e8eadb6c284a8e6a54e0190a225",
+    "session_reports": "7b09f800765d54efafc4d53876ec9583fd4c8bf562728c28774f35180b36010f",
     "recent_window": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T10:35:26Z"
+    "checked_at": "2026-05-20T10:52:14Z"
   },
   "vault": ".",
   "policy": {
@@ -31,36 +31,36 @@
     "version": 4
   },
   "summary": {
-    "attempts_considered": 21,
+    "attempts_considered": 22,
     "recent_window": 20,
     "recent_attempt_count": 20,
-    "session_reports_considered": 11
+    "session_reports_considered": 12
   },
   "metrics": {
-    "attempt_count": 21,
+    "attempt_count": 22,
     "recent_window": 20,
     "recent_attempt_count": 20,
     "rework_count": 4,
     "rollback_signal_count": 0,
     "rollback_rehearsal_coverage_count": 3,
     "moving_averages": {
-      "hold": 0.5,
+      "hold": 0.55,
       "discard": 0.2,
       "rollback_signal": 0.0
     },
     "operator_effort_proxy": {
       "phase_totals_seconds": {
-        "scope_freeze": 0.095,
-        "routing": 4.765,
-        "scaffold": 4.024,
-        "experiment": 7625.089,
+        "scope_freeze": 0.111,
+        "routing": 5.511,
+        "scaffold": 4.52,
+        "experiment": 7915.572,
         "typed_same_eval_evidence": 0.0
       },
-      "executor_report_count": 13,
+      "executor_report_count": 14,
       "reviewer_dispatch_count": 4,
       "validator_dispatch_count": 2,
       "auditor_dispatch_count": 1,
-      "hold_count": 10
+      "hold_count": 11
     },
     "rework_keys": [
       {
@@ -229,6 +229,23 @@
     ]
   },
   "recent_attempts": [
+    {
+      "run_id": "5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime",
+      "session_id": "5day-auto-improve-runtime-rerun13-30m_trial",
+      "proposal_id": "recent_log_overlap_queue_blocked__mutation-proposal-runtime",
+      "source_candidate_id": "recent_log_overlap_queue_unblock__mutation-proposal-runtime",
+      "observed_at": "2026-05-20T10:43:09Z",
+      "decision": "HOLD",
+      "outcome": "mutation_failed",
+      "primary_targets": [
+        "ops/scripts/mechanism/mutation_proposal_runtime.py"
+      ],
+      "rework_key": "proposal:recent_log_overlap_queue_blocked__mutation-proposal-runtime",
+      "rollback_rehearsal_covered": false,
+      "rollback_signal": false,
+      "run_telemetry": "runs/5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime/run-telemetry.json",
+      "promotion_report": "runs/5day-auto-improve-runtime-rerun13-30m_trial-run-01-mutation-proposal-runtime/promotion-report.json"
+    },
     {
       "run_id": "5day-auto-improve-runtime-rerun12-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
       "session_id": "5day-auto-improve-runtime-rerun12-30m_trial",
@@ -547,21 +564,6 @@
       "rollback_signal": false,
       "run_telemetry": "",
       "promotion_report": "runs/archive/run-20260415-mechanism-planning-gate-second-retry/promotion-report.json"
-    },
-    {
-      "run_id": "run-20260415-mechanism-planning-gate-second-clean",
-      "session_id": "standalone-run-telemetry",
-      "proposal_id": "",
-      "source_candidate_id": "",
-      "observed_at": "",
-      "decision": "PROMOTE",
-      "outcome": "promoted",
-      "primary_targets": [],
-      "rework_key": "",
-      "rollback_rehearsal_covered": false,
-      "rollback_signal": false,
-      "run_telemetry": "",
-      "promotion_report": "runs/run-20260415-mechanism-planning-gate-second-clean/promotion-report.json"
     }
   ]
 }
