@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-20T06:30:19Z",
+  "generated_at": "2026-05-20T06:31:12Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -11,10 +11,10 @@
     "schema": "b07ea4db25e1e00c9ecce8026872b299d5f6df21f7edd396dce9af266ed48c42",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e8a26558749ee2fc8d615020caccd4b12d32e2354739c58e8a580ff43a3cbc10",
-    "artifact_freshness_report": "abf516eb22161e94d90dd96867e8e72ad460de6fbda836d5dd92ecfa410d7f9c",
-    "goal_worktree_guard_report": "6c96ce0c1f1ad0ea9e9d2dfe26981f693b4241765322d9cb385d41898682e423",
-    "mechanism_review_report": "79bff347fe584032edb7217b22d1a4c37684e93499dc471ac35216ceb229442a",
-    "mutation_proposal_report": "8966b62feb9397ba98811828ce61e4bf289a74e0a27a87afd544a5f9d5b1a7ef",
+    "artifact_freshness_report": "e01701bbf3da99030a2c5d271330ae61c6aa5bdaf0f538ee7138e33eec4d69f7",
+    "goal_worktree_guard_report": "7df3ca89f9d46ebcc5ebd026f5bdac0e90587b41f48baf69bc618b2a1a13883f",
+    "mechanism_review_report": "2032440c77cfa52dd49e0d57987fe8f1f1c4fd58fa069edd45da566561c41088",
+    "mutation_proposal_report": "19895bab7126ae396170e9552adac19165702ae56adea0dad0ca6ee1163bd24e",
     "outcome_metrics_report": "62f8526d48fbd62e3f466860e81f8d7d0d427f20c2a1d8469b1438350317f7aa",
     "release_authority_preflight_report": "8771a6022db09e525cf4c8a22c99725d1e3539f340aca5db6445f8d675705b8e",
     "release_closeout_batch_manifest_report": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T06:30:19Z"
+    "checked_at": "2026-05-20T06:31:12Z"
   },
   "vault": ".",
   "policy": {
@@ -82,26 +82,6 @@
   },
   "learning_blockers": [],
   "promotion_blockers": [
-    {
-      "id": "promotion_blocked_by_goal_worktree_guard_failure",
-      "scope": "worktree_guard",
-      "status": "open",
-      "severity": "blocker",
-      "release_blocker": true,
-      "accepted_risk": false,
-      "gate_effect": "active",
-      "source_status": "attention",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=8",
-      "signal_ids": [
-        "git_worktree_dirty"
-      ],
-      "required_evidence": [
-        "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
-        "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
-        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal."
-      ],
-      "recommended_next_step": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
-    },
     {
       "id": "promotion_blocked_by_remediation_backlog_open",
       "scope": "remediation_backlog",
@@ -302,19 +282,17 @@
     "goal_worktree_guard_summary": {
       "path": "tmp/goal-worktree-guard.json",
       "artifact_kind": "goal_worktree_guard",
-      "status": "attention",
+      "status": "pass",
       "requested_mode": "git",
       "detected_mode": "git_worktree",
       "can_execute_goal_runtime": true,
-      "can_promote_result": false,
+      "can_promote_result": true,
       "zip_mode_replay_only": false,
       "dirty_worktree_allowed": false,
-      "dirty_entry_count": 8,
+      "dirty_entry_count": 0,
       "fatal_blockers": [],
-      "promotion_blockers": [
-        "git_worktree_dirty"
-      ],
-      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=8"
+      "promotion_blockers": [],
+      "summary": "goal worktree guard status=pass; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=true; dirty_entry_count=0"
     },
     "remediation_backlog_summary": {
       "path": "ops/reports/remediation-backlog.json",
@@ -399,5 +377,5 @@
     }
   ],
   "remediations": [],
-  "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
+  "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Close or explicitly defer remediation backlog items, rerun make remediation-backlog, then rerun make auto-improve-readiness."
 }

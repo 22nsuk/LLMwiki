@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/mechanism-review-candidates.schema.json",
   "artifact_kind": "mechanism_review_candidates_report",
-  "generated_at": "2026-05-20T06:24:26Z",
+  "generated_at": "2026-05-20T06:31:13Z",
   "producer": "ops.scripts.mechanism_review_runtime",
   "source_command": "python -m ops.scripts.mechanism_review",
   "source_revision": "unknown",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T06:24:26Z"
+    "checked_at": "2026-05-20T06:31:13Z"
   },
   "vault": ".",
   "policy": {
