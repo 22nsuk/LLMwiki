@@ -194,3 +194,60 @@ class MechanismRunRepoHealthStepRuntimeTests(unittest.TestCase):
             "repo_health_pass",
         )
         dependencies.write_timeout_failure_artifact.assert_not_called()
+
+    def test_repo_health_step_copies_artifact_freshness_diagnostic_report(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            workspace = Path(temp_dir) / "workspace"
+            vault.mkdir()
+            workspace.mkdir()
+            diagnostic = workspace / "tmp" / "artifact-freshness-report-check.json"
+            diagnostic.parent.mkdir(parents=True)
+            diagnostic.write_text('{"status":"fail","failures":["stale"]}\n', encoding="utf-8")
+            dependencies = RepoHealthStepDependencies(
+                command_argv=mock.Mock(return_value=["make", "check"]),
+                run_command=mock.Mock(
+                    return_value={
+                        "command": "make check",
+                        "argv": ["make", "check"],
+                        "returncode": 1,
+                        "stdout": "tmp/artifact-freshness-report-check.json\n",
+                        "stderr": "artifact freshness failed\n",
+                    }
+                ),
+                write_command_logs=mock.Mock(
+                    return_value=[
+                        "runs/run-steps/repo-health.stdout.txt",
+                        "runs/run-steps/repo-health.stderr.txt",
+                    ]
+                ),
+                write_timeout_failure_artifact=mock.Mock(),
+                append_ledger_event=mock.Mock(),
+                write_changed_files_manifest=mock.Mock(
+                    return_value="runs/run-steps/changed-files-manifest.json"
+                ),
+                write_behavior_delta_artifact=mock.Mock(
+                    return_value="runs/run-steps/behavior-delta.json"
+                ),
+                sanitize_path_text=mock.Mock(side_effect=lambda text, *, roots: text),
+            )
+
+            result = repo_health_step(
+                vault,
+                workspace,
+                run_id="run-steps",
+                resolution=_resolution(),
+                baseline_file_digests={},
+                dependencies=dependencies,
+            )
+
+            copied = vault / "runs" / "run-steps" / "repo-health-artifact-freshness-report-check.json"
+            self.assertFalse(result.passed)
+            self.assertEqual(
+                copied.read_text(encoding="utf-8"),
+                '{"status":"fail","failures":["stale"]}\n',
+            )
+            self.assertIn(
+                "runs/run-steps/repo-health-artifact-freshness-report-check.json",
+                dependencies.append_ledger_event.call_args.kwargs["artifacts"],
+            )

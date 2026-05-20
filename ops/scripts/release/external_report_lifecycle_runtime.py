@@ -260,6 +260,7 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         ],
         "evidence_paths": [
             "mk/mechanism.mk",
+            "ops/reports/goal-runtime-certificate.json",
             "ops/schemas/codex-goal-contract.schema.json",
             "ops/scripts/mechanism/goal_run_status.py",
             "ops/scripts/mechanism/goal_runtime_certificate_report.py",
@@ -307,6 +308,7 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         "evidence_paths": [
             "ops/scripts/mechanism/goal_runtime_backoff.py",
             "ops/scripts/mechanism/goal_runtime_runner.py",
+            "ops/reports/goal-run-status.json",
             "ops/schemas/goal-run-status.schema.json",
             "tests/test_goal_runtime_runner.py",
             "tests/test_goal_run_status.py",
@@ -800,20 +802,79 @@ def goal_run_status_audit_resume_status(
     if (
         report.get("artifact_kind") == "goal_run_status"
         and report.get("producer") == "ops.scripts.goal_run_status"
-        and report.get("status") in {"pass", "attention"}
+        and report.get("status") in {"pass", "attention", "fail"}
         and bool(backend.get("process_persistent"))
         and goal.get("contract_sha256") == contract_digest
         and status_report_path_valid
         and paths_valid
         and health.get("heartbeat_status") in {"current", "stale"}
         and health.get("checkpoint_status") in {"current", "stale"}
-        and health.get("command_heartbeat_status") in {"current", "stale"}
+        and health.get("command_heartbeat_status") in {"current", "stale", "not_recorded"}
         and health.get("backoff_status") in {"inactive", "active", "expired"}
         and health.get("resume_status") in {"not_requested", "ready"}
         and health.get("promotion_status") == "blocked"
         and health.get("can_promote_result") is False
         and runtime_certificate.get("status") in {"pending", "complete"}
         and runtime_certificate.get("mode") == "self_improvement_loop"
+    ):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
+def goal_execution_runtime_certificate_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    status = _all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    report = load_json_object(vault / "ops/reports/goal-runtime-certificate.json")
+    certificate = as_dict(report.get("certificate"))
+    run = as_dict(report.get("run"))
+    run_artifacts = as_dict(report.get("run_artifacts"))
+    session_evidence = as_dict(report.get("session_evidence"))
+    command_observability = as_dict(report.get("command_observability"))
+    contract_update = as_dict(report.get("contract_update"))
+    if (
+        report.get("artifact_kind") == "goal_runtime_certificate"
+        and report.get("producer") == "ops.scripts.goal_runtime_certificate_report"
+        and report.get("status") == "pass"
+        and certificate.get("target_runtime_mode") == "self_improvement_loop"
+        and certificate.get("verification_status") in {"eligible", "already_verified"}
+        and certificate.get("eligible") is True
+        and run.get("run_status") == "completed"
+        and run.get("run_runtime_mode") == "self_improvement_loop"
+        and run_artifacts.get("status") == "clean"
+        and session_evidence.get("status") == "clean"
+        and command_observability.get("status") == "clean"
+        and contract_update.get("runtime_certificate_verified_after") is True
+        and not as_list(report.get("blockers"))
+    ):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
+def goal_executor_backoff_observability_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    status = _all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    report = load_json_object(vault / "ops/reports/goal-run-status.json")
+    health = as_dict(report.get("health"))
+    observability = as_dict(report.get("observability"))
+    command_mode = str(observability.get("command_observation_mode", "")).strip()
+    backoff_until = observability.get("last_backoff_until")
+    backoff_reason = observability.get("backoff_reason")
+    if (
+        report.get("artifact_kind") == "goal_run_status"
+        and report.get("producer") == "ops.scripts.goal_run_status"
+        and report.get("status") in {"pass", "attention"}
+        and health.get("backoff_status") in {"inactive", "active", "expired"}
+        and command_mode in {"", "communicate", "process_poll", "process_heartbeat"}
+        and isinstance(backoff_until, str)
+        and isinstance(backoff_reason, str)
+        and "last_backoff_until" in observability
+        and "backoff_reason" in observability
     ):
         return "implemented"
     return "requires_release_run_verification"
@@ -1083,6 +1144,18 @@ def status_from_evidence(vault: Path, action: dict[str, Any]) -> tuple[str, list
         )
     elif action_id == "goal_run_status_audit_resume":
         status = goal_run_status_audit_resume_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "goal_execution_runtime_certificate":
+        status = goal_execution_runtime_certificate_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "goal_executor_backoff_observability":
+        status = goal_executor_backoff_observability_status(
             vault,
             existing_count,
             len(action["evidence_paths"]),

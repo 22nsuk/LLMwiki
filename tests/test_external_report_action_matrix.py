@@ -359,6 +359,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "ops/scripts/mechanism/auto_improve_runtime.py",
             "ops/schemas/goal-run-status.schema.json",
             "ops/scripts/mechanism/goal_run_status.py",
+            "ops/scripts/mechanism/goal_runtime_backoff.py",
             "ops/scripts/mechanism/goal_runtime_runner.py",
             "ops/scripts/mechanism/goal_runtime_certificate_report.py",
             "ops/scripts/mechanism/goal_runtime_certificate.py",
@@ -483,6 +484,33 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
                     "status": "pending",
                     "mode": "self_improvement_loop",
                 },
+                "observability": {
+                    "command_observation_mode": "process_heartbeat",
+                    "last_backoff_until": "",
+                    "backoff_reason": "",
+                },
+            },
+        )
+        self._write_json(
+            "ops/reports/goal-runtime-certificate.json",
+            {
+                "artifact_kind": "goal_runtime_certificate",
+                "producer": "ops.scripts.goal_runtime_certificate_report",
+                "status": "pass",
+                "certificate": {
+                    "target_runtime_mode": "self_improvement_loop",
+                    "verification_status": "eligible",
+                    "eligible": True,
+                },
+                "run": {
+                    "run_status": "completed",
+                    "run_runtime_mode": "self_improvement_loop",
+                },
+                "run_artifacts": {"status": "clean"},
+                "session_evidence": {"status": "clean"},
+                "command_observability": {"status": "clean"},
+                "contract_update": {"runtime_certificate_verified_after": True},
+                "blockers": [],
             },
         )
         self._write_json(
@@ -537,7 +565,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         )
         (self.external / "goal.md").write_text(
             "# Goal Review\n\ngoal contract, set_goal, codex_goal_prompt, --goal-contract, "
-            "goal-run-status, selected contract, Git worktree, transient artifact cleanup, "
+            "goal-run-status, runtime certificate, retry-after executor backoff, selected contract, Git worktree, transient artifact cleanup, "
             "goal-runtime-clean-transient, long-run-preflight-clean.\n",
             encoding="utf-8",
         )
@@ -551,11 +579,207 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "codex_goal_prompt_generator",
             "auto_improve_goal_contract_input",
             "goal_run_status_audit_resume",
+            "goal_execution_runtime_certificate",
+            "goal_executor_backoff_observability",
             "selected_contract_currentness_gate",
             "git_worktree_goal_guard",
             "goal_runtime_transient_cleanup_gate",
         }:
             self.assertEqual(actions[action_id]["current_status"], "implemented", action_id)
+
+    def test_goal_certificate_action_requires_verified_clean_certificate_report(self) -> None:
+        for rel_path in (
+            "mk/mechanism.mk",
+            "ops/schemas/codex-goal-contract.schema.json",
+            "ops/scripts/mechanism/goal_run_status.py",
+            "ops/scripts/mechanism/goal_runtime_certificate_report.py",
+            "ops/scripts/mechanism/goal_runtime_certificate.py",
+            "tests/test_goal_runtime_certificate.py",
+            "tests/test_goal_run_status.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+        self._write_json(
+            "ops/reports/goal-runtime-certificate.json",
+            {
+                "artifact_kind": "goal_runtime_certificate",
+                "producer": "ops.scripts.goal_runtime_certificate_report",
+                "status": "attention",
+                "certificate": {
+                    "target_runtime_mode": "self_improvement_loop",
+                    "verification_status": "blocked",
+                    "eligible": False,
+                },
+                "run": {
+                    "run_status": "running",
+                    "run_runtime_mode": "self_improvement_loop",
+                },
+                "run_artifacts": {"status": "incomplete"},
+                "session_evidence": {"status": "missing"},
+                "command_observability": {"status": "incomplete"},
+                "contract_update": {"runtime_certificate_verified_after": False},
+                "blockers": ["goal run is not completed"],
+            },
+        )
+        (self.external / "certificate.md").write_text(
+            "# Certificate Review\n\nruntime certificate and self-improvement loop.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        self.assertEqual(
+            actions["goal_execution_runtime_certificate"]["current_status"],
+            "requires_release_run_verification",
+        )
+
+    def test_goal_status_audit_resume_action_accepts_failed_runtime_status(self) -> None:
+        for rel_path in (
+            "ops/schemas/goal-run-status.schema.json",
+            "ops/scripts/mechanism/auto_improve_loop.py",
+            "ops/scripts/mechanism/goal_run_status.py",
+            "ops/scripts/mechanism/goal_runtime_runner.py",
+            "tests/test_goal_auto_improve_runtime.py",
+            "tests/test_goal_run_status.py",
+            "tests/test_goal_runtime_runner.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+        contract = {
+            "$schema": "ops/schemas/codex-goal-contract.schema.json",
+            "contract_id": "auto-improve-goal",
+            "runtime": {"mode": "self_improvement_loop"},
+            "budgets": {"max_wall_clock_seconds": 21600},
+            "required_evidence": [
+                {
+                    "evidence_id": "goal_run_status",
+                    "path": "ops/reports/goal-run-status.json",
+                    "required_for_promotion": True,
+                }
+            ],
+        }
+        contract_digest = _canonical_json_digest(contract)
+        self._write_json("ops/reports/codex-goal-contract.json", contract)
+        self._write_json(
+            "ops/reports/goal-run-status.json",
+            {
+                "artifact_kind": "goal_run_status",
+                "producer": "ops.scripts.goal_run_status",
+                "status": "fail",
+                "goal": {
+                    "contract_sha256": contract_digest,
+                    "backend": {"process_persistent": True},
+                },
+                "artifacts": {
+                    "status_report_path": "ops/reports/goal-run-status.json",
+                    "status_markdown_path": "runs/goal-auto-improve-trial/status.md",
+                    "audit_log_path": "runs/goal-auto-improve-trial/audit-log.jsonl",
+                    "resume_metadata_path": "runs/goal-auto-improve-trial/resume-metadata.json",
+                    "checkpoint_command_log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl",
+                },
+                "health": {
+                    "heartbeat_status": "current",
+                    "checkpoint_status": "current",
+                    "command_heartbeat_status": "current",
+                    "backoff_status": "inactive",
+                    "resume_status": "not_requested",
+                    "promotion_status": "blocked",
+                    "can_promote_result": False,
+                },
+                "runtime_certificate": {
+                    "status": "pending",
+                    "mode": "self_improvement_loop",
+                },
+            },
+        )
+        (self.external / "goal-status.md").write_text(
+            "# Goal Status Review\n\ngoal-run-status, audit-log, checkpoint, resume.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        self.assertEqual(
+            actions["goal_run_status_audit_resume"]["current_status"],
+            "implemented",
+        )
+
+    def test_goal_status_audit_resume_action_accepts_missing_command_heartbeat(self) -> None:
+        for rel_path in (
+            "ops/schemas/goal-run-status.schema.json",
+            "ops/scripts/mechanism/auto_improve_loop.py",
+            "ops/scripts/mechanism/goal_run_status.py",
+            "ops/scripts/mechanism/goal_runtime_runner.py",
+            "tests/test_goal_auto_improve_runtime.py",
+            "tests/test_goal_run_status.py",
+            "tests/test_goal_runtime_runner.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+        contract = {
+            "$schema": "ops/schemas/codex-goal-contract.schema.json",
+            "contract_id": "auto-improve-goal",
+            "runtime": {"mode": "self_improvement_loop"},
+            "budgets": {"max_wall_clock_seconds": 21600},
+            "required_evidence": [
+                {
+                    "evidence_id": "goal_run_status",
+                    "path": "ops/reports/goal-run-status.json",
+                    "required_for_promotion": True,
+                }
+            ],
+        }
+        contract_digest = _canonical_json_digest(contract)
+        self._write_json("ops/reports/codex-goal-contract.json", contract)
+        self._write_json(
+            "ops/reports/goal-run-status.json",
+            {
+                "artifact_kind": "goal_run_status",
+                "producer": "ops.scripts.goal_run_status",
+                "status": "attention",
+                "goal": {
+                    "contract_sha256": contract_digest,
+                    "backend": {"process_persistent": True},
+                },
+                "artifacts": {
+                    "status_report_path": "ops/reports/goal-run-status.json",
+                    "status_markdown_path": "runs/goal-auto-improve-trial/status.md",
+                    "audit_log_path": "runs/goal-auto-improve-trial/audit-log.jsonl",
+                    "resume_metadata_path": "runs/goal-auto-improve-trial/resume-metadata.json",
+                    "checkpoint_command_log_path": "runs/goal-auto-improve-trial/checkpoint-command-events.jsonl",
+                },
+                "health": {
+                    "heartbeat_status": "current",
+                    "checkpoint_status": "current",
+                    "command_heartbeat_status": "not_recorded",
+                    "backoff_status": "inactive",
+                    "resume_status": "not_requested",
+                    "promotion_status": "blocked",
+                    "can_promote_result": False,
+                },
+                "runtime_certificate": {
+                    "status": "pending",
+                    "mode": "self_improvement_loop",
+                },
+            },
+        )
+        (self.external / "goal-status.md").write_text(
+            "# Goal Status Review\n\ngoal-run-status, audit-log, checkpoint, resume.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        self.assertEqual(
+            actions["goal_run_status_audit_resume"]["current_status"],
+            "implemented",
+        )
 
     def test_release_verified_actions_accept_conditional_status_v2_authority(self) -> None:
         self._write_release_verification_reports()

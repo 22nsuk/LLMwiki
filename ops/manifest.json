@@ -807,8 +807,8 @@
     },
     {
       "path": "ops/schemas/run-telemetry.schema.json",
-      "sha256": "cc8fe10dc20ed14e3c6028129db59420f3daf891a35243c371c77c8401e1a76f",
-      "size_bytes": 10374
+      "sha256": "beeb2930404c5f5135e96c607fc3ec257ef47a2709eca406a2d217b511806067",
+      "size_bytes": 10519
     },
     {
       "path": "ops/schemas/runtime-event.schema.json",
@@ -1007,8 +1007,8 @@
     },
     {
       "path": "ops/scripts/core/backfill_archived_run_artifacts.py",
-      "sha256": "8589b05680ea1ae2b8cb8d3058180143deb66b2870f45d192a2578184083e473",
-      "size_bytes": 31347
+      "sha256": "9c2f24085824037b8ed054053e6c7338fe425a81419a2cfd0336fe3cfea84b10",
+      "size_bytes": 30993
     },
     {
       "path": "ops/scripts/core/backfill_historical_bootstrap_reports.py",
@@ -1042,8 +1042,8 @@
     },
     {
       "path": "ops/scripts/core/codex_exec_executor.py",
-      "sha256": "64dac4d7c661702adc726c3316d099175ba821ff90cf97933a189d9e0ebb023e",
-      "size_bytes": 34108
+      "sha256": "653ae98fc500e72cd7ada603051b415b378794b56fc87f2484f32c7789b51e3c",
+      "size_bytes": 34189
     },
     {
       "path": "ops/scripts/core/codex_goal_client.py",
@@ -1162,8 +1162,8 @@
     },
     {
       "path": "ops/scripts/core/proposal_scope_runtime.py",
-      "sha256": "efc389e895e44406f59f204f0f05e54017ea60e2d0f8075d1010ec4623b6331c",
-      "size_bytes": 7330
+      "sha256": "7e58206971f5696ee7315999d2b50f16b97bb6cccd800c6fb538dccd3372d4b9",
+      "size_bytes": 7716
     },
     {
       "path": "ops/scripts/core/python_function_budget_runtime.py",
@@ -1507,8 +1507,8 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
-      "sha256": "ec82494ba1d8d90aed36fcc223605d535c044d46adc142beab2f94cff1147cd3",
-      "size_bytes": 22490
+      "sha256": "03c65abaaeac057d70b62e56ef279d334cbb9a0eeaeb179ed5e76435d9807304",
+      "size_bytes": 24916
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_iteration_runtime.py",
@@ -1527,8 +1527,8 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
-      "sha256": "306d7c8ea72771c79e34ec273cb9d87080a6b2d258efbf958dd79884a1976d3f",
-      "size_bytes": 9175
+      "sha256": "5091ca07df1ced3dfe5e324b04f1e5d7190ddcb3ae76f1bc8bbaade9d473d710",
+      "size_bytes": 9457
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_outcome_runtime.py",
@@ -1772,8 +1772,8 @@
     },
     {
       "path": "ops/scripts/mechanism/mechanism_run_repo_health_step_runtime.py",
-      "sha256": "dfedd1f109f64f1702a27ef8f7b94005114cfd7fd982e0a94ab25afd29048bba",
-      "size_bytes": 4717
+      "sha256": "17ba5748f618bca6d360a3fdb999d46aebab57d32ce4b1ac962f43f65d71973c",
+      "size_bytes": 5647
     },
     {
       "path": "ops/scripts/mechanism/mechanism_run_scaffold_resolution_runtime.py",
@@ -1807,8 +1807,8 @@
     },
     {
       "path": "ops/scripts/mechanism/mutation_proposal_runtime.py",
-      "sha256": "0df798a860a202bc55d9a9f4434d992882a68f049e25322628705e559c7d0326",
-      "size_bytes": 89705
+      "sha256": "ed9508aa3577531559288aa5e485dd93287163898a732ff0dfa08ca886012f0c",
+      "size_bytes": 94896
     },
     {
       "path": "ops/scripts/mechanism/outcome_metrics.py",
@@ -2027,8 +2027,8 @@
     },
     {
       "path": "ops/scripts/release/external_report_lifecycle_runtime.py",
-      "sha256": "b4d0c9049c14b0be5725ecea6a3f0dfb88acd98865de7ff32ba675d4b7611e2d",
-      "size_bytes": 49445
+      "sha256": "628f37e88a0dde76275e395b7b3f01ba22471c5f5d496e8fff85ca615d6876d2",
+      "size_bytes": 52782
     },
     {
       "path": "ops/scripts/release/external_report_reference_manifest.py",
@@ -4957,7 +4957,7 @@
     },
     {
       "path": "tests/fixtures/report_schema_samples.json",
-      "sha256": "7da6cb215cb353d655e2189524a0b9884ac37e54fbc5b80ae5a76ba25d1de52d",
+      "sha256": "2399c81cd8339495aac06d4695b10cd6ae4b7f7e84a3b65d0466db72d329b4e2",
       "size_bytes": 137615
     },
     {
@@ -5022,8 +5022,8 @@
     },
     {
       "path": "tests/test_auto_improve_iteration_runtime.py",
-      "sha256": "d96a1aa0e5fbe0e858139a9cc9bc3c32eb03427b2f847d7402a6766d67a85f99",
-      "size_bytes": 44880
+      "sha256": "504da92afffdba138190ce9f491fc4af944d1373c578fd60605a707da3395dfd",
+      "size_bytes": 55717
     },
     {
       "path": "tests/test_auto_improve_next_run_decision_runtime.py",
@@ -5067,8 +5067,8 @@
     },
     {
       "path": "tests/test_backfill_archived_run_artifacts.py",
-      "sha256": "d0c31be8b02405bc6eaffcec7cff87046989355302680897bba1e6a6f996631f",
-      "size_bytes": 17501
+      "sha256": "8eb61d81f2947806f69dedf853584b0386f59418bbfbdc9958646ac17c51f41c",
+      "size_bytes": 17371
     },
     {
       "path": "tests/test_backfill_historical_bootstrap_reports.py",
@@ -5157,8 +5157,8 @@
     },
     {
       "path": "tests/test_executor_runtime.py",
-      "sha256": "55b4f44cd914e39483a8c07f3becf57ac960bc921bee0a5025fdf327d46ee157",
-      "size_bytes": 46152
+      "sha256": "28e62a27921b8d4ad7f1062ab93bf301c8a51dad71a0b35d6f11c5aca8547b42",
+      "size_bytes": 48706
     },
     {
       "path": "tests/test_experiment_telemetry_runtime.py",
@@ -5172,8 +5172,8 @@
     },
     {
       "path": "tests/test_external_report_action_matrix.py",
-      "sha256": "57dd9324da9dc393a6d7caf9f78a4341a13d2df15a76c89d1e08f9bbe42b1f8d",
-      "size_bytes": 32129
+      "sha256": "3c9e4635f7c7b70de4af6db912839c759eb39acd5bfcc527632976d81d1a53ba",
+      "size_bytes": 42430
     },
     {
       "path": "tests/test_external_report_lifecycle_static.py",
@@ -5357,8 +5357,8 @@
     },
     {
       "path": "tests/test_mechanism_run_repo_health_step_runtime.py",
-      "sha256": "78fbfc9c05b0e860bb89f7d18e0216395dc2512b42f538e8c7d83e8073abb6c8",
-      "size_bytes": 7927
+      "sha256": "b7caea41e50380ad376527168845de4fffcbbb92238ea533a37499617a957a50",
+      "size_bytes": 10521
     },
     {
       "path": "tests/test_mechanism_run_scaffold_resolution_runtime.py",
@@ -5377,8 +5377,8 @@
     },
     {
       "path": "tests/test_mutation_proposal.py",
-      "sha256": "83ad9e155d622cd7c2fd4dca7830fa4196612bd3cf8791be92877d85e641a74f",
-      "size_bytes": 110113
+      "sha256": "e44ad0be89dbad04b3aea37717f3cc747f488e5681103322454afc688cbc5e89",
+      "size_bytes": 122774
     },
     {
       "path": "tests/test_observability_artifacts_runtime.py",
@@ -5462,8 +5462,8 @@
     },
     {
       "path": "tests/test_proposal_scope_runtime.py",
-      "sha256": "af9a734a985bd1d0c49501331a1a5a20a8d8a6135355eeb0e09005f9ec7dbd40",
-      "size_bytes": 8867
+      "sha256": "7f310326371dfa1dc03d91cb87ae9a4cd4d560b921a6079d242b8da9f7b50d42",
+      "size_bytes": 10817
     },
     {
       "path": "tests/test_public_check_summary.py",

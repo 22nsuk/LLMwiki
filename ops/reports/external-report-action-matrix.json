@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-20T18:06:56Z",
+  "generated_at": "2026-05-20T22:32:04Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "40edcaa1959fe55280fdb49d09106664043af487557a977ff76c2826bfb3aa6d",
+  "source_tree_fingerprint": "4d4ddb351214ee0dda539f46a7326751806351c8127cc37a465afc015d8ba815",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "41b7f2349197838c51b19b1f1320a4317d899cd0e033c33e6f1a8f8e8ac11009",
+    "source_paths": "b7d7a3cd646c1222463ed7b13a502c3fe98ac166c7c68f3dfad757f3822b8176",
     "active_external_reports": "decefdb771e3808785a78eb721ff084e1dfc0bdded112da50ac993f59e815985",
-    "action_catalog": "84ec1fd0f7b48c1ff39c7cb33430799005c0dc31849a6f9e6c2c475ce1da10f4"
+    "action_catalog": "05dbd1c8d8595cd49210c3b2d445243360ff4fb558b3aead52f6de010426918e"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T18:06:56Z"
+    "checked_at": "2026-05-20T22:32:04Z"
   },
   "vault": ".",
   "status": "attention",
@@ -32,9 +32,9 @@
     "active_report_count": 2,
     "archived_report_count": 67,
     "action_item_count": 24,
-    "implemented_count": 21,
+    "implemented_count": 23,
     "partially_automated_count": 0,
-    "requires_release_run_verification_count": 3,
+    "requires_release_run_verification_count": 1,
     "planned_count": 0,
     "unmatched_active_report_count": 0,
     "reference_manifest_alignment_status": "current",
@@ -450,7 +450,7 @@
       "action_id": "goal_run_status_audit_resume",
       "priority": "P0",
       "theme": "goal run status, audit log, checkpoint, and resume contract",
-      "current_status": "requires_release_run_verification",
+      "current_status": "implemented",
       "source_report_paths": [
         "external-reports/llmwiki_code_change_implementation_report_20260516.md"
       ],
@@ -521,6 +521,12 @@
           "exists": true,
           "status": "",
           "producer": ""
+        },
+        {
+          "path": "ops/reports/goal-runtime-certificate.json",
+          "exists": true,
+          "status": "attention",
+          "producer": "ops.scripts.goal_runtime_certificate_report"
         },
         {
           "path": "ops/schemas/codex-goal-contract.schema.json",
@@ -618,7 +624,7 @@
       "action_id": "goal_executor_backoff_observability",
       "priority": "P1",
       "theme": "goal executor retry-after backoff and status observability",
-      "current_status": "requires_release_run_verification",
+      "current_status": "implemented",
       "source_report_paths": [
         "external-reports/llmwiki_code_change_implementation_report_20260516.md"
       ],
@@ -635,6 +641,12 @@
           "exists": true,
           "status": "",
           "producer": ""
+        },
+        {
+          "path": "ops/reports/goal-run-status.json",
+          "exists": true,
+          "status": "attention",
+          "producer": "ops.scripts.goal_run_status"
         },
         {
           "path": "ops/schemas/goal-run-status.schema.json",

@@ -109,6 +109,46 @@ class ProposalScopeRuntimeTests(unittest.TestCase):
             self.assertEqual(report["resolution"]["blocked_by"], [])
             self.assertEqual(report["dispatch"]["validator"], True)
 
+    def test_supporting_fixture_target_is_not_treated_as_focus_test(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            policy, policy_path = load_policy(vault)
+            context = RuntimeContext.from_policy(policy)
+            target = vault / "ops" / "scripts" / "mechanism" / "example_runtime.py"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("VALUE = 1\n", encoding="utf-8")
+            fixture = vault / "tests" / "fixtures" / "report_schema_samples.json"
+            fixture.parent.mkdir(parents=True, exist_ok=True)
+            fixture.write_text("{}\n", encoding="utf-8")
+            test_path = vault / "tests" / "test_report_schema_sample_regeneration.py"
+            test_path.write_text("def test_regeneration() -> None:\n    assert True\n", encoding="utf-8")
+
+            report = build_scope_freeze(
+                vault,
+                policy,
+                policy_path,
+                run_id="run-fixture-supporting-target",
+                proposal={
+                    "proposal_id": "proposal-fixture-supporting-target",
+                    "primary_targets": ["ops/scripts/mechanism/example_runtime.py"],
+                    "supporting_targets": ["tests/fixtures/report_schema_samples.json"],
+                    "must_change_tests": ["tests/test_report_schema_sample_regeneration.py"],
+                },
+                context=context,
+            )
+
+            self.assertEqual(report["status"], "runnable")
+            self.assertEqual(
+                report["resolution"]["test_files"],
+                ["tests/test_report_schema_sample_regeneration.py"],
+            )
+            self.assertNotIn(
+                "tests/fixtures/report_schema_samples.json",
+                report["resolution"]["test_files"],
+            )
+
     def test_system_log_target_sets_log_risk_flag(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

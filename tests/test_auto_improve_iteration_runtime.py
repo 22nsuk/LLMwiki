@@ -20,6 +20,7 @@ from ops.scripts.auto_improve_iteration_persistence_runtime import (
     IterationTelemetryRequest,
     PersistIterationDependencies,
     PersistIterationPhaseResult,
+    persist_iteration_phase,
     write_iteration_telemetry,
 )
 from ops.scripts.auto_improve_iteration_runtime import (
@@ -94,6 +95,38 @@ def _persist_dependencies() -> PersistIterationDependencies:
         write_run_artifact_fingerprint=lambda *_args, **_kwargs: "",
         write_session_report=lambda *_args, **_kwargs: Path("ops/reports/session.json"),
     )
+
+
+def _write_iteration_executor_report(
+    vault: Path,
+    run_id: str,
+    *,
+    role: str,
+    status: str,
+) -> str:
+    report_rel = f"runs/{run_id}/{role}-executor-report.json"
+    report_path = vault / report_rel
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
+        json.dumps(
+            {
+                "$schema": "ops/schemas/executor-report.schema.json",
+                "run_id": run_id,
+                "role": role,
+                "generated_at": "2026-05-20T12:00:00Z",
+                "executor": {"name": "unit-test", "sandbox_mode": "workspace-write"},
+                "status": status,
+                "command": {"argv": ["unit-test"]},
+                "artifacts": {},
+                "result": {"returncode": 0, "timed_out": False},
+                "diagnostics": {},
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    return report_rel
 
 
 class AutoImproveIterationRuntimeTests(unittest.TestCase):
@@ -285,6 +318,234 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             self.assertEqual(
                 payload["timeout_failure_artifacts"],
                 [f"runs/{run_id}/worker-executor-timeout-failure.json"],
+            )
+
+    def test_write_iteration_telemetry_records_pre_promotion_failure_logs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-pre-promotion-failure"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            for name in (
+                "mutation-command.stdout.txt",
+                "mutation-command.stderr.txt",
+                "repo-health.stderr.txt",
+                "repo-health-artifact-freshness-report-check.json",
+            ):
+                (run_dir / name).write_text(f"{name}\n", encoding="utf-8")
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[f"runs/{run_id}/subagent-routing.worker.json"],
+                    roles=["worker"],
+                    phase_durations={"routing": 0.1, "experiment": 0.2},
+                    outcome="mutation_failed",
+                    result=None,
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertEqual(
+                payload["pre_promotion_failure_artifacts"],
+                [
+                    f"runs/{run_id}/mutation-command.stdout.txt",
+                    f"runs/{run_id}/mutation-command.stderr.txt",
+                    f"runs/{run_id}/repo-health.stderr.txt",
+                    f"runs/{run_id}/repo-health-artifact-freshness-report-check.json",
+                ],
+            )
+
+    def test_write_iteration_telemetry_omits_stale_pre_promotion_logs_for_hold(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-hold"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            (run_dir / "mutation-command.stderr.txt").write_text("old failure\n", encoding="utf-8")
+            (run_dir / "run-telemetry.json").write_text(
+                json.dumps(
+                    {
+                        "pre_promotion_failure_artifacts": [
+                            f"runs/{run_id}/mutation-command.stderr.txt"
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[f"runs/{run_id}/subagent-routing.worker.json"],
+                    roles=["worker"],
+                    phase_durations={"routing": 0.1, "experiment": 0.2},
+                    outcome="hold",
+                    result={"decision": "HOLD"},
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertNotIn("pre_promotion_failure_artifacts", payload)
+
+    def test_write_iteration_telemetry_records_only_existing_executor_reports(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-missing-planned-reports"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            worker_report = _write_iteration_executor_report(
+                vault,
+                run_id,
+                role="worker",
+                status="pass",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[
+                        f"runs/{run_id}/subagent-routing.worker.json",
+                        f"runs/{run_id}/subagent-routing.reviewer.json",
+                        f"runs/{run_id}/subagent-routing.validator.json",
+                    ],
+                    roles=["worker", "reviewer", "validator"],
+                    phase_durations={"routing": 0.1, "experiment": 0.2},
+                    outcome="mutation_failed",
+                    result=None,
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertEqual(payload["executor_reports"], [worker_report])
+            self.assertNotIn(
+                f"runs/{run_id}/reviewer-executor-report.json",
+                payload["executor_reports"],
+            )
+            self.assertNotIn(
+                f"runs/{run_id}/validator-executor-report.json",
+                payload["executor_reports"],
+            )
+
+    def test_persist_iteration_phase_uses_existing_executor_reports_for_decision_evidence(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-auditor-blocked"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            for role in ("worker", "reviewer", "validator", "provenance-auditor"):
+                (run_dir / f"subagent-routing.{role}.json").write_text("{}", encoding="utf-8")
+            worker_report = _write_iteration_executor_report(
+                vault,
+                run_id,
+                role="worker",
+                status="pass",
+            )
+            validator_report = _write_iteration_executor_report(
+                vault,
+                run_id,
+                role="validator",
+                status="pass",
+            )
+            auditor_report = _write_iteration_executor_report(
+                vault,
+                run_id,
+                role="provenance-auditor",
+                status="fail",
+            )
+            session = {
+                "iterations": [],
+                "next_run_decisions": [],
+                "loop_state": {},
+            }
+            proposal = {
+                "proposal_id": "proposal-1",
+                "source_candidate_id": "candidate-1",
+                "family": "next_run_failure_repair",
+                "tier": "supporting",
+                "primary_targets": ["ops/scripts/mechanism/example_runtime.py"],
+                "supporting_targets": ["ops/schemas/run-telemetry.schema.json"],
+                "must_change_tests": ["tests/test_example_runtime.py"],
+            }
+            route_scaffold = SimpleNamespace(
+                run_id=run_id,
+                phase_durations={"routing": 0.1},
+                scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                routing_report_rels=[
+                    f"runs/{run_id}/subagent-routing.worker.json",
+                    f"runs/{run_id}/subagent-routing.reviewer.json",
+                    f"runs/{run_id}/subagent-routing.validator.json",
+                    f"runs/{run_id}/subagent-routing.provenance-auditor.json",
+                ],
+                roles=["worker", "reviewer", "validator", "provenance-auditor"],
+            )
+            execution = ExecuteEvaluatePhaseResult(
+                outcome=ExecutionOutcome(
+                    outcome="validation_blocked",
+                    next_consecutive_failures=1,
+                    quarantine_proposal=True,
+                ),
+                phase_durations={"experiment": 0.2},
+            )
+
+            persist_iteration_phase(
+                vault,
+                session,
+                session_id="auto-session",
+                iteration=1,
+                proposal=proposal,
+                route_scaffold=route_scaffold,
+                execution=execution,
+                quarantined=set(),
+                context=_context(),
+                dependencies=PersistIterationDependencies(
+                    apply_execution_outcome=lambda *_args, **_kwargs: 1,
+                    write_iteration_telemetry=write_iteration_telemetry,
+                    write_run_artifact_fingerprint=lambda *_args, **_kwargs: "",
+                    write_session_report=lambda *_args, **_kwargs: Path(
+                        "ops/reports/session.json"
+                    ),
+                ),
+            )
+
+            telemetry = json.loads(
+                (vault / "runs" / run_id / "run-telemetry.json").read_text(encoding="utf-8")
+            )
+            decision = session["next_run_decisions"][0]
+            self.assertEqual(
+                telemetry["executor_reports"],
+                [worker_report, validator_report, auditor_report],
+            )
+            self.assertEqual(decision["blocking_role"], "provenance-auditor")
+            self.assertIn(auditor_report, decision["evidence_paths"])
+            self.assertNotIn(
+                f"runs/{run_id}/reviewer-executor-report.json",
+                decision["evidence_paths"],
             )
 
     def test_write_iteration_telemetry_records_behavior_delta_digest_and_same_eval_reason(self) -> None:

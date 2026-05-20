@@ -114,6 +114,13 @@
         "minLength": 1
       }
     },
+    "pre_promotion_failure_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
     "behavior_delta": {
       "type": "string"
     },

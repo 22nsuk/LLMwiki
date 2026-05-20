@@ -326,6 +326,8 @@ def _is_non_worker_integrity_ignored(rel_path: str, *, run_id: str) -> bool:
     normalized = rel_path.replace("\\", "/")
     if normalized == f"runs/{run_id}" or normalized.startswith(f"runs/{run_id}/"):
         return True
+    if normalized == "tmp" or normalized.startswith("tmp/"):
+        return True
     parts = [part for part in Path(normalized).parts if part not in {".", ""}]
     return any(part in NON_WORKER_INTEGRITY_IGNORE_NAMES for part in parts)
 

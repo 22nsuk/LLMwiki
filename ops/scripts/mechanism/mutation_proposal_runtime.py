@@ -34,7 +34,7 @@ from .mechanism_candidate_registry_runtime import (
 from ops.scripts.output_runtime import display_path
 from ops.scripts.path_runtime import normalize_repo_path_text
 from ops.scripts.policy_runtime import report_path
-from ops.scripts.proposal_scope_runtime import resolve_focus_tests
+from ops.scripts.proposal_scope_runtime import dedupe_preserve_order, resolve_focus_tests
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import (
     MECHANISM_REVIEW_SCHEMA_PATH,
@@ -89,6 +89,8 @@ RECENT_OUTCOME_REWORK_MIN_ATTEMPTS = 2
 RECENT_LOG_OVERLAP_UNBLOCK_REWORK_MIN_ATTEMPTS = 1
 RESOLVED_PROMOTION_HISTORY_STATUSES = {"archived", "quarantined"}
 SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
+REPORT_SCHEMA_SAMPLES_TARGET = "tests/fixtures/report_schema_samples.json"
+REPORT_SCHEMA_SAMPLE_REGENERATION_TEST = "tests/test_report_schema_sample_regeneration.py"
 DEFAULT_AUTO_IMPROVE_SESSIONS_DIR = "ops/reports/auto-improve-sessions"
 
 
@@ -222,6 +224,7 @@ class _MutationReportInputs:
     outcome_metrics_path: Path
     outcome_metrics_report: dict
     auto_improve_session_report_paths: list[str]
+    consumed_next_run_decision_ids: list[str]
     next_run_decisions: list[dict]
     system_log: Path
     recent_log_sections: list[RecentLogSection]
@@ -295,12 +298,64 @@ def _load_next_run_decisions(
     )
 
 
-def _open_carry_forward_decisions(next_run_decisions: list[dict]) -> list[dict]:
+def _load_consumed_next_run_decision_ids(
+    vault: Path,
+    session_report_paths: list[str],
+) -> list[str]:
+    consumed: set[str] = set()
+    for rel_path in session_report_paths:
+        try:
+            session_report = _read_json(vault / rel_path)
+        except (OSError, json.JSONDecodeError):
+            continue
+        iterations = session_report.get("iterations", [])
+        if not isinstance(iterations, list):
+            continue
+        for iteration in iterations:
+            if not isinstance(iteration, dict):
+                continue
+            source_candidate_id = str(iteration.get("source_candidate_id", "")).strip()
+            if source_candidate_id.startswith("next-run-decision:"):
+                consumed.add(source_candidate_id)
+    return sorted(consumed)
+
+
+def _repair_decision_ended_as_noop_mutation_failure(vault: Path, decision: dict) -> bool:
+    if str(decision.get("proposal_family", "")).strip() != NEXT_RUN_FAILURE_REPAIR_FAMILY:
+        return False
+    if str(decision.get("failure_taxonomy", "")).strip() != "mutation_failed":
+        return False
+    source_proposal_id = str(decision.get("proposal_id", "")).strip()
+    if not source_proposal_id.startswith(f"{NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE}__"):
+        return False
+    source_run_id = str(decision.get("source_run_id", "")).strip()
+    if not source_run_id:
+        return False
+    stderr_path = vault / "runs" / source_run_id / "mutation-command.stderr.txt"
+    try:
+        stderr_text = stderr_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    return "reported pass without modifying any declared primary target" in stderr_text
+
+
+def _open_carry_forward_decisions(
+    next_run_decisions: list[dict],
+    *,
+    vault: Path | None = None,
+    consumed_decision_ids: set[str] | None = None,
+) -> list[dict]:
     latest_by_target: dict[str, dict] = {}
+    consumed_decision_ids = consumed_decision_ids or set()
     for decision in next_run_decisions:
         if str(decision.get("decision", "")).strip() != CARRY_FORWARD_DECISION:
             continue
         if str(decision.get("status", "")).strip() != OPEN_DECISION_STATUS:
+            continue
+        decision_id = str(decision.get("decision_id", "")).strip()
+        if decision_id and decision_id in consumed_decision_ids:
+            continue
+        if vault is not None and _repair_decision_ended_as_noop_mutation_failure(vault, decision):
             continue
         target_proposal_id = str(decision.get("target_proposal_id", "")).strip()
         if not target_proposal_id:
@@ -621,24 +676,68 @@ def _resolve_must_change_tests(
     primary_targets: list[str],
     supporting_targets: list[str],
 ) -> list[str]:
+    generated_tests = _generated_must_change_tests(vault, [*primary_targets, *supporting_targets])
     scoped_tests = resolve_focus_tests(
         vault,
         policy,
         primary_targets,
         supporting_targets,
     )
+    scoped_tests = _must_change_test_paths(vault, scoped_tests)
     if scoped_tests:
-        return scoped_tests
-    return _content_evidence_tests(vault, primary_targets)
+        return dedupe_preserve_order([*scoped_tests, *generated_tests])
+    return dedupe_preserve_order([*_content_evidence_tests(vault, primary_targets), *generated_tests])
 
 
-def _generated_supporting_targets(vault: Path, primary_targets: list[str]) -> list[str]:
-    if not (vault / SCRIPT_OUTPUT_SURFACES_TARGET).is_file():
-        return []
-    for target in primary_targets:
+def _must_change_test_paths(vault: Path, paths: list[str]) -> list[str]:
+    resolved: list[str] = []
+    for path in paths:
+        normalized_path = normalize_repo_path_text(path)
+        if normalized_path is None:
+            continue
+        name = Path(normalized_path).name
+        if (
+            normalized_path.startswith("tests/")
+            and normalized_path.endswith(".py")
+            and (name.startswith("test_") or name.endswith("_test.py"))
+            and (vault / normalized_path).is_file()
+        ):
+            resolved.append(normalized_path)
+    return dedupe_preserve_order(resolved)
+
+
+def _generated_supporting_targets(vault: Path, targets: list[str]) -> list[str]:
+    generated: list[str] = []
+    for target in targets:
         normalized_target = normalize_repo_path_text(target)
-        if normalized_target and normalized_target.startswith("ops/scripts/") and normalized_target.endswith(".py"):
-            return [SCRIPT_OUTPUT_SURFACES_TARGET]
+        if normalized_target is None:
+            continue
+        if (
+            normalized_target.startswith("ops/scripts/")
+            and normalized_target.endswith(".py")
+            and (vault / SCRIPT_OUTPUT_SURFACES_TARGET).is_file()
+        ):
+            generated.append(SCRIPT_OUTPUT_SURFACES_TARGET)
+        if (
+            normalized_target.startswith("ops/schemas/")
+            and normalized_target.endswith(".schema.json")
+            and (vault / REPORT_SCHEMA_SAMPLES_TARGET).is_file()
+        ):
+            generated.append(REPORT_SCHEMA_SAMPLES_TARGET)
+    return dedupe_preserve_order(generated)
+
+
+def _generated_must_change_tests(vault: Path, targets: list[str]) -> list[str]:
+    if not (vault / REPORT_SCHEMA_SAMPLE_REGENERATION_TEST).is_file():
+        return []
+    for target in targets:
+        normalized_target = normalize_repo_path_text(target)
+        if (
+            normalized_target
+            and normalized_target.startswith("ops/schemas/")
+            and normalized_target.endswith(".schema.json")
+        ):
+            return [REPORT_SCHEMA_SAMPLE_REGENERATION_TEST]
     return []
 
 
@@ -650,7 +749,8 @@ def _with_generated_supporting_targets(
 ) -> list[str]:
     ordered: list[str] = []
     seen: set[str] = set()
-    for target in [*supporting_targets, *_generated_supporting_targets(vault, primary_targets)]:
+    generated_targets = _generated_supporting_targets(vault, [*primary_targets, *supporting_targets])
+    for target in [*supporting_targets, *generated_targets]:
         if target in seen:
             continue
         seen.add(target)
@@ -1377,14 +1477,19 @@ def _next_run_repair_proposal(
             ],
         ),
     )
-    must_change_tests = [
-        path
-        for path in current_repo_target_paths(
+    must_change_tests = _must_change_test_paths(
+        vault,
+        current_repo_target_paths(
             vault,
             [str(target).strip() for target in decision.get("must_change_tests", []) if str(target).strip()],
-        )
-        if path.startswith("tests/")
-    ]
+        ),
+    )
+    must_change_tests = dedupe_preserve_order(
+        [
+            *must_change_tests,
+            *_generated_must_change_tests(vault, [*primary_targets, *supporting_targets]),
+        ]
+    )
     if not must_change_tests:
         must_change_tests = _resolve_must_change_tests(
             vault,
@@ -1477,9 +1582,15 @@ def _next_run_repair_proposal_models(
     vault: Path,
     policy: dict,
     next_run_decisions: list[dict],
+    *,
+    consumed_decision_ids: set[str],
 ) -> list[MutationProposal]:
     models: list[MutationProposal] = []
-    for decision in _open_carry_forward_decisions(next_run_decisions):
+    for decision in _open_carry_forward_decisions(
+        next_run_decisions,
+        vault=vault,
+        consumed_decision_ids=consumed_decision_ids,
+    ):
         proposal = _next_run_repair_proposal(vault, policy, decision)
         if proposal is not None:
             models.append(proposal)
@@ -1720,9 +1831,15 @@ def _next_run_decision_queue_diagnostics(
     next_run_decisions: list[dict],
     proposals: list[dict],
     *,
+    vault: Path,
     session_report_paths: list[str],
+    consumed_decision_ids: set[str],
 ) -> dict:
-    open_carry_forward = _open_carry_forward_decisions(next_run_decisions)
+    open_carry_forward = _open_carry_forward_decisions(
+        next_run_decisions,
+        vault=vault,
+        consumed_decision_ids=consumed_decision_ids,
+    )
     repair_proposals = [
         proposal
         for proposal in proposals
@@ -2077,6 +2194,7 @@ def _proposal_models_from_candidates(
     recent_log_sections: list[RecentLogSection],
     outcome_metrics_report: dict,
     next_run_decisions: list[dict],
+    consumed_next_run_decision_ids: list[str],
 ) -> tuple[list[MutationProposal], list[dict]]:
     available_proposal_models: list[MutationProposal] = []
     skipped_candidates: list[dict] = []
@@ -2123,7 +2241,12 @@ def _proposal_models_from_candidates(
     if recent_log_overlap_unblock is not None:
         available_proposal_models.append(recent_log_overlap_unblock)
     available_proposal_models.extend(
-        _next_run_repair_proposal_models(vault, effective_policy, next_run_decisions)
+        _next_run_repair_proposal_models(
+            vault,
+            effective_policy,
+            next_run_decisions,
+            consumed_decision_ids=set(consumed_next_run_decision_ids),
+        )
     )
     return available_proposal_models, skipped_candidates
 
@@ -2158,6 +2281,10 @@ def _load_mutation_report_inputs(
         vault,
         auto_improve_session_report_paths,
     )
+    consumed_next_run_decision_ids = _load_consumed_next_run_decision_ids(
+        vault,
+        auto_improve_session_report_paths,
+    )
     system_log = (vault / (system_log_path or DEFAULT_SYSTEM_LOG)).resolve()
     recent_log_sections, recent_log_section_ordering = _read_log_sections(
         system_log,
@@ -2174,6 +2301,7 @@ def _load_mutation_report_inputs(
         outcome_metrics_path=outcome_metrics_path,
         outcome_metrics_report=outcome_metrics_report,
         auto_improve_session_report_paths=auto_improve_session_report_paths,
+        consumed_next_run_decision_ids=consumed_next_run_decision_ids,
         next_run_decisions=next_run_decisions,
         system_log=system_log,
         recent_log_sections=recent_log_sections,
@@ -2192,6 +2320,7 @@ def _assemble_mutation_proposals(
         recent_log_sections=inputs.recent_log_sections,
         outcome_metrics_report=inputs.outcome_metrics_report,
         next_run_decisions=inputs.next_run_decisions,
+        consumed_next_run_decision_ids=inputs.consumed_next_run_decision_ids,
     )
     proposal_models = _select_report_proposals(
         available_proposal_models,
@@ -2207,6 +2336,7 @@ def _assemble_mutation_proposals(
 
 
 def _assemble_mutation_diagnostics(
+    vault: Path,
     inputs: _MutationReportInputs,
     proposal_assembly: _MutationProposalAssembly,
 ) -> _MutationDiagnosticsAssembly:
@@ -2217,7 +2347,9 @@ def _assemble_mutation_diagnostics(
     next_run_decision_queue = _next_run_decision_queue_diagnostics(
         inputs.next_run_decisions,
         proposal_assembly.proposals,
+        vault=vault,
         session_report_paths=inputs.auto_improve_session_report_paths,
+        consumed_decision_ids=set(inputs.consumed_next_run_decision_ids),
     )
     source_evidence_gaps = _source_evidence_gaps(
         inputs.mechanism_review_report,
@@ -2374,7 +2506,7 @@ def build_report(
         context=context,
     )
     proposal_assembly = _assemble_mutation_proposals(vault, inputs)
-    diagnostics_assembly = _assemble_mutation_diagnostics(inputs, proposal_assembly)
+    diagnostics_assembly = _assemble_mutation_diagnostics(vault, inputs, proposal_assembly)
     report = _mutation_report_payload(
         vault,
         policy,

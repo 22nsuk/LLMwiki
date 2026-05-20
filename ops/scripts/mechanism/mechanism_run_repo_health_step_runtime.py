@@ -15,6 +15,11 @@ from .mechanism_run_common_runtime import (
 )
 
 
+REPO_HEALTH_DIAGNOSTIC_ARTIFACTS = {
+    "tmp/artifact-freshness-report-check.json": "repo-health-artifact-freshness-report-check.json",
+}
+
+
 @dataclass(frozen=True)
 class RepoHealthStepDependencies:
     command_argv: Callable[..., list[str]]
@@ -39,6 +44,25 @@ def _command_execution_dependencies(
     )
 
 
+def _copy_repo_health_diagnostic_artifacts(
+    vault: Path,
+    workspace_vault: Path,
+    *,
+    run_id: str,
+) -> list[str]:
+    copied: list[str] = []
+    run_dir = vault / "runs" / run_id
+    for source_rel, destination_name in REPO_HEALTH_DIAGNOSTIC_ARTIFACTS.items():
+        source = workspace_vault / source_rel
+        if not source.is_file():
+            continue
+        destination = run_dir / destination_name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(source.read_bytes())
+        copied.append(f"runs/{run_id}/{destination_name}")
+    return copied
+
+
 def repo_health_step(
     vault: Path,
     workspace_vault: Path,
@@ -60,6 +84,11 @@ def repo_health_step(
     command_execution = execute_command_step(
         command_request,
         dependencies=_command_execution_dependencies(dependencies),
+    )
+    diagnostic_artifacts = _copy_repo_health_diagnostic_artifacts(
+        vault,
+        workspace_vault,
+        run_id=run_id,
     )
     changed_files_manifest = dependencies.write_changed_files_manifest(
         vault,
@@ -114,6 +143,7 @@ def repo_health_step(
         ),
         artifacts=[
             *command_execution.logs,
+            *diagnostic_artifacts,
             changed_files_manifest,
             behavior_delta,
             *([timeout_failure_rel] if timeout_failure_rel else []),

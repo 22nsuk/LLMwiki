@@ -50,6 +50,7 @@ ITERATION_TELEMETRY_MERGED_FIELDS = frozenset(
         "discard_non_regression_evidence",
         "command_timeouts",
         "timeout_failure_artifacts",
+        "pre_promotion_failure_artifacts",
         "behavior_delta",
         "behavior_delta_digest",
         "same_eval_reason",
@@ -68,6 +69,16 @@ PRESERVED_RUN_TELEMETRY_FIELDS = frozenset(
         "workspace_preparation", "apply_mode", "apply_status",
         "live_applied", "shadow_apply_report", "rollback_rehearsal_report",
     }
+)
+PRE_PROMOTION_FAILURE_ARTIFACT_OUTCOMES = frozenset(
+    {"mutation_failed", "repo_health_blocked"}
+)
+PRE_PROMOTION_FAILURE_LOG_NAMES = (
+    "mutation-command.stdout.txt",
+    "mutation-command.stderr.txt",
+    "repo-health.stdout.txt",
+    "repo-health.stderr.txt",
+    "repo-health-artifact-freshness-report-check.json",
 )
 
 
@@ -169,6 +180,23 @@ def _iteration_timeout_failure_artifacts(vault: Path, run_id: str, result: dict 
     return sorted(artifacts)
 
 
+def _iteration_pre_promotion_failure_artifacts(
+    vault: Path,
+    run_id: str,
+    outcome: str,
+) -> list[str]:
+    if outcome not in PRE_PROMOTION_FAILURE_ARTIFACT_OUTCOMES:
+        return []
+    run_dir = vault / run_rel(run_id, "")
+    if not run_dir.is_dir():
+        return []
+    return [
+        run_rel(run_id, log_name)
+        for log_name in PRE_PROMOTION_FAILURE_LOG_NAMES
+        if (run_dir / log_name).is_file()
+    ]
+
+
 def _iteration_behavior_delta(vault: Path, run_id: str, result: dict | None) -> str:
     if isinstance(result, dict):
         behavior_delta = result.get("behavior_delta")
@@ -197,6 +225,34 @@ def _load_repo_relative_json(vault: Path, rel_path: object) -> dict | None:
         return None
     payload = load_optional_json(resolved_path)
     return payload if isinstance(payload, dict) else None
+
+
+def _iteration_executor_report_rels(vault: Path, run_id: str, roles: list[str]) -> list[str]:
+    report_rels: list[str] = []
+    for role in roles:
+        rel_path = role_report_path(run_id, role)
+        if _load_repo_relative_json(vault, rel_path) is not None:
+            report_rels.append(rel_path)
+    return report_rels
+
+
+def _role_from_executor_report_rel(rel_path: str) -> str:
+    filename = rel_path.rsplit("/", 1)[-1]
+    suffix = "-executor-report.json"
+    if filename.endswith(suffix):
+        return filename[: -len(suffix)]
+    return ""
+
+
+def _blocking_role_from_executor_reports(vault: Path, report_rels: list[str]) -> str:
+    for rel_path in report_rels:
+        payload = _load_repo_relative_json(vault, rel_path)
+        if payload is None:
+            continue
+        status = str(payload.get("status", "")).strip().lower()
+        if status and status != "pass":
+            return str(payload.get("role", "")).strip() or _role_from_executor_report_rel(rel_path)
+    return ""
 
 
 def _load_promotion_report_from_rel(
@@ -426,6 +482,11 @@ def write_iteration_telemetry(
     )
     existing_report = loaded_existing_report if isinstance(loaded_existing_report, dict) else {}
     observed_at = request.context.isoformat_z()
+    executor_report_rels = _iteration_executor_report_rels(
+        request.vault,
+        request.run_id,
+        request.roles,
+    )
     payload = {
         "session_id": request.session_id,
         "run_id": request.run_id,
@@ -436,7 +497,7 @@ def write_iteration_telemetry(
         "proposal_snapshot": run_rel(request.run_id, "proposal-snapshot.json"),
         "scope_freeze": request.scope_freeze_rel,
         "routing_reports": request.routing_report_rels,
-        "executor_reports": [role_report_path(request.run_id, role) for role in request.roles],
+        "executor_reports": executor_report_rels,
         "phase_durations": request.phase_durations,
         "failure_taxonomy": request.outcome if request.outcome != "promoted" else "",
         "decision": (request.result or {}).get("decision", ""),
@@ -470,6 +531,13 @@ def write_iteration_telemetry(
     )
     if timeout_failure_artifacts:
         payload["timeout_failure_artifacts"] = timeout_failure_artifacts
+    pre_promotion_failure_artifacts = _iteration_pre_promotion_failure_artifacts(
+        request.vault,
+        request.run_id,
+        request.outcome,
+    )
+    if pre_promotion_failure_artifacts:
+        payload["pre_promotion_failure_artifacts"] = pre_promotion_failure_artifacts
     behavior_delta = _iteration_behavior_delta(request.vault, request.run_id, request.result)
     behavior_delta_digest = ""
     if behavior_delta:
@@ -578,6 +646,7 @@ def persist_iteration_phase(
             run_id=run_id,
         )
     )
+    executor_report_rels = _iteration_executor_report_rels(vault, run_id, route_scaffold.roles)
     next_run_decision = build_next_run_decision(
         session_id=session_id,
         iteration=iteration,
@@ -589,6 +658,8 @@ def persist_iteration_phase(
         routing_report_rels=route_scaffold.routing_report_rels,
         telemetry_rel=telemetry_rel,
         context=context,
+        executor_report_rels=executor_report_rels,
+        blocking_role=_blocking_role_from_executor_reports(vault, executor_report_rels),
     )
     if next_run_decision is not None:
         session.setdefault("next_run_decisions", []).append(next_run_decision)

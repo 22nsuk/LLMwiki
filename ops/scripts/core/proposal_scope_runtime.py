@@ -42,6 +42,18 @@ def _target_test_patterns(target: str, patterns: list[str]) -> list[str]:
     ]
 
 
+def _is_focus_test_path(path: str) -> bool:
+    normalized = normalize_repo_path_text(path)
+    if normalized is None:
+        return False
+    name = Path(normalized).name
+    return (
+        normalized.startswith("tests/")
+        and normalized.endswith(".py")
+        and (name.startswith("test_") or name.endswith("_test.py"))
+    )
+
+
 def resolve_focus_tests(
     vault: Path,
     policy: dict,
@@ -59,7 +71,7 @@ def resolve_focus_tests(
             if normalized_override is None:
                 continue
             candidate = (vault / normalized_override).resolve()
-            if candidate.exists():
+            if candidate.exists() and _is_focus_test_path(normalized_override):
                 resolved.append(normalized_override)
 
     for target in primary_targets:
@@ -72,7 +84,7 @@ def resolve_focus_tests(
         normalized = normalize_repo_path_text(target)
         if normalized is None:
             continue
-        if normalized.startswith("tests/") and (vault / normalized).exists():
+        if _is_focus_test_path(normalized) and (vault / normalized).exists():
             resolved.append(normalized)
             continue
         for pattern in _target_test_patterns(target, scope_policy["test_path_globs"]):
@@ -93,7 +105,7 @@ def _proposal_declared_focus_tests(vault: Path, proposal: dict) -> list[str]:
             if not isinstance(value, str):
                 continue
             normalized = normalize_repo_path_text(value)
-            if normalized is None or not normalized.startswith("tests/"):
+            if normalized is None or not _is_focus_test_path(normalized):
                 continue
             if (vault / normalized).is_file():
                 resolved.append(normalized)

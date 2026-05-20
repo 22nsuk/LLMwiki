@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-20T18:06:59Z",
+  "generated_at": "2026-05-20T22:32:07Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "40edcaa1959fe55280fdb49d09106664043af487557a977ff76c2826bfb3aa6d",
+  "source_tree_fingerprint": "4d4ddb351214ee0dda539f46a7326751806351c8127cc37a465afc015d8ba815",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "834eb6cfec958f35d3989a742cfd58414bb50bb75040ab9283e4c90ed61f1657",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "b790276452a65e65644ebce80e05c81f7bef1bee46411138e5c5da2b2b5518f5",
-    "run_promotion_reports": "3bca082b2928ba49257590b44bd0ef7ce18e032ec8fb6df1e17a209da19c01e5",
+    "source_paths": "faf0ef2d0c7b909f435de954bcb7d9f49c924c3b4e585e79a488be2cf7f4f128",
+    "run_promotion_reports": "99e9678edf2bd6e2fbcca2f1f262271f4dc1b8fec7296a07a47f76d049a80ab6",
     "external_report_inventory": "93eeb3ebc59d8e84193be9ed3ca42958086b56958ae7eb3b847a5d803dee6b22",
     "operator_report_inventory": "0479590a186415fa72ba934ab4431828124b8ca576b06322a6eae193e9627721",
     "ops_report_inventory": "5f7ceda816bf9f579c986c2d9fe1b946aa493c0e4ed2339eba5002cbabfd96be",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T18:06:59Z"
+    "checked_at": "2026-05-20T22:32:07Z"
   },
   "vault": ".",
   "policy": {
@@ -58,7 +58,7 @@
     }
   ],
   "now": [
-    "100 canonical artifact(s) are currently indexed.",
+    "110 canonical artifact(s) are currently indexed.",
     "1 archive candidate(s) remain in active namespaces."
   ],
   "next": [
@@ -73,9 +73,9 @@
     "operator_reports_root_file_count": 2,
     "external_reports_root_file_count": 2,
     "external_reports_archive_file_count": 70,
-    "run_directory_count": 29,
+    "run_directory_count": 39,
     "run_archive_directory_count": 4,
-    "canonical_report_count": 100,
+    "canonical_report_count": 110,
     "archive_candidate_count": 1
   },
   "canonical_reports": [
@@ -1028,10 +1028,120 @@
     {
       "surface": "runs",
       "family": "mechanism_run",
-      "path": "runs/goal-active-report-self-improve-certificate",
+      "path": "runs/active-report-self-improve-certificate-rerun-run-01-auto-improve-iteration-persistence-runtime",
       "role": "run_history_record",
       "date": "",
-      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary. Load issues: promotion-report.json:missing, run-ledger.json:missing.",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/active-report-self-improve-certificate-rerun-run-02-auto-improve-iteration-persistence-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/active-report-self-improve-certificate-rerun-run-03-auto-improve-iteration-persistence-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/active-report-self-improve-certificate-rerun2-run-03-auto-improve-iteration-persistence-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/active-report-self-improve-certificate-rerun3-run-02-auto-improve-iteration-persistence-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/active-report-self-improve-certificate-run-02-auto-improve-iteration-persistence-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
+      "path": "runs/active-report-self-improve-certificate-run-03-auto-improve-iteration-persistence-runtime",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary.",
       "supersedes": [],
       "superseded_by": [],
       "decision_relevance": "run_history"

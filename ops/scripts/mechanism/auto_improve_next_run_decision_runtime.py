@@ -162,6 +162,8 @@ def build_next_run_decision(
     routing_report_rels: list[str],
     telemetry_rel: str,
     context: RuntimeContext,
+    executor_report_rels: list[str] | None = None,
+    blocking_role: str | None = None,
 ) -> dict[str, Any] | None:
     failure_taxonomy = str(getattr(outcome, "outcome", "")).strip()
     if not failure_taxonomy or bool(getattr(outcome, "is_terminal_success", False)):
@@ -180,11 +182,16 @@ def build_next_run_decision(
         if decision == CARRY_FORWARD_DECISION
         else ""
     )
+    executor_reports = (
+        _list_strings(executor_report_rels)
+        if executor_report_rels is not None
+        else [run_rel(run_id, f"{role}-executor-report.json") for role in roles if role]
+    )
     evidence_paths = [
         telemetry_rel,
         scope_freeze_rel,
         *routing_report_rels,
-        *(run_rel(run_id, f"{role}-executor-report.json") for role in roles if role),
+        *executor_reports,
     ]
     if getattr(outcome, "result", None):
         evidence_paths.append(run_rel(run_id, "promotion-report.json"))
@@ -206,7 +213,8 @@ def build_next_run_decision(
         "proposal_family": str(proposal.get("family", "")).strip(),
         "proposal_tier": _proposal_tier(proposal.get("tier")),
         "failure_taxonomy": failure_taxonomy,
-        "blocking_role": blocking_role_for_outcome(failure_taxonomy, roles),
+        "blocking_role": str(blocking_role or "").strip()
+        or blocking_role_for_outcome(failure_taxonomy, roles),
         "decision": decision,
         "next_run_action": next_run_action,
         "status": status,

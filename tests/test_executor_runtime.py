@@ -425,6 +425,62 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertIn("PYTHONDONTWRITEBYTECODE=1", prompt)
             self.assertIn("Executor roles run before repo-health capture", prompt)
 
+    def test_non_worker_tmp_replay_artifacts_do_not_trip_mutation_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["reviewer"])
+            _write_routing_report(
+                vault,
+                "reviewer",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+
+            def fake_run(argv: list[str], **_: object) -> object:
+                out_index = argv.index("-o") + 1
+                tmp_dir = vault / "tmp"
+                tmp_dir.mkdir(parents=True, exist_ok=True)
+                (tmp_dir / "reviewer-mechanism-assessment.json").write_text(
+                    "{}\n",
+                    encoding="utf-8",
+                )
+                (tmp_dir / "reviewer-promotion-report.json").write_text(
+                    "{}\n",
+                    encoding="utf-8",
+                )
+                Path(argv[out_index]).write_text(
+                    json.dumps(
+                        {"status": "pass", "diagnostics": {"notes": ["reviewed"]}},
+                        ensure_ascii=False,
+                    ),
+                    encoding="utf-8",
+                )
+                return mock.Mock(returncode=0, stdout="ok\n", stderr="")
+
+            with mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+                report = execute_codex_exec_role(
+                    artifact_root=vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    role="reviewer",
+                    routing_report_rel="runs/run-executor/subagent-routing.reviewer.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+            self.assertEqual(report["status"], "pass")
+            self.assertNotIn(
+                "non-worker workspace mutation guard blocked",
+                "\n".join(report["diagnostics"]["notes"]),
+            )
+            self.assertTrue((vault / "tmp" / "reviewer-mechanism-assessment.json").is_file())
+            self.assertTrue((vault / "tmp" / "reviewer-promotion-report.json").is_file())
+
     def test_non_worker_workspace_write_mutation_is_blocking(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
