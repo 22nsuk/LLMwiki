@@ -472,13 +472,13 @@ Run context:
 
 Repository write boundary:
 - worker may only mutate `ops/**`, `tests/**`, and bounded files required by the selected proposal.
-- reviewer, validator, and auditor roles are read-only.
+- reviewer, validator, and auditor roles are read-only for source and control files, even when a temp workspace grants write access for caches or replay checks.
 - never edit `raw/`, `wiki/`, or non-log `system/` pages.
 - do not rewrite unrelated files or expand scope.
 
 Execution environment guidance:
 - For Python project checks, use workspace-local `.venv/bin/python` when it exists; avoid bare `python` when a repo virtualenv is available.
-- In read-only roles, set `PYTHONDONTWRITEBYTECODE=1` and pass pytest `-p no:cacheprovider` so validation does not fail only because bytecode or cache writes are blocked.
+- In reviewer, validator, and auditor roles, set `PYTHONDONTWRITEBYTECODE=1` and pass pytest `-p no:cacheprovider` when cache writes are not part of the check.
 - If dependencies are genuinely absent and setup would write to the workspace, report the exact blocked command and the missing dependency surface.
 
 Executor phase boundary:

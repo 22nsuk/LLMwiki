@@ -488,10 +488,22 @@ def _checks(
     reports_present: bool,
     proposals_emitted: int,
     runnable_proposal_count: int,
+    blocked_proposal_count: int,
+    blocked_reason_counts: dict[str, int],
     session_reports_considered: int,
     seed_runs: list[str],
     history_requirement: int,
 ) -> list[dict[str, Any]]:
+    blocked_detail = ""
+    if blocked_proposal_count > 0:
+        reason_text = ", ".join(
+            f"{reason}={count}"
+            for reason, count in sorted(blocked_reason_counts.items())
+        )
+        blocked_detail = (
+            f"; retained blocked_proposal_count={blocked_proposal_count}"
+            + (f" ({reason_text})" if reason_text else "")
+        )
     return [
         {
             "id": "generated_reports_present",
@@ -506,11 +518,12 @@ def _checks(
             "id": "proposal_queue_nonempty",
             "pass": runnable_proposal_count > 0,
             "detail": (
-                f"runnable_proposal_count={runnable_proposal_count} (proposals_emitted={proposals_emitted})"
+                f"runnable_proposal_count={runnable_proposal_count} "
+                f"(proposals_emitted={proposals_emitted}){blocked_detail}"
                 if runnable_proposal_count > 0
                 else (
                     f"proposals_emitted={proposals_emitted} but runnable_proposal_count=0, "
-                    "so auto-improve should stay paused."
+                    f"so auto-improve should stay paused{blocked_detail}."
                     if proposals_emitted > 0
                     else "proposals_emitted=0 so auto-improve should stay paused."
                 )

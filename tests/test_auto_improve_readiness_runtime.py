@@ -2182,6 +2182,8 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertIn("none are runnable yet", report["next_action"])
         self.assertIn("recent_log_overlap", report["next_action"])
         checks = {check["id"]: check for check in report["checks"]}
+        self.assertIn("blocked_proposal_count=1", checks["proposal_queue_nonempty"]["detail"])
+        self.assertIn("recent_log_overlap=1", checks["proposal_queue_nonempty"]["detail"])
         self.assertTrue(checks["fallback_target_history_requirement_met"]["pass"])
         self.assertIn(
             "fallback history depth is not needed",

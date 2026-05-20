@@ -894,7 +894,7 @@ subagent_routing_policy:
           threshold: 1
           min_rung: 2
     reviewer:
-      sandbox_mode: read-only
+      sandbox_mode: workspace-write
       default_rung: 2
       allowed_rungs:
         - 2

@@ -123,6 +123,7 @@ class SubagentRoutingTest(unittest.TestCase):
             self.assertEqual(report["routing_decision"]["selected_rung"], 3)
             self.assertEqual(report["routing_decision"]["model"], "gpt-5.5")
             self.assertEqual(report["routing_decision"]["reasoning_effort"], "xhigh")
+            self.assertEqual(report["routing_decision"]["sandbox_mode"], "workspace-write")
             self.assertTrue(
                 any(reason["type"] == "score_band" for reason in report["routing_decision"]["escalation_reasons"])
             )

@@ -710,6 +710,8 @@ def render_readiness_report(
         reports_present=inputs.reports_present,
         proposals_emitted=inputs.proposals_emitted,
         runnable_proposal_count=len(inputs.runnable_proposal_ids),
+        blocked_proposal_count=inputs.blocked_proposal_count,
+        blocked_reason_counts=inputs.blocked_reason_counts,
         session_reports_considered=int(inputs.outcome_summary.get("session_reports_considered", 0) or 0),
         seed_runs=inputs.seed_runs,
         history_requirement=inputs.history_requirement,

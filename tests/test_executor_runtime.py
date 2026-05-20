@@ -379,6 +379,52 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertIn("Executor roles run before repo-health capture", prompt)
             self.assertIn("candidate-mechanism-assessment.json", prompt)
 
+    def test_reviewer_role_uses_workspace_write_sandbox_with_read_only_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["reviewer"])
+            _write_routing_report(
+                vault,
+                "reviewer",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="high",
+                selected_rung=2,
+            )
+
+            def fake_run(argv: list[str], **_: object) -> object:
+                out_index = argv.index("-o") + 1
+                Path(argv[out_index]).write_text(
+                    json.dumps({"status": "pass", "diagnostics": {"notes": ["reviewed"]}}, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+                return mock.Mock(returncode=0, stdout="ok\n", stderr="")
+
+            with mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run):
+                report = execute_codex_exec_role(
+                    artifact_root=vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    role="reviewer",
+                    routing_report_rel="runs/run-executor/subagent-routing.reviewer.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+            self.assertEqual(report["status"], "pass")
+            self.assertIn("--full-auto", report["command"]["argv"])
+            self.assertIn("--skip-git-repo-check", report["command"]["argv"])
+            self.assertEqual(report["executor"]["sandbox_mode"], "workspace-write")
+            prompt = (vault / "runs" / "run-executor" / "reviewer-prompt.md").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("source and control files", prompt)
+            self.assertIn("PYTHONDONTWRITEBYTECODE=1", prompt)
+            self.assertIn("Executor roles run before repo-health capture", prompt)
+
     def test_non_worker_workspace_write_mutation_is_blocking(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
