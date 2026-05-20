@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/goal-run-status.schema.json",
   "artifact_kind": "goal_run_status",
-  "generated_at": "2026-05-20T06:26:50Z",
+  "generated_at": "2026-05-20T06:30:14Z",
   "producer": "ops.scripts.goal_run_status",
   "source_command": "python -m ops.scripts.goal_run_status --vault .",
   "source_revision": "unknown",
@@ -11,7 +11,7 @@
     "schema": "88ae1d2a6f77cad197342016f545d78ebc7dc204fed9dddac8fef09bcc648725",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "6c8f2f86ae6498da8c32d0a6b83f221f0c98a58cab3a6b176fc21a2b627da5e5",
-    "goal_contract": "5252f253d0cba7c283fff8f0b2b2dc3ddf126b0985f2f43c6d26bc587183d1d4",
+    "goal_contract": "d7fb6682ddc4bdfa0b136dc82024cb96ff11bc9cf0e22ce6b56b3911cf0ec613",
     "session_synopsis_link": "7cbf10072f9b38b0b7b209442fe7e61976148ae82e700c307dc8c735ff054848"
   },
   "schema_version": 1,
@@ -20,11 +20,11 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T06:26:50Z"
+    "checked_at": "2026-05-20T06:30:14Z"
   },
   "goal": {
     "contract_path": "runs/goal-5day-auto-improve-runtime/state/codex-goal-contract.json",
-    "contract_sha256": "1c03d3d7d655d8a275dc2eb6bfaa6abe064f3e329b9c8aeef0186ea09cfcb566",
+    "contract_sha256": "816c437dc4751b05ea64ea0324e0d37aa7ef3b0d2beb9a56d5c68d8f4fb503cb",
     "contract_status": "loaded",
     "contract_id": "goal-5day-auto-improve-runtime",
     "objective": "Achieve a verified 5-day sustained LLMwiki auto-improve runtime test through the profile ladder, preserving public/private boundaries and keeping promotion blocked until readiness, sealed authority, remediation backlog, and profile evidence are clean.",
@@ -38,15 +38,15 @@
     "run_id": "5day-auto-improve-runtime",
     "status": "blocked",
     "profile": "30m_trial",
-    "started_at": "2026-05-20T06:26:50Z",
-    "updated_at": "2026-05-20T06:26:50Z",
+    "started_at": "2026-05-20T06:30:14Z",
+    "updated_at": "2026-05-20T06:30:14Z",
     "completed_at": ""
   },
   "observability": {
     "heartbeat_interval_seconds": 300,
     "checkpoint_interval_seconds": 1800,
-    "last_heartbeat_at": "2026-05-20T06:26:50Z",
-    "last_checkpoint_at": "2026-05-20T06:26:50Z",
+    "last_heartbeat_at": "2026-05-20T06:30:14Z",
+    "last_checkpoint_at": "2026-05-20T06:30:14Z",
     "last_command_heartbeat_at": "",
     "quiet_seconds": 0,
     "command_observation_mode": "",
@@ -208,7 +208,7 @@
       {
         "checkpoint_id": "checkpoint_6h",
         "due_after_seconds": 21600,
-        "due_at": "2026-05-20T12:26:50Z",
+        "due_at": "2026-05-20T12:30:14Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -227,13 +227,13 @@
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "status": "present",
-            "generated_at": "2026-05-20T06:26:48Z",
+            "generated_at": "2026-05-20T06:30:12Z",
             "freshness_status": "not_due"
           },
           {
             "path": "ops/reports/session-synopsis.json",
             "status": "present",
-            "generated_at": "2026-05-20T06:26:47Z",
+            "generated_at": "2026-05-20T06:30:11Z",
             "freshness_status": "not_due"
           }
         ]
@@ -241,7 +241,7 @@
       {
         "checkpoint_id": "checkpoint_12h",
         "due_after_seconds": 43200,
-        "due_at": "2026-05-20T18:26:50Z",
+        "due_at": "2026-05-20T18:30:14Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -259,7 +259,7 @@
           {
             "path": "ops/reports/test-execution-summary.json",
             "status": "present",
-            "generated_at": "2026-05-20T06:08:14Z",
+            "generated_at": "2026-05-20T06:28:51Z",
             "freshness_status": "not_due"
           },
           {
@@ -273,7 +273,7 @@
       {
         "checkpoint_id": "checkpoint_24h",
         "due_after_seconds": 86400,
-        "due_at": "2026-05-21T06:26:50Z",
+        "due_at": "2026-05-21T06:30:14Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -308,8 +308,8 @@
     "link_status": "linked",
     "report_path": "ops/reports/session-synopsis.json",
     "status": "attention",
-    "generated_at": "2026-05-20T06:26:47Z",
-    "recent_blocker_count": 4,
+    "generated_at": "2026-05-20T06:30:11Z",
+    "recent_blocker_count": 3,
     "evidence_gap_count": 2,
     "next_action": "Trial only; do not promote. Queue is non-empty. After `make check-serial` and `make public-check-serial`, start bounded goal-native auto-improve with `make auto-improve-goal-run` so runner heartbeat, checkpoint, resume, and timeout evidence is captured. Promotion remains blocked until: Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
   },
