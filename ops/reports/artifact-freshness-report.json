@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/artifact-freshness-report.schema.json",
   "artifact_kind": "artifact_freshness_report",
-  "generated_at": "2026-05-20T09:57:44Z",
+  "generated_at": "2026-05-20T09:59:35Z",
   "producer": "ops.scripts.artifact_freshness_runtime",
   "source_command": "python -m ops.scripts.artifact_freshness_runtime",
   "source_revision": "unknown",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T09:57:44Z"
+    "checked_at": "2026-05-20T09:59:35Z"
   },
   "vault": ".",
   "policy": {
@@ -52,8 +52,8 @@
     "stable_contract_debt_issue_count": 3,
     "mtime_sensitive_attention_artifact_count": 0,
     "mtime_sensitive_attention_issue_count": 0,
-    "operational_attention_artifact_count": 1,
-    "operational_attention_issue_count": 1
+    "operational_attention_artifact_count": 0,
+    "operational_attention_issue_count": 0
   },
   "top_debt": [
     {
@@ -87,16 +87,6 @@
       "recommended_next_action": "add_schema_or_exclude_noncanonical_json"
     },
     {
-      "issue": "test_target_fingerprint_mismatch:tests/test_auto_improve_iteration_runtime.py",
-      "count": 1,
-      "owner_surface_counts": {
-        "ops_reports": 1
-      },
-      "safe_to_backfill_count": 1,
-      "mtime_sensitive_count": 0,
-      "recommended_next_action": "regenerate_test_execution_summary"
-    },
-    {
       "issue": "unknown_currentness",
       "count": 1,
       "owner_surface_counts": {
@@ -120,18 +110,6 @@
       ],
       "recommended_next_action": "backfill_artifact_envelope",
       "expected_debt_reduction": 4,
-      "safe_to_backfill": true,
-      "mtime_sensitive": false
-    },
-    {
-      "path": "ops/reports/test-execution-summary.json",
-      "owner_surface": "ops_reports",
-      "primary_issue": "test_target_fingerprint_mismatch:tests/test_auto_improve_iteration_runtime.py",
-      "issues": [
-        "test_target_fingerprint_mismatch:tests/test_auto_improve_iteration_runtime.py"
-      ],
-      "recommended_next_action": "regenerate_test_execution_summary",
-      "expected_debt_reduction": 1,
       "safe_to_backfill": true,
       "mtime_sensitive": false
     }
@@ -205,18 +183,18 @@
       "recommended_next_action": "backfill_artifact_envelope"
     },
     {
-      "surface": "ops_reports",
-      "artifact_count": 153,
-      "issue_count": 1,
-      "safe_to_backfill_count": 153,
-      "mtime_sensitive_count": 0,
-      "recommended_next_action": "regenerate_test_execution_summary"
-    },
-    {
       "surface": "operator_reports",
       "artifact_count": 2,
       "issue_count": 0,
       "safe_to_backfill_count": 2,
+      "mtime_sensitive_count": 0,
+      "recommended_next_action": "none"
+    },
+    {
+      "surface": "ops_reports",
+      "artifact_count": 153,
+      "issue_count": 0,
+      "safe_to_backfill_count": 153,
       "mtime_sensitive_count": 0,
       "recommended_next_action": "none"
     }
@@ -433,7 +411,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:36Z",
+      "generated_at": "2026-05-20T09:59:28Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -593,7 +571,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:00Z",
+      "generated_at": "2026-05-20T09:59:01Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -625,7 +603,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:32Z",
+      "generated_at": "2026-05-20T09:58:37Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1009,7 +987,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:26Z",
+      "generated_at": "2026-05-20T09:58:03Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1041,7 +1019,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:27Z",
+      "generated_at": "2026-05-20T09:58:04Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1105,7 +1083,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:37Z",
+      "generated_at": "2026-05-20T09:59:28Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1201,7 +1179,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:39Z",
+      "generated_at": "2026-05-20T09:59:30Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1265,7 +1243,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:26Z",
+      "generated_at": "2026-05-20T09:58:03Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1585,7 +1563,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:37Z",
+      "generated_at": "2026-05-20T09:59:29Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1617,7 +1595,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:56:55Z",
+      "generated_at": "2026-05-20T09:58:39Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1649,7 +1627,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:56:57Z",
+      "generated_at": "2026-05-20T09:58:41Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1713,7 +1691,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:56:54Z",
+      "generated_at": "2026-05-20T09:58:39Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -1969,7 +1947,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:56:50Z",
+      "generated_at": "2026-05-20T09:58:35Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -2001,7 +1979,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:56:49Z",
+      "generated_at": "2026-05-20T09:58:35Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -2033,7 +2011,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:56:50Z",
+      "generated_at": "2026-05-20T09:58:35Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -2353,7 +2331,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:38Z",
+      "generated_at": "2026-05-20T09:59:29Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -2417,7 +2395,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:22:10Z",
+      "generated_at": "2026-05-20T09:58:54Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -2513,7 +2491,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:37Z",
+      "generated_at": "2026-05-20T09:59:28Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -2577,7 +2555,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:56:53Z",
+      "generated_at": "2026-05-20T09:58:38Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -5361,7 +5339,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T07:03:41Z",
+      "generated_at": "2026-05-20T09:59:27Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -5372,8 +5350,8 @@
       "schema_validation_status": "pass",
       "schema_validation_errors": [],
       "safe_to_backfill": true,
-      "recommended_next_action": "regenerate_test_execution_summary",
-      "contract_issue_class": "operational_attention",
+      "recommended_next_action": "none",
+      "contract_issue_class": "clean",
       "stable_contract_issues": [],
       "mtime_sensitive_issues": [],
       "schema_contract": {
@@ -5382,9 +5360,7 @@
         "reason": "artifact declares a loadable schema and validates against it",
         "recommended_next_action": "none"
       },
-      "issues": [
-        "test_target_fingerprint_mismatch:tests/test_auto_improve_iteration_runtime.py"
-      ]
+      "issues": []
     },
     {
       "path": "runs/5day-auto-improve-runtime-rerun10-30m_trial-run-01-auto-improve-readiness-queue-runtime/baseline-eval.json",
@@ -10750,7 +10726,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:26Z",
+      "generated_at": "2026-05-20T09:58:03Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -10782,7 +10758,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:26Z",
+      "generated_at": "2026-05-20T09:58:03Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -10814,7 +10790,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:57:26Z",
+      "generated_at": "2026-05-20T09:58:03Z",
       "artifact_status": "current",
       "retention_policy": "canonical_report",
       "currentness_status": "current",
@@ -10878,7 +10854,7 @@
       "has_schema": true,
       "has_generated_at": true,
       "has_artifact_envelope": true,
-      "generated_at": "2026-05-20T09:56:41Z",
+      "generated_at": "2026-05-20T09:58:03Z",
       "artifact_status": "current",
       "retention_policy": "run_local_state",
       "currentness_status": "current",
