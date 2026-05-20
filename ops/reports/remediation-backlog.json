@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-20T05:45:02Z",
+  "generated_at": "2026-05-20T05:46:41Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
@@ -11,9 +11,9 @@
     "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ac89dead9a209f58ec98e9f5a02446afe66adf70edbba3f94c9c88d59e3386cb",
-    "learning_claim_activation": "12826a0126e41f99d44dcbd975acd640b60c79b54c40da2e970573d2546319bb",
-    "self_improvement_negative_lessons": "a8dc54cdaf9db12e63421fa64ca408cb804299771b2d8dafe536732bc0650189",
-    "session_synopsis": "c11c18fc9fabdb2775a4248547b8636b7a3d6c2c3eca7556b49df27dba170e3d",
+    "learning_claim_activation": "f11f7e1f2b3adfbf01de9740de44f482e6579e3d3fe83aaf3300846d5e6537b2",
+    "self_improvement_negative_lessons": "7f9ac52cf7f2ab6a0121c433bb14bd31dcb92209a7432b0c931da8e9f5c05f98",
+    "session_synopsis": "5bf193019e1e732ae75f30b174cf2f6382fc7f9eea3450ab2f99829e84274618",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
     "auto_improve_sessions": "eed83f7c884e458e6d0dc0466e0eaefc67924a1f45ab28b6ae914d543534197e"
   },
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T05:45:02Z"
+    "checked_at": "2026-05-20T05:46:41Z"
   },
   "vault": ".",
   "policy": {
