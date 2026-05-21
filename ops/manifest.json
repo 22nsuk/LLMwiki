@@ -1657,8 +1657,8 @@
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_certificate_report.py",
-      "sha256": "e5359002da087ee9acffdbde618fd12a495f87a99ae13288104c4f47b5446775",
-      "size_bytes": 39695
+      "sha256": "854dca70e9b7d7f269e71e4c8c76b2856d4f86fe0abc2bae73dfd3bc2c5149bf",
+      "size_bytes": 40533
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_clean_transient.py",
@@ -5227,8 +5227,8 @@
     },
     {
       "path": "tests/test_goal_runtime_certificate.py",
-      "sha256": "00d07e2c11da70671298d8639581468618d5d2bb9312cf4b287142a2a29cf3f3",
-      "size_bytes": 13151
+      "sha256": "705a5eec97ebddb464c628038ce3dcbc12ccefc59dcdd810a364de94da42ac68",
+      "size_bytes": 14496
     },
     {
       "path": "tests/test_goal_runtime_clean_transient.py",

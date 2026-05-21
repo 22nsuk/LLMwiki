@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/public-check-summary.schema.json",
   "artifact_kind": "public_check_summary",
-  "generated_at": "2026-05-21T03:18:09Z",
+  "generated_at": "2026-05-21T04:10:16Z",
   "producer": "ops.scripts.public_check_summary",
   "source_command": "python -m ops.scripts.public_check_summary --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "b347a96d3d3db246b9af5bdc224c2144972a19b1ed43bf963073528b90d597a8",
+  "source_tree_fingerprint": "48a1e64f2d89790ab6583572c564e7a84e7da3320d335ea150f555cbfb7165be",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "60e44cd49ca6321888bbf40d808c7be70d89d5e19a3a35154a4e235efca7c7fc",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T03:18:09Z"
+    "checked_at": "2026-05-21T04:10:16Z"
   },
   "vault": ".",
   "policy": {
@@ -32,12 +32,12 @@
     "public_check_status": "pass",
     "export_file_count": 671,
     "export_source_file_count": 670,
-    "export_root_fingerprint": "b3379dfad4a5607046fb7c84c0496a79c4fc633c6fcaa9ad58ab7a7a7998541b",
+    "export_root_fingerprint": "8f1c8ac603758172104655015b2517121a81fa253f42fe0daf9bb8a34a16bf04",
     "public_export_manifest_sha256": "da5fbf71ff5610e64efc13b2a2c7b4df6fdbd5b97f5af62b5081760d2bc570a6",
     "public_surface_policy_sha256": "6551a09d14ab4961d949b71777f6320f4ffed0d2ec50bc4ab6ab109521590dcf",
     "command_count": 3,
     "command_fail_count": 0,
-    "pytest_passed": 431,
+    "pytest_passed": 432,
     "pytest_failed": 0,
     "pytest_errors": 0,
     "pytest_skipped": 6
@@ -47,7 +47,7 @@
     "manifest_file": "PUBLIC-EXPORT-MANIFEST.json",
     "file_count": 671,
     "source_file_count": 670,
-    "export_root_fingerprint": "b3379dfad4a5607046fb7c84c0496a79c4fc633c6fcaa9ad58ab7a7a7998541b",
+    "export_root_fingerprint": "8f1c8ac603758172104655015b2517121a81fa253f42fe0daf9bb8a34a16bf04",
     "manifest_sha256": "da5fbf71ff5610e64efc13b2a2c7b4df6fdbd5b97f5af62b5081760d2bc570a6"
   },
   "commands": [
@@ -60,7 +60,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 45,
+      "duration_ms": 38,
       "stdout_tail": "All checks passed!\n",
       "stderr_tail": "",
       "pytest_counts": {}
@@ -74,7 +74,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 3212,
+      "duration_ms": 3044,
       "stdout_tail": "Success: no issues found in 243 source files\n",
       "stderr_tail": "",
       "pytest_counts": {}
@@ -88,11 +88,11 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 57548,
-      "stdout_tail": "bringing up nodes...\nbringing up nodes...\n\n.......ss............................................................... [ 16%]\n...............................................................sss.s.... [ 32%]\n........................................................................ [ 49%]\n........................................................................ [ 65%]\n........................................................................ [ 82%]\n........................................................................ [ 98%]\n.....                                                                    [100%]\n431 passed, 6 skipped in 57.33s\n",
+      "duration_ms": 54565,
+      "stdout_tail": "bringing up nodes...\nbringing up nodes...\n\n.......s......s......................................................... [ 16%]\n.........................................................ssss........... [ 32%]\n........................................................................ [ 49%]\n........................................................................ [ 65%]\n........................................................................ [ 82%]\n........................................................................ [ 98%]\n......                                                                   [100%]\n432 passed, 6 skipped in 54.36s\n",
       "stderr_tail": "",
       "pytest_counts": {
-        "passed": 431,
+        "passed": 432,
         "failed": 0,
         "errors": 0,
         "skipped": 6,

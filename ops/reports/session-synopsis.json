@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-21T03:08:34Z",
+  "generated_at": "2026-05-21T03:49:58Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "b347a96d3d3db246b9af5bdc224c2144972a19b1ed43bf963073528b90d597a8",
+  "source_tree_fingerprint": "86e956358df2f65e98d72facd45e7ec4aa22fe2161166db65412403e26575827",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "f7dd295621a34a54cb5018604760de77e8685c6f0e0dc086056a7362e25a7519",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ea66bebc6dcb1e56d35893c8f4a0557a3dd3ad55888a83b5b2678e5b822c5ba7",
-    "auto_improve_readiness": "4eb6174923239a297e077571a860ca553c58e9c158c9539c94378ef5a94220a9",
-    "goal_run_status": "f1d80dacf47ca9e80fdfec17b16c69a1d0fbc1edb114c04713baa04dc938afe4",
+    "auto_improve_readiness": "a48dbc696410336dc5b27cefbe5d0158fdd15d73626b6a665be1f37a88f4c434",
+    "goal_run_status": "d0674b5e1ae60bfecdaf9ee30b28d4f48e468b44daecf26c5851696c9c186d41",
     "learning_claim_activation": "f90a59b26c0aafc739d67a3d2bdde627f879afb337ca0220af680861946a0b81",
     "learning_delta_scoreboard": "bbd6f92d95bac554925d3fe657a3b370f2ece6ee67c189501d48d6695fc12014",
-    "source_package_clean_extract": "4e498124855ed3f5597d3c1587a5c14d225ad4ce1bcb74877207d7d44b21c116",
+    "source_package_clean_extract": "dfbe9edd90763f12b430dbc1f8de26fce0c1749db7afa6f6cbe1c8ba2c983b84",
     "task_observations": "5ee6fc130d9ca93cc1189b0816c3aca7b2fe351a203f126ba6f09522decfd6ea"
   },
   "schema_version": 1,
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T03:08:34Z"
+    "checked_at": "2026-05-21T03:49:58Z"
   },
   "vault": ".",
   "policy": {

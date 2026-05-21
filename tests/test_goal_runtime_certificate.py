@@ -258,6 +258,36 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         self.assertEqual(loaded["runtime"]["certificate_status"], "verified")
         self.assertTrue(loaded["promotion_guard"]["runtime_certificate_verified"])
 
+    def test_refreshed_completed_status_accepts_original_runner_command_audit(self) -> None:
+        self._seed_goal_contract()
+        self._seed_full_gate_reports()
+        self._write_completed_goal_status(completed_at="2026-05-17T11:30:00Z")
+
+        refreshed = build_goal_run_status_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-loop",
+                status="completed",
+                started_at="2026-05-17T11:00:00Z",
+                completed_at="2026-05-17T11:30:00Z",
+                context=context_at(dt.datetime(2026, 5, 17, 12, 15, tzinfo=dt.timezone.utc)),
+            )
+        )
+        write_goal_run_status_report(self.vault, refreshed)
+        write_run_artifacts(self.vault, refreshed, writer="ops.scripts.goal_run_status")
+
+        report = build_certificate_report(
+            GoalRuntimeCertificateRequest(
+                vault=self.vault,
+                context=context_at(dt.datetime(2026, 5, 17, 12, 30, tzinfo=dt.timezone.utc)),
+            )
+        )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["certificate"]["verification_status"], "eligible")
+        self.assertTrue(report["command_observability"]["runner_audit_current"])
+        self.assertEqual(report["command_observability"]["status"], "clean")
+
     def test_queue_exhausted_after_success_is_eligible_without_maintenance_cycles(self) -> None:
         self._seed_goal_contract()
         self._seed_full_gate_reports()

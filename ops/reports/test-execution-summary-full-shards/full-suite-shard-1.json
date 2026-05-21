@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/test-execution-summary.schema.json",
   "artifact_kind": "test_execution_summary",
-  "generated_at": "2026-05-21T03:36:00Z",
+  "generated_at": "2026-05-21T04:02:11Z",
   "producer": "ops.scripts.test_execution_summary",
   "source_command": "python -m ops.scripts.test_execution_summary --vault . --suite full-shard-1 --collect-nodeids -- .venv/bin/python -m pytest --junit-xml build/release-payloads/test-execution-summary-full.junit.xml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "86e956358df2f65e98d72facd45e7ec4aa22fe2161166db65412403e26575827",
+  "source_tree_fingerprint": "48a1e64f2d89790ab6583572c564e7a84e7da3320d335ea150f555cbfb7165be",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "9723184baf2c03d63eb746bd49cfab746f2a29e2b29f05ee97b2a3a802dae4bf",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b6a7530898be27f1c114dc37c64bb35558dff83186584c7cbfa96f0c4a181cd2",
     "deselected_tests": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-    "deselection_lifecycle": "786640db42a20795baf4234ed2edd9b273ddaf1c13ac333cce80832f9d075959",
-    "evidence_artifact_consistency": "84db8146377e7402e321308e40d827fdd24782c09bb60bccc15fc45986ab6b27",
-    "evidence_artifacts": "2572488dd7c2e45f415c7b7a99dc2265559c3d8ab62c72ad65356981c390d0b8",
-    "nodeid_outcome_consistency": "82679942dee96f372b5884d63ba8bf0b67ff51adfbd2a9aec640259577aa96aa",
+    "deselection_lifecycle": "5afafcc1d8dcac74cdb94bce851476281b9ec4ff317ed49d3c786091bd330895",
+    "evidence_artifact_consistency": "92d8a175e5787b1ae23d877db387343cd4d84fe97a8059b24e2e7c8b02ee6100",
+    "evidence_artifacts": "8e73b76bfc42e5dde2cd2022c84219945b399cfc5576ab9343e3ff939560cc39",
+    "nodeid_outcome_consistency": "d05c379a0cadfffe51b605082ca4fdf58b0db63f53f2e494309e3dcd90b9c574",
     "suite": "205588069f5c1a564e866d1a14270117417fcded950f99b3c22d61ea96b2568e",
     "suite_coverage": "3bb5e7571f5a9efa71bb9fff3b6da343e7d855b4a6a2af4f9c9eb7fe5c449cf1",
     "wrapped_command": "b97c4aeb16d6a67faee0bf3928e40277855edc4b2214eeb41082b6d75089e6c7"
@@ -26,7 +26,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T03:36:00Z"
+    "checked_at": "2026-05-21T04:02:11Z"
   },
   "vault": ".",
   "policy": {
@@ -49,9 +49,9 @@
   "timed_out": false,
   "timeout_seconds": 5400,
   "termination_reason": "completed",
-  "duration_ms": 410394,
+  "duration_ms": 393629,
   "counts": {
-    "passed": 1413,
+    "passed": 1414,
     "failed": 0,
     "errors": 0,
     "skipped": 0,
@@ -88,7 +88,7 @@
   "deselected_tests": [],
   "deselection_lifecycle": {
     "status": "pass",
-    "checked_at": "2026-05-21T03:36:00Z",
+    "checked_at": "2026-05-21T04:02:11Z",
     "actual_deselected_count": 0,
     "max_allowed_deselected_count": 0,
     "over_budget": false,
@@ -109,16 +109,16 @@
   "pytest_collect_nodeid_digest": {
     "status": "collected",
     "command": ".venv/bin/python -m pytest -o addopts= --collect-only -q --capture=no",
-    "nodeid_count": 1413,
-    "sha256": "62c120ba15b0ef380dcedcf579838612ac9220e9443810fb8ba7f66f17c38fe0",
+    "nodeid_count": 1414,
+    "sha256": "f35dbd56af2f89d1e22b88ca44f789a203d65e6903d4870b3f7c038a2f1646d3",
     "reason": ""
   },
   "nodeid_outcome_consistency": {
     "status": "pass",
-    "nodeid_count": 1413,
-    "outcome_count": 1413,
+    "nodeid_count": 1414,
+    "outcome_count": 1414,
     "counted_outcomes": {
-      "passed": 1413,
+      "passed": 1414,
       "skipped": 0,
       "xfailed": 0,
       "xpassed": 0
@@ -132,19 +132,19 @@
       "path": "build/release-payloads/test-execution-summary-full.log",
       "exists": true,
       "size_bytes": 1772,
-      "sha256": "edbe1316c617795f13333d9c46ed64900546388f43d41aa6fa0d20a86a953a3e",
+      "sha256": "23d446ce52e83ea29d69db0bd8eb8a67f38415ccbf99cba32dd741bcda44b396",
       "source": "captured_pytest_stdout_stderr"
     },
     {
       "kind": "junit_xml",
       "path": "build/release-payloads/test-execution-summary-full.junit.xml",
       "exists": true,
-      "size_bytes": 239596,
-      "sha256": "44b30044b939ccda2a61f22402670dbbd45842caab45b23f45609f555316ac09",
+      "size_bytes": 239774,
+      "sha256": "f5450048ce6f77e5ba710de9cee07a52f04e2364ca92b599610fb5965528c597",
       "source": "pytest_junit_xml",
       "consistency_status": "pass",
-      "observed_count": 1413,
-      "expected_count": 1413,
+      "observed_count": 1414,
+      "expected_count": 1414,
       "consistency_reason": "junit testcase count matches pytest summary"
     },
     {
@@ -168,8 +168,8 @@
         "kind": "junit_xml",
         "path": "build/release-payloads/test-execution-summary-full.junit.xml",
         "status": "pass",
-        "expected_count": 1413,
-        "observed_count": 1413
+        "expected_count": 1414,
+        "observed_count": 1414
       },
       {
         "kind": "failed_nodeids",
@@ -181,7 +181,7 @@
     ],
     "blockers": []
   },
-  "stdout_tail": "........................................................................ [  5%]\n........................................................................ [ 10%]\n........................................................................ [ 15%]\n........................................................................ [ 20%]\n........................................................................ [ 25%]\n........................................................................ [ 30%]\n........................................................................ [ 35%]\n........................................................................ [ 40%]\n........................................................................ [ 45%]\n........................................................................ [ 50%]\n........................................................................ [ 56%]\n........................................................................ [ 61%]\n........................................................................ [ 66%]\n........................................................................ [ 71%]\n........................................................................ [ 76%]\n........................................................................ [ 81%]\n........................................................................ [ 86%]\n........................................................................ [ 91%]\n........................................................................ [ 96%]\n.............................................                            [100%]\n- generated xml file: build/release-payloads/test-execution-summary-full.junit.xml -\n1413 passed in 409.87s (0:06:49)\n",
+  "stdout_tail": "........................................................................ [  5%]\n........................................................................ [ 10%]\n........................................................................ [ 15%]\n........................................................................ [ 20%]\n........................................................................ [ 25%]\n........................................................................ [ 30%]\n........................................................................ [ 35%]\n........................................................................ [ 40%]\n........................................................................ [ 45%]\n........................................................................ [ 50%]\n........................................................................ [ 56%]\n........................................................................ [ 61%]\n........................................................................ [ 66%]\n........................................................................ [ 71%]\n........................................................................ [ 76%]\n........................................................................ [ 81%]\n........................................................................ [ 86%]\n........................................................................ [ 91%]\n........................................................................ [ 96%]\n..............................................                           [100%]\n- generated xml file: build/release-payloads/test-execution-summary-full.junit.xml -\n1414 passed in 393.21s (0:06:33)\n",
   "stderr_tail": "",
   "release_contract_diagnosis": [
     {
@@ -189,8 +189,8 @@
       "status": "clean_pass",
       "lane": "clean",
       "command": ".venv/bin/python -m pytest --junit-xml build/release-payloads/test-execution-summary-full.junit.xml",
-      "duration_seconds": 410.39,
-      "checked_at": "2026-05-21T03:36:00Z",
+      "duration_seconds": 393.63,
+      "checked_at": "2026-05-21T04:02:11Z",
       "blocker_conditions": [],
       "accepted_risk_family": null,
       "risk_acceptance_ref": null,

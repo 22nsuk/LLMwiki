@@ -228,11 +228,28 @@ def _run_artifacts(vault: Path, status_report: Mapping[str, Any]) -> dict[str, A
         )
 
     matching_command_observability = any(command_observability_matches(event) for event in matching_events)
+    completed_at = str(run.get("completed_at", "")).strip()
+
+    def runner_completion_command_observability_matches(event: Mapping[str, Any]) -> bool:
+        if str(event.get("event", "")).strip() != "goal_run_status_written":
+            return False
+        if str(event.get("writer", "")).strip() != RUNNER_PRODUCER:
+            return False
+        if str(event.get("run_id", "")).strip() != run_id:
+            return False
+        if str(event.get("run_status", "")).strip() != str(run.get("status", "")).strip():
+            return False
+        if not command_observability_matches(event):
+            return False
+        if completed_at:
+            return str(event.get("generated_at", "")).strip() == completed_at
+        return True
+
     runner_command_audit_current = any(
         command_observability_matches(event)
         and str(event.get("writer", "")).strip() == RUNNER_PRODUCER
         for event in matching_events
-    )
+    ) or any(runner_completion_command_observability_matches(event) for event in audit_events)
     checks.append(
         {
             "artifact": "audit_log_command_observability_current",
