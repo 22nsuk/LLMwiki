@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/mutation-proposals.schema.json",
   "artifact_kind": "mutation_proposals_report",
-  "generated_at": "2026-05-21T08:09:45Z",
+  "generated_at": "2026-05-21T09:19:23Z",
   "producer": "ops.scripts.mutation_proposal_runtime",
   "source_command": "python -m ops.scripts.mutation_proposal --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "cba2ca57643af3cbe76c591dca5eedb3857f571189759b706453e44e935b6c4e",
+  "source_tree_fingerprint": "d631159363e4169dded6b589d5a93a2f7e6e1088d1663b2d472d1bb27d4d936e",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "45c5c7af5d8210fc6cbe07d6c5aeb5d3ff286b38a5606e71269eef9bb900fab3",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "82b47cbbd0806c5da537d1d05e5b79bdfe8e451c554a43ea67260dec00316573",
-    "mechanism_review_report": "1a46faf387f17c35095bd4155204a79e102a76480ab344248fe26b0aa4a1b571",
-    "outcome_metrics": "11b20958351dbbb30293c3031198a0b6b765eec5dd0e6b1d04a836add7aa2b5c",
+    "source_paths": "887a0a844e589803a3b8385991aa033efeb6a5e8b243c46df99948ddb330a9e3",
+    "mechanism_review_report": "f0f4b1cfb9fc215301e174fcf109742ec4779bdc7ea2d2ea6eaf59b2abfc969f",
+    "outcome_metrics": "463b112e3fcc33e2bb19a075043b8cefe26c0afa4ed6183f28f463107c67b85b",
     "system_log": "bcb20066b62bb5cc0e93306acc6f80416110eee1c44cd86e418c3c9810156a6a",
     "auto_improve_session_reports": "045839dd6979b19e7b1e2cf2c9ed4675b6db02844a8f4ea94a33326f904f690f",
     "mutation_dedupe_window": "ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d",
@@ -25,23 +25,23 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T08:09:45Z"
+    "checked_at": "2026-05-21T09:19:23Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "status": "attention",
+  "status": "pass",
   "summary": {
     "source_candidates_read": 1,
     "log_entries_scanned": 5,
     "proposals_emitted": 2,
-    "blocked_proposals": 2,
+    "blocked_proposals": 1,
     "candidate_blocker_count": 0,
     "proposal_blocker_count": 0,
     "next_run_repair_proposals": 0,
-    "queue_pressure_summary": "contract_regression_signals 1 proposal, 1 blocked, validation 1, review 1; queue_unblock 1 proposal, 1 blocked"
+    "queue_pressure_summary": "contract_regression_signals 1 proposal, 1 blocked, validation 1, review 1; queue_unblock 1 proposal"
   },
   "diagnostics": {
     "source_mechanism_review_report": "ops/reports/mechanism-review-candidates.json",
@@ -52,7 +52,7 @@
       "enabled": true,
       "status": "active",
       "proposal_count": 2,
-      "blocked_proposal_count": 2,
+      "blocked_proposal_count": 1,
       "by_family": [
         {
           "family": "contract_regression_signals",
@@ -72,7 +72,7 @@
         {
           "family": "queue_unblock",
           "proposal_count": 1,
-          "blocked_proposal_count": 1,
+          "blocked_proposal_count": 0,
           "session_priority_delta": 0,
           "boosted_candidates": 0,
           "lowered_candidates": 0,
@@ -102,14 +102,14 @@
     "queue_selection": {
       "available_proposal_count": 2,
       "selected_proposal_count": 2,
-      "runnable_available_count": 0,
-      "blocked_available_count": 2,
-      "selected_runnable_count": 0,
-      "selected_blocked_count": 2,
+      "runnable_available_count": 1,
+      "blocked_available_count": 1,
+      "selected_runnable_count": 1,
+      "selected_blocked_count": 1,
       "blocked_reason_counts": [
         {
           "reason": "recent_log_overlap",
-          "count": 2
+          "count": 1
         }
       ]
     },
@@ -182,9 +182,7 @@
         "runs/<run-id>/baseline-mechanism-assessment.json",
         "runs/<run-id>/candidate-mechanism-assessment.json"
       ],
-      "blocked_by": [
-        "recent_log_overlap"
-      ],
+      "blocked_by": [],
       "why_now": "현재 후보들이 모두 recent_log_overlap 하나로만 막히면 live queue가 비어 readiness와 learning execution gate까지 연쇄적으로 닫힌다. guardrail은 보존하고 target rotation proposal만 별도로 열어둔다.",
       "priority_breakdown": {
         "base_priority": 91,

@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Goal Runtime Run Admission",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "status",
+    "decisions",
+    "summary",
+    "recommended_next_action",
+    "inputs",
+    "checks"
+  ],
+  "properties": {
+    "$schema": { "const": "ops/schemas/goal-runtime-run-admission.schema.json" },
+    "artifact_kind": { "const": "goal_runtime_run_admission" },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "producer": { "const": "ops.scripts.goal_runtime_run_admission" },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": {
+      "type": "string",
+      "enum": ["current", "archived", "stale", "unknown"]
+    },
+    "retention_policy": { "const": "canonical_report" },
+    "encoding": { "const": "utf-8" },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown", "invalid"] },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "vault": { "type": "string" },
+    "status": { "type": "string", "enum": ["pass", "attention", "fail"] },
+    "decisions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "can_start_goal_runtime",
+        "can_mutate_candidate",
+        "can_promote_result_later",
+        "should_pause_before_run"
+      ],
+      "properties": {
+        "can_start_goal_runtime": { "type": "boolean" },
+        "can_mutate_candidate": { "type": "boolean" },
+        "can_promote_result_later": { "type": "boolean" },
+        "should_pause_before_run": { "type": "boolean" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "check_count",
+        "start_blocker_count",
+        "promotion_blocker_count",
+        "attention_check_count",
+        "failed_check_count"
+      ],
+      "properties": {
+        "check_count": { "type": "integer", "minimum": 0 },
+        "start_blocker_count": { "type": "integer", "minimum": 0 },
+        "promotion_blocker_count": { "type": "integer", "minimum": 0 },
+        "attention_check_count": { "type": "integer", "minimum": 0 },
+        "failed_check_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "recommended_next_action": { "type": "string", "minLength": 1 },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cleanup_report",
+        "quarantine_preflight_report",
+        "fixed_point_report",
+        "goal_worktree_guard_report",
+        "mutation_proposals_report",
+        "readiness_report",
+        "remediation_backlog_report"
+      ],
+      "properties": {
+        "cleanup_report": { "type": "string", "minLength": 1 },
+        "quarantine_preflight_report": { "type": "string", "minLength": 1 },
+        "fixed_point_report": { "type": "string", "minLength": 1 },
+        "goal_worktree_guard_report": { "type": "string", "minLength": 1 },
+        "mutation_proposals_report": { "type": "string", "minLength": 1 },
+        "readiness_report": { "type": "string", "minLength": 1 },
+        "remediation_backlog_report": { "type": "string", "minLength": 1 }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/check" }
+    }
+  },
+  "$defs": {
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "status",
+        "severity",
+        "expected",
+        "observed",
+        "reason",
+        "next_action",
+        "evidence_paths"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_]*$" },
+        "status": { "type": "string", "enum": ["pass", "attention", "fail"] },
+        "severity": { "type": "string", "enum": ["block_start", "block_promotion"] },
+        "expected": {},
+        "observed": {},
+        "reason": { "type": "string", "minLength": 1 },
+        "next_action": { "type": "string", "minLength": 1 },
+        "evidence_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

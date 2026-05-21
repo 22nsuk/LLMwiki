@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/goal-run-status.schema.json",
   "artifact_kind": "goal_run_status",
-  "generated_at": "2026-05-21T07:11:29Z",
+  "generated_at": "2026-05-21T09:17:33Z",
   "producer": "ops.scripts.goal_run_status",
   "source_command": "python -m ops.scripts.goal_run_status --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "a9fffd4d7dda1c8eaef2ea3ee220040b0a3d4ec2cb6d556460f6c11dceb42ab1",
+  "source_tree_fingerprint": "8418c3159ebea7698c11c85a1d4ea1a6927d233049cc5da1fadf1c7529ef15c4",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "d5f30c4146c3ec45940e3b0679f503e2ed7b45e3cfc5f0cd0846521f4db56bb6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "c660ba929519efa6d5bd79feab56de8e74b35b4617b309ed4fb1c330b86fa795",
-    "goal_contract": "6d4c2c1737e0cd58620f14081b3dec89ea30a02c6e08084df9476f8ec61f8dc6",
+    "goal_contract": "f704220afe2483a389d54170f9738dbb58cb4d3fb2701103dd80988660ab47ee",
     "session_synopsis_link": "7cbf10072f9b38b0b7b209442fe7e61976148ae82e700c307dc8c735ff054848"
   },
   "schema_version": 1,
@@ -20,11 +20,11 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T07:11:29Z"
+    "checked_at": "2026-05-21T09:17:33Z"
   },
   "goal": {
     "contract_path": "runs/goal-auto-improve-trial/state/codex-goal-contract.json",
-    "contract_sha256": "58940a5dba7d8f56011735a7679496b9c31ea1c5b703a6d85ab828501dbb8066",
+    "contract_sha256": "469bef8cff3d2ca250f091e4eda847809dc4200ab10a217804b94eb2705f393e",
     "contract_status": "loaded",
     "contract_id": "auto-improve-goal",
     "objective": "Run a bounded self-improvement loop whose result is certified by current readiness, release, source-package, public-check, status, and session evidence.",
@@ -38,15 +38,15 @@
     "run_id": "auto-improve-trial",
     "status": "blocked",
     "runtime_mode": "self_improvement_loop",
-    "started_at": "2026-05-21T07:11:29Z",
-    "updated_at": "2026-05-21T07:11:29Z",
+    "started_at": "2026-05-21T09:17:33Z",
+    "updated_at": "2026-05-21T09:17:33Z",
     "completed_at": ""
   },
   "observability": {
     "heartbeat_interval_seconds": 300,
     "checkpoint_interval_seconds": 1800,
-    "last_heartbeat_at": "2026-05-21T07:11:29Z",
-    "last_checkpoint_at": "2026-05-21T07:11:29Z",
+    "last_heartbeat_at": "2026-05-21T09:17:33Z",
+    "last_checkpoint_at": "2026-05-21T09:17:33Z",
     "last_command_heartbeat_at": "",
     "quiet_seconds": 0,
     "command_observation_mode": "",
@@ -83,9 +83,7 @@
     "can_promote_result": false,
     "sealed_authority_clean": true,
     "promotion_blockers": [
-      "execution_blocked_by_no_runnable_proposal",
-      "learning_blocked_by_execution_not_runnable",
-      "promotion_blocked_by_selected_contract_failure",
+      "learning_blocked_by_review_required",
       "promotion_blocked_by_goal_worktree_guard_failure",
       "promotion_blocked_by_remediation_backlog_open",
       "git_worktree_dirty"
@@ -152,7 +150,7 @@
       {
         "checkpoint_id": "checkpoint_6h",
         "due_after_seconds": 21600,
-        "due_at": "2026-05-21T13:11:29Z",
+        "due_at": "2026-05-21T15:17:33Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -171,13 +169,13 @@
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "status": "present",
-            "generated_at": "2026-05-21T06:23:10Z",
+            "generated_at": "2026-05-21T08:53:55Z",
             "freshness_status": "not_due"
           },
           {
             "path": "ops/reports/session-synopsis.json",
             "status": "present",
-            "generated_at": "2026-05-21T06:23:08Z",
+            "generated_at": "2026-05-21T07:11:30Z",
             "freshness_status": "not_due"
           }
         ]
@@ -185,7 +183,7 @@
       {
         "checkpoint_id": "checkpoint_12h",
         "due_after_seconds": 43200,
-        "due_at": "2026-05-21T19:11:29Z",
+        "due_at": "2026-05-21T21:17:33Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -203,13 +201,13 @@
           {
             "path": "ops/reports/test-execution-summary.json",
             "status": "present",
-            "generated_at": "2026-05-21T06:14:26Z",
+            "generated_at": "2026-05-21T08:54:33Z",
             "freshness_status": "not_due"
           },
           {
             "path": "ops/reports/source-package-clean-extract.json",
             "status": "present",
-            "generated_at": "2026-05-21T06:06:10Z",
+            "generated_at": "2026-05-21T07:12:12Z",
             "freshness_status": "not_due"
           }
         ]
@@ -217,7 +215,7 @@
       {
         "checkpoint_id": "checkpoint_24h",
         "due_after_seconds": 86400,
-        "due_at": "2026-05-22T07:11:29Z",
+        "due_at": "2026-05-22T09:17:33Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -235,7 +233,7 @@
           {
             "path": "ops/reports/public-check-summary.json",
             "status": "present",
-            "generated_at": "2026-05-21T07:09:17Z",
+            "generated_at": "2026-05-21T08:13:51Z",
             "freshness_status": "not_due"
           },
           {
@@ -252,8 +250,8 @@
     "link_status": "linked",
     "report_path": "ops/reports/session-synopsis.json",
     "status": "attention",
-    "generated_at": "2026-05-21T06:23:08Z",
-    "recent_blocker_count": 5,
+    "generated_at": "2026-05-21T07:11:30Z",
+    "recent_blocker_count": 6,
     "evidence_gap_count": 0,
     "next_action": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
   },
@@ -267,9 +265,7 @@
   "promotion_guard": {
     "can_promote_result": false,
     "promotion_blockers": [
-      "execution_blocked_by_no_runnable_proposal",
-      "learning_blocked_by_execution_not_runnable",
-      "promotion_blocked_by_selected_contract_failure",
+      "learning_blocked_by_review_required",
       "promotion_blocked_by_goal_worktree_guard_failure",
       "promotion_blocked_by_remediation_backlog_open",
       "git_worktree_dirty"
@@ -280,9 +276,7 @@
     "no_sustained_claim_before_certificate_verified": true
   },
   "blockers": [
-    "execution_blocked_by_no_runnable_proposal",
-    "learning_blocked_by_execution_not_runnable",
-    "promotion_blocked_by_selected_contract_failure",
+    "learning_blocked_by_review_required",
     "promotion_blocked_by_goal_worktree_guard_failure",
     "promotion_blocked_by_remediation_backlog_open",
     "git_worktree_dirty",

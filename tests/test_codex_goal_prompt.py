@@ -84,6 +84,11 @@ Promotion gate guidance:
 - Do not lower thresholds, remove guard checks, edit output-only reports, or relabel risks merely to make can_promote_result true.
 - If blockers remain, record the next repair in remediation/session evidence and keep promotion banned.
 
+Run admission discipline:
+- Before starting or resuming a goal run, pass `make goal-runtime-run-admission` instead of relying on remembered cleanup steps.
+- Treat `tmp/goal-runtime-run-admission.json` as the start gate: dirty/stale worktree, fixed-point drift, or zero runnable proposals means pause and follow `recommended_next_action`.
+- A promotion-only attention result may still allow bounded repair work, but it never weakens the final promotion gate.
+
 Resume discipline:
 - Keep the same contract digest across resume.
 - Treat the wall-clock duration as a maximum budget, not as proof by itself.

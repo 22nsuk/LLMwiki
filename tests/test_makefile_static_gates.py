@@ -2778,8 +2778,16 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(GOAL_RUN_STATUS_OUT)",
             ),
             (
+                "GOAL_RUNTIME_QUARANTINE_PREFLIGHT_OUT",
+                "tmp/goal-runtime-quarantine-preflight.json",
+            ),
+            (
                 "GOAL_RUNTIME_FIXED_POINT_CHECK_OUT",
                 "tmp/goal-runtime-fixed-point-check.json",
+            ),
+            (
+                "GOAL_RUNTIME_RUN_ADMISSION_OUT",
+                "tmp/goal-runtime-run-admission.json",
             ),
             (
                 "GOAL_RUNTIME_CLOSEOUT_PLAN_OUT",
@@ -2881,7 +2889,10 @@ class MakefileStaticGateTests(unittest.TestCase):
             "goal-runtime-closeout",
             "goal-runtime-closeout-full",
             "goal-runtime-clean-transient",
+            "goal-runtime-quarantine-preflight",
             "goal-runtime-fixed-point-check",
+            "goal-runtime-run-admission-converge",
+            "goal-runtime-run-admission",
             "goal-runtime-lock-check",
             "goal-runtime-lock-status",
             "goal-runtime-lock-stop",
@@ -2901,16 +2912,15 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertNotIn("auto-improve-goal-contract", codex_contract_header)
         _assert_target_depends_on(self, text, "codex-goal-prompt", "codex-goal-contract")
         _assert_target_depends_on(self, text, "goal-runtime-refresh", "auto-improve-goal-status")
-        _assert_target_depends_on(self, text, "long-run-preflight-clean", "goal-runtime-lock-check")
+        _assert_target_depends_on(self, text, "goal-runtime-run-admission-converge", "goal-runtime-lock-check")
         _assert_target_depends_on(
             self,
             text,
-            "long-run-preflight-clean",
+            "goal-runtime-run-admission-converge",
             "goal-runtime-python-preflight",
         )
-        _assert_target_depends_on(self, text, "long-run-preflight-clean", "goal-runtime-clean-transient")
-        _assert_target_depends_on(self, text, "long-run-preflight-clean", "goal-runtime-fixed-point-check")
-        _assert_target_depends_on(self, text, "long-run-preflight-clean", "auto-improve-goal-preflight")
+        _assert_target_depends_on(self, text, "goal-runtime-run-admission", "goal-runtime-run-admission-converge")
+        _assert_target_depends_on(self, text, "long-run-preflight-clean", "goal-runtime-run-admission")
         _assert_target_depends_on(self, text, "auto-improve-goal-preflight", "goal-runtime-lock-check")
         _assert_target_depends_on(
             self,
@@ -2918,15 +2928,52 @@ class MakefileStaticGateTests(unittest.TestCase):
             "auto-improve-goal-preflight",
             "goal-runtime-python-preflight",
         )
-        _assert_target_depends_on(self, text, "auto-improve-goal-run", "auto-improve-goal-preflight")
+        _assert_target_depends_on(self, text, "auto-improve-goal-run", "goal-runtime-run-admission")
         _assert_target_depends_on(self, text, "auto-improve-goal-run", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "auto-improve-goal-status", "auto-improve-goal-contract")
-        _assert_target_depends_on(self, text, "auto-improve-goal-resume", "auto-improve-goal-preflight")
+        _assert_target_depends_on(self, text, "auto-improve-goal-resume", "goal-runtime-run-admission")
         _assert_target_depends_on(self, text, "auto-improve-goal-resume", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "auto-improve-goal-finalize", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "auto-improve-goal-run-artifacts", "auto-improve-goal-status")
         _assert_target_depends_on(self, text, "goal-runtime-certificate", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "goal-worktree-guard", "auto-improve-goal-preflight")
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-run-admission-converge",
+            (
+                "$(MAKE) goal-runtime-clean-transient",
+                "$(MAKE) refresh-generated-core",
+                "$(MAKE) goal-runtime-quarantine-preflight",
+                "$(MAKE) goal-runtime-local-evidence-converge",
+                "$(MAKE) goal-runtime-publish-local-evidence",
+                "$(MAKE) goal-runtime-fixed-point-check",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-run-admission",
+            (
+                "ops.scripts.goal_runtime_run_admission",
+                "--out \"$(GOAL_RUNTIME_RUN_ADMISSION_OUT)\"",
+                "--quarantine-preflight-report \"$(GOAL_RUNTIME_QUARANTINE_PREFLIGHT_OUT)\"",
+                "--mutation-proposals-report \"$(MUTATION_PROPOSAL_OUT)\"",
+                "--readiness-report \"$(AUTO_IMPROVE_READINESS_OUT)\"",
+                "--strict",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-quarantine-preflight",
+            (
+                "ops.scripts.goal_runtime_quarantine_preflight",
+                "--out \"$(GOAL_RUNTIME_QUARANTINE_PREFLIGHT_OUT)\"",
+                "--mechanism-review-report \"$(MECHANISM_REVIEW_OUT)\"",
+                "--strict",
+            ),
+        )
         _assert_recipe_contains_tokens(
             self,
             text,

@@ -77,6 +77,14 @@ SCHEMA_PATHS = {
     / "ops"
     / "schemas"
     / "goal-runtime-fixed-point-check.schema.json",
+    "goal-runtime-quarantine-preflight.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "goal-runtime-quarantine-preflight.schema.json",
+    "goal-runtime-run-admission.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "goal-runtime-run-admission.schema.json",
     "goal-runtime-closeout-plan.schema.json": REPO_ROOT
     / "ops"
     / "schemas"

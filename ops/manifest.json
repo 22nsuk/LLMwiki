@@ -142,8 +142,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "e3913c67806c5ecedb0c8116815643318bb12fad086ceb4b44e4fab5dc86f7c1",
-      "size_bytes": 87249
+      "sha256": "30ebdd4153dfe6d67ddec1c76771687691f99acf641614aea04371d60b8b1681",
+      "size_bytes": 88008
     },
     {
       "path": "SECURITY.md",
@@ -172,8 +172,8 @@
     },
     {
       "path": "mk/mechanism.mk",
-      "sha256": "cc325d44961b10d9caade3e653b1e4bee4f911795b9a0f5df590ec7c4a711199",
-      "size_bytes": 26098
+      "sha256": "acae2a6e83a0a98ab010386971e8f03df63bd133c480edc1be59c55b82470682",
+      "size_bytes": 27522
     },
     {
       "path": "mk/public.mk",
@@ -207,8 +207,8 @@
     },
     {
       "path": "ops/README.md",
-      "sha256": "6a0216c02624b27174a65a641df95ea0c3617fbfc3e4cb6129cc75eda65e5516",
-      "size_bytes": 115302
+      "sha256": "63d0b7c6ac2eb42c98b943a20a09a20745e81f1be8d431bfaaef168e83e68dc1",
+      "size_bytes": 116018
     },
     {
       "path": "ops/__init__.py",
@@ -227,8 +227,8 @@
     },
     {
       "path": "ops/mypy-allowlist.txt",
-      "sha256": "c7136bd5f7a311510e7a49ecee7f0400c7a0245db098c7e39c8ee264300d5385",
-      "size_bytes": 12323
+      "sha256": "3708a5a6fa4a8d6cc6a075b28f19ec2c5bab7fa88bb6fb56f747579f7eb06431",
+      "size_bytes": 12434
     },
     {
       "path": "ops/mypy-strict-preview-allowlist.txt",
@@ -464,6 +464,16 @@
       "path": "ops/schemas/goal-runtime-fixed-point-check.schema.json",
       "sha256": "01641e63ce168f030ca44b83e999e58f6fdf9c8ae45ee44325698d28e471a588",
       "size_bytes": 2923
+    },
+    {
+      "path": "ops/schemas/goal-runtime-quarantine-preflight.schema.json",
+      "sha256": "23130dcf87ec9b114cb0ab4ec013d168c53858a5d567f6ea1292078cab79e054",
+      "size_bytes": 4882
+    },
+    {
+      "path": "ops/schemas/goal-runtime-run-admission.schema.json",
+      "sha256": "a4ef57a2626f0d7deb00e16884a3edc5e063152b7b3eb74ff185558c11de13d4",
+      "size_bytes": 5066
     },
     {
       "path": "ops/schemas/goal-worktree-guard.schema.json",
@@ -1222,8 +1232,8 @@
     },
     {
       "path": "ops/scripts/core/schema_constants_runtime.py",
-      "sha256": "5310e25d2a78233a41924f671e227b83cf426bcc824482d46d9b9fc15d38fe40",
-      "size_bytes": 12375
+      "sha256": "438a33f88b575957224dbc4596259a889ad0761bd699ebf90ca5998851a182ed",
+      "size_bytes": 12585
     },
     {
       "path": "ops/scripts/core/schema_runtime.py",
@@ -1602,8 +1612,8 @@
     },
     {
       "path": "ops/scripts/mechanism/codex_goal_prompt.py",
-      "sha256": "633f34a8853cb7502bd2f81576b16241c14740ecc63ec7138e6c0580d2804822",
-      "size_bytes": 13270
+      "sha256": "dffccc5786b43787ccc8a1d20356592e62ab1ba04170462ceee429063fc66cda",
+      "size_bytes": 13804
     },
     {
       "path": "ops/scripts/mechanism/current_target_path_runtime.py",
@@ -1691,9 +1701,19 @@
       "size_bytes": 12270
     },
     {
+      "path": "ops/scripts/mechanism/goal_runtime_quarantine_preflight.py",
+      "sha256": "74e7f1a29fa50c7e6af420b2fdfbeebbfd300cf343f7ac1ee6a5956dffa3c0e7",
+      "size_bytes": 12250
+    },
+    {
       "path": "ops/scripts/mechanism/goal_runtime_resume.py",
       "sha256": "665e1433c45ffc9002d42e0b5bf3e17df68c8e23eb81d3746a373eca400030fb",
       "size_bytes": 2408
+    },
+    {
+      "path": "ops/scripts/mechanism/goal_runtime_run_admission.py",
+      "sha256": "d3700b3bf67e58563a8a021571f22fcac91943431bfe17eb49da92ab8f6ca2d9",
+      "size_bytes": 26700
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_runner.py",
@@ -1817,8 +1837,8 @@
     },
     {
       "path": "ops/scripts/mechanism/mutation_proposal_runtime.py",
-      "sha256": "e6f31befd434bbd76e69210d2cbef0b01f0ddf200aa59214b00394ae1ffa8835",
-      "size_bytes": 100369
+      "sha256": "068812b34141c16c0af0217fa217d0a9e8f238c2b56836325824dd4219fab2d3",
+      "size_bytes": 100247
     },
     {
       "path": "ops/scripts/mechanism/outcome_metrics.py",
@@ -2037,8 +2057,8 @@
     },
     {
       "path": "ops/scripts/release/external_report_lifecycle_runtime.py",
-      "sha256": "f4ecbb03099b2eb49449791ce1589d98db49f87c46dfd24b5569670d05128124",
-      "size_bytes": 53734
+      "sha256": "147085bf5ec583522195f243f5a6faab08d9c287c745fb00707e4c5018c68277",
+      "size_bytes": 55704
     },
     {
       "path": "ops/scripts/release/external_report_reference_manifest.py",
@@ -4967,8 +4987,8 @@
     },
     {
       "path": "tests/fixtures/report_schema_samples.json",
-      "sha256": "6d707d0a5e3d03b7fbda2c2cc9b40f7b5640886e646962a85cfafca0bdcbc9f9",
-      "size_bytes": 137914
+      "sha256": "9f9a4cd0e89b310088440cc6ecceeaae565f97c062e9f3a1bedfa8a776b04869",
+      "size_bytes": 138443
     },
     {
       "path": "tests/fixtures/yaml/block-scalar.yaml",
@@ -4982,8 +5002,8 @@
     },
     {
       "path": "tests/minimal_vault_runtime.py",
-      "sha256": "ec4eab91861665119ad474ed1ca0a8f8aa7ca263a184dfb84a4689d94261527c",
-      "size_bytes": 23658
+      "sha256": "6bcb190e6c03e79378cb4865a95985508b3a838abd2891009a7b41e2b4e50e58",
+      "size_bytes": 23936
     },
     {
       "path": "tests/minimal_vault_seed_core.py",
@@ -5122,8 +5142,8 @@
     },
     {
       "path": "tests/test_codex_goal_prompt.py",
-      "sha256": "48cc6ebb85b2d2f3ae692618cc5167890962475e3b3e379c354ddc3e84412bb2",
-      "size_bytes": 8155
+      "sha256": "4d393d9d1b9bfd0f9686832ccba9fe4ab293c0d3386ce4c159ea50c5f7b2c9a9",
+      "size_bytes": 8614
     },
     {
       "path": "tests/test_command_runtime.py",
@@ -5182,8 +5202,8 @@
     },
     {
       "path": "tests/test_external_report_action_matrix.py",
-      "sha256": "504042238d29fa688fb01e461221b8447cef0e72fc83726033f40ab3babc8b0b",
-      "size_bytes": 48604
+      "sha256": "946daf54e83000052fceba06a042fb4f521740dacd285fc49604a4bee3abff09",
+      "size_bytes": 50595
     },
     {
       "path": "tests/test_external_report_lifecycle_static.py",
@@ -5261,6 +5281,16 @@
       "size_bytes": 4294
     },
     {
+      "path": "tests/test_goal_runtime_quarantine_preflight.py",
+      "sha256": "77d924701674763b341017cd92254b949710ca24320897fb9fa2b1e4ae4e16c1",
+      "size_bytes": 5064
+    },
+    {
+      "path": "tests/test_goal_runtime_run_admission.py",
+      "sha256": "e2b5be60d109e1d58595376104c1470c729953b8b608d05f964d10b1130210c6",
+      "size_bytes": 10443
+    },
+    {
       "path": "tests/test_goal_runtime_runner.py",
       "sha256": "0392fb5f8414c82d974feff9d5786828c04b4f6fa068b5de7a62c66aeaac675d",
       "size_bytes": 20520
@@ -5332,8 +5362,8 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "f4842090706508277ee01be30dd9e6b94b316fceab6e51814d97762c8ed3c454",
-      "size_bytes": 166719
+      "sha256": "0315ac0685e49528aac0621dfbcecc767bdf9b95c89221cf5dabcccb0073677c",
+      "size_bytes": 168529
     },
     {
       "path": "tests/test_manifest_export_symlink_safety.py",
@@ -5392,8 +5422,8 @@
     },
     {
       "path": "tests/test_mutation_proposal.py",
-      "sha256": "2b92de90564bd8cceb0fdfeefb2ff02f03d7c0706b3282de20bf698037796a63",
-      "size_bytes": 131629
+      "sha256": "ddb22552258e8814da2ff790f8938d86239d1c161edb98ce7004ad44ea4921a5",
+      "size_bytes": 131612
     },
     {
       "path": "tests/test_observability_artifacts_runtime.py",

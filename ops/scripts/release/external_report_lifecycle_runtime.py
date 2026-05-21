@@ -417,12 +417,15 @@ ACTION_CATALOG: list[dict[str, Any]] = [
     {
         "action_id": "goal_runtime_transient_cleanup_gate",
         "priority": "P1",
-        "theme": "transient artifact cleanup gate for long goal runs",
+        "theme": "pre-run cleanup and admission gate for long goal runs",
         "patterns": [
             r"transient artifact cleanup",
             r"transient cleanup gate",
             r"goal-runtime-clean-transient",
+            r"goal-runtime-run-admission",
             r"long-run-preflight-clean",
+            r"runnable proposal",
+            r"fixed-point",
             r"obsolete tracked goal",
             r"stale legacy runtime",
         ],
@@ -432,8 +435,16 @@ ACTION_CATALOG: list[dict[str, Any]] = [
             "ops/schemas/goal-runtime-clean-transient.schema.json",
             "tmp/goal-runtime-clean-transient.json",
             "tests/test_goal_runtime_clean_transient.py",
+            "ops/scripts/mechanism/goal_runtime_quarantine_preflight.py",
+            "ops/schemas/goal-runtime-quarantine-preflight.schema.json",
+            "tmp/goal-runtime-quarantine-preflight.json",
+            "tests/test_goal_runtime_quarantine_preflight.py",
+            "ops/scripts/mechanism/goal_runtime_run_admission.py",
+            "ops/schemas/goal-runtime-run-admission.schema.json",
+            "tmp/goal-runtime-run-admission.json",
+            "tests/test_goal_runtime_run_admission.py",
         ],
-        "recommended_target": "long-run-preflight-clean",
+        "recommended_target": "goal-runtime-run-admission",
     },
 ]
 
@@ -961,18 +972,36 @@ def goal_runtime_transient_cleanup_gate_status(
         return status
     report = load_json_object(vault / "tmp/goal-runtime-clean-transient.json")
     summary = as_dict(report.get("summary"))
+    quarantine = load_json_object(vault / "tmp/goal-runtime-quarantine-preflight.json")
+    quarantine_summary = as_dict(quarantine.get("summary"))
+    admission = load_json_object(vault / "tmp/goal-runtime-run-admission.json")
+    admission_decisions = as_dict(admission.get("decisions"))
     try:
         makefile_text = (vault / "mk/mechanism.mk").read_text(encoding="utf-8")
     except OSError:
         makefile_text = ""
     if (
         "goal-runtime-clean-transient:" in makefile_text
+        and "goal-runtime-run-admission:" in makefile_text
+        and "goal-runtime-run-admission-converge:" in makefile_text
         and "long-run-preflight-clean:" in makefile_text
+        and "long-run-preflight-clean: goal-runtime-run-admission" in makefile_text
         and report.get("artifact_kind") == "goal_runtime_clean_transient"
         and report.get("producer") == "ops.scripts.goal_runtime_clean_transient"
         and report.get("status") == "pass"
         and summary.get("apply") is True
         and as_int(summary.get("failed_count")) == 0
+        and quarantine.get("artifact_kind") == "goal_runtime_quarantine_preflight"
+        and quarantine.get("producer") == "ops.scripts.goal_runtime_quarantine_preflight"
+        and quarantine.get("status") == "pass"
+        and as_int(quarantine_summary.get("operator_decision_required_count")) == 0
+        and admission.get("artifact_kind") == "goal_runtime_run_admission"
+        and admission.get("producer") == "ops.scripts.goal_runtime_run_admission"
+        and admission.get("status") in {"pass", "attention", "fail"}
+        and isinstance(admission_decisions.get("can_start_goal_runtime"), bool)
+        and isinstance(admission_decisions.get("can_mutate_candidate"), bool)
+        and isinstance(admission_decisions.get("can_promote_result_later"), bool)
+        and isinstance(admission_decisions.get("should_pause_before_run"), bool)
     ):
         return "implemented"
     return "requires_release_run_verification"

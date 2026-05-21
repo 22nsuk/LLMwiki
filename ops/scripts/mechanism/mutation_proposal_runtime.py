@@ -1510,8 +1510,7 @@ def _recent_log_overlap_queue_unblock_proposal(
         },
         RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE,
     )
-    blocked_by = ["recent_log_overlap"] if recent_log_matches else []
-    blocked_by.extend(blocker for blocker in recent_outcome_blockers if blocker not in blocked_by)
+    blocked_by = list(recent_outcome_blockers)
     scoped_target_text = " and ".join(f"`{path}`" for path in primary_targets)
     scoped_test_text = " and ".join(f"`{path}`" for path in must_change_tests)
     return MutationProposal(

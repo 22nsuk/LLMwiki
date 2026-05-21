@@ -930,7 +930,7 @@ class MutationProposalTest(unittest.TestCase):
             self.assertEqual(rotation["failure_mode"], "recent_log_overlap_queue_blocked")
             self.assertEqual(rotation["blocked_by"], [])
 
-    def test_recent_log_overlap_queue_rotation_respects_rotation_target_overlap(self) -> None:
+    def test_recent_log_overlap_queue_rotation_does_not_self_block_when_targets_overlap(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
             seed_vault(vault)
@@ -952,27 +952,27 @@ class MutationProposalTest(unittest.TestCase):
             schema = load_schema(vault / "ops" / "schemas" / "mutation-proposals.schema.json")
 
             self.assertEqual(validate_with_schema(proposal_report, schema), [])
-            self.assertEqual(proposal_report["status"], "attention")
+            self.assertEqual(proposal_report["status"], "pass")
             self.assertEqual(proposal_report["summary"]["proposals_emitted"], 4)
-            self.assertEqual(proposal_report["summary"]["blocked_proposals"], 4)
+            self.assertEqual(proposal_report["summary"]["blocked_proposals"], 3)
             self.assertEqual(
                 proposal_report["diagnostics"]["queue_selection"],
                 {
                     "available_proposal_count": 4,
                     "selected_proposal_count": 4,
-                    "runnable_available_count": 0,
-                    "blocked_available_count": 4,
-                    "selected_runnable_count": 0,
-                    "selected_blocked_count": 4,
+                    "runnable_available_count": 1,
+                    "blocked_available_count": 3,
+                    "selected_runnable_count": 1,
+                    "selected_blocked_count": 3,
                     "blocked_reason_counts": [
-                        {"reason": "recent_log_overlap", "count": 4}
+                        {"reason": "recent_log_overlap", "count": 3}
                     ],
                 },
             )
 
             rotation = proposal_report["proposals"][0]
             self.assertEqual(rotation["failure_mode"], "recent_log_overlap_queue_blocked")
-            self.assertEqual(rotation["blocked_by"], ["recent_log_overlap"])
+            self.assertEqual(rotation["blocked_by"], [])
             rotation_matches = [
                 match
                 for match in proposal_report["diagnostics"]["recent_log_overlap"]["matches"]

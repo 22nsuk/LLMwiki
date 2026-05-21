@@ -56,6 +56,8 @@ ops/scripts/mechanism/goal_runtime_closeout.py
 ops/scripts/mechanism/goal_runtime_fixed_point_check.py
 ops/scripts/mechanism/goal_runtime_lock.py
 ops/scripts/mechanism/goal_runtime_maintenance.py
+ops/scripts/mechanism/goal_runtime_quarantine_preflight.py
+ops/scripts/mechanism/goal_runtime_run_admission.py
 ops/scripts/mechanism/goal_run_status.py
 ops/scripts/mechanism/goal_worktree_guard.py
 ops/scripts/core/frontmatter_runtime.py

@@ -368,6 +368,10 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "ops/schemas/goal-worktree-guard.schema.json",
             "ops/scripts/mechanism/goal_runtime_clean_transient.py",
             "ops/schemas/goal-runtime-clean-transient.schema.json",
+            "ops/scripts/mechanism/goal_runtime_run_admission.py",
+            "ops/schemas/goal-runtime-run-admission.schema.json",
+            "ops/scripts/mechanism/goal_runtime_quarantine_preflight.py",
+            "ops/schemas/goal-runtime-quarantine-preflight.schema.json",
             "tests/test_codex_goal_contract.py",
             "tests/test_codex_goal_client.py",
             "tests/test_codex_goal_prompt.py",
@@ -379,6 +383,8 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "tests/test_auto_improve_readiness_release_authority_runtime.py",
             "tests/test_goal_worktree_guard.py",
             "tests/test_goal_runtime_clean_transient.py",
+            "tests/test_goal_runtime_run_admission.py",
+            "tests/test_goal_runtime_quarantine_preflight.py",
         ):
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -388,7 +394,13 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         mechanism_makefile.write_text(
             "goal-runtime-clean-transient:\n"
             "\tpython -m ops.scripts.goal_runtime_clean_transient\n"
-            "long-run-preflight-clean: goal-runtime-clean-transient auto-improve-goal-preflight\n",
+            "goal-runtime-quarantine-preflight:\n"
+            "\tpython -m ops.scripts.goal_runtime_quarantine_preflight --strict\n"
+            "goal-runtime-run-admission-converge: goal-runtime-clean-transient auto-improve-goal-preflight\n"
+            "\t$(MAKE) goal-runtime-quarantine-preflight\n"
+            "goal-runtime-run-admission: goal-runtime-run-admission-converge\n"
+            "\tpython -m ops.scripts.goal_runtime_run_admission --strict\n"
+            "long-run-preflight-clean: goal-runtime-run-admission\n",
             encoding="utf-8",
         )
         contract = {
@@ -563,10 +575,38 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
                 },
             },
         )
+        self._write_json(
+            "tmp/goal-runtime-run-admission.json",
+            {
+                "artifact_kind": "goal_runtime_run_admission",
+                "producer": "ops.scripts.goal_runtime_run_admission",
+                "status": "fail",
+                "decisions": {
+                    "can_start_goal_runtime": False,
+                    "can_mutate_candidate": False,
+                    "can_promote_result_later": False,
+                    "should_pause_before_run": True,
+                },
+            },
+        )
+        self._write_json(
+            "tmp/goal-runtime-quarantine-preflight.json",
+            {
+                "artifact_kind": "goal_runtime_quarantine_preflight",
+                "producer": "ops.scripts.goal_runtime_quarantine_preflight",
+                "status": "pass",
+                "summary": {
+                    "operator_decision_required_count": 0,
+                    "excluded_run_count": 1,
+                    "quarantined_run_count": 1,
+                    "invalid_exclusion_count": 0,
+                },
+            },
+        )
         (self.external / "goal.md").write_text(
             "# Goal Review\n\ngoal contract, set_goal, codex_goal_prompt, --goal-contract, "
             "goal-run-status, runtime certificate, retry-after executor backoff, selected contract, Git worktree, transient artifact cleanup, "
-            "goal-runtime-clean-transient, long-run-preflight-clean.\n",
+            "goal-runtime-clean-transient, goal-runtime-quarantine-preflight, goal-runtime-run-admission, long-run-preflight-clean.\n",
             encoding="utf-8",
         )
 

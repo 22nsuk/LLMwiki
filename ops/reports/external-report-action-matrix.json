@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-21T07:26:41Z",
+  "generated_at": "2026-05-21T09:18:04Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "926b16ecda58cb1c2c4e0cec3a8bacdc70db6faa2805f292861a8f2cde736376",
+  "source_tree_fingerprint": "d631159363e4169dded6b589d5a93a2f7e6e1088d1663b2d472d1bb27d4d936e",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "ca1aa6e4665c54adcc1f3a5ddc0ed9385b5d0c02d84a7225e0ceeea0fd2f7220",
+    "source_paths": "c672e08dd77ee352a74e1922705ad1782a001d241941cd3e2b2f00fa58631d30",
     "active_external_reports": "092f2ee56969cd869ccb50461f6158a5eead83e11aabf2b613ff31877ce63e41",
-    "action_catalog": "05dbd1c8d8595cd49210c3b2d445243360ff4fb558b3aead52f6de010426918e"
+    "action_catalog": "72dc25d77152e70f7503a12d1a38805d07730ac48dc6078075ab1d418307ad9c"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T07:26:41Z"
+    "checked_at": "2026-05-21T09:18:04Z"
   },
   "vault": ".",
   "status": "pass",
@@ -855,10 +855,10 @@
     {
       "action_id": "goal_runtime_transient_cleanup_gate",
       "priority": "P1",
-      "theme": "transient artifact cleanup gate for long goal runs",
+      "theme": "pre-run cleanup and admission gate for long goal runs",
       "current_status": "implemented",
       "source_report_paths": [],
-      "recommended_target": "long-run-preflight-clean",
+      "recommended_target": "goal-runtime-run-admission",
       "evidence": [
         {
           "path": "mk/mechanism.mk",
@@ -886,6 +886,54 @@
         },
         {
           "path": "tests/test_goal_runtime_clean_transient.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/scripts/mechanism/goal_runtime_quarantine_preflight.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/schemas/goal-runtime-quarantine-preflight.schema.json",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tmp/goal-runtime-quarantine-preflight.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.goal_runtime_quarantine_preflight"
+        },
+        {
+          "path": "tests/test_goal_runtime_quarantine_preflight.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/scripts/mechanism/goal_runtime_run_admission.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/schemas/goal-runtime-run-admission.schema.json",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tmp/goal-runtime-run-admission.json",
+          "exists": true,
+          "status": "fail",
+          "producer": "ops.scripts.goal_runtime_run_admission"
+        },
+        {
+          "path": "tests/test_goal_runtime_run_admission.py",
           "exists": true,
           "status": "",
           "producer": ""
