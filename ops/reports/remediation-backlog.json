@@ -1,19 +1,19 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-21T02:00:07Z",
+  "generated_at": "2026-05-21T03:08:35Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "15d2f101d044bf8925ecf2ca37fc4780a57c5dd76f1cdb972a2d415a79605400",
+  "source_tree_fingerprint": "58a19fe296a2ea8a1b189c5036f81486a2012b55dc35b94713784ea80276615d",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "f876905f26fb3b7aea67a4bb70dc21985bef1ce5ccf17d16352a143f464c63e9",
+    "source_paths": "04d709548fae3fbea7087eb8bc62a9aa1f424113a60ebcbe2b410ccba8cb34c5",
     "learning_claim_activation": "f90a59b26c0aafc739d67a3d2bdde627f879afb337ca0220af680861946a0b81",
-    "self_improvement_negative_lessons": "d444772beafd42e5a9edb1030516a2ff8328d510c1cd68baa83df83a94dbf610",
-    "session_synopsis": "38121162399d499b0c236e55614bd8f1154a89070a4a25df684dc590e999ce67",
+    "self_improvement_negative_lessons": "c301c4417ce2fc94a03b4b65fb1480ffe6343a218727935014d0c4898a950901",
+    "session_synopsis": "b628aaeec4df86fa237027212e2018972079f4b0f84e28c7b5ef9b3c883101f3",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
     "auto_improve_sessions": "045839dd6979b19e7b1e2cf2c9ed4675b6db02844a8f4ea94a33326f904f690f"
   },
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T02:00:07Z"
+    "checked_at": "2026-05-21T03:08:35Z"
   },
   "vault": ".",
   "policy": {
@@ -32,140 +32,14 @@
   },
   "status": "attention",
   "summary": {
-    "backlog_item_count": 11,
+    "backlog_item_count": 2,
     "repeated_blocker_count": 2,
-    "active_blocker_count": 9,
-    "open_item_count": 11,
+    "active_blocker_count": 0,
+    "open_item_count": 2,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
     "next_action": "Close or explicitly defer remediation backlog items before promotion."
   },
   "items": [
-    {
-      "item_id": "active_blocker_execution_blocked_by_no_runnable_proposal",
-      "blocker_id": "execution_blocked_by_no_runnable_proposal",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "runs/goal-active-report-self-improve-certificate-rerun7/state/session-synopsis.json"
-      ],
-      "repair_target": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap.",
-      "next_action": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
-    },
-    {
-      "item_id": "active_blocker_goal_status_git_worktree_dirty",
-      "blocker_id": "goal_status_git_worktree_dirty",
-      "source": "goal_run_status.blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "runs/goal-active-report-self-improve-certificate-rerun7/state/session-synopsis.json"
-      ],
-      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
-      "next_action": "Refresh goal run status and close the active blocker before resuming."
-    },
-    {
-      "item_id": "active_blocker_goal_status_learning_blocked_by_review_required",
-      "blocker_id": "goal_status_learning_blocked_by_review_required",
-      "source": "goal_run_status.blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "runs/goal-active-report-self-improve-certificate-rerun7/state/session-synopsis.json"
-      ],
-      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
-      "next_action": "Refresh goal run status and close the active blocker before resuming."
-    },
-    {
-      "item_id": "active_blocker_goal_status_self_improvement_loop_certificate_incomplete",
-      "blocker_id": "goal_status_self_improvement_loop_certificate_incomplete",
-      "source": "goal_run_status.blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "runs/goal-active-report-self-improve-certificate-rerun7/state/session-synopsis.json"
-      ],
-      "repair_target": "Run the bounded self-improvement loop and full gates, then refresh goal-runtime-certificate.",
-      "next_action": "Run the bounded self-improvement loop and full gates, then refresh goal-runtime-certificate."
-    },
-    {
-      "item_id": "active_blocker_learning_blocked_by_execution_not_runnable",
-      "blocker_id": "learning_blocked_by_execution_not_runnable",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "runs/goal-active-report-self-improve-certificate-rerun7/state/session-synopsis.json"
-      ],
-      "repair_target": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty.",
-      "next_action": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty."
-    },
-    {
-      "item_id": "active_blocker_learning_claim_unlock_review_not_approved",
-      "blocker_id": "learning_claim_unlock_review_not_approved",
-      "source": "learning_claim_activation.blocked_predicates",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "runs/goal-active-report-self-improve-certificate-rerun7/state/session-synopsis.json"
-      ],
-      "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean.",
-      "next_action": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean."
-    },
-    {
-      "item_id": "active_blocker_promotion_blocked_by_artifact_contract_failure",
-      "blocker_id": "promotion_blocked_by_artifact_contract_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "runs/goal-active-report-self-improve-certificate-rerun7/state/session-synopsis.json"
-      ],
-      "repair_target": "Resolve artifact freshness blockers, then rerun make auto-improve-readiness.",
-      "next_action": "Resolve artifact freshness blockers, then rerun make auto-improve-readiness."
-    },
-    {
-      "item_id": "active_blocker_promotion_blocked_by_goal_worktree_guard_failure",
-      "blocker_id": "promotion_blocked_by_goal_worktree_guard_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "runs/goal-active-report-self-improve-certificate-rerun7/state/session-synopsis.json"
-      ],
-      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness.",
-      "next_action": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
-    },
-    {
-      "item_id": "active_blocker_promotion_blocked_by_selected_contract_failure",
-      "blocker_id": "promotion_blocked_by_selected_contract_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "runs/goal-active-report-self-improve-certificate-rerun7/state/session-synopsis.json"
-      ],
-      "repair_target": "Refresh selected contract evidence, then rerun make auto-improve-readiness.",
-      "next_action": "Refresh selected contract evidence, then rerun make auto-improve-readiness."
-    },
     {
       "item_id": "auto_session_repeated_blocker_active_report_self_improve_certificate_rerun4_review_blocked",
       "blocker_id": "review_blocked",
