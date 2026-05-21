@@ -116,7 +116,7 @@ class GoalRuntimeCloseoutTests(unittest.TestCase):
             1,
         )
         self.assertIn(
-            "generated-artifact-index",
+            "generated-artifact-converge",
             report["transaction"]["publish_boundary"]["canonical_publish_targets"],
         )
         self.assertIn(

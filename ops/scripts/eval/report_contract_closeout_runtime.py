@@ -9,17 +9,6 @@ from ops.scripts.artifact_io_runtime import read_json_object
 POLICY_PATH = "ops/policies/report-contract-closeout.json"
 
 
-def _dedupe_preserve_order(values: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for value in values:
-        if value in seen:
-            continue
-        seen.add(value)
-        result.append(value)
-    return result
-
-
 def load_pre_refresh_targets(vault: Path) -> list[str]:
     payload = read_json_object(vault / POLICY_PATH, context=POLICY_PATH)
     version = payload.get("version")
@@ -31,7 +20,7 @@ def load_pre_refresh_targets(vault: Path) -> list[str]:
     targets = [str(item).strip() for item in raw_targets if str(item).strip()]
     if not targets:
         raise ValueError(f"{POLICY_PATH}: pre_refresh_targets must contain at least one target")
-    return _dedupe_preserve_order(targets)
+    return targets
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

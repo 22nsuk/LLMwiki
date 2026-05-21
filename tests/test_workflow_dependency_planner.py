@@ -37,7 +37,8 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         (self.vault / ".github" / "workflows" / "ci.yml").write_text("name: CI\n", encoding="utf-8")
         (self.vault / "Makefile").write_text(
             ".PHONY: static ruff typecheck release-evidence-closeout release-smoke-full "
-            "test-execution-summary generated-artifact-index artifact-freshness "
+            "test-execution-summary generated-artifact-converge script-output-surfaces "
+            "external-report-action-matrix generated-artifact-index artifact-freshness "
             "operator-release-summary report-contract-closeout\n"
             "static: ruff typecheck\n"
             "\t@echo static\n"
@@ -53,6 +54,15 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "\t@echo smoke\n"
             "test-execution-summary:\n"
             "\t@echo tests\n"
+            "generated-artifact-converge:\n"
+            "\t$(MAKE) script-output-surfaces\n"
+            "\t$(MAKE) external-report-action-matrix\n"
+            "\t$(MAKE) generated-artifact-index\n"
+            "\t$(MAKE) artifact-freshness\n"
+            "script-output-surfaces:\n"
+            "\t@echo surfaces\n"
+            "external-report-action-matrix:\n"
+            "\t@echo matrix\n"
             "generated-artifact-index:\n"
             "\t@echo index\n"
             "artifact-freshness:\n"
@@ -61,8 +71,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "\t@echo operator\n"
             "report-contract-closeout:\n"
             "\t$(MAKE) test-execution-summary\n"
-            "\t$(MAKE) generated-artifact-index\n"
-            "\t$(MAKE) artifact-freshness\n",
+            "\t$(MAKE) generated-artifact-converge\n",
             encoding="utf-8",
         )
 

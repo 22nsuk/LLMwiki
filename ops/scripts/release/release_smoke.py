@@ -1279,6 +1279,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     ap.add_argument("--reuse-if-current", action="store_true")
     ap.add_argument("--reuse-from")
+    ap.add_argument(
+        "--reuse-only",
+        action="store_true",
+        help="With --reuse-if-current, fail instead of executing when the reusable report is stale.",
+    )
     return ap.parse_args(argv)
 
 
@@ -1307,6 +1312,8 @@ def _maybe_exit_with_reused_report(
             print(f"\nreused_from={display_path(vault, reuse_path)}")
             raise SystemExit(0)
         print(json.dumps({"summary_mode": "executed", "reuse_diagnostics": diagnostics}, ensure_ascii=False, indent=2))
+        if bool(getattr(args, "reuse_only", False)):
+            raise SystemExit(1)
 
 
 def _release_smoke_execution(

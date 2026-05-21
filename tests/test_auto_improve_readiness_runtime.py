@@ -195,6 +195,8 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                     "session_synopsis": "ops/reports/session-synopsis.json",
                     "learning_claim_activation": "ops/reports/learning_claim_activation_report.json",
                     "auto_improve_sessions": "ops/reports/auto-improve-sessions",
+                    "goal_runtime_certificate": "ops/reports/goal-runtime-certificate.json",
+                    "learning_readiness_signoff": "ops/reports/learning-readiness-signoff.json",
                     "status_overrides": "ops/policies/remediation-backlog-status-overrides.json",
                 },
             },
@@ -643,6 +645,8 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                     "session_synopsis": "ops/reports/session-synopsis.json",
                     "learning_claim_activation": "ops/reports/learning_claim_activation_report.json",
                     "auto_improve_sessions": "ops/reports/auto-improve-sessions",
+                    "goal_runtime_certificate": "ops/reports/goal-runtime-certificate.json",
+                    "learning_readiness_signoff": "ops/reports/learning-readiness-signoff.json",
                     "status_overrides": "ops/policies/remediation-backlog-status-overrides.json",
                 },
             },
@@ -1644,6 +1648,76 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertIn(
             "make auto-improve-goal-run",
             report["learning_readiness"]["recommended_next_step"],
+        )
+
+    def test_active_learning_signoff_unblocks_promotion_without_claiming_learning(self) -> None:
+        self._write_report(
+            "ops/reports/outcome-metrics.json",
+            {
+                "summary": {
+                    "attempts_considered": 12,
+                    "recent_window": 20,
+                    "recent_attempt_count": 12,
+                    "session_reports_considered": 0,
+                },
+                "metrics": {
+                    "rework_count": 3,
+                    "moving_averages": {"hold": 0.5, "discard": 0.0},
+                    "defect_escape_proxy": {"count": 0},
+                },
+            },
+        )
+        self._write_report(
+            "ops/reports/mechanism-review-candidates.json",
+            {
+                "summary": {"candidates_emitted": 1},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"},
+                    "session_calibration": {"status": "active"},
+                },
+            },
+        )
+        self._write_report(
+            "ops/reports/mutation-proposals.json",
+            {
+                "summary": {
+                    "source_candidates_read": 1,
+                    "proposals_emitted": 1,
+                    "blocked_proposals": 0,
+                    "queue_pressure_summary": "ready",
+                },
+                "diagnostics": {"evidence_gaps": []},
+                "proposals": [{"proposal_id": "proposal-ready", "blocked_by": [], "priority": 55}],
+            },
+        )
+        self._write_report(
+            "ops/reports/learning-readiness-signoff.json",
+            {
+                "artifact_kind": "learning_readiness_signoff",
+                "linked_blocker_id": "learning_blocked_by_review_required",
+                "accepted_by": "operator@example.test",
+                "accepted_at": "2026-05-17T11:00:00Z",
+                "expires_at": "2026-05-24T11:00:00Z",
+                "risk_owner": "runtime-maintainer",
+                "revalidation_condition": "Rerun release evidence before release.",
+                "rollback_trigger": "Treat the blocker as active if learning evidence changes.",
+            },
+            enveloped=False,
+        )
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        self.assertTrue(report["can_execute_trial"])
+        self.assertTrue(report["can_promote_result"])
+        self.assertEqual(report["learning_readiness"]["gate_effect"], "review_required")
+        self.assertEqual(
+            [item["id"] for item in report["learning_blockers"]],
+            ["learning_blocked_by_review_required"],
+        )
+        self.assertEqual(report["promotion_blockers"], [])
+        self.assertEqual(
+            report["diagnostics"]["learning_signoff_summary"]["signoff_status"],
+            "active",
         )
         self.assertIn(
             "runner heartbeat",

@@ -1218,6 +1218,10 @@ def test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflig
         for item in payload.get("promotion_blockers", [])
         if isinstance(item, dict)
     }
+    learning_signoff_active = (
+        payload.get("diagnostics", {}).get("learning_signoff_summary", {}).get("active")
+        is True
+    )
     if learning_status == LEARNING_STATUS_LIKELY:
         assert signal_ids == set()
         assert learning_blocker_ids == set()
@@ -1227,8 +1231,11 @@ def test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflig
         assert signal_ids
         assert learning_blocker_ids == {LEARNING_REVIEW_REQUIRED_BLOCKER_ID}
         assert release_blocker_ids == {LEARNING_REVIEW_REQUIRED_BLOCKER_ID}
-        assert LEARNING_REVIEW_REQUIRED_BLOCKER_ID in promotion_blocker_ids
-        assert can_promote_result is False
+        if learning_signoff_active:
+            assert LEARNING_REVIEW_REQUIRED_BLOCKER_ID not in promotion_blocker_ids
+        else:
+            assert LEARNING_REVIEW_REQUIRED_BLOCKER_ID in promotion_blocker_ids
+            assert can_promote_result is False
     else:
         assert learning_status == LEARNING_STATUS_NOT_RUNNABLE
         assert signal_ids

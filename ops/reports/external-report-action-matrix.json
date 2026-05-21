@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-21T09:54:05Z",
+  "generated_at": "2026-05-21T12:39:43Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "088cd9a077d9233d4f0f2cd1f39f27410c158512eb3de72ac0b7710ff4aa86d6",
+  "source_tree_fingerprint": "d356b03a1755805399f54b400f66269467b4af2ff43a6f7172748eea8785d98d",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
@@ -20,10 +20,10 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T09:54:05Z"
+    "checked_at": "2026-05-21T12:39:43Z"
   },
   "vault": ".",
-  "status": "pass",
+  "status": "attention",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
@@ -32,9 +32,9 @@
     "active_report_count": 2,
     "archived_report_count": 67,
     "action_item_count": 24,
-    "implemented_count": 24,
+    "implemented_count": 23,
     "partially_automated_count": 0,
-    "requires_release_run_verification_count": 0,
+    "requires_release_run_verification_count": 1,
     "planned_count": 0,
     "unmatched_active_report_count": 0,
     "reference_manifest_alignment_status": "current",
@@ -213,7 +213,7 @@
         {
           "path": "ops/reports/external-report-action-matrix.json",
           "exists": true,
-          "status": "pass",
+          "status": "attention",
           "producer": "ops.scripts.external_report_action_matrix"
         }
       ]
@@ -510,7 +510,7 @@
       "action_id": "goal_execution_runtime_certificate",
       "priority": "P0",
       "theme": "bounded goal execution runtime certificate",
-      "current_status": "implemented",
+      "current_status": "requires_release_run_verification",
       "source_report_paths": [
         "external-reports/llmwiki_code_change_implementation_report_20260516.md"
       ],
@@ -525,7 +525,7 @@
         {
           "path": "ops/reports/goal-runtime-certificate.json",
           "exists": true,
-          "status": "pass",
+          "status": "attention",
           "producer": "ops.scripts.goal_runtime_certificate_report"
         },
         {
@@ -841,7 +841,7 @@
         {
           "path": "tmp/goal-worktree-guard.json",
           "exists": true,
-          "status": "pass",
+          "status": "attention",
           "producer": "ops.scripts.goal_worktree_guard"
         },
         {

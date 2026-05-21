@@ -107,7 +107,7 @@ def build_signoff_report(
             source_command=SOURCE_COMMAND,
             resolved_policy_path=resolved_policy_path,
             schema_path=LEARNING_READINESS_SIGNOFF_SCHEMA_PATH,
-            source_paths=["ops/scripts/learning_readiness_signoff.py"],
+            source_paths=["ops/scripts/learning/learning_readiness_signoff.py"],
             text_inputs={
                 "accepted_by": accepted_by,
                 "linked_blocker_id": request.linked_blocker_id,

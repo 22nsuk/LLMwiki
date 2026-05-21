@@ -65,6 +65,7 @@ ops/scripts/core/generated_artifact_index.py
 ops/scripts/mechanism/improvement_observations.py
 ops/scripts/mechanism/improvement_observations_runtime.py
 ops/scripts/learning/learning_readiness_signoff.py
+ops/scripts/learning/learning_readiness_signoff_state.py
 ops/scripts/learning/learning_readiness_signoff_revalidation.py
 ops/scripts/learning/learning_readiness_vocabulary.py
 ops/scripts/learning/learning_claim_evidence_bundle.py
@@ -172,6 +173,7 @@ ops/scripts/release/release_evidence_dashboard.py
 ops/scripts/release/release_lane_summary.py
 ops/scripts/release/release_live_artifact_attestation.py
 ops/scripts/release/release_post_seal_attestation.py
+ops/scripts/release/release_ready_commit.py
 ops/scripts/release/release_risk_taxonomy_matrix.py
 ops/scripts/release/release_workflow_order_guard.py
 ops/scripts/release/release_risk_taxonomy_runtime.py

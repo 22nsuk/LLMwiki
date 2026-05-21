@@ -52,9 +52,8 @@ RELEASE_CLOSEOUT_TARGET = "release-evidence-closeout"
 CHECK_FINALIZED_TARGET = "check-finalized"
 STRICT_FINALIZER_FLAG = "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required"
 ALLOWED_REPEATED_CLOSEOUT_TARGETS = {
-    "artifact-freshness",
     "auto-improve-readiness-report-body",
-    "generated-artifact-index",
+    "generated-artifact-converge",
     "release-closeout-summary-report",
     "tmp-json-clean",
 }
@@ -344,7 +343,10 @@ def _check_planner_fixed_point_writer_order(
         for step in planner_workflow.get("steps", [])
         if isinstance(step, dict) and str(step.get("target", "")).strip()
     ]
-    expected = _fixed_point_initial_order(writers)
+    if "generated-artifact-converge" in planner_steps:
+        expected = ["generated-artifact-converge"]
+    else:
+        expected = _fixed_point_initial_order(writers)
     positions = _subsequence_positions(
         [{"role": step, "target": step} for step in planner_steps],
         expected,

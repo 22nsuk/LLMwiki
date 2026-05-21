@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-21T09:56:05Z",
+  "generated_at": "2026-05-21T12:39:45Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e6e75eed22acf72925d1b07560dfa17e8ab6840d251e79df6d0ad72cf1c929e8",
+  "source_tree_fingerprint": "d356b03a1755805399f54b400f66269467b4af2ff43a6f7172748eea8785d98d",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "834eb6cfec958f35d3989a742cfd58414bb50bb75040ab9283e4c90ed61f1657",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T09:56:05Z"
+    "checked_at": "2026-05-21T12:39:45Z"
   },
   "vault": ".",
   "policy": {
@@ -58,14 +58,13 @@
     }
   ],
   "now": [
-    "121 canonical artifact(s) are currently indexed.",
-    "2 archive candidate(s) remain in active namespaces."
+    "122 canonical artifact(s) are currently indexed.",
+    "1 archive candidate(s) remain in active namespaces."
   ],
   "next": [
     "Archive the root-level candidates after confirming their content lifecycle decision and linked replacement evidence."
   ],
   "why_blocked": [
-    "All structured action themes from this external report are implemented in canonical evidence.",
     "promotion-report.history.status=archived but the run remains in the top-level runs namespace."
   ],
   "summary": {
@@ -76,8 +75,8 @@
     "external_reports_archive_file_count": 70,
     "run_directory_count": 51,
     "run_archive_directory_count": 4,
-    "canonical_report_count": 121,
-    "archive_candidate_count": 2
+    "canonical_report_count": 122,
+    "archive_candidate_count": 1
   },
   "canonical_reports": [
     {
@@ -852,6 +851,17 @@
     },
     {
       "surface": "external_reports",
+      "family": "llmwiki_code_change_implementation_report",
+      "path": "external-reports/llmwiki_code_change_implementation_report_20260516.md",
+      "role": "current_review_report",
+      "date": "2026-05-16",
+      "reason": "External report still carries unique unresolved action themes not covered by another active report.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "review_context"
+    },
+    {
+      "surface": "external_reports",
       "family": "report_reference_manifest",
       "path": "external-reports/report-reference-manifest.json",
       "role": "current_review_report",
@@ -1413,17 +1423,6 @@
     }
   ],
   "archive_candidates": [
-    {
-      "surface": "external_reports",
-      "family": "llmwiki_code_change_implementation_report",
-      "path": "external-reports/llmwiki_code_change_implementation_report_20260516.md",
-      "suggested_archive_path": "external-reports/archive/llmwiki_code_change_implementation_report_20260516.md",
-      "date": "2026-05-16",
-      "reason": "All structured action themes from this external report are implemented in canonical evidence.",
-      "superseded_by": [],
-      "supersedes": [],
-      "decision_relevance": "review_context"
-    },
     {
       "surface": "runs",
       "family": "mechanism_run",

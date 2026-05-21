@@ -70,7 +70,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
     def _write_makefile(self, *, misorder_check_finalized: bool = False) -> None:
         check_finalized_lines = (
             "\t$(MAKE) auto-improve-readiness-report-body\n"
-            "\t$(MAKE) external-report-action-matrix\n"
+            "\t$(MAKE) generated-artifact-converge\n"
             "\t$(MAKE) release-closeout-post-check-finalizer-dry-run\n"
             "\t$(MAKE) release-closeout-fixed-point\n"
             "\t$(MAKE) tmp-json-clean\n"
@@ -89,6 +89,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "check",
                 "check-finalized",
                 "release-evidence-closeout",
+                "generated-artifact-converge",
                 "generated-artifact-index",
                 "artifact-freshness",
                 "release-closeout-summary",
@@ -97,6 +98,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "release-clean-blocker-ledger",
                 "test-artifact-finalization",
                 "auto-improve-readiness-report-body",
+                "script-output-surfaces",
                 "external-report-action-matrix",
                 "release-closeout-post-check-finalizer-dry-run",
                 "release-closeout-fixed-point",
@@ -112,20 +114,30 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             f"{check_finalized_lines}"
             "release-evidence-closeout:\n"
             "\t$(MAKE) auto-improve-readiness-report-body\n"
-            "\t$(MAKE) external-report-action-matrix\n"
-            "\t$(MAKE) generated-artifact-index\n"
-            "\t$(MAKE) artifact-freshness\n"
+            "\t$(MAKE) generated-artifact-converge\n"
             "\t$(MAKE) release-closeout-summary\n"
             "\t$(MAKE) release-evidence-dashboard\n"
             "\t$(MAKE) release-lane-summary\n"
             "\t$(MAKE) release-clean-blocker-ledger\n"
-            "\t$(MAKE) generated-artifact-index\n"
-            "\t$(MAKE) artifact-freshness\n"
+            "\t$(MAKE) generated-artifact-converge\n"
             "\t$(MAKE) test-artifact-finalization\n"
             "\t$(MAKE) release-closeout-post-check-finalizer-dry-run\n"
             "\t$(MAKE) release-closeout-fixed-point\n"
             "\t$(MAKE) tmp-json-clean\n"
-            "\t$(MAKE) release-closeout-finality-verify\n",
+            "\t$(MAKE) release-closeout-finality-verify\n"
+            "generated-artifact-converge:\n"
+            "\t$(MAKE) script-output-surfaces\n"
+            "\t$(MAKE) external-report-action-matrix\n"
+            "\t$(MAKE) generated-artifact-index\n"
+            "\t$(MAKE) artifact-freshness\n"
+            "script-output-surfaces:\n"
+            "\t@true\n"
+            "external-report-action-matrix:\n"
+            "\t@true\n"
+            "generated-artifact-index:\n"
+            "\t@true\n"
+            "artifact-freshness:\n"
+            "\t@true\n",
             encoding="utf-8",
         )
 
@@ -182,11 +194,9 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         makefile = self.vault.joinpath("Makefile")
         makefile.write_text(
             makefile.read_text(encoding="utf-8").replace(
-                "\t$(MAKE) external-report-action-matrix\n"
-                "\t$(MAKE) generated-artifact-index\n",
-                "\t$(MAKE) external-report-action-matrix\n"
-                "\t$(MAKE) external-report-action-matrix\n"
-                "\t$(MAKE) generated-artifact-index\n",
+                "\t$(MAKE) release-lane-summary\n",
+                "\t$(MAKE) release-lane-summary\n"
+                "\t$(MAKE) release-lane-summary\n",
             ),
             encoding="utf-8",
         )
@@ -200,7 +210,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         )
         self.assertEqual(report["status"], "fail")
         self.assertEqual(check["status"], "fail")
-        self.assertEqual(check["violations"][0]["target"], "external-report-action-matrix")
+        self.assertEqual(check["violations"][0]["target"], "release-lane-summary")
         self.assertEqual(
             check["violations"][0]["reason"],
             "unexpected_repeated_closeout_target",

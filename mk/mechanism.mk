@@ -152,9 +152,7 @@ goal-runtime-reconcile:
 	$(MAKE) goal-runtime-local-evidence-converge
 	$(MAKE) goal-runtime-publish-local-evidence
 	$(MAKE) goal-runtime-fixed-point-check
-	$(MAKE) external-report-action-matrix
-	$(MAKE) generated-artifact-index
-	$(MAKE) artifact-freshness
+	$(MAKE) generated-artifact-converge
 
 goal-runtime-closeout-plan:
 	$(PYTHON) -m ops.scripts.goal_runtime_closeout --vault "$(VAULT)" --out "$(GOAL_RUNTIME_CLOSEOUT_PLAN_OUT)" --budget "$(GOAL_RUNTIME_CLOSEOUT_BUDGET)" --candidate-root "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)"
@@ -183,9 +181,7 @@ goal-runtime-closeout-publish:
 	$(MAKE) goal-runtime-closeout-publish-script-output-surfaces
 	$(MAKE) goal-runtime-publish-local-evidence
 	$(MAKE) goal-runtime-certificate
-	$(MAKE) external-report-action-matrix
-	$(MAKE) generated-artifact-index
-	$(MAKE) artifact-freshness
+	$(MAKE) generated-artifact-converge
 
 goal-runtime-closeout-finalize:
 	$(MAKE) test-artifact-finalization

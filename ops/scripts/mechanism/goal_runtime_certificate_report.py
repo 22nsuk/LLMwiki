@@ -484,10 +484,47 @@ def _diagnosis(
     }
 
 
-def _existing_verified_certificate(report: Mapping[str, Any]) -> bool:
+def _safe_existing_rel_path(vault: Path, rel_path: str) -> bool:
+    normalized = str(rel_path).strip()
+    if not normalized:
+        return False
+    path = Path(normalized)
+    if path.is_absolute():
+        return False
+    candidate = (vault / path).resolve(strict=False)
+    try:
+        candidate.relative_to(vault.resolve())
+    except ValueError:
+        return False
+    return candidate.exists()
+
+
+def _existing_certificate_referenced_paths(report: Mapping[str, Any]) -> list[str]:
+    paths: list[str] = []
+    goal = _mapping_value(report, "goal")
+    paths.append(str(goal.get("contract_path", "")).strip())
+    run = _mapping_value(report, "run")
+    paths.append(str(run.get("status_report_path", "")).strip())
+    session_evidence = _mapping_value(report, "session_evidence")
+    paths.append(str(session_evidence.get("path", "")).strip())
+    run_artifacts = _mapping_value(report, "run_artifacts")
+    checks = run_artifacts.get("checks")
+    if isinstance(checks, list):
+        for check in checks:
+            if isinstance(check, Mapping):
+                paths.append(str(check.get("path", "")).strip())
+    evidence_paths = report.get("evidence_paths")
+    if isinstance(evidence_paths, list):
+        for evidence in evidence_paths:
+            if isinstance(evidence, Mapping):
+                paths.append(str(evidence.get("path", "")).strip())
+    return list(dict.fromkeys(path for path in paths if path))
+
+
+def _existing_verified_certificate(vault: Path, report: Mapping[str, Any]) -> bool:
     certificate = _mapping_value(report, "certificate")
     contract_update = _mapping_value(report, "contract_update")
-    return (
+    verified = (
         report.get("artifact_kind") == "goal_runtime_certificate"
         and report.get("producer") == PRODUCER
         and report.get("status") == "pass"
@@ -496,6 +533,12 @@ def _existing_verified_certificate(report: Mapping[str, Any]) -> bool:
         and contract_update.get("runtime_certificate_verified_after") is True
         and not _list_text(report.get("blockers"))
     )
+    if not verified:
+        return False
+    referenced_paths = _existing_certificate_referenced_paths(report)
+    if not referenced_paths:
+        return False
+    return all(_safe_existing_rel_path(vault, path) for path in referenced_paths)
 
 
 def _preserved_verified_report(
@@ -978,7 +1021,7 @@ def build_report(request: GoalRuntimeCertificateRequest) -> dict[str, Any]:
         file_inputs["auto_improve_session"] = session_evidence_path
     if blockers:
         existing_report = load_optional_json_object(vault / request.existing_report_path)
-        if _existing_verified_certificate(existing_report):
+        if _existing_verified_certificate(vault, existing_report):
             return _preserved_verified_report(
                 existing_report=existing_report,
             )

@@ -1,9 +1,8 @@
 {
   "version": 1,
   "pre_refresh_targets": [
-    "script-output-surfaces",
-    "generated-artifact-index",
+    "generated-artifact-converge",
     "auto-improve-readiness-report",
-    "artifact-freshness"
+    "generated-artifact-converge"
   ]
 }

@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/artifact-relocation-audit.schema.json",
   "artifact_kind": "artifact_relocation_audit",
-  "generated_at": "2026-05-21T09:56:03Z",
+  "generated_at": "2026-05-21T12:39:43Z",
   "producer": "ops.scripts.artifact_relocation_audit",
   "source_command": "python -m ops.scripts.artifact_relocation_audit --vault . --out ops/operator/artifact-relocation-audit.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e6e75eed22acf72925d1b07560dfa17e8ab6840d251e79df6d0ad72cf1c929e8",
+  "source_tree_fingerprint": "d356b03a1755805399f54b400f66269467b4af2ff43a6f7172748eea8785d98d",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "2bca24a2fb1f0a7c49b35b6df2aac4e0676e137502b48691d033ad62e3769173",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "1ffc3cd808f7848d5e07c33875f5b587f2c166346a1e07e6617ac6b127df422c",
     "candidate_spec": "b1200b347913aa0fd79d57373d7874415448511a26db8629fc55c649d860c9c2",
-    "dependency_paths": "0f7cc4cad512986c75d5f260ab3fc2d3cb0318fd237a16c4e61fbd1fd338df79",
+    "dependency_paths": "63aa3ebc592d8d80bcfa0c8f3ccd1090939853db8d2e67a1b9489e52582f89b9",
     "dependency_roots": "be545ec75d1f4e02ad9ba08e5ac7019a5c4bf7d0baa3aa348395f93db732be97",
     "excluded_scan_paths": "fd1a01cc9a3c77d51ba8bec1c7117e110d4c742ac36077133fbb3b0b3d4b90bd",
     "excluded_scan_prefixes": "e957c42e176e00f268bb61a907a17e555ae0d84924fcabe7c04d0ab207727581"
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T09:56:03Z"
+    "checked_at": "2026-05-21T12:39:43Z"
   },
   "vault": ".",
   "policy": {
@@ -67,7 +67,7 @@
       "system/",
       "external-reports/"
     ],
-    "file_count": 651,
+    "file_count": 654,
     "files": [
       ".github/workflows/ci.yml",
       ".github/workflows/release.yml",
@@ -343,6 +343,7 @@
       "ops/scripts/learning/learning_delta_scoreboard_unlock_runtime.py",
       "ops/scripts/learning/learning_readiness_signoff.py",
       "ops/scripts/learning/learning_readiness_signoff_revalidation.py",
+      "ops/scripts/learning/learning_readiness_signoff_state.py",
       "ops/scripts/learning/learning_readiness_vocabulary.py",
       "ops/scripts/learning/remediation_backlog.py",
       "ops/scripts/learning/self_improvement_negative_lessons.py",
@@ -477,6 +478,7 @@
       "ops/scripts/release/release_lane_summary.py",
       "ops/scripts/release/release_live_artifact_attestation.py",
       "ops/scripts/release/release_post_seal_attestation.py",
+      "ops/scripts/release/release_ready_commit.py",
       "ops/scripts/release/release_risk_taxonomy_matrix.py",
       "ops/scripts/release/release_risk_taxonomy_runtime.py",
       "ops/scripts/release/release_smoke.py",
@@ -656,6 +658,7 @@
       "tests/test_release_lane_summary.py",
       "tests/test_release_live_artifact_attestation.py",
       "tests/test_release_post_seal_attestation.py",
+      "tests/test_release_ready_commit.py",
       "tests/test_release_risk_taxonomy_matrix.py",
       "tests/test_release_sealing_lane.py",
       "tests/test_release_smoke.py",
@@ -729,7 +732,7 @@
     "blocking_candidate_count": 0,
     "old_reference_count": 0,
     "new_reference_count": 28,
-    "dependency_file_count": 651
+    "dependency_file_count": 654
   },
   "candidates": [
     {
@@ -762,7 +765,7 @@
           "match_count": 1,
           "matches": [
             {
-              "line": 106,
+              "line": 107,
               "excerpt": "- `make operator-release-summary`는 closeout, batch manifest, self-check, test summary, learning revalidation, learning delta scoreboard를 한 장짜리 JSON으로 모아 `semantic_release_status`, `sealed_release_status`, `source_zip_policy_status`, full-su"
             }
           ]
@@ -772,7 +775,7 @@
           "match_count": 1,
           "matches": [
             {
-              "line": 87,
+              "line": 91,
               "excerpt": "OPERATOR_RELEASE_SUMMARY_OUT ?= ops/operator/operator-release-summary.json"
             }
           ]
@@ -782,7 +785,7 @@
           "match_count": 1,
           "matches": [
             {
-              "line": 435,
+              "line": 424,
               "excerpt": "\"operator-release-summary\": \"ops/operator/operator-release-summary.json\","
             }
           ]

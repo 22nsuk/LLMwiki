@@ -168,6 +168,48 @@ class GoalRuntimeCleanTransientTests(unittest.TestCase):
             (self.vault / "runs/goal-active/state/auto-improve-goal-session-result.json").exists()
         )
 
+    def test_verified_certificate_evidence_tree_is_protected_from_stale_cleanup(self) -> None:
+        self._write("runs/goal-old/state/codex-goal-contract.json", "{}\n")
+        self._write("runs/goal-old/state/goal-run-status.json", "{}\n")
+        self._write("runs/goal-old/state/audit-log.jsonl", "{}\n")
+        self._write("ops/reports/auto-improve-sessions/old.json", "{}\n")
+        self._write(
+            "ops/reports/goal-runtime-certificate.json",
+            json.dumps(
+                {
+                    "artifact_kind": "goal_runtime_certificate",
+                    "status": "pass",
+                    "certificate": {"verification_status": "already_verified", "eligible": True},
+                    "contract_update": {"runtime_certificate_verified_after": True},
+                    "goal": {"contract_path": "runs/goal-old/state/codex-goal-contract.json"},
+                    "run": {"status_report_path": "runs/goal-old/state/goal-run-status.json"},
+                    "session_evidence": {"path": "ops/reports/auto-improve-sessions/old.json"},
+                    "run_artifacts": {
+                        "checks": [
+                            {"path": "runs/goal-old/state/audit-log.jsonl", "status": "pass"}
+                        ]
+                    },
+                    "evidence_paths": [],
+                },
+                sort_keys=True,
+            ),
+        )
+
+        report = build_report(
+            GoalRuntimeCleanTransientRequest(
+                vault=self.vault,
+                apply=True,
+                context=fixed_context(),
+            )
+        )
+
+        self.assertIn("runs/goal-old", report["protected_paths"])
+        self.assertTrue((self.vault / "runs/goal-old/state/goal-run-status.json").is_file())
+        self.assertNotIn(
+            "runs/goal-old",
+            {item["path"] for item in report["cleanup_candidates"] if item["action"] == "removed"},
+        )
+
     def test_write_report_uses_schema_backed_output(self) -> None:
         report = build_report(
             GoalRuntimeCleanTransientRequest(

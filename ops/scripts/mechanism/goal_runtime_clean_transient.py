@@ -37,6 +37,7 @@ PROTECTED_REPORT_SURFACES = (
     "ops/reports/goal-run-status.json",
     "ops/reports/goal-runtime-certificate.json",
 )
+GOAL_RUNTIME_CERTIFICATE_REPORT = "ops/reports/goal-runtime-certificate.json"
 GOAL_SESSION_RESULT_FILENAME = "auto-improve-goal-session-result.json"
 GOAL_SESSION_RESULT_CATEGORY = "stale_goal_session_result"
 
@@ -109,6 +110,64 @@ def _string_values(payload: dict[str, Any]) -> list[str]:
     return values
 
 
+def _verified_certificate_report(report: dict[str, Any]) -> bool:
+    certificate = report.get("certificate")
+    contract_update = report.get("contract_update")
+    return (
+        report.get("artifact_kind") == "goal_runtime_certificate"
+        and report.get("status") == "pass"
+        and isinstance(certificate, dict)
+        and certificate.get("verification_status") in {"eligible", "already_verified"}
+        and certificate.get("eligible") is True
+        and isinstance(contract_update, dict)
+        and contract_update.get("runtime_certificate_verified_after") is True
+    )
+
+
+def _certificate_referenced_paths(report: dict[str, Any]) -> list[str]:
+    paths: list[str] = []
+    goal = report.get("goal")
+    if isinstance(goal, dict):
+        paths.append(str(goal.get("contract_path", "")).strip())
+    run = report.get("run")
+    if isinstance(run, dict):
+        paths.append(str(run.get("status_report_path", "")).strip())
+    session_evidence = report.get("session_evidence")
+    if isinstance(session_evidence, dict):
+        paths.append(str(session_evidence.get("path", "")).strip())
+    run_artifacts = report.get("run_artifacts")
+    if isinstance(run_artifacts, dict):
+        checks = run_artifacts.get("checks")
+        if isinstance(checks, list):
+            paths.extend(
+                str(check.get("path", "")).strip()
+                for check in checks
+                if isinstance(check, dict)
+            )
+    evidence_paths = report.get("evidence_paths")
+    if isinstance(evidence_paths, list):
+        paths.extend(
+            str(evidence.get("path", "")).strip()
+            for evidence in evidence_paths
+            if isinstance(evidence, dict)
+        )
+    return list(dict.fromkeys(path for path in paths if path))
+
+
+def _certificate_protected_paths(vault: Path) -> list[str]:
+    report = _status_report(vault, GOAL_RUNTIME_CERTIFICATE_REPORT)
+    if not _verified_certificate_report(report):
+        return []
+    protected: set[str] = set()
+    for rel_path in _certificate_referenced_paths(report):
+        normalized = _safe_relative_path(vault, rel_path)
+        if normalized:
+            protected.add(normalized)
+            if normalized.startswith("runs/") and "/state/" in normalized:
+                protected.add(normalized.split("/state/", maxsplit=1)[0])
+    return sorted(protected)
+
+
 def _protected_paths(vault: Path, status_report_path: str, status: dict[str, Any]) -> list[str]:
     protected = {status_report_path, *PROTECTED_REPORT_SURFACES}
     goal = status.get("goal")
@@ -126,7 +185,11 @@ def _protected_paths(vault: Path, status_report_path: str, status: dict[str, Any
     for rel_path in list(protected):
         if rel_path.startswith("runs/") and "/state/" in rel_path:
             protected.add(rel_path.split("/state/", maxsplit=1)[0])
-    return sorted({path for rel_path in protected if (path := _safe_relative_path(vault, rel_path))})
+    normalized_paths = {
+        path for rel_path in protected if (path := _safe_relative_path(vault, rel_path))
+    }
+    normalized_paths.update(_certificate_protected_paths(vault))
+    return sorted(normalized_paths)
 
 
 def _is_protected(rel_path: str, protected_paths: list[str]) -> bool:

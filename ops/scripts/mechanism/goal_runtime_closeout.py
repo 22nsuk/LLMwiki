@@ -42,9 +42,7 @@ PUBLISH_TARGETS = (
     "goal-runtime-closeout-publish-script-output-surfaces",
     "goal-runtime-publish-local-evidence",
     "goal-runtime-certificate",
-    "external-report-action-matrix",
-    "generated-artifact-index",
-    "artifact-freshness",
+    "generated-artifact-converge",
 )
 POST_PUBLISH_FINALIZATION_TARGETS = (
     "test-artifact-finalization",

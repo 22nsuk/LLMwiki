@@ -1,23 +1,23 @@
 {
   "$schema": "ops/schemas/test-execution-summary.schema.json",
   "artifact_kind": "test_execution_summary",
-  "generated_at": "2026-05-21T09:52:11Z",
+  "generated_at": "2026-05-21T12:37:23Z",
   "producer": "ops.scripts.test_execution_summary",
   "source_command": "python -m ops.scripts.test_execution_summary --vault . --suite report-contract-summary --collect-nodeids --deselection-policy ops/policies/report-contract-deselections.json -- .venv/bin/python -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_clean_fixture_regeneration_guard.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_goal_runtime_clean_transient.py tests/test_goal_runtime_fixed_point_check.py tests/test_run_templates.py",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "088cd9a077d9233d4f0f2cd1f39f27410c158512eb3de72ac0b7710ff4aa86d6",
+  "source_tree_fingerprint": "d356b03a1755805399f54b400f66269467b4af2ff43a6f7172748eea8785d98d",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "9723184baf2c03d63eb746bd49cfab746f2a29e2b29f05ee97b2a3a802dae4bf",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b6a7530898be27f1c114dc37c64bb35558dff83186584c7cbfa96f0c4a181cd2",
     "deselection_policy": "304ab09b5d5d34ab1992a9b2ce54aa5a5f4e0b73f928db808de6e6df372fba91",
-    "test_targets": "fd275396939010d5927e1d8d5ad46f29a93e53201a892a202f6f0ebc6116a9f2",
+    "test_targets": "50caed87c660fa4698d75c9909fbabb94aa94b1eb179e03512919732d1ed2c24",
     "deselected_tests": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-    "deselection_lifecycle": "bc6fe95c2060f4db002f10f2cb1d5550269317365bfbff4d396226c77273f8e9",
+    "deselection_lifecycle": "c18b9f2b3b9fffa9b2b99e39aee35ae553e6a5643b1a450fcdc0e63c46786230",
     "evidence_artifact_consistency": "c05eee63c53707bc9495a70f7106f4f5382246ee11f9b76770a1c94d8eb8ffb9",
     "evidence_artifacts": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-    "nodeid_outcome_consistency": "6eaaf7d4899ab96296bbee11eb7b5dc44ec4dcd5835003f6fa480f9dc1ae89dc",
+    "nodeid_outcome_consistency": "321500c4bc38b495b3986b1b768901594766d7658f876a0e3993cc7d87fedd31",
     "suite": "e8806087007f73940192067c46554732289adb000251e116b8eda2437a0ff078",
     "suite_coverage": "b77ace30e3859d15a04208659cffabca258e1fcdfda97192c160769a041b2b7e",
     "wrapped_command": "21c46c78c967c47e76eb351081269d094e92a6e63557468d1b4024290913ce41"
@@ -28,7 +28,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T09:52:11Z"
+    "checked_at": "2026-05-21T12:37:23Z"
   },
   "vault": ".",
   "policy": {
@@ -51,9 +51,9 @@
   "timed_out": false,
   "timeout_seconds": 5400,
   "termination_reason": "completed",
-  "duration_ms": 25517,
+  "duration_ms": 25716,
   "counts": {
-    "passed": 189,
+    "passed": 190,
     "failed": 0,
     "errors": 0,
     "skipped": 0,
@@ -101,11 +101,11 @@
     },
     {
       "path": "tests/test_generated_report_contracts.py",
-      "sha256": "97e028d16bb5fe651a1e528f14cb09958a1d243bf4392a236d2bee650d6f6b0b"
+      "sha256": "95458efa8f5df65c143b07bfb098c679088ef2a51b31515f352b727534e8596f"
     },
     {
       "path": "tests/test_goal_runtime_clean_transient.py",
-      "sha256": "c8eda3e20e6d4c519f16b0c4ffdfaa582318aa84086d05ca2060f35e75590489"
+      "sha256": "9f9875e0144cb36ceb7723df6bd2a2192c149f74ffc501e321ff447406050c02"
     },
     {
       "path": "tests/test_goal_runtime_fixed_point_check.py",
@@ -113,7 +113,7 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "8ef323d9dd480aeca87208f19f13e1a177b936d0e13aacd85cce0c009a27674d"
+      "sha256": "f4f265e6c4ed6c5a95ebd9ecc0209b0c6b037675d080e8035c169f475a2e069b"
     },
     {
       "path": "tests/test_pytest_entrypoint_guidance.py",
@@ -137,13 +137,13 @@
     },
     {
       "path": "tests/test_workflow_dependency_planner.py",
-      "sha256": "2101cccb95f4416f83c61f305441a26dbb7aadcb0c3d294d3dfb112e62cd0559"
+      "sha256": "606116ac78eb634fa4df3b048ee0f1d5e36192129cd2a797aeed0d119f33191e"
     }
   ],
   "deselected_tests": [],
   "deselection_lifecycle": {
     "status": "pass",
-    "checked_at": "2026-05-21T09:52:11Z",
+    "checked_at": "2026-05-21T12:37:23Z",
     "actual_deselected_count": 0,
     "max_allowed_deselected_count": 0,
     "over_budget": false,
@@ -164,16 +164,16 @@
   "pytest_collect_nodeid_digest": {
     "status": "collected",
     "command": ".venv/bin/python -m pytest -o addopts= --collect-only -q --capture=no tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_clean_fixture_regeneration_guard.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_goal_runtime_clean_transient.py tests/test_goal_runtime_fixed_point_check.py tests/test_run_templates.py -m 'report_contract and not artifact_finalization'",
-    "nodeid_count": 189,
-    "sha256": "2a874f23c9829eca156ed98620cf7af05b72a86b84bdc759230100a9e5da52a7",
+    "nodeid_count": 190,
+    "sha256": "8405da485b220bcf7a0044206eb1dd49019d826c22646bc55dbb11a5cc04bbaf",
     "reason": ""
   },
   "nodeid_outcome_consistency": {
     "status": "pass",
-    "nodeid_count": 189,
-    "outcome_count": 189,
+    "nodeid_count": 190,
+    "outcome_count": 190,
     "counted_outcomes": {
-      "passed": 189,
+      "passed": 190,
       "skipped": 0,
       "xfailed": 0,
       "xpassed": 0
@@ -188,7 +188,7 @@
     "checks": [],
     "blockers": []
   },
-  "stdout_tail": "........................................................................ [ 38%]\n........................................................................ [ 76%]\n.............................................                            [100%]\n189 passed, 8 deselected in 25.33s\n",
+  "stdout_tail": "........................................................................ [ 37%]\n........................................................................ [ 75%]\n..............................................                           [100%]\n190 passed, 8 deselected in 25.51s\n",
   "stderr_tail": "",
   "release_contract_diagnosis": [
     {
@@ -196,8 +196,8 @@
       "status": "clean_pass",
       "lane": "clean",
       "command": ".venv/bin/python -m pytest -m 'report_contract and not artifact_finalization' tests/test_test_execution_summary.py tests/test_makefile_static_gates.py tests/test_ci_workflow_static.py tests/test_pytest_entrypoint_guidance.py tests/test_generated_report_contracts.py tests/test_report_schemas.py tests/test_report_schema_sample_regeneration.py tests/test_workflow_dependency_planner.py tests/test_clean_fixture_regeneration_guard.py tests/test_auto_improve_iteration_runtime.py::AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface tests/test_goal_runtime_clean_transient.py tests/test_goal_runtime_fixed_point_check.py tests/test_run_templates.py",
-      "duration_seconds": 25.52,
-      "checked_at": "2026-05-21T09:52:11Z",
+      "duration_seconds": 25.72,
+      "checked_at": "2026-05-21T12:37:23Z",
       "blocker_conditions": [],
       "accepted_risk_family": null,
       "risk_acceptance_ref": null,

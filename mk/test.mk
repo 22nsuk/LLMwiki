@@ -168,14 +168,13 @@ report-contract-closeout:
 	$(MAKE) report-contract-closeout-precheck
 	$(MAKE) release-smoke-full-reuse
 	$(MAKE) test-execution-summary
-	$(MAKE) generated-artifact-index
-	$(MAKE) artifact-freshness
+	$(MAKE) generated-artifact-converge
 	$(MAKE) release-closeout-summary-report
 	$(MAKE) release-evidence-cohort
-	$(MAKE) artifact-freshness
-	$(MAKE) generated-artifact-index
+	$(MAKE) generated-artifact-converge
 	$(MAKE) release-closeout-summary-report
 	$(MAKE) auto-improve-readiness-report-body
+	$(MAKE) generated-artifact-converge
 	$(MAKE) test-artifact-finalization
 	@echo "report-contract-closeout refreshed generated precheck evidence, report-contract test evidence, finalization self-checks, closeout artifacts, and auto-improve readiness without rerunning the pytest wrapper."
 test-execution-summary-fast:
@@ -190,20 +189,16 @@ test-execution-summary-report-contract-refresh:
 	$(MAKE) refresh-generated-core
 	$(MAKE) auto-improve-readiness-report-body
 	$(MAKE) release-smoke-full-reuse
-	$(MAKE) generated-artifact-index
-	$(MAKE) artifact-freshness
+	$(MAKE) generated-artifact-converge
 	@status=0; $(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)" --collect-nodeids --deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)" -- $(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_SERIAL_FLAGS) || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --out "$(TEST_EXECUTION_SUMMARY_OUT)" --schema ops/schemas/test-execution-summary.schema.json --expected-artifact-kind test_execution_summary --expected-producer ops.scripts.test_execution_summary || exit $$?; if [ $$status -ne 0 ]; then echo "test-execution-summary-report-contract-refresh promoted a non-pass bootstrap summary; strict test-execution-summary will rerun later in closeout."; fi; exit 0
-	$(MAKE) generated-artifact-index
-	$(MAKE) artifact-freshness
+	$(MAKE) generated-artifact-converge
 
 test-execution-summary-report-contract-refresh-no-smoke:
 	$(MAKE) refresh-generated-core
 	$(MAKE) auto-improve-readiness-report-body
-	$(MAKE) generated-artifact-index
-	$(MAKE) artifact-freshness
+	$(MAKE) generated-artifact-converge
 	@status=0; $(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)" --collect-nodeids --deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)" -- $(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_SERIAL_FLAGS) || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --out "$(TEST_EXECUTION_SUMMARY_OUT)" --schema ops/schemas/test-execution-summary.schema.json --expected-artifact-kind test_execution_summary --expected-producer ops.scripts.test_execution_summary || exit $$?; if [ $$status -ne 0 ]; then echo "test-execution-summary-report-contract-refresh-no-smoke promoted a non-pass bootstrap summary; strict test-execution-summary will rerun later in closeout."; fi; exit 0
-	$(MAKE) generated-artifact-index
-	$(MAKE) artifact-freshness
+	$(MAKE) generated-artifact-converge
 
 test-execution-summary: test-execution-summary-report-contract
 
@@ -214,8 +209,7 @@ test-execution-summary-full:
 	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)/full-suite-shard-1.json" --suite "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_SUITE)" --collect-nodeids --junit-xml-path "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)" --execution-log-out "$(TEST_EXECUTION_SUMMARY_FULL_LOG_OUT)" --failed-nodeids-out "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.failed-nodeids.txt" -- $(PYTHON) -m pytest --junit-xml "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)" $(PYTEST_SERIAL_FLAGS)
 	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_FULL_SUITE)" --aggregate --aggregate-dir "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_OUT)" --schema ops/schemas/test-execution-summary.schema.json --expected-artifact-kind test_execution_summary --expected-producer ops.scripts.test_execution_summary
-	$(MAKE) generated-artifact-index
-	$(MAKE) artifact-freshness
+	$(MAKE) generated-artifact-converge
 
 test-execution-summary-full-refresh: test-execution-summary-full
 	@echo "full-suite evidence refreshed; collect-only nodeid digest and count recorded in $(TEST_EXECUTION_SUMMARY_FULL_OUT)"

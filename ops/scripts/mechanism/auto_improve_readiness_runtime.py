@@ -15,6 +15,11 @@ from ops.scripts.artifact_freshness_runtime import (
     canonical_report_loading_issue,
 )
 from ops.scripts.learning_readiness_vocabulary import EXECUTION_NO_RUNNABLE_PROPOSAL_BLOCKER_ID
+from ops.scripts.learning_readiness_signoff_state import (
+    SIGNOFF_REPORT_REL_PATH,
+    SUPPORTED_BLOCKER_ID as SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID,
+    learning_readiness_signoff_summary,
+)
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import AUTO_IMPROVE_READINESS_REPORT_SCHEMA_PATH
@@ -101,6 +106,7 @@ class ReadinessInputs:
     active_release_authority_preflight: dict[str, Any]
     active_goal_worktree_guard: dict[str, Any]
     active_remediation_backlog: dict[str, Any]
+    active_learning_signoff: dict[str, Any]
     remediation_backlog_path: str
     artifact_freshness_summary: dict[str, Any]
     selected_contract_summary: dict[str, Any]
@@ -113,6 +119,7 @@ class ReadinessInputs:
     release_authority_preflight_summary: dict[str, Any]
     goal_worktree_guard_summary: dict[str, Any]
     remediation_backlog_summary: dict[str, Any]
+    learning_signoff_summary: dict[str, Any]
     loop_health_summary: dict[str, Any]
     same_eval_telemetry_summary: dict[str, Any]
     reports_present: bool
@@ -274,6 +281,7 @@ def _load_readiness_report_payloads(
         "release_authority_preflight": _load_release_authority_preflight_json(vault),
         "goal_worktree_guard": _load_optional_json(vault / GOAL_WORKTREE_GUARD_REPORT_REL_PATH),
         "remediation_backlog": _load_json(vault / remediation_backlog_path),
+        "learning_signoff": _load_optional_json(vault / SIGNOFF_REPORT_REL_PATH),
     }
 
 
@@ -442,6 +450,7 @@ def load_readiness_inputs(
         active_release_authority_preflight=reports["release_authority_preflight"],
         active_goal_worktree_guard=reports["goal_worktree_guard"],
         active_remediation_backlog=reports["remediation_backlog"],
+        active_learning_signoff=reports["learning_signoff"],
         remediation_backlog_path=remediation_backlog_path,
         artifact_freshness_summary=release_summaries["artifact_freshness"],
         selected_contract_summary=release_summaries["selected_contract"],
@@ -458,6 +467,10 @@ def load_readiness_inputs(
         remediation_backlog_summary=_remediation_backlog_summary(
             reports["remediation_backlog"],
             remediation_backlog_path=remediation_backlog_path,
+        ),
+        learning_signoff_summary=learning_readiness_signoff_summary(
+            reports["learning_signoff"],
+            generated_at=runtime_context.isoformat_z(),
         ),
         loop_health_summary=loop_health_summary,
         same_eval_telemetry_summary=same_eval_telemetry_summary,
@@ -622,9 +635,16 @@ def _readiness_promotion_blockers(
     learning: LearningReadinessAssessment,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     learning_blockers = [blocker.to_wire() for blocker in _learning_release_blockers(learning)]
+    learning_promotion_blockers = learning_blockers
+    if bool(inputs.learning_signoff_summary.get("active")):
+        learning_promotion_blockers = [
+            blocker
+            for blocker in learning_blockers
+            if str(blocker.get("id", "")).strip() != SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID
+        ]
     promotion_blockers = [
         *_execution_blockers(execution),
-        *learning_blockers,
+        *learning_promotion_blockers,
         *_release_gate_promotion_blockers(
             inputs.selected_contract_summary,
             inputs.source_package_clean_extract_summary,
@@ -668,6 +688,7 @@ def _readiness_inputs_payload(*, remediation_backlog_path: str) -> dict[str, str
         "release_authority_preflight_report": RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
         "goal_worktree_guard_report": GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
         "remediation_backlog_report": remediation_backlog_path,
+        "learning_readiness_signoff_report": SIGNOFF_REPORT_REL_PATH,
     }
 
 
@@ -686,6 +707,7 @@ def _readiness_diagnostics_payload(inputs: ReadinessInputs) -> dict[str, Any]:
         "release_authority_preflight_summary": inputs.release_authority_preflight_summary,
         "goal_worktree_guard_summary": inputs.goal_worktree_guard_summary,
         "remediation_backlog_summary": inputs.remediation_backlog_summary,
+        "learning_signoff_summary": inputs.learning_signoff_summary,
     }
 
 
@@ -777,6 +799,7 @@ def render_readiness_report(
                 "release_authority_preflight_report": RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
                 "goal_worktree_guard_report": GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
                 "remediation_backlog_report": inputs.remediation_backlog_path,
+                "learning_readiness_signoff_report": SIGNOFF_REPORT_REL_PATH,
             },
             path_group_inputs={
                 "release_authority_preflight_report_candidates": list(

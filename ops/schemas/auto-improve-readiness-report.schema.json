@@ -189,7 +189,8 @@
         "release_closeout_post_check_finalizer_report",
         "release_authority_preflight_report",
         "goal_worktree_guard_report",
-        "remediation_backlog_report"
+        "remediation_backlog_report",
+        "learning_readiness_signoff_report"
       ],
       "properties": {
         "refresh_generated_target": {
@@ -236,6 +237,9 @@
         },
         "remediation_backlog_report": {
           "type": "string"
+        },
+        "learning_readiness_signoff_report": {
+          "type": "string"
         }
       }
     },
@@ -255,7 +259,8 @@
         "artifact_finalization_summary",
         "release_authority_preflight_summary",
         "goal_worktree_guard_summary",
-        "remediation_backlog_summary"
+        "remediation_backlog_summary",
+        "learning_signoff_summary"
       ],
       "properties": {
         "loop_health_summary": {
@@ -296,6 +301,9 @@
       },
       "remediation_backlog_summary": {
         "$ref": "#/$defs/remediation_backlog_summary"
+      },
+      "learning_signoff_summary": {
+        "$ref": "#/$defs/learning_signoff_summary"
       }
     }
   },
@@ -1152,6 +1160,41 @@
         "currentness_status": {
           "type": "string"
         },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "learning_signoff_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "signoff_status",
+        "active",
+        "linked_blocker_id",
+        "accepted_by",
+        "expires_at",
+        "risk_owner",
+        "summary"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "signoff_status": {
+          "type": "string",
+          "enum": [
+            "missing",
+            "template_only",
+            "kind_mismatch",
+            "unsupported_blocker",
+            "invalid",
+            "expired",
+            "active"
+          ]
+        },
+        "active": { "type": "boolean" },
+        "linked_blocker_id": { "type": "string" },
+        "accepted_by": { "type": "string" },
+        "expires_at": { "type": "string" },
+        "risk_owner": { "type": "string" },
         "summary": { "type": "string", "minLength": 1 }
       }
     },

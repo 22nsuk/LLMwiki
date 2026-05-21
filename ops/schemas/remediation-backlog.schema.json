@@ -89,6 +89,8 @@
         "session_synopsis",
         "learning_claim_activation",
         "auto_improve_sessions",
+        "goal_runtime_certificate",
+        "learning_readiness_signoff",
         "status_overrides"
       ],
       "properties": {
@@ -96,6 +98,8 @@
         "session_synopsis": { "type": "string", "minLength": 1 },
         "learning_claim_activation": { "type": "string", "minLength": 1 },
         "auto_improve_sessions": { "type": "string", "minLength": 1 },
+        "goal_runtime_certificate": { "type": "string", "minLength": 1 },
+        "learning_readiness_signoff": { "type": "string", "minLength": 1 },
         "status_overrides": { "type": "string", "minLength": 1 }
       }
     },

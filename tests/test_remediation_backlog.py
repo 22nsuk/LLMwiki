@@ -202,6 +202,140 @@ class RemediationBacklogTests(unittest.TestCase):
             self.assertEqual(report["summary"]["open_item_count"], 2)
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_active_learning_signoff_defers_learning_review_backlog_item(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            write_json(vault, "ops/reports/self-improvement-negative-lessons.json", {"lessons": []})
+            write_json(
+                vault,
+                "ops/reports/session-synopsis.json",
+                {
+                    "recent_blockers": [
+                        {
+                            "id": "learning_blocked_by_review_required",
+                            "source": "auto_improve_readiness.promotion_blockers",
+                            "status": "open",
+                            "reason": "learning uncertainty requires review",
+                            "repair_target": "Record accepted risk or improve learning metrics.",
+                        },
+                        {
+                            "id": "goal_status_learning_blocked_by_review_required",
+                            "source": "goal_run_status.blockers",
+                            "status": "open",
+                            "reason": "goal status mirrors the learning review blocker",
+                            "repair_target": "Record accepted risk or improve learning metrics.",
+                        }
+                    ]
+                },
+            )
+            write_json(vault, "ops/reports/learning_claim_activation_report.json", {"status": "pass"})
+            write_json(
+                vault,
+                "ops/reports/learning-readiness-signoff.json",
+                {
+                    "artifact_kind": "learning_readiness_signoff",
+                    "linked_blocker_id": "learning_blocked_by_review_required",
+                    "accepted_by": "operator@example.test",
+                    "accepted_at": "2026-05-17T11:00:00Z",
+                    "expires_at": "2026-05-24T11:00:00Z",
+                    "risk_owner": "runtime-maintainer",
+                },
+            )
+
+            report = build_report(vault, context=fixed_context())
+            items = {item["item_id"]: item for item in report["items"]}
+
+            self.assertEqual(
+                items["active_blocker_learning_blocked_by_review_required"]["status"],
+                "deferred",
+            )
+            self.assertEqual(
+                items["active_blocker_goal_status_learning_blocked_by_review_required"][
+                    "status"
+                ],
+                "deferred",
+            )
+            self.assertIn(
+                "ops/reports/learning-readiness-signoff.json",
+                items["active_blocker_learning_blocked_by_review_required"]["evidence_paths"],
+            )
+            self.assertIn(
+                "ops/reports/learning-readiness-signoff.json",
+                items["active_blocker_goal_status_learning_blocked_by_review_required"][
+                    "evidence_paths"
+                ],
+            )
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["summary"]["open_item_count"], 0)
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_verified_certificate_closes_incomplete_certificate_item_only_with_live_evidence(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            write_json(vault, "ops/reports/self-improvement-negative-lessons.json", {"lessons": []})
+            write_json(
+                vault,
+                "ops/reports/session-synopsis.json",
+                {
+                    "recent_blockers": [
+                        {
+                            "id": "goal_status_self_improvement_loop_certificate_incomplete",
+                            "source": "goal_run_status.blockers",
+                            "status": "open",
+                            "reason": "self-improvement loop certificate incomplete",
+                            "repair_target": "Refresh goal runtime certificate.",
+                        }
+                    ]
+                },
+            )
+            write_json(vault, "ops/reports/learning_claim_activation_report.json", {"status": "pass"})
+            certificate = {
+                "artifact_kind": "goal_runtime_certificate",
+                "producer": "ops.scripts.goal_runtime_certificate_report",
+                "status": "pass",
+                "goal": {"contract_path": "runs/goal-live/state/codex-goal-contract.json"},
+                "certificate": {"verification_status": "already_verified", "eligible": True},
+                "contract_update": {"runtime_certificate_verified_after": True},
+                "run": {"status_report_path": "runs/goal-live/state/goal-run-status.json"},
+                "session_evidence": {"path": "ops/reports/auto-improve-sessions/live.json"},
+                "run_artifacts": {
+                    "checks": [
+                        {"path": "runs/goal-live/state/audit-log.jsonl", "status": "pass"}
+                    ]
+                },
+                "evidence_paths": [
+                    {"path": "ops/reports/auto-improve-readiness.json", "status": "present"}
+                ],
+                "blockers": [],
+            }
+            write_json(vault, "ops/reports/goal-runtime-certificate.json", certificate)
+
+            stale_report = build_report(vault, context=fixed_context())
+            stale_item = stale_report["items"][0]
+            self.assertEqual(stale_item["status"], "open")
+
+            for rel_path in [
+                "runs/goal-live/state/codex-goal-contract.json",
+                "runs/goal-live/state/goal-run-status.json",
+                "runs/goal-live/state/audit-log.jsonl",
+                "ops/reports/auto-improve-sessions/live.json",
+                "ops/reports/auto-improve-readiness.json",
+            ]:
+                (vault / rel_path).parent.mkdir(parents=True, exist_ok=True)
+                (vault / rel_path).write_text("{}\n", encoding="utf-8")
+
+            live_report = build_report(vault, context=fixed_context())
+            live_item = live_report["items"][0]
+            self.assertEqual(live_item["status"], "closed")
+            self.assertEqual(live_report["status"], "pass")
+            self.assertEqual(validate_with_schema(live_report, load_schema(SCHEMA_PATH)), [])
+
     def test_build_report_can_read_run_local_session_and_negative_lessons(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

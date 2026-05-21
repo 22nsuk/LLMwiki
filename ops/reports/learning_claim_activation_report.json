@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-claim-activation-report.schema.json",
   "artifact_kind": "learning_claim_activation_report",
-  "generated_at": "2026-05-20T14:23:05Z",
+  "generated_at": "2026-05-21T11:02:52Z",
   "producer": "ops.scripts.learning_claim_activation_report",
   "source_command": "python -m ops.scripts.learning_claim_activation_report --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "7e48bb48352541056b800c1e9a961b2b84f1300ec2579b7d9fab541dc24d44be",
+  "source_tree_fingerprint": "ac357a83c8c4d4f110faf8334bcf7ccdf191bd6af59041dd8eb9520a52fbd7b8",
   "input_fingerprints": {
-    "policy": "5f97cf7619b458d6e8aa229fa3f318d888cf78c4a806b6b72a552c360ceb0894",
+    "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "d366a06d6c9fbade9f99a3a702f7e88409d8e793328122ab6b196c4d7d670305",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "dacdaf0814200d85ea19b48020b2b4fc37138c2de5e4969ffef772480063bbd0",
-    "learning_claim_activation_inputs": "4bbc5ecda341d5f43b324327e86c956db799c35de3f4ab961016f2b5c6c3513b"
+    "learning_claim_activation_inputs": "c4630301a3e1205ca3cad124be3f010707c5926ba764cd7d9443199f6efe2af0"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T14:23:05Z"
+    "checked_at": "2026-05-21T11:02:52Z"
   },
   "vault": ".",
   "policy": {
@@ -31,9 +31,9 @@
     "activation_status": "not_candidate",
     "claim_level": "none",
     "claim_wording_allowed": false,
-    "blocked_predicate_count": 1,
+    "blocked_predicate_count": 2,
     "anti_slop_preview_status": "attention",
-    "negative_learning_pattern_count": 3,
+    "negative_learning_pattern_count": 7,
     "gate_effect": "none"
   },
   "claim_candidate": {
@@ -58,13 +58,13 @@
     "evidence_digest": {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "bbd6f92d95bac554925d3fe657a3b370f2ece6ee67c189501d48d6695fc12014",
+      "sha256": "a776a6f9730e331e820a169715d9fdcf17742817b70f28e738d98b236f71f2b1",
       "status": "present"
     },
     "post_seal_linkage": {
       "path": "build/release/release-post-seal-attestation.json",
-      "sha256": "969b5f0ceba4f683fa31ac06fa544b6ad163314646320826cde201da6ac6e6a6",
-      "post_seal_verified": true
+      "sha256": "",
+      "post_seal_verified": false
     }
   },
   "blocked_predicates": [
@@ -80,13 +80,34 @@
       "evidence_digest": {
         "path": "ops/reports/learning-delta-scoreboard.json",
         "exists": true,
-        "sha256": "bbd6f92d95bac554925d3fe657a3b370f2ece6ee67c189501d48d6695fc12014",
+        "sha256": "a776a6f9730e331e820a169715d9fdcf17742817b70f28e738d98b236f71f2b1",
         "status": "present"
       },
       "post_seal_linkage": {
         "path": "build/release/release-post-seal-attestation.json",
-        "sha256": "969b5f0ceba4f683fa31ac06fa544b6ad163314646320826cde201da6ac6e6a6",
-        "linked": true
+        "sha256": "",
+        "linked": false
+      }
+    },
+    {
+      "id": "post_seal_learning_claim_linkage",
+      "status": "fail",
+      "source": "release_post_seal_attestation",
+      "source_path": "build/release/release-post-seal-attestation.json",
+      "current": "post_seal_verified=False",
+      "required": "release_post_seal_attestation.status == pass",
+      "repair_target": "Run release-post-seal-attestation after the candidate evidence is sealed and verify the learning claim authority binding.",
+      "summary": "Post-seal learning claim authority is not verified for the current evidence set.",
+      "evidence_digest": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "exists": false,
+        "sha256": "",
+        "status": "missing"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "",
+        "linked": false
       }
     }
   ],
@@ -94,13 +115,13 @@
     {
       "path": "ops/reports/auto-improve-readiness.json",
       "exists": true,
-      "sha256": "fa06edd7b2657b4d9db1efa150a8d1bd5696f2993171fb61a3d58bfcb5e57095",
+      "sha256": "d65863296f5fb3e864b5653d18e57c3404c0891556e6305b5e6325e04108a0a4",
       "status": "present"
     },
     {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "bbd6f92d95bac554925d3fe657a3b370f2ece6ee67c189501d48d6695fc12014",
+      "sha256": "a776a6f9730e331e820a169715d9fdcf17742817b70f28e738d98b236f71f2b1",
       "status": "present"
     },
     {
@@ -124,25 +145,25 @@
     {
       "path": "ops/reports/source-package-clean-extract.json",
       "exists": true,
-      "sha256": "dd906c540c08d9f3ff8d34d77a9fa8e470628b59ee13794fb95ce547a05af26d",
+      "sha256": "136f0187ac37fe12a1803ed575b2e917b2f5c091b7ab99fdc1381ccfed40d770",
       "status": "present"
     },
     {
       "path": "build/release/release-post-seal-attestation.json",
-      "exists": true,
-      "sha256": "969b5f0ceba4f683fa31ac06fa544b6ad163314646320826cde201da6ac6e6a6",
-      "status": "present"
+      "exists": false,
+      "sha256": "",
+      "status": "missing"
     }
   ],
   "post_seal_linkage": {
     "path": "build/release/release-post-seal-attestation.json",
-    "exists": true,
-    "sha256": "969b5f0ceba4f683fa31ac06fa544b6ad163314646320826cde201da6ac6e6a6",
-    "status": "present",
-    "attestation_status": "pass",
-    "claim_level": "none",
-    "learning_claim_evidence_bundle_sha256": "4e6118c540721a799ba27accd51368eb9a9807017450d1dbc411af97d293e35a",
-    "post_seal_verified": true
+    "exists": false,
+    "sha256": "",
+    "status": "missing",
+    "attestation_status": "missing",
+    "claim_level": "",
+    "learning_claim_evidence_bundle_sha256": "",
+    "post_seal_verified": false
   },
   "anti_slop_preview_ledger": {
     "mode": "preview",
@@ -205,8 +226,26 @@
     "mode": "advisory",
     "gate_effect": "none",
     "status": "attention",
-    "pattern_count": 3,
+    "pattern_count": 7,
     "patterns": [
+      {
+        "pattern_id": "blocked_queue_recent_log_overlap",
+        "decisions": [
+          "BLOCKED"
+        ],
+        "run_ids": [],
+        "occurrence_count": 1,
+        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+        "repair_target": "Resolve queue blocked reason recent_log_overlap before rerunning the same proposal lane.",
+        "evidence_digests": [
+          {
+            "path": "ops/reports/auto-improve-readiness.json",
+            "exists": true,
+            "sha256": "d65863296f5fb3e864b5653d18e57c3404c0891556e6305b5e6325e04108a0a4",
+            "status": "present"
+          }
+        ]
+      },
       {
         "pattern_id": "discard_behavior_delta_before_after_evidence_missing",
         "decisions": [
@@ -222,7 +261,7 @@
           {
             "path": "ops/reports/learning-delta-scoreboard.json",
             "exists": true,
-            "sha256": "bbd6f92d95bac554925d3fe657a3b370f2ece6ee67c189501d48d6695fc12014",
+            "sha256": "a776a6f9730e331e820a169715d9fdcf17742817b70f28e738d98b236f71f2b1",
             "status": "present"
           }
         ]
@@ -248,6 +287,53 @@
         ]
       },
       {
+        "pattern_id": "discard_changed_files_manifest_scope",
+        "decisions": [
+          "DISCARD"
+        ],
+        "run_ids": [
+          "active-report-self-improve-certificate-rerun6-run-01-auto-improve-iteration-persistence-runtime"
+        ],
+        "occurrence_count": 1,
+        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+        "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=changed_files_manifest_scope.",
+        "evidence_digests": [
+          {
+            "path": "runs/active-report-self-improve-certificate-rerun6-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "8690a3decb53389650c1672e479f27135608a6bf4d801ebc459309ea9df146c3",
+            "status": "present"
+          }
+        ]
+      },
+      {
+        "pattern_id": "discard_equal_score_secondary_eligibility",
+        "decisions": [
+          "DISCARD"
+        ],
+        "run_ids": [
+          "active-report-self-improve-certificate-rerun-run-02-auto-improve-iteration-persistence-runtime",
+          "active-report-self-improve-certificate-run-02-auto-improve-iteration-persistence-runtime"
+        ],
+        "occurrence_count": 2,
+        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+        "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=equal_score_secondary_eligibility.",
+        "evidence_digests": [
+          {
+            "path": "runs/active-report-self-improve-certificate-rerun-run-02-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "374cc9e18168dcff5721cac02b333a4c200be8df4e5d71228cf7bf7c28e6c45c",
+            "status": "present"
+          },
+          {
+            "path": "runs/active-report-self-improve-certificate-run-02-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "dc0715c7b75c091c27e2acf9c84dafffc181174d695d05a06a7a8800d99f20e6",
+            "status": "present"
+          }
+        ]
+      },
+      {
         "pattern_id": "discard_telemetry_discoverability_improved",
         "decisions": [
           "DISCARD"
@@ -263,6 +349,26 @@
             "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/run-telemetry.json",
             "exists": true,
             "sha256": "370f77f245e56c0572e6542a94c5dbf3257f9d533d78da70f01507d83a8007d4",
+            "status": "present"
+          }
+        ]
+      },
+      {
+        "pattern_id": "hold_legacy_promotion_report",
+        "decisions": [
+          "HOLD"
+        ],
+        "run_ids": [
+          "active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime"
+        ],
+        "occurrence_count": 1,
+        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+        "repair_target": "Change the mechanism or evidence predicate before rerunning another HOLD attempt with same_eval_reason_code=legacy_promotion_report.",
+        "evidence_digests": [
+          {
+            "path": "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "b6d062ba640f790dab855801cc08e903db6f37c6d66b9756e235fab090b50252",
             "status": "present"
           }
         ]

@@ -1,16 +1,16 @@
 {
   "$schema": "ops/schemas/release-smoke-report.schema.json",
   "artifact_kind": "release_smoke_report",
-  "generated_at": "2026-05-21T09:31:30Z",
+  "generated_at": "2026-05-21T12:37:57Z",
   "producer": "ops.scripts.release_smoke",
   "source_command": "python -m ops.scripts.release.release_smoke --vault . --profile full",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "c10fe5f96ce083d613effcb80b11cfeab14d7953ebe6f41816a479635057827a",
+  "source_tree_fingerprint": "d356b03a1755805399f54b400f66269467b4af2ff43a6f7172748eea8785d98d",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "6f14f899e0f4dce979d6152079ccd87ca44a19716266452a0f497b5fb3275d93",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "6e1fbd154051dd07c0227569fa0285bd836236a24e184713e602ffe960bf66ca"
+    "source_paths": "cddf26c74743f9b3e8b4e48caba697af8fcc2862df5f9433baf251fa5144474c"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -18,7 +18,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T09:31:30Z"
+    "checked_at": "2026-05-21T12:37:57Z"
   },
   "vault": ".",
   "policy": {
@@ -31,8 +31,8 @@
   "archive_file": {
     "path": "<tmp>/LLMwiki-release-smoke.zip",
     "exists": true,
-    "size_bytes": 190629290,
-    "sha256": "e59fd0239116aaa1d4c9a37613da6a361de27d2d9b4933ac2b3bb73c89dbefad"
+    "size_bytes": 190642130,
+    "sha256": "cd877a1342f03853c92091e424ad23a87a1667aa13565e6bbc3b8067dbe232d8"
   },
   "archive_class": {
     "name": "release_smoke_zip",
@@ -245,11 +245,11 @@
   "archive_reproducibility": {
     "status": "pass",
     "run_count": 2,
-    "first_archive_sha256": "e59fd0239116aaa1d4c9a37613da6a361de27d2d9b4933ac2b3bb73c89dbefad",
-    "second_archive_sha256": "e59fd0239116aaa1d4c9a37613da6a361de27d2d9b4933ac2b3bb73c89dbefad",
+    "first_archive_sha256": "cd877a1342f03853c92091e424ad23a87a1667aa13565e6bbc3b8067dbe232d8",
+    "second_archive_sha256": "cd877a1342f03853c92091e424ad23a87a1667aa13565e6bbc3b8067dbe232d8",
     "same_archive_sha256": true,
-    "first_source_manifest_digest": "04e496d082c5e135c6517c0ed626feab1cbca4a802165cc68f76ba5a199fe663",
-    "second_source_manifest_digest": "04e496d082c5e135c6517c0ed626feab1cbca4a802165cc68f76ba5a199fe663",
+    "first_source_manifest_digest": "842e818e988a7262573c242b2a85aea9974fb8c7bcff804a7b48e58278ca6934",
+    "second_source_manifest_digest": "842e818e988a7262573c242b2a85aea9974fb8c7bcff804a7b48e58278ca6934",
     "same_source_manifest_digest": true,
     "summary": "archive_reproducibility=pass; same_archive_sha256=true; same_source_manifest_digest=true"
   },
@@ -257,11 +257,11 @@
     "path": "release-archive-self-description.json",
     "archive_root_name": "LLMwiki",
     "archive_member_path": "LLMwiki/release-archive-self-description.json",
-    "sha256": "cad52c19c804c391f43349bc2da12e0c1aa05b990c278aca10f6534828c278c4",
+    "sha256": "b2784877ee7d62478f08dfa4d051701ce9f042a1022a4ad24343110ec0685ca5",
     "size_bytes": 4096,
     "profile": "full",
-    "source_manifest_digest": "100adb06f0f76169c3df1ec2ec31238e9c23fc4b0c53d2ab821e12efd7298d43",
-    "source_manifest_file_count": 1618,
+    "source_manifest_digest": "4ccf06fb0d90bccf95305bdb0cd4ce6d49875ecd3d76de7ef0333a533ad04c73",
+    "source_manifest_file_count": 1621,
     "tmp_included": false,
     "external_reports_included": false,
     "evidence_linkage_phase": "pre_seal_package_build_snapshot",
@@ -269,11 +269,11 @@
     "evidence_linked_artifact_count": 8
   },
   "extracted_vault": "<tmp>/unpacked/LLMwiki",
-  "packed_file_count": 1619,
+  "packed_file_count": 1622,
   "manifest_comparison": {
     "pass": true,
-    "expected_file_count": 1619,
-    "extracted_file_count": 1619,
+    "expected_file_count": 1622,
+    "extracted_file_count": 1622,
     "missing_paths": [],
     "unexpected_paths": [],
     "sha_mismatches": [],
@@ -288,7 +288,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 1247,
+      "duration_ms": 1227,
       "stdout_tail": "      \"path_list_separator\": \":\",\n      \"path_separator\": \"/\",\n      \"platform_system\": \"Linux\",\n      \"posix_escape_expanded_component_byte_limit\": \"255\",\n      \"preferred_encoding\": \"UTF-8\"\n    }\n  },\n  \"metric_semantics\": {\n    \"entry_count\": {\n      \"scope\": \"registry_entries\",\n      \"description\": \"Parsed raw registry entries after inventory enrichment.\"\n    },\n    \"error_count\": {\n      \"scope\": \"diagnostics\",\n      \"description\": \"Number of preflight diagnostics emitted with fail severity.\"\n    },\n    \"warning_count\": {\n      \"scope\": \"diagnostics\",\n      \"description\": \"Number of preflight diagnostics emitted with warn severity.\"\n    },\n    \"path_alias_match_count\": {\n      \"scope\": \"entries_with_missing_canonical_storage_path\",\n      \"description\": \"Entries whose canonical storage_path was absent but a manual, exported, or deterministic environment alias existed on disk.\"\n    },\n    \"content_hash_fallback_count\": {\n      \"scope\": \"entries_with_missing_canonical_storage_path_and_aliases\",\n      \"description\": \"Entries whose path locators were absent but exactly one raw inventory file matched the entry content_sha256.\"\n    }\n  },\n  \"unsupported_environment\": false,\n  \"errors\": [],\n  \"warnings\": [],\n  \"stats\": {\n    \"entry_count\": 446,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"path_alias_match_count\": 0,\n    \"content_hash_fallback_count\": 0\n  }\n}",
       "stderr_tail": ""
     },
@@ -300,8 +300,8 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 2510,
-      "stdout_tail": "        \"function_lines\": 697,\n        \"parameter_count\": 0,\n        \"branch_node_count\": 3\n      },\n      \"threshold\": {\n        \"function_lines\": 180,\n        \"parameter_count\": 12,\n        \"branch_node_count\": 12\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    },\n    {\n      \"type\": \"python_function_budget_candidate\",\n      \"page\": \"tests/test_run_mechanism_experiment.py\",\n      \"symbol\": \"RunMechanismExperimentTests.test_wrapper_ignores_ephemeral_workspace_noise_in_changed_manifest\",\n      \"line\": 950,\n      \"profile\": \"tests\",\n      \"triggered_budgets\": [\n        \"function_lines\"\n      ],\n      \"value\": {\n        \"function_lines\": 192,\n        \"parameter_count\": 0,\n        \"branch_node_count\": 2\n      },\n      \"threshold\": {\n        \"function_lines\": 180,\n        \"parameter_count\": 12,\n        \"branch_node_count\": 12\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    }\n  ],\n  \"stats\": {\n    \"page_count\": 487,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"review_candidate_count\": 32\n  }\n}",
+      "duration_ms": 2513,
+      "stdout_tail": "        \"function_lines\": 710,\n        \"parameter_count\": 0,\n        \"branch_node_count\": 3\n      },\n      \"threshold\": {\n        \"function_lines\": 180,\n        \"parameter_count\": 12,\n        \"branch_node_count\": 12\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    },\n    {\n      \"type\": \"python_function_budget_candidate\",\n      \"page\": \"tests/test_run_mechanism_experiment.py\",\n      \"symbol\": \"RunMechanismExperimentTests.test_wrapper_ignores_ephemeral_workspace_noise_in_changed_manifest\",\n      \"line\": 950,\n      \"profile\": \"tests\",\n      \"triggered_budgets\": [\n        \"function_lines\"\n      ],\n      \"value\": {\n        \"function_lines\": 192,\n        \"parameter_count\": 0,\n        \"branch_node_count\": 2\n      },\n      \"threshold\": {\n        \"function_lines\": 180,\n        \"parameter_count\": 12,\n        \"branch_node_count\": 12\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    }\n  ],\n  \"stats\": {\n    \"page_count\": 487,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"review_candidate_count\": 32\n  }\n}",
       "stderr_tail": ""
     },
     {
@@ -312,7 +312,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 1015,
+      "duration_ms": 1017,
       "stdout_tail": "        {\n          \"eval\": \"frontmatter_contract\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"required_sections_present\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"source_trace_present\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"source_trace_targets_exist\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"link_integration\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"high_severity_open_questions_within_budget\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"medium_severity_open_questions_within_budget\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"broken_link_free\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"placeholder_discipline\",\n          \"pass\": true\n        }\n      ]\n    }\n  ]\n}",
       "stderr_tail": ""
     },
@@ -324,7 +324,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 522,
+      "duration_ms": 520,
       "stdout_tail": "        {\n          \"eval\": \"declared_source_count_matches_evidence\",\n          \"pass\": true,\n          \"detail\": {\n            \"declared_source_count\": 7,\n            \"evidence_source_count\": 7,\n            \"evidence_source_links\": [\n              \"source--ai-memory-boom-and-supply-constraints-2026-04-13\",\n              \"source--asml-ai-chip-demand-and-semiconductor-capex-resilience-2026-04-16\",\n              \"source--memory-product-mix-upside-for-samsung-and-sk-hynix-2026-04-21\",\n              \"source--samsung-labor-bonus-dispute-and-semiconductor-workforce-risk-2026-04-17\",\n              \"source--samsung-process-blueprint-trade-secret-case-2026-04-21\",\n              \"source--samsung-strategic-output-increase-and-preorders-2026-04-21\",\n              \"source--sk-hynix-socamm2-ai-memory-scaleup-2026-04-21\"\n            ]\n          }\n        }\n      ]\n    },\n    {\n      \"page\": \"system/synthesis--stage1-planning-harness-bridge.md\",\n      \"score\": 1,\n      \"max_score\": 1,\n      \"results\": [\n        {\n          \"eval\": \"declared_source_count_matches_evidence\",\n          \"pass\": true,\n          \"detail\": {\n            \"declared_source_count\": 2,\n            \"evidence_source_count\": 2,\n            \"evidence_source_links\": [\n              \"source--ouroboros-repo\",\n              \"source--stage1-planning-harness-mvp\"\n            ]\n          }\n        }\n      ]\n    }\n  ]\n}",
       "stderr_tail": ""
     },

@@ -20,13 +20,13 @@ export PYTEST_DISABLE_PLUGIN_AUTOLOAD
 
 .PHONY: check check-finalized check-clean check-clean-lane-guard check-conditional check-serial check-all check-all-serial check-strict canonical-parity-guard
 
-check: static artifact-freshness-check registry-preflight lint eval stage2-eval planning-gate unit-tests
+check: static artifact-freshness-check registry-preflight-check lint eval stage2-eval planning-gate unit-tests
 
 check-finalized:
 	$(MAKE) auto-improve-readiness-report
 	$(MAKE) check
 	$(MAKE) auto-improve-readiness-report-body
-	$(MAKE) external-report-action-matrix
+	$(MAKE) generated-artifact-converge
 	$(MAKE) release-closeout-post-check-finalizer-dry-run
 	$(MAKE) release-closeout-fixed-point
 	$(MAKE) tmp-json-clean
@@ -34,9 +34,7 @@ check-finalized:
 	$(MAKE) release-closeout-finality-verify
 
 canonical-parity-guard:
-	$(MAKE) script-output-surfaces
-	$(MAKE) generated-artifact-index
-	$(MAKE) artifact-freshness
+	$(MAKE) generated-artifact-converge
 	$(MAKE) release-closeout-post-check-finalizer-dry-run
 	$(MAKE) release-closeout-fixed-point
 	$(MAKE) tmp-json-clean
@@ -49,10 +47,10 @@ check-clean-lane-guard:
 
 check-clean: check-clean-lane-guard check-conditional warning-budget test-artifact-finalization release-evidence-cohort-check
 
-check-serial: static artifact-freshness-check registry-preflight lint eval stage2-eval planning-gate unit-tests-serial
+check-serial: static artifact-freshness-check registry-preflight-check lint eval stage2-eval planning-gate unit-tests-serial
 
-check-all: static artifact-freshness-check registry-preflight lint eval stage2-eval planning-gate unit-tests-all
+check-all: static artifact-freshness-check registry-preflight-check lint eval stage2-eval planning-gate unit-tests-all
 
-check-all-serial: static artifact-freshness-check registry-preflight lint eval stage2-eval planning-gate unit-tests-all-serial
+check-all-serial: static artifact-freshness-check registry-preflight-check lint eval stage2-eval planning-gate unit-tests-all-serial
 
 check-strict: check warning-budget complexity-budget-touched-check
