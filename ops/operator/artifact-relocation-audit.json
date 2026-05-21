@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/artifact-relocation-audit.schema.json",
   "artifact_kind": "artifact_relocation_audit",
-  "generated_at": "2026-05-21T17:26:03Z",
+  "generated_at": "2026-05-21T18:00:47Z",
   "producer": "ops.scripts.artifact_relocation_audit",
   "source_command": "python -m ops.scripts.artifact_relocation_audit --vault . --out ops/operator/artifact-relocation-audit.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "36e6bf4d91b46700f562b0bc17a5cf1b4c7287535d964f882a670cc94d0ec0f9",
+  "source_tree_fingerprint": "e87210163d5661241576ab225b9a05e7286084eb4bf5aad231abbef7132b41b8",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "2bca24a2fb1f0a7c49b35b6df2aac4e0676e137502b48691d033ad62e3769173",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T17:26:03Z"
+    "checked_at": "2026-05-21T18:00:47Z"
   },
   "vault": ".",
   "policy": {

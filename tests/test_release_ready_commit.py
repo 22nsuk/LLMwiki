@@ -77,6 +77,99 @@ class ReleaseReadyCommitTests(unittest.TestCase):
             categories["ops/reports/release-smoke-report.json"], "generated_canonical"
         )
 
+    def test_report_summarizes_release_ready_diagnostics_without_changing_commit_policy(
+        self,
+    ) -> None:
+        (self.vault / "README.md").write_text("# Test\n\nChanged.\n", encoding="utf-8")
+        (self.vault / "tmp").mkdir()
+        (self.vault / "tmp" / "goal-runtime-local-evidence-refresh.json").write_text(
+            json.dumps(
+                {
+                    "status": "pass",
+                    "reason": "converged",
+                    "digest_mode": "semantic_without_envelope_fingerprints_or_clock_fields",
+                    "summary": {
+                        "iteration_count": 4,
+                        "command_count": 20,
+                        "converged_iteration": 4,
+                        "changed_path_count": 0,
+                    },
+                    "iterations": [
+                        {
+                            "iteration_index": 1,
+                            "status": "changed",
+                            "changed_paths": [
+                                "runs/goal-test/state/auto-improve-readiness.json",
+                                "runs/goal-test/state/session-synopsis.json",
+                            ],
+                        },
+                        {
+                            "iteration_index": 4,
+                            "status": "pass",
+                            "changed_paths": [],
+                        },
+                    ],
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        (self.vault / "ops" / "reports" / "release-closeout-summary.json").write_text(
+            json.dumps(
+                {
+                    "status": "pass",
+                    "clean_release_ready": False,
+                    "machine_release_allowed": False,
+                    "release_authority_status": "conditional_pass",
+                    "sealed_release_status": "unsealed_distribution_not_provided",
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        (self.vault / "ops" / "reports" / "artifact-freshness-report.json").write_text(
+            json.dumps(
+                {
+                    "status": "pass",
+                    "currentness": {"status": "current"},
+                    "source_tree_fingerprint": "abc123",
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-ready-commit.json",
+                "--message",
+                "release: ready",
+                "--dry-run",
+            ]
+        )
+
+        self.assertEqual(rc, 0)
+        report = json.loads(
+            (self.vault / "tmp" / "release-ready-commit.json").read_text(encoding="utf-8")
+        )
+        diagnostics = report["diagnostics"]
+        goal_refresh = diagnostics["goal_runtime_local_evidence_refresh"]
+        self.assertEqual(goal_refresh["status"], "pass")
+        self.assertEqual(goal_refresh["summary"]["iteration_count"], 4)
+        self.assertEqual(goal_refresh["iterations"][0]["changed_path_count"], 2)
+        closeout = diagnostics["release_closeout_summary"]
+        self.assertEqual(
+            closeout["classification"],
+            "source_release_checks_pass_distribution_unsealed",
+        )
+        self.assertFalse(closeout["machine_release_allowed"])
+        self.assertIn("not a sealed machine release", closeout["operator_note"])
+        freshness = diagnostics["artifact_freshness"]
+        self.assertEqual(freshness["currentness_status"], "current")
+
     def test_rejects_private_dirty_paths_before_staging(self) -> None:
         (self.vault / "raw").mkdir()
         (self.vault / "raw" / "private.md").write_text("secret corpus\n", encoding="utf-8")

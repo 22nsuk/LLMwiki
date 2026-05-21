@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-21T17:26:17Z",
+  "generated_at": "2026-05-21T18:01:01Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e21fe2339c0dc20185c55e4ecdbdf9a1e6caa1292844763b845ae6a279187aa7",
+  "source_tree_fingerprint": "738feb2287a79d58b05b8c8a301be182ada20c41eb3be9fd9059962df4e36d3e",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "24b4245045c33871aed14d97ac056f1ae202409b6cd3ad01fb4667fb70ccf17b",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "7eb90914c0915d5e3d6e1407c2447511073f92f54b851a6c480e58dbea56127f",
     "goal_runtime_certificate": "3bb824b5fd060c45ce9e706eb4b92cd030cbbc9bfe2685ff7d457e2d48e6ef46",
-    "learning_claim_activation": "6185ac6258d678ad29f9d3b5b9351f4ba3cfad5bd8f0952a88c6463acda56afe",
+    "learning_claim_activation": "de7d55053765a0f2e8d8c0e43f15b97f7c0a1b65e7630460b44ee53a010f0b12",
     "learning_readiness_signoff": "1ec9a280330bf4c9f5cc6a77f7ea7590acaf29d0718a80299d25d8f466576e9d",
-    "self_improvement_negative_lessons": "c5ea4551a23faeb674cd30170b77cb60c67e20c4a91e97f28a0f1f0444d0e5fb",
-    "session_synopsis": "1b33bbac0b10b9ea730ba04f3417480a659f7a162d8eaf84030a1a0c74a7f607",
+    "self_improvement_negative_lessons": "08ca3b391c5fb71b238d38de0471b6a9f9c3981d8c44b1da202cb1ed270b4a3c",
+    "session_synopsis": "579dca454c4e5c76ed92d567b46e069aee30b71fe294fc4d964fc8e793136194",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
     "auto_improve_sessions": "045839dd6979b19e7b1e2cf2c9ed4675b6db02844a8f4ea94a33326f904f690f"
   },
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T17:26:17Z"
+    "checked_at": "2026-05-21T18:01:01Z"
   },
   "vault": ".",
   "policy": {

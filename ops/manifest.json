@@ -2167,8 +2167,8 @@
     },
     {
       "path": "ops/scripts/release/release_ready_commit.py",
-      "sha256": "0b45efe4aec7e3ddac0042b4d3973be6943610fe996bf1dcdcc30c57dbe9e1ae",
-      "size_bytes": 15938
+      "sha256": "98bf9f6c115ae98f38c02a148f2cda05e98f872711117ccb4eed0fdc5914a2fd",
+      "size_bytes": 20568
     },
     {
       "path": "ops/scripts/release/release_risk_taxonomy_matrix.py",
@@ -5672,8 +5672,8 @@
     },
     {
       "path": "tests/test_release_ready_commit.py",
-      "sha256": "8e624c681cba5c65210c9e689227443d958f2c3f3b032d7c783eeb043b517fff",
-      "size_bytes": 13602
+      "sha256": "b26568c8ff5481eb0214ced5c4fa198b4bee00c2be12de69fed8ffe98d944518",
+      "size_bytes": 17264
     },
     {
       "path": "tests/test_release_risk_taxonomy_matrix.py",

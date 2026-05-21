@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/release-lane-summary.schema.json",
   "artifact_kind": "release_lane_summary",
-  "generated_at": "2026-05-21T17:26:18Z",
+  "generated_at": "2026-05-21T18:01:01Z",
   "producer": "ops.scripts.release_lane_summary",
   "source_command": "python -m ops.scripts.release_lane_summary --vault . --out ops/reports/release-lane-summary.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "36e6bf4d91b46700f562b0bc17a5cf1b4c7287535d964f882a670cc94d0ec0f9",
+  "source_tree_fingerprint": "e87210163d5661241576ab225b9a05e7286084eb4bf5aad231abbef7132b41b8",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "0d52985f1a335ba2c86dcfcd891717a3c35fc67c6a4f95df49e73822041aa523",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e61b0bc0bda4784ff61850ac5b3d8f5a63b95209cdd9f1e84e6e4142763be1a0",
-    "learning_delta_scoreboard": "df6cdbbc49bb5d9c1cedce756e6d937098f75d944973ba6b340f2b0b26a80f76",
-    "release_closeout_summary": "ce507796dc1a84402a2cac34f5c2bc6a46fe0ea9055379ab2c5f3c1b51446f7d",
-    "release_evidence_cohort": "05363b7ed04f8433a38f8a06b2b28c1419e36e679d52f5ca3c320e04c45a4c61",
-    "release_evidence_dashboard": "461592da5e3574171e9b051404708a474b24075181f1e1a7ba40b2ff8d503b87",
-    "current_source_tree_fingerprint": "2f8d2a959026d7eb9ccc5aff948c814dcd20bdf680691c2fa2eb2dada52acd07"
+    "learning_delta_scoreboard": "766e22a2456ec7c9f7643fa65731a6ee8cc98b79d8f9ec5aa1f9239cd3b22d3e",
+    "release_closeout_summary": "b91eb5fd6288c93b97105943ac3366ba2e68f38637ac441eb14049d2b130e996",
+    "release_evidence_cohort": "a1aaa9474e34fc4c1b08e3a82de787f71a1f36f8816c4556c879254a852d609a",
+    "release_evidence_dashboard": "afa392738c45d042df669ae141cf3f4988b941b114a035a0d29c61f1fac53065",
+    "current_source_tree_fingerprint": "1e116a9b732c4812a6dbfc30a540b2c5fcc0b1de74f6a3cbab0a99c5eb40e114"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T17:26:18Z"
+    "checked_at": "2026-05-21T18:01:01Z"
   },
   "vault": ".",
   "policy": {

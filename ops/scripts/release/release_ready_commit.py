@@ -11,6 +11,9 @@ from typing import Any
 
 DEFAULT_OUT = "tmp/release-ready-commit.json"
 DEFAULT_MESSAGE = "release: converge all surfaces"
+GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH = "tmp/goal-runtime-local-evidence-refresh.json"
+RELEASE_CLOSEOUT_SUMMARY = "ops/reports/release-closeout-summary.json"
+ARTIFACT_FRESHNESS_REPORT = "ops/reports/artifact-freshness-report.json"
 
 GENERATED_FILES = {
     ".gitignore",
@@ -180,6 +183,115 @@ def _load_report(path: Path | None) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
+def _load_repo_report(vault: Path, rel_path: str) -> dict[str, Any]:
+    return _load_report(vault / rel_path)
+
+
+def _text_field(payload: dict[str, Any], key: str) -> str:
+    value = payload.get(key)
+    return value if isinstance(value, str) else ""
+
+
+def _bool_field(payload: dict[str, Any], key: str) -> bool:
+    return payload.get(key) is True
+
+
+def _dict_field(payload: dict[str, Any], key: str) -> dict[str, Any]:
+    value = payload.get(key)
+    return value if isinstance(value, dict) else {}
+
+
+def _goal_runtime_refresh_diagnostics(vault: Path) -> dict[str, Any]:
+    payload = _load_repo_report(vault, GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH)
+    if not payload:
+        return {"path": GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH, "present": False}
+    iterations = []
+    for item in payload.get("iterations", []):
+        if not isinstance(item, dict):
+            continue
+        changed_paths = [
+            str(path)
+            for path in item.get("changed_paths", [])
+            if isinstance(path, str)
+        ]
+        iterations.append(
+            {
+                "iteration_index": item.get("iteration_index", 0),
+                "status": _text_field(item, "status"),
+                "changed_path_count": len(changed_paths),
+                "changed_paths": changed_paths[:20],
+            }
+        )
+    return {
+        "path": GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH,
+        "present": True,
+        "status": _text_field(payload, "status"),
+        "reason": _text_field(payload, "reason"),
+        "digest_mode": _text_field(payload, "digest_mode"),
+        "summary": _dict_field(payload, "summary"),
+        "iterations": iterations,
+    }
+
+
+def _release_closeout_summary_diagnostics(vault: Path) -> dict[str, Any]:
+    payload = _load_repo_report(vault, RELEASE_CLOSEOUT_SUMMARY)
+    if not payload:
+        return {"path": RELEASE_CLOSEOUT_SUMMARY, "present": False}
+    status = _text_field(payload, "status")
+    clean_release_ready = _bool_field(payload, "clean_release_ready")
+    machine_release_allowed = _bool_field(payload, "machine_release_allowed")
+    sealed_release_status = _text_field(payload, "sealed_release_status")
+    release_authority_status = _text_field(payload, "release_authority_status")
+    if machine_release_allowed:
+        classification = "machine_release_allowed"
+        note = "release closeout allows machine release."
+    elif status == "pass" and sealed_release_status == "unsealed_distribution_not_provided":
+        classification = "source_release_checks_pass_distribution_unsealed"
+        note = (
+            "release-ready/check may pass, but this is not a sealed machine release "
+            "until a distribution package is provided and closeout allows machine release."
+        )
+    else:
+        classification = "release_not_machine_allowed"
+        note = (
+            "release closeout does not currently allow machine release; inspect "
+            "release_authority_status and sealed_release_status before treating this as distributable."
+        )
+    return {
+        "path": RELEASE_CLOSEOUT_SUMMARY,
+        "present": True,
+        "status": status,
+        "clean_release_ready": clean_release_ready,
+        "machine_release_allowed": machine_release_allowed,
+        "release_authority_status": release_authority_status,
+        "sealed_release_status": sealed_release_status,
+        "classification": classification,
+        "operator_note": note,
+    }
+
+
+def _artifact_freshness_diagnostics(vault: Path) -> dict[str, Any]:
+    payload = _load_repo_report(vault, ARTIFACT_FRESHNESS_REPORT)
+    if not payload:
+        return {"path": ARTIFACT_FRESHNESS_REPORT, "present": False}
+    currentness = _dict_field(payload, "currentness")
+    return {
+        "path": ARTIFACT_FRESHNESS_REPORT,
+        "present": True,
+        "status": _text_field(payload, "status"),
+        "currentness_status": _text_field(currentness, "status"),
+        "source_tree_fingerprint": _text_field(payload, "source_tree_fingerprint"),
+    }
+
+
+def _release_ready_diagnostics(vault: Path) -> dict[str, Any]:
+    return {
+        "goal_runtime_local_evidence_refresh": _goal_runtime_refresh_diagnostics(vault),
+        "release_closeout_summary": _release_closeout_summary_diagnostics(vault),
+        "artifact_freshness": _artifact_freshness_diagnostics(vault),
+    }
+
+
 def _entry_payload(entry: StatusEntry, *, preexisting_paths: set[str]) -> dict[str, Any]:
     path = _normalize_repo_path(entry.path)
     return {
@@ -219,6 +331,7 @@ def _base_report(vault: Path, entries: list[StatusEntry], preexisting_paths: set
         "head_before": _head(vault),
         "entries": entry_payloads,
         "counts": dict(sorted(counts.items())),
+        "diagnostics": _release_ready_diagnostics(vault),
     }
 
 
