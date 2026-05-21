@@ -77,6 +77,10 @@ SCHEMA_PATHS = {
     / "ops"
     / "schemas"
     / "goal-runtime-fixed-point-check.schema.json",
+    "goal-runtime-closeout-plan.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "goal-runtime-closeout-plan.schema.json",
     "goal-resume-metadata.schema.json": REPO_ROOT
     / "ops"
     / "schemas"

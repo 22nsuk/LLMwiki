@@ -6,6 +6,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 from ops.scripts.mechanism_assess import main as mechanism_assess_main
 from ops.scripts.output_runtime import resolve_output_path, write_output_text
 from ops.scripts.path_runtime import stable_report_path
@@ -34,6 +36,7 @@ OUTPUT_RUNTIME_FILE = "ops/scripts/core/output_runtime.py"
 SCRIPT_OUTPUT_SURFACES = Path("ops/script-output-surfaces.json")
 SCRIPT_OUTPUT_SURFACES_SCHEMA = Path("ops/schemas/script-output-surfaces.schema.json")
 OUTPUT_WRITER_CLASSIFICATIONS = {"repo_artifact", "user_export", "mixed"}
+PUBLIC_EXPORT_MANIFEST = REPO_ROOT / "PUBLIC-EXPORT-MANIFEST.json"
 
 
 def _script_tree(rel_path: str) -> ast.AST:
@@ -165,6 +168,15 @@ class WriterOutputPathsTest(unittest.TestCase):
         paths = [entry["path"] for entry in registry["surfaces"]]
         self.assertEqual(len(paths), len(set(paths)))
 
+    @pytest.mark.artifact_finalization
+    @unittest.skipIf(
+        PUBLIC_EXPORT_MANIFEST.exists(),
+        (
+            "script-output-surfaces is generated from the full-vault source tree; "
+            "public exports validate schema and writer classifications without "
+            "requiring full-vault fingerprint equality"
+        ),
+    )
     def test_script_output_surface_registry_matches_current_ast_inventory(self) -> None:
         actual = _script_output_surface_registry()
         expected = build_script_output_surface_registry(

@@ -23,6 +23,12 @@ GOAL_RUNTIME_CLEAN_TRANSIENT_OUT ?= tmp/goal-runtime-clean-transient.json
 GOAL_RUNTIME_CLEAN_TRANSIENT_APPLY ?= 1
 GOAL_RUNTIME_CLEAN_TRANSIENT_STATUS_REPORT ?= $(GOAL_RUN_STATUS_OUT)
 GOAL_RUNTIME_FIXED_POINT_CHECK_OUT ?= tmp/goal-runtime-fixed-point-check.json
+GOAL_RUNTIME_CLOSEOUT_PLAN_OUT ?= tmp/goal-runtime-closeout-plan.json
+GOAL_RUNTIME_CLOSEOUT_BUDGET ?= cheap
+GOAL_RUNTIME_CLOSEOUT_STATE_DIR ?= $(GOAL_ACTIVE_STATE_DIR)/closeout
+GOAL_RUNTIME_CLOSEOUT_SCRIPT_OUTPUT_SURFACES_OUT ?= $(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)/script-output-surfaces.json
+GOAL_RUNTIME_CLOSEOUT_GENERATED_ARTIFACT_INDEX_OUT ?= $(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)/generated-artifact-index.json
+GOAL_RUNTIME_CLOSEOUT_ARTIFACT_FRESHNESS_OUT ?= $(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)/artifact-freshness-report.json
 GOAL_RUNTIME_LOCK_PATH ?= $(GOAL_RUN_LOG_DIR)/goal-runtime.lock.json
 GOAL_RUNTIME_PYTHON_PREFLIGHT_OUT ?= tmp/goal-runtime-python-preflight.json
 GOAL_SESSION_RESULT_OUT ?= $(GOAL_ACTIVE_STATE_DIR)/auto-improve-goal-session-result.json
@@ -59,7 +65,7 @@ GOAL_COMPLETED_AT ?=
 GOAL_RUN_LOG_DIR ?= build/goal-runs
 MECHANISM_RUN_ARGS ?=
 
-.PHONY: auto-improve-readiness auto-improve-readiness-report auto-improve-readiness-report-body auto-improve-readiness-worktree-guard codex-goal-contract codex-goal-prompt codex-goal-client goal-prompt auto-improve-goal-contract goal-runtime-refresh goal-runtime-publish-snapshot goal-runtime-local-readiness goal-runtime-local-session-synopsis goal-runtime-local-negative-lessons goal-runtime-local-remediation-backlog goal-runtime-local-fixed-point-check goal-runtime-local-evidence-converge goal-runtime-publish-local-evidence goal-runtime-reconcile goal-runtime-clean-transient goal-runtime-fixed-point-check goal-runtime-lock-check goal-runtime-lock-status goal-runtime-lock-stop goal-runtime-python-preflight long-run-preflight-clean auto-improve-goal-preflight auto-improve-goal-run auto-improve-goal-status auto-improve-goal-resume auto-improve-goal-finalize auto-improve-goal-run-artifacts goal-runtime-certificate goal-worktree-guard mechanism-review mutation-proposal run-mechanism-experiment-linux-tmp outcome-metrics routing-provenance-aggregate outcome-provenance-gate-policy
+.PHONY: auto-improve-readiness auto-improve-readiness-report auto-improve-readiness-report-body auto-improve-readiness-worktree-guard codex-goal-contract codex-goal-prompt codex-goal-client goal-prompt auto-improve-goal-contract goal-runtime-refresh goal-runtime-publish-snapshot goal-runtime-local-readiness goal-runtime-local-session-synopsis goal-runtime-local-negative-lessons goal-runtime-local-remediation-backlog goal-runtime-local-fixed-point-check goal-runtime-local-evidence-converge goal-runtime-publish-local-evidence goal-runtime-reconcile goal-runtime-closeout-plan goal-runtime-closeout-candidate-script-output-surfaces goal-runtime-closeout-candidate-generated-artifact-index goal-runtime-closeout-candidate-artifact-freshness goal-runtime-closeout-candidate-converge goal-runtime-closeout-publish-script-output-surfaces goal-runtime-closeout-publish goal-runtime-closeout-finalize goal-runtime-closeout goal-runtime-closeout-full goal-runtime-clean-transient goal-runtime-fixed-point-check goal-runtime-lock-check goal-runtime-lock-status goal-runtime-lock-stop goal-runtime-python-preflight long-run-preflight-clean auto-improve-goal-preflight auto-improve-goal-run auto-improve-goal-status auto-improve-goal-resume auto-improve-goal-finalize auto-improve-goal-run-artifacts goal-runtime-certificate goal-worktree-guard mechanism-review mutation-proposal run-mechanism-experiment-linux-tmp outcome-metrics routing-provenance-aggregate outcome-provenance-gate-policy
 
 auto-improve-readiness: auto-improve-readiness-worktree-guard
 	@status=0; $(PYTHON) -m ops.scripts.auto_improve_readiness --vault "$(VAULT)" --out "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" --out "$(AUTO_IMPROVE_READINESS_OUT)" --schema ops/schemas/auto-improve-readiness-report.schema.json --expected-artifact-kind auto_improve_readiness_report --expected-producer ops.scripts.auto_improve_readiness_runtime; exit $$status
@@ -145,6 +151,55 @@ goal-runtime-reconcile:
 	$(MAKE) external-report-action-matrix
 	$(MAKE) generated-artifact-index
 	$(MAKE) artifact-freshness
+
+goal-runtime-closeout-plan:
+	$(PYTHON) -m ops.scripts.goal_runtime_closeout --vault "$(VAULT)" --out "$(GOAL_RUNTIME_CLOSEOUT_PLAN_OUT)" --budget "$(GOAL_RUNTIME_CLOSEOUT_BUDGET)" --candidate-root "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)"
+
+goal-runtime-closeout-candidate-script-output-surfaces:
+	$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" --out "$(GOAL_RUNTIME_CLOSEOUT_SCRIPT_OUTPUT_SURFACES_OUT)"
+
+goal-runtime-closeout-candidate-generated-artifact-index:
+	$(PYTHON) -m ops.scripts.generated_artifact_index --vault "$(VAULT)" --out "$(GOAL_RUNTIME_CLOSEOUT_GENERATED_ARTIFACT_INDEX_OUT)"
+
+goal-runtime-closeout-candidate-artifact-freshness:
+	$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(GOAL_RUNTIME_CLOSEOUT_ARTIFACT_FRESHNESS_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",)
+
+goal-runtime-closeout-candidate-converge:
+	$(MAKE) report-schema-samples-check
+	$(MAKE) goal-runtime-clean-transient
+	$(MAKE) goal-runtime-local-evidence-converge
+	$(MAKE) goal-runtime-closeout-candidate-script-output-surfaces
+	$(MAKE) goal-runtime-closeout-candidate-generated-artifact-index
+	$(MAKE) goal-runtime-closeout-candidate-artifact-freshness
+
+goal-runtime-closeout-publish-script-output-surfaces:
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_RUNTIME_CLOSEOUT_SCRIPT_OUTPUT_SURFACES_OUT)" --out "$(SCRIPT_OUTPUT_SURFACES_OUT)" --schema ops/schemas/script-output-surfaces.schema.json --expected-artifact-kind script_output_surfaces --expected-producer ops.scripts.script_output_surfaces
+
+goal-runtime-closeout-publish:
+	$(MAKE) goal-runtime-closeout-publish-script-output-surfaces
+	$(MAKE) goal-runtime-publish-local-evidence
+	$(MAKE) goal-runtime-certificate
+	$(MAKE) external-report-action-matrix
+	$(MAKE) generated-artifact-index
+	$(MAKE) artifact-freshness
+
+goal-runtime-closeout-finalize:
+	$(MAKE) test-artifact-finalization
+	$(MAKE) goal-runtime-fixed-point-check
+
+goal-runtime-closeout:
+	@set -e; \
+	for target in $$($(PYTHON) -m ops.scripts.goal_runtime_closeout --vault "$(VAULT)" --budget cheap --candidate-root "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)" --format targets); do \
+		$(MAKE) $$target; \
+	done
+	$(MAKE) goal-runtime-closeout-plan GOAL_RUNTIME_CLOSEOUT_BUDGET=cheap
+
+goal-runtime-closeout-full:
+	@set -e; \
+	for target in $$($(PYTHON) -m ops.scripts.goal_runtime_closeout --vault "$(VAULT)" --budget full --candidate-root "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)" --format targets); do \
+		$(MAKE) $$target; \
+	done
+	$(MAKE) goal-runtime-closeout-plan GOAL_RUNTIME_CLOSEOUT_BUDGET=full
 
 goal-runtime-clean-transient:
 	$(PYTHON) -m ops.scripts.goal_runtime_clean_transient --vault "$(VAULT)" --out "$(GOAL_RUNTIME_CLEAN_TRANSIENT_OUT)" --status-report "$(GOAL_RUNTIME_CLEAN_TRANSIENT_STATUS_REPORT)" $(if $(GOAL_RUNTIME_CLEAN_TRANSIENT_APPLY),--apply,)

@@ -39,26 +39,26 @@
     }
   ],
   "budgets": {
-    "max_wall_clock_seconds": 43200,
-    "max_proposals": 6,
-    "max_consecutive_failures": 4,
+    "max_wall_clock_seconds": 21600,
+    "max_proposals": 1,
+    "max_consecutive_failures": 1,
     "heartbeat_interval_seconds": 300,
     "checkpoint_interval_seconds": 1800
   },
-  "created_at": "2026-05-21T01:23:59Z",
+  "created_at": "2026-05-21T05:52:41Z",
   "created_by": "codex",
   "status": "active",
   "runtime": {
     "mode": "self_improvement_loop",
-    "duration_seconds": 43200,
-    "max_unattended_seconds": 43200,
-    "certificate_status": "verified",
-    "verified_at": "2026-05-21T03:54:02Z"
+    "duration_seconds": 21600,
+    "max_unattended_seconds": 21600,
+    "certificate_status": "unverified",
+    "verified_at": ""
   },
   "goal_backend": {
     "backend_type": "run_local_file",
     "process_persistent": true,
-    "storage_path": "runs/goal-active-report-self-improve-certificate-rerun7/state/codex-goal-contract.json"
+    "storage_path": "runs/goal-auto-improve-trial/state/codex-goal-contract.json"
   },
   "stop_conditions": [
     {
@@ -87,7 +87,7 @@
     },
     {
       "evidence_id": "goal_run_status",
-      "path": "runs/goal-active-report-self-improve-certificate-rerun7/state/goal-run-status.json",
+      "path": "runs/goal-auto-improve-trial/state/goal-run-status.json",
       "description": "Goal status records heartbeat, checkpoint, resume, and promotion blockers.",
       "freshness": "current_run",
       "required_for_promotion": true
@@ -138,11 +138,15 @@
   "promotion_guard": {
     "can_promote_result": false,
     "promotion_blockers": [
+      "execution_blocked_by_no_runnable_proposal",
+      "learning_blocked_by_execution_not_runnable",
+      "promotion_blocked_by_selected_contract_failure",
       "promotion_blocked_by_goal_worktree_guard_failure",
-      "promotion_blocked_by_remediation_backlog_open"
+      "promotion_blocked_by_remediation_backlog_open",
+      "git_worktree_dirty"
     ],
     "sealed_authority_clean": true,
-    "runtime_certificate_verified": true,
+    "runtime_certificate_verified": false,
     "sustained_runtime_claimed": false,
     "no_sustained_claim_before_certificate_verified": true
   },
@@ -152,7 +156,7 @@
     "properties": [
       {
         "name": "urn:openai:artifact-envelope",
-        "value": "{\"$schema\": \"ops/schemas/codex-goal-contract.schema.json\", \"artifact_kind\": \"codex_goal_contract\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-21T04:45:44Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-21T04:45:44Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"auto_improve_readiness\": \"309676c83158e34be31ab9c95c396acad4b332a63b232be56a0b214f9dcf38e6\", \"auto_improve_session\": \"8e8b3072dd44ac518d8c60462f70fc1af63c4f7ffe6d73da7312de34092bf4e7\", \"contract_id\": \"d6dee5d74cf954a24559fc821001ef3dc5c693b768134ad20fe8924060b7adfe\", \"goal_run_status\": \"3e939b0a3db9fc90ee33fd4447f44bb264c2053b2286f70b562cea87b64290b4\", \"goal_worktree_guard_report\": \"55db3a4feee016465a12f6a17541d042291d4a1d2aee946183074d52e476ed35\", \"policy\": \"db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24\", \"schema\": \"a1601bdfb503b41bc6fc4f93585cc130d12974e1fadb297ea53ef5c4aa148329\", \"source_paths\": \"cc6306304de49416dde77bacc40a75fc3f66584830a3e04e72252c26dbb478f0\"}, \"producer\": \"ops.scripts.codex_goal_client\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.codex_goal_client --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"746b5d22a82695591b6a19d0d54ff73607dc8dcd3ca0eefd79171c92bb42e10f\"}"
+        "value": "{\"$schema\": \"ops/schemas/codex-goal-contract.schema.json\", \"artifact_kind\": \"codex_goal_contract\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-21T07:11:29Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-21T07:11:29Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"auto_improve_readiness\": \"9600df892d2b118f45ccd28ce77d25cb77e886ed7ff8c6e9fa5a579df4cf667f\", \"auto_improve_session\": \"missing\", \"contract_id\": \"d6dee5d74cf954a24559fc821001ef3dc5c693b768134ad20fe8924060b7adfe\", \"goal_run_status\": \"7fa8db79c7d360e187d38ffdb5d3a30a46c5d4c3edd9e8a88a2534ad4fa37dba\", \"goal_worktree_guard_report\": \"e9afb61a8c08bf0f6711a529ba23bdfbe270b2323ef31b34e5b1a34c63b4d725\", \"policy\": \"db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24\", \"schema\": \"a1601bdfb503b41bc6fc4f93585cc130d12974e1fadb297ea53ef5c4aa148329\", \"source_paths\": \"cc6306304de49416dde77bacc40a75fc3f66584830a3e04e72252c26dbb478f0\"}, \"producer\": \"ops.scripts.codex_goal_client\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.codex_goal_client --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"91cfee4beceebe9b292e0ce6da94d69350b56831f24935d72cab44b27a5e9b9e\"}"
       }
     ]
   }

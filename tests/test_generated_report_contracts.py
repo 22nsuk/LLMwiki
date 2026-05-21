@@ -38,8 +38,18 @@ IMPROVEMENT_OBSERVATIONS_PATH = (
     / "task-20260427-anti-slop-report-reconciliation"
     / "improvement-observations.json"
 )
+PUBLIC_EXPORT_MANIFEST_PATH = REPO_ROOT / "PUBLIC-EXPORT-MANIFEST.json"
 
-pytestmark = pytest.mark.report_contract
+pytestmark = [pytest.mark.report_contract]
+if PUBLIC_EXPORT_MANIFEST_PATH.exists() and not (REPO_ROOT / "ops" / "reports").exists():
+    pytestmark.append(
+        pytest.mark.skip(
+            reason=(
+                "checked-in generated report contracts are full-vault canonical "
+                "artifact checks; public exports intentionally omit ops/reports"
+            )
+        )
+    )
 LEARNING_EVIDENCE_OBSERVATIONS_PATH = (
     REPO_ROOT
     / "ops"
@@ -1327,6 +1337,7 @@ def test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflig
     assert record.get("issues") == []
 
 
+@pytest.mark.artifact_finalization
 def test_checked_in_auto_improve_readiness_keeps_evidence_ledgers_in_sync() -> None:
     readiness = _read_json(AUTO_IMPROVE_READINESS_REPORT_PATH)
     mechanism_review = _read_json(MECHANISM_REVIEW_REPORT_PATH)

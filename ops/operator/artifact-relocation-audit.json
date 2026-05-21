@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/artifact-relocation-audit.schema.json",
   "artifact_kind": "artifact_relocation_audit",
-  "generated_at": "2026-05-21T04:44:09Z",
+  "generated_at": "2026-05-21T07:55:15Z",
   "producer": "ops.scripts.artifact_relocation_audit",
   "source_command": "python -m ops.scripts.artifact_relocation_audit --vault . --out ops/operator/artifact-relocation-audit.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "4b13c78d093040547a7c6ad8bccb113000efc6dbf2d7a1b1963cd0e615e032c7",
+  "source_tree_fingerprint": "25b1c76f97dea7e93a8499a311e9c54350d9861c7317de58fd19cfb52247c60b",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "2bca24a2fb1f0a7c49b35b6df2aac4e0676e137502b48691d033ad62e3769173",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "1ffc3cd808f7848d5e07c33875f5b587f2c166346a1e07e6617ac6b127df422c",
     "candidate_spec": "b1200b347913aa0fd79d57373d7874415448511a26db8629fc55c649d860c9c2",
-    "dependency_paths": "9e155279e257dcac40fb01d7c78a60e3cebfc2c3ee5840a1a2cecd7f45c078d0",
+    "dependency_paths": "8e797bb4f9cf31af0201ac8b1fedcb568ab39130a27b0a2e6168ddf45b585b24",
     "dependency_roots": "be545ec75d1f4e02ad9ba08e5ac7019a5c4bf7d0baa3aa348395f93db732be97",
     "excluded_scan_paths": "fd1a01cc9a3c77d51ba8bec1c7117e110d4c742ac36077133fbb3b0b3d4b90bd",
     "excluded_scan_prefixes": "e957c42e176e00f268bb61a907a17e555ae0d84924fcabe7c04d0ab207727581"
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T04:44:09Z"
+    "checked_at": "2026-05-21T07:55:15Z"
   },
   "vault": ".",
   "policy": {
@@ -67,7 +67,7 @@
       "system/",
       "external-reports/"
     ],
-    "file_count": 642,
+    "file_count": 645,
     "files": [
       ".github/workflows/ci.yml",
       ".github/workflows/release.yml",
@@ -137,6 +137,7 @@
       "ops/schemas/goal-run-status.schema.json",
       "ops/schemas/goal-runtime-certificate.schema.json",
       "ops/schemas/goal-runtime-clean-transient.schema.json",
+      "ops/schemas/goal-runtime-closeout-plan.schema.json",
       "ops/schemas/goal-runtime-fixed-point-check.schema.json",
       "ops/schemas/goal-worktree-guard.schema.json",
       "ops/schemas/improvement-observations.schema.json",
@@ -379,6 +380,7 @@
       "ops/scripts/mechanism/goal_runtime_certificate.py",
       "ops/scripts/mechanism/goal_runtime_certificate_report.py",
       "ops/scripts/mechanism/goal_runtime_clean_transient.py",
+      "ops/scripts/mechanism/goal_runtime_closeout.py",
       "ops/scripts/mechanism/goal_runtime_fixed_point_check.py",
       "ops/scripts/mechanism/goal_runtime_lock.py",
       "ops/scripts/mechanism/goal_runtime_maintenance.py",
@@ -573,6 +575,7 @@
       "tests/test_goal_run_status.py",
       "tests/test_goal_runtime_certificate.py",
       "tests/test_goal_runtime_clean_transient.py",
+      "tests/test_goal_runtime_closeout.py",
       "tests/test_goal_runtime_fixed_point_check.py",
       "tests/test_goal_runtime_lock.py",
       "tests/test_goal_runtime_runner.py",
@@ -720,7 +723,7 @@
     "blocking_candidate_count": 0,
     "old_reference_count": 0,
     "new_reference_count": 28,
-    "dependency_file_count": 642
+    "dependency_file_count": 645
   },
   "candidates": [
     {
@@ -753,7 +756,7 @@
           "match_count": 1,
           "matches": [
             {
-              "line": 104,
+              "line": 105,
               "excerpt": "- `make operator-release-summary`는 closeout, batch manifest, self-check, test summary, learning revalidation, learning delta scoreboard를 한 장짜리 JSON으로 모아 `semantic_release_status`, `sealed_release_status`, `source_zip_policy_status`, full-su"
             }
           ]

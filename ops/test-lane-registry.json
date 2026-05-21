@@ -281,6 +281,26 @@
       ]
     },
     {
+      "pack_id": "release_check_unit_complement",
+      "authority": "derived",
+      "status": "derived_from_registry",
+      "semantics": "Release-check pytest complement that excludes report-contract tests already executed by the preflight summary and checked-in generated artifact finalization.",
+      "backing_targets": [
+        "unit-tests-release-check"
+      ],
+      "selection": {
+        "mode": "marker_expression",
+        "pytest_mark_expr": "not artifact_finalization and not report_contract"
+      },
+      "ci_entrypoint": "release-check",
+      "ci_steps": [
+        "make release-check"
+      ],
+      "documented_entrypoints": [
+        "make release-check"
+      ]
+    },
+    {
       "pack_id": "report_contract_core",
       "authority": "derived",
       "status": "derived_from_registry",
@@ -383,6 +403,7 @@
           "tests/test_generated_report_contracts.py::test_source_derived_workflow_planner_contract_is_covered_by_checked_in_artifacts",
           "tests/test_generated_report_contracts.py::test_checked_in_release_smoke_report_matches_live_envelope_fingerprints",
           "tests/test_generated_report_contracts.py::test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflight_state",
+          "tests/test_generated_report_contracts.py::test_checked_in_auto_improve_readiness_keeps_evidence_ledgers_in_sync",
           "tests/test_writer_output_paths.py::WriterOutputPathsTest::test_script_output_surface_registry_matches_current_ast_inventory"
         ]
       },
@@ -562,6 +583,11 @@
     },
     {
       "kind": "make_target",
+      "name": "unit-tests-release-check",
+      "maps_to": "release_check_unit_complement"
+    },
+    {
+      "kind": "make_target",
       "name": "test-all",
       "maps_to": "developer_full"
     },
@@ -584,6 +610,11 @@
       "kind": "make_target",
       "name": "check-all-serial",
       "maps_to": "developer_full"
+    },
+    {
+      "kind": "make_target",
+      "name": "release-check",
+      "maps_to": "release_check_unit_complement"
     },
     {
       "kind": "make_target",
@@ -744,6 +775,11 @@
       "kind": "documented_entrypoint",
       "name": "make check-all",
       "maps_to": "developer_full"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-check",
+      "maps_to": "release_check_unit_complement"
     },
     {
       "kind": "documented_entrypoint",

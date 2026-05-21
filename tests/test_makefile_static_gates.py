@@ -1115,6 +1115,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn(
             "PYTEST_DEVELOPER_FULL_MARK_EXPR ?= not artifact_finalization", text
         )
+        self.assertIn(
+            "PYTEST_RELEASE_CHECK_MARK_EXPR ?= not artifact_finalization and not report_contract",
+            text,
+        )
         self.assertIn("PYTEST_RELEASE_SEALING_MARK_EXPR ?= release_sealing", text)
         self.assertIn("PYTEST_SUBPROCESS_MARK_EXPR ?= subprocess", text)
         self.assertIn("not report_contract and not artifact_finalization", text)
@@ -1127,6 +1131,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn(
             '$(PYTHON) -m pytest -m "$(PYTEST_DEVELOPER_FULL_MARK_EXPR)" $(PYTEST_FLAGS)',
             _target_block(text, "unit-tests-all"),
+        )
+        self.assertIn(
+            '$(PYTHON) -m pytest -m "$(PYTEST_RELEASE_CHECK_MARK_EXPR)" $(PYTEST_FLAGS)',
+            _target_block(text, "unit-tests-release-check"),
         )
         self.assertIn("test: test-fast", text)
         self.assertIn("unit-tests: test-fast", text)
@@ -1201,6 +1209,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         registry = _test_lane_registry()
         text = _makefile_text()
         developer_full_expr = pack_mark_expr(registry, "developer_full")
+        release_check_expr = pack_mark_expr(registry, "release_check_unit_complement")
 
         _assert_assignment_exists(
             self,
@@ -1208,7 +1217,14 @@ class MakefileStaticGateTests(unittest.TestCase):
             "PYTEST_DEVELOPER_FULL_MARK_EXPR",
             developer_full_expr,
         )
+        _assert_assignment_exists(
+            self,
+            text,
+            "PYTEST_RELEASE_CHECK_MARK_EXPR",
+            release_check_expr,
+        )
         self.assertEqual(developer_full_expr, "not artifact_finalization")
+        self.assertEqual(release_check_expr, "not artifact_finalization and not report_contract")
         for target, flags in (
             ("unit-tests-all", "$(PYTEST_FLAGS)"),
             ("unit-tests-all-serial", "$(PYTEST_SERIAL_FLAGS)"),
@@ -1219,6 +1235,10 @@ class MakefileStaticGateTests(unittest.TestCase):
                     f'$(PYTHON) -m pytest -m "$(PYTEST_DEVELOPER_FULL_MARK_EXPR)" {flags}',
                     _target_block(text, target),
                 )
+        self.assertIn(
+            '$(PYTHON) -m pytest -m "$(PYTEST_RELEASE_CHECK_MARK_EXPR)" $(PYTEST_FLAGS)',
+            _target_block(text, "unit-tests-release-check"),
+        )
 
     def test_source_package_targets_pin_clean_extract_test_lane(self) -> None:
         registry = _test_lane_registry()
@@ -1384,7 +1404,46 @@ class MakefileStaticGateTests(unittest.TestCase):
             '$(PYTHON) -m ops.scripts.release_smoke --vault "$(VAULT)" --profile fast --out "$(RELEASE_SMOKE_FAST_OUT)"',
             _target_block(text, "release-smoke-fast"),
         )
-        self.assertIn("release-check: check-all release-smoke", text)
+        preflight_block = _target_block(text, "release-check-preflight-converge")
+        release_check_block = _target_block(text, "release-check")
+        post_block = _target_block(text, "release-check-post-converge")
+        self.assertIn("release-check-preflight-converge", _target_block(text, ".PHONY"))
+        self.assertIn("release-check-post-converge", _target_block(text, ".PHONY"))
+        self.assertIn("$(MAKE) test-execution-summary-report-contract-refresh", preflight_block)
+        self.assertIn("$(MAKE) test-execution-summary-report-contract-refresh-no-smoke", preflight_block)
+        self.assertNotIn("$(MAKE) test-execution-summary-report-contract-refresh\n", preflight_block)
+        self.assertIn("$(MAKE) release-check-preflight-converge", release_check_block)
+        self.assertIn("$(MAKE) static", release_check_block)
+        self.assertIn("$(MAKE) artifact-freshness-check", release_check_block)
+        self.assertIn("$(MAKE) registry-preflight", release_check_block)
+        self.assertIn("$(MAKE) lint", release_check_block)
+        self.assertIn("$(MAKE) eval", release_check_block)
+        self.assertIn("$(MAKE) stage2-eval", release_check_block)
+        self.assertIn("$(MAKE) planning-gate", release_check_block)
+        self.assertIn("$(MAKE) unit-tests-release-check", release_check_block)
+        self.assertIn("$(MAKE) release-smoke-full-reuse", release_check_block)
+        self.assertIn("$(MAKE) release-check-post-converge", release_check_block)
+        self.assertNotIn("$(MAKE) check-all", release_check_block)
+        self.assertNotIn("$(MAKE) unit-tests-all", release_check_block)
+        self.assertIn("$(MAKE) generated-artifact-index", post_block)
+        self.assertIn("$(MAKE) artifact-freshness", post_block)
+        self.assertIn("$(MAKE) test-artifact-finalization", post_block)
+        self.assertLess(
+            release_check_block.index("$(MAKE) release-check-preflight-converge"),
+            release_check_block.index("$(MAKE) unit-tests-release-check"),
+        )
+        self.assertLess(
+            release_check_block.index("$(MAKE) unit-tests-release-check"),
+            release_check_block.index("$(MAKE) release-smoke-full-reuse"),
+        )
+        self.assertLess(
+            release_check_block.index("$(MAKE) release-smoke-full-reuse"),
+            release_check_block.index("$(MAKE) release-check-post-converge"),
+        )
+        finalized_block = _target_block(text, "release-check-finalized")
+        self.assertIn("release-check-finalized", _target_block(text, ".PHONY"))
+        self.assertTrue(finalized_block.startswith("release-check-finalized: release-check"))
+        self.assertIn("release-check already includes preflight convergence", finalized_block)
         self.assertIn(
             "developer/package precheck이며 canonical release evidence로 쓰지 않는다",
             readme_text,
@@ -2256,6 +2315,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "test-execution-summary-fast",
             "test-execution-summary-report-contract",
             "test-execution-summary-report-contract-refresh",
+            "test-execution-summary-report-contract-refresh-no-smoke",
             "test-execution-summary-full",
             "test-execution-summary-full-refresh",
             "test-execution-summary-reuse",
@@ -2361,14 +2421,27 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "ops.scripts.canonical_artifact_promote",
                 "$(MAKE) refresh-generated-core",
                 "$(MAKE) auto-improve-readiness-report-body",
-                "$(MAKE) release-smoke-full",
+                "$(MAKE) release-smoke-full-reuse",
             ),
         )
+        self.assertNotIn("$(MAKE) release-smoke-full\n", refresh_block)
         self.assertEqual(refresh_block.count("$(MAKE) generated-artifact-index"), 2)
         self.assertEqual(refresh_block.count("$(MAKE) archive-execution-manifest-report"), 0)
         self.assertEqual(refresh_block.count("$(MAKE) artifact-freshness"), 2)
         self.assertIn(
             "strict test-execution-summary will rerun later in closeout", refresh_block
+        )
+        no_smoke_refresh_block = _target_block(
+            text, "test-execution-summary-report-contract-refresh-no-smoke"
+        )
+        self.assertIn("$(MAKE) refresh-generated-core", no_smoke_refresh_block)
+        self.assertIn("$(MAKE) auto-improve-readiness-report-body", no_smoke_refresh_block)
+        self.assertNotIn("$(MAKE) release-smoke-full-reuse", no_smoke_refresh_block)
+        self.assertEqual(no_smoke_refresh_block.count("$(MAKE) generated-artifact-index"), 2)
+        self.assertEqual(no_smoke_refresh_block.count("$(MAKE) artifact-freshness"), 2)
+        self.assertIn(
+            "test-execution-summary-report-contract-refresh-no-smoke promoted a non-pass bootstrap summary",
+            no_smoke_refresh_block,
         )
         self.assertIn(
             "test-execution-summary: test-execution-summary-report-contract", text
@@ -2685,6 +2758,24 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "GOAL_RUNTIME_FIXED_POINT_CHECK_OUT",
                 "tmp/goal-runtime-fixed-point-check.json",
             ),
+            (
+                "GOAL_RUNTIME_CLOSEOUT_PLAN_OUT",
+                "tmp/goal-runtime-closeout-plan.json",
+            ),
+            ("GOAL_RUNTIME_CLOSEOUT_BUDGET", "cheap"),
+            ("GOAL_RUNTIME_CLOSEOUT_STATE_DIR", "$(GOAL_ACTIVE_STATE_DIR)/closeout"),
+            (
+                "GOAL_RUNTIME_CLOSEOUT_SCRIPT_OUTPUT_SURFACES_OUT",
+                "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)/script-output-surfaces.json",
+            ),
+            (
+                "GOAL_RUNTIME_CLOSEOUT_GENERATED_ARTIFACT_INDEX_OUT",
+                "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)/generated-artifact-index.json",
+            ),
+            (
+                "GOAL_RUNTIME_CLOSEOUT_ARTIFACT_FRESHNESS_OUT",
+                "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)/artifact-freshness-report.json",
+            ),
             ("GOAL_RUNTIME_LOCK_PATH", "$(GOAL_RUN_LOG_DIR)/goal-runtime.lock.json"),
             (
                 "GOAL_RUNTIME_PYTHON_PREFLIGHT_OUT",
@@ -2756,6 +2847,16 @@ class MakefileStaticGateTests(unittest.TestCase):
             "goal-runtime-local-evidence-converge",
             "goal-runtime-publish-local-evidence",
             "goal-runtime-reconcile",
+            "goal-runtime-closeout-plan",
+            "goal-runtime-closeout-candidate-script-output-surfaces",
+            "goal-runtime-closeout-candidate-generated-artifact-index",
+            "goal-runtime-closeout-candidate-artifact-freshness",
+            "goal-runtime-closeout-candidate-converge",
+            "goal-runtime-closeout-publish-script-output-surfaces",
+            "goal-runtime-closeout-publish",
+            "goal-runtime-closeout-finalize",
+            "goal-runtime-closeout",
+            "goal-runtime-closeout-full",
             "goal-runtime-clean-transient",
             "goal-runtime-fixed-point-check",
             "goal-runtime-lock-check",
@@ -3026,6 +3127,134 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) generated-artifact-index",
                 "$(MAKE) artifact-freshness",
             ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-plan",
+            (
+                "ops.scripts.goal_runtime_closeout",
+                "--out \"$(GOAL_RUNTIME_CLOSEOUT_PLAN_OUT)\"",
+                "--budget \"$(GOAL_RUNTIME_CLOSEOUT_BUDGET)\"",
+                "--candidate-root \"$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-candidate-script-output-surfaces",
+            (
+                "ops.scripts.script_output_surfaces",
+                "--out \"$(GOAL_RUNTIME_CLOSEOUT_SCRIPT_OUTPUT_SURFACES_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-candidate-generated-artifact-index",
+            (
+                "ops.scripts.generated_artifact_index",
+                "--out \"$(GOAL_RUNTIME_CLOSEOUT_GENERATED_ARTIFACT_INDEX_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-candidate-artifact-freshness",
+            (
+                "ops.scripts.artifact_freshness_runtime",
+                "--out \"$(GOAL_RUNTIME_CLOSEOUT_ARTIFACT_FRESHNESS_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-candidate-converge",
+            (
+                "$(MAKE) report-schema-samples-check",
+                "$(MAKE) goal-runtime-clean-transient",
+                "$(MAKE) goal-runtime-local-evidence-converge",
+                "$(MAKE) goal-runtime-closeout-candidate-script-output-surfaces",
+                "$(MAKE) goal-runtime-closeout-candidate-generated-artifact-index",
+                "$(MAKE) goal-runtime-closeout-candidate-artifact-freshness",
+            ),
+        )
+        candidate_block = _target_block(text, "goal-runtime-closeout-candidate-converge")
+        self.assertNotIn("$(MAKE) script-output-surfaces", candidate_block)
+        self.assertNotIn("$(MAKE) generated-artifact-index", candidate_block)
+        self.assertNotIn("$(MAKE) artifact-freshness", candidate_block)
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-publish-script-output-surfaces",
+            (
+                "ops.scripts.canonical_artifact_promote",
+                "--candidate \"$(GOAL_RUNTIME_CLOSEOUT_SCRIPT_OUTPUT_SURFACES_OUT)\"",
+                "--out \"$(SCRIPT_OUTPUT_SURFACES_OUT)\"",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-publish",
+            (
+                "$(MAKE) goal-runtime-closeout-publish-script-output-surfaces",
+                "$(MAKE) goal-runtime-publish-local-evidence",
+                "$(MAKE) goal-runtime-certificate",
+                "$(MAKE) external-report-action-matrix",
+                "$(MAKE) generated-artifact-index",
+                "$(MAKE) artifact-freshness",
+            ),
+        )
+        self.assertEqual(
+            _recipe_lines(text, "goal-runtime-closeout-publish"),
+            [
+                "$(MAKE) goal-runtime-closeout-publish-script-output-surfaces",
+                "$(MAKE) goal-runtime-publish-local-evidence",
+                "$(MAKE) goal-runtime-certificate",
+                "$(MAKE) external-report-action-matrix",
+                "$(MAKE) generated-artifact-index",
+                "$(MAKE) artifact-freshness",
+            ],
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-finalize",
+            (
+                "$(MAKE) test-artifact-finalization",
+                "$(MAKE) goal-runtime-fixed-point-check",
+            ),
+        )
+        self.assertNotIn(
+            "$(MAKE) generated-artifact-index",
+            _target_block(text, "goal-runtime-closeout-finalize"),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout",
+            (
+                "@set -e; \\",
+                "--budget cheap --candidate-root \"$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)\" --format targets",
+                "$(MAKE) $$target",
+                "GOAL_RUNTIME_CLOSEOUT_BUDGET=cheap",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-closeout-full",
+            (
+                "@set -e; \\",
+                "--budget full --candidate-root \"$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)\" --format targets",
+                "$(MAKE) $$target",
+                "GOAL_RUNTIME_CLOSEOUT_BUDGET=full",
+            ),
+        )
+        self.assertNotIn(
+            "test-execution-summary-full-refresh",
+            _target_block(text, "goal-runtime-closeout"),
         )
         _assert_recipe_contains_tokens(
             self,

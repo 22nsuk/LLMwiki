@@ -26,6 +26,7 @@
     "session_evidence",
     "command_observability",
     "evidence_paths",
+    "diagnosis",
     "contract_update",
     "blockers",
     "status"
@@ -204,6 +205,79 @@
     "evidence_paths": {
       "type": "array",
       "items": { "$ref": "#/$defs/evidence_path" }
+    },
+    "diagnosis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claim_type",
+        "certificate_claim_status",
+        "report_status_meaning",
+        "current_scope",
+        "mechanism_promote_evidence_policy",
+        "primary_blocker_categories",
+        "certifiable"
+      ],
+      "properties": {
+        "claim_type": {
+          "type": "string",
+          "const": "sustained_self_improvement_loop_certificate"
+        },
+        "certificate_claim_status": {
+          "type": "string",
+          "enum": ["eligible", "already_verified", "not_yet_certifiable"]
+        },
+        "report_status_meaning": { "type": "string", "minLength": 1 },
+        "current_scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status_report_path",
+            "run_id",
+            "run_status",
+            "runtime_mode",
+            "session_evidence_path"
+          ],
+          "properties": {
+            "status_report_path": { "type": "string", "minLength": 1 },
+            "run_id": { "type": "string" },
+            "run_status": { "type": "string" },
+            "runtime_mode": { "type": "string" },
+            "session_evidence_path": { "type": "string" }
+          }
+        },
+        "mechanism_promote_evidence_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mechanism_promote_sufficient_for_certificate",
+            "role"
+          ],
+          "properties": {
+            "mechanism_promote_sufficient_for_certificate": { "type": "boolean", "const": false },
+            "role": { "type": "string", "minLength": 1 }
+          }
+        },
+        "primary_blocker_categories": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "runtime_run",
+              "session_evidence",
+              "command_observability",
+              "required_evidence",
+              "promotion_guard",
+              "sealed_authority",
+              "runtime_budget",
+              "runtime_mode",
+              "other"
+            ]
+          }
+        },
+        "certifiable": { "type": "boolean" }
+      }
     },
     "contract_update": {
       "type": "object",

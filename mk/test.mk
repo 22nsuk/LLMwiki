@@ -5,6 +5,7 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD ?= 1
 PYTEST_FAST_MARK_EXPR ?= not slow and not integration and not integration_heavy and not public and not report_contract and not artifact_finalization and not release_sealing and not subprocess
 PYTEST_FAST_SMOKE_MARK_EXPR ?= not slow and not integration_heavy
 PYTEST_DEVELOPER_FULL_MARK_EXPR ?= not artifact_finalization
+PYTEST_RELEASE_CHECK_MARK_EXPR ?= not artifact_finalization and not report_contract
 PYTEST_SLOW_MARK_EXPR ?= slow and not integration and not integration_heavy and not public
 PYTEST_INTEGRATION_MARK_EXPR ?= integration and not integration_heavy and not public
 PYTEST_INTEGRATION_HEAVY_MARK_EXPR ?= integration_heavy and not public
@@ -82,6 +83,7 @@ REPORT_CONTRACT_FINALIZATION_TESTS ?= \
 	tests/test_generated_report_contracts.py::test_source_derived_workflow_planner_contract_is_covered_by_checked_in_artifacts \
 	tests/test_generated_report_contracts.py::test_checked_in_release_smoke_report_matches_live_envelope_fingerprints \
 	tests/test_generated_report_contracts.py::test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflight_state \
+	tests/test_generated_report_contracts.py::test_checked_in_auto_improve_readiness_keeps_evidence_ledgers_in_sync \
 	tests/test_writer_output_paths.py::WriterOutputPathsTest::test_script_output_surface_registry_matches_current_ast_inventory
 RELEASE_SEALING_TESTS ?= \
 	tests/test_release_closeout_batch_manifest.py \
@@ -110,7 +112,7 @@ RELEASE_CLOSEOUT_REGRESSION_TESTS ?= tests/test_release_closeout_finality_attest
 RELEASE_CLOSEOUT_REGRESSION_FRESHNESS_CHECK_OUT ?= tmp/release-closeout-regression-artifact-freshness-check.json
 RELEASE_CLOSEOUT_COST_EVIDENCE_CI_OUT ?= tmp/release-closeout-fixed-point-cost-trend-ci.json
 
-.PHONY: fast-smoke report-contracts report-contracts-extended test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact test-report-contract report-contract-summary test-artifact-finalization test-artifact-finalization-lane-guard report-contract-finalization test-release-sealing test-subprocess report-schema-samples-check report-schema-samples-regenerate report-contract-closeout-precheck report-contract-closeout test-execution-summary-fast test-execution-summary-report-contract test-execution-summary-report-contract-refresh test-execution-summary test-execution-summary-full test-execution-summary-full-refresh test-execution-summary-reuse test-execution-summary-aggregate test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
+.PHONY: fast-smoke report-contracts report-contracts-extended test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact test-report-contract report-contract-summary test-artifact-finalization test-artifact-finalization-lane-guard report-contract-finalization test-release-sealing test-subprocess report-schema-samples-check report-schema-samples-regenerate report-contract-closeout-precheck report-contract-closeout test-execution-summary-fast test-execution-summary-report-contract test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary test-execution-summary-full test-execution-summary-full-refresh test-execution-summary-reuse test-execution-summary-aggregate test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
 
 fast-smoke:
 	$(PYTHON) -m pytest -m "$(PYTEST_FAST_SMOKE_MARK_EXPR)" $(FAST_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)
@@ -187,10 +189,19 @@ test-execution-summary-report-contract:
 test-execution-summary-report-contract-refresh:
 	$(MAKE) refresh-generated-core
 	$(MAKE) auto-improve-readiness-report-body
-	$(MAKE) release-smoke-full
+	$(MAKE) release-smoke-full-reuse
 	$(MAKE) generated-artifact-index
 	$(MAKE) artifact-freshness
 	@status=0; $(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)" --collect-nodeids --deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)" -- $(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_SERIAL_FLAGS) || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --out "$(TEST_EXECUTION_SUMMARY_OUT)" --schema ops/schemas/test-execution-summary.schema.json --expected-artifact-kind test_execution_summary --expected-producer ops.scripts.test_execution_summary || exit $$?; if [ $$status -ne 0 ]; then echo "test-execution-summary-report-contract-refresh promoted a non-pass bootstrap summary; strict test-execution-summary will rerun later in closeout."; fi; exit 0
+	$(MAKE) generated-artifact-index
+	$(MAKE) artifact-freshness
+
+test-execution-summary-report-contract-refresh-no-smoke:
+	$(MAKE) refresh-generated-core
+	$(MAKE) auto-improve-readiness-report-body
+	$(MAKE) generated-artifact-index
+	$(MAKE) artifact-freshness
+	@status=0; $(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)" --collect-nodeids --deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)" -- $(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_SERIAL_FLAGS) || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --out "$(TEST_EXECUTION_SUMMARY_OUT)" --schema ops/schemas/test-execution-summary.schema.json --expected-artifact-kind test_execution_summary --expected-producer ops.scripts.test_execution_summary || exit $$?; if [ $$status -ne 0 ]; then echo "test-execution-summary-report-contract-refresh-no-smoke promoted a non-pass bootstrap summary; strict test-execution-summary will rerun later in closeout."; fi; exit 0
 	$(MAKE) generated-artifact-index
 	$(MAKE) artifact-freshness
 
@@ -235,6 +246,9 @@ unit-tests-all-serial:
 
 unit-tests-all-parallel:
 	$(PYTHON) -m pytest -m "$(PYTEST_DEVELOPER_FULL_MARK_EXPR)" $(PYTEST_PARALLEL_FLAGS)
+
+unit-tests-release-check:
+	$(PYTHON) -m pytest -m "$(PYTEST_RELEASE_CHECK_MARK_EXPR)" $(PYTEST_FLAGS)
 
 test: test-fast
 

@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-21T04:43:23Z",
+  "generated_at": "2026-05-21T07:26:41Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "4b13c78d093040547a7c6ad8bccb113000efc6dbf2d7a1b1963cd0e615e032c7",
+  "source_tree_fingerprint": "926b16ecda58cb1c2c4e0cec3a8bacdc70db6faa2805f292861a8f2cde736376",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T04:43:23Z"
+    "checked_at": "2026-05-21T07:26:41Z"
   },
   "vault": ".",
   "status": "pass",
@@ -401,7 +401,7 @@
         {
           "path": "ops/reports/codex-goal-prompt.json",
           "exists": true,
-          "status": "pass",
+          "status": "attention",
           "producer": "ops.scripts.codex_goal_prompt"
         },
         {
@@ -483,7 +483,7 @@
         {
           "path": "ops/reports/goal-run-status.json",
           "exists": true,
-          "status": "pass",
+          "status": "attention",
           "producer": "ops.scripts.goal_run_status"
         },
         {
@@ -645,7 +645,7 @@
         {
           "path": "ops/reports/goal-run-status.json",
           "exists": true,
-          "status": "pass",
+          "status": "attention",
           "producer": "ops.scripts.goal_run_status"
         },
         {

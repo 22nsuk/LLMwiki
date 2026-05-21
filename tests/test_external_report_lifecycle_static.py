@@ -11,10 +11,20 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 EXTERNAL_REPORTS = REPO_ROOT / "external-reports"
 REFERENCE_MANIFEST = EXTERNAL_REPORTS / "report-reference-manifest.json"
 ACTION_MATRIX = REPO_ROOT / "ops" / "reports" / "external-report-action-matrix.json"
+PUBLIC_EXPORT_MANIFEST = REPO_ROOT / "PUBLIC-EXPORT-MANIFEST.json"
 REFERENCE_EXTENSIONS = {".md", ".pdf", ".docx"}
 ACTIVE_MATRIX_EXTENSIONS = {".md", ".json"}
 
-pytestmark = pytest.mark.report_contract
+pytestmark = [pytest.mark.report_contract]
+if PUBLIC_EXPORT_MANIFEST.exists() and not EXTERNAL_REPORTS.exists():
+    pytestmark.append(
+        pytest.mark.skip(
+            reason=(
+                "external report lifecycle static checks require full-vault "
+                "external-reports; public exports intentionally omit that surface"
+            )
+        )
+    )
 
 
 def _active_root_paths(extensions: set[str]) -> list[str]:

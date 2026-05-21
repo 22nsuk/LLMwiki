@@ -185,5 +185,23 @@
     "runtime_certificate_verified_after": true
   },
   "blockers": [],
-  "status": "pass"
+  "status": "pass",
+  "diagnosis": {
+    "claim_type": "sustained_self_improvement_loop_certificate",
+    "certificate_claim_status": "already_verified",
+    "report_status_meaning": "status=pass means current evidence is eligible to verify the runtime certificate.",
+    "current_scope": {
+      "status_report_path": "runs/goal-active-report-self-improve-certificate-rerun7/state/goal-run-status.json",
+      "run_id": "active-report-self-improve-certificate-rerun7",
+      "run_status": "completed",
+      "runtime_mode": "self_improvement_loop",
+      "session_evidence_path": "ops/reports/auto-improve-sessions/active-report-self-improve-certificate-rerun7.json"
+    },
+    "mechanism_promote_evidence_policy": {
+      "mechanism_promote_sufficient_for_certificate": false,
+      "role": "A PROMOTE mechanism run can satisfy the successful-iteration part of matching auto-improve session evidence, but it does not replace the completed goal-run status, runner command heartbeat/audit, promotion guard, and full-gate evidence."
+    },
+    "primary_blocker_categories": [],
+    "certifiable": true
+  }
 }

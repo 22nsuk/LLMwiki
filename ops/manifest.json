@@ -142,8 +142,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "a9609db55dec8ea0d7f496ab3ef03163e16bd4b917f24093b3b3c0cb87bb9c22",
-      "size_bytes": 83826
+      "sha256": "0509d536f4fd6f3669b983fa448c5bc634b07e22238812b9a5a7f2a3d42123c2",
+      "size_bytes": 86590
     },
     {
       "path": "SECURITY.md",
@@ -172,8 +172,8 @@
     },
     {
       "path": "mk/mechanism.mk",
-      "sha256": "d2f447df2043a5010018cddbc59b5b5057d9d24b2b601e70ef40f45c1590a276",
-      "size_bytes": 22213
+      "sha256": "cc325d44961b10d9caade3e653b1e4bee4f911795b9a0f5df590ec7c4a711199",
+      "size_bytes": 26098
     },
     {
       "path": "mk/public.mk",
@@ -187,8 +187,8 @@
     },
     {
       "path": "mk/release.mk",
-      "sha256": "55f348709b7ded48dea7b853bf840ba5556133285c460202e24ab30c8f365988",
-      "size_bytes": 44657
+      "sha256": "b1de5f603a08de416c7de82e6ae1c5e77f5e7f6d19d1dccf5bef8ae6dd7f61a5",
+      "size_bytes": 45372
     },
     {
       "path": "mk/static.mk",
@@ -202,13 +202,13 @@
     },
     {
       "path": "mk/test.mk",
-      "sha256": "c636ea18bae03501359073c9c887470186842ba5b029365bffa1479603b5c91e",
-      "size_bytes": 19617
+      "sha256": "8d669042e40a5af9ff0d2c330bd65564ee38463eedb62b443b2762c0747a0772",
+      "size_bytes": 21164
     },
     {
       "path": "ops/README.md",
-      "sha256": "b923750b86ac0fba376f4534a8eb7a497a39d56fe73748d4df41907d9f518488",
-      "size_bytes": 112451
+      "sha256": "c0d2ea1d9cd650c29dfcf72c83f8a624b049725d879c77e4b44037cadf7615d0",
+      "size_bytes": 115015
     },
     {
       "path": "ops/__init__.py",
@@ -227,8 +227,8 @@
     },
     {
       "path": "ops/mypy-allowlist.txt",
-      "sha256": "ac7dccaeeee45ef3fc2c65d96afbb655758f12c4dacd55fe4ec509a85875178d",
-      "size_bytes": 12276
+      "sha256": "c7136bd5f7a311510e7a49ecee7f0400c7a0245db098c7e39c8ee264300d5385",
+      "size_bytes": 12323
     },
     {
       "path": "ops/mypy-strict-preview-allowlist.txt",
@@ -447,13 +447,18 @@
     },
     {
       "path": "ops/schemas/goal-runtime-certificate.schema.json",
-      "sha256": "49e74a52eeb18347a05f83988b5144b78820046b333c72e272931d58f30ed2ab",
-      "size_bytes": 9432
+      "sha256": "6dc9d05307aeee9e09399eacc105c89a24cc3259c21562a89d324758f3c889d7",
+      "size_bytes": 11744
     },
     {
       "path": "ops/schemas/goal-runtime-clean-transient.schema.json",
       "sha256": "08e444d08231cb4016a315e8844511a6c72a87fe4aa0e00944be0282ede66cc5",
       "size_bytes": 4244
+    },
+    {
+      "path": "ops/schemas/goal-runtime-closeout-plan.schema.json",
+      "sha256": "0965ca3732e3a68acc42cd4ecb6e495c0f4abf1218c352365added6feb1f475b",
+      "size_bytes": 10113
     },
     {
       "path": "ops/schemas/goal-runtime-fixed-point-check.schema.json",
@@ -1597,8 +1602,8 @@
     },
     {
       "path": "ops/scripts/mechanism/codex_goal_prompt.py",
-      "sha256": "e664f18cfeadcafb6b63275afbd8f509398e730a1ce9a226a41d11e950c135a7",
-      "size_bytes": 12300
+      "sha256": "633f34a8853cb7502bd2f81576b16241c14740ecc63ec7138e6c0580d2804822",
+      "size_bytes": 13270
     },
     {
       "path": "ops/scripts/mechanism/current_target_path_runtime.py",
@@ -1657,13 +1662,18 @@
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_certificate_report.py",
-      "sha256": "854dca70e9b7d7f269e71e4c8c76b2856d4f86fe0abc2bae73dfd3bc2c5149bf",
-      "size_bytes": 40533
+      "sha256": "c66a9ce29938b216fa9b1d6450d3d1754ba646b44e0c112cf503449e020312f9",
+      "size_bytes": 45675
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_clean_transient.py",
       "sha256": "ad1a1bf70e788b88e500e8dc2ee03c421fc13327d08c36dd108f895bd512e071",
       "size_bytes": 16154
+    },
+    {
+      "path": "ops/scripts/mechanism/goal_runtime_closeout.py",
+      "sha256": "23204f45d9ce81316a1c5eb7817b9ac01824158807d03e240f585b1a8650c8ed",
+      "size_bytes": 20298
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_fixed_point_check.py",
@@ -2322,8 +2332,8 @@
     },
     {
       "path": "ops/test-lane-registry.json",
-      "sha256": "33cc4a6bf8005deaf70e1a4e72ef9664a535cca120094bd43505fb5d44baa4c3",
-      "size_bytes": 28116
+      "sha256": "0985bed74ec4b3cb2544c3891fb3bc4cc6eee5279c563d70337e842c1fe38be1",
+      "size_bytes": 29334
     },
     {
       "path": "pyproject.toml",
@@ -4957,8 +4967,8 @@
     },
     {
       "path": "tests/fixtures/report_schema_samples.json",
-      "sha256": "b48af2b221cecd692c3ec173a82951abddfc9b37070533c8eea290f3cd34e55a",
-      "size_bytes": 137653
+      "sha256": "6d707d0a5e3d03b7fbda2c2cc9b40f7b5640886e646962a85cfafca0bdcbc9f9",
+      "size_bytes": 137914
     },
     {
       "path": "tests/fixtures/yaml/block-scalar.yaml",
@@ -4972,8 +4982,8 @@
     },
     {
       "path": "tests/minimal_vault_runtime.py",
-      "sha256": "e708a5d02d73700c4675220e4a377e1c6ce440ca6086236ed716c960ee2ad550",
-      "size_bytes": 23526
+      "sha256": "ec4eab91861665119ad474ed1ca0a8f8aa7ca263a184dfb84a4689d94261527c",
+      "size_bytes": 23658
     },
     {
       "path": "tests/minimal_vault_seed_core.py",
@@ -5112,8 +5122,8 @@
     },
     {
       "path": "tests/test_codex_goal_prompt.py",
-      "sha256": "aa475c18bb2a1a26dfd888a46d1d9a1812a2c00af1ff47f7ce98c2bd58e7ca83",
-      "size_bytes": 6917
+      "sha256": "48cc6ebb85b2d2f3ae692618cc5167890962475e3b3e379c354ddc3e84412bb2",
+      "size_bytes": 8155
     },
     {
       "path": "tests/test_command_runtime.py",
@@ -5177,8 +5187,8 @@
     },
     {
       "path": "tests/test_external_report_lifecycle_static.py",
-      "sha256": "4d0bca1235bd7c4ad94d691bdce5f40b14b65b6bd38af7e0149b596a1bc6f2ee",
-      "size_bytes": 2190
+      "sha256": "804614fc7f8b0edb0628f0785452e0199ce42ad28333400e4737515049b4ff46",
+      "size_bytes": 2590
     },
     {
       "path": "tests/test_external_report_reference_manifest.py",
@@ -5212,8 +5222,8 @@
     },
     {
       "path": "tests/test_generated_report_contracts.py",
-      "sha256": "861e0066bc7f587d11831d8ca3cff548024d89568875bf0cc072e60b1df7b83a",
-      "size_bytes": 70182
+      "sha256": "97e028d16bb5fe651a1e528f14cb09958a1d243bf4392a236d2bee650d6f6b0b",
+      "size_bytes": 70644
     },
     {
       "path": "tests/test_goal_auto_improve_runtime.py",
@@ -5227,13 +5237,18 @@
     },
     {
       "path": "tests/test_goal_runtime_certificate.py",
-      "sha256": "705a5eec97ebddb464c628038ce3dcbc12ccefc59dcdd810a364de94da42ac68",
-      "size_bytes": 14496
+      "sha256": "947711782ca97d8e05acf920a2bd7ff8d1df83fc120a699afac97a70f7251ff5",
+      "size_bytes": 19204
     },
     {
       "path": "tests/test_goal_runtime_clean_transient.py",
       "sha256": "c8eda3e20e6d4c519f16b0c4ffdfaa582318aa84086d05ca2060f35e75590489",
       "size_bytes": 8531
+    },
+    {
+      "path": "tests/test_goal_runtime_closeout.py",
+      "sha256": "95c79fee0d70d06b7f2e2763830592ecba8bef52c2dc11ddeb820ff3ea3ab110",
+      "size_bytes": 9562
     },
     {
       "path": "tests/test_goal_runtime_fixed_point_check.py",
@@ -5317,8 +5332,8 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "52fd55d1e15c9503a1efe75a65986bf5c60cf1c0c87ed1f8e493e887fe500dbf",
-      "size_bytes": 154750
+      "sha256": "dacd146588df52995e177377f71584ee9135e4c3023e0c941db5624159322753",
+      "size_bytes": 165535
     },
     {
       "path": "tests/test_manifest_export_symlink_safety.py",
@@ -5907,8 +5922,8 @@
     },
     {
       "path": "tests/test_writer_output_paths.py",
-      "sha256": "984680ac22881c07735e9438d22e18f06ffb8efb828e91dadaa7f01620fef5cb",
-      "size_bytes": 23805
+      "sha256": "38d6f06e6793c59ce614d23ec14697a861eb856c511ff6475eac01dcac7934c5",
+      "size_bytes": 24237
     },
     {
       "path": "tests/test_yaml_runtime.py",

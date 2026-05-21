@@ -92,8 +92,14 @@ Resume discipline:
 
 Generated artifact convergence:
 - After code or report-generator edits, do not use test failure -> patch -> full rerun as the auto-improve loop.
+- Prefer `make goal-runtime-closeout` to run the fingerprint-based cheap closeout plan before any full-suite retry.
+- Treat that closeout as run-local candidate-converge -> single canonical publish boundary -> post-publish finalization when expensive evidence is already current.
+- If the cheap closeout plan reports stale expensive evidence, stop after the run-local candidate step and escalate to the full closeout budget instead of publishing canonical reports.
+- Use `make goal-runtime-closeout-full` only when the closeout plan shows stale expensive evidence and the source fingerprint changed.
+- Run `make report-schema-samples-check` before generated index/freshness so schema fixture drift is caught before report currentness work.
 - First converge `make script-output-surfaces`, `make generated-artifact-index`, and `make artifact-freshness`.
 - Run `make release-smoke-full-reuse` when release source-tree evidence may have changed.
+- Treat full-suite evidence as max-once per unchanged source fingerprint; reuse it after a pass instead of rerunning for report-only drift.
 - Run artifact finalization only after that convergence, through `make report-contract-closeout` or `make test-artifact-finalization`.
 """,
         )
@@ -126,6 +132,9 @@ Generated artifact convergence:
             self.assertIn("Promotion gate guidance:", persisted["prompt"]["text"])
             self.assertIn("Do not lower thresholds", persisted["prompt"]["text"])
             self.assertIn("Generated artifact convergence:", persisted["prompt"]["text"])
+            self.assertIn("make goal-runtime-closeout", persisted["prompt"]["text"])
+            self.assertIn("single canonical publish boundary", persisted["prompt"]["text"])
+            self.assertIn("make report-schema-samples-check", persisted["prompt"]["text"])
             self.assertIn("make script-output-surfaces", persisted["prompt"]["text"])
             self.assertIn("make test-artifact-finalization", persisted["prompt"]["text"])
 
@@ -140,8 +149,10 @@ Generated artifact convergence:
     def test_self_improvement_docs_name_generated_artifact_convergence_order(self) -> None:
         required_phrases = (
             "make script-output-surfaces",
+            "make report-schema-samples-check",
             "make generated-artifact-index",
             "make artifact-freshness",
+            "make goal-runtime-closeout",
             "make release-smoke-full-reuse",
             "make test-artifact-finalization",
         )

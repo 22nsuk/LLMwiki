@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/self-improvement-negative-lessons.schema.json",
   "artifact_kind": "self_improvement_negative_lessons",
-  "generated_at": "2026-05-21T04:45:48Z",
+  "generated_at": "2026-05-21T07:11:30Z",
   "producer": "ops.scripts.self_improvement_negative_lessons",
   "source_command": "python -m ops.scripts.self_improvement_negative_lessons --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "a7285e3f8fbe67f552c93831bb154504c6bc4d8121baaedc7b9dc329757104f5",
+  "source_tree_fingerprint": "eaf4ee39e3080808f93b6b9567ec9c9e047f2bb251d878881079b13cb3fac05f",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "47b79b46ef1a89257481eb0fa0b41f96e2765bb833dd8fe9b2f718d71cf470e2",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "84193028407a795627d839d6af851d9f2c755cb578844df5ee01ee720faf8a87",
     "learning_claim_activation": "f90a59b26c0aafc739d67a3d2bdde627f879afb337ca0220af680861946a0b81",
-    "session_synopsis": "2428e149ea14e3f7bca725a9f9da15cc2017e1ffa67ff48e46ce85c8ef75cce7"
+    "session_synopsis": "9519ac27c04a515d89ca04fd9be161b9f128269ab505d0893114199b9b9a88a5"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T04:45:48Z"
+    "checked_at": "2026-05-21T07:11:30Z"
   },
   "vault": ".",
   "policy": {
@@ -109,6 +109,6 @@
   ],
   "inputs": {
     "learning_claim_activation": "ops/reports/learning_claim_activation_report.json",
-    "session_synopsis": "runs/goal-active-report-self-improve-certificate-rerun7/state/session-synopsis.json"
+    "session_synopsis": "runs/goal-auto-improve-trial/state/session-synopsis.json"
   }
 }
