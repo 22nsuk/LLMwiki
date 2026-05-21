@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/release-smoke-report.schema.json",
   "artifact_kind": "release_smoke_report",
-  "generated_at": "2026-05-21T02:32:19Z",
+  "generated_at": "2026-05-21T03:28:39Z",
   "producer": "ops.scripts.release_smoke",
   "source_command": "python -m ops.scripts.release.release_smoke --vault . --profile full",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e14bad6b0a02e3c90c9fb04560e3cf7648f40ec1b3e95523b978c6ddccc95b08",
+  "source_tree_fingerprint": "86e956358df2f65e98d72facd45e7ec4aa22fe2161166db65412403e26575827",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "6f14f899e0f4dce979d6152079ccd87ca44a19716266452a0f497b5fb3275d93",
@@ -18,7 +18,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T02:32:19Z"
+    "checked_at": "2026-05-21T03:28:39Z"
   },
   "vault": ".",
   "policy": {
@@ -31,8 +31,8 @@
   "archive_file": {
     "path": "<tmp>/LLMwiki-release-smoke.zip",
     "exists": true,
-    "size_bytes": 190592235,
-    "sha256": "bf3063af2aa4d07d272e95b0b5f5624668e76539957dd23790c641e953bc0ee9"
+    "size_bytes": 190595366,
+    "sha256": "c81b19f31bd056c2425b50c00f4bca3ebf5e2c3fe2619fd9f8bf920b3b41568e"
   },
   "archive_class": {
     "name": "release_smoke_zip",
@@ -245,11 +245,11 @@
   "archive_reproducibility": {
     "status": "pass",
     "run_count": 2,
-    "first_archive_sha256": "bf3063af2aa4d07d272e95b0b5f5624668e76539957dd23790c641e953bc0ee9",
-    "second_archive_sha256": "bf3063af2aa4d07d272e95b0b5f5624668e76539957dd23790c641e953bc0ee9",
+    "first_archive_sha256": "c81b19f31bd056c2425b50c00f4bca3ebf5e2c3fe2619fd9f8bf920b3b41568e",
+    "second_archive_sha256": "c81b19f31bd056c2425b50c00f4bca3ebf5e2c3fe2619fd9f8bf920b3b41568e",
     "same_archive_sha256": true,
-    "first_source_manifest_digest": "7c912c2725689360da73b852e5bcdcef90207bd34e128777e7cb8d394f1d7b4a",
-    "second_source_manifest_digest": "7c912c2725689360da73b852e5bcdcef90207bd34e128777e7cb8d394f1d7b4a",
+    "first_source_manifest_digest": "4d6703ef3e91f7c7b7f4e616c0cfc788462666d25910bc0a1132acccbd193f3d",
+    "second_source_manifest_digest": "4d6703ef3e91f7c7b7f4e616c0cfc788462666d25910bc0a1132acccbd193f3d",
     "same_source_manifest_digest": true,
     "summary": "archive_reproducibility=pass; same_archive_sha256=true; same_source_manifest_digest=true"
   },
@@ -257,10 +257,10 @@
     "path": "release-archive-self-description.json",
     "archive_root_name": "LLMwiki",
     "archive_member_path": "LLMwiki/release-archive-self-description.json",
-    "sha256": "4a0c44a2bf8f5540c598dd27a635f8687de9026278747b4a41928a474795c470",
+    "sha256": "e732252d156817773b36de8883588faf26befed8807598dab3d6282521c2beb1",
     "size_bytes": 4096,
     "profile": "full",
-    "source_manifest_digest": "423e1170d9db7ecc5d46c3db2bb6268b1c4b75d39ab5c9acc93ff5a0022dc0d1",
+    "source_manifest_digest": "5ac654b14c761790b22a603f66baff299456c8a73b33d624a9165bc063207801",
     "source_manifest_file_count": 1609,
     "tmp_included": false,
     "external_reports_included": false,
@@ -288,7 +288,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 1290,
+      "duration_ms": 1281,
       "stdout_tail": "      \"path_list_separator\": \":\",\n      \"path_separator\": \"/\",\n      \"platform_system\": \"Linux\",\n      \"posix_escape_expanded_component_byte_limit\": \"255\",\n      \"preferred_encoding\": \"UTF-8\"\n    }\n  },\n  \"metric_semantics\": {\n    \"entry_count\": {\n      \"scope\": \"registry_entries\",\n      \"description\": \"Parsed raw registry entries after inventory enrichment.\"\n    },\n    \"error_count\": {\n      \"scope\": \"diagnostics\",\n      \"description\": \"Number of preflight diagnostics emitted with fail severity.\"\n    },\n    \"warning_count\": {\n      \"scope\": \"diagnostics\",\n      \"description\": \"Number of preflight diagnostics emitted with warn severity.\"\n    },\n    \"path_alias_match_count\": {\n      \"scope\": \"entries_with_missing_canonical_storage_path\",\n      \"description\": \"Entries whose canonical storage_path was absent but a manual, exported, or deterministic environment alias existed on disk.\"\n    },\n    \"content_hash_fallback_count\": {\n      \"scope\": \"entries_with_missing_canonical_storage_path_and_aliases\",\n      \"description\": \"Entries whose path locators were absent but exactly one raw inventory file matched the entry content_sha256.\"\n    }\n  },\n  \"unsupported_environment\": false,\n  \"errors\": [],\n  \"warnings\": [],\n  \"stats\": {\n    \"entry_count\": 446,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"path_alias_match_count\": 0,\n    \"content_hash_fallback_count\": 0\n  }\n}",
       "stderr_tail": ""
     },
@@ -300,8 +300,8 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 2616,
-      "stdout_tail": "        \"function_lines\": 493,\n        \"parameter_count\": 0,\n        \"branch_node_count\": 3\n      },\n      \"threshold\": {\n        \"function_lines\": 180,\n        \"parameter_count\": 12,\n        \"branch_node_count\": 12\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    },\n    {\n      \"type\": \"python_function_budget_candidate\",\n      \"page\": \"tests/test_run_mechanism_experiment.py\",\n      \"symbol\": \"RunMechanismExperimentTests.test_wrapper_ignores_ephemeral_workspace_noise_in_changed_manifest\",\n      \"line\": 950,\n      \"profile\": \"tests\",\n      \"triggered_budgets\": [\n        \"function_lines\"\n      ],\n      \"value\": {\n        \"function_lines\": 192,\n        \"parameter_count\": 0,\n        \"branch_node_count\": 2\n      },\n      \"threshold\": {\n        \"function_lines\": 180,\n        \"parameter_count\": 12,\n        \"branch_node_count\": 12\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    }\n  ],\n  \"stats\": {\n    \"page_count\": 487,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"review_candidate_count\": 29\n  }\n}",
+      "duration_ms": 2654,
+      "stdout_tail": "        \"function_lines\": 494,\n        \"parameter_count\": 0,\n        \"branch_node_count\": 3\n      },\n      \"threshold\": {\n        \"function_lines\": 180,\n        \"parameter_count\": 12,\n        \"branch_node_count\": 12\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    },\n    {\n      \"type\": \"python_function_budget_candidate\",\n      \"page\": \"tests/test_run_mechanism_experiment.py\",\n      \"symbol\": \"RunMechanismExperimentTests.test_wrapper_ignores_ephemeral_workspace_noise_in_changed_manifest\",\n      \"line\": 950,\n      \"profile\": \"tests\",\n      \"triggered_budgets\": [\n        \"function_lines\"\n      ],\n      \"value\": {\n        \"function_lines\": 192,\n        \"parameter_count\": 0,\n        \"branch_node_count\": 2\n      },\n      \"threshold\": {\n        \"function_lines\": 180,\n        \"parameter_count\": 12,\n        \"branch_node_count\": 12\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    }\n  ],\n  \"stats\": {\n    \"page_count\": 487,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"review_candidate_count\": 30\n  }\n}",
       "stderr_tail": ""
     },
     {
@@ -312,7 +312,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 1074,
+      "duration_ms": 1084,
       "stdout_tail": "        {\n          \"eval\": \"frontmatter_contract\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"required_sections_present\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"source_trace_present\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"source_trace_targets_exist\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"link_integration\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"high_severity_open_questions_within_budget\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"medium_severity_open_questions_within_budget\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"broken_link_free\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"placeholder_discipline\",\n          \"pass\": true\n        }\n      ]\n    }\n  ]\n}",
       "stderr_tail": ""
     },
@@ -324,7 +324,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 554,
+      "duration_ms": 558,
       "stdout_tail": "        {\n          \"eval\": \"declared_source_count_matches_evidence\",\n          \"pass\": true,\n          \"detail\": {\n            \"declared_source_count\": 7,\n            \"evidence_source_count\": 7,\n            \"evidence_source_links\": [\n              \"source--ai-memory-boom-and-supply-constraints-2026-04-13\",\n              \"source--asml-ai-chip-demand-and-semiconductor-capex-resilience-2026-04-16\",\n              \"source--memory-product-mix-upside-for-samsung-and-sk-hynix-2026-04-21\",\n              \"source--samsung-labor-bonus-dispute-and-semiconductor-workforce-risk-2026-04-17\",\n              \"source--samsung-process-blueprint-trade-secret-case-2026-04-21\",\n              \"source--samsung-strategic-output-increase-and-preorders-2026-04-21\",\n              \"source--sk-hynix-socamm2-ai-memory-scaleup-2026-04-21\"\n            ]\n          }\n        }\n      ]\n    },\n    {\n      \"page\": \"system/synthesis--stage1-planning-harness-bridge.md\",\n      \"score\": 1,\n      \"max_score\": 1,\n      \"results\": [\n        {\n          \"eval\": \"declared_source_count_matches_evidence\",\n          \"pass\": true,\n          \"detail\": {\n            \"declared_source_count\": 2,\n            \"evidence_source_count\": 2,\n            \"evidence_source_links\": [\n              \"source--ouroboros-repo\",\n              \"source--stage1-planning-harness-mvp\"\n            ]\n          }\n        }\n      ]\n    }\n  ]\n}",
       "stderr_tail": ""
     },

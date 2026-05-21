@@ -1,30 +1,30 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-21T03:08:34Z",
+  "generated_at": "2026-05-21T03:28:23Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "b347a96d3d3db246b9af5bdc224c2144972a19b1ed43bf963073528b90d597a8",
+  "source_tree_fingerprint": "86e956358df2f65e98d72facd45e7ec4aa22fe2161166db65412403e26575827",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "27cd71440c75698e6e1aceea8885fb72c3c91ad83cfff20c1d5c81358e688c04",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "c81a53851286949be4152bf3484570bc2540afd45f2ca65919e6973aebd7192c",
-    "artifact_freshness_report": "838ffac66d01084959eef2f8a6516b36c1886d9240aacceb0549ba64329d48b0",
-    "goal_worktree_guard_report": "cd7ee266824a72319287c422882097ef988e7406f7a1c05a21394657b6ee00c4",
-    "mechanism_review_report": "fe0b5e170dc939fe97932ceba1ba6bf23175931f59173eed7c46ad4e90b6283c",
-    "mutation_proposal_report": "9453e5fc170703215c75722f693d8d3507f36a80f3825bc82ea4295a52c239dd",
-    "outcome_metrics_report": "ff7078b5694c14e43ba16737c464d968fe595bd9b095a7e06ba928accf7d735e",
+    "artifact_freshness_report": "0e717d9e37c46d0e9a508998dfae6a696974e4028e13f95aefe5afb7d830cb37",
+    "goal_worktree_guard_report": "ac83e33e2663bc592ab9133880ef9f777177e229b8639a53d172ccbba7040f75",
+    "mechanism_review_report": "fe5a8b6eeb05a7f992400dd8413542a6d0efde9d5e5fe1161670072ec9d47444",
+    "mutation_proposal_report": "29806eac78780597702874df9e07baae8b795d6d02055a9565e50304e8a83555",
+    "outcome_metrics_report": "dec217e7d380937ea0b2c8c8a81afedbfb0baa699a71ac26a7aa8171d8e9d6aa",
     "release_authority_preflight_report": "10f0bfb695bf86acef189209fdbea66e2d0665cfb4aaa8f700c3ecb851ac0a85",
     "release_closeout_batch_manifest_report": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
     "release_closeout_finality_attestation_report": "7dd3b5e276deee3a02a3e664f5e2c8e28adf36ed7e19eacedd884942521c03ea",
     "release_closeout_post_check_finalizer_report": "missing",
-    "release_closeout_summary_report": "d7d59fe49d0ea65ef35728cf9a23f8ae61e0f559bd2374ec6d1162110b4edfb4",
+    "release_closeout_summary_report": "48b01dcd747ac66d4e20090ca74cf9626fdc2fc8098fccb4deb4d11f548dffdc",
     "release_evidence_cohort_report": "694897fe672515f02ad9230367e2e81a064634b56bc1a581a52afd9d587d715a",
-    "remediation_backlog_report": "4f25ffb1e0b936f6edda955c5d98d85394653d9670be8f9c47d09f3649357fea",
-    "selected_contract_summary_report": "67ea36384e7bed5b487c6bdad582e5af87845cbc154acd556d886f2899029505",
-    "source_package_clean_extract_report": "4e498124855ed3f5597d3c1587a5c14d225ad4ce1bcb74877207d7d44b21c116",
+    "remediation_backlog_report": "3b86ef7c756c046bc6f984466ae36775b2246d4678f24c3a759c27e9381c4888",
+    "selected_contract_summary_report": "26161d31be49326bc8863e96b6c5c3df3cb88480d38102dd5e88c747cd5de6fb",
+    "source_package_clean_extract_report": "936e5fdc7dc44627a102d99ae19a2d85220238fb2a2eea80a759eeaa312f5919",
     "release_authority_preflight_report_candidates": "6ea0b18b4d7d8346dfc8550c58618164b7039c8eb19a02c2cb80ed7eb8e45cb9"
   },
   "schema_version": 1,
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T03:08:34Z"
+    "checked_at": "2026-05-21T03:28:23Z"
   },
   "vault": ".",
   "policy": {
@@ -168,6 +168,26 @@
         "restore a non-empty runnable proposal queue; learning-readiness signoff cannot accept not_runnable execution blockers"
       ],
       "recommended_next_step": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty."
+    },
+    {
+      "id": "promotion_blocked_by_goal_worktree_guard_failure",
+      "scope": "worktree_guard",
+      "status": "open",
+      "severity": "blocker",
+      "release_blocker": true,
+      "accepted_risk": false,
+      "gate_effect": "active",
+      "source_status": "attention",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=23",
+      "signal_ids": [
+        "git_worktree_dirty"
+      ],
+      "required_evidence": [
+        "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
+        "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
+        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal."
+      ],
+      "recommended_next_step": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     }
   ],
   "release_blockers": [
@@ -207,14 +227,14 @@
     "release_closeout_post_check_finalizer_report": "tmp/release-closeout-post-check-finalizer.json",
     "release_authority_preflight_report": "ops/reports/release-closeout-sealed-rehearsal-check.json",
     "goal_worktree_guard_report": "tmp/goal-worktree-guard.json",
-    "remediation_backlog_report": "runs/goal-active-report-self-improve-certificate-rerun7/state/remediation-backlog.json"
+    "remediation_backlog_report": "ops/reports/remediation-backlog.json"
   },
   "diagnostics": {
     "loop_health_summary": {
       "status": "available",
       "gate_effect": "none",
       "source_report": "ops/reports/routing-provenance-aggregates/active-report-self-improve-certificate-rerun7.json",
-      "source_generated_at": "2026-05-21T02:31:57Z",
+      "source_generated_at": "2026-05-21T03:28:18Z",
       "session_id": "active-report-self-improve-certificate-rerun7",
       "summary": "attempts=2, finalized=1, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=1.00 | alerts: unfinalized runs present, recent HOLD trend",
       "health_flags": [
@@ -388,20 +408,22 @@
     "goal_worktree_guard_summary": {
       "path": "tmp/goal-worktree-guard.json",
       "artifact_kind": "goal_worktree_guard",
-      "status": "pass",
+      "status": "attention",
       "requested_mode": "git",
       "detected_mode": "git_worktree",
       "can_execute_goal_runtime": true,
-      "can_promote_result": true,
+      "can_promote_result": false,
       "zip_mode_replay_only": false,
       "dirty_worktree_allowed": false,
-      "dirty_entry_count": 0,
+      "dirty_entry_count": 23,
       "fatal_blockers": [],
-      "promotion_blockers": [],
-      "summary": "goal worktree guard status=pass; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=true; dirty_entry_count=0"
+      "promotion_blockers": [
+        "git_worktree_dirty"
+      ],
+      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=23"
     },
     "remediation_backlog_summary": {
-      "path": "runs/goal-active-report-self-improve-certificate-rerun7/state/remediation-backlog.json",
+      "path": "ops/reports/remediation-backlog.json",
       "expected_artifact_kind": "remediation_backlog",
       "artifact_kind": "remediation_backlog",
       "status": "pass",

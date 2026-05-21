@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/source-package-clean-extract.schema.json",
   "artifact_kind": "source_package_clean_extract",
-  "generated_at": "2026-05-21T02:33:53Z",
+  "generated_at": "2026-05-21T03:10:35Z",
   "producer": "ops.scripts.source_package_clean_extract",
   "source_command": "python -m ops.scripts.source_package_clean_extract --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e14bad6b0a02e3c90c9fb04560e3cf7648f40ec1b3e95523b978c6ddccc95b08",
+  "source_tree_fingerprint": "b347a96d3d3db246b9af5bdc224c2144972a19b1ed43bf963073528b90d597a8",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "27da520a851619f68c36b430ea2f17debedc4c0ce3dbcd3621acb9652a5b73f5",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b720e650f1616cdcc5f6236487d3d84311352d36567bd2eec977ae7ac8fc6000",
-    "source_zip": "ea482e5007751f8d07f3d314b2db39f3530788e4939bd0df559cbb150274e3cc",
-    "zip_smoke_report": "e047d5798f98a9ca5f0e3cb9daa645f9b6c88e415205479c33e5403c3bc28833",
+    "source_zip": "93158744a0cd031df7dc158d50acfa81a9c60627baf5a4642675c0f4597b871e",
+    "zip_smoke_report": "470d5215958c4d019411caea2f29bc623dd42a5dbd51929856a8efa5daa8e44e",
     "archive_root_name": "16e8bef78c32198777a85a911c5318b19502b6097d5f994a951578e17d052627",
     "archive_root_source": "1024cb551d0155801d1a6906c526613eab1bef5238d87887d9b83892ac6f90d3",
     "deselection_policy": "d7cdf13d224bc19222fd99a33e87e00034c5ace72c4d0f4e4f1055e5bc4f3d1a",
@@ -34,7 +34,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T02:33:53Z"
+    "checked_at": "2026-05-21T03:10:35Z"
   },
   "vault": ".",
   "policy": {
@@ -45,7 +45,7 @@
   "source_zip": {
     "path": "tmp/source-package-check/LLMwiki-source.zip",
     "exists": true,
-    "sha256": "ea482e5007751f8d07f3d314b2db39f3530788e4939bd0df559cbb150274e3cc"
+    "sha256": "93158744a0cd031df7dc158d50acfa81a9c60627baf5a4642675c0f4597b871e"
   },
   "extract": {
     "parent": "tmp/source-package-check/extract",
@@ -71,7 +71,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 1111,
+      "duration_ms": 1117,
       "heartbeat_count": 0,
       "heartbeat_interval_seconds": 30,
       "quiet_seconds": 0,
@@ -96,7 +96,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 41,
+      "duration_ms": 48,
       "heartbeat_count": 0,
       "heartbeat_interval_seconds": 30,
       "quiet_seconds": 0,
@@ -118,7 +118,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 3543,
+      "duration_ms": 3403,
       "heartbeat_count": 0,
       "heartbeat_interval_seconds": 30,
       "quiet_seconds": 0,
@@ -157,7 +157,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 398435,
+      "duration_ms": 401805,
       "heartbeat_count": 13,
       "heartbeat_interval_seconds": 30,
       "quiet_seconds": 390,
@@ -165,97 +165,97 @@
       "heartbeat_events": [
         {
           "heartbeat_index": 1,
-          "elapsed_seconds": 30.03,
+          "elapsed_seconds": 30.01,
           "timeout_seconds": 5400,
           "quiet_seconds": 30,
           "observation_mode": "process_poll"
         },
         {
           "heartbeat_index": 2,
-          "elapsed_seconds": 60.142,
+          "elapsed_seconds": 60.04,
           "timeout_seconds": 5400,
           "quiet_seconds": 60,
           "observation_mode": "process_poll"
         },
         {
           "heartbeat_index": 3,
-          "elapsed_seconds": 90.008,
+          "elapsed_seconds": 90.036,
           "timeout_seconds": 5400,
           "quiet_seconds": 90,
           "observation_mode": "process_poll"
         },
         {
           "heartbeat_index": 4,
-          "elapsed_seconds": 120.033,
+          "elapsed_seconds": 120.078,
           "timeout_seconds": 5400,
           "quiet_seconds": 120,
           "observation_mode": "process_poll"
         },
         {
           "heartbeat_index": 5,
-          "elapsed_seconds": 150.015,
+          "elapsed_seconds": 150.02,
           "timeout_seconds": 5400,
           "quiet_seconds": 150,
           "observation_mode": "process_poll"
         },
         {
           "heartbeat_index": 6,
-          "elapsed_seconds": 180.146,
+          "elapsed_seconds": 180.034,
           "timeout_seconds": 5400,
           "quiet_seconds": 180,
           "observation_mode": "process_poll"
         },
         {
           "heartbeat_index": 7,
-          "elapsed_seconds": 210.026,
+          "elapsed_seconds": 210.039,
           "timeout_seconds": 5400,
           "quiet_seconds": 210,
           "observation_mode": "process_poll"
         },
         {
           "heartbeat_index": 8,
-          "elapsed_seconds": 240.006,
+          "elapsed_seconds": 240.027,
           "timeout_seconds": 5400,
           "quiet_seconds": 240,
           "observation_mode": "process_poll"
         },
         {
           "heartbeat_index": 9,
-          "elapsed_seconds": 270.002,
+          "elapsed_seconds": 270.047,
           "timeout_seconds": 5400,
           "quiet_seconds": 270,
           "observation_mode": "process_poll"
         },
         {
           "heartbeat_index": 10,
-          "elapsed_seconds": 300.111,
+          "elapsed_seconds": 300.011,
           "timeout_seconds": 5400,
           "quiet_seconds": 300,
           "observation_mode": "process_poll"
         },
         {
           "heartbeat_index": 11,
-          "elapsed_seconds": 330.057,
+          "elapsed_seconds": 330.015,
           "timeout_seconds": 5400,
           "quiet_seconds": 330,
           "observation_mode": "process_poll"
         },
         {
           "heartbeat_index": 12,
-          "elapsed_seconds": 360.04,
+          "elapsed_seconds": 360.033,
           "timeout_seconds": 5400,
           "quiet_seconds": 360,
           "observation_mode": "process_poll"
         },
         {
           "heartbeat_index": 13,
-          "elapsed_seconds": 390.005,
+          "elapsed_seconds": 390.011,
           "timeout_seconds": 5400,
           "quiet_seconds": 390,
           "observation_mode": "process_poll"
         }
       ],
-      "stdout_tail": "\": \"runtime-maintainer\",\n    \"expires_at\": \"2026-06-08T00:00:00Z\",\n    \"count_increase_gate_effect\": \"fail\",\n    \"expiry_gate_effect\": \"fail\",\n    \"next_action\": \"none\",\n    \"blockers\": []\n  },\n  \"pytest_marker_deselected_count\": 80,\n  \"policy_deselected_count\": 2,\n  \"pytest_collect_nodeid_digest\": {\n    \"status\": \"collected\",\n    \"command\": \"'.venv/bin/python' -m pytest -o addopts= --collect-only -q --capture=no tests -m 'not artifact_finalization and not release_sealing' --deselect=tests/test_generated_report_contracts.py --deselect=tests/test_external_report_lifecycle_static.py\",\n    \"nodeid_count\": 1327,\n    \"sha256\": \"647e8f6a2ea4448d0e4676df1a0dcb852f53f9ff39b25c60a169be8d4cab22ce\",\n    \"reason\": \"\"\n  },\n  \"nodeid_outcome_consistency\": {\n    \"status\": \"pass\",\n    \"nodeid_count\": 1327,\n    \"outcome_count\": 1327,\n    \"counted_outcomes\": {\n      \"passed\": 1321,\n      \"skipped\": 6,\n      \"xfailed\": 0,\n      \"xpassed\": 0\n    },\n    \"delta\": 0,\n    \"reason\": \"collected nodeid count matches passed + skipped + xfailed/xpassed outcomes\"\n  },\n  \"evidence_artifacts\": [],\n  \"evidence_artifact_consistency\": {\n    \"status\": \"skipped\",\n    \"checked_artifact_count\": 0,\n    \"checks\": [],\n    \"blockers\": []\n  },\n  \"stdout_tail\": \"........................................................................ [  5%]/n........................................................................ [ 10%]/n.................ss..ssss............................................... [ 16%]/n........................................................................ [ 21%]/n........................................................................ [ 27%]/n........................................................................ [ 32%]/n........................................................................ [ 37%]/n........................................................................ [ 43%]/n........................................................................ [ 48%]/n........................................................................ [ 54%]/n........................................................................ [ 59%]/n........................................................................ [ 65%]/n........................................................................ [ 70%]/n........................................................................ [ 75%]/n........................................................................ [ 81%]/n........................................................................ [ 86%]/n........................................................................ [ 92%]/n........................................................................ [ 97%]/n...............................                                          [100%]/n1321 passed, 6 skipped, 82 deselected in 394.65s (0:06:34)/n\",\n  \"stderr_tail\": \"\",\n  \"release_contract_diagnosis\": [\n    {\n      \"name\": \"pytest_contract_summary\",\n      \"status\": \"clean_pass\",\n      \"lane\": \"clean\",\n      \"command\": \"'.venv/bin/python' -m pytest -m 'not artifact_finalization and not release_sealing' tests --deselect=tests/test_generated_report_contracts.py --deselect=tests/test_external_report_lifecycle_static.py\",\n      \"duration_seconds\": 395.14,\n      \"checked_at\": \"2026-05-21T02:40:15Z\",\n      \"blocker_conditions\": [],\n      \"accepted_risk_family\": null,\n      \"risk_acceptance_ref\": null,\n      \"reason\": \"\"\n    },\n    {\n      \"name\": \"static_checks\",\n      \"status\": \"not_run\",\n      \"lane\": \"blocked\",\n      \"command\": \"make static\",\n      \"duration_seconds\": null,\n      \"checked_at\": null,\n      \"blocker_conditions\": [\n        \"external_static_evidence_not_captured_by_summary\"\n      ],\n      \"accepted_risk_family\": null,\n      \"risk_acceptance_ref\": null,\n      \"reason\": \"not executed inside this pytest summary; use release-builder evidence before treating static checks as covered\"\n    }\n  ]\n}\n\nwritten_to=tmp/test-source-package-summary.json\n",
+      "stdout_tail": "\": \"runtime-maintainer\",\n    \"expires_at\": \"2026-06-08T00:00:00Z\",\n    \"count_increase_gate_effect\": \"fail\",\n    \"expiry_gate_effect\": \"fail\",\n    \"next_action\": \"none\",\n    \"blockers\": []\n  },\n  \"pytest_marker_deselected_count\": 80,\n  \"policy_deselected_count\": 2,\n  \"pytest_collect_nodeid_digest\": {\n    \"status\": \"collected\",\n    \"command\": \"'.venv/bin/python' -m pytest -o addopts= --collect-only -q --capture=no tests -m 'not artifact_finalization and not release_sealing' --deselect=tests/test_generated_report_contracts.py --deselect=tests/test_external_report_lifecycle_static.py\",\n    \"nodeid_count\": 1331,\n    \"sha256\": \"6ee51c2bd11bd706ebde26af113cc654f3bf1dccd1b466ffda9886daeb9f8341\",\n    \"reason\": \"\"\n  },\n  \"nodeid_outcome_consistency\": {\n    \"status\": \"pass\",\n    \"nodeid_count\": 1331,\n    \"outcome_count\": 1331,\n    \"counted_outcomes\": {\n      \"passed\": 1325,\n      \"skipped\": 6,\n      \"xfailed\": 0,\n      \"xpassed\": 0\n    },\n    \"delta\": 0,\n    \"reason\": \"collected nodeid count matches passed + skipped + xfailed/xpassed outcomes\"\n  },\n  \"evidence_artifacts\": [],\n  \"evidence_artifact_consistency\": {\n    \"status\": \"skipped\",\n    \"checked_artifact_count\": 0,\n    \"checks\": [],\n    \"blockers\": []\n  },\n  \"stdout_tail\": \"........................................................................ [  5%]/n........................................................................ [ 10%]/n...................ss..ssss............................................. [ 16%]/n........................................................................ [ 21%]/n........................................................................ [ 27%]/n........................................................................ [ 32%]/n........................................................................ [ 37%]/n........................................................................ [ 43%]/n........................................................................ [ 48%]/n........................................................................ [ 54%]/n........................................................................ [ 59%]/n........................................................................ [ 64%]/n........................................................................ [ 70%]/n........................................................................ [ 75%]/n........................................................................ [ 81%]/n........................................................................ [ 86%]/n........................................................................ [ 91%]/n........................................................................ [ 97%]/n...................................                                      [100%]/n1325 passed, 6 skipped, 82 deselected in 398.17s (0:06:38)/n\",\n  \"stderr_tail\": \"\",\n  \"release_contract_diagnosis\": [\n    {\n      \"name\": \"pytest_contract_summary\",\n      \"status\": \"clean_pass\",\n      \"lane\": \"clean\",\n      \"command\": \"'.venv/bin/python' -m pytest -m 'not artifact_finalization and not release_sealing' tests --deselect=tests/test_generated_report_contracts.py --deselect=tests/test_external_report_lifecycle_static.py\",\n      \"duration_seconds\": 398.68,\n      \"checked_at\": \"2026-05-21T03:16:58Z\",\n      \"blocker_conditions\": [],\n      \"accepted_risk_family\": null,\n      \"risk_acceptance_ref\": null,\n      \"reason\": \"\"\n    },\n    {\n      \"name\": \"static_checks\",\n      \"status\": \"not_run\",\n      \"lane\": \"blocked\",\n      \"command\": \"make static\",\n      \"duration_seconds\": null,\n      \"checked_at\": null,\n      \"blocker_conditions\": [\n        \"external_static_evidence_not_captured_by_summary\"\n      ],\n      \"accepted_risk_family\": null,\n      \"risk_acceptance_ref\": null,\n      \"reason\": \"not executed inside this pytest summary; use release-builder evidence before treating static checks as covered\"\n    }\n  ]\n}\n\nwritten_to=tmp/test-source-package-summary.json\n",
       "stderr_tail": "",
       "status": "pass"
     }

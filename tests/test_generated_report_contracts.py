@@ -9,8 +9,11 @@ import pytest
 from ops.scripts.artifact_freshness_runtime import STABLE_CONTRACT_ISSUES, build_canonical_report_envelope
 from ops.scripts.generated_artifact_index import build_report as build_generated_artifact_index_report
 from ops.scripts.learning_readiness_vocabulary import (
+    EXECUTION_NO_RUNNABLE_PROPOSAL_BLOCKER_ID,
+    LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID,
     LEARNING_REVIEW_REQUIRED_BLOCKER_ID,
     LEARNING_STATUS_LIKELY,
+    LEARNING_STATUS_NOT_RUNNABLE,
     LEARNING_STATUS_UNCERTAIN,
 )
 from ops.scripts.policy_runtime import load_policy
@@ -1147,12 +1150,21 @@ def test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflig
     assert learning_status in {
         LEARNING_STATUS_LIKELY,
         LEARNING_STATUS_UNCERTAIN,
+        LEARNING_STATUS_NOT_RUNNABLE,
     }
-    assert payload.get("can_execute_trial") is True
+    execution_readiness = payload.get("execution_readiness", {})
+    queue = payload.get("queue", {})
+    if learning_status == LEARNING_STATUS_NOT_RUNNABLE:
+        assert payload.get("can_execute_trial") is False
+        assert execution_readiness.get("can_run") is False
+        assert queue.get("ready") is False
+        assert int(queue.get("runnable_proposal_count", -1)) == 0
+    else:
+        assert payload.get("can_execute_trial") is True
+        assert execution_readiness.get("can_run") is True
+        assert queue.get("ready") is True
+        assert int(queue.get("runnable_proposal_count", 0)) > 0
     can_promote_result = payload.get("can_promote_result")
-    assert payload.get("execution_readiness", {}).get("can_run") is True
-    assert payload.get("queue", {}).get("ready") is True
-    assert int(payload.get("queue", {}).get("runnable_proposal_count", 0)) > 0
     assert payload.get("diagnostics", {}).get("loop_health_summary", {}).get("status") == "available"
     assert payload.get("learning_readiness", {}).get("metrics", {}).get("telemetry_coverage_ratio") == payload.get(
         "diagnostics", {}
@@ -1201,11 +1213,19 @@ def test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflig
         assert learning_blocker_ids == set()
         assert release_blocker_ids == set()
         assert LEARNING_REVIEW_REQUIRED_BLOCKER_ID not in promotion_blocker_ids
-    else:
+    elif learning_status == LEARNING_STATUS_UNCERTAIN:
         assert signal_ids
         assert learning_blocker_ids == {LEARNING_REVIEW_REQUIRED_BLOCKER_ID}
         assert release_blocker_ids == {LEARNING_REVIEW_REQUIRED_BLOCKER_ID}
         assert LEARNING_REVIEW_REQUIRED_BLOCKER_ID in promotion_blocker_ids
+        assert can_promote_result is False
+    else:
+        assert learning_status == LEARNING_STATUS_NOT_RUNNABLE
+        assert signal_ids
+        assert learning_blocker_ids == {LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID}
+        assert release_blocker_ids == {LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID}
+        assert LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID in promotion_blocker_ids
+        assert EXECUTION_NO_RUNNABLE_PROPOSAL_BLOCKER_ID in promotion_blocker_ids
         assert can_promote_result is False
     closeout_summary = payload.get("diagnostics", {}).get("release_closeout_summary", {})
     assert closeout_summary.get("source_status") == "pass"
@@ -1236,10 +1256,21 @@ def test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflig
     authority_preflight = payload.get("diagnostics", {}).get(
         "release_authority_preflight_summary", {}
     )
+    expected_authority_blocked = (
+        authority_preflight.get("preflight_status") == "binding_pass_authority_blocked"
+        and authority_preflight.get("preflight_mode") == "expected_blocked"
+        and authority_preflight.get("distribution_binding_status") == "pass"
+        and authority_preflight.get("authority_preflight_status") == "blocked"
+        and authority_preflight.get("unexpected_failure_ids") == []
+    )
     if authority_preflight.get("preflight_status") == "sealed_clean_pass":
         assert "promotion_blocked_by_release_authority_preflight_failure" not in promotion_blocker_ids
         assert authority_preflight.get("distribution_binding_status") == "pass"
         assert authority_preflight.get("authority_preflight_status") == "clean"
+    elif expected_authority_blocked:
+        assert "promotion_blocked_by_release_authority_preflight_failure" not in promotion_blocker_ids
+        assert authority_preflight.get("status") == "fail"
+        assert authority_preflight.get("expected_blocked_preflight") is True
     else:
         assert "promotion_blocked_by_release_authority_preflight_failure" in promotion_blocker_ids
         authority_preflight_blocker = next(
@@ -1274,6 +1305,8 @@ def test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflig
             assert next_action.startswith(
                 "Execution readiness is pass, but learning readiness still requires explicit operator review."
             )
+        elif learning_status == LEARNING_STATUS_NOT_RUNNABLE:
+            assert "runnable" in next_action
         else:
             assert next_action.startswith("Trial only; do not promote.")
     else:
