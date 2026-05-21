@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-20T22:32:04Z",
+  "generated_at": "2026-05-21T04:43:23Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "4d4ddb351214ee0dda539f46a7326751806351c8127cc37a465afc015d8ba815",
+  "source_tree_fingerprint": "4b13c78d093040547a7c6ad8bccb113000efc6dbf2d7a1b1963cd0e615e032c7",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "b7d7a3cd646c1222463ed7b13a502c3fe98ac166c7c68f3dfad757f3822b8176",
-    "active_external_reports": "decefdb771e3808785a78eb721ff084e1dfc0bdded112da50ac993f59e815985",
+    "source_paths": "ca1aa6e4665c54adcc1f3a5ddc0ed9385b5d0c02d84a7225e0ceeea0fd2f7220",
+    "active_external_reports": "092f2ee56969cd869ccb50461f6158a5eead83e11aabf2b613ff31877ce63e41",
     "action_catalog": "05dbd1c8d8595cd49210c3b2d445243360ff4fb558b3aead52f6de010426918e"
   },
   "schema_version": 1,
@@ -20,10 +20,10 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T22:32:04Z"
+    "checked_at": "2026-05-21T04:43:23Z"
   },
   "vault": ".",
-  "status": "attention",
+  "status": "pass",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
@@ -32,9 +32,9 @@
     "active_report_count": 2,
     "archived_report_count": 67,
     "action_item_count": 24,
-    "implemented_count": 23,
+    "implemented_count": 24,
     "partially_automated_count": 0,
-    "requires_release_run_verification_count": 1,
+    "requires_release_run_verification_count": 0,
     "planned_count": 0,
     "unmatched_active_report_count": 0,
     "reference_manifest_alignment_status": "current",
@@ -213,7 +213,7 @@
         {
           "path": "ops/reports/external-report-action-matrix.json",
           "exists": true,
-          "status": "attention",
+          "status": "pass",
           "producer": "ops.scripts.external_report_action_matrix"
         }
       ]
@@ -401,7 +401,7 @@
         {
           "path": "ops/reports/codex-goal-prompt.json",
           "exists": true,
-          "status": "attention",
+          "status": "pass",
           "producer": "ops.scripts.codex_goal_prompt"
         },
         {
@@ -483,7 +483,7 @@
         {
           "path": "ops/reports/goal-run-status.json",
           "exists": true,
-          "status": "attention",
+          "status": "pass",
           "producer": "ops.scripts.goal_run_status"
         },
         {
@@ -510,7 +510,7 @@
       "action_id": "goal_execution_runtime_certificate",
       "priority": "P0",
       "theme": "bounded goal execution runtime certificate",
-      "current_status": "requires_release_run_verification",
+      "current_status": "implemented",
       "source_report_paths": [
         "external-reports/llmwiki_code_change_implementation_report_20260516.md"
       ],
@@ -525,7 +525,7 @@
         {
           "path": "ops/reports/goal-runtime-certificate.json",
           "exists": true,
-          "status": "attention",
+          "status": "pass",
           "producer": "ops.scripts.goal_runtime_certificate_report"
         },
         {
@@ -645,7 +645,7 @@
         {
           "path": "ops/reports/goal-run-status.json",
           "exists": true,
-          "status": "attention",
+          "status": "pass",
           "producer": "ops.scripts.goal_run_status"
         },
         {

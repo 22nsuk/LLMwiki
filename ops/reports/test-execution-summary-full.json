@@ -1,19 +1,19 @@
 {
   "$schema": "ops/schemas/test-execution-summary.schema.json",
   "artifact_kind": "test_execution_summary",
-  "generated_at": "2026-05-21T04:02:11Z",
+  "generated_at": "2026-05-21T04:35:06Z",
   "producer": "ops.scripts.test_execution_summary",
   "source_command": "python -m ops.scripts.test_execution_summary --vault . --suite full --aggregate-from ops/reports/test-execution-summary-full-shards/full-suite-shard-1.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "48a1e64f2d89790ab6583572c564e7a84e7da3320d335ea150f555cbfb7165be",
+  "source_tree_fingerprint": "4b13c78d093040547a7c6ad8bccb113000efc6dbf2d7a1b1963cd0e615e032c7",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "9723184baf2c03d63eb746bd49cfab746f2a29e2b29f05ee97b2a3a802dae4bf",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b6a7530898be27f1c114dc37c64bb35558dff83186584c7cbfa96f0c4a181cd2",
-    "shard_1": "578caa0f3d0ff5401d7911c9312ef6304c05eba179b63ed09f90b64f7eee9a98",
-    "deselection_lifecycle": "112d71ec1a5d4b0bcf0880a8cfdab6b60bbad80a0d5b7ef5510c2cc5fb84f09f",
-    "evidence_artifact_consistency": "92d8a175e5787b1ae23d877db387343cd4d84fe97a8059b24e2e7c8b02ee6100",
+    "shard_1": "6eb3b94864641300493ebae60cb01d60af78502a1483c9fe01729db5645c9f55",
+    "deselection_lifecycle": "1cf4afbb1cb531854549f51c42e2aeacdfd69941dfd7a382434196dd98e0f6a1",
+    "evidence_artifact_consistency": "41ab54df82fc5631ad4520bcb925774697531cf824bcbff696d5dec392283e2f",
     "shard_statuses": "9e315c02fcaa4699f86633b57d509a77d575150ce2ff062d2fbb4d06d48c14c5",
     "suite": "a18b869b2e81c0c529552a3c4fa5c92ed08b98a4e146aed778d71d27517f83ac",
     "suite_coverage": "3bb5e7571f5a9efa71bb9fff3b6da343e7d855b4a6a2af4f9c9eb7fe5c449cf1",
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T04:02:11Z"
+    "checked_at": "2026-05-21T04:35:06Z"
   },
   "vault": ".",
   "policy": {
@@ -48,9 +48,9 @@
   "timed_out": false,
   "timeout_seconds": 5400,
   "termination_reason": "completed",
-  "duration_ms": 393629,
+  "duration_ms": 393963,
   "counts": {
-    "passed": 1414,
+    "passed": 1416,
     "failed": 0,
     "errors": 0,
     "skipped": 0,
@@ -87,7 +87,7 @@
   "deselected_tests": [],
   "deselection_lifecycle": {
     "status": "pass",
-    "checked_at": "2026-05-21T04:02:11Z",
+    "checked_at": "2026-05-21T04:35:06Z",
     "actual_deselected_count": 0,
     "max_allowed_deselected_count": 0,
     "over_budget": false,
@@ -106,16 +106,16 @@
   "pytest_collect_nodeid_digest": {
     "status": "collected",
     "command": ".venv/bin/python -m pytest -o addopts= --collect-only -q --capture=no",
-    "nodeid_count": 1414,
-    "sha256": "86dde4068280b484138354e9d41de904f1d23332a3de60cfd18ca797c74b2e1c",
+    "nodeid_count": 1416,
+    "sha256": "440af5686e4416bec3b81db2646ada63d7e6260092ee5f07a55bc108d8aa6bd4",
     "reason": "aggregate report reuses shard nodeid digests"
   },
   "nodeid_outcome_consistency": {
     "status": "pass",
-    "nodeid_count": 1414,
-    "outcome_count": 1414,
+    "nodeid_count": 1416,
+    "outcome_count": 1416,
     "counted_outcomes": {
-      "passed": 1414,
+      "passed": 1416,
       "skipped": 0,
       "xfailed": 0,
       "xpassed": 0
@@ -129,19 +129,19 @@
       "path": "build/release-payloads/test-execution-summary-full.log",
       "exists": true,
       "size_bytes": 1772,
-      "sha256": "23d446ce52e83ea29d69db0bd8eb8a67f38415ccbf99cba32dd741bcda44b396",
+      "sha256": "a600602df23b6a7cec835844f204bcfbd3b35335bc610865839cbf8528901a03",
       "source": "captured_pytest_stdout_stderr"
     },
     {
       "kind": "junit_xml",
       "path": "build/release-payloads/test-execution-summary-full.junit.xml",
       "exists": true,
-      "size_bytes": 239774,
-      "sha256": "f5450048ce6f77e5ba710de9cee07a52f04e2364ca92b599610fb5965528c597",
+      "size_bytes": 240157,
+      "sha256": "ad3b71fd3ec42fdbfcb08793864c9190c7d9e7d244ffe7340c82c26750c6f1b0",
       "source": "pytest_junit_xml",
       "consistency_status": "pass",
-      "observed_count": 1414,
-      "expected_count": 1414,
+      "observed_count": 1416,
+      "expected_count": 1416,
       "consistency_reason": "junit testcase count matches pytest summary"
     },
     {
@@ -165,8 +165,8 @@
         "kind": "junit_xml",
         "path": "build/release-payloads/test-execution-summary-full.junit.xml",
         "status": "pass",
-        "expected_count": 1414,
-        "observed_count": 1414
+        "expected_count": 1416,
+        "observed_count": 1416
       },
       {
         "kind": "failed_nodeids",
@@ -178,7 +178,7 @@
     ],
     "blockers": []
   },
-  "stdout_tail": "[{\"counts\": {\"errors\": 0, \"failed\": 0, \"passed\": 1414, \"skipped\": 0, \"warnings\": 0, \"xfailed\": 0, \"xpassed\": 0}, \"duration_ms\": 393629, \"generated_at\": \"2026-05-21T04:02:11Z\", \"path\": \"ops/reports/test-execution-summary-full-shards/full-suite-shard-1.json\", \"represents_full_suite\": true, \"status\": \"pass\", \"suite\": \"full-shard-1\"}]",
+  "stdout_tail": "[{\"counts\": {\"errors\": 0, \"failed\": 0, \"passed\": 1416, \"skipped\": 0, \"warnings\": 0, \"xfailed\": 0, \"xpassed\": 0}, \"duration_ms\": 393963, \"generated_at\": \"2026-05-21T04:35:05Z\", \"path\": \"ops/reports/test-execution-summary-full-shards/full-suite-shard-1.json\", \"represents_full_suite\": true, \"status\": \"pass\", \"suite\": \"full-shard-1\"}]",
   "stderr_tail": "",
   "summary_mode": "aggregate",
   "shards": [
@@ -186,10 +186,10 @@
       "path": "ops/reports/test-execution-summary-full-shards/full-suite-shard-1.json",
       "suite": "full-shard-1",
       "status": "pass",
-      "generated_at": "2026-05-21T04:02:11Z",
-      "duration_ms": 393629,
+      "generated_at": "2026-05-21T04:35:05Z",
+      "duration_ms": 393963,
       "counts": {
-        "passed": 1414,
+        "passed": 1416,
         "failed": 0,
         "errors": 0,
         "skipped": 0,

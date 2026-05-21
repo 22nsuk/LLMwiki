@@ -635,6 +635,68 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "requires_release_run_verification",
         )
 
+    def test_goal_prompt_action_accepts_verified_promotion_prompt_without_ban(self) -> None:
+        for rel_path in (
+            "ops/scripts/mechanism/codex_goal_prompt.py",
+            "ops/schemas/codex-goal-prompt.schema.json",
+            "tests/test_codex_goal_prompt.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+        contract = {
+            "$schema": "ops/schemas/codex-goal-contract.schema.json",
+            "contract_id": "auto-improve-goal",
+            "runtime": {
+                "mode": "self_improvement_loop",
+                "certificate_status": "verified",
+            },
+            "promotion_guard": {
+                "can_promote_result": True,
+                "promotion_blockers": [],
+                "runtime_certificate_verified": True,
+                "sustained_runtime_claimed": False,
+            },
+        }
+        contract_digest = _canonical_json_digest(contract)
+        self._write_json("ops/reports/codex-goal-contract.json", contract)
+        self._write_json(
+            "ops/reports/codex-goal-prompt.json",
+            {
+                "artifact_kind": "codex_goal_prompt",
+                "producer": "ops.scripts.codex_goal_prompt",
+                "status": "pass",
+                "goal_contract": {
+                    "contract_sha256": contract_digest,
+                    "process_persistent_backend": True,
+                },
+                "promotion_guard": {
+                    "can_promote_result": True,
+                    "promotion_ban_required": False,
+                    "promotion_blockers": [],
+                    "runtime_certificate_verified": True,
+                    "sustained_runtime_claimed": False,
+                },
+                "prompt": {
+                    "includes_budget_limits": True,
+                    "includes_allowed_roots": True,
+                    "includes_sustained_claim_ban": False,
+                },
+            },
+        )
+        (self.external / "goal-prompt.md").write_text(
+            "# Goal Prompt Review\n\ncodex_goal_prompt and promotion guard.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        self.assertEqual(
+            actions["codex_goal_prompt_generator"]["current_status"],
+            "implemented",
+        )
+
     def test_goal_status_audit_resume_action_accepts_failed_runtime_status(self) -> None:
         for rel_path in (
             "ops/schemas/goal-run-status.schema.json",
@@ -765,6 +827,85 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
                 "runtime_certificate": {
                     "status": "pending",
                     "mode": "self_improvement_loop",
+                },
+            },
+        )
+        (self.external / "goal-status.md").write_text(
+            "# Goal Status Review\n\ngoal-run-status, audit-log, checkpoint, resume.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        self.assertEqual(
+            actions["goal_run_status_audit_resume"]["current_status"],
+            "implemented",
+        )
+
+    def test_goal_status_audit_resume_action_accepts_verified_completed_runtime_status(self) -> None:
+        for rel_path in (
+            "ops/schemas/goal-run-status.schema.json",
+            "ops/scripts/mechanism/auto_improve_loop.py",
+            "ops/scripts/mechanism/goal_run_status.py",
+            "ops/scripts/mechanism/goal_runtime_runner.py",
+            "tests/test_goal_auto_improve_runtime.py",
+            "tests/test_goal_run_status.py",
+            "tests/test_goal_runtime_runner.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+        contract = {
+            "$schema": "ops/schemas/codex-goal-contract.schema.json",
+            "contract_id": "auto-improve-goal",
+            "runtime": {
+                "mode": "self_improvement_loop",
+                "certificate_status": "verified",
+            },
+            "budgets": {"max_wall_clock_seconds": 43200},
+            "required_evidence": [
+                {
+                    "evidence_id": "goal_run_status",
+                    "path": "runs/goal-runtime/state/goal-run-status.json",
+                    "required_for_promotion": True,
+                }
+            ],
+        }
+        contract_digest = _canonical_json_digest(contract)
+        self._write_json("ops/reports/codex-goal-contract.json", contract)
+        self._write_json(
+            "ops/reports/goal-run-status.json",
+            {
+                "artifact_kind": "goal_run_status",
+                "producer": "ops.scripts.goal_run_status",
+                "status": "pass",
+                "goal": {
+                    "contract_sha256": contract_digest,
+                    "backend": {"process_persistent": True},
+                },
+                "artifacts": {
+                    "status_report_path": "runs/goal-runtime/state/goal-run-status.json",
+                    "status_markdown_path": "runs/goal-runtime/state/status.md",
+                    "audit_log_path": "runs/goal-runtime/state/audit-log.jsonl",
+                    "resume_metadata_path": "runs/goal-runtime/state/resume-metadata.json",
+                    "checkpoint_command_log_path": "runs/goal-runtime/state/checkpoint-command-events.jsonl",
+                },
+                "health": {
+                    "heartbeat_status": "stale",
+                    "checkpoint_status": "stale",
+                    "command_heartbeat_status": "stale",
+                    "backoff_status": "inactive",
+                    "resume_status": "not_requested",
+                    "promotion_status": "allowed",
+                    "can_promote_result": True,
+                },
+                "runtime_certificate": {
+                    "status": "complete",
+                    "mode": "self_improvement_loop",
+                    "certificate_status": "verified",
+                    "full_gate_clean": True,
+                    "promotion_blockers": [],
                 },
             },
         )

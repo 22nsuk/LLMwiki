@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-21T03:49:58Z",
+  "generated_at": "2026-05-21T04:44:40Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "86e956358df2f65e98d72facd45e7ec4aa22fe2161166db65412403e26575827",
+  "source_tree_fingerprint": "4b13c78d093040547a7c6ad8bccb113000efc6dbf2d7a1b1963cd0e615e032c7",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "f7dd295621a34a54cb5018604760de77e8685c6f0e0dc086056a7362e25a7519",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ea66bebc6dcb1e56d35893c8f4a0557a3dd3ad55888a83b5b2678e5b822c5ba7",
-    "auto_improve_readiness": "a48dbc696410336dc5b27cefbe5d0158fdd15d73626b6a665be1f37a88f4c434",
-    "goal_run_status": "d0674b5e1ae60bfecdaf9ee30b28d4f48e468b44daecf26c5851696c9c186d41",
+    "auto_improve_readiness": "309676c83158e34be31ab9c95c396acad4b332a63b232be56a0b214f9dcf38e6",
+    "goal_run_status": "3e939b0a3db9fc90ee33fd4447f44bb264c2053b2286f70b562cea87b64290b4",
     "learning_claim_activation": "f90a59b26c0aafc739d67a3d2bdde627f879afb337ca0220af680861946a0b81",
     "learning_delta_scoreboard": "bbd6f92d95bac554925d3fe657a3b370f2ece6ee67c189501d48d6695fc12014",
-    "source_package_clean_extract": "dfbe9edd90763f12b430dbc1f8de26fce0c1749db7afa6f6cbe1c8ba2c983b84",
+    "source_package_clean_extract": "061877385fe66c20a5f8302fa9f32ad19830a123d62a3d2290baa6e71c53d2d9",
     "task_observations": "5ee6fc130d9ca93cc1189b0816c3aca7b2fe351a203f126ba6f09522decfd6ea"
   },
   "schema_version": 1,
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T03:49:58Z"
+    "checked_at": "2026-05-21T04:44:40Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
   },
   "status": "attention",
   "summary": {
-    "recent_blocker_count": 0,
+    "recent_blocker_count": 2,
     "last_success_pattern_count": 5,
     "forbidden_repeat_pattern_count": 3,
     "recommended_seed_run_count": 3,
@@ -47,7 +47,22 @@
     "runtime_certificate_full_gate_clean": false,
     "next_action": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
   },
-  "recent_blockers": [],
+  "recent_blockers": [
+    {
+      "id": "goal_status_git_worktree_dirty",
+      "source": "goal_run_status.blockers",
+      "status": "open",
+      "reason": "git_worktree_dirty",
+      "repair_target": "Refresh goal run status and close the active blocker before resuming."
+    },
+    {
+      "id": "promotion_blocked_by_goal_worktree_guard_failure",
+      "source": "auto_improve_readiness.promotion_blockers",
+      "status": "open",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=36",
+      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
+    }
+  ],
   "last_success_patterns": [
     {
       "id": "goal_periodic_checkpoint_command_scheduler",
@@ -173,7 +188,7 @@
     "mode": "self_improvement_loop",
     "run_mode": "self_improvement_loop",
     "duration_seconds": 43200,
-    "certificate_status": "unverified",
+    "certificate_status": "verified",
     "full_gate_clean": false,
     "missing_evidence": []
   },
@@ -201,7 +216,7 @@
     "target_runtime_mode": "self_improvement_loop",
     "runtime_certificate_status": "pending",
     "runtime_certificate_full_gate_clean": false,
-    "open_blocker_count": 0,
+    "open_blocker_count": 2,
     "forbidden_pattern_count": 3,
     "evidence_gap_count": 0
   },

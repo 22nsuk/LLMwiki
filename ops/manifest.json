@@ -2027,8 +2027,8 @@
     },
     {
       "path": "ops/scripts/release/external_report_lifecycle_runtime.py",
-      "sha256": "628f37e88a0dde76275e395b7b3f01ba22471c5f5d496e8fff85ca615d6876d2",
-      "size_bytes": 52782
+      "sha256": "f4ecbb03099b2eb49449791ce1589d98db49f87c46dfd24b5569670d05128124",
+      "size_bytes": 53734
     },
     {
       "path": "ops/scripts/release/external_report_reference_manifest.py",
@@ -5172,8 +5172,8 @@
     },
     {
       "path": "tests/test_external_report_action_matrix.py",
-      "sha256": "3c9e4635f7c7b70de4af6db912839c759eb39acd5bfcc527632976d81d1a53ba",
-      "size_bytes": 42430
+      "sha256": "504042238d29fa688fb01e461221b8447cef0e72fc83726033f40ab3babc8b0b",
+      "size_bytes": 48604
     },
     {
       "path": "tests/test_external_report_lifecycle_static.py",

@@ -725,6 +725,13 @@ def codex_goal_prompt_generator_status(
     prompt = as_dict(report.get("prompt"))
     promotion_guard = as_dict(report.get("promotion_guard"))
     contract_digest = _current_contract_digest(vault)
+    prompt_guard_is_explicit = bool(prompt.get("includes_sustained_claim_ban"))
+    prompt_guard_is_certified = bool(
+        promotion_guard.get("promotion_ban_required") is False
+        and promotion_guard.get("runtime_certificate_verified") is True
+        and promotion_guard.get("can_promote_result") is True
+        and not as_list(promotion_guard.get("promotion_blockers"))
+    )
     if (
         report.get("artifact_kind") == "codex_goal_prompt"
         and report.get("producer") == "ops.scripts.codex_goal_prompt"
@@ -733,7 +740,7 @@ def codex_goal_prompt_generator_status(
         and goal_contract.get("contract_sha256") == contract_digest
         and bool(prompt.get("includes_budget_limits"))
         and bool(prompt.get("includes_allowed_roots"))
-        and bool(prompt.get("includes_sustained_claim_ban"))
+        and (prompt_guard_is_explicit or prompt_guard_is_certified)
         and not bool(promotion_guard.get("sustained_runtime_claimed"))
     ):
         return "implemented"
@@ -799,6 +806,20 @@ def goal_run_status_audit_resume_status(
         else artifacts.get(key) == prefix
         for key, prefix in artifact_paths.items()
     )
+    blocked_pending_state = bool(
+        health.get("promotion_status") == "blocked"
+        and health.get("can_promote_result") is False
+        and runtime_certificate.get("status") in {"pending", "complete"}
+    )
+    verified_completed_state = bool(
+        report.get("status") == "pass"
+        and health.get("promotion_status") == "allowed"
+        and health.get("can_promote_result") is True
+        and runtime_certificate.get("status") == "complete"
+        and runtime_certificate.get("certificate_status") == "verified"
+        and runtime_certificate.get("full_gate_clean") is True
+        and not as_list(runtime_certificate.get("promotion_blockers"))
+    )
     if (
         report.get("artifact_kind") == "goal_run_status"
         and report.get("producer") == "ops.scripts.goal_run_status"
@@ -812,9 +833,7 @@ def goal_run_status_audit_resume_status(
         and health.get("command_heartbeat_status") in {"current", "stale", "not_recorded"}
         and health.get("backoff_status") in {"inactive", "active", "expired"}
         and health.get("resume_status") in {"not_requested", "ready"}
-        and health.get("promotion_status") == "blocked"
-        and health.get("can_promote_result") is False
-        and runtime_certificate.get("status") in {"pending", "complete"}
+        and (blocked_pending_state or verified_completed_state)
         and runtime_certificate.get("mode") == "self_improvement_loop"
     ):
         return "implemented"
