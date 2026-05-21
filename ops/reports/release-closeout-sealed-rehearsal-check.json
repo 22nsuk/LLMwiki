@@ -14,7 +14,7 @@
   "blocking_reason_ids": [],
   "clean_required_preflight": true,
   "currentness": {
-    "checked_at": "2026-05-21T03:46:39Z",
+    "checked_at": "2026-05-21T04:11:13Z",
     "status": "current"
   },
   "distribution_binding_status": "pass",
@@ -22,7 +22,7 @@
     "entry_count": 1610,
     "exists": true,
     "path": "tmp/release-closeout-sealed-dry-run/LLMwiki-source.zip",
-    "sha256": "5a291553ef687e29a9938bc68c96d6dca75002b18b333057f3bbd034cb2543b7"
+    "sha256": "30b1856492f3e6003d3aaeffb7e702851d100edf8d69cc85a64478e5605de6f8"
   },
   "encoding": "utf-8",
   "expected_blocked_preflight": false,
@@ -35,12 +35,12 @@
   },
   "failure_details": [],
   "failures": [],
-  "generated_at": "2026-05-21T03:46:39Z",
+  "generated_at": "2026-05-21T04:11:13Z",
   "input_fingerprints": {
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "batch_manifest": "cd67d7282936632fabeec078f9a1fcbb940adc4466fb353cb817568924c6fc32",
+    "batch_manifest": "7876356ee76f21901453516ac751077cc45cee6623506606867ca5603043cfd9",
     "distribution_zip": "c3091a294f08983270e68a07ff6044a38d21d42f1b6e4cbefa0b59cf7e514205",
-    "external_manifest": "63960ef2e0dab8e14064ad5ede571f4742666aeb60a847c9e193447169e6061d",
+    "external_manifest": "e71e245616512f0704ed156402a6e941151b3fc3dfa547e505f9ca8f0e523d14",
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "014ce08f655cddbd6777d046f238b21ccf8d35240c0d87a5f2462806271ce7aa",
     "source_paths": "eb0b5032641773cbb40586bce05cff05f649c5e1a238a000dcfd0982b38486c4"
@@ -53,7 +53,7 @@
   "schema_version": 1,
   "source_command": "python -m ops.scripts.release_closeout_sealed_rehearsal_check --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "7d77e337e35b390e22479ea2b353e21eec5f6bfbac8f783e6050da1b26c1ede3",
+  "source_tree_fingerprint": "191f83d54fb6e52369ac31133b38f9be775894b1ce7ccf9fad1e46cf55f6ef8a",
   "status": "pass",
   "summary": "sealed closeout rehearsal passed: batch sealed clean pass and external strict manifest bind the distribution ZIP",
   "unexpected_failure_ids": []
