@@ -113,7 +113,6 @@ def _goal_worktree_guard_promotion_blockers(
             "scope": "worktree_guard",
             "status": "open",
             "severity": "blocker",
-            "release_blocker": True,
             "accepted_risk": False,
             "gate_effect": "active",
             "source_status": source_status,

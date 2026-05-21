@@ -44,7 +44,11 @@ def is_signoff_supported_learning_blocker_id(blocker_id: str) -> bool:
 def learning_release_blocker_ids_from_report(
     report: dict[str, Any],
     *,
-    field_names: Iterable[str] = ("release_blockers", "learning_blockers"),
+    field_names: Iterable[str] = (
+        "learning_claim_blockers",
+        "learning_blockers",
+        "release_blockers",
+    ),
 ) -> list[str]:
     ids: list[str] = []
     for field_name in field_names:
@@ -57,7 +61,7 @@ def learning_release_blocker_ids_from_report(
             blocker_id = str(item.get("id", "")).strip()
             if not blocker_id or not is_learning_release_blocker_id(blocker_id):
                 continue
-            if not bool(item.get("release_blocker")):
+            if "release_blocker" in item and not bool(item.get("release_blocker")):
                 continue
             if str(item.get("status", "")).strip() != "open":
                 continue

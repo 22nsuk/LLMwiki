@@ -37,6 +37,25 @@
         "promotion_blocked_by_remediation_backlog_open"
       ]
     },
+    "readiness_blocker_id": {
+      "type": "string",
+      "enum": [
+        "learning_blocked_by_execution_not_runnable",
+        "learning_blocked_by_review_required",
+        "execution_blocked_by_no_runnable_proposal",
+        "promotion_blocked_by_artifact_contract_failure",
+        "promotion_blocked_by_selected_contract_failure",
+        "promotion_blocked_by_source_package_failure",
+        "promotion_blocked_by_release_closeout_summary_failure",
+        "promotion_blocked_by_release_batch_manifest_failure",
+        "promotion_blocked_by_release_finality_failure",
+        "promotion_blocked_by_release_authority_preflight_failure",
+        "promotion_blocked_by_release_lineage_mismatch",
+        "promotion_blocked_by_artifact_finalization_failure",
+        "promotion_blocked_by_goal_worktree_guard_failure",
+        "promotion_blocked_by_remediation_backlog_open"
+      ]
+    },
     "learning_source_status": {
       "type": "string",
       "enum": [
@@ -45,6 +64,19 @@
       ]
     },
     "release_blocker_source_status": {
+      "type": "string",
+      "enum": [
+        "warn",
+        "fail",
+        "not_run",
+        "attention",
+        "missing",
+        "unknown",
+        "learning_uncertain",
+        "not_runnable"
+      ]
+    },
+    "readiness_blocker_source_status": {
       "type": "string",
       "enum": [
         "warn",

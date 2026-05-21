@@ -201,12 +201,11 @@ class LearningReadinessAssessment:
 
 
 @dataclass(frozen=True)
-class LearningReleaseBlocker:
+class LearningClaimBlocker:
     blocker_id: str
     scope: str
     status: str
     severity: str
-    release_blocker: bool
     accepted_risk: bool
     gate_effect: str
     source_status: str
@@ -221,7 +220,6 @@ class LearningReleaseBlocker:
             "scope": self.scope,
             "status": self.status,
             "severity": self.severity,
-            "release_blocker": self.release_blocker,
             "accepted_risk": self.accepted_risk,
             "gate_effect": self.gate_effect,
             "source_status": self.source_status,
@@ -745,7 +743,7 @@ def _learning_readiness_assessment(
     )
 
 
-def _learning_release_blockers(learning: LearningReadinessAssessment) -> list[LearningReleaseBlocker]:
+def _learning_claim_blockers(learning: LearningReadinessAssessment) -> list[LearningClaimBlocker]:
     if learning.likely_to_learn:
         return []
 
@@ -770,12 +768,11 @@ def _learning_release_blockers(learning: LearningReadinessAssessment) -> list[Le
         ]
 
     return [
-        LearningReleaseBlocker(
+        LearningClaimBlocker(
             blocker_id=blocker_id,
             scope="learning_readiness",
             status="open",
             severity="blocker",
-            release_blocker=True,
             accepted_risk=False,
             gate_effect=learning.gate_effect,
             source_status=learning.status,

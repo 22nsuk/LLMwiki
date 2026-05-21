@@ -1462,6 +1462,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             _recipe_lines(text, "release-converge-preflight"),
             [
                 "$(MAKE) report-schema-samples-regenerate CLEAN_FIXTURE_REGENERATION_ALLOW_DIRTY_REPORTS=1",
+                "$(MAKE) goal-runtime-local-evidence-refresh",
                 "$(MAKE) test-execution-summary-report-contract-refresh-no-smoke",
             ],
         )
@@ -1518,6 +1519,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             _recipe_lines(text, "release-ready-post-commit-converge"),
             [
                 "$(MAKE) auto-improve-readiness-worktree-guard",
+                "$(MAKE) goal-runtime-local-evidence-refresh",
                 "$(MAKE) generated-artifact-converge",
                 "$(MAKE) remediation-backlog",
                 "$(MAKE) release-closeout-fixed-point",
@@ -3014,6 +3016,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "goal-runtime-local-negative-lessons",
             "goal-runtime-local-remediation-backlog",
             "goal-runtime-local-fixed-point-check",
+            "goal-runtime-local-evidence-refresh",
             "goal-runtime-local-evidence-converge",
             "goal-runtime-publish-local-evidence",
             "goal-runtime-reconcile",
@@ -3481,13 +3484,21 @@ class MakefileStaticGateTests(unittest.TestCase):
         _assert_recipe_contains_tokens(
             self,
             text,
-            "goal-runtime-local-evidence-converge",
+            "goal-runtime-local-evidence-refresh",
             (
                 "$(MAKE) goal-runtime-refresh",
                 "$(MAKE) goal-runtime-local-readiness",
                 "$(MAKE) goal-runtime-local-session-synopsis",
                 "$(MAKE) goal-runtime-local-negative-lessons",
                 "$(MAKE) goal-runtime-local-remediation-backlog",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-local-evidence-converge",
+            (
+                "$(MAKE) goal-runtime-local-evidence-refresh",
                 "$(MAKE) goal-runtime-local-fixed-point-check",
             ),
         )

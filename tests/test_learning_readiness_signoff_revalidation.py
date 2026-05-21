@@ -125,13 +125,12 @@ class LearningReadinessSignoffRevalidationTests(unittest.TestCase):
         blocker_id: str = SUPPORTED_BLOCKER_ID,
         status: str | None = None,
     ) -> None:
-        release_blockers = []
+        learning_claim_blockers = []
         if blocker_present:
-            release_blockers.append(
+            learning_claim_blockers.append(
                 {
                     "id": blocker_id,
                     "status": "open",
-                    "release_blocker": True,
                 }
             )
         learning_status = status or ("learning_likely" if likely_to_learn else "learning_uncertain")
@@ -147,7 +146,7 @@ class LearningReadinessSignoffRevalidationTests(unittest.TestCase):
                 "metrics": {"attempts_considered": 10},
                 "signals": [],
             },
-            "release_blockers": release_blockers,
+            "learning_claim_blockers": learning_claim_blockers,
         }
         write_json_object(self.vault / AUTO_IMPROVE_READINESS_PATH, report)
 

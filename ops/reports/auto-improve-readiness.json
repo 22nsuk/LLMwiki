@@ -1,30 +1,30 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-21T14:57:06Z",
+  "generated_at": "2026-05-21T16:31:06Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "2897e93d3225786cfd734d5b4a9a1893d6a5e92de9aab4a893ed7e2231ca8823",
+  "source_tree_fingerprint": "142b6c3c4fa38faeb73df7c8f5d06ba988e940838e0e707e39b756ba30bc25b8",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
-    "schema": "e9c42be01059ee1830316ef368cb7947f0cc164dad1401ac3e2787e898b58975",
+    "schema": "c304d76dcad922ac79d558af247003d3873998729f0dd2ad58617b6de23420a0",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "aa05a308998431aa823f2c0e3e92f0370a59f6eff4e1b0a0674beea84f356ae3",
-    "artifact_freshness_report": "c5c0b7cbc6afbfdee4de24ccc2b3297398c2a306af2ec0d7bfc673712713260c",
-    "goal_worktree_guard_report": "e928c64413c8d45d7dc1ccfd1181fa7f5584f235d316977e006a3ae531d08320",
+    "source_paths": "0d3d58b57ed49a51f84878329a4882e8fd909cd65be2f9566f6384059ab1de82",
+    "artifact_freshness_report": "313207fc9601bb71fff50d0c16fce5b11634ec9805c837caa99662c7cb5fda49",
+    "goal_worktree_guard_report": "545f12e5609b605b1ef15e2db6b9799f75a47fe8095d97a54bafe5f6f4562a03",
     "learning_readiness_signoff_report": "1ec9a280330bf4c9f5cc6a77f7ea7590acaf29d0718a80299d25d8f466576e9d",
-    "mechanism_review_report": "b3224232189e67ca37b8943f1f8d46d88f9e4c1a3c0bb0877d8ee14d8ec36c38",
-    "mutation_proposal_report": "66fd1781e9e81cb846431594b957bf164c987f4ad6d5b7b6894d7c2c713e375a",
-    "outcome_metrics_report": "09db6bd2f5bc3fd34af73d9797351f88d1f36927c9dd6b03e4f36e77a1814806",
+    "mechanism_review_report": "c79d753a8ac1a53ecac59c80cc87cf748653281b66955e018fccb0219f03674f",
+    "mutation_proposal_report": "049e5d82f543d7589f7e9d55750b95426559ebcb68437c1bbb0bff0ee7eaf209",
+    "outcome_metrics_report": "8a189dd1871cf836bbbd268598b15dae641f0e6b11faad00886e2705245db868",
     "release_authority_preflight_report": "2298cfa17310094796edc9e88516a1004d4212deea3e5d6a64b8c10b6d50a158",
-    "release_closeout_batch_manifest_report": "72eb77d98f0f54c531b792926d3feace0d2a1982c65f273628a084faa3c5a2e6",
-    "release_closeout_finality_attestation_report": "e18ec06ca4e88dcb6b1e006f6a6a48c05faab36f2e0266a0efd423f2be67c1ad",
-    "release_closeout_post_check_finalizer_report": "09519e0013d3b2fb0b84b82a6fd4a1cade8703cb24d46a3763b12e64a332df66",
-    "release_closeout_summary_report": "ff55659f415fec0e187e6bc5ac450665869e0b8c58dd8615c81b23a67c9675c8",
-    "release_evidence_cohort_report": "cefeb2e1bf8bd37901adb15afef7da2e61a24dabb6b63388f6edcb6267bfe686",
-    "remediation_backlog_report": "ea3d124572baa96408835d6beab54f7e357abb175dd8dfecd47fa9bda592c8fe",
-    "selected_contract_summary_report": "f4344aa676fc2ea40c96c6f250976b67a265ea434d3bb4b25920ec1769034497",
+    "release_closeout_batch_manifest_report": "c0e57cd829a49044a6ad8beee98a69584eb5539738b805bd58339fc2ad7323c7",
+    "release_closeout_finality_attestation_report": "a889e0cc91b7aae9c1e9c0b88b1a8b6ccb41f2d4bb8afbe174ad112362b6cb7b",
+    "release_closeout_post_check_finalizer_report": "65c9bcdff9bf91152d8f1b30f3a03e0e98f8324eba89f8de4ff7225e062ff828",
+    "release_closeout_summary_report": "ff626bec06253e7b3f8d319180c761a3208575cbdf697fa5ec42137080a83d37",
+    "release_evidence_cohort_report": "b241b7b9b1001d941d9d1899d9cd0be1050a737c8a4378c1a26eabcf82ad9a4a",
+    "remediation_backlog_report": "ae77f00cf837190ddf207d68a3952522d9820a7c8cff01efc3b77d9316504047",
+    "selected_contract_summary_report": "a5ae1ff59e51af5e788c8c0e9f08dbc9f7c1cf7bfb5206f6be77f3ddb6314037",
     "source_package_clean_extract_report": "136f0187ac37fe12a1803ed575b2e917b2f5c091b7ab99fdc1381ccfed40d770",
     "release_authority_preflight_report_candidates": "e8dc01ac45cb5a4e75255479f3287ac412199e04a71006f82a6d3b996a3b48ba"
   },
@@ -34,7 +34,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T14:57:06Z"
+    "checked_at": "2026-05-21T16:31:06Z"
   },
   "vault": ".",
   "policy": {
@@ -108,13 +108,12 @@
     ],
     "recommended_next_step": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded runtime with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
   },
-  "learning_blockers": [
+  "learning_claim_blockers": [
     {
       "id": "learning_blocked_by_review_required",
       "scope": "learning_readiness",
       "status": "open",
       "severity": "blocker",
-      "release_blocker": true,
       "accepted_risk": false,
       "gate_effect": "review_required",
       "source_status": "learning_uncertain",
@@ -136,7 +135,6 @@
       "scope": "release_gate",
       "status": "open",
       "severity": "blocker",
-      "release_blocker": true,
       "accepted_risk": false,
       "gate_effect": "active",
       "source_status": "fail",
@@ -158,7 +156,6 @@
       "scope": "release_gate",
       "status": "open",
       "severity": "blocker",
-      "release_blocker": true,
       "accepted_risk": false,
       "gate_effect": "active",
       "source_status": "fail",
@@ -180,7 +177,6 @@
       "scope": "release_gate",
       "status": "open",
       "severity": "blocker",
-      "release_blocker": true,
       "accepted_risk": false,
       "gate_effect": "active",
       "source_status": "fail",
@@ -200,7 +196,6 @@
       "scope": "remediation_backlog",
       "status": "open",
       "severity": "blocker",
-      "release_blocker": true,
       "accepted_risk": false,
       "gate_effect": "active",
       "source_status": "attention",
@@ -219,28 +214,7 @@
       "recommended_next_step": "Close or explicitly defer remediation backlog items, rerun make remediation-backlog, then rerun make auto-improve-readiness."
     }
   ],
-  "release_blockers": [
-    {
-      "id": "learning_blocked_by_review_required",
-      "scope": "learning_readiness",
-      "status": "open",
-      "severity": "blocker",
-      "release_blocker": true,
-      "accepted_risk": false,
-      "gate_effect": "review_required",
-      "source_status": "learning_uncertain",
-      "reason": "runnable proposal queue is non-empty; shadow learning signals require operator review before this run can count as confirmed learning; learning signals: recent_hold_moving_average, high_rework",
-      "signal_ids": [
-        "recent_hold_moving_average",
-        "high_rework"
-      ],
-      "required_evidence": [
-        "learning_readiness.likely_to_learn must be true before release readiness can pass",
-        "or an operator must record accepted risk for this named learning review blocker"
-      ],
-      "recommended_next_step": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded runtime with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
-    }
-  ],
+  "clean_release_blockers": [],
   "inputs": {
     "refresh_generated_target": "make refresh-generated-core",
     "outcome_metrics_report": "ops/reports/outcome-metrics.json",
@@ -264,7 +238,7 @@
       "status": "available",
       "gate_effect": "none",
       "source_report": "ops/reports/routing-provenance-aggregates/active-report-self-improve-certificate-rerun7.json",
-      "source_generated_at": "2026-05-21T14:50:42Z",
+      "source_generated_at": "2026-05-21T16:24:56Z",
       "session_id": "active-report-self-improve-certificate-rerun7",
       "summary": "attempts=2, finalized=1, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=1.00 | alerts: unfinalized runs present, recent HOLD trend",
       "health_flags": [

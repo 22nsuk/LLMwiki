@@ -67,7 +67,13 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def _write_makefile(self, *, misorder_check_finalized: bool = False) -> None:
+    def _write_makefile(
+        self,
+        *,
+        misorder_check_finalized: bool = False,
+        misorder_release_ready: bool = False,
+        misorder_release_ready_post_commit: bool = False,
+    ) -> None:
         check_finalized_lines = (
             "\t$(MAKE) auto-improve-readiness-report-body\n"
             "\t$(MAKE) generated-artifact-converge\n"
@@ -84,11 +90,65 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "\t$(MAKE) tmp-json-clean\n"
                 "\t$(MAKE) release-closeout-finality-verify\n"
             )
+        release_ready_lines = (
+            "\t$(MAKE) release-ready-snapshot\n"
+            "\t$(MAKE) release-converge-all-surfaces\n"
+            "\t$(MAKE) release-ready-commit\n"
+            "\t$(MAKE) release-ready-post-commit-converge\n"
+            "\t$(MAKE) release-ready-amend\n"
+            "\t$(MAKE) release-check-all-surfaces\n"
+        )
+        if misorder_release_ready:
+            release_ready_lines = (
+                "\t$(MAKE) release-ready-snapshot\n"
+                "\t$(MAKE) release-converge-all-surfaces\n"
+                "\t$(MAKE) release-ready-commit\n"
+                "\t$(MAKE) release-check-all-surfaces\n"
+                "\t$(MAKE) release-ready-post-commit-converge\n"
+                "\t$(MAKE) release-ready-amend\n"
+            )
+        release_ready_post_commit_lines = (
+            "\t$(MAKE) auto-improve-readiness-worktree-guard\n"
+            "\t$(MAKE) goal-runtime-local-evidence-refresh\n"
+            "\t$(MAKE) generated-artifact-converge\n"
+            "\t$(MAKE) remediation-backlog\n"
+            "\t$(MAKE) release-closeout-fixed-point\n"
+            "\t$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required\n"
+        )
+        if misorder_release_ready_post_commit:
+            release_ready_post_commit_lines = (
+                "\t$(MAKE) auto-improve-readiness-worktree-guard\n"
+                "\t$(MAKE) goal-runtime-local-evidence-refresh\n"
+                "\t$(MAKE) generated-artifact-converge\n"
+                "\t$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required\n"
+                "\t$(MAKE) remediation-backlog\n"
+                "\t$(MAKE) release-closeout-fixed-point\n"
+            )
+        release_converge_all_lines = (
+            "\t$(MAKE) release-converge\n"
+            "\t$(MAKE) sync-public-policy\n"
+            "\t$(MAKE) public-check-all\n"
+            "\t$(MAKE) release-converge-post\n"
+        )
         phony = " ".join(
             [
                 "check",
                 "check-finalized",
                 "release-evidence-closeout",
+                "release-ready",
+                "release-ready-snapshot",
+                "release-ready-commit",
+                "release-ready-post-commit-converge",
+                "release-ready-amend",
+                "release-converge-all-surfaces",
+                "release-converge",
+                "release-converge-post",
+                "release-check-all-surfaces",
+                "sync-public-policy",
+                "public-check-all",
+                "goal-runtime-local-evidence-refresh",
+                "auto-improve-readiness-worktree-guard",
+                "remediation-backlog",
                 "generated-artifact-converge",
                 "generated-artifact-index",
                 "artifact-freshness",
@@ -125,6 +185,38 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "\t$(MAKE) release-closeout-fixed-point\n"
             "\t$(MAKE) tmp-json-clean\n"
             "\t$(MAKE) release-closeout-finality-verify\n"
+            "release-ready:\n"
+            f"{release_ready_lines}"
+            "release-ready-post-commit-converge:\n"
+            f"{release_ready_post_commit_lines}"
+            "release-converge-all-surfaces:\n"
+            f"{release_converge_all_lines}"
+            "release-converge:\n"
+            "\t$(MAKE) release-converge-post\n"
+            "release-converge-post:\n"
+            "\t$(MAKE) generated-artifact-converge\n"
+            "\t$(MAKE) remediation-backlog\n"
+            "\t$(MAKE) release-closeout-fixed-point\n"
+            "\t$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required\n"
+            "\t$(MAKE) test-artifact-finalization\n"
+            "release-ready-snapshot:\n"
+            "\t@true\n"
+            "release-ready-commit:\n"
+            "\t@true\n"
+            "release-ready-amend:\n"
+            "\t@true\n"
+            "release-check-all-surfaces:\n"
+            "\t@true\n"
+            "sync-public-policy:\n"
+            "\t@true\n"
+            "public-check-all:\n"
+            "\t@true\n"
+            "goal-runtime-local-evidence-refresh:\n"
+            "\t@true\n"
+            "auto-improve-readiness-worktree-guard:\n"
+            "\t@true\n"
+            "remediation-backlog:\n"
+            "\t@true\n"
             "generated-artifact-converge:\n"
             "\t$(MAKE) script-output-surfaces\n"
             "\t$(MAKE) external-report-action-matrix\n"
@@ -147,6 +239,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         self.assertEqual(report["status"], "pass")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
         self.assertIn("release-evidence-closeout", {item["target"] for item in report["target_recipes"]})
+        self.assertIn("release-ready", {item["target"] for item in report["target_recipes"]})
         self.assertEqual(report["fixed_point_policy"]["writer_count"], 2)
         planner_hook = next(item for item in report["checks"] if item["id"] == "workflow_dependency_planner_closeout_hooks")
         self.assertEqual(planner_hook["status"], "pass")
@@ -214,6 +307,38 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         self.assertEqual(
             check["violations"][0]["reason"],
             "unexpected_repeated_closeout_target",
+        )
+
+    def test_guard_fails_when_release_ready_check_is_not_terminal(self) -> None:
+        self._write_makefile(misorder_release_ready=True)
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(item for item in report["checks"] if item["id"] == "release_ready_transaction_sequence")
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertEqual(
+            check["violations"][-1]["reason"],
+            "release_check_all_surfaces_must_be_terminal",
+        )
+
+    def test_guard_fails_when_release_ready_post_commit_skips_fixed_point_before_strict_finalizer(
+        self,
+    ) -> None:
+        self._write_makefile(misorder_release_ready_post_commit=True)
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "release_ready_post_commit_converge_sequence"
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+        self.assertEqual(
+            check["violations"][0]["expected_role"],
+            "release-closeout-post-check-finalizer-strict-dry-run",
         )
 
 

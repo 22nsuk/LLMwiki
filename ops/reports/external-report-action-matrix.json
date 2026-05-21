@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-21T14:56:50Z",
+  "generated_at": "2026-05-21T16:30:51Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "2897e93d3225786cfd734d5b4a9a1893d6a5e92de9aab4a893ed7e2231ca8823",
+  "source_tree_fingerprint": "142b6c3c4fa38faeb73df7c8f5d06ba988e940838e0e707e39b756ba30bc25b8",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T14:56:50Z"
+    "checked_at": "2026-05-21T16:30:51Z"
   },
   "vault": ".",
   "status": "pass",
@@ -126,9 +126,9 @@
         },
         {
           "path": "tmp/release-workflow-order-guard.json",
-          "exists": false,
-          "status": "",
-          "producer": ""
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.release_workflow_order_guard"
         }
       ]
     },

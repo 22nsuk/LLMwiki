@@ -52,7 +52,7 @@ def seed_activation_inputs(vault: Path) -> None:
                 "runnable_proposal_count": 1,
                 "blocked_reason_counts": [{"reason": "recent_log_overlap", "count": 1}],
             },
-            "release_blockers": [],
+            "learning_claim_blockers": [],
         },
     )
     write_json(

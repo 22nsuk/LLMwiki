@@ -514,11 +514,11 @@ def _auto_policy_readiness_predicates(
             "learning_readiness_no_blockers",
             "pass" if not blocking_signal_ids and not blocking_blocker_ids else "fail",
             "ops/reports/auto-improve-readiness.json",
-            "learning_readiness.signals == [] and release_blockers == []",
+            "learning_readiness.signals == [] and learning_claim_blockers == []",
             (
                 "learning_readiness.signals="
                 + (",".join(blocking_signal_ids) or "[]")
-                + "; release_blockers="
+                + "; learning_claim_blockers="
                 + (",".join(blocking_blocker_ids) or "[]")
             ),
             "Learning readiness exposes no blocking learning claim signals.",
@@ -792,12 +792,12 @@ def _unlock_review_decision(
         else "reviewed=false"
     )
     readiness_observed_value = (
-        "learning_readiness.signals=[]; release_blockers=[]"
+        "learning_readiness.signals=[]; learning_claim_blockers=[]"
         if not blocking_signal_ids and not blocking_blocker_ids
         else (
             "learning_readiness.signals="
             + (",".join(blocking_signal_ids) or "<none>")
-            + "; release_blockers="
+            + "; learning_claim_blockers="
             + (",".join(blocking_blocker_ids) or "<none>")
         )
     )
@@ -877,7 +877,7 @@ def _unlock_review_items(
             ),
             required_condition=(
                 "auto_improve_readiness.learning_readiness.signals == [] "
-                "and auto_improve_readiness.release_blockers == []"
+                "and auto_improve_readiness.learning_claim_blockers == []"
             ),
             observed_value=decision.readiness_observed_value,
             requires_human_review=False,

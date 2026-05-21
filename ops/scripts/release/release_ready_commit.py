@@ -173,6 +173,13 @@ def _load_preexisting_paths(pre_status_path: Path | None) -> set[str]:
     return paths
 
 
+def _load_report(path: Path | None) -> dict[str, Any]:
+    if path is None or not path.exists():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return payload if isinstance(payload, dict) else {}
+
+
 def _entry_payload(entry: StatusEntry, *, preexisting_paths: set[str]) -> dict[str, Any]:
     path = _normalize_repo_path(entry.path)
     return {
@@ -244,10 +251,7 @@ def _commit_amend(vault: Path) -> GitResult:
 
 
 def _load_amend_base(amend_of_path: Path | None) -> dict[str, Any]:
-    if amend_of_path is None or not amend_of_path.exists():
-        return {}
-    payload = json.loads(amend_of_path.read_text(encoding="utf-8"))
-    return payload if isinstance(payload, dict) else {}
+    return _load_report(amend_of_path)
 
 
 def build_snapshot(vault: Path, out_path: Path) -> int:
@@ -281,15 +285,33 @@ def run_commit(
         return 1
 
     entries = git_status_entries(vault)
+    pre_status = _load_report(pre_status_path)
     preexisting_paths = _load_preexisting_paths(pre_status_path)
     report = _base_report(vault, entries, preexisting_paths=preexisting_paths)
     report["message"] = message
     report["dry_run"] = dry_run
     report["amend"] = amend
 
+    if pre_status and not amend:
+        expected_head = str(pre_status.get("head_before", "")).strip()
+        current_head = _head(vault)
+        report["snapshot"] = _display_path(vault, pre_status_path)
+        report["expected_head_from_snapshot"] = expected_head
+        report["actual_head_before_commit"] = current_head
+        if expected_head and current_head != expected_head:
+            report["status"] = "blocked"
+            report["reason"] = "snapshot_head_mismatch"
+            _write_report(out_path, report)
+            print(
+                "release-ready-commit refused: current HEAD does not match release-ready snapshot",
+                file=sys.stderr,
+            )
+            return 1
+
     amend_base = _load_amend_base(amend_of_path) if amend else {}
     if amend:
         report["amend_of"] = _display_path(vault, amend_of_path)
+        report["amend_of_status"] = str(amend_base.get("status", "")).strip()
         expected_head = str(amend_base.get("head_after", "")).strip()
         current_head = _head(vault)
         report["expected_head_before_amend"] = expected_head
@@ -312,6 +334,7 @@ def run_commit(
         item for item in report["entries"] if amend and item["category"] == "public_source"
     ]
     staged = [item for item in report["entries"] if item["staged"]]
+    paths = [str(item["path"]) for item in report["entries"] if item["path"]]
     if unexpected:
         report["status"] = "blocked"
         report["reason"] = "unexpected_dirty_paths"
@@ -339,7 +362,17 @@ def run_commit(
         print("release-ready-commit refused: staged changes are present", file=sys.stderr)
         return 1
 
-    paths = [str(item["path"]) for item in report["entries"] if item["path"]]
+    if amend and paths and report["amend_of_status"] != "committed":
+        report["status"] = "blocked"
+        report["reason"] = "amend_base_not_committed"
+        report["paths_after_uncommitted_base"] = paths
+        _write_report(out_path, report)
+        print(
+            "release-ready-amend refused: release-ready commit did not create a commit",
+            file=sys.stderr,
+        )
+        return 1
+
     if not paths:
         report["status"] = "no_changes"
         report["head_after"] = _head(vault)

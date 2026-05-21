@@ -392,6 +392,7 @@ release-worktree-clean-check:
 
 release-converge-preflight:
 	$(MAKE) report-schema-samples-regenerate CLEAN_FIXTURE_REGENERATION_ALLOW_DIRTY_REPORTS=1
+	$(MAKE) goal-runtime-local-evidence-refresh
 	$(MAKE) test-execution-summary-report-contract-refresh-no-smoke
 
 release-converge-post:
@@ -421,6 +422,7 @@ release-ready-commit:
 
 release-ready-post-commit-converge:
 	$(MAKE) auto-improve-readiness-worktree-guard
+	$(MAKE) goal-runtime-local-evidence-refresh
 	$(MAKE) generated-artifact-converge
 	$(MAKE) remediation-backlog
 	$(MAKE) release-closeout-fixed-point

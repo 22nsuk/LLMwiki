@@ -336,7 +336,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
             {
                 "execution_readiness": {"can_run": True},
                 "learning_readiness": {"status": "learning_likely"},
-                "release_blockers": [],
+                "learning_claim_blockers": [],
             },
         )
 
@@ -1076,10 +1076,9 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
             {
                 "execution_readiness": {"can_run": True},
                 "learning_readiness": {"status": "learning_uncertain"},
-                "release_blockers": [
+                "learning_claim_blockers": [
                     {
                         "id": "learning_blocked_by_review_required",
-                        "release_blocker": True,
                         "accepted_risk": False,
                         "severity": "blocker",
                         "gate_effect": "review_required",
@@ -1121,10 +1120,9 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
             {
                 "execution_readiness": {"can_run": True},
                 "learning_readiness": {"status": "learning_uncertain"},
-                "release_blockers": [
+                "learning_claim_blockers": [
                     {
                         "id": "learning_blocked_by_review_required",
-                        "release_blocker": True,
                         "accepted_risk": False,
                         "severity": "blocker",
                         "gate_effect": "review_required",
@@ -1163,14 +1161,13 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
                 "can_promote_result": False,
                 "execution_readiness": {"can_run": False},
                 "learning_readiness": {"status": "not_runnable"},
-                "release_blockers": [],
+                "learning_claim_blockers": [],
                 "promotion_blockers": [
                     {
                         "id": "execution_blocked_by_no_runnable_proposal",
                         "scope": "execution_readiness",
                         "status": "open",
                         "severity": "blocker",
-                        "release_blocker": True,
                         "accepted_risk": False,
                         "gate_effect": "active",
                         "source_status": "warn",
@@ -1220,14 +1217,13 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
                 "can_promote_result": False,
                 "execution_readiness": {"can_run": True},
                 "learning_readiness": {"status": "learning_likely"},
-                "release_blockers": [],
+                "learning_claim_blockers": [],
                 "promotion_blockers": [
                     {
                         "id": blocker_id,
                         "scope": "release_gate",
                         "status": "open",
                         "severity": "blocker",
-                        "release_blocker": True,
                         "accepted_risk": False,
                         "gate_effect": "active",
                         "source_status": "fail",
@@ -1269,10 +1265,9 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
             {
                 "execution_readiness": {"can_run": True},
                 "learning_readiness": {"status": "learning_uncertain"},
-                "release_blockers": [
+                "learning_claim_blockers": [
                     {
                         "id": "learning_blocked_by_review_required",
-                        "release_blocker": True,
                         "accepted_risk": False,
                         "severity": "blocker",
                         "gate_effect": "review_required",
@@ -1324,10 +1319,9 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
             {
                 "execution_readiness": {"can_run": True},
                 "learning_readiness": {"status": "learning_uncertain"},
-                "release_blockers": [
+                "learning_claim_blockers": [
                     {
                         "id": "learning_blocked_by_review_required",
-                        "release_blocker": True,
                         "accepted_risk": False,
                         "severity": "blocker",
                         "gate_effect": "review_required",
@@ -1381,10 +1375,9 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
             {
                 "execution_readiness": {"can_run": True},
                 "learning_readiness": {"status": "learning_uncertain"},
-                "release_blockers": [
+                "learning_claim_blockers": [
                     {
                         "id": "other_learning_blocker",
-                        "release_blocker": True,
                         "accepted_risk": False,
                         "severity": "blocker",
                         "gate_effect": "review_required",
@@ -1423,10 +1416,9 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
             {
                 "execution_readiness": {"can_run": True},
                 "learning_readiness": {"status": "learning_uncertain"},
-                "release_blockers": [
+                "learning_claim_blockers": [
                     {
                         "id": "new_unclassified_learning_risk",
-                        "release_blocker": True,
                         "accepted_risk": True,
                         "severity": "warn",
                         "gate_effect": "accepted_risk",
@@ -1462,10 +1454,9 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
             {
                 "execution_readiness": {"can_run": True},
                 "learning_readiness": {"status": "learning_uncertain"},
-                "release_blockers": [
+                "learning_claim_blockers": [
                     {
                         "id": "learning_blocked_by_review_required",
-                        "release_blocker": True,
                         "accepted_risk": False,
                         "severity": "blocker",
                         "gate_effect": "review_required",
@@ -1604,7 +1595,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
             {
                 "execution_readiness": {"can_run": False},
                 "learning_readiness": {"status": "not_runnable"},
-                "release_blockers": [],
+                "learning_claim_blockers": [],
             },
         )
 

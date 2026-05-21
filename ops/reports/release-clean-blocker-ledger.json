@@ -1,22 +1,22 @@
 {
   "$schema": "ops/schemas/release-clean-blocker-ledger.schema.json",
   "artifact_kind": "release_clean_blocker_ledger",
-  "generated_at": "2026-05-21T14:57:06Z",
+  "generated_at": "2026-05-21T16:31:06Z",
   "producer": "ops.scripts.release_clean_blocker_ledger",
   "source_command": "python -m ops.scripts.release_clean_blocker_ledger --vault . --out ops/reports/release-clean-blocker-ledger.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "2897e93d3225786cfd734d5b4a9a1893d6a5e92de9aab4a893ed7e2231ca8823",
+  "source_tree_fingerprint": "142b6c3c4fa38faeb73df7c8f5d06ba988e940838e0e707e39b756ba30bc25b8",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "f6aa73699b331c2043768aebbdd1a91ef5399c245b427d3c0bc1358b10789332",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "05d9ca92b669481899a02e5a557550b51eabdd6e3d3c4d5cb6757659f40de64c",
-    "learning_delta_scoreboard": "45c2fd92a2afd85a58bbf7917167bfdd8bed06f464d922e43d027e81916fcea2",
-    "release_closeout_summary": "ed07c03af09b0b27cbded306d07488b10fb45db894a791e7fa2b7d07e23198d8",
-    "release_evidence_cohort": "d864bc0a935e7bfe10b4de7213ed2d660db7f138e1b9bc02a614c14f8f829315",
-    "release_lane_summary": "1f18c74759ce2c9fbc09c21f37e7d33e8fc7f1e96a7c6755d5fba95789de9f7d",
+    "learning_delta_scoreboard": "bc6225615c644c6c934d612c70187fe180e98d09ca498fbaaf4cd1fac1dd86ae",
+    "release_closeout_summary": "fe5f2a1528b3310710814b6b48d59b1462fd288288e95036174e0ca1f995d563",
+    "release_evidence_cohort": "66825e260555055b2f43033e03d7695763791e67e12148da453af6801a014e27",
+    "release_lane_summary": "6f0c333f40fe87809ba7d7d9e8af779165dab5251646137b32ac219ba9c8a859",
     "release_risk_taxonomy": "03e1c9015389ebac078be42f611e672a1f922d96552bd16980f9900f78d6b2e6",
-    "current_source_tree_fingerprint": "bdb0b4f47014ca53bbf4c417e2726fcb08d694c4bc887131cd97d059437bdef1"
+    "current_source_tree_fingerprint": "3b687f8fb1150ae37b08f6be9d5685ee31fc4e33b98e625be0453b73e1bae93e"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T14:57:06Z"
+    "checked_at": "2026-05-21T16:31:06Z"
   },
   "vault": ".",
   "policy": {
@@ -99,7 +99,7 @@
         "Regenerate release evidence in one closeout chain or document why fingerprint divergence is acceptable."
       ],
       "risk_owner": "runtime-maintainer",
-      "expires_at": "2026-05-28T14:57:06Z",
+      "expires_at": "2026-05-28T16:31:06Z",
       "acceptance_source": "ops/scripts/release_closeout_summary.py",
       "closure_action": "Rerun release evidence in one ordered closeout chain before release signoff.",
       "rollback_trigger": "Treat source tree coherence attention as a blocker if component fingerprints are missing.",
@@ -125,7 +125,7 @@
         "Regenerate release evidence in one closeout chain or document why fingerprint divergence is acceptable."
       ],
       "risk_owner": "runtime-maintainer",
-      "expires_at": "2026-05-28T14:57:06Z",
+      "expires_at": "2026-05-28T16:31:06Z",
       "acceptance_source": "ops/scripts/release_closeout_summary.py",
       "closure_action": "Rerun release evidence in one ordered closeout chain before release signoff.",
       "rollback_trigger": "Treat source tree coherence attention as a blocker if component fingerprints are missing.",
@@ -367,7 +367,7 @@
         "Run make release-evidence-closeout-sealed before sealed release signoff."
       ],
       "risk_owner": "runtime-maintainer",
-      "expires_at": "2026-05-28T14:57:06Z",
+      "expires_at": "2026-05-28T16:31:06Z",
       "acceptance_source": "ops/scripts/release_closeout_summary.py",
       "closure_action": "Rerun the sealed closeout lane with a current distribution ZIP before external review signoff.",
       "rollback_trigger": "Treat missing strict external report provenance as a blocker in sealed release lanes.",
@@ -389,7 +389,7 @@
       "message": "generated artifact index reports archive candidates as advisory release risk.",
       "required_evidence": [],
       "risk_owner": "runtime-maintainer",
-      "expires_at": "2026-05-28T14:57:06Z",
+      "expires_at": "2026-05-28T16:31:06Z",
       "acceptance_source": "ops/scripts/release_closeout_summary.py",
       "closure_action": "Rerun generated-artifact-index before the next release closeout.",
       "rollback_trigger": "Treat generated artifact index advisory debt as a blocker if current artifacts go missing.",

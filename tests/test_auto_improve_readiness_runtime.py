@@ -557,9 +557,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertTrue(persisted["learning_readiness"]["can_run"])
         self.assertTrue(persisted["learning_readiness"]["likely_to_learn"])
         self.assertEqual(persisted["learning_readiness"]["signals"], [])
-        self.assertEqual(persisted["learning_blockers"], [])
+        self.assertEqual(persisted["learning_claim_blockers"], [])
         self.assertEqual(persisted["promotion_blockers"], [])
-        self.assertEqual(persisted["release_blockers"], [])
+        self.assertEqual(persisted["clean_release_blockers"], [])
         self.assertEqual(
             persisted["diagnostics"]["artifact_freshness_summary"]["status"],
             "pass",
@@ -1623,20 +1623,18 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         )
         self.assertEqual(attempt_history_signal["minimum_sample_size"], 10)
         self.assertIn("summary.attempts_considered", attempt_history_signal["required_evidence"][0])
-        self.assertEqual(len(report["release_blockers"]), 1)
-        self.assertEqual(report["learning_blockers"], report["release_blockers"])
-        self.assertEqual(report["promotion_blockers"], report["learning_blockers"])
-        release_blocker = report["release_blockers"][0]
-        self.assertEqual(release_blocker["id"], "learning_blocked_by_review_required")
-        self.assertEqual(release_blocker["scope"], "learning_readiness")
-        self.assertEqual(release_blocker["status"], "open")
-        self.assertEqual(release_blocker["severity"], "blocker")
-        self.assertTrue(release_blocker["release_blocker"])
-        self.assertFalse(release_blocker["accepted_risk"])
-        self.assertEqual(release_blocker["gate_effect"], "review_required")
-        self.assertEqual(release_blocker["source_status"], "learning_uncertain")
-        self.assertSetEqual(set(release_blocker["signal_ids"]), signal_ids)
-        self.assertIn("operator must record accepted risk", release_blocker["required_evidence"][1])
+        self.assertEqual(len(report["learning_claim_blockers"]), 1)
+        self.assertEqual(report["promotion_blockers"], report["learning_claim_blockers"])
+        learning_claim_blocker = report["learning_claim_blockers"][0]
+        self.assertEqual(learning_claim_blocker["id"], "learning_blocked_by_review_required")
+        self.assertEqual(learning_claim_blocker["scope"], "learning_readiness")
+        self.assertEqual(learning_claim_blocker["status"], "open")
+        self.assertEqual(learning_claim_blocker["severity"], "blocker")
+        self.assertFalse(learning_claim_blocker["accepted_risk"])
+        self.assertEqual(learning_claim_blocker["gate_effect"], "review_required")
+        self.assertEqual(learning_claim_blocker["source_status"], "learning_uncertain")
+        self.assertSetEqual(set(learning_claim_blocker["signal_ids"]), signal_ids)
+        self.assertIn("operator must record accepted risk", learning_claim_blocker["required_evidence"][1])
         self.assertEqual(
             report["next_action"],
             report["learning_readiness"]["recommended_next_step"],
@@ -1711,7 +1709,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertTrue(report["can_promote_result"])
         self.assertEqual(report["learning_readiness"]["gate_effect"], "review_required")
         self.assertEqual(
-            [item["id"] for item in report["learning_blockers"]],
+            [item["id"] for item in report["learning_claim_blockers"]],
             ["learning_blocked_by_review_required"],
         )
         self.assertEqual(report["promotion_blockers"], [])
@@ -1855,7 +1853,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(report["learning_readiness"]["status"], "learning_likely")
         self.assertEqual(report["learning_readiness"]["metrics"]["telemetry_coverage_ratio"], 0.75)
         self.assertEqual(report["learning_readiness"]["signals"], [])
-        self.assertEqual(report["release_blockers"], [])
+        self.assertEqual(report["learning_claim_blockers"], [])
         self.assertEqual(
             loop_health_summary["health_flags"],
             [
@@ -2038,13 +2036,13 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(report["learning_readiness"]["metrics"]["telemetry_coverage_ratio"], 0.0)
         signal_ids = {signal["id"] for signal in report["learning_readiness"]["signals"]}
         self.assertSetEqual(signal_ids, {"loop_health_telemetry_coverage_missing"})
-        self.assertEqual(len(report["release_blockers"]), 1)
+        self.assertEqual(len(report["learning_claim_blockers"]), 1)
         self.assertEqual(
-            report["release_blockers"][0]["id"],
+            report["learning_claim_blockers"][0]["id"],
             "learning_blocked_by_review_required",
         )
         self.assertEqual(
-            report["release_blockers"][0]["signal_ids"],
+            report["learning_claim_blockers"][0]["signal_ids"],
             ["loop_health_telemetry_coverage_missing"],
         )
         self.assertEqual(
@@ -2417,15 +2415,15 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(report["learning_readiness"]["status"], "not_runnable")
         self.assertFalse(report["can_execute_trial"])
         self.assertFalse(report["can_promote_result"])
-        self.assertEqual(len(report["release_blockers"]), 1)
+        self.assertEqual(len(report["learning_claim_blockers"]), 1)
         self.assertEqual(
-            report["release_blockers"][0]["id"],
+            report["learning_claim_blockers"][0]["id"],
             "learning_blocked_by_execution_not_runnable",
         )
-        self.assertEqual(report["release_blockers"][0]["gate_effect"], "shadow")
-        self.assertEqual(report["release_blockers"][0]["source_status"], "not_runnable")
-        self.assertIn("learning-readiness signoff cannot accept", report["release_blockers"][0]["required_evidence"][1])
-        self.assertNotIn("operator must record accepted risk", " ".join(report["release_blockers"][0]["required_evidence"]))
+        self.assertEqual(report["learning_claim_blockers"][0]["gate_effect"], "shadow")
+        self.assertEqual(report["learning_claim_blockers"][0]["source_status"], "not_runnable")
+        self.assertIn("learning-readiness signoff cannot accept", report["learning_claim_blockers"][0]["required_evidence"][1])
+        self.assertNotIn("operator must record accepted risk", " ".join(report["learning_claim_blockers"][0]["required_evidence"]))
         self.assertTrue(any(item["id"] == "execution_blocked_by_no_runnable_proposal" for item in report["promotion_blockers"]))
         self.assertFalse(readiness_can_run(report))
         self.assertEqual(report["fallback"]["status"], "history_seeded")
@@ -2710,7 +2708,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(report["remediations"], [])
         self.assertNotIn(
             "learning_blocked_by_execution_not_runnable",
-            {blocker["id"] for blocker in report["release_blockers"]},
+            {blocker["id"] for blocker in report["learning_claim_blockers"]},
         )
         self.assertIn("Queue is non-empty", report["next_action"])
         checks = {check["id"]: check for check in report["checks"]}

@@ -1203,14 +1203,9 @@ def test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflig
         assert int(signal.get("minimum_sample_size", 0)) >= 1
         assert str(signal.get("next_evaluation_command", "")).startswith("make ")
         assert signal.get("closure_strategy")
-    learning_blocker_ids = {
+    learning_claim_blocker_ids = {
         str(item.get("id", "")).strip()
-        for item in payload.get("learning_blockers", [])
-        if isinstance(item, dict)
-    }
-    release_blocker_ids = {
-        str(item.get("id", "")).strip()
-        for item in payload.get("release_blockers", [])
+        for item in payload.get("learning_claim_blockers", [])
         if isinstance(item, dict)
     }
     promotion_blocker_ids = {
@@ -1224,13 +1219,11 @@ def test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflig
     )
     if learning_status == LEARNING_STATUS_LIKELY:
         assert signal_ids == set()
-        assert learning_blocker_ids == set()
-        assert release_blocker_ids == set()
+        assert learning_claim_blocker_ids == set()
         assert LEARNING_REVIEW_REQUIRED_BLOCKER_ID not in promotion_blocker_ids
     elif learning_status == LEARNING_STATUS_UNCERTAIN:
         assert signal_ids
-        assert learning_blocker_ids == {LEARNING_REVIEW_REQUIRED_BLOCKER_ID}
-        assert release_blocker_ids == {LEARNING_REVIEW_REQUIRED_BLOCKER_ID}
+        assert learning_claim_blocker_ids == {LEARNING_REVIEW_REQUIRED_BLOCKER_ID}
         if learning_signoff_active:
             assert LEARNING_REVIEW_REQUIRED_BLOCKER_ID not in promotion_blocker_ids
         else:
@@ -1239,8 +1232,7 @@ def test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflig
     else:
         assert learning_status == LEARNING_STATUS_NOT_RUNNABLE
         assert signal_ids
-        assert learning_blocker_ids == {LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID}
-        assert release_blocker_ids == {LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID}
+        assert learning_claim_blocker_ids == {LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID}
         assert LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID in promotion_blocker_ids
         assert EXECUTION_NO_RUNNABLE_PROPOSAL_BLOCKER_ID in promotion_blocker_ids
         assert can_promote_result is False
@@ -1391,7 +1383,7 @@ def test_checked_in_auto_improve_readiness_keeps_evidence_ledgers_in_sync() -> N
     if loop_health_summary.get("telemetry_coverage_ratio", 1.0) <= 0.0:
         assert "loop_health_telemetry_coverage_missing" in learning_signals
     if not readiness.get("learning_readiness", {}).get("likely_to_learn", True):
-        blocker = readiness.get("release_blockers", [{}])[0]
+        blocker = readiness.get("learning_claim_blockers", [{}])[0]
         assert blocker.get("scope") == "learning_readiness"
         assert blocker.get("source_status") == readiness.get("learning_readiness", {}).get("status")
         assert set(blocker.get("signal_ids", [])) == learning_signals

@@ -218,7 +218,7 @@ def machine_claimable_readiness() -> dict[str, Any]:
                 "defect_escape_pair_count": 0,
             },
         },
-        "release_blockers": [],
+        "learning_claim_blockers": [],
     }
 
 
@@ -347,11 +347,11 @@ class LearningDeltaScoreboardTests(unittest.TestCase):
             self.assertEqual(
                 review_items["auto_improve_readiness"]["required_condition"],
                 "auto_improve_readiness.learning_readiness.signals == [] "
-                "and auto_improve_readiness.release_blockers == []",
+                "and auto_improve_readiness.learning_claim_blockers == []",
             )
             self.assertEqual(
                 review_items["auto_improve_readiness"]["observed_value"],
-                "learning_readiness.signals=[]; release_blockers=[]",
+                "learning_readiness.signals=[]; learning_claim_blockers=[]",
             )
             self.assertFalse(review_items["auto_improve_readiness"]["requires_human_review"])
             self.assertEqual(
@@ -507,7 +507,7 @@ class LearningDeltaScoreboardTests(unittest.TestCase):
             self.assertEqual(review_items["auto_improve_readiness"]["status"], "fail")
             self.assertEqual(
                 review_items["auto_improve_readiness"]["observed_value"],
-                "learning_readiness.signals=high_rework; release_blockers=<none>",
+                "learning_readiness.signals=high_rework; learning_claim_blockers=<none>",
             )
             self.assertEqual(validate_with_schema(report, load_schema(UNLOCK_REVIEW_SCHEMA_PATH)), [])
 
@@ -524,11 +524,10 @@ class LearningDeltaScoreboardTests(unittest.TestCase):
                             "status": "not_runnable",
                             "signals": [],
                         },
-                        "release_blockers": [
+                        "learning_claim_blockers": [
                             {
                                 "id": LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID,
                                 "status": "open",
-                                "release_blocker": True,
                             }
                         ],
                     }
@@ -552,7 +551,7 @@ class LearningDeltaScoreboardTests(unittest.TestCase):
             self.assertEqual(review_items["auto_improve_readiness"]["status"], "fail")
             self.assertEqual(
                 review_items["auto_improve_readiness"]["observed_value"],
-                f"learning_readiness.signals=<none>; release_blockers={LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID}",
+                f"learning_readiness.signals=<none>; learning_claim_blockers={LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID}",
             )
             self.assertEqual(validate_with_schema(report, load_schema(UNLOCK_REVIEW_SCHEMA_PATH)), [])
 

@@ -792,14 +792,34 @@ def _evaluate_auto_improve(
             )
         )
 
-    release_blockers = promotion_blockers if has_promotion_blockers else payload.get("release_blockers")
+    blocker_fields: tuple[tuple[str, Any], ...] = (
+        ("promotion_blockers", payload.get("promotion_blockers")),
+        ("clean_release_blockers", payload.get("clean_release_blockers")),
+        ("learning_claim_blockers", payload.get("learning_claim_blockers")),
+    )
+    if not any(isinstance(items, list) for _, items in blocker_fields):
+        blocker_fields = (
+            ("release_blockers", payload.get("release_blockers")),
+            ("learning_blockers", payload.get("learning_blockers")),
+        )
     claims_learning_improved = bool(learning_claim_context.get("claims_learning_improved"))
     skipped_learning_claim_blocker_count = 0
-    if isinstance(release_blockers, list):
-        for item in release_blockers:
-            if not isinstance(item, dict) or not bool(item.get("release_blocker")):
+    seen_blocker_ids: set[str] = set()
+    for _, blocker_items in blocker_fields:
+        if not isinstance(blocker_items, list):
+            continue
+        for item in blocker_items:
+            if not isinstance(item, dict):
                 continue
             code = str(item.get("id", "")).strip() or "auto_improve_release_blocker"
+            if code in seen_blocker_ids:
+                continue
+            if "release_blocker" in item and not bool(item.get("release_blocker")):
+                continue
+            status = str(item.get("status", "open")).strip() or "open"
+            if status not in {"open", "accepted_risk"} and not bool(item.get("accepted_risk")):
+                continue
+            seen_blocker_ids.add(code)
             if code == LEARNING_REVIEW_BLOCKER_ID and not claims_learning_improved:
                 skipped_learning_claim_blocker_count += 1
                 continue

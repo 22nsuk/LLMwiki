@@ -23,9 +23,9 @@
     "can_promote_result",
     "execution_readiness",
     "learning_readiness",
-    "learning_blockers",
+    "learning_claim_blockers",
     "promotion_blockers",
-    "release_blockers",
+    "clean_release_blockers",
     "inputs",
     "diagnostics",
     "queue",
@@ -153,22 +153,22 @@
     "learning_readiness": {
       "$ref": "#/$defs/learning_readiness"
     },
-    "learning_blockers": {
+    "learning_claim_blockers": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/release_blocker"
+        "$ref": "#/$defs/readiness_blocker"
       }
     },
     "promotion_blockers": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/release_blocker"
+        "$ref": "#/$defs/readiness_blocker"
       }
     },
-    "release_blockers": {
+    "clean_release_blockers": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/release_blocker"
+        "$ref": "#/$defs/readiness_blocker"
       }
     },
     "inputs": {
@@ -920,7 +920,7 @@
         }
       }
     },
-    "release_blocker": {
+    "readiness_blocker": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -928,7 +928,6 @@
         "scope",
         "status",
         "severity",
-        "release_blocker",
         "accepted_risk",
         "gate_effect",
         "source_status",
@@ -939,7 +938,7 @@
       ],
       "properties": {
         "id": {
-          "$ref": "https://llmwiki/schemas/learning-readiness-vocabulary#/$defs/release_blocker_id"
+          "$ref": "https://llmwiki/schemas/learning-readiness-vocabulary#/$defs/readiness_blocker_id"
         },
         "scope": {
           "type": "string",
@@ -965,10 +964,6 @@
             "blocker"
           ]
         },
-        "release_blocker": {
-          "type": "boolean",
-          "const": true
-        },
         "accepted_risk": {
           "type": "boolean"
         },
@@ -981,7 +976,7 @@
           ]
         },
         "source_status": {
-          "$ref": "https://llmwiki/schemas/learning-readiness-vocabulary#/$defs/release_blocker_source_status"
+          "$ref": "https://llmwiki/schemas/learning-readiness-vocabulary#/$defs/readiness_blocker_source_status"
         },
         "reason": {
           "type": "string",
@@ -1266,7 +1261,7 @@
         "linked_promotion_blocker_ids": {
           "type": "array",
           "items": {
-            "$ref": "https://llmwiki/schemas/learning-readiness-vocabulary#/$defs/release_blocker_id"
+            "$ref": "https://llmwiki/schemas/learning-readiness-vocabulary#/$defs/readiness_blocker_id"
           }
         },
         "summary": { "type": "string", "minLength": 1 }

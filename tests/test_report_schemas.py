@@ -330,11 +330,11 @@ class ReportSchemaContractTest(unittest.TestCase):
             validate_with_schema(missing_learning_telemetry_coverage, schema),
         )
 
-        missing_release_blockers = copy.deepcopy(report)
-        missing_release_blockers.pop("release_blockers", None)
+        missing_learning_claim_blockers = copy.deepcopy(report)
+        missing_learning_claim_blockers.pop("learning_claim_blockers", None)
         self.assertIn(
-            "$: missing required property 'release_blockers'",
-            validate_with_schema(missing_release_blockers, schema),
+            "$: missing required property 'learning_claim_blockers'",
+            validate_with_schema(missing_learning_claim_blockers, schema),
         )
 
         missing_promotion_blockers = copy.deepcopy(report)
@@ -344,6 +344,13 @@ class ReportSchemaContractTest(unittest.TestCase):
             validate_with_schema(missing_promotion_blockers, schema),
         )
 
+        missing_clean_release_blockers = copy.deepcopy(report)
+        missing_clean_release_blockers.pop("clean_release_blockers", None)
+        self.assertIn(
+            "$: missing required property 'clean_release_blockers'",
+            validate_with_schema(missing_clean_release_blockers, schema),
+        )
+
         missing_can_execute_trial = copy.deepcopy(report)
         missing_can_execute_trial.pop("can_execute_trial", None)
         self.assertIn(
@@ -351,12 +358,12 @@ class ReportSchemaContractTest(unittest.TestCase):
             validate_with_schema(missing_can_execute_trial, schema),
         )
 
-        invalid_release_blocker_id = copy.deepcopy(report)
-        invalid_release_blocker_id["release_blockers"][0]["id"] = "learning_uncertain"
-        errors = validate_with_schema(invalid_release_blocker_id, schema)
+        invalid_learning_claim_blocker_id = copy.deepcopy(report)
+        invalid_learning_claim_blocker_id["learning_claim_blockers"][0]["id"] = "learning_uncertain"
+        errors = validate_with_schema(invalid_learning_claim_blocker_id, schema)
         self.assertTrue(
             any(
-                error.startswith("$.release_blockers[0].id: expected one of ")
+                error.startswith("$.learning_claim_blockers[0].id: expected one of ")
                 and "promotion_blocked_by_release_lineage_mismatch" in error
                 for error in errors
             ),

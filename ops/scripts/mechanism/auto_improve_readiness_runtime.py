@@ -55,7 +55,7 @@ from .auto_improve_readiness_learning_runtime import (
     LearningReadinessAssessment,
     _build_loop_health_summary,
     _learning_readiness_assessment,
-    _learning_release_blockers,
+    _learning_claim_blockers,
 )
 from .auto_improve_readiness_queue_runtime import (
     _blocked_proposal_count,
@@ -580,7 +580,6 @@ def _execution_blockers(execution: ExecutionReadinessAssessment) -> list[dict[st
             "scope": "execution_readiness",
             "status": "open",
             "severity": "blocker",
-            "release_blocker": True,
             "accepted_risk": False,
             "gate_effect": execution.gate_effect,
             "source_status": execution.status,
@@ -607,7 +606,6 @@ def _remediation_backlog_promotion_blockers(
             "scope": "remediation_backlog",
             "status": "open",
             "severity": "blocker",
-            "release_blocker": True,
             "accepted_risk": False,
             "gate_effect": "active",
             "source_status": str(summary.get("source_status", "")).strip() or "open",
@@ -634,12 +632,12 @@ def _readiness_promotion_blockers(
     execution: ExecutionReadinessAssessment,
     learning: LearningReadinessAssessment,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    learning_blockers = [blocker.to_wire() for blocker in _learning_release_blockers(learning)]
-    learning_promotion_blockers = learning_blockers
+    learning_claim_blockers = [blocker.to_wire() for blocker in _learning_claim_blockers(learning)]
+    learning_promotion_blockers = learning_claim_blockers
     if bool(inputs.learning_signoff_summary.get("active")):
         learning_promotion_blockers = [
             blocker
-            for blocker in learning_blockers
+            for blocker in learning_claim_blockers
             if str(blocker.get("id", "")).strip() != SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID
         ]
     promotion_blockers = [
@@ -668,7 +666,7 @@ def _readiness_promotion_blockers(
             inputs.remediation_backlog_summary,
         ),
     ]
-    return learning_blockers, promotion_blockers
+    return learning_claim_blockers, promotion_blockers
 
 
 def _readiness_inputs_payload(*, remediation_backlog_path: str) -> dict[str, str]:
@@ -771,7 +769,11 @@ def render_readiness_report(
         inputs.blocked_proposal_count,
         inputs.seed_runs,
     )
-    learning_blockers, promotion_blockers = _readiness_promotion_blockers(inputs, execution, learning)
+    learning_claim_blockers, promotion_blockers = _readiness_promotion_blockers(
+        inputs,
+        execution,
+        learning,
+    )
     can_execute_trial = execution.can_run
     can_promote_result = can_execute_trial and not promotion_blockers
     return {
@@ -816,9 +818,9 @@ def render_readiness_report(
         "can_promote_result": can_promote_result,
         "execution_readiness": execution.to_wire(),
         "learning_readiness": learning.to_wire(),
-        "learning_blockers": learning_blockers,
+        "learning_claim_blockers": learning_claim_blockers,
         "promotion_blockers": promotion_blockers,
-        "release_blockers": learning_blockers,
+        "clean_release_blockers": [],
         "inputs": _readiness_inputs_payload(
             remediation_backlog_path=inputs.remediation_backlog_path
         ),

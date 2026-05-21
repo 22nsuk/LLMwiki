@@ -70,7 +70,7 @@ GOAL_COMPLETED_AT ?=
 GOAL_RUN_LOG_DIR ?= build/goal-runs
 MECHANISM_RUN_ARGS ?=
 
-.PHONY: auto-improve-readiness auto-improve-readiness-report auto-improve-readiness-report-body auto-improve-readiness-worktree-guard codex-goal-contract codex-goal-prompt codex-goal-client goal-prompt auto-improve-goal-contract goal-runtime-refresh goal-runtime-publish-snapshot goal-runtime-local-readiness goal-runtime-local-session-synopsis goal-runtime-local-negative-lessons goal-runtime-local-remediation-backlog goal-runtime-local-fixed-point-check goal-runtime-local-evidence-converge goal-runtime-publish-local-evidence goal-runtime-reconcile goal-runtime-closeout-plan goal-runtime-closeout-candidate-script-output-surfaces goal-runtime-closeout-candidate-generated-artifact-index goal-runtime-closeout-candidate-artifact-freshness goal-runtime-closeout-candidate-converge goal-runtime-closeout-publish-script-output-surfaces goal-runtime-closeout-publish goal-runtime-closeout-finalize goal-runtime-closeout goal-runtime-closeout-full goal-runtime-clean-transient goal-runtime-quarantine-preflight goal-runtime-fixed-point-check goal-runtime-run-admission-converge goal-runtime-run-admission-local-refresh goal-runtime-run-admission goal-runtime-lock-check goal-runtime-lock-status goal-runtime-lock-stop goal-runtime-python-preflight long-run-preflight-clean auto-improve-goal-preflight auto-improve-goal-run auto-improve-goal-status auto-improve-goal-resume auto-improve-goal-finalize auto-improve-goal-run-artifacts goal-runtime-certificate goal-worktree-guard mechanism-review mutation-proposal run-mechanism-experiment-linux-tmp outcome-metrics routing-provenance-aggregate outcome-provenance-gate-policy
+.PHONY: auto-improve-readiness auto-improve-readiness-report auto-improve-readiness-report-body auto-improve-readiness-worktree-guard codex-goal-contract codex-goal-prompt codex-goal-client goal-prompt auto-improve-goal-contract goal-runtime-refresh goal-runtime-publish-snapshot goal-runtime-local-readiness goal-runtime-local-session-synopsis goal-runtime-local-negative-lessons goal-runtime-local-remediation-backlog goal-runtime-local-fixed-point-check goal-runtime-local-evidence-refresh goal-runtime-local-evidence-converge goal-runtime-publish-local-evidence goal-runtime-reconcile goal-runtime-closeout-plan goal-runtime-closeout-candidate-script-output-surfaces goal-runtime-closeout-candidate-generated-artifact-index goal-runtime-closeout-candidate-artifact-freshness goal-runtime-closeout-candidate-converge goal-runtime-closeout-publish-script-output-surfaces goal-runtime-closeout-publish goal-runtime-closeout-finalize goal-runtime-closeout goal-runtime-closeout-full goal-runtime-clean-transient goal-runtime-quarantine-preflight goal-runtime-fixed-point-check goal-runtime-run-admission-converge goal-runtime-run-admission-local-refresh goal-runtime-run-admission goal-runtime-lock-check goal-runtime-lock-status goal-runtime-lock-stop goal-runtime-python-preflight long-run-preflight-clean auto-improve-goal-preflight auto-improve-goal-run auto-improve-goal-status auto-improve-goal-resume auto-improve-goal-finalize auto-improve-goal-run-artifacts goal-runtime-certificate goal-worktree-guard mechanism-review mutation-proposal run-mechanism-experiment-linux-tmp outcome-metrics routing-provenance-aggregate outcome-provenance-gate-policy
 
 auto-improve-readiness: auto-improve-readiness-worktree-guard
 	@status=0; $(PYTHON) -m ops.scripts.auto_improve_readiness --vault "$(VAULT)" --out "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" --out "$(AUTO_IMPROVE_READINESS_OUT)" --schema ops/schemas/auto-improve-readiness-report.schema.json --expected-artifact-kind auto_improve_readiness_report --expected-producer ops.scripts.auto_improve_readiness_runtime; exit $$status
@@ -125,23 +125,26 @@ goal-runtime-local-remediation-backlog:
 goal-runtime-local-fixed-point-check:
 	$(PYTHON) -m ops.scripts.goal_runtime_fixed_point_check --vault "$(VAULT)" --out "$(GOAL_RUNTIME_FIXED_POINT_CHECK_OUT)" --codex-goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --goal-run-status "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --auto-improve-readiness "$(GOAL_LOCAL_READINESS_OUT)" --session-synopsis "$(GOAL_LOCAL_SESSION_SYNOPSIS_OUT)" --remediation-backlog "$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)"
 
+goal-runtime-local-evidence-refresh:
+	$(MAKE) goal-runtime-refresh
+	$(MAKE) goal-runtime-local-readiness
+	$(MAKE) goal-runtime-local-session-synopsis
+	$(MAKE) goal-runtime-local-negative-lessons
+	$(MAKE) goal-runtime-local-remediation-backlog
+	$(MAKE) goal-runtime-local-readiness
+	$(MAKE) goal-runtime-refresh
+	$(MAKE) goal-runtime-local-session-synopsis
+	$(MAKE) goal-runtime-local-negative-lessons
+	$(MAKE) goal-runtime-local-remediation-backlog
+	$(MAKE) goal-runtime-local-readiness
+	$(MAKE) goal-runtime-refresh
+	$(MAKE) goal-runtime-local-session-synopsis
+	$(MAKE) goal-runtime-local-negative-lessons
+	$(MAKE) goal-runtime-local-remediation-backlog
+	$(MAKE) goal-runtime-local-readiness
+
 goal-runtime-local-evidence-converge:
-	$(MAKE) goal-runtime-refresh
-	$(MAKE) goal-runtime-local-readiness
-	$(MAKE) goal-runtime-local-session-synopsis
-	$(MAKE) goal-runtime-local-negative-lessons
-	$(MAKE) goal-runtime-local-remediation-backlog
-	$(MAKE) goal-runtime-local-readiness
-	$(MAKE) goal-runtime-refresh
-	$(MAKE) goal-runtime-local-session-synopsis
-	$(MAKE) goal-runtime-local-negative-lessons
-	$(MAKE) goal-runtime-local-remediation-backlog
-	$(MAKE) goal-runtime-local-readiness
-	$(MAKE) goal-runtime-refresh
-	$(MAKE) goal-runtime-local-session-synopsis
-	$(MAKE) goal-runtime-local-negative-lessons
-	$(MAKE) goal-runtime-local-remediation-backlog
-	$(MAKE) goal-runtime-local-readiness
+	$(MAKE) goal-runtime-local-evidence-refresh
 	$(MAKE) goal-runtime-local-fixed-point-check
 
 goal-runtime-publish-local-evidence:

@@ -143,7 +143,7 @@ def test_unlock_review_decision_blocks_operator_approval_when_readiness_has_bloc
         approved_by=" operator ",
         reviewed_at=" 2026-05-14T00:00:00Z ",
         blocking_signal_ids=["same_eval_missing"],
-        blocking_blocker_ids=["release_blocker"],
+        blocking_blocker_ids=["learning_claim_blocker"],
     )
     review_items = {
         item["id"]: item
@@ -151,7 +151,7 @@ def test_unlock_review_decision_blocks_operator_approval_when_readiness_has_bloc
             machine_policy={"decision": "requires_human"},
             decision=decision,
             blocking_signal_ids=["same_eval_missing"],
-            blocking_blocker_ids=["release_blocker"],
+            blocking_blocker_ids=["learning_claim_blocker"],
         )
     }
 
