@@ -207,6 +207,10 @@ class ReleaseEvidenceCohortTests(unittest.TestCase):
                         "size_bytes": 32,
                         "sha256": "a" * 64,
                         "source": "pytest_junit_xml",
+                        "consistency_status": "pass",
+                        "observed_count": 1,
+                        "expected_count": 1,
+                        "consistency_reason": "junit payload count matches the recorded shard count",
                     },
                     {
                         "kind": "execution_log",
@@ -237,6 +241,12 @@ class ReleaseEvidenceCohortTests(unittest.TestCase):
             {item["kind"] for item in full_component["evidence_artifacts"]},
             {"junit_xml", "execution_log", "failed_nodeids"},
         )
+        junit_artifact = next(
+            item for item in full_component["evidence_artifacts"] if item["kind"] == "junit_xml"
+        )
+        self.assertEqual(junit_artifact["consistency_status"], "pass")
+        self.assertEqual(junit_artifact["observed_count"], 1)
+        self.assertEqual(junit_artifact["expected_count"], 1)
         self.assertEqual(validate_with_schema(report, load_schema(REPORT_SCHEMA_PATH)), [])
 
     def test_allowed_policy_keeps_fingerprint_drift_visible_as_attention(self) -> None:

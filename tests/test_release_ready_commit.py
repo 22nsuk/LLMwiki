@@ -124,6 +124,130 @@ class ReleaseReadyCommitTests(unittest.TestCase):
         self.assertEqual(report["reason"], "preexisting_staged_changes")
         self.assertEqual(report["staged_paths"], ["README.md"])
 
+    def test_amends_release_ready_commit_with_post_converge_evidence(self) -> None:
+        initial_commit_count = int(_git(self.vault, "rev-list", "--count", "HEAD"))
+        (self.vault / "README.md").write_text("# Test\n\nChanged.\n", encoding="utf-8")
+
+        commit_rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-ready-commit.json",
+                "--message",
+                "release: ready",
+            ]
+        )
+        first_head = _git(self.vault, "rev-parse", "HEAD")
+        (self.vault / "ops" / "reports" / "release-smoke-report.json").write_text(
+            '{"status": "pass", "phase": "post-converge"}\n',
+            encoding="utf-8",
+        )
+
+        amend_rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-ready-amend.json",
+                "--amend",
+                "--amend-of",
+                "tmp/release-ready-commit.json",
+            ]
+        )
+
+        self.assertEqual(commit_rc, 0)
+        self.assertEqual(amend_rc, 0)
+        self.assertEqual(_git(self.vault, "status", "--short"), "")
+        self.assertEqual(int(_git(self.vault, "rev-list", "--count", "HEAD")), initial_commit_count + 1)
+        self.assertNotEqual(_git(self.vault, "rev-parse", "HEAD"), first_head)
+        self.assertEqual(_git(self.vault, "log", "-1", "--format=%s"), "release: ready")
+        changed_paths = _git(self.vault, "show", "--name-only", "--format=", "HEAD").splitlines()
+        self.assertIn("README.md", changed_paths)
+        self.assertIn("ops/reports/release-smoke-report.json", changed_paths)
+        report = json.loads(
+            (self.vault / "tmp" / "release-ready-amend.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(report["status"], "amended")
+        self.assertTrue(report["amend"])
+        self.assertEqual(report["expected_head_before_amend"], first_head)
+
+    def test_amend_rejects_intervening_head_change(self) -> None:
+        (self.vault / "README.md").write_text("# Test\n\nChanged.\n", encoding="utf-8")
+        commit_rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-ready-commit.json",
+                "--message",
+                "release: ready",
+            ]
+        )
+        (self.vault / "README.md").write_text("# Test\n\nChanged again.\n", encoding="utf-8")
+        _git(self.vault, "add", "README.md")
+        _git(self.vault, "commit", "-m", "intervening")
+        (self.vault / "ops" / "reports" / "release-smoke-report.json").write_text(
+            '{"status": "pass", "phase": "post-converge"}\n',
+            encoding="utf-8",
+        )
+
+        amend_rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-ready-amend.json",
+                "--amend",
+                "--amend-of",
+                "tmp/release-ready-commit.json",
+            ]
+        )
+
+        self.assertEqual(commit_rc, 0)
+        self.assertEqual(amend_rc, 1)
+        self.assertIn("ops/reports/release-smoke-report.json", _git(self.vault, "status", "--short"))
+        report = json.loads(
+            (self.vault / "tmp" / "release-ready-amend.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(report["status"], "blocked")
+        self.assertEqual(report["reason"], "amend_base_head_mismatch")
+
+    def test_amend_rejects_late_public_source_changes(self) -> None:
+        (self.vault / "README.md").write_text("# Test\n\nChanged.\n", encoding="utf-8")
+        commit_rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-ready-commit.json",
+                "--message",
+                "release: ready",
+            ]
+        )
+        (self.vault / "README.md").write_text("# Test\n\nChanged after commit.\n", encoding="utf-8")
+
+        amend_rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-ready-amend.json",
+                "--amend",
+                "--amend-of",
+                "tmp/release-ready-commit.json",
+            ]
+        )
+
+        self.assertEqual(commit_rc, 0)
+        self.assertEqual(amend_rc, 1)
+        report = json.loads(
+            (self.vault / "tmp" / "release-ready-amend.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(report["status"], "blocked")
+        self.assertEqual(report["reason"], "amend_contains_public_source_changes")
+        self.assertEqual(report["late_public_source_paths"], ["README.md"])
+
 
 if __name__ == "__main__":
     unittest.main()

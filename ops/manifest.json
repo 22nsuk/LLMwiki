@@ -142,8 +142,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "f462952e68a2391ed766d2077c0a0e7a9a4b7512ad18e2e15f68855907069528",
-      "size_bytes": 89619
+      "sha256": "067b83f75473d8f3bd45a7ccb5f8c456519ac1349e71a1a187893ff8dcad0220",
+      "size_bytes": 90618
     },
     {
       "path": "SECURITY.md",
@@ -187,8 +187,8 @@
     },
     {
       "path": "mk/release.mk",
-      "sha256": "836288e91120809b8c8b4d1605d0b02d931bcaf158708d2d6c46dcdb4c1a2753",
-      "size_bytes": 48483
+      "sha256": "e8b1b61220eba77366b9297f32639d7a4ee4aa4980f0ef493dfa517293038c24",
+      "size_bytes": 48637
     },
     {
       "path": "mk/static.mk",
@@ -207,8 +207,8 @@
     },
     {
       "path": "ops/README.md",
-      "sha256": "90ed9e901a89108ac25a8e040ca16e1752fda883dd795fcd6118461a283226b8",
-      "size_bytes": 118101
+      "sha256": "a40cdcb67cdb1b7901af4b25d4b18d7f20af137d25db2be3b6569f662fffbcc3",
+      "size_bytes": 119111
     },
     {
       "path": "ops/__init__.py",
@@ -262,8 +262,8 @@
     },
     {
       "path": "ops/policies/release-closeout-fixed-point.json",
-      "sha256": "d956fd03ea45321cd7dce45d9b494bbacec8a1faf9fb7c63f414d9104c3f8deb",
-      "size_bytes": 4027
+      "sha256": "c536fe2a30eb5b33769331b40ed611383497aded27f5a85b3f9030c0c0f4ba36",
+      "size_bytes": 5067
     },
     {
       "path": "ops/policies/release-lane-definitions.json",
@@ -737,8 +737,8 @@
     },
     {
       "path": "ops/schemas/release-evidence-cohort.schema.json",
-      "sha256": "1208ec3ed20e6b59117a09f7014db23733b735911bd5b71e22e26f62eeb0f3cd",
-      "size_bytes": 19660
+      "sha256": "0b84c2e52e7ad2450bda1a020aa7a42f19e3123e5c5de760f0eff6850218e0b8",
+      "size_bytes": 20082
     },
     {
       "path": "ops/schemas/release-evidence-dashboard.schema.json",
@@ -2112,8 +2112,8 @@
     },
     {
       "path": "ops/scripts/release/release_closeout_fixed_point.py",
-      "sha256": "4fac849d6945577295a2f8de2cf15cad8e4eec34ea6f14c8edc65d3cc549faca",
-      "size_bytes": 57857
+      "sha256": "54659830037e3757d20466331ab496c640bdf6b2ddde2e328853a97b929f3e41",
+      "size_bytes": 58986
     },
     {
       "path": "ops/scripts/release/release_closeout_fixed_point_cost_trend.py",
@@ -2162,8 +2162,8 @@
     },
     {
       "path": "ops/scripts/release/release_ready_commit.py",
-      "sha256": "dffc65d1abae2b29861a13f9d304df7b0401abe2f5c8184079451490208a66bb",
-      "size_bytes": 11773
+      "sha256": "197c51ea408f3329fd42914a04efbbaa42d62a97b0aea6be3538b0bd9da85e02",
+      "size_bytes": 14611
     },
     {
       "path": "ops/scripts/release/release_risk_taxonomy_matrix.py",
@@ -4997,7 +4997,7 @@
     },
     {
       "path": "tests/fixtures/report_schema_samples.json",
-      "sha256": "5956be4d12ae575dffed34818803cf85705c92d6d3e861b588b0b7ee9c1eb27e",
+      "sha256": "1e5fe95236d37881614e7ae6192f00b14b28e9cdd1f01abccab03e605895adf0",
       "size_bytes": 138945
     },
     {
@@ -5372,8 +5372,8 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "9e64317e1c049bba3a2dd0edc78ebcbaf8edf502d1adf750374b97b14739d4be",
-      "size_bytes": 177274
+      "sha256": "5ae935306d0072c2d95be0d016937e35984238b32e44c97050abe6ec89a79115",
+      "size_bytes": 178505
     },
     {
       "path": "tests/test_manifest_export_symlink_safety.py",
@@ -5612,8 +5612,8 @@
     },
     {
       "path": "tests/test_release_closeout_fixed_point.py",
-      "sha256": "543b6192661e3970a850682259ea286f821ac5489d51e26adb888f16ceaefdc9",
-      "size_bytes": 21531
+      "sha256": "f428126d6eb6f8be8c3851c0b710f8996188d45a3fac2d5e0e9d01f1f5097adb",
+      "size_bytes": 24132
     },
     {
       "path": "tests/test_release_closeout_fixed_point_cost_trend.py",
@@ -5637,8 +5637,8 @@
     },
     {
       "path": "tests/test_release_evidence_cohort.py",
-      "sha256": "325a14afa5db9bda7b31c0cd31b7f748b053fb44e3f488f64418a8c140c64afa",
-      "size_bytes": 23927
+      "sha256": "e7a037dd4284f24c1f932aceae5dd865d97ea63d1fcc4e16ddc50e0dbdf63ca0",
+      "size_bytes": 24506
     },
     {
       "path": "tests/test_release_evidence_dashboard.py",
@@ -5662,8 +5662,8 @@
     },
     {
       "path": "tests/test_release_ready_commit.py",
-      "sha256": "e8f29e3fae75b62a65b35606cfe8720ce6cd2a28274bc77e6803725f7dde9c8f",
-      "size_bytes": 4645
+      "sha256": "bf5d6b48d17a0436084ba98e62d704c407eab6ac4f16d1cda23268ed48957f05",
+      "size_bytes": 9431
     },
     {
       "path": "tests/test_release_risk_taxonomy_matrix.py",

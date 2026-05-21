@@ -162,7 +162,7 @@ def _assert_release_closeout_manifest_phony_and_vars(case: unittest.TestCase, te
         "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_RECOMMENDED_TARGETS_OUT ?= tmp/release-closeout-post-check-finalizer-recommended-targets.txt",
         "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_PLAN_OUT ?= tmp/release-closeout-post-check-finalizer-plan.json",
         "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS ?=",
-        "RELEASE_CLOSEOUT_FIXED_POINT_MAX_ITERATIONS ?= 5",
+        "RELEASE_CLOSEOUT_FIXED_POINT_MAX_ITERATIONS ?= 10",
         "RELEASE_CLOSEOUT_FINALITY_ATTESTATION_OUT ?= ops/reports/release-closeout-finality-attestation.json",
         "RELEASE_CLOSEOUT_FINALITY_ATTESTATION_CANDIDATE_OUT ?= tmp/release-closeout-finality-attestation.candidate.json",
         "RELEASE_DISTRIBUTION_ZIP_OUT ?= build/release/LLMwiki-source.zip",
@@ -1441,10 +1441,12 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("release-worktree-clean-check", _target_block(text, ".PHONY"))
         self.assertIn("release-converge", _target_block(text, ".PHONY"))
         self.assertIn("release-converge-all-surfaces", _target_block(text, ".PHONY"))
+        phony_targets = _target_block(text, ".PHONY").replace(".PHONY:", "").split()
         self.assertIn("release-ready-snapshot", _target_block(text, ".PHONY"))
         self.assertIn("release-ready-commit", _target_block(text, ".PHONY"))
         self.assertIn("release-ready-post-commit-converge", _target_block(text, ".PHONY"))
-        self.assertIn("release-ready-post-commit", _target_block(text, ".PHONY"))
+        self.assertIn("release-ready-amend", _target_block(text, ".PHONY"))
+        self.assertNotIn("release-ready-post-commit", phony_targets)
         self.assertIn("release-ready", _target_block(text, ".PHONY"))
         self.assertNotIn("release-converge-artifact-commit", _target_block(text, ".PHONY"))
         self.assertIn("release-check-preflight-converge", _target_block(text, ".PHONY"))
@@ -1456,7 +1458,13 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("release-check-post-converge: release-converge-post", post_block)
         self.assertIn("mutating compatibility alias", preflight_block)
         self.assertIn("mutating compatibility alias", post_block)
-        self.assertIn("$(MAKE) test-execution-summary-report-contract-refresh-no-smoke", _target_block(text, "release-converge-preflight"))
+        self.assertEqual(
+            _recipe_lines(text, "release-converge-preflight"),
+            [
+                "$(MAKE) report-schema-samples-regenerate CLEAN_FIXTURE_REGENERATION_ALLOW_DIRTY_REPORTS=1",
+                "$(MAKE) test-execution-summary-report-contract-refresh-no-smoke",
+            ],
+        )
         self.assertNotIn("$(MAKE) test-execution-summary-report-contract-refresh\n", preflight_block)
         self.assertIn("$(MAKE) release-converge-preflight", converge_block)
         self.assertIn("$(MAKE) registry-preflight", converge_block)
@@ -1467,35 +1475,33 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("$(MAKE) public-check-all", converge_all_block)
         self.assertIn("$(MAKE) release-converge-post", converge_all_block)
         self.assertIn("RELEASE_READY_COMMIT_MESSAGE ?= release: converge all surfaces", text)
-        self.assertIn(
-            "RELEASE_READY_POST_COMMIT_MESSAGE ?= release: stabilize readiness surfaces",
-            text,
-        )
         self.assertIn("RELEASE_READY_PRE_STATUS_OUT ?= tmp/release-ready-pre-status.json", text)
         self.assertIn("RELEASE_READY_COMMIT_OUT ?= tmp/release-ready-commit.json", text)
-        self.assertIn("RELEASE_READY_POST_COMMIT_OUT ?= tmp/release-ready-post-commit.json", text)
+        self.assertIn("RELEASE_READY_AMEND_OUT ?= tmp/release-ready-amend.json", text)
         self.assertIn("ops.scripts.release_ready_commit", ready_snapshot_block)
         self.assertIn("--snapshot-only", ready_snapshot_block)
         self.assertIn("ops.scripts.release_ready_commit", ready_commit_block)
         self.assertIn('--pre-status "$(RELEASE_READY_PRE_STATUS_OUT)"', ready_commit_block)
         self.assertIn('--message "$(RELEASE_READY_COMMIT_MESSAGE)"', ready_commit_block)
-        post_commit_block = _target_block(text, "release-ready-post-commit")
+        amend_block = _target_block(text, "release-ready-amend")
         post_commit_converge_block = _target_block(text, "release-ready-post-commit-converge")
-        self.assertIn("ops.scripts.release_ready_commit", post_commit_block)
-        self.assertIn('--out "$(RELEASE_READY_POST_COMMIT_OUT)"', post_commit_block)
-        self.assertIn('--message "$(RELEASE_READY_POST_COMMIT_MESSAGE)"', post_commit_block)
+        self.assertIn("ops.scripts.release_ready_commit", amend_block)
+        self.assertIn('--out "$(RELEASE_READY_AMEND_OUT)"', amend_block)
+        self.assertIn("--amend", amend_block)
+        self.assertIn('--amend-of "$(RELEASE_READY_COMMIT_OUT)"', amend_block)
         self.assertIn("$(MAKE) auto-improve-readiness-worktree-guard", post_commit_converge_block)
+        self.assertIn("$(MAKE) generated-artifact-converge", post_commit_converge_block)
+        self.assertIn("$(MAKE) remediation-backlog", post_commit_converge_block)
+        self.assertIn("$(MAKE) release-closeout-fixed-point", post_commit_converge_block)
         self.assertIn(
-            "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=0",
+            "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
             post_commit_converge_block,
         )
-        self.assertIn("$(MAKE) remediation-backlog", post_commit_converge_block)
-        self.assertIn("$(MAKE) generated-artifact-converge", post_commit_converge_block)
         self.assertIn("$(MAKE) release-ready-snapshot", ready_block)
         self.assertIn("$(MAKE) release-converge-all-surfaces", ready_block)
         self.assertIn("$(MAKE) release-ready-commit", ready_block)
         self.assertIn("$(MAKE) release-ready-post-commit-converge", ready_block)
-        self.assertIn("$(MAKE) release-ready-post-commit", ready_block)
+        self.assertIn("$(MAKE) release-ready-amend", ready_block)
         self.assertIn("$(MAKE) release-check-all-surfaces", ready_block)
         self.assertEqual(
             _recipe_lines(text, "release-ready"),
@@ -1504,8 +1510,18 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-converge-all-surfaces",
                 "$(MAKE) release-ready-commit",
                 "$(MAKE) release-ready-post-commit-converge",
-                "$(MAKE) release-ready-post-commit",
+                "$(MAKE) release-ready-amend",
                 "$(MAKE) release-check-all-surfaces",
+            ],
+        )
+        self.assertEqual(
+            _recipe_lines(text, "release-ready-post-commit-converge"),
+            [
+                "$(MAKE) auto-improve-readiness-worktree-guard",
+                "$(MAKE) generated-artifact-converge",
+                "$(MAKE) remediation-backlog",
+                "$(MAKE) release-closeout-fixed-point",
+                "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
             ],
         )
         self.assertIn("$(MAKE) release-worktree-clean-check", core_block)
@@ -1527,6 +1543,12 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertNotIn("$(MAKE) check-all", core_block)
         self.assertNotIn("$(MAKE) unit-tests-all", core_block)
         self.assertIn("$(MAKE) generated-artifact-converge", _target_block(text, "release-converge-post"))
+        self.assertIn("$(MAKE) remediation-backlog", _target_block(text, "release-converge-post"))
+        self.assertIn("$(MAKE) release-closeout-fixed-point", _target_block(text, "release-converge-post"))
+        self.assertIn(
+            "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
+            _target_block(text, "release-converge-post"),
+        )
         self.assertNotIn("$(MAKE) generated-artifact-index", _target_block(text, "release-converge-post"))
         self.assertNotIn("$(MAKE) artifact-freshness", _target_block(text, "release-converge-post"))
         self.assertIn("$(MAKE) test-artifact-finalization", _target_block(text, "release-converge-post"))

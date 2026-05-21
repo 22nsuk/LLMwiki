@@ -1,6 +1,10 @@
 {
-  "version": 3,
-  "max_iterations": 5,
+  "version": 4,
+  "max_iterations": 10,
+  "feedback_refresh_targets": [
+    "generated-artifact-index-body",
+    "artifact-freshness"
+  ],
   "cost_trend": {
     "retained_run_count": 10,
     "thresholds": {
@@ -34,10 +38,21 @@
       "expensive_prerequisites_once": []
     },
     {
+      "name": "auto-improve-readiness",
+      "target": "auto-improve-readiness-report-body",
+      "produces": ["ops/reports/auto-improve-readiness.json"],
+      "depends_on": ["artifact-freshness"],
+      "expensive_prerequisites_once": []
+    },
+    {
       "name": "release-closeout-summary",
       "target": "release-closeout-summary-report",
       "produces": ["ops/reports/release-closeout-summary.json"],
-      "depends_on": ["generated-artifact-index-body", "artifact-freshness"],
+      "depends_on": [
+        "generated-artifact-index-body",
+        "artifact-freshness",
+        "auto-improve-readiness-report-body"
+      ],
       "expensive_prerequisites_once": []
     },
     {
@@ -48,9 +63,9 @@
       "expensive_prerequisites_once": []
     },
     {
-      "name": "release-evidence-dashboard",
-      "target": "release-evidence-dashboard-report",
-      "produces": ["ops/reports/release-evidence-dashboard.json"],
+      "name": "release-evidence-cohort",
+      "target": "release-evidence-cohort",
+      "produces": ["ops/reports/release-evidence-cohort.json"],
       "depends_on": [
         "release-closeout-summary-report",
         "learning-readiness-signoff-revalidation",
@@ -59,10 +74,26 @@
       "expensive_prerequisites_once": []
     },
     {
+      "name": "release-evidence-dashboard",
+      "target": "release-evidence-dashboard-report",
+      "produces": ["ops/reports/release-evidence-dashboard.json"],
+      "depends_on": [
+        "release-closeout-summary-report",
+        "learning-readiness-signoff-revalidation",
+        "release-evidence-cohort",
+        "artifact-freshness"
+      ],
+      "expensive_prerequisites_once": []
+    },
+    {
       "name": "release-lane-summary",
       "target": "release-lane-summary",
       "produces": ["ops/reports/release-lane-summary.json"],
-      "depends_on": ["release-closeout-summary-report", "release-evidence-dashboard-report"],
+      "depends_on": [
+        "release-closeout-summary-report",
+        "release-evidence-dashboard-report",
+        "release-evidence-cohort"
+      ],
       "expensive_prerequisites_once": []
     },
     {
@@ -72,7 +103,8 @@
       "depends_on": [
         "release-closeout-summary-report",
         "release-evidence-dashboard-report",
-        "release-lane-summary"
+        "release-lane-summary",
+        "release-evidence-cohort"
       ],
       "expensive_prerequisites_once": []
     },
@@ -85,6 +117,7 @@
         "artifact-freshness",
         "release-closeout-summary-report",
         "learning-readiness-signoff-revalidation",
+        "release-evidence-cohort",
         "release-evidence-dashboard-report",
         "release-lane-summary",
         "release-clean-blocker-ledger"
@@ -102,8 +135,10 @@
   "tracked_artifacts": [
     "ops/reports/generated-artifact-index.json",
     "ops/reports/artifact-freshness-report.json",
+    "ops/reports/auto-improve-readiness.json",
     "ops/reports/release-closeout-summary.json",
     "ops/reports/learning-readiness-signoff-revalidation.json",
+    "ops/reports/release-evidence-cohort.json",
     "ops/reports/release-evidence-dashboard.json",
     "ops/reports/release-lane-summary.json",
     "ops/reports/release-clean-blocker-ledger.json",

@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/script-output-surfaces.schema.json",
   "artifact_kind": "script_output_surfaces",
-  "generated_at": "2026-05-21T13:31:34Z",
+  "generated_at": "2026-05-21T14:56:49Z",
   "producer": "ops.scripts.script_output_surfaces",
   "source_command": "python -m ops.scripts.script_output_surfaces --vault . --out ops/script-output-surfaces.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "4c1ae54c3b78bc7f538654072f0a2d6673d09c988389362c77aad118254290a9",
+  "source_tree_fingerprint": "2897e93d3225786cfd734d5b4a9a1893d6a5e92de9aab4a893ed7e2231ca8823",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "02cee320f449f8666c341a0a389855f3ef5ac34bddcdf4c2767b5d4b384a9722",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e900c33d02f3ad2e070458f03812edda50bfd1172100ba43707ef8dfdb11cc1c",
-    "ops_scripts": "71220921880547717163f32c11372bd6e29fffe56674eaa7d4ec1652bc5c91f2",
+    "ops_scripts": "91ba7d82f1bf1e4c3690bd997f93e59d10758892e846d40973062dd348175a1d",
     "classification_values": "0ba4b7fd8868f9c9d070bea6d90c2cee76e2b9c8089223c413c8e898794923f4"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T13:31:34Z"
+    "checked_at": "2026-05-21T14:56:49Z"
   },
   "version": 1,
   "description": "Generated inventory for ops/scripts output path surfaces. Tests compare this registry with the live AST-derived inventory.",

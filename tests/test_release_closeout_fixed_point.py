@@ -43,8 +43,10 @@ def fixed_context() -> RuntimeContext:
 TARGET_TO_TRACKED_PATH = {
     "generated-artifact-index-body": "ops/reports/generated-artifact-index.json",
     "artifact-freshness": "ops/reports/artifact-freshness-report.json",
+    "auto-improve-readiness-report-body": "ops/reports/auto-improve-readiness.json",
     "release-closeout-summary-report": "ops/reports/release-closeout-summary.json",
     "learning-readiness-signoff-revalidation": "ops/reports/learning-readiness-signoff-revalidation.json",
+    "release-evidence-cohort": "ops/reports/release-evidence-cohort.json",
     "release-evidence-dashboard-report": "ops/reports/release-evidence-dashboard.json",
     "release-lane-summary": "ops/reports/release-lane-summary.json",
     "release-clean-blocker-ledger": "ops/reports/release-clean-blocker-ledger.json",
@@ -189,7 +191,7 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
                 "release-risk-taxonomy-matrix",
             ],
         )
-        self.assertEqual(calls.count("generated-artifact-index-body"), 1)
+        self.assertEqual(calls.count("generated-artifact-index-body"), 2)
         self.assertIn("release-evidence-closeout-self-check", calls)
         duration_summary = report["duration_summary"]
         self.assertEqual(duration_summary["iteration_count"], 2)
@@ -200,8 +202,8 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
             for item in duration_summary["writer_costs"]
             if item["target"] == "generated-artifact-index-body"
         )
-        self.assertEqual(generated_index_cost["run_count"], 1)
-        self.assertEqual(generated_index_cost["skipped_after_first_iteration_count"], 1)
+        self.assertEqual(generated_index_cost["run_count"], 2)
+        self.assertEqual(generated_index_cost["skipped_after_first_iteration_count"], 0)
         expensive = duration_summary["expensive_prerequisites_once"]
         self.assertEqual(expensive["first_iteration_run_count"], 3)
         self.assertEqual(expensive["post_first_iteration_run_count"], 0)
@@ -214,6 +216,68 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         for rel_path, digest in report["final_digest_map"].items():
             actual = hashlib.sha256((self.vault / rel_path).read_bytes()).hexdigest()
             self.assertEqual(digest, actual)
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_fixed_point_reruns_feedback_targets_after_downstream_changes(self) -> None:
+        calls: list[str] = []
+        downstream_version = 0
+
+        def runner(
+            argv: Sequence[str], cwd: Path, timeout_seconds: int, env: Mapping[str, str]
+        ) -> dict[str, Any]:
+            nonlocal downstream_version
+            target = argv[1]
+            calls.append(target)
+            rel_path = TARGET_TO_TRACKED_PATH.get(target)
+            if rel_path:
+                if target in {
+                    "generated-artifact-index-body",
+                    "artifact-freshness",
+                }:
+                    payload = {
+                        "target": target,
+                        "observed_downstream_version": downstream_version,
+                    }
+                else:
+                    downstream_version = 1
+                    payload = {"target": target, "downstream_version": downstream_version}
+                self._write_tracked_payload(rel_path, payload)
+            return {
+                "command": list(argv),
+                "returncode": 0,
+                "timed_out": False,
+                "timeout_seconds": timeout_seconds,
+                "termination_reason": "",
+                "duration_ms": 1,
+                "stdout_tail": "",
+                "stderr_tail": "",
+                "status": "pass",
+            }
+
+        report = build_report(
+            self.vault,
+            max_iterations=5,
+            timeout_seconds=30,
+            python_executable="python",
+            context=fixed_context(),
+            command_runner=runner,
+        )
+
+        self.assertEqual(report["status"], "pass")
+        selected_by_iteration = {
+            item["iteration_index"]: item["selected_targets"]
+            for item in report["iterations"]
+        }
+        self.assertIn("generated-artifact-index-body", selected_by_iteration[2])
+        self.assertIn("artifact-freshness", selected_by_iteration[2])
+        self.assertGreaterEqual(calls.count("generated-artifact-index-body"), 2)
+        self.assertEqual(
+            json.loads(
+                (self.vault / TARGET_TO_TRACKED_PATH["generated-artifact-index-body"])
+                .read_text(encoding="utf-8")
+            )["observed_downstream_version"],
+            1,
+        )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_dry_run_reports_affected_paths_and_recommended_targets(self) -> None:
@@ -235,6 +299,7 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
             [
                 "release-closeout-summary-report",
                 "learning-readiness-signoff-revalidation",
+                "release-evidence-cohort",
                 "release-evidence-dashboard-report",
                 "release-lane-summary",
                 "release-clean-blocker-ledger",
@@ -244,7 +309,7 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         )
         plan = report["closeout_plan"]
         self.assertEqual(plan["status"], "drift_detected")
-        self.assertEqual(plan["recommended_target_count"], 7)
+        self.assertEqual(plan["recommended_target_count"], 8)
         self.assertEqual(
             plan["recommended_targets"][0]["target"],
             "release-closeout-summary-report",

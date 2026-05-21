@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/outcome-metrics.schema.json",
   "artifact_kind": "outcome_metrics_report",
-  "generated_at": "2026-05-21T13:28:03Z",
+  "generated_at": "2026-05-21T14:50:42Z",
   "producer": "ops.scripts.observability_decision_metrics_runtime",
   "source_command": "python -m ops.scripts.outcome_metrics --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "4c1ae54c3b78bc7f538654072f0a2d6673d09c988389362c77aad118254290a9",
+  "source_tree_fingerprint": "2897e93d3225786cfd734d5b4a9a1893d6a5e92de9aab4a893ed7e2231ca8823",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "aadbf232f7dc6bf40f35290f0dabcc4e9320b93c70cc2f0177f1167b24ecff29",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "af0acc94281d5ba550838e9b62e4da8290962d8710300629e7d8d0050bb67d3c",
-    "defect_escape_closures": "9960e2592a7e826f82afe332016ee499f729ce718db22f3bc21a50eb45a1f952",
-    "rework_closures": "5241e83b84775655437af8f1313b92f924ad1d4b935cf2f580c7f30b154cc97b",
+    "defect_escape_closures": "b7b2a0f8b53b1c42bffec0922bbc096197687cf81dcf7034a48cdc87cf5aa77f",
+    "rework_closures": "7cbbb36fb9d2352168d2d1f1ba529e60b24a59313030387dd37f3918507df5fb",
     "run_inputs": "ac0246059a69ddecdd17e8c2024c04bf507e4e4e64c5ced63ca1989e27ffd736",
     "session_reports": "045839dd6979b19e7b1e2cf2c9ed4675b6db02844a8f4ea94a33326f904f690f",
     "recent_window": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T13:28:03Z"
+    "checked_at": "2026-05-21T14:50:42Z"
   },
   "vault": ".",
   "policy": {

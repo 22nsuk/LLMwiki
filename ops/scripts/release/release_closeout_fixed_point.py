@@ -54,6 +54,7 @@ class _FixedPointPolicyRuntime:
     tracked_artifacts: list[dict[str, str]]
     tracked_paths: list[str]
     writer_targets: list[str]
+    feedback_targets: list[str]
     producer_by_path: dict[str, str]
     downstream_by_target: dict[str, set[str]]
 
@@ -94,12 +95,14 @@ def _policy_runtime(vault: Path) -> _FixedPointPolicyRuntime:
     tracked_artifacts = _tracked_artifacts(policy, writers)
     tracked_paths = [item["path"] for item in tracked_artifacts]
     writer_targets = [str(writer["target"]) for writer in writers]
+    feedback_targets = _feedback_targets(policy, writers)
     return _FixedPointPolicyRuntime(
         policy=policy,
         writers=writers,
         tracked_artifacts=tracked_artifacts,
         tracked_paths=tracked_paths,
         writer_targets=writer_targets,
+        feedback_targets=feedback_targets,
         producer_by_path=_producer_by_path(writers),
         downstream_by_target=_downstream_by_target(writers),
     )
@@ -173,6 +176,22 @@ def _tracked_artifacts(
         }
         for path in paths
     ]
+
+
+def _feedback_targets(policy: dict[str, Any], writers: list[dict[str, Any]]) -> list[str]:
+    raw_targets = policy.get("feedback_refresh_targets", [])
+    targets = (
+        [str(target).strip() for target in raw_targets if str(target).strip()]
+        if isinstance(raw_targets, list)
+        else []
+    )
+    known = {str(writer["target"]) for writer in writers}
+    unknown = sorted(set(targets) - known)
+    if unknown:
+        raise ValueError(
+            f"{POLICY_PATH} feedback_refresh_targets contain unknown targets: {unknown}"
+        )
+    return _dedupe_preserve_order(targets)
 
 
 def _producer_by_path(writers: list[dict[str, Any]]) -> dict[str, str]:
@@ -273,6 +292,24 @@ def _targets_for_affected_paths(
     return [
         str(writer["target"]) for writer in writers if str(writer["target"]) in selected
     ]
+
+
+def _next_iteration_targets(
+    changed_paths: Sequence[str],
+    *,
+    runtime: _FixedPointPolicyRuntime,
+) -> list[str]:
+    if not changed_paths:
+        return []
+    downstream_targets = _downstream_targets_for_changed_paths(
+        changed_paths,
+        writers=runtime.writers,
+        producer_by_path=runtime.producer_by_path,
+        downstream_by_target=runtime.downstream_by_target,
+    )
+    return _dedupe_preserve_order(
+        [*runtime.feedback_targets, *downstream_targets]
+    )
 
 
 def _digest_map(
@@ -1272,12 +1309,7 @@ def _fixed_point_iteration_state(
             converged = True
             converged_iteration = iteration_index
             break
-        next_targets = _downstream_targets_for_changed_paths(
-            changed_paths,
-            writers=runtime.writers,
-            producer_by_path=runtime.producer_by_path,
-            downstream_by_target=runtime.downstream_by_target,
-        )
+        next_targets = _next_iteration_targets(changed_paths, runtime=runtime)
         previous_digest_map = current_digest_map
 
     final_digest_map = (
@@ -1332,6 +1364,7 @@ def _fixed_point_envelope(
             "max_iterations": str(max_iterations),
             "timeout_seconds": str(timeout_seconds),
             "writer_targets": "\n".join(runtime.writer_targets),
+            "feedback_targets": "\n".join(runtime.feedback_targets),
             "initial_iteration_targets": "\n".join(
                 _initial_iteration_targets(runtime.writers)
             ),

@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-21T13:31:35Z",
+  "generated_at": "2026-05-21T14:56:50Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "4c1ae54c3b78bc7f538654072f0a2d6673d09c988389362c77aad118254290a9",
+  "source_tree_fingerprint": "2897e93d3225786cfd734d5b4a9a1893d6a5e92de9aab4a893ed7e2231ca8823",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T13:31:35Z"
+    "checked_at": "2026-05-21T14:56:50Z"
   },
   "vault": ".",
   "status": "pass",
@@ -267,7 +267,7 @@
         {
           "path": "ops/reports/release-closeout-batch-manifest.json",
           "exists": true,
-          "status": "pass",
+          "status": "fail",
           "producer": "ops.scripts.release_closeout_batch_manifest"
         }
       ]

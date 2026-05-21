@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/artifact-relocation-audit.schema.json",
   "artifact_kind": "artifact_relocation_audit",
-  "generated_at": "2026-05-21T13:31:35Z",
+  "generated_at": "2026-05-21T14:56:50Z",
   "producer": "ops.scripts.artifact_relocation_audit",
   "source_command": "python -m ops.scripts.artifact_relocation_audit --vault . --out ops/operator/artifact-relocation-audit.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "4c1ae54c3b78bc7f538654072f0a2d6673d09c988389362c77aad118254290a9",
+  "source_tree_fingerprint": "2897e93d3225786cfd734d5b4a9a1893d6a5e92de9aab4a893ed7e2231ca8823",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "2bca24a2fb1f0a7c49b35b6df2aac4e0676e137502b48691d033ad62e3769173",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T13:31:35Z"
+    "checked_at": "2026-05-21T14:56:50Z"
   },
   "vault": ".",
   "policy": {
@@ -775,7 +775,7 @@
           "match_count": 1,
           "matches": [
             {
-              "line": 93,
+              "line": 92,
               "excerpt": "OPERATOR_RELEASE_SUMMARY_OUT ?= ops/operator/operator-release-summary.json"
             }
           ]

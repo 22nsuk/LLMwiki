@@ -190,6 +190,15 @@ def _write_report(out_path: Path, payload: dict[str, Any]) -> None:
     out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _display_path(vault: Path, path: Path | None) -> str:
+    if path is None:
+        return ""
+    try:
+        return path.relative_to(vault).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
 def _base_report(vault: Path, entries: list[StatusEntry], preexisting_paths: set[str]) -> dict[str, Any]:
     entry_payloads = [_entry_payload(entry, preexisting_paths=preexisting_paths) for entry in entries]
     counts: dict[str, int] = {}
@@ -230,6 +239,17 @@ def _commit(vault: Path, message: str) -> GitResult:
     return _run_git(vault, ["commit", "-m", message])
 
 
+def _commit_amend(vault: Path) -> GitResult:
+    return _run_git(vault, ["commit", "--amend", "--no-edit"])
+
+
+def _load_amend_base(amend_of_path: Path | None) -> dict[str, Any]:
+    if amend_of_path is None or not amend_of_path.exists():
+        return {}
+    payload = json.loads(amend_of_path.read_text(encoding="utf-8"))
+    return payload if isinstance(payload, dict) else {}
+
+
 def build_snapshot(vault: Path, out_path: Path) -> int:
     ok, reason = _require_git_worktree(vault)
     if not ok:
@@ -250,6 +270,8 @@ def run_commit(
     out_path: Path,
     message: str,
     pre_status_path: Path | None,
+    amend: bool,
+    amend_of_path: Path | None,
     dry_run: bool,
     allow_staged: bool,
 ) -> int:
@@ -263,8 +285,32 @@ def run_commit(
     report = _base_report(vault, entries, preexisting_paths=preexisting_paths)
     report["message"] = message
     report["dry_run"] = dry_run
+    report["amend"] = amend
+
+    amend_base = _load_amend_base(amend_of_path) if amend else {}
+    if amend:
+        report["amend_of"] = _display_path(vault, amend_of_path)
+        expected_head = str(amend_base.get("head_after", "")).strip()
+        current_head = _head(vault)
+        report["expected_head_before_amend"] = expected_head
+        report["actual_head_before_amend"] = current_head
+        if not expected_head:
+            report["status"] = "blocked"
+            report["reason"] = "amend_base_missing_head"
+            _write_report(out_path, report)
+            print("release-ready-amend refused: amend base has no head_after", file=sys.stderr)
+            return 1
+        if current_head != expected_head:
+            report["status"] = "blocked"
+            report["reason"] = "amend_base_head_mismatch"
+            _write_report(out_path, report)
+            print("release-ready-amend refused: current HEAD does not match amend base", file=sys.stderr)
+            return 1
 
     unexpected = [item for item in report["entries"] if item["category"] == "unexpected"]
+    late_public_source = [
+        item for item in report["entries"] if amend and item["category"] == "public_source"
+    ]
     staged = [item for item in report["entries"] if item["staged"]]
     if unexpected:
         report["status"] = "blocked"
@@ -274,6 +320,16 @@ def run_commit(
         print("release-ready-commit refused: unexpected dirty paths are present", file=sys.stderr)
         for item in unexpected:
             print(item["path"], file=sys.stderr)
+        return 1
+    if late_public_source:
+        report["status"] = "blocked"
+        report["reason"] = "amend_contains_public_source_changes"
+        report["late_public_source_paths"] = [item["path"] for item in late_public_source]
+        _write_report(out_path, report)
+        print(
+            "release-ready-amend refused: public source changed after release-ready commit",
+            file=sys.stderr,
+        )
         return 1
     if staged and not allow_staged:
         report["status"] = "blocked"
@@ -288,7 +344,8 @@ def run_commit(
         report["status"] = "no_changes"
         report["head_after"] = _head(vault)
         _write_report(out_path, report)
-        print("release-ready-commit: no dirty release-ready changes")
+        action = "release-ready-amend" if amend else "release-ready-commit"
+        print(f"{action}: no dirty release-ready changes")
         return 0
 
     report["paths_to_commit"] = paths
@@ -308,10 +365,10 @@ def run_commit(
         print(stage.stderr, file=sys.stderr)
         return stage.returncode or 1
 
-    commit = _commit(vault, message)
+    commit = _commit_amend(vault) if amend else _commit(vault, message)
     if commit.returncode != 0:
         report["status"] = "blocked"
-        report["reason"] = "git_commit_failed"
+        report["reason"] = "git_amend_failed" if amend else "git_commit_failed"
         report["stdout"] = commit.stdout.strip()
         report["stderr"] = commit.stderr.strip()
         _write_report(out_path, report)
@@ -319,7 +376,7 @@ def run_commit(
         print(commit.stderr, file=sys.stderr)
         return commit.returncode or 1
 
-    report["status"] = "committed"
+    report["status"] = "amended" if amend else "committed"
     report["stdout"] = commit.stdout.strip()
     report["head_after"] = _head(vault)
     _write_report(out_path, report)
@@ -335,6 +392,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--out", default=DEFAULT_OUT, help="Report path.")
     parser.add_argument("--message", default=DEFAULT_MESSAGE, help="Commit message.")
     parser.add_argument("--pre-status", default="", help="Optional snapshot report captured before converge.")
+    parser.add_argument(
+        "--amend",
+        action="store_true",
+        help="Amend the release-ready commit instead of creating a second stabilization commit.",
+    )
+    parser.add_argument(
+        "--amend-of",
+        default="",
+        help="Report path from the release-ready commit whose head_after must match current HEAD.",
+    )
     parser.add_argument("--snapshot-only", action="store_true", help="Only write the current dirty snapshot.")
     parser.add_argument("--dry-run", action="store_true", help="Classify and report without staging or committing.")
     parser.add_argument(
@@ -352,11 +419,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.snapshot_only:
         return build_snapshot(vault, out_path)
     pre_status_path = vault / args.pre_status if args.pre_status else None
+    amend_of_path = vault / args.amend_of if args.amend_of else None
     return run_commit(
         vault=vault,
         out_path=out_path,
         message=args.message,
         pre_status_path=pre_status_path,
+        amend=bool(args.amend),
+        amend_of_path=amend_of_path,
         dry_run=bool(args.dry_run),
         allow_staged=bool(args.allow_staged),
     )

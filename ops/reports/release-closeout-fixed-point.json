@@ -1,23 +1,24 @@
 {
   "$schema": "ops/schemas/release-closeout-fixed-point.schema.json",
   "artifact_kind": "release_closeout_fixed_point_report",
-  "generated_at": "2026-05-15T19:08:32Z",
+  "generated_at": "2026-05-21T14:57:06Z",
   "producer": "ops.scripts.release_closeout_fixed_point",
   "source_command": "make release-closeout-fixed-point",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "15fa4f911da94672572fae63a5f9c1b36f49c06337ec9625e6b6e6162dc6a2ed",
+  "source_tree_fingerprint": "76de5247a7c5eeef88976ff59bc7c10a173ee9f9cb25d64c457ccbe54f59494d",
   "input_fingerprints": {
-    "policy": "d956fd03ea45321cd7dce45d9b494bbacec8a1faf9fb7c63f414d9104c3f8deb",
+    "policy": "c536fe2a30eb5b33769331b40ed611383497aded27f5a85b3f9030c0c0f4ba36",
     "schema": "ee8a3eb88a6541cf4cc59401c7bfd7a3232da215fabc0067fc74e8246fdcb66e",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "93a68acfe69deda38ea8977acede4bce7893528415ea7aed3e5152e9436d2777",
-    "tracked_artifacts": "1d2648b9656edbc39b0ab2c68e0b5e9ee8319663a68a6319915090766645926d",
-    "initial_iteration_targets": "93d379a84a145452947c3bba134015bc237bbe47ec160a7622ec7d039bc00e44",
-    "make_variables": "defa3984adcdf226e81d293dd2b40373e29fe94e2432a3cc26f4cbc9d880bfd1",
-    "max_iterations": "ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d",
-    "policy_version": "4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce",
+    "source_paths": "fbcf7221193be951a4a6b88833572f546d901a026f7bb69aca695ca019a74424",
+    "tracked_artifacts": "98f392a7d3460a31bd7cbee57083df8c9d5672ee38b37e7156d8879e7a09886c",
+    "feedback_targets": "ad497d2a5a3e24347654318a3a03600dc2eb8b96e1cea2c0e558574524803044",
+    "initial_iteration_targets": "fa83e737b3bca934f4e8b1df091eca4235dc1261ddd79a10c27182192a9173f1",
+    "make_variables": "8b575e9324fcaad3b7b8b9e3fef7daa4de862f3256c5588f4377c9f652fdb957",
+    "max_iterations": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
+    "policy_version": "4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a",
     "timeout_seconds": "284b7e6d788f363f910f7beb1910473e23ce9d6c871f1ce0f31f22a982d48ad4",
-    "writer_targets": "496c0cc3e86852f667a56d5bc2df93754c9488a440095a917e222db671b3d654"
+    "writer_targets": "377257c3d8845bf0b4c26f087cd53fcf826f705bd49080420adc4c0318a85a96"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -25,18 +26,18 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T19:08:32Z"
+    "checked_at": "2026-05-21T14:57:06Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/release-closeout-fixed-point.json",
-    "version": 3
+    "version": 4
   },
   "status": "pass",
-  "max_iterations": 5,
-  "iteration_count": 4,
+  "max_iterations": 10,
+  "iteration_count": 5,
   "converged": true,
-  "converged_iteration": 4,
+  "converged_iteration": 5,
   "tracked_artifacts": [
     {
       "name": "generated-artifact-index",
@@ -47,12 +48,20 @@
       "path": "ops/reports/artifact-freshness-report.json"
     },
     {
+      "name": "auto-improve-readiness",
+      "path": "ops/reports/auto-improve-readiness.json"
+    },
+    {
       "name": "release-closeout-summary",
       "path": "ops/reports/release-closeout-summary.json"
     },
     {
       "name": "learning-readiness-signoff-revalidation",
       "path": "ops/reports/learning-readiness-signoff-revalidation.json"
+    },
+    {
+      "name": "release-evidence-cohort",
+      "path": "ops/reports/release-evidence-cohort.json"
     },
     {
       "name": "release-evidence-dashboard",
@@ -78,8 +87,10 @@
   "command_sequence": [
     "generated-artifact-index-body",
     "artifact-freshness",
+    "auto-improve-readiness-report-body",
     "release-closeout-summary-report",
     "learning-readiness-signoff-revalidation",
+    "release-evidence-cohort",
     "release-evidence-dashboard-report",
     "release-lane-summary",
     "release-clean-blocker-ledger",
@@ -96,8 +107,10 @@
         "release-risk-taxonomy-matrix",
         "generated-artifact-index-body",
         "artifact-freshness",
+        "auto-improve-readiness-report-body",
         "release-closeout-summary-report",
         "learning-readiness-signoff-revalidation",
+        "release-evidence-cohort",
         "release-evidence-dashboard-report",
         "release-lane-summary",
         "release-clean-blocker-ledger",
@@ -110,18 +123,16 @@
           "command": [
             "make",
             "closure-registry-envelope",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 501,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.closure_registry_envelope --vault \".\" --registry \"all\"\nwritten_to=ops/reports/defect-escape-closures.json\nwritten_to=ops/reports/rework-closures.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 484,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.closure_registry_envelope --vault \".\" --registry \"all\"\nwritten_to=ops/reports/defect-escape-closures.json\nwritten_to=ops/reports/rework-closures.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -130,18 +141,16 @@
           "command": [
             "make",
             "manual-mutate-defect-registry",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 368,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.manual_mutate_defect_registry --vault \".\" --out \"ops/reports/manual-mutate-defect-registry.json\"\nops/reports/manual-mutate-defect-registry.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 355,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.manual_mutate_defect_registry --vault \".\" --out \"ops/reports/manual-mutate-defect-registry.json\"\nops/reports/manual-mutate-defect-registry.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -150,18 +159,16 @@
           "command": [
             "make",
             "release-risk-taxonomy-matrix",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 520,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_risk_taxonomy_matrix --vault \".\" --out \"tmp/release-risk-taxonomy-matrix.candidate.json\" --markdown-out \"ops/reports/release-risk-taxonomy-matrix.md\"\ntmp/release-risk-taxonomy-matrix.candidate.json\nops/reports/release-risk-taxonomy-matrix.md\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-risk-taxonomy-matrix.candidate.json\" --out \"ops/reports/release-risk-taxonomy-matrix.json\" --schema ops/schemas/release-risk-taxonomy-matrix.schema.json --expected-artifact-kind release_risk_taxonomy_matrix --expected-producer ops.scripts.release_risk_taxonomy_matrix\nops/reports/release-risk-taxonomy-matrix.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 439,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_risk_taxonomy_matrix --vault \".\" --out \"tmp/release-risk-taxonomy-matrix.candidate.json\" --markdown-out \"ops/reports/release-risk-taxonomy-matrix.md\"\ntmp/release-risk-taxonomy-matrix.candidate.json\nops/reports/release-risk-taxonomy-matrix.md\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-risk-taxonomy-matrix.candidate.json\" --out \"ops/reports/release-risk-taxonomy-matrix.json\" --schema ops/schemas/release-risk-taxonomy-matrix.schema.json --expected-artifact-kind release_risk_taxonomy_matrix --expected-producer ops.scripts.release_risk_taxonomy_matrix\nops/reports/release-risk-taxonomy-matrix.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -170,18 +177,16 @@
           "command": [
             "make",
             "generated-artifact-index-body",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 891,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.generated_artifact_index --vault \".\" --out \"tmp/generated-artifact-index.candidate.json\"\ntmp/generated-artifact-index.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/generated-artifact-index.candidate.json\" --out \"ops/reports/generated-artifact-index.json\" --schema ops/schemas/generated-artifact-index.schema.json --expected-artifact-kind generated_artifact_index_report --expected-producer ops.scripts.generated_artifact_index\nops/reports/generated-artifact-index.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 860,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.generated_artifact_index --vault \".\" --out \"tmp/generated-artifact-index.candidate.json\"\ntmp/generated-artifact-index.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/generated-artifact-index.candidate.json\" --out \"ops/reports/generated-artifact-index.json\" --schema ops/schemas/generated-artifact-index.schema.json --expected-artifact-kind generated_artifact_index_report --expected-producer ops.scripts.generated_artifact_index\nops/reports/generated-artifact-index.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -190,18 +195,34 @@
           "command": [
             "make",
             "artifact-freshness",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 3948,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.artifact_freshness_runtime --vault \".\" --out \"tmp/artifact-freshness-report.candidate.json\" --mtime-source \"embedded_currentness\" \ntmp/artifact-freshness-report.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/artifact-freshness-report.candidate.json\" --out \"ops/reports/artifact-freshness-report.json\" --schema ops/schemas/artifact-freshness-report.schema.json --expected-artifact-kind artifact_freshness_report --expected-producer ops.scripts.artifact_freshness_runtime\nops/reports/artifact-freshness-report.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 9572,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.artifact_freshness_runtime --vault \".\" --out \"tmp/artifact-freshness-report.candidate.json\" --mtime-source \"embedded_currentness\" \ntmp/artifact-freshness-report.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/artifact-freshness-report.candidate.json\" --out \"ops/reports/artifact-freshness-report.json\" --schema ops/schemas/artifact-freshness-report.schema.json --expected-artifact-kind artifact_freshness_report --expected-producer ops.scripts.artifact_freshness_runtime\nops/reports/artifact-freshness-report.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "auto-improve-readiness-report-body",
+          "command": [
+            "make",
+            "auto-improve-readiness-report-body",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 495,
+          "stdout_tail": "make[3]: Entering directory '.'\ntmp/auto-improve-readiness.candidate.json\nops/reports/auto-improve-readiness.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -210,18 +231,16 @@
           "command": [
             "make",
             "release-closeout-summary-report",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 561,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_closeout_summary --vault \".\" --out \"tmp/release-closeout-summary.candidate.json\" --profile \"base\" --no-fail\ntmp/release-closeout-summary.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-closeout-summary.candidate.json\" --out \"ops/reports/release-closeout-summary.json\" --schema ops/schemas/release-closeout-summary.schema.json --expected-artifact-kind release_closeout_summary --expected-producer ops.scripts.release_closeout_summary\nops/reports/release-closeout-summary.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 569,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_closeout_summary --vault \".\" --out \"tmp/release-closeout-summary.candidate.json\" --profile \"base\" --no-fail\ntmp/release-closeout-summary.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-closeout-summary.candidate.json\" --out \"ops/reports/release-closeout-summary.json\" --schema ops/schemas/release-closeout-summary.schema.json --expected-artifact-kind release_closeout_summary --expected-producer ops.scripts.release_closeout_summary\nops/reports/release-closeout-summary.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -230,18 +249,34 @@
           "command": [
             "make",
             "learning-readiness-signoff-revalidation",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 391,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.learning_readiness_signoff_revalidation --vault \".\" --out \"ops/reports/learning-readiness-signoff-revalidation.json\" --window-days \"7\" --required-command \"make release-evidence-closeout PYTHON=.venv/bin/python\" --required-environment \".venv clean release-builder\"\nops/reports/learning-readiness-signoff-revalidation.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 370,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.learning_readiness_signoff_revalidation --vault \".\" --out \"ops/reports/learning-readiness-signoff-revalidation.json\" --window-days \"7\" --required-command \"make release-evidence-closeout PYTHON=.venv/bin/python\" --required-environment \".venv clean release-builder\"\nops/reports/learning-readiness-signoff-revalidation.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "release-evidence-cohort",
+          "command": [
+            "make",
+            "release-evidence-cohort",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 502,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_evidence_cohort --vault \".\" --out \"tmp/release-evidence-cohort.candidate.json\" --profile \"base\" --cohort-policy \"allowed_divergence_with_explicit_risk\" --provenance-mode \"embedded_currentness\"  \ntmp/release-evidence-cohort.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-evidence-cohort.candidate.json\" --out \"ops/reports/release-evidence-cohort.json\" --schema ops/schemas/release-evidence-cohort.schema.json --expected-artifact-kind release_evidence_cohort --expected-producer ops.scripts.release_evidence_cohort\nops/reports/release-evidence-cohort.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -250,18 +285,16 @@
           "command": [
             "make",
             "release-evidence-dashboard-report",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 537,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_evidence_dashboard --vault \".\" --out \"tmp/release-evidence-dashboard.candidate.json\" --no-fail\ntmp/release-evidence-dashboard.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-evidence-dashboard.candidate.json\" --out \"ops/reports/release-evidence-dashboard.json\" --schema ops/schemas/release-evidence-dashboard.schema.json --expected-artifact-kind release_evidence_dashboard --expected-producer ops.scripts.release_evidence_dashboard\nops/reports/release-evidence-dashboard.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 525,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_evidence_dashboard --vault \".\" --out \"tmp/release-evidence-dashboard.candidate.json\" --no-fail\ntmp/release-evidence-dashboard.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-evidence-dashboard.candidate.json\" --out \"ops/reports/release-evidence-dashboard.json\" --schema ops/schemas/release-evidence-dashboard.schema.json --expected-artifact-kind release_evidence_dashboard --expected-producer ops.scripts.release_evidence_dashboard\nops/reports/release-evidence-dashboard.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -270,18 +303,16 @@
           "command": [
             "make",
             "release-lane-summary",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
           "duration_ms": 438,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_lane_summary --vault \".\" --out \"tmp/release-lane-summary.candidate.json\"\ntmp/release-lane-summary.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-lane-summary.candidate.json\" --out \"ops/reports/release-lane-summary.json\" --schema ops/schemas/release-lane-summary.schema.json --expected-artifact-kind release_lane_summary --expected-producer ops.scripts.release_lane_summary\nops/reports/release-lane-summary.json\nmake[3]: Leaving directory '.'\n",
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_lane_summary --vault \".\" --out \"tmp/release-lane-summary.candidate.json\"\ntmp/release-lane-summary.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-lane-summary.candidate.json\" --out \"ops/reports/release-lane-summary.json\" --schema ops/schemas/release-lane-summary.schema.json --expected-artifact-kind release_lane_summary --expected-producer ops.scripts.release_lane_summary\nops/reports/release-lane-summary.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -290,18 +321,16 @@
           "command": [
             "make",
             "release-clean-blocker-ledger",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 475,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_clean_blocker_ledger --vault \".\" --out \"tmp/release-clean-blocker-ledger.candidate.json\"\ntmp/release-clean-blocker-ledger.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-clean-blocker-ledger.candidate.json\" --out \"ops/reports/release-clean-blocker-ledger.json\" --schema ops/schemas/release-clean-blocker-ledger.schema.json --expected-artifact-kind release_clean_blocker_ledger --expected-producer ops.scripts.release_clean_blocker_ledger\nops/reports/release-clean-blocker-ledger.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 462,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_clean_blocker_ledger --vault \".\" --out \"tmp/release-clean-blocker-ledger.candidate.json\"\ntmp/release-clean-blocker-ledger.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-clean-blocker-ledger.candidate.json\" --out \"ops/reports/release-clean-blocker-ledger.json\" --schema ops/schemas/release-clean-blocker-ledger.schema.json --expected-artifact-kind release_clean_blocker_ledger --expected-producer ops.scripts.release_clean_blocker_ledger\nops/reports/release-clean-blocker-ledger.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -310,18 +339,16 @@
           "command": [
             "make",
             "release-closeout-batch-manifest-promote",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 1465,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_closeout_batch_manifest --vault \".\" --out \"tmp/release-closeout-batch-manifest.candidate.json\" --zip-metadata \"build/release/LLMwiki-source.zip\" --zip-timestamp-timezone \"UTC\" --distribution-zip \"build/release/LLMwiki-source.zip\"\ntmp/release-closeout-batch-manifest.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-closeout-batch-manifest.candidate.json\" --out \"ops/reports/release-closeout-batch-manifest.json\" --schema ops/schemas/release-closeout-batch-manifest.schema.json --expected-artifact-kind release_closeout_batch_manifest --expected-producer ops.scripts.release_closeout_batch_manifest\nops/reports/release-closeout-batch-manifest.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 827,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_closeout_batch_manifest --vault \".\" --out \"tmp/release-closeout-batch-manifest.candidate.json\"  \ntmp/release-closeout-batch-manifest.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-closeout-batch-manifest.candidate.json\" --out \"ops/reports/release-closeout-batch-manifest.json\" --schema ops/schemas/release-closeout-batch-manifest.schema.json --expected-artifact-kind release_closeout_batch_manifest --expected-producer ops.scripts.release_closeout_batch_manifest\nops/reports/release-closeout-batch-manifest.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -330,42 +357,44 @@
           "command": [
             "make",
             "release-evidence-closeout-self-check",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 370,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_evidence_closeout_self_check --vault \".\" --batch-manifest \"ops/reports/release-closeout-batch-manifest.json\" --evidence-cohort \"ops/reports/release-evidence-cohort.json\" --out \"ops/reports/release-evidence-closeout-self-check.json\"\nops/reports/release-evidence-closeout-self-check.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 357,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_evidence_closeout_self_check --vault \".\" --batch-manifest \"ops/reports/release-closeout-batch-manifest.json\" --evidence-cohort \"ops/reports/release-evidence-cohort.json\" --out \"ops/reports/release-evidence-closeout-self-check.json\"\nops/reports/release-evidence-closeout-self-check.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         }
       ],
       "digest_map": {
-        "ops/reports/generated-artifact-index.json": "5b2a429bb02bb359978071ee9eef6fba52f018faed4dd58a88fc9baac531111e",
-        "ops/reports/artifact-freshness-report.json": "09ae9782b28a4895d18b3b350d3521ad60ae7ae909ec848e610429232bfce6d6",
-        "ops/reports/release-closeout-summary.json": "1cb71f44fce89285a0471b4966a52d5b0037ed5f3ab21f3143ec6c76f18e741c",
-        "ops/reports/learning-readiness-signoff-revalidation.json": "04f278a0672f3286c80efbf75bcdbed738bc663a18c7e27b2acdf14fc8c3005d",
-        "ops/reports/release-evidence-dashboard.json": "917f249fab0bbf0c92e6b4c91f2ea4cd4cce0984df5a517a5fd948cba7319268",
-        "ops/reports/release-lane-summary.json": "9994053c1da2c2cbd3434d1a962defa9171fda17ebbdab166da47a03da89b83f",
-        "ops/reports/release-clean-blocker-ledger.json": "d8b2e18cf5c8e1f164d12f1af0496de2b7fbe269f79d2790bfd3b8bf598a28d5",
-        "ops/reports/release-closeout-batch-manifest.json": "50bd9ec3c479d37b7f54d00f8431098729c99701954cc94bf9b37a83d55e9228",
-        "ops/reports/release-evidence-closeout-self-check.json": "59cf62f16e9f47f6425b7725f184fb607664bd52cba1b2b4579825679dc42e53"
+        "ops/reports/generated-artifact-index.json": "13c53271c3ce5fe8bf150a4685bbc9feaa48001cb83ca0b36afe67ff071163cc",
+        "ops/reports/artifact-freshness-report.json": "d813f34793dc285ca6ab9a940680e3f5d3278cce0018ee2c74217aab78ae6643",
+        "ops/reports/auto-improve-readiness.json": "0f9624f32ecb44e52045378b00e731b514329539a68ceef1c46fab3ef58424ac",
+        "ops/reports/release-closeout-summary.json": "2bac281ee887afb022c2af09f584ca9bc51b296515efab846a2c65d4cb8c1767",
+        "ops/reports/learning-readiness-signoff-revalidation.json": "98ff2f8397deed63dd352b4bac9b7697058c4a6d1b178ff16494f5b0cd0136f9",
+        "ops/reports/release-evidence-cohort.json": "68e0f0cfc386933b1d43baa86710f2a56ff947ff71f97e4dbff50b7832c67693",
+        "ops/reports/release-evidence-dashboard.json": "376d4577f7bc59cdd62dcfeff9b037593fd40789587e6124df15d927ad8ec18b",
+        "ops/reports/release-lane-summary.json": "eb4a6916f220ec5d0d1e9fb2b33141ad93ac1348a011f9a25f201e3b48adcc32",
+        "ops/reports/release-clean-blocker-ledger.json": "c394a3fc82d18f5493f2a08b11abe8a376e184a22c7b8f74f0bbc1f5bfd3ccc2",
+        "ops/reports/release-closeout-batch-manifest.json": "8f3b449759a03aa2c8a8d2a10e0121ca1d159a05e026b41f070cbcee6ee2df38",
+        "ops/reports/release-evidence-closeout-self-check.json": "086d05a0d422ba7ba856ff613d5fbb7a1c57490baf736074c7b21031132d1c31"
       },
       "digest_changed": true,
       "changed_paths": [
         "ops/reports/artifact-freshness-report.json",
+        "ops/reports/auto-improve-readiness.json",
         "ops/reports/generated-artifact-index.json",
         "ops/reports/learning-readiness-signoff-revalidation.json",
         "ops/reports/release-clean-blocker-ledger.json",
         "ops/reports/release-closeout-batch-manifest.json",
         "ops/reports/release-closeout-summary.json",
         "ops/reports/release-evidence-closeout-self-check.json",
+        "ops/reports/release-evidence-cohort.json",
         "ops/reports/release-evidence-dashboard.json",
         "ops/reports/release-lane-summary.json"
       ]
@@ -374,9 +403,12 @@
       "iteration_index": 2,
       "status": "pass",
       "selected_targets": [
+        "generated-artifact-index-body",
         "artifact-freshness",
+        "auto-improve-readiness-report-body",
         "release-closeout-summary-report",
         "learning-readiness-signoff-revalidation",
+        "release-evidence-cohort",
         "release-evidence-dashboard-report",
         "release-lane-summary",
         "release-clean-blocker-ledger",
@@ -385,22 +417,56 @@
       ],
       "command_results": [
         {
-          "target": "artifact-freshness",
+          "target": "generated-artifact-index-body",
           "command": [
             "make",
-            "artifact-freshness",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "generated-artifact-index-body",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 3886,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.artifact_freshness_runtime --vault \".\" --out \"tmp/artifact-freshness-report.candidate.json\" --mtime-source \"embedded_currentness\" \ntmp/artifact-freshness-report.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/artifact-freshness-report.candidate.json\" --out \"ops/reports/artifact-freshness-report.json\" --schema ops/schemas/artifact-freshness-report.schema.json --expected-artifact-kind artifact_freshness_report --expected-producer ops.scripts.artifact_freshness_runtime\nops/reports/artifact-freshness-report.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 870,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.generated_artifact_index --vault \".\" --out \"tmp/generated-artifact-index.candidate.json\"\ntmp/generated-artifact-index.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/generated-artifact-index.candidate.json\" --out \"ops/reports/generated-artifact-index.json\" --schema ops/schemas/generated-artifact-index.schema.json --expected-artifact-kind generated_artifact_index_report --expected-producer ops.scripts.generated_artifact_index\nops/reports/generated-artifact-index.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "artifact-freshness",
+          "command": [
+            "make",
+            "artifact-freshness",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 9559,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.artifact_freshness_runtime --vault \".\" --out \"tmp/artifact-freshness-report.candidate.json\" --mtime-source \"embedded_currentness\" \ntmp/artifact-freshness-report.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/artifact-freshness-report.candidate.json\" --out \"ops/reports/artifact-freshness-report.json\" --schema ops/schemas/artifact-freshness-report.schema.json --expected-artifact-kind artifact_freshness_report --expected-producer ops.scripts.artifact_freshness_runtime\nops/reports/artifact-freshness-report.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "auto-improve-readiness-report-body",
+          "command": [
+            "make",
+            "auto-improve-readiness-report-body",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 493,
+          "stdout_tail": "make[3]: Entering directory '.'\ntmp/auto-improve-readiness.candidate.json\nops/reports/auto-improve-readiness.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -409,18 +475,16 @@
           "command": [
             "make",
             "release-closeout-summary-report",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 550,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_closeout_summary --vault \".\" --out \"tmp/release-closeout-summary.candidate.json\" --profile \"base\" --no-fail\ntmp/release-closeout-summary.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-closeout-summary.candidate.json\" --out \"ops/reports/release-closeout-summary.json\" --schema ops/schemas/release-closeout-summary.schema.json --expected-artifact-kind release_closeout_summary --expected-producer ops.scripts.release_closeout_summary\nops/reports/release-closeout-summary.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 572,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_closeout_summary --vault \".\" --out \"tmp/release-closeout-summary.candidate.json\" --profile \"base\" --no-fail\ntmp/release-closeout-summary.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-closeout-summary.candidate.json\" --out \"ops/reports/release-closeout-summary.json\" --schema ops/schemas/release-closeout-summary.schema.json --expected-artifact-kind release_closeout_summary --expected-producer ops.scripts.release_closeout_summary\nops/reports/release-closeout-summary.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -429,18 +493,34 @@
           "command": [
             "make",
             "learning-readiness-signoff-revalidation",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 375,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.learning_readiness_signoff_revalidation --vault \".\" --out \"ops/reports/learning-readiness-signoff-revalidation.json\" --window-days \"7\" --required-command \"make release-evidence-closeout PYTHON=.venv/bin/python\" --required-environment \".venv clean release-builder\"\nops/reports/learning-readiness-signoff-revalidation.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 364,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.learning_readiness_signoff_revalidation --vault \".\" --out \"ops/reports/learning-readiness-signoff-revalidation.json\" --window-days \"7\" --required-command \"make release-evidence-closeout PYTHON=.venv/bin/python\" --required-environment \".venv clean release-builder\"\nops/reports/learning-readiness-signoff-revalidation.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "release-evidence-cohort",
+          "command": [
+            "make",
+            "release-evidence-cohort",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 495,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_evidence_cohort --vault \".\" --out \"tmp/release-evidence-cohort.candidate.json\" --profile \"base\" --cohort-policy \"allowed_divergence_with_explicit_risk\" --provenance-mode \"embedded_currentness\"  \ntmp/release-evidence-cohort.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-evidence-cohort.candidate.json\" --out \"ops/reports/release-evidence-cohort.json\" --schema ops/schemas/release-evidence-cohort.schema.json --expected-artifact-kind release_evidence_cohort --expected-producer ops.scripts.release_evidence_cohort\nops/reports/release-evidence-cohort.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -449,18 +529,16 @@
           "command": [
             "make",
             "release-evidence-dashboard-report",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 544,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_evidence_dashboard --vault \".\" --out \"tmp/release-evidence-dashboard.candidate.json\" --no-fail\ntmp/release-evidence-dashboard.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-evidence-dashboard.candidate.json\" --out \"ops/reports/release-evidence-dashboard.json\" --schema ops/schemas/release-evidence-dashboard.schema.json --expected-artifact-kind release_evidence_dashboard --expected-producer ops.scripts.release_evidence_dashboard\nops/reports/release-evidence-dashboard.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 526,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_evidence_dashboard --vault \".\" --out \"tmp/release-evidence-dashboard.candidate.json\" --no-fail\ntmp/release-evidence-dashboard.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-evidence-dashboard.candidate.json\" --out \"ops/reports/release-evidence-dashboard.json\" --schema ops/schemas/release-evidence-dashboard.schema.json --expected-artifact-kind release_evidence_dashboard --expected-producer ops.scripts.release_evidence_dashboard\nops/reports/release-evidence-dashboard.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -469,18 +547,16 @@
           "command": [
             "make",
             "release-lane-summary",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 447,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_lane_summary --vault \".\" --out \"tmp/release-lane-summary.candidate.json\"\ntmp/release-lane-summary.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-lane-summary.candidate.json\" --out \"ops/reports/release-lane-summary.json\" --schema ops/schemas/release-lane-summary.schema.json --expected-artifact-kind release_lane_summary --expected-producer ops.scripts.release_lane_summary\nops/reports/release-lane-summary.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 441,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_lane_summary --vault \".\" --out \"tmp/release-lane-summary.candidate.json\"\ntmp/release-lane-summary.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-lane-summary.candidate.json\" --out \"ops/reports/release-lane-summary.json\" --schema ops/schemas/release-lane-summary.schema.json --expected-artifact-kind release_lane_summary --expected-producer ops.scripts.release_lane_summary\nops/reports/release-lane-summary.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -489,18 +565,16 @@
           "command": [
             "make",
             "release-clean-blocker-ledger",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 477,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_clean_blocker_ledger --vault \".\" --out \"tmp/release-clean-blocker-ledger.candidate.json\"\ntmp/release-clean-blocker-ledger.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-clean-blocker-ledger.candidate.json\" --out \"ops/reports/release-clean-blocker-ledger.json\" --schema ops/schemas/release-clean-blocker-ledger.schema.json --expected-artifact-kind release_clean_blocker_ledger --expected-producer ops.scripts.release_clean_blocker_ledger\nops/reports/release-clean-blocker-ledger.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 452,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_clean_blocker_ledger --vault \".\" --out \"tmp/release-clean-blocker-ledger.candidate.json\"\ntmp/release-clean-blocker-ledger.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-clean-blocker-ledger.candidate.json\" --out \"ops/reports/release-clean-blocker-ledger.json\" --schema ops/schemas/release-clean-blocker-ledger.schema.json --expected-artifact-kind release_clean_blocker_ledger --expected-producer ops.scripts.release_clean_blocker_ledger\nops/reports/release-clean-blocker-ledger.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -509,18 +583,16 @@
           "command": [
             "make",
             "release-closeout-batch-manifest-promote",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 1455,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_closeout_batch_manifest --vault \".\" --out \"tmp/release-closeout-batch-manifest.candidate.json\" --zip-metadata \"build/release/LLMwiki-source.zip\" --zip-timestamp-timezone \"UTC\" --distribution-zip \"build/release/LLMwiki-source.zip\"\ntmp/release-closeout-batch-manifest.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-closeout-batch-manifest.candidate.json\" --out \"ops/reports/release-closeout-batch-manifest.json\" --schema ops/schemas/release-closeout-batch-manifest.schema.json --expected-artifact-kind release_closeout_batch_manifest --expected-producer ops.scripts.release_closeout_batch_manifest\nops/reports/release-closeout-batch-manifest.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 812,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_closeout_batch_manifest --vault \".\" --out \"tmp/release-closeout-batch-manifest.candidate.json\"  \ntmp/release-closeout-batch-manifest.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-closeout-batch-manifest.candidate.json\" --out \"ops/reports/release-closeout-batch-manifest.json\" --schema ops/schemas/release-closeout-batch-manifest.schema.json --expected-artifact-kind release_closeout_batch_manifest --expected-producer ops.scripts.release_closeout_batch_manifest\nops/reports/release-closeout-batch-manifest.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -529,41 +601,43 @@
           "command": [
             "make",
             "release-evidence-closeout-self-check",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 363,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_evidence_closeout_self_check --vault \".\" --batch-manifest \"ops/reports/release-closeout-batch-manifest.json\" --evidence-cohort \"ops/reports/release-evidence-cohort.json\" --out \"ops/reports/release-evidence-closeout-self-check.json\"\nops/reports/release-evidence-closeout-self-check.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 341,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_evidence_closeout_self_check --vault \".\" --batch-manifest \"ops/reports/release-closeout-batch-manifest.json\" --evidence-cohort \"ops/reports/release-evidence-cohort.json\" --out \"ops/reports/release-evidence-closeout-self-check.json\"\nops/reports/release-evidence-closeout-self-check.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         }
       ],
       "digest_map": {
-        "ops/reports/generated-artifact-index.json": "5b2a429bb02bb359978071ee9eef6fba52f018faed4dd58a88fc9baac531111e",
-        "ops/reports/artifact-freshness-report.json": "8ebe547e7d8156a38a8d19890efc38faf41ac70e1537f57e5b186a62a0aa47dd",
-        "ops/reports/release-closeout-summary.json": "da1a540ce7a016a72a4a1fb88480ad8e02822db05b56e17d9c45b62b601bb4f8",
-        "ops/reports/learning-readiness-signoff-revalidation.json": "a074a832a455efbd8ee138f08536afa5b01248f764f6c72853a8f5b2bcc8f2bd",
-        "ops/reports/release-evidence-dashboard.json": "a80f40af2d609bf8e1ea44ee7bcab50d7e5583605e8d358715d6b6978ab7b112",
-        "ops/reports/release-lane-summary.json": "b640bb59b592ee973a57f22c62ec34a85df47f446bcc846bbf1951573288d1de",
-        "ops/reports/release-clean-blocker-ledger.json": "77dbb6a0dbbc7ebeee7a74947df38d3e1cf6be0a3d683841676a3e6a8a452642",
-        "ops/reports/release-closeout-batch-manifest.json": "f6e902ade18ff635c9d92b4ac4aa0716f010a526615c5dd0f63c840710b9fafc",
-        "ops/reports/release-evidence-closeout-self-check.json": "6a55d083099738c2c3068225ee56eb20f2042e5f98de7d3dd1527d2fd58301c2"
+        "ops/reports/generated-artifact-index.json": "13c53271c3ce5fe8bf150a4685bbc9feaa48001cb83ca0b36afe67ff071163cc",
+        "ops/reports/artifact-freshness-report.json": "c5c0b7cbc6afbfdee4de24ccc2b3297398c2a306af2ec0d7bfc673712713260c",
+        "ops/reports/auto-improve-readiness.json": "1814ca99d8b4368dee9f5a2ccd53891ad24c7ebd7318305bd868617ae7481807",
+        "ops/reports/release-closeout-summary.json": "ff55659f415fec0e187e6bc5ac450665869e0b8c58dd8615c81b23a67c9675c8",
+        "ops/reports/learning-readiness-signoff-revalidation.json": "2c15db9f2213dbf7d89270c9cf6f9f99aac277432a2af2a0fd438298228ec6b2",
+        "ops/reports/release-evidence-cohort.json": "cefeb2e1bf8bd37901adb15afef7da2e61a24dabb6b63388f6edcb6267bfe686",
+        "ops/reports/release-evidence-dashboard.json": "93a7e03b8e2f6873754e74749a0e0e423d58b74261ed8ba5a2f0f7bbf5110964",
+        "ops/reports/release-lane-summary.json": "efc7e3da8f55bd401a36a6dd9ee0e7f99c2228ebc9daeb73681fc0e4f51597e4",
+        "ops/reports/release-clean-blocker-ledger.json": "081b3f5c2d04583c78669225562993da71eee396b60df8c72e2afe08ccab7da3",
+        "ops/reports/release-closeout-batch-manifest.json": "72eb77d98f0f54c531b792926d3feace0d2a1982c65f273628a084faa3c5a2e6",
+        "ops/reports/release-evidence-closeout-self-check.json": "01d4ec50f504023d1b95dadeaaa971aa9ffe9bd935bbe9611427ffbe99370827"
       },
       "digest_changed": true,
       "changed_paths": [
         "ops/reports/artifact-freshness-report.json",
+        "ops/reports/auto-improve-readiness.json",
         "ops/reports/learning-readiness-signoff-revalidation.json",
         "ops/reports/release-clean-blocker-ledger.json",
         "ops/reports/release-closeout-batch-manifest.json",
         "ops/reports/release-closeout-summary.json",
         "ops/reports/release-evidence-closeout-self-check.json",
+        "ops/reports/release-evidence-cohort.json",
         "ops/reports/release-evidence-dashboard.json",
         "ops/reports/release-lane-summary.json"
       ]
@@ -572,8 +646,12 @@
       "iteration_index": 3,
       "status": "pass",
       "selected_targets": [
+        "generated-artifact-index-body",
+        "artifact-freshness",
+        "auto-improve-readiness-report-body",
         "release-closeout-summary-report",
         "learning-readiness-signoff-revalidation",
+        "release-evidence-cohort",
         "release-evidence-dashboard-report",
         "release-lane-summary",
         "release-clean-blocker-ledger",
@@ -582,22 +660,74 @@
       ],
       "command_results": [
         {
-          "target": "release-closeout-summary-report",
+          "target": "generated-artifact-index-body",
           "command": [
             "make",
-            "release-closeout-summary-report",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "generated-artifact-index-body",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 554,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_closeout_summary --vault \".\" --out \"tmp/release-closeout-summary.candidate.json\" --profile \"base\" --no-fail\ntmp/release-closeout-summary.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-closeout-summary.candidate.json\" --out \"ops/reports/release-closeout-summary.json\" --schema ops/schemas/release-closeout-summary.schema.json --expected-artifact-kind release_closeout_summary --expected-producer ops.scripts.release_closeout_summary\nops/reports/release-closeout-summary.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 861,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.generated_artifact_index --vault \".\" --out \"tmp/generated-artifact-index.candidate.json\"\ntmp/generated-artifact-index.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/generated-artifact-index.candidate.json\" --out \"ops/reports/generated-artifact-index.json\" --schema ops/schemas/generated-artifact-index.schema.json --expected-artifact-kind generated_artifact_index_report --expected-producer ops.scripts.generated_artifact_index\nops/reports/generated-artifact-index.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "artifact-freshness",
+          "command": [
+            "make",
+            "artifact-freshness",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 9359,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.artifact_freshness_runtime --vault \".\" --out \"tmp/artifact-freshness-report.candidate.json\" --mtime-source \"embedded_currentness\" \ntmp/artifact-freshness-report.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/artifact-freshness-report.candidate.json\" --out \"ops/reports/artifact-freshness-report.json\" --schema ops/schemas/artifact-freshness-report.schema.json --expected-artifact-kind artifact_freshness_report --expected-producer ops.scripts.artifact_freshness_runtime\nops/reports/artifact-freshness-report.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "auto-improve-readiness-report-body",
+          "command": [
+            "make",
+            "auto-improve-readiness-report-body",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 486,
+          "stdout_tail": "make[3]: Entering directory '.'\ntmp/auto-improve-readiness.candidate.json\nops/reports/auto-improve-readiness.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "release-closeout-summary-report",
+          "command": [
+            "make",
+            "release-closeout-summary-report",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 560,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_closeout_summary --vault \".\" --out \"tmp/release-closeout-summary.candidate.json\" --profile \"base\" --no-fail\ntmp/release-closeout-summary.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-closeout-summary.candidate.json\" --out \"ops/reports/release-closeout-summary.json\" --schema ops/schemas/release-closeout-summary.schema.json --expected-artifact-kind release_closeout_summary --expected-producer ops.scripts.release_closeout_summary\nops/reports/release-closeout-summary.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -606,18 +736,34 @@
           "command": [
             "make",
             "learning-readiness-signoff-revalidation",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 383,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.learning_readiness_signoff_revalidation --vault \".\" --out \"ops/reports/learning-readiness-signoff-revalidation.json\" --window-days \"7\" --required-command \"make release-evidence-closeout PYTHON=.venv/bin/python\" --required-environment \".venv clean release-builder\"\nops/reports/learning-readiness-signoff-revalidation.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 364,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.learning_readiness_signoff_revalidation --vault \".\" --out \"ops/reports/learning-readiness-signoff-revalidation.json\" --window-days \"7\" --required-command \"make release-evidence-closeout PYTHON=.venv/bin/python\" --required-environment \".venv clean release-builder\"\nops/reports/learning-readiness-signoff-revalidation.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "release-evidence-cohort",
+          "command": [
+            "make",
+            "release-evidence-cohort",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 491,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_evidence_cohort --vault \".\" --out \"tmp/release-evidence-cohort.candidate.json\" --profile \"base\" --cohort-policy \"allowed_divergence_with_explicit_risk\" --provenance-mode \"embedded_currentness\"  \ntmp/release-evidence-cohort.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-evidence-cohort.candidate.json\" --out \"ops/reports/release-evidence-cohort.json\" --schema ops/schemas/release-evidence-cohort.schema.json --expected-artifact-kind release_evidence_cohort --expected-producer ops.scripts.release_evidence_cohort\nops/reports/release-evidence-cohort.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -626,18 +772,16 @@
           "command": [
             "make",
             "release-evidence-dashboard-report",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 546,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_evidence_dashboard --vault \".\" --out \"tmp/release-evidence-dashboard.candidate.json\" --no-fail\ntmp/release-evidence-dashboard.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-evidence-dashboard.candidate.json\" --out \"ops/reports/release-evidence-dashboard.json\" --schema ops/schemas/release-evidence-dashboard.schema.json --expected-artifact-kind release_evidence_dashboard --expected-producer ops.scripts.release_evidence_dashboard\nops/reports/release-evidence-dashboard.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 517,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_evidence_dashboard --vault \".\" --out \"tmp/release-evidence-dashboard.candidate.json\" --no-fail\ntmp/release-evidence-dashboard.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-evidence-dashboard.candidate.json\" --out \"ops/reports/release-evidence-dashboard.json\" --schema ops/schemas/release-evidence-dashboard.schema.json --expected-artifact-kind release_evidence_dashboard --expected-producer ops.scripts.release_evidence_dashboard\nops/reports/release-evidence-dashboard.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -646,18 +790,16 @@
           "command": [
             "make",
             "release-lane-summary",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 441,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_lane_summary --vault \".\" --out \"tmp/release-lane-summary.candidate.json\"\ntmp/release-lane-summary.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-lane-summary.candidate.json\" --out \"ops/reports/release-lane-summary.json\" --schema ops/schemas/release-lane-summary.schema.json --expected-artifact-kind release_lane_summary --expected-producer ops.scripts.release_lane_summary\nops/reports/release-lane-summary.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 428,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_lane_summary --vault \".\" --out \"tmp/release-lane-summary.candidate.json\"\ntmp/release-lane-summary.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-lane-summary.candidate.json\" --out \"ops/reports/release-lane-summary.json\" --schema ops/schemas/release-lane-summary.schema.json --expected-artifact-kind release_lane_summary --expected-producer ops.scripts.release_lane_summary\nops/reports/release-lane-summary.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -666,18 +808,16 @@
           "command": [
             "make",
             "release-clean-blocker-ledger",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 468,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_clean_blocker_ledger --vault \".\" --out \"tmp/release-clean-blocker-ledger.candidate.json\"\ntmp/release-clean-blocker-ledger.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-clean-blocker-ledger.candidate.json\" --out \"ops/reports/release-clean-blocker-ledger.json\" --schema ops/schemas/release-clean-blocker-ledger.schema.json --expected-artifact-kind release_clean_blocker_ledger --expected-producer ops.scripts.release_clean_blocker_ledger\nops/reports/release-clean-blocker-ledger.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 447,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_clean_blocker_ledger --vault \".\" --out \"tmp/release-clean-blocker-ledger.candidate.json\"\ntmp/release-clean-blocker-ledger.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-clean-blocker-ledger.candidate.json\" --out \"ops/reports/release-clean-blocker-ledger.json\" --schema ops/schemas/release-clean-blocker-ledger.schema.json --expected-artifact-kind release_clean_blocker_ledger --expected-producer ops.scripts.release_clean_blocker_ledger\nops/reports/release-clean-blocker-ledger.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -686,18 +826,16 @@
           "command": [
             "make",
             "release-closeout-batch-manifest-promote",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 1459,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_closeout_batch_manifest --vault \".\" --out \"tmp/release-closeout-batch-manifest.candidate.json\" --zip-metadata \"build/release/LLMwiki-source.zip\" --zip-timestamp-timezone \"UTC\" --distribution-zip \"build/release/LLMwiki-source.zip\"\ntmp/release-closeout-batch-manifest.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-closeout-batch-manifest.candidate.json\" --out \"ops/reports/release-closeout-batch-manifest.json\" --schema ops/schemas/release-closeout-batch-manifest.schema.json --expected-artifact-kind release_closeout_batch_manifest --expected-producer ops.scripts.release_closeout_batch_manifest\nops/reports/release-closeout-batch-manifest.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 811,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_closeout_batch_manifest --vault \".\" --out \"tmp/release-closeout-batch-manifest.candidate.json\"  \ntmp/release-closeout-batch-manifest.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-closeout-batch-manifest.candidate.json\" --out \"ops/reports/release-closeout-batch-manifest.json\" --schema ops/schemas/release-closeout-batch-manifest.schema.json --expected-artifact-kind release_closeout_batch_manifest --expected-producer ops.scripts.release_closeout_batch_manifest\nops/reports/release-closeout-batch-manifest.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -706,40 +844,42 @@
           "command": [
             "make",
             "release-evidence-closeout-self-check",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 370,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_evidence_closeout_self_check --vault \".\" --batch-manifest \"ops/reports/release-closeout-batch-manifest.json\" --evidence-cohort \"ops/reports/release-evidence-cohort.json\" --out \"ops/reports/release-evidence-closeout-self-check.json\"\nops/reports/release-evidence-closeout-self-check.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 338,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_evidence_closeout_self_check --vault \".\" --batch-manifest \"ops/reports/release-closeout-batch-manifest.json\" --evidence-cohort \"ops/reports/release-evidence-cohort.json\" --out \"ops/reports/release-evidence-closeout-self-check.json\"\nops/reports/release-evidence-closeout-self-check.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         }
       ],
       "digest_map": {
-        "ops/reports/generated-artifact-index.json": "5b2a429bb02bb359978071ee9eef6fba52f018faed4dd58a88fc9baac531111e",
-        "ops/reports/artifact-freshness-report.json": "8ebe547e7d8156a38a8d19890efc38faf41ac70e1537f57e5b186a62a0aa47dd",
-        "ops/reports/release-closeout-summary.json": "44a45b6591a17a02b77fe5ce3f9f6b292b6e82b9163125a9436d119f476c2ad2",
-        "ops/reports/learning-readiness-signoff-revalidation.json": "d082dc702fb5c7539b8fff77e9fcc09fa024db6edf940bc0282e86c2c66345ad",
-        "ops/reports/release-evidence-dashboard.json": "431bf3cb7c3f67f445d150a9c4a02b4e4c46df566b44730ddcd8c3281b040417",
-        "ops/reports/release-lane-summary.json": "3d10ede3924a01c6c0c44a74916ce1aea08d6a2eade227f4111db51ddeab4df2",
-        "ops/reports/release-clean-blocker-ledger.json": "21607147e6fbbe69e7ebf8d32c13c4b0e82ff2757bda0b00c0005f29ac5f8854",
-        "ops/reports/release-closeout-batch-manifest.json": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
-        "ops/reports/release-evidence-closeout-self-check.json": "d1106e387c86d0bd1af4d70a4cd5a309516a3b7ca57e4366d7bf0df64175aaf7"
+        "ops/reports/generated-artifact-index.json": "13c53271c3ce5fe8bf150a4685bbc9feaa48001cb83ca0b36afe67ff071163cc",
+        "ops/reports/artifact-freshness-report.json": "c5c0b7cbc6afbfdee4de24ccc2b3297398c2a306af2ec0d7bfc673712713260c",
+        "ops/reports/auto-improve-readiness.json": "0231e895705e3f178fe88199842c8ed34864ca4bdf01ec1f6d6dac8b8e5253d7",
+        "ops/reports/release-closeout-summary.json": "2cab53c8399ff4d21bdc6bbaa5c16190ff9bb76ace16a9b02414164dcc330454",
+        "ops/reports/learning-readiness-signoff-revalidation.json": "9abc5c64df5f3f1f710940e8b18b55ea71115177a2ae04e125c1e3d0f26cd1ee",
+        "ops/reports/release-evidence-cohort.json": "966a1ee9b1db9a1083e9b3d4967d293478a46fda1149ab0849415052e831c87a",
+        "ops/reports/release-evidence-dashboard.json": "75f1d77e5ee5320070b376956607d61b0a49ff331e0ec1db31d1a6b87056aad3",
+        "ops/reports/release-lane-summary.json": "67bf910403d011c9b342686ed0f5168671af8c16d6ab5801e54488cfd52d0bf9",
+        "ops/reports/release-clean-blocker-ledger.json": "43d4d8eb8fff10068b62a08428961b50a9e765276759f38be9d99cb7ac6749da",
+        "ops/reports/release-closeout-batch-manifest.json": "ce4d501eeb95c633593fdf43177a8b306f7a75902222b27e24d2356969e61f4b",
+        "ops/reports/release-evidence-closeout-self-check.json": "3b0f3f641985374eb81ede834fb4c4ee711961bbea739af1dc4d06e36dbb41e8"
       },
       "digest_changed": true,
       "changed_paths": [
+        "ops/reports/auto-improve-readiness.json",
         "ops/reports/learning-readiness-signoff-revalidation.json",
         "ops/reports/release-clean-blocker-ledger.json",
         "ops/reports/release-closeout-batch-manifest.json",
         "ops/reports/release-closeout-summary.json",
         "ops/reports/release-evidence-closeout-self-check.json",
+        "ops/reports/release-evidence-cohort.json",
         "ops/reports/release-evidence-dashboard.json",
         "ops/reports/release-lane-summary.json"
       ]
@@ -748,7 +888,11 @@
       "iteration_index": 4,
       "status": "pass",
       "selected_targets": [
+        "generated-artifact-index-body",
+        "artifact-freshness",
+        "release-closeout-summary-report",
         "learning-readiness-signoff-revalidation",
+        "release-evidence-cohort",
         "release-evidence-dashboard-report",
         "release-lane-summary",
         "release-clean-blocker-ledger",
@@ -757,22 +901,92 @@
       ],
       "command_results": [
         {
-          "target": "learning-readiness-signoff-revalidation",
+          "target": "generated-artifact-index-body",
           "command": [
             "make",
-            "learning-readiness-signoff-revalidation",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "generated-artifact-index-body",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 384,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.learning_readiness_signoff_revalidation --vault \".\" --out \"ops/reports/learning-readiness-signoff-revalidation.json\" --window-days \"7\" --required-command \"make release-evidence-closeout PYTHON=.venv/bin/python\" --required-environment \".venv clean release-builder\"\nops/reports/learning-readiness-signoff-revalidation.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 862,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.generated_artifact_index --vault \".\" --out \"tmp/generated-artifact-index.candidate.json\"\ntmp/generated-artifact-index.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/generated-artifact-index.candidate.json\" --out \"ops/reports/generated-artifact-index.json\" --schema ops/schemas/generated-artifact-index.schema.json --expected-artifact-kind generated_artifact_index_report --expected-producer ops.scripts.generated_artifact_index\nops/reports/generated-artifact-index.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "artifact-freshness",
+          "command": [
+            "make",
+            "artifact-freshness",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 9520,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.artifact_freshness_runtime --vault \".\" --out \"tmp/artifact-freshness-report.candidate.json\" --mtime-source \"embedded_currentness\" \ntmp/artifact-freshness-report.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/artifact-freshness-report.candidate.json\" --out \"ops/reports/artifact-freshness-report.json\" --schema ops/schemas/artifact-freshness-report.schema.json --expected-artifact-kind artifact_freshness_report --expected-producer ops.scripts.artifact_freshness_runtime\nops/reports/artifact-freshness-report.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "release-closeout-summary-report",
+          "command": [
+            "make",
+            "release-closeout-summary-report",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 575,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_closeout_summary --vault \".\" --out \"tmp/release-closeout-summary.candidate.json\" --profile \"base\" --no-fail\ntmp/release-closeout-summary.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-closeout-summary.candidate.json\" --out \"ops/reports/release-closeout-summary.json\" --schema ops/schemas/release-closeout-summary.schema.json --expected-artifact-kind release_closeout_summary --expected-producer ops.scripts.release_closeout_summary\nops/reports/release-closeout-summary.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "learning-readiness-signoff-revalidation",
+          "command": [
+            "make",
+            "learning-readiness-signoff-revalidation",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 372,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.learning_readiness_signoff_revalidation --vault \".\" --out \"ops/reports/learning-readiness-signoff-revalidation.json\" --window-days \"7\" --required-command \"make release-evidence-closeout PYTHON=.venv/bin/python\" --required-environment \".venv clean release-builder\"\nops/reports/learning-readiness-signoff-revalidation.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "release-evidence-cohort",
+          "command": [
+            "make",
+            "release-evidence-cohort",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 504,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_evidence_cohort --vault \".\" --out \"tmp/release-evidence-cohort.candidate.json\" --profile \"base\" --cohort-policy \"allowed_divergence_with_explicit_risk\" --provenance-mode \"embedded_currentness\"  \ntmp/release-evidence-cohort.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-evidence-cohort.candidate.json\" --out \"ops/reports/release-evidence-cohort.json\" --schema ops/schemas/release-evidence-cohort.schema.json --expected-artifact-kind release_evidence_cohort --expected-producer ops.scripts.release_evidence_cohort\nops/reports/release-evidence-cohort.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -781,18 +995,16 @@
           "command": [
             "make",
             "release-evidence-dashboard-report",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 535,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_evidence_dashboard --vault \".\" --out \"tmp/release-evidence-dashboard.candidate.json\" --no-fail\ntmp/release-evidence-dashboard.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-evidence-dashboard.candidate.json\" --out \"ops/reports/release-evidence-dashboard.json\" --schema ops/schemas/release-evidence-dashboard.schema.json --expected-artifact-kind release_evidence_dashboard --expected-producer ops.scripts.release_evidence_dashboard\nops/reports/release-evidence-dashboard.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 523,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_evidence_dashboard --vault \".\" --out \"tmp/release-evidence-dashboard.candidate.json\" --no-fail\ntmp/release-evidence-dashboard.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-evidence-dashboard.candidate.json\" --out \"ops/reports/release-evidence-dashboard.json\" --schema ops/schemas/release-evidence-dashboard.schema.json --expected-artifact-kind release_evidence_dashboard --expected-producer ops.scripts.release_evidence_dashboard\nops/reports/release-evidence-dashboard.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -801,18 +1013,16 @@
           "command": [
             "make",
             "release-lane-summary",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 438,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_lane_summary --vault \".\" --out \"tmp/release-lane-summary.candidate.json\"\ntmp/release-lane-summary.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-lane-summary.candidate.json\" --out \"ops/reports/release-lane-summary.json\" --schema ops/schemas/release-lane-summary.schema.json --expected-artifact-kind release_lane_summary --expected-producer ops.scripts.release_lane_summary\nops/reports/release-lane-summary.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 436,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_lane_summary --vault \".\" --out \"tmp/release-lane-summary.candidate.json\"\ntmp/release-lane-summary.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-lane-summary.candidate.json\" --out \"ops/reports/release-lane-summary.json\" --schema ops/schemas/release-lane-summary.schema.json --expected-artifact-kind release_lane_summary --expected-producer ops.scripts.release_lane_summary\nops/reports/release-lane-summary.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -821,18 +1031,16 @@
           "command": [
             "make",
             "release-clean-blocker-ledger",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 468,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_clean_blocker_ledger --vault \".\" --out \"tmp/release-clean-blocker-ledger.candidate.json\"\ntmp/release-clean-blocker-ledger.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-clean-blocker-ledger.candidate.json\" --out \"ops/reports/release-clean-blocker-ledger.json\" --schema ops/schemas/release-clean-blocker-ledger.schema.json --expected-artifact-kind release_clean_blocker_ledger --expected-producer ops.scripts.release_clean_blocker_ledger\nops/reports/release-clean-blocker-ledger.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 461,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_clean_blocker_ledger --vault \".\" --out \"tmp/release-clean-blocker-ledger.candidate.json\"\ntmp/release-clean-blocker-ledger.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-clean-blocker-ledger.candidate.json\" --out \"ops/reports/release-clean-blocker-ledger.json\" --schema ops/schemas/release-clean-blocker-ledger.schema.json --expected-artifact-kind release_clean_blocker_ledger --expected-producer ops.scripts.release_clean_blocker_ledger\nops/reports/release-clean-blocker-ledger.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -841,18 +1049,16 @@
           "command": [
             "make",
             "release-closeout-batch-manifest-promote",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 1462,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_closeout_batch_manifest --vault \".\" --out \"tmp/release-closeout-batch-manifest.candidate.json\" --zip-metadata \"build/release/LLMwiki-source.zip\" --zip-timestamp-timezone \"UTC\" --distribution-zip \"build/release/LLMwiki-source.zip\"\ntmp/release-closeout-batch-manifest.candidate.json\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-closeout-batch-manifest.candidate.json\" --out \"ops/reports/release-closeout-batch-manifest.json\" --schema ops/schemas/release-closeout-batch-manifest.schema.json --expected-artifact-kind release_closeout_batch_manifest --expected-producer ops.scripts.release_closeout_batch_manifest\nops/reports/release-closeout-batch-manifest.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 813,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_closeout_batch_manifest --vault \".\" --out \"tmp/release-closeout-batch-manifest.candidate.json\"  \ntmp/release-closeout-batch-manifest.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-closeout-batch-manifest.candidate.json\" --out \"ops/reports/release-closeout-batch-manifest.json\" --schema ops/schemas/release-closeout-batch-manifest.schema.json --expected-artifact-kind release_closeout_batch_manifest --expected-producer ops.scripts.release_closeout_batch_manifest\nops/reports/release-closeout-batch-manifest.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         },
@@ -861,52 +1067,257 @@
           "command": [
             "make",
             "release-evidence-closeout-self-check",
-            "PYTHON=<home>/code/LLMwiki/.venv/bin/python",
+            "PYTHON=.venv/bin/python",
             "VAULT=.",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=build/release/LLMwiki-source.zip",
-            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC",
-            "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=build/release/LLMwiki-source.zip"
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
           ],
           "returncode": 0,
           "timed_out": false,
           "timeout_seconds": 600,
           "termination_reason": "completed",
-          "duration_ms": 365,
-          "stdout_tail": "make[3]: Entering directory '.'\n<home>/code/LLMwiki/.venv/bin/python -m ops.scripts.release_evidence_closeout_self_check --vault \".\" --batch-manifest \"ops/reports/release-closeout-batch-manifest.json\" --evidence-cohort \"ops/reports/release-evidence-cohort.json\" --out \"ops/reports/release-evidence-closeout-self-check.json\"\nops/reports/release-evidence-closeout-self-check.json\nmake[3]: Leaving directory '.'\n",
+          "duration_ms": 339,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_evidence_closeout_self_check --vault \".\" --batch-manifest \"ops/reports/release-closeout-batch-manifest.json\" --evidence-cohort \"ops/reports/release-evidence-cohort.json\" --out \"ops/reports/release-evidence-closeout-self-check.json\"\nops/reports/release-evidence-closeout-self-check.json\nmake[3]: Leaving directory '.'\n",
           "stderr_tail": "",
           "status": "pass"
         }
       ],
       "digest_map": {
-        "ops/reports/generated-artifact-index.json": "5b2a429bb02bb359978071ee9eef6fba52f018faed4dd58a88fc9baac531111e",
-        "ops/reports/artifact-freshness-report.json": "8ebe547e7d8156a38a8d19890efc38faf41ac70e1537f57e5b186a62a0aa47dd",
-        "ops/reports/release-closeout-summary.json": "44a45b6591a17a02b77fe5ce3f9f6b292b6e82b9163125a9436d119f476c2ad2",
-        "ops/reports/learning-readiness-signoff-revalidation.json": "d082dc702fb5c7539b8fff77e9fcc09fa024db6edf940bc0282e86c2c66345ad",
-        "ops/reports/release-evidence-dashboard.json": "431bf3cb7c3f67f445d150a9c4a02b4e4c46df566b44730ddcd8c3281b040417",
-        "ops/reports/release-lane-summary.json": "3d10ede3924a01c6c0c44a74916ce1aea08d6a2eade227f4111db51ddeab4df2",
-        "ops/reports/release-clean-blocker-ledger.json": "21607147e6fbbe69e7ebf8d32c13c4b0e82ff2757bda0b00c0005f29ac5f8854",
-        "ops/reports/release-closeout-batch-manifest.json": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
-        "ops/reports/release-evidence-closeout-self-check.json": "d1106e387c86d0bd1af4d70a4cd5a309516a3b7ca57e4366d7bf0df64175aaf7"
+        "ops/reports/generated-artifact-index.json": "13c53271c3ce5fe8bf150a4685bbc9feaa48001cb83ca0b36afe67ff071163cc",
+        "ops/reports/artifact-freshness-report.json": "c5c0b7cbc6afbfdee4de24ccc2b3297398c2a306af2ec0d7bfc673712713260c",
+        "ops/reports/auto-improve-readiness.json": "0231e895705e3f178fe88199842c8ed34864ca4bdf01ec1f6d6dac8b8e5253d7",
+        "ops/reports/release-closeout-summary.json": "ed07c03af09b0b27cbded306d07488b10fb45db894a791e7fa2b7d07e23198d8",
+        "ops/reports/learning-readiness-signoff-revalidation.json": "0d7344e9772f0500c5a25959824ae7452c260d6a56a27a3c2a36c0f1e4f98d46",
+        "ops/reports/release-evidence-cohort.json": "d864bc0a935e7bfe10b4de7213ed2d660db7f138e1b9bc02a614c14f8f829315",
+        "ops/reports/release-evidence-dashboard.json": "afccedf1d75151efba21d4556b0be3e6d85896bbc71661359fb3210f3ba5fb74",
+        "ops/reports/release-lane-summary.json": "1f18c74759ce2c9fbc09c21f37e7d33e8fc7f1e96a7c6755d5fba95789de9f7d",
+        "ops/reports/release-clean-blocker-ledger.json": "853febd9cfa25c395bc585202b74e4cd9a4c297ffe6608d393ea18026ed97aed",
+        "ops/reports/release-closeout-batch-manifest.json": "50047dd7e52b0738c93765119f5e9990e82bbdd2f8f0161be6700f164397a42e",
+        "ops/reports/release-evidence-closeout-self-check.json": "ffa1a0cb16a8e1a8b4e44775e99463beb739c52451d785548f5a4964cf230f3c"
+      },
+      "digest_changed": true,
+      "changed_paths": [
+        "ops/reports/learning-readiness-signoff-revalidation.json",
+        "ops/reports/release-clean-blocker-ledger.json",
+        "ops/reports/release-closeout-batch-manifest.json",
+        "ops/reports/release-closeout-summary.json",
+        "ops/reports/release-evidence-closeout-self-check.json",
+        "ops/reports/release-evidence-cohort.json",
+        "ops/reports/release-evidence-dashboard.json",
+        "ops/reports/release-lane-summary.json"
+      ]
+    },
+    {
+      "iteration_index": 5,
+      "status": "pass",
+      "selected_targets": [
+        "generated-artifact-index-body",
+        "artifact-freshness",
+        "learning-readiness-signoff-revalidation",
+        "release-evidence-cohort",
+        "release-evidence-dashboard-report",
+        "release-lane-summary",
+        "release-clean-blocker-ledger",
+        "release-closeout-batch-manifest-promote",
+        "release-evidence-closeout-self-check"
+      ],
+      "command_results": [
+        {
+          "target": "generated-artifact-index-body",
+          "command": [
+            "make",
+            "generated-artifact-index-body",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 854,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.generated_artifact_index --vault \".\" --out \"tmp/generated-artifact-index.candidate.json\"\ntmp/generated-artifact-index.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/generated-artifact-index.candidate.json\" --out \"ops/reports/generated-artifact-index.json\" --schema ops/schemas/generated-artifact-index.schema.json --expected-artifact-kind generated_artifact_index_report --expected-producer ops.scripts.generated_artifact_index\nops/reports/generated-artifact-index.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "artifact-freshness",
+          "command": [
+            "make",
+            "artifact-freshness",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 9545,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.artifact_freshness_runtime --vault \".\" --out \"tmp/artifact-freshness-report.candidate.json\" --mtime-source \"embedded_currentness\" \ntmp/artifact-freshness-report.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/artifact-freshness-report.candidate.json\" --out \"ops/reports/artifact-freshness-report.json\" --schema ops/schemas/artifact-freshness-report.schema.json --expected-artifact-kind artifact_freshness_report --expected-producer ops.scripts.artifact_freshness_runtime\nops/reports/artifact-freshness-report.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "learning-readiness-signoff-revalidation",
+          "command": [
+            "make",
+            "learning-readiness-signoff-revalidation",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 360,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.learning_readiness_signoff_revalidation --vault \".\" --out \"ops/reports/learning-readiness-signoff-revalidation.json\" --window-days \"7\" --required-command \"make release-evidence-closeout PYTHON=.venv/bin/python\" --required-environment \".venv clean release-builder\"\nops/reports/learning-readiness-signoff-revalidation.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "release-evidence-cohort",
+          "command": [
+            "make",
+            "release-evidence-cohort",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 480,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_evidence_cohort --vault \".\" --out \"tmp/release-evidence-cohort.candidate.json\" --profile \"base\" --cohort-policy \"allowed_divergence_with_explicit_risk\" --provenance-mode \"embedded_currentness\"  \ntmp/release-evidence-cohort.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-evidence-cohort.candidate.json\" --out \"ops/reports/release-evidence-cohort.json\" --schema ops/schemas/release-evidence-cohort.schema.json --expected-artifact-kind release_evidence_cohort --expected-producer ops.scripts.release_evidence_cohort\nops/reports/release-evidence-cohort.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "release-evidence-dashboard-report",
+          "command": [
+            "make",
+            "release-evidence-dashboard-report",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 528,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_evidence_dashboard --vault \".\" --out \"tmp/release-evidence-dashboard.candidate.json\" --no-fail\ntmp/release-evidence-dashboard.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-evidence-dashboard.candidate.json\" --out \"ops/reports/release-evidence-dashboard.json\" --schema ops/schemas/release-evidence-dashboard.schema.json --expected-artifact-kind release_evidence_dashboard --expected-producer ops.scripts.release_evidence_dashboard\nops/reports/release-evidence-dashboard.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "release-lane-summary",
+          "command": [
+            "make",
+            "release-lane-summary",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 435,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_lane_summary --vault \".\" --out \"tmp/release-lane-summary.candidate.json\"\ntmp/release-lane-summary.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-lane-summary.candidate.json\" --out \"ops/reports/release-lane-summary.json\" --schema ops/schemas/release-lane-summary.schema.json --expected-artifact-kind release_lane_summary --expected-producer ops.scripts.release_lane_summary\nops/reports/release-lane-summary.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "release-clean-blocker-ledger",
+          "command": [
+            "make",
+            "release-clean-blocker-ledger",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 461,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_clean_blocker_ledger --vault \".\" --out \"tmp/release-clean-blocker-ledger.candidate.json\"\ntmp/release-clean-blocker-ledger.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-clean-blocker-ledger.candidate.json\" --out \"ops/reports/release-clean-blocker-ledger.json\" --schema ops/schemas/release-clean-blocker-ledger.schema.json --expected-artifact-kind release_clean_blocker_ledger --expected-producer ops.scripts.release_clean_blocker_ledger\nops/reports/release-clean-blocker-ledger.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "release-closeout-batch-manifest-promote",
+          "command": [
+            "make",
+            "release-closeout-batch-manifest-promote",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 877,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_closeout_batch_manifest --vault \".\" --out \"tmp/release-closeout-batch-manifest.candidate.json\"  \ntmp/release-closeout-batch-manifest.candidate.json\n.venv/bin/python -m ops.scripts.canonical_artifact_promote --vault \".\" --candidate \"tmp/release-closeout-batch-manifest.candidate.json\" --out \"ops/reports/release-closeout-batch-manifest.json\" --schema ops/schemas/release-closeout-batch-manifest.schema.json --expected-artifact-kind release_closeout_batch_manifest --expected-producer ops.scripts.release_closeout_batch_manifest\nops/reports/release-closeout-batch-manifest.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        },
+        {
+          "target": "release-evidence-closeout-self-check",
+          "command": [
+            "make",
+            "release-evidence-closeout-self-check",
+            "PYTHON=.venv/bin/python",
+            "VAULT=.",
+            "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=UTC"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "timeout_seconds": 600,
+          "termination_reason": "completed",
+          "duration_ms": 373,
+          "stdout_tail": "make[3]: Entering directory '.'\n.venv/bin/python -m ops.scripts.release_evidence_closeout_self_check --vault \".\" --batch-manifest \"ops/reports/release-closeout-batch-manifest.json\" --evidence-cohort \"ops/reports/release-evidence-cohort.json\" --out \"ops/reports/release-evidence-closeout-self-check.json\"\nops/reports/release-evidence-closeout-self-check.json\nmake[3]: Leaving directory '.'\n",
+          "stderr_tail": "",
+          "status": "pass"
+        }
+      ],
+      "digest_map": {
+        "ops/reports/generated-artifact-index.json": "13c53271c3ce5fe8bf150a4685bbc9feaa48001cb83ca0b36afe67ff071163cc",
+        "ops/reports/artifact-freshness-report.json": "c5c0b7cbc6afbfdee4de24ccc2b3297398c2a306af2ec0d7bfc673712713260c",
+        "ops/reports/auto-improve-readiness.json": "0231e895705e3f178fe88199842c8ed34864ca4bdf01ec1f6d6dac8b8e5253d7",
+        "ops/reports/release-closeout-summary.json": "ed07c03af09b0b27cbded306d07488b10fb45db894a791e7fa2b7d07e23198d8",
+        "ops/reports/learning-readiness-signoff-revalidation.json": "0d7344e9772f0500c5a25959824ae7452c260d6a56a27a3c2a36c0f1e4f98d46",
+        "ops/reports/release-evidence-cohort.json": "d864bc0a935e7bfe10b4de7213ed2d660db7f138e1b9bc02a614c14f8f829315",
+        "ops/reports/release-evidence-dashboard.json": "afccedf1d75151efba21d4556b0be3e6d85896bbc71661359fb3210f3ba5fb74",
+        "ops/reports/release-lane-summary.json": "1f18c74759ce2c9fbc09c21f37e7d33e8fc7f1e96a7c6755d5fba95789de9f7d",
+        "ops/reports/release-clean-blocker-ledger.json": "853febd9cfa25c395bc585202b74e4cd9a4c297ffe6608d393ea18026ed97aed",
+        "ops/reports/release-closeout-batch-manifest.json": "50047dd7e52b0738c93765119f5e9990e82bbdd2f8f0161be6700f164397a42e",
+        "ops/reports/release-evidence-closeout-self-check.json": "ffa1a0cb16a8e1a8b4e44775e99463beb739c52451d785548f5a4964cf230f3c"
       },
       "digest_changed": false,
       "changed_paths": []
     }
   ],
   "final_digest_map": {
-    "ops/reports/generated-artifact-index.json": "5b2a429bb02bb359978071ee9eef6fba52f018faed4dd58a88fc9baac531111e",
-    "ops/reports/artifact-freshness-report.json": "8ebe547e7d8156a38a8d19890efc38faf41ac70e1537f57e5b186a62a0aa47dd",
-    "ops/reports/release-closeout-summary.json": "44a45b6591a17a02b77fe5ce3f9f6b292b6e82b9163125a9436d119f476c2ad2",
-    "ops/reports/learning-readiness-signoff-revalidation.json": "d082dc702fb5c7539b8fff77e9fcc09fa024db6edf940bc0282e86c2c66345ad",
-    "ops/reports/release-evidence-dashboard.json": "431bf3cb7c3f67f445d150a9c4a02b4e4c46df566b44730ddcd8c3281b040417",
-    "ops/reports/release-lane-summary.json": "3d10ede3924a01c6c0c44a74916ce1aea08d6a2eade227f4111db51ddeab4df2",
-    "ops/reports/release-clean-blocker-ledger.json": "21607147e6fbbe69e7ebf8d32c13c4b0e82ff2757bda0b00c0005f29ac5f8854",
-    "ops/reports/release-closeout-batch-manifest.json": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
-    "ops/reports/release-evidence-closeout-self-check.json": "d1106e387c86d0bd1af4d70a4cd5a309516a3b7ca57e4366d7bf0df64175aaf7"
+    "ops/reports/generated-artifact-index.json": "13c53271c3ce5fe8bf150a4685bbc9feaa48001cb83ca0b36afe67ff071163cc",
+    "ops/reports/artifact-freshness-report.json": "c5c0b7cbc6afbfdee4de24ccc2b3297398c2a306af2ec0d7bfc673712713260c",
+    "ops/reports/auto-improve-readiness.json": "0231e895705e3f178fe88199842c8ed34864ca4bdf01ec1f6d6dac8b8e5253d7",
+    "ops/reports/release-closeout-summary.json": "ed07c03af09b0b27cbded306d07488b10fb45db894a791e7fa2b7d07e23198d8",
+    "ops/reports/learning-readiness-signoff-revalidation.json": "0d7344e9772f0500c5a25959824ae7452c260d6a56a27a3c2a36c0f1e4f98d46",
+    "ops/reports/release-evidence-cohort.json": "d864bc0a935e7bfe10b4de7213ed2d660db7f138e1b9bc02a614c14f8f829315",
+    "ops/reports/release-evidence-dashboard.json": "afccedf1d75151efba21d4556b0be3e6d85896bbc71661359fb3210f3ba5fb74",
+    "ops/reports/release-lane-summary.json": "1f18c74759ce2c9fbc09c21f37e7d33e8fc7f1e96a7c6755d5fba95789de9f7d",
+    "ops/reports/release-clean-blocker-ledger.json": "853febd9cfa25c395bc585202b74e4cd9a4c297ffe6608d393ea18026ed97aed",
+    "ops/reports/release-closeout-batch-manifest.json": "50047dd7e52b0738c93765119f5e9990e82bbdd2f8f0161be6700f164397a42e",
+    "ops/reports/release-evidence-closeout-self-check.json": "ffa1a0cb16a8e1a8b4e44775e99463beb739c52451d785548f5a4964cf230f3c"
   },
   "duration_summary": {
-    "iteration_count": 4,
-    "command_run_count": 33,
-    "total_duration_ms": 26435,
+    "iteration_count": 5,
+    "command_run_count": 55,
+    "total_duration_ms": 74160,
     "writer_costs": [
       {
         "name": "generated-artifact-index",
@@ -914,15 +1325,15 @@
         "produces": [
           "ops/reports/generated-artifact-index.json"
         ],
-        "run_count": 1,
-        "selected_iteration_count": 1,
-        "total_duration_ms": 891,
-        "average_duration_ms": 891,
-        "max_duration_ms": 891,
+        "run_count": 5,
+        "selected_iteration_count": 5,
+        "total_duration_ms": 4307,
+        "average_duration_ms": 861,
+        "max_duration_ms": 870,
         "first_iteration": 1,
-        "last_iteration": 1,
-        "skipped_iteration_count": 3,
-        "skipped_after_first_iteration_count": 3
+        "last_iteration": 5,
+        "skipped_iteration_count": 0,
+        "skipped_after_first_iteration_count": 0
       },
       {
         "name": "artifact-freshness",
@@ -930,13 +1341,29 @@
         "produces": [
           "ops/reports/artifact-freshness-report.json"
         ],
-        "run_count": 2,
-        "selected_iteration_count": 2,
-        "total_duration_ms": 7834,
-        "average_duration_ms": 3917,
-        "max_duration_ms": 3948,
+        "run_count": 5,
+        "selected_iteration_count": 5,
+        "total_duration_ms": 47555,
+        "average_duration_ms": 9511,
+        "max_duration_ms": 9572,
         "first_iteration": 1,
-        "last_iteration": 2,
+        "last_iteration": 5,
+        "skipped_iteration_count": 0,
+        "skipped_after_first_iteration_count": 0
+      },
+      {
+        "name": "auto-improve-readiness",
+        "target": "auto-improve-readiness-report-body",
+        "produces": [
+          "ops/reports/auto-improve-readiness.json"
+        ],
+        "run_count": 3,
+        "selected_iteration_count": 3,
+        "total_duration_ms": 1474,
+        "average_duration_ms": 491,
+        "max_duration_ms": 495,
+        "first_iteration": 1,
+        "last_iteration": 3,
         "skipped_iteration_count": 2,
         "skipped_after_first_iteration_count": 2
       },
@@ -946,13 +1373,13 @@
         "produces": [
           "ops/reports/release-closeout-summary.json"
         ],
-        "run_count": 3,
-        "selected_iteration_count": 3,
-        "total_duration_ms": 1665,
-        "average_duration_ms": 555,
-        "max_duration_ms": 561,
+        "run_count": 4,
+        "selected_iteration_count": 4,
+        "total_duration_ms": 2276,
+        "average_duration_ms": 569,
+        "max_duration_ms": 575,
         "first_iteration": 1,
-        "last_iteration": 3,
+        "last_iteration": 4,
         "skipped_iteration_count": 1,
         "skipped_after_first_iteration_count": 1
       },
@@ -962,13 +1389,29 @@
         "produces": [
           "ops/reports/learning-readiness-signoff-revalidation.json"
         ],
-        "run_count": 4,
-        "selected_iteration_count": 4,
-        "total_duration_ms": 1533,
-        "average_duration_ms": 383,
-        "max_duration_ms": 391,
+        "run_count": 5,
+        "selected_iteration_count": 5,
+        "total_duration_ms": 1830,
+        "average_duration_ms": 366,
+        "max_duration_ms": 372,
         "first_iteration": 1,
-        "last_iteration": 4,
+        "last_iteration": 5,
+        "skipped_iteration_count": 0,
+        "skipped_after_first_iteration_count": 0
+      },
+      {
+        "name": "release-evidence-cohort",
+        "target": "release-evidence-cohort",
+        "produces": [
+          "ops/reports/release-evidence-cohort.json"
+        ],
+        "run_count": 5,
+        "selected_iteration_count": 5,
+        "total_duration_ms": 2472,
+        "average_duration_ms": 494,
+        "max_duration_ms": 504,
+        "first_iteration": 1,
+        "last_iteration": 5,
         "skipped_iteration_count": 0,
         "skipped_after_first_iteration_count": 0
       },
@@ -978,13 +1421,13 @@
         "produces": [
           "ops/reports/release-evidence-dashboard.json"
         ],
-        "run_count": 4,
-        "selected_iteration_count": 4,
-        "total_duration_ms": 2162,
-        "average_duration_ms": 540,
-        "max_duration_ms": 546,
+        "run_count": 5,
+        "selected_iteration_count": 5,
+        "total_duration_ms": 2619,
+        "average_duration_ms": 524,
+        "max_duration_ms": 528,
         "first_iteration": 1,
-        "last_iteration": 4,
+        "last_iteration": 5,
         "skipped_iteration_count": 0,
         "skipped_after_first_iteration_count": 0
       },
@@ -994,13 +1437,13 @@
         "produces": [
           "ops/reports/release-lane-summary.json"
         ],
-        "run_count": 4,
-        "selected_iteration_count": 4,
-        "total_duration_ms": 1764,
-        "average_duration_ms": 441,
-        "max_duration_ms": 447,
+        "run_count": 5,
+        "selected_iteration_count": 5,
+        "total_duration_ms": 2178,
+        "average_duration_ms": 436,
+        "max_duration_ms": 441,
         "first_iteration": 1,
-        "last_iteration": 4,
+        "last_iteration": 5,
         "skipped_iteration_count": 0,
         "skipped_after_first_iteration_count": 0
       },
@@ -1010,13 +1453,13 @@
         "produces": [
           "ops/reports/release-clean-blocker-ledger.json"
         ],
-        "run_count": 4,
-        "selected_iteration_count": 4,
-        "total_duration_ms": 1888,
-        "average_duration_ms": 472,
-        "max_duration_ms": 477,
+        "run_count": 5,
+        "selected_iteration_count": 5,
+        "total_duration_ms": 2283,
+        "average_duration_ms": 457,
+        "max_duration_ms": 462,
         "first_iteration": 1,
-        "last_iteration": 4,
+        "last_iteration": 5,
         "skipped_iteration_count": 0,
         "skipped_after_first_iteration_count": 0
       },
@@ -1026,13 +1469,13 @@
         "produces": [
           "ops/reports/release-closeout-batch-manifest.json"
         ],
-        "run_count": 4,
-        "selected_iteration_count": 4,
-        "total_duration_ms": 5841,
-        "average_duration_ms": 1460,
-        "max_duration_ms": 1465,
+        "run_count": 5,
+        "selected_iteration_count": 5,
+        "total_duration_ms": 4140,
+        "average_duration_ms": 828,
+        "max_duration_ms": 877,
         "first_iteration": 1,
-        "last_iteration": 4,
+        "last_iteration": 5,
         "skipped_iteration_count": 0,
         "skipped_after_first_iteration_count": 0
       },
@@ -1042,13 +1485,13 @@
         "produces": [
           "ops/reports/release-evidence-closeout-self-check.json"
         ],
-        "run_count": 4,
-        "selected_iteration_count": 4,
-        "total_duration_ms": 1468,
-        "average_duration_ms": 367,
-        "max_duration_ms": 370,
+        "run_count": 5,
+        "selected_iteration_count": 5,
+        "total_duration_ms": 1748,
+        "average_duration_ms": 350,
+        "max_duration_ms": 373,
         "first_iteration": 1,
-        "last_iteration": 4,
+        "last_iteration": 5,
         "skipped_iteration_count": 0,
         "skipped_after_first_iteration_count": 0
       }
@@ -1064,18 +1507,18 @@
       "first_iteration_run_count": 3,
       "post_first_iteration_selected_count": 0,
       "post_first_iteration_run_count": 0,
-      "skipped_post_first_iteration_selection_count": 9,
-      "total_duration_ms": 1389,
+      "skipped_post_first_iteration_selection_count": 12,
+      "total_duration_ms": 1278,
       "skip_policy_effective": true,
       "summary": "expensive prerequisites were selected only in iteration 1"
     },
-    "summary": "9 writers ran 33 commands across 4 iterations; total_duration_ms=26435; expensive_prerequisite_skip_effective=True"
+    "summary": "11 writers ran 55 commands across 5 iterations; total_duration_ms=74160; expensive_prerequisite_skip_effective=True"
   },
   "convergence_summary": {
     "reason": "digest_map_converged",
     "changed_path_count": 0,
     "changed_paths": [],
-    "previous_iteration": 3,
-    "current_iteration": 4
+    "previous_iteration": 4,
+    "current_iteration": 5
   }
 }
