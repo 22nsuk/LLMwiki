@@ -2826,6 +2826,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "--max-proposals \"$(GOAL_MAX_PROPOSALS)\"",
                 "--max-consecutive-failures \"$(GOAL_MAX_CONSECUTIVE_FAILURES)\"",
                 "--goal-status-path \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
+                "--readiness-report \"$(GOAL_LOCAL_READINESS_OUT)\"",
                 "--worktree-guard-report \"$(GOAL_WORKTREE_GUARD_OUT)\"",
             ),
         )
