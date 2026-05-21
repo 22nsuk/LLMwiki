@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/artifact-relocation-audit.schema.json",
   "artifact_kind": "artifact_relocation_audit",
-  "generated_at": "2026-05-21T16:30:51Z",
+  "generated_at": "2026-05-21T17:26:03Z",
   "producer": "ops.scripts.artifact_relocation_audit",
   "source_command": "python -m ops.scripts.artifact_relocation_audit --vault . --out ops/operator/artifact-relocation-audit.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "142b6c3c4fa38faeb73df7c8f5d06ba988e940838e0e707e39b756ba30bc25b8",
+  "source_tree_fingerprint": "36e6bf4d91b46700f562b0bc17a5cf1b4c7287535d964f882a670cc94d0ec0f9",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "2bca24a2fb1f0a7c49b35b6df2aac4e0676e137502b48691d033ad62e3769173",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "1ffc3cd808f7848d5e07c33875f5b587f2c166346a1e07e6617ac6b127df422c",
     "candidate_spec": "b1200b347913aa0fd79d57373d7874415448511a26db8629fc55c649d860c9c2",
-    "dependency_paths": "63aa3ebc592d8d80bcfa0c8f3ccd1090939853db8d2e67a1b9489e52582f89b9",
+    "dependency_paths": "7721a8052fc75627a2d1064811ab0fce58b7be118d266f008d47fd1b8f9b5c0f",
     "dependency_roots": "be545ec75d1f4e02ad9ba08e5ac7019a5c4bf7d0baa3aa348395f93db732be97",
     "excluded_scan_paths": "fd1a01cc9a3c77d51ba8bec1c7117e110d4c742ac36077133fbb3b0b3d4b90bd",
     "excluded_scan_prefixes": "e957c42e176e00f268bb61a907a17e555ae0d84924fcabe7c04d0ab207727581"
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T16:30:51Z"
+    "checked_at": "2026-05-21T17:26:03Z"
   },
   "vault": ".",
   "policy": {
@@ -67,7 +67,7 @@
       "system/",
       "external-reports/"
     ],
-    "file_count": 654,
+    "file_count": 656,
     "files": [
       ".github/workflows/ci.yml",
       ".github/workflows/release.yml",
@@ -385,6 +385,7 @@
       "ops/scripts/mechanism/goal_runtime_clean_transient.py",
       "ops/scripts/mechanism/goal_runtime_closeout.py",
       "ops/scripts/mechanism/goal_runtime_fixed_point_check.py",
+      "ops/scripts/mechanism/goal_runtime_local_evidence_refresh.py",
       "ops/scripts/mechanism/goal_runtime_lock.py",
       "ops/scripts/mechanism/goal_runtime_maintenance.py",
       "ops/scripts/mechanism/goal_runtime_quarantine_preflight.py",
@@ -583,6 +584,7 @@
       "tests/test_goal_runtime_clean_transient.py",
       "tests/test_goal_runtime_closeout.py",
       "tests/test_goal_runtime_fixed_point_check.py",
+      "tests/test_goal_runtime_local_evidence_refresh.py",
       "tests/test_goal_runtime_lock.py",
       "tests/test_goal_runtime_quarantine_preflight.py",
       "tests/test_goal_runtime_run_admission.py",
@@ -732,7 +734,7 @@
     "blocking_candidate_count": 0,
     "old_reference_count": 0,
     "new_reference_count": 28,
-    "dependency_file_count": 654
+    "dependency_file_count": 656
   },
   "candidates": [
     {

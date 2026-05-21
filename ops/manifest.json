@@ -142,8 +142,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "d84c064d49f7bef47ffbb41a8f330e6bf2153c05a7fa1ae45ae6759107d2d4bf",
-      "size_bytes": 91070
+      "sha256": "152dc6284de3f4573d60ae6988f5bf4d8a5fd0d78c2d0d98c9642039c262278b",
+      "size_bytes": 91322
     },
     {
       "path": "SECURITY.md",
@@ -172,8 +172,8 @@
     },
     {
       "path": "mk/mechanism.mk",
-      "sha256": "55ce9dc31f18e6a3273bfec0b77a12a60446a1d0525ddbc579d26a52c04a3813",
-      "size_bytes": 28226
+      "sha256": "8acbe5af2a4dff16802b4aeaf6d3139f8e72680b6d9adcc79dcf7b445a5a8494",
+      "size_bytes": 28409
     },
     {
       "path": "mk/public.mk",
@@ -207,8 +207,8 @@
     },
     {
       "path": "ops/README.md",
-      "sha256": "92e638ad7ff097364fdeedca4c2dad00564d7b62d2bfd08bab5f5c6c1c9dcabd",
-      "size_bytes": 119491
+      "sha256": "78ba3dfc3372378d6972e82cf6d9b727fc34f3e4f661d5b3d37cbae6f168f790",
+      "size_bytes": 119743
     },
     {
       "path": "ops/__init__.py",
@@ -227,8 +227,8 @@
     },
     {
       "path": "ops/mypy-allowlist.txt",
-      "sha256": "5376984ac5c91e673af2294521f3820772e41ca5d754c6e2459ff6fa5579bd25",
-      "size_bytes": 12535
+      "sha256": "631d46b3b0faf8f8518ec9c02fc96d85089a69a5d94818a95e966dcaf1f7778a",
+      "size_bytes": 12596
     },
     {
       "path": "ops/mypy-strict-preview-allowlist.txt",
@@ -1062,8 +1062,8 @@
     },
     {
       "path": "ops/scripts/core/codex_goal_client.py",
-      "sha256": "9e308ff32dadfe398543af3897fc6b9f446262721e879fdf557ba57a12b54e1e",
-      "size_bytes": 29726
+      "sha256": "c3680ef0338c5c19e726b68096468c5820479e4e31fe3e3bdc534669d6a3ace5",
+      "size_bytes": 30296
     },
     {
       "path": "ops/scripts/core/command_runtime.py",
@@ -1692,8 +1692,13 @@
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_fixed_point_check.py",
-      "sha256": "d89e0fb25ab73a9dadaf0135b6210b0ccabcb08cb70999079d538ad33880c258",
-      "size_bytes": 16910
+      "sha256": "d512ecb66c0f7c8df766575da1491b65de29c80c040f4604d51dc0965e392f07",
+      "size_bytes": 17741
+    },
+    {
+      "path": "ops/scripts/mechanism/goal_runtime_local_evidence_refresh.py",
+      "sha256": "af552f2a976d1e36db687c8cf5305e7cc023261f0e9eb6277f0d4ccb86a1e251",
+      "size_bytes": 14000
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_lock.py",
@@ -5142,8 +5147,8 @@
     },
     {
       "path": "tests/test_codex_goal_client.py",
-      "sha256": "4e03722ed95b4626f3dee0397d00d71211279bd317c82433ba9cd6485e048e74",
-      "size_bytes": 20888
+      "sha256": "95aa02b3e0510121e9502dc22f55dafc95876ce0d9dc5bc8f830658398a67db4",
+      "size_bytes": 22062
     },
     {
       "path": "tests/test_codex_goal_contract.py",
@@ -5282,8 +5287,13 @@
     },
     {
       "path": "tests/test_goal_runtime_fixed_point_check.py",
-      "sha256": "48130b139abd18b5292e462e3a5817e4289734a08e70bf98c66a2c882022b674",
-      "size_bytes": 13715
+      "sha256": "952b34c92aca626a22edd0e152d2153a108e009c702c680e17ffb3b505f348dd",
+      "size_bytes": 16608
+    },
+    {
+      "path": "tests/test_goal_runtime_local_evidence_refresh.py",
+      "sha256": "5a9678ee39e3da6db1535277ef2ddcc6c888c138abc84df991b1a392d2526f85",
+      "size_bytes": 8704
     },
     {
       "path": "tests/test_goal_runtime_lock.py",
@@ -5372,8 +5382,8 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "38f0f32dafced4d53ed9b35492a8ee1b7f05b40055e2d23c0017b0d0c7677b2d",
-      "size_bytes": 178911
+      "sha256": "3f7e36f7790515983ecce6ae4fdadd3819e237bba0bfd0c4e5994257d0a4c68d",
+      "size_bytes": 179961
     },
     {
       "path": "tests/test_manifest_export_symlink_safety.py",

@@ -6,6 +6,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 import datetime as dt
 import json
+import os
 from pathlib import Path
 from typing import Any, Protocol, cast
 
@@ -97,6 +98,21 @@ def _merge_json_objects(base: Mapping[str, Any], patch: Mapping[str, Any]) -> di
 
 
 def _utc_now() -> str:
+    injected = os.environ.get("LLMWIKI_RUNTIME_UTC_NOW", "").strip()
+    if injected:
+        try:
+            parsed = dt.datetime.fromisoformat(injected.replace("Z", "+00:00"))
+        except ValueError:
+            parsed = None
+        if parsed is not None:
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=dt.timezone.utc)
+            return (
+                parsed.astimezone(dt.timezone.utc)
+                .replace(microsecond=0)
+                .isoformat()
+                .replace("+00:00", "Z")
+            )
     return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 

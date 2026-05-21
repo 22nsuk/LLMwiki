@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import pytest
 
@@ -176,6 +178,37 @@ class CodexGoalClientTests(unittest.TestCase):
         )
         self.assertEqual(envelope["artifact_kind"], "codex_goal_contract")
         self.assertEqual(envelope["producer"], "ops.scripts.codex_goal_client")
+
+    def test_cli_uses_injected_runtime_clock_for_artifact_envelope(self) -> None:
+        seed_minimal_vault(self.vault)
+
+        with patch.dict(os.environ, {"LLMWIKI_RUNTIME_UTC_NOW": "2026-05-21T16:00:00Z"}):
+            exit_code = main(
+                [
+                    "--vault",
+                    self.vault.as_posix(),
+                    "--out",
+                    "ops/reports/injected-clock-goal-contract.json",
+                    "--contract-id",
+                    "injected-clock-goal",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        raw = json.loads(
+            (self.vault / "ops" / "reports" / "injected-clock-goal-contract.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        envelope = json.loads(
+            next(
+                item["value"]
+                for item in raw["metadata"]["properties"]
+                if item["name"] == "urn:openai:artifact-envelope"
+            )
+        )
+        self.assertEqual(raw["created_at"], "2026-05-21T16:00:00Z")
+        self.assertEqual(envelope["generated_at"], "2026-05-21T16:00:00Z")
 
     def test_cli_preserves_existing_created_at_for_same_contract_refresh(self) -> None:
         contract_path = "ops/reports/stable-goal-contract.json"

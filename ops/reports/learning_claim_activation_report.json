@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-claim-activation-report.schema.json",
   "artifact_kind": "learning_claim_activation_report",
-  "generated_at": "2026-05-21T16:31:04Z",
+  "generated_at": "2026-05-21T17:26:16Z",
   "producer": "ops.scripts.learning_claim_activation_report",
   "source_command": "python -m ops.scripts.learning_claim_activation_report --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "142b6c3c4fa38faeb73df7c8f5d06ba988e940838e0e707e39b756ba30bc25b8",
+  "source_tree_fingerprint": "36e6bf4d91b46700f562b0bc17a5cf1b4c7287535d964f882a670cc94d0ec0f9",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "d366a06d6c9fbade9f99a3a702f7e88409d8e793328122ab6b196c4d7d670305",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e2f27ca894f489f00bc7349aa20591f1431c1b4a1f8cc5c9d019283145bd94c8",
-    "learning_claim_activation_inputs": "9deeba11e60289a4f4f028fa265f4457c36228de6eb56653773a7b44cda4be06"
+    "learning_claim_activation_inputs": "ff73c2d4a66151ae8eb1adccf896102d77cff72f54153e859551e2d0da5c9d29"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T16:31:04Z"
+    "checked_at": "2026-05-21T17:26:16Z"
   },
   "vault": ".",
   "policy": {
@@ -58,7 +58,7 @@
     "evidence_digest": {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "bc6225615c644c6c934d612c70187fe180e98d09ca498fbaaf4cd1fac1dd86ae",
+      "sha256": "df6cdbbc49bb5d9c1cedce756e6d937098f75d944973ba6b340f2b0b26a80f76",
       "status": "present"
     },
     "post_seal_linkage": {
@@ -80,7 +80,7 @@
       "evidence_digest": {
         "path": "ops/reports/learning-delta-scoreboard.json",
         "exists": true,
-        "sha256": "bc6225615c644c6c934d612c70187fe180e98d09ca498fbaaf4cd1fac1dd86ae",
+        "sha256": "df6cdbbc49bb5d9c1cedce756e6d937098f75d944973ba6b340f2b0b26a80f76",
         "status": "present"
       },
       "post_seal_linkage": {
@@ -115,13 +115,13 @@
     {
       "path": "ops/reports/auto-improve-readiness.json",
       "exists": true,
-      "sha256": "073471a7b7c1f06df3a1eaa8f8ae1ff2d49818e0303648ed6eb184faf786bd2e",
+      "sha256": "8944bfcb6cb8294f67c33045000f378e271b9f86a4cffbc44d9b923d3b1bb73a",
       "status": "present"
     },
     {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "bc6225615c644c6c934d612c70187fe180e98d09ca498fbaaf4cd1fac1dd86ae",
+      "sha256": "df6cdbbc49bb5d9c1cedce756e6d937098f75d944973ba6b340f2b0b26a80f76",
       "status": "present"
     },
     {
@@ -139,7 +139,7 @@
     {
       "path": "ops/reports/release-clean-blocker-ledger.json",
       "exists": true,
-      "sha256": "5b766249fe1b1afe50b9008f06ff950309d90897fb81c7e9082c49ee32774175",
+      "sha256": "8eb9f6d92a337deb73d30ffd6b55d3ee937c8f31353ef85212b7e14868f1fec2",
       "status": "present"
     },
     {
@@ -241,7 +241,7 @@
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "exists": true,
-            "sha256": "073471a7b7c1f06df3a1eaa8f8ae1ff2d49818e0303648ed6eb184faf786bd2e",
+            "sha256": "8944bfcb6cb8294f67c33045000f378e271b9f86a4cffbc44d9b923d3b1bb73a",
             "status": "present"
           }
         ]
@@ -261,7 +261,7 @@
           {
             "path": "ops/reports/learning-delta-scoreboard.json",
             "exists": true,
-            "sha256": "bc6225615c644c6c934d612c70187fe180e98d09ca498fbaaf4cd1fac1dd86ae",
+            "sha256": "df6cdbbc49bb5d9c1cedce756e6d937098f75d944973ba6b340f2b0b26a80f76",
             "status": "present"
           }
         ]

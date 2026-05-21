@@ -54,6 +54,7 @@ ops/scripts/mechanism/goal_runtime_backoff.py
 ops/scripts/mechanism/goal_runtime_clean_transient.py
 ops/scripts/mechanism/goal_runtime_closeout.py
 ops/scripts/mechanism/goal_runtime_fixed_point_check.py
+ops/scripts/mechanism/goal_runtime_local_evidence_refresh.py
 ops/scripts/mechanism/goal_runtime_lock.py
 ops/scripts/mechanism/goal_runtime_maintenance.py
 ops/scripts/mechanism/goal_runtime_quarantine_preflight.py

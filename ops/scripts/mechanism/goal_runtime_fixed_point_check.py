@@ -280,6 +280,18 @@ def _backlog_open_active_blocker_ids(backlog: dict[str, Any]) -> list[str]:
     )
 
 
+def _backlog_resolved_active_blocker_ids(backlog: dict[str, Any]) -> list[str]:
+    return sorted(
+        blocker_id
+        for item in _dict_list(backlog.get("items"))
+        if str(item.get("status", "")).strip() in {"closed", "deferred"}
+        if str(item.get("item_type", "")).strip() == "active_blocker"
+        if str(item.get("severity", "")).strip() == "blocks_promotion"
+        for blocker_id in [str(item.get("blocker_id", "")).strip()]
+        if blocker_id
+    )
+
+
 def _readiness_remediation_signal_ids(readiness: dict[str, Any]) -> list[str]:
     for blocker in _dict_list(readiness.get("promotion_blockers")):
         if str(blocker.get("id", "")).strip() == "promotion_blocked_by_remediation_backlog_open":
@@ -297,6 +309,12 @@ def _blocker_alignment_checks(
     backlog = reports["backlog"]
     status = reports["status"]
     active_backlog_ids = _backlog_open_active_blocker_ids(backlog)
+    resolved_backlog_ids = set(_backlog_resolved_active_blocker_ids(backlog))
+    unresolved_session_blocker_ids = [
+        blocker_id
+        for blocker_id in _session_blocker_ids(session)
+        if blocker_id not in resolved_backlog_ids
+    ]
     return [
         _check(
             "session_readiness_blockers",
@@ -306,11 +324,12 @@ def _blocker_alignment_checks(
         ),
         _check(
             "backlog_session_blockers",
-            expected=_session_blocker_ids(session),
+            expected=unresolved_session_blocker_ids,
             observed=active_backlog_ids,
             reason=(
-                "remediation backlog open active promotion blocker ids must match "
-                "session synopsis recent blockers"
+                "remediation backlog open active promotion blocker ids must match unresolved "
+                "session synopsis recent blockers; closed/deferred active blockers are treated "
+                "as explicit resolutions"
             ),
         ),
         _check(

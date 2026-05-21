@@ -303,6 +303,78 @@ class GoalRuntimeFixedPointCheckTests(unittest.TestCase):
         )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_closed_active_backlog_items_resolve_session_blockers(self) -> None:
+        self._write_json(
+            "ops/reports/auto-improve-readiness.json",
+            {
+                "promotion_blockers": [
+                    {
+                        "id": "execution_blocked_by_no_runnable_proposal",
+                        "status": "open",
+                    },
+                    {
+                        "id": "promotion_blocked_by_remediation_backlog_open",
+                        "status": "open",
+                        "signal_ids": ["execution_blocked_by_no_runnable_proposal"],
+                    },
+                ],
+            },
+        )
+        self._write_json(
+            "ops/reports/session-synopsis.json",
+            {
+                "active_goal": {
+                    "contract_id": "auto-improve-goal",
+                    "run_id": "auto-improve-trial",
+                    "run_status": "blocked",
+                    "runtime_mode": "self_improvement_loop",
+                    "can_promote_result": False,
+                },
+                "recent_blockers": [
+                    {
+                        "id": "execution_blocked_by_no_runnable_proposal",
+                        "source": "auto_improve_readiness.promotion_blockers",
+                    },
+                    {
+                        "id": "goal_status_self_improvement_loop_certificate_incomplete",
+                        "source": "goal_run_status.blockers",
+                    },
+                ],
+            },
+        )
+        self._write_json(
+            "ops/reports/remediation-backlog.json",
+            {
+                "items": [
+                    {
+                        "blocker_id": "execution_blocked_by_no_runnable_proposal",
+                        "item_type": "active_blocker",
+                        "severity": "blocks_promotion",
+                        "status": "open",
+                    },
+                    {
+                        "blocker_id": "goal_status_self_improvement_loop_certificate_incomplete",
+                        "item_type": "active_blocker",
+                        "severity": "blocks_promotion",
+                        "status": "closed",
+                    },
+                ]
+            },
+        )
+
+        report = build_report(
+            GoalRuntimeFixedPointCheckRequest(
+                vault=self.vault,
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(report["status"], "pass")
+        check = next(item for item in report["checks"] if item["id"] == "backlog_session_blockers")
+        self.assertEqual(check["expected"], ["execution_blocked_by_no_runnable_proposal"])
+        self.assertEqual(check["observed"], ["execution_blocked_by_no_runnable_proposal"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_build_report_can_check_run_local_goal_runtime_surfaces(self) -> None:
         for rel_path in (
             "codex-goal-contract.json",

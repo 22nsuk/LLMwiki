@@ -2927,6 +2927,12 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "tmp/goal-runtime-fixed-point-check.json",
             ),
             (
+                "GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_OUT",
+                "tmp/goal-runtime-local-evidence-refresh.json",
+            ),
+            ("GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_MAX_ITERATIONS", "4"),
+            ("GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_TIMEOUT_SECONDS", "300"),
+            (
                 "GOAL_RUNTIME_RUN_ADMISSION_OUT",
                 "tmp/goal-runtime-run-admission.json",
             ),
@@ -3486,13 +3492,21 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-local-evidence-refresh",
             (
-                "$(MAKE) goal-runtime-refresh",
-                "$(MAKE) goal-runtime-local-readiness",
-                "$(MAKE) goal-runtime-local-session-synopsis",
-                "$(MAKE) goal-runtime-local-negative-lessons",
-                "$(MAKE) goal-runtime-local-remediation-backlog",
+                "ops.scripts.goal_runtime_local_evidence_refresh",
+                "--out \"$(GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_OUT)\"",
+                "--max-iterations \"$(GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_MAX_ITERATIONS)\"",
+                "--timeout-seconds \"$(GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_TIMEOUT_SECONDS)\"",
+                "--codex-goal-contract \"$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)\"",
+                "--goal-run-status \"$(GOAL_ACTIVE_RUN_STATUS_OUT)\"",
+                "--auto-improve-readiness \"$(GOAL_LOCAL_READINESS_OUT)\"",
+                "--session-synopsis \"$(GOAL_LOCAL_SESSION_SYNOPSIS_OUT)\"",
+                "--negative-lessons \"$(GOAL_LOCAL_NEGATIVE_LESSONS_OUT)\"",
+                "--remediation-backlog \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\"",
             ),
         )
+        local_refresh_block = _target_block(text, "goal-runtime-local-evidence-refresh")
+        self.assertNotIn("$(MAKE) goal-runtime-refresh", local_refresh_block)
+        self.assertNotIn("$(MAKE) goal-runtime-local-readiness", local_refresh_block)
         _assert_recipe_contains_tokens(
             self,
             text,
