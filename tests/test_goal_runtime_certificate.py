@@ -426,7 +426,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         self.assertTrue(report["diagnosis"]["certifiable"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
-    def test_existing_verified_certificate_is_not_preserved_after_evidence_cleanup(self) -> None:
+    def test_existing_verified_certificate_is_preserved_after_transient_evidence_cleanup(self) -> None:
         self._seed_goal_contract()
         self._seed_full_gate_reports()
         self._write_completed_goal_status(completed_at="2026-05-17T11:30:00Z")
@@ -465,9 +465,10 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
             )
         )
 
-        self.assertEqual(report["status"], "attention")
-        self.assertEqual(report["run"]["run_id"], "new-default-trial")
-        self.assertIn("can_promote_result is not clean", " ".join(report["blockers"]))
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["run"]["run_id"], "20260517-loop")
+        self.assertEqual(report["certificate"]["verification_status"], "eligible")
+        self.assertEqual(report["blockers"], [])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_runtime_duration_is_a_maximum_budget_not_a_minimum(self) -> None:

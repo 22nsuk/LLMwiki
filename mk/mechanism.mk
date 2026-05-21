@@ -5,6 +5,7 @@ MECHANISM_REVIEW_OUT ?= ops/reports/mechanism-review-candidates.json
 MUTATION_PROPOSAL_OUT ?= ops/reports/mutation-proposals.json
 AUTO_IMPROVE_READINESS_OUT ?= ops/reports/auto-improve-readiness.json
 AUTO_IMPROVE_READINESS_CANDIDATE_OUT ?= tmp/auto-improve-readiness.candidate.json
+AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH ?= 0
 CODEX_GOAL_CONTRACT_OUT ?= ops/reports/codex-goal-contract.json
 CODEX_GOAL_CONTRACT_ID ?= auto-improve-goal
 CODEX_GOAL_PROMPT_OUT ?= ops/reports/codex-goal-prompt.json
@@ -77,9 +78,14 @@ auto-improve-readiness: auto-improve-readiness-worktree-guard
 auto-improve-readiness-report:
 	$(MAKE) auto-improve-readiness-worktree-guard
 	$(MAKE) refresh-generated-core
-	$(MAKE) auto-improve-readiness-report-body
+	$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=0
+	$(MAKE) remediation-backlog
+	$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=0
+	$(MAKE) remediation-backlog
+	$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=0
 
-auto-improve-readiness-report-body: auto-improve-readiness-worktree-guard
+auto-improve-readiness-report-body:
+	@if [ "$(AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH)" = "1" ]; then $(MAKE) auto-improve-readiness-worktree-guard; fi
 	@status=0; $(PYTHON) -m ops.scripts.auto_improve_readiness --vault "$(VAULT)" --out "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" --out "$(AUTO_IMPROVE_READINESS_OUT)" --schema ops/schemas/auto-improve-readiness-report.schema.json --expected-artifact-kind auto_improve_readiness_report --expected-producer ops.scripts.auto_improve_readiness_runtime; exit 0
 
 auto-improve-readiness-worktree-guard:

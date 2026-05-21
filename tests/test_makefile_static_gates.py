@@ -1443,6 +1443,8 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("release-converge-all-surfaces", _target_block(text, ".PHONY"))
         self.assertIn("release-ready-snapshot", _target_block(text, ".PHONY"))
         self.assertIn("release-ready-commit", _target_block(text, ".PHONY"))
+        self.assertIn("release-ready-post-commit-converge", _target_block(text, ".PHONY"))
+        self.assertIn("release-ready-post-commit", _target_block(text, ".PHONY"))
         self.assertIn("release-ready", _target_block(text, ".PHONY"))
         self.assertNotIn("release-converge-artifact-commit", _target_block(text, ".PHONY"))
         self.assertIn("release-check-preflight-converge", _target_block(text, ".PHONY"))
@@ -1465,28 +1467,46 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("$(MAKE) public-check-all", converge_all_block)
         self.assertIn("$(MAKE) release-converge-post", converge_all_block)
         self.assertIn("RELEASE_READY_COMMIT_MESSAGE ?= release: converge all surfaces", text)
+        self.assertIn(
+            "RELEASE_READY_POST_COMMIT_MESSAGE ?= release: stabilize readiness surfaces",
+            text,
+        )
         self.assertIn("RELEASE_READY_PRE_STATUS_OUT ?= tmp/release-ready-pre-status.json", text)
         self.assertIn("RELEASE_READY_COMMIT_OUT ?= tmp/release-ready-commit.json", text)
+        self.assertIn("RELEASE_READY_POST_COMMIT_OUT ?= tmp/release-ready-post-commit.json", text)
         self.assertIn("ops.scripts.release_ready_commit", ready_snapshot_block)
         self.assertIn("--snapshot-only", ready_snapshot_block)
         self.assertIn("ops.scripts.release_ready_commit", ready_commit_block)
         self.assertIn('--pre-status "$(RELEASE_READY_PRE_STATUS_OUT)"', ready_commit_block)
         self.assertIn('--message "$(RELEASE_READY_COMMIT_MESSAGE)"', ready_commit_block)
+        post_commit_block = _target_block(text, "release-ready-post-commit")
+        post_commit_converge_block = _target_block(text, "release-ready-post-commit-converge")
+        self.assertIn("ops.scripts.release_ready_commit", post_commit_block)
+        self.assertIn('--out "$(RELEASE_READY_POST_COMMIT_OUT)"', post_commit_block)
+        self.assertIn('--message "$(RELEASE_READY_POST_COMMIT_MESSAGE)"', post_commit_block)
+        self.assertIn("$(MAKE) auto-improve-readiness-worktree-guard", post_commit_converge_block)
+        self.assertIn(
+            "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=0",
+            post_commit_converge_block,
+        )
+        self.assertIn("$(MAKE) remediation-backlog", post_commit_converge_block)
+        self.assertIn("$(MAKE) generated-artifact-converge", post_commit_converge_block)
         self.assertIn("$(MAKE) release-ready-snapshot", ready_block)
         self.assertIn("$(MAKE) release-converge-all-surfaces", ready_block)
         self.assertIn("$(MAKE) release-ready-commit", ready_block)
+        self.assertIn("$(MAKE) release-ready-post-commit-converge", ready_block)
+        self.assertIn("$(MAKE) release-ready-post-commit", ready_block)
         self.assertIn("$(MAKE) release-check-all-surfaces", ready_block)
-        self.assertLess(
-            ready_block.index("$(MAKE) release-ready-snapshot"),
-            ready_block.index("$(MAKE) release-converge-all-surfaces"),
-        )
-        self.assertLess(
-            ready_block.index("$(MAKE) release-converge-all-surfaces"),
-            ready_block.index("$(MAKE) release-ready-commit"),
-        )
-        self.assertLess(
-            ready_block.index("$(MAKE) release-ready-commit"),
-            ready_block.index("$(MAKE) release-check-all-surfaces"),
+        self.assertEqual(
+            _recipe_lines(text, "release-ready"),
+            [
+                "$(MAKE) release-ready-snapshot",
+                "$(MAKE) release-converge-all-surfaces",
+                "$(MAKE) release-ready-commit",
+                "$(MAKE) release-ready-post-commit-converge",
+                "$(MAKE) release-ready-post-commit",
+                "$(MAKE) release-check-all-surfaces",
+            ],
         )
         self.assertIn("$(MAKE) release-worktree-clean-check", core_block)
         self.assertIn("$(MAKE) test-report-contract", core_block)
@@ -2514,8 +2534,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             (
                 "ops.scripts.test_execution_summary",
                 "ops.scripts.canonical_artifact_promote",
-                "$(MAKE) refresh-generated-core",
-                "$(MAKE) auto-improve-readiness-report-body",
+                "$(MAKE) auto-improve-readiness-report",
                 "$(MAKE) release-smoke-full-reuse",
                 "$(MAKE) generated-artifact-converge",
             ),
@@ -2531,8 +2550,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         no_smoke_refresh_block = _target_block(
             text, "test-execution-summary-report-contract-refresh-no-smoke"
         )
-        self.assertIn("$(MAKE) refresh-generated-core", no_smoke_refresh_block)
-        self.assertIn("$(MAKE) auto-improve-readiness-report-body", no_smoke_refresh_block)
+        self.assertIn("$(MAKE) auto-improve-readiness-report", no_smoke_refresh_block)
         self.assertEqual(no_smoke_refresh_block.count("$(MAKE) generated-artifact-converge"), 2)
         self.assertNotIn("$(MAKE) release-smoke-full-reuse", no_smoke_refresh_block)
         self.assertNotIn("$(MAKE) generated-artifact-index", no_smoke_refresh_block)
@@ -2764,6 +2782,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "AUTO_IMPROVE_READINESS_CANDIDATE_OUT ?= tmp/auto-improve-readiness.candidate.json",
             text,
         )
+        self.assertIn("AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH ?= 0", text)
         self.assertIn(
             "auto-improve-readiness: auto-improve-readiness-worktree-guard",
             text,
@@ -2787,12 +2806,14 @@ class MakefileStaticGateTests(unittest.TestCase):
             (
                 "$(MAKE) auto-improve-readiness-worktree-guard",
                 "$(MAKE) refresh-generated-core",
-                "$(MAKE) auto-improve-readiness-report-body",
+                "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=0",
+                "$(MAKE) remediation-backlog",
             ),
         )
+        self.assertIn("auto-improve-readiness-report-body:", text)
         self.assertIn(
-            "auto-improve-readiness-report-body: auto-improve-readiness-worktree-guard",
-            text,
+            'if [ "$(AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH)" = "1" ]; then $(MAKE) auto-improve-readiness-worktree-guard; fi',
+            _target_block(text, "auto-improve-readiness-report-body"),
         )
         _assert_recipe_contains_tokens(
             self,

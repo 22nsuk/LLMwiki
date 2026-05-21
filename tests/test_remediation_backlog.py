@@ -271,7 +271,7 @@ class RemediationBacklogTests(unittest.TestCase):
             self.assertEqual(report["summary"]["open_item_count"], 0)
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
-    def test_verified_certificate_closes_incomplete_certificate_item_only_with_live_evidence(
+    def test_verified_certificate_closes_incomplete_certificate_item_from_canonical_report(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -316,25 +316,14 @@ class RemediationBacklogTests(unittest.TestCase):
             }
             write_json(vault, "ops/reports/goal-runtime-certificate.json", certificate)
 
-            stale_report = build_report(vault, context=fixed_context())
-            stale_item = stale_report["items"][0]
-            self.assertEqual(stale_item["status"], "open")
-
-            for rel_path in [
-                "runs/goal-live/state/codex-goal-contract.json",
-                "runs/goal-live/state/goal-run-status.json",
-                "runs/goal-live/state/audit-log.jsonl",
-                "ops/reports/auto-improve-sessions/live.json",
-                "ops/reports/auto-improve-readiness.json",
-            ]:
-                (vault / rel_path).parent.mkdir(parents=True, exist_ok=True)
-                (vault / rel_path).write_text("{}\n", encoding="utf-8")
-
-            live_report = build_report(vault, context=fixed_context())
-            live_item = live_report["items"][0]
-            self.assertEqual(live_item["status"], "closed")
-            self.assertEqual(live_report["status"], "pass")
-            self.assertEqual(validate_with_schema(live_report, load_schema(SCHEMA_PATH)), [])
+            report = build_report(vault, context=fixed_context())
+            item = report["items"][0]
+            self.assertEqual(item["status"], "closed")
+            self.assertEqual(
+                item["next_action"], "Verified goal-runtime-certificate evidence is present."
+            )
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_build_report_can_read_run_local_session_and_negative_lessons(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

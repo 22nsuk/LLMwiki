@@ -142,8 +142,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "40920e8c54ab40603e629710cb0f9ea588c71c01c82600c2e378ed5993daafcf",
-      "size_bytes": 89490
+      "sha256": "f462952e68a2391ed766d2077c0a0e7a9a4b7512ad18e2e15f68855907069528",
+      "size_bytes": 89619
     },
     {
       "path": "SECURITY.md",
@@ -172,8 +172,8 @@
     },
     {
       "path": "mk/mechanism.mk",
-      "sha256": "3dc1a83a1577785b4fc4eafd95b68e80761ade509112877964d63a8f27a2266b",
-      "size_bytes": 27682
+      "sha256": "790565da57c21ea6275a82f0226570b0d55e46578c67a174d54b22155a5f41eb",
+      "size_bytes": 28107
     },
     {
       "path": "mk/public.mk",
@@ -187,8 +187,8 @@
     },
     {
       "path": "mk/release.mk",
-      "sha256": "ed5087022e1cfcfe548598ad748a696371cc517d934d2e1b01c44417f021736f",
-      "size_bytes": 47635
+      "sha256": "836288e91120809b8c8b4d1605d0b02d931bcaf158708d2d6c46dcdb4c1a2753",
+      "size_bytes": 48483
     },
     {
       "path": "mk/static.mk",
@@ -202,13 +202,13 @@
     },
     {
       "path": "mk/test.mk",
-      "sha256": "ebde88b247f2ed5706beadf9af455497eaab2fd9be4e3601ae2a096ced61f0f8",
-      "size_bytes": 21026
+      "sha256": "d56e6a3c62a798235e510acd690acb0c713321860b8c9d1ccc62e3ec2393e15e",
+      "size_bytes": 20952
     },
     {
       "path": "ops/README.md",
-      "sha256": "54dc0aba5181d4a5a2a775f3e426f7f0233ccbf9425c1aaf6455dd37d68ac924",
-      "size_bytes": 117936
+      "sha256": "90ed9e901a89108ac25a8e040ca16e1752fda883dd795fcd6118461a283226b8",
+      "size_bytes": 118101
     },
     {
       "path": "ops/__init__.py",
@@ -1497,8 +1497,8 @@
     },
     {
       "path": "ops/scripts/learning/remediation_backlog.py",
-      "sha256": "5f87368716a2f78fc14ff45b6225e8701e99ae33dbbc7e740c05fab6e7286fa8",
-      "size_bytes": 19887
+      "sha256": "28eff6eb1843348914af3e8c894847bbc9de111c796c30c766d9b11267cc985a",
+      "size_bytes": 18315
     },
     {
       "path": "ops/scripts/learning/self_improvement_negative_lessons.py",
@@ -1677,8 +1677,8 @@
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_certificate_report.py",
-      "sha256": "e7bee4e1dc6ab3f3cedd9e1cbebaf75e8e982bc1cff1e6907f32b47900210074",
-      "size_bytes": 47381
+      "sha256": "c66a9ce29938b216fa9b1d6450d3d1754ba646b44e0c112cf503449e020312f9",
+      "size_bytes": 45675
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_clean_transient.py",
@@ -5267,8 +5267,8 @@
     },
     {
       "path": "tests/test_goal_runtime_certificate.py",
-      "sha256": "94ce0b340c3770aa357d157e7d207877931ae08dff2d3206ffa11de6a50d03a4",
-      "size_bytes": 21325
+      "sha256": "ce4c4fdf30ad40ee1944e020d10a7724f8e4c07a3c0032960f239ec8744db11a",
+      "size_bytes": 21367
     },
     {
       "path": "tests/test_goal_runtime_clean_transient.py",
@@ -5372,8 +5372,8 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "f4f265e6c4ed6c5a95ebd9ecc0209b0c6b037675d080e8035c169f475a2e069b",
-      "size_bytes": 175700
+      "sha256": "9e64317e1c049bba3a2dd0edc78ebcbaf8edf502d1adf750374b97b14739d4be",
+      "size_bytes": 177274
     },
     {
       "path": "tests/test_manifest_export_symlink_safety.py",
@@ -5697,8 +5697,8 @@
     },
     {
       "path": "tests/test_remediation_backlog.py",
-      "sha256": "2fe2a2f3bf1aa271057bc8ce19f82636a1bea32e997a200e089abb3b86d3e8d5",
-      "size_bytes": 21439
+      "sha256": "4a2f2bfca88d81f8068163935e84411fd2a0c9c7f64e212dadc8cb211a183740",
+      "size_bytes": 20864
     },
     {
       "path": "tests/test_report_generation_smoke.py",

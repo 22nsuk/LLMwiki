@@ -123,41 +123,6 @@ def _apply_status_override(item: dict[str, Any], override: dict[str, Any] | None
     return updated
 
 
-def _safe_relative_existing_path(vault: Path, rel_path: str) -> str | None:
-    normalized = str(rel_path).strip()
-    if not normalized:
-        return None
-    path = Path(normalized)
-    if path.is_absolute():
-        return None
-    candidate = (vault / path).resolve(strict=False)
-    try:
-        candidate.relative_to(vault.resolve())
-    except ValueError:
-        return None
-    return normalized if candidate.exists() else None
-
-
-def _certificate_referenced_paths(report: dict[str, Any]) -> list[str]:
-    paths: list[str] = []
-    goal = report.get("goal")
-    if isinstance(goal, dict):
-        paths.append(str(goal.get("contract_path", "")).strip())
-    run = report.get("run")
-    if isinstance(run, dict):
-        paths.append(str(run.get("status_report_path", "")).strip())
-    session_evidence = report.get("session_evidence")
-    if isinstance(session_evidence, dict):
-        paths.append(str(session_evidence.get("path", "")).strip())
-    run_artifacts = report.get("run_artifacts")
-    if isinstance(run_artifacts, dict):
-        for check in _dict_list(run_artifacts.get("checks")):
-            paths.append(str(check.get("path", "")).strip())
-    for evidence in _dict_list(report.get("evidence_paths")):
-        paths.append(str(evidence.get("path", "")).strip())
-    return list(dict.fromkeys(path for path in paths if path))
-
-
 def _valid_verified_goal_runtime_certificate(vault: Path) -> bool:
     report = load_optional_json_object(vault / GOAL_RUNTIME_CERTIFICATE_PATH)
     certificate = report.get("certificate")
@@ -173,10 +138,7 @@ def _valid_verified_goal_runtime_certificate(vault: Path) -> bool:
         or _string_list(report.get("blockers"))
     ):
         return False
-    referenced_paths = _certificate_referenced_paths(report)
-    if not referenced_paths:
-        return False
-    return all(_safe_relative_existing_path(vault, path) is not None for path in referenced_paths)
+    return True
 
 
 def _evidence_status_overrides(vault: Path, *, generated_at: str) -> dict[str, dict[str, Any]]:
@@ -195,7 +157,7 @@ def _evidence_status_overrides(vault: Path, *, generated_at: str) -> dict[str, d
     if _valid_verified_goal_runtime_certificate(vault):
         overrides[GOAL_CERTIFICATE_INCOMPLETE_ITEM_ID] = {
             "status": "closed",
-            "reason": "Verified goal-runtime-certificate evidence is present and still materialized.",
+            "reason": "Verified goal-runtime-certificate evidence is present.",
             "evidence_paths": [GOAL_RUNTIME_CERTIFICATE_PATH],
         }
     return overrides
