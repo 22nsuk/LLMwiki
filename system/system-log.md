@@ -6236,3 +6236,25 @@ Updated the raw-registry summary and corpus shard Source trace entries to the cu
 ### Consequence
 - Raw-registry Source trace now resolves to live vault files instead of relying on import compatibility aliases.
 - The next self-improvement evidence pass should treat this as a provenance-maintenance repair, not as a mutation to raw source content.
+
+---
+
+## [2026-05-21 10:20 KST] improve | Carry precise next-run repair evidence
+
+### Summary
+The rerun6 self-improvement loop exposed two handoff defects: promotion-gate DISCARD outcomes were carried forward only as coarse `discarded` taxonomy, and reviewer findings could identify required adjacent files without those files entering the next repair proposal scope.
+
+Updated iteration telemetry and next-run decision construction so DISCARD promotion failures carry the concrete promotion blocker, such as `changed_files_manifest_scope`, when the decision record provides one. Updated mutation proposal generation to add bounded `ops/` and `tests/` paths from prior changed-files manifests and reviewer diagnostics into the next repair scope.
+
+### Artifacts
+- `ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py`
+- `ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py`
+- `ops/scripts/mechanism/mutation_proposal_runtime.py`
+- `tests/test_auto_improve_iteration_runtime.py`
+- `tests/test_auto_improve_next_run_decision_runtime.py`
+- `tests/test_mutation_proposal.py`
+- `system/system-log.md`
+
+### Consequence
+- Future self-improvement runs should repair the specific failed gate or reviewer finding instead of replaying a generic `discarded` or under-scoped `review_blocked` proposal.
+- Interrupted pre-candidate rerun5/rerun6 attempts are quarantined as run-local failure evidence rather than active mechanism-review history.

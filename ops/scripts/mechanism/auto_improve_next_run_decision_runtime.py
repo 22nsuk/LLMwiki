@@ -5,6 +5,11 @@ import re
 from typing import Any
 
 from ops.scripts.experiment_telemetry_runtime import run_rel
+from ops.scripts.promotion_decision_registry_runtime import (
+    PromotionDecisionRegistryError,
+    decision_record_from_payload,
+    decision_record_from_report,
+)
 from ops.scripts.runtime_context import RuntimeContext
 
 NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE = "next_run_failure_repair"
@@ -33,6 +38,37 @@ ACTIONABLE_FAILURE_OUTCOMES = frozenset(
         "scope_blocked",
         "validation_blocked",
     }
+)
+ACTIONABLE_PROMOTION_CHECK_FAILURES = frozenset(
+    {
+        "primary_target_scope",
+        "primary_target_exists",
+        "report_consistency",
+        "run_ledger_target_coverage",
+        "mechanism_report_primary_targets",
+        "changed_files_manifest_declared_targets",
+        "changed_files_manifest_scope",
+        "changed_files_manifest_allowed_apply_roots",
+        "changed_files_manifest_nonempty",
+        "changed_files_manifest_primary_targets_touched",
+        "behavior_delta_presence",
+        "candidate_lint_pass",
+        "candidate_eval_pass",
+        "eval_score_improves",
+        "lint_non_regression",
+        "lint_improves",
+        "structural_complexity_non_regression",
+        "structural_complexity_improves",
+        "tests_non_regression",
+        "tests_increase",
+        "complexity_profile_score",
+        "risk_flags",
+        "equal_score_secondary_eligibility",
+    }
+)
+GENERIC_PROMOTION_FAILURE_OUTCOMES = frozenset({"discarded"})
+LEGACY_PROMOTION_REASON_CODES = frozenset(
+    {"", "legacy_promotion_report", "unknown", "none"}
 )
 
 
@@ -113,6 +149,8 @@ def blocking_role_for_outcome(outcome: str, roles: list[str]) -> str:
         return "scope"
     if outcome in {"discarded", "hold"}:
         return "promotion_gate"
+    if outcome in ACTIONABLE_PROMOTION_CHECK_FAILURES:
+        return "promotion_gate"
     return ""
 
 
@@ -135,7 +173,10 @@ def _decision_shape(
             CLOSED_DECISION_STATUS,
             "Failure has no bounded primary target, so the next run should select other queued work.",
         )
-    if failure_taxonomy in ACTIONABLE_FAILURE_OUTCOMES:
+    if (
+        failure_taxonomy in ACTIONABLE_FAILURE_OUTCOMES
+        or failure_taxonomy in ACTIONABLE_PROMOTION_CHECK_FAILURES
+    ):
         return (
             CARRY_FORWARD_DECISION,
             REPAIR_FAILURE_ACTION,
@@ -148,6 +189,59 @@ def _decision_shape(
         CLOSED_DECISION_STATUS,
         "Failure taxonomy is not recognized as actionable next-run repair evidence.",
     )
+
+
+def _decision_record_from_result(result: object) -> dict[str, Any] | None:
+    if not isinstance(result, dict):
+        return None
+    for source in (result.get("promotion_report"), result):
+        if not isinstance(source, dict):
+            continue
+        try:
+            return decision_record_from_report(source, require_record=False)
+        except PromotionDecisionRegistryError:
+            pass
+        try:
+            return decision_record_from_payload(source, require_record=False)
+        except PromotionDecisionRegistryError:
+            pass
+    return None
+
+
+def _promotion_check_failure_taxonomy(result: object) -> str:
+    if not isinstance(result, dict):
+        return ""
+    report = result.get("promotion_report")
+    if not isinstance(report, dict):
+        report = result
+    checks = report.get("checks")
+    if not isinstance(checks, list):
+        return ""
+    for check in checks:
+        if not isinstance(check, dict):
+            continue
+        check_id = str(check.get("id", "")).strip()
+        check_status = str(check.get("status", "")).strip().upper()
+        if check_id and check_status == "FAIL":
+            return check_id
+    return ""
+
+
+def _specific_failure_taxonomy(outcome: object, override: str | None) -> str:
+    override_text = str(override or "").strip()
+    if override_text:
+        return override_text
+    failure_taxonomy = str(getattr(outcome, "outcome", "")).strip()
+    if failure_taxonomy not in GENERIC_PROMOTION_FAILURE_OUTCOMES:
+        return failure_taxonomy
+    result = getattr(outcome, "result", None)
+    decision_record = _decision_record_from_result(result)
+    if isinstance(decision_record, dict):
+        reason_code = str(decision_record.get("reason_code", "")).strip()
+        if reason_code and reason_code not in LEGACY_PROMOTION_REASON_CODES:
+            return reason_code
+    check_failure = _promotion_check_failure_taxonomy(result)
+    return check_failure or failure_taxonomy
 
 
 def build_next_run_decision(
@@ -164,8 +258,9 @@ def build_next_run_decision(
     context: RuntimeContext,
     executor_report_rels: list[str] | None = None,
     blocking_role: str | None = None,
+    failure_taxonomy_override: str | None = None,
 ) -> dict[str, Any] | None:
-    failure_taxonomy = str(getattr(outcome, "outcome", "")).strip()
+    failure_taxonomy = _specific_failure_taxonomy(outcome, failure_taxonomy_override)
     if not failure_taxonomy or bool(getattr(outcome, "is_terminal_success", False)):
         return None
 

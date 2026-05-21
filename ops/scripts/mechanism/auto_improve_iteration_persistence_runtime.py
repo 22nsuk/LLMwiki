@@ -88,6 +88,10 @@ DISCARD_NON_REGRESSION_CHECK_IDS = (
     "tests_non_regression",
 )
 PROMOTION_CHECK_STATUS_VALUES = frozenset({"PASS", "WARN", "FAIL"})
+GENERIC_PROMOTION_FAILURE_TAXONOMIES = frozenset({"discarded"})
+LEGACY_PROMOTION_REASON_CODES = frozenset(
+    {"", "legacy_promotion_report", "unknown", "none"}
+)
 
 
 @dataclass(frozen=True)
@@ -523,6 +527,38 @@ def _preserve_existing_telemetry_fields(payload: dict[str, Any], existing_report
             payload[field] = existing_report[field]
 
 
+def _specific_failure_taxonomy(
+    outcome: str,
+    *,
+    decision_record: dict[str, Any] | None,
+    discard_evidence: dict[str, Any] | None,
+) -> str:
+    outcome_text = str(outcome).strip()
+    if outcome_text == "promoted":
+        return ""
+    if outcome_text not in GENERIC_PROMOTION_FAILURE_TAXONOMIES:
+        return outcome_text
+    if isinstance(decision_record, dict):
+        reason_code = str(decision_record.get("reason_code", "")).strip()
+        if reason_code and reason_code not in LEGACY_PROMOTION_REASON_CODES:
+            return reason_code
+    if isinstance(discard_evidence, dict):
+        blocking_check_ids = discard_evidence.get("blocking_check_ids")
+        if isinstance(blocking_check_ids, list):
+            for check_id in blocking_check_ids:
+                check_id_text = str(check_id).strip()
+                if check_id_text:
+                    return check_id_text
+    return outcome_text
+
+
+def _run_telemetry_failure_taxonomy(vault: Path, telemetry_rel: str) -> str:
+    payload = load_optional_json(vault / telemetry_rel)
+    if not isinstance(payload, dict):
+        return ""
+    return str(payload.get("failure_taxonomy", "")).strip()
+
+
 def _update_session_loop_state(
     session: dict[str, Any],
     *,
@@ -616,6 +652,11 @@ def write_iteration_telemetry(
     )
     if discard_evidence is not None:
         payload["discard_non_regression_evidence"] = discard_evidence
+    payload["failure_taxonomy"] = _specific_failure_taxonomy(
+        request.outcome,
+        decision_record=decision_record,
+        discard_evidence=discard_evidence,
+    )
     command_timeouts = _iteration_command_timeouts(request.vault, request.run_id, request.result)
     if command_timeouts is not None:
         payload["command_timeouts"] = command_timeouts
@@ -753,6 +794,7 @@ def persist_iteration_phase(
         context=context,
         executor_report_rels=executor_report_rels,
         blocking_role=_blocking_role_from_executor_reports(vault, executor_report_rels),
+        failure_taxonomy_override=_run_telemetry_failure_taxonomy(vault, telemetry_rel),
     )
     if next_run_decision is not None:
         session.setdefault("next_run_decisions", []).append(next_run_decision)

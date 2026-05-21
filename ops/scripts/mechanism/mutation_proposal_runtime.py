@@ -92,6 +92,10 @@ SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
 REPORT_SCHEMA_SAMPLES_TARGET = "tests/fixtures/report_schema_samples.json"
 REPORT_SCHEMA_SAMPLE_REGENERATION_TEST = "tests/test_report_schema_sample_regeneration.py"
 DEFAULT_AUTO_IMPROVE_SESSIONS_DIR = "ops/reports/auto-improve-sessions"
+NEXT_RUN_REPAIR_BACKTICK_PATH_RE = re.compile(r"`((?:ops|tests)/[^`\s]+)`")
+NEXT_RUN_REPAIR_PLAIN_PATH_RE = re.compile(
+    r"\b((?:ops|tests)/(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+\.(?:py|json|md))(?:[:]\d+)?"
+)
 
 
 @dataclass(frozen=True)
@@ -756,6 +760,130 @@ def _with_generated_supporting_targets(
         seen.add(target)
         ordered.append(target)
     return ordered
+
+
+def _changed_manifest_extra_scope(
+    vault: Path,
+    source_run_id: str,
+) -> tuple[list[str], list[str]]:
+    manifest_path = vault / "runs" / source_run_id / "changed-files-manifest.json"
+    if not manifest_path.is_file():
+        return [], []
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return [], []
+    declared = manifest.get("declared_targets")
+    declared = declared if isinstance(declared, dict) else {}
+    declared_paths = set(
+        current_repo_target_paths(
+            vault,
+            [
+                *[str(path) for path in declared.get("primary_targets", [])],
+                *[str(path) for path in declared.get("supporting_targets", [])],
+                *[str(path) for path in declared.get("test_files", [])],
+            ],
+        )
+    )
+    supporting_targets: list[str] = []
+    must_change_tests: list[str] = []
+    files = manifest.get("files")
+    if not isinstance(files, list):
+        return [], []
+    for item in files:
+        if not isinstance(item, dict):
+            continue
+        normalized_path = normalize_repo_path_text(item.get("path"))
+        if normalized_path is None or normalized_path in declared_paths:
+            continue
+        if normalized_path.startswith("tests/") and normalized_path.endswith(".py"):
+            must_change_tests.append(normalized_path)
+        elif normalized_path.startswith("ops/") and (vault / normalized_path).is_file():
+            supporting_targets.append(normalized_path)
+    return dedupe_preserve_order(supporting_targets), _must_change_test_paths(
+        vault,
+        must_change_tests,
+    )
+
+
+def _evidence_report_paths(vault: Path, evidence_paths: list[str]) -> list[Path]:
+    resolved: list[Path] = []
+    for evidence_path in evidence_paths:
+        normalized_path = normalize_repo_path_text(evidence_path)
+        if normalized_path is None:
+            continue
+        path = vault / normalized_path
+        if path.is_file() and path.suffix == ".json":
+            resolved.append(path)
+    return resolved
+
+
+def _diagnostic_note_extra_scope(
+    vault: Path,
+    evidence_paths: list[str],
+) -> tuple[list[str], list[str]]:
+    supporting_targets: list[str] = []
+    must_change_tests: list[str] = []
+    for evidence_report_path in _evidence_report_paths(vault, evidence_paths):
+        try:
+            report = json.loads(evidence_report_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        diagnostics = report.get("diagnostics")
+        if not isinstance(diagnostics, dict):
+            continue
+        notes = diagnostics.get("notes")
+        if not isinstance(notes, list):
+            continue
+        for note in notes:
+            note_text = str(note)
+            note_paths = [
+                *NEXT_RUN_REPAIR_BACKTICK_PATH_RE.findall(note_text),
+                *NEXT_RUN_REPAIR_PLAIN_PATH_RE.findall(note_text),
+            ]
+            for match in note_paths:
+                normalized_path = normalize_repo_path_text(match)
+                if normalized_path is None or not (vault / normalized_path).is_file():
+                    continue
+                if normalized_path.startswith("tests/") and normalized_path.endswith(".py"):
+                    must_change_tests.append(normalized_path)
+                elif normalized_path.startswith("ops/"):
+                    supporting_targets.append(normalized_path)
+    return dedupe_preserve_order(supporting_targets), _must_change_test_paths(
+        vault,
+        must_change_tests,
+    )
+
+
+def _next_run_repair_extra_scope(
+    vault: Path,
+    *,
+    decision: dict,
+    source_run_id: str,
+    failure_taxonomy: str,
+    evidence_paths: list[str],
+) -> tuple[list[str], list[str]]:
+    supporting_targets: list[str] = []
+    must_change_tests: list[str] = []
+    if failure_taxonomy == "changed_files_manifest_scope":
+        manifest_supporting, manifest_tests = _changed_manifest_extra_scope(vault, source_run_id)
+        supporting_targets.extend(manifest_supporting)
+        must_change_tests.extend(manifest_tests)
+    diagnostic_supporting, diagnostic_tests = _diagnostic_note_extra_scope(vault, evidence_paths)
+    supporting_targets.extend(diagnostic_supporting)
+    must_change_tests.extend(diagnostic_tests)
+    original_primary = current_repo_target_paths(
+        vault,
+        [str(target) for target in decision.get("primary_targets", [])],
+    )
+    return (
+        [
+            path
+            for path in dedupe_preserve_order(supporting_targets)
+            if path not in original_primary
+        ],
+        dedupe_preserve_order(must_change_tests),
+    )
 
 
 def _proposal_blast_radius_score(
@@ -1465,6 +1593,13 @@ def _next_run_repair_proposal(
     )
     if not primary_targets:
         return None
+    failure_taxonomy = str(decision.get("failure_taxonomy", "")).strip()
+    source_run_id = str(decision.get("source_run_id", "")).strip()
+    evidence_paths = [
+        str(path).strip()
+        for path in decision.get("evidence_paths", [])
+        if str(path).strip()
+    ]
     supporting_targets = _with_generated_supporting_targets(
         vault,
         primary_targets=primary_targets,
@@ -1477,6 +1612,20 @@ def _next_run_repair_proposal(
             ],
         ),
     )
+    extra_supporting_targets, extra_must_change_tests = _next_run_repair_extra_scope(
+        vault,
+        decision=decision,
+        source_run_id=source_run_id,
+        failure_taxonomy=failure_taxonomy,
+        evidence_paths=evidence_paths,
+    )
+    supporting_targets = _with_generated_supporting_targets(
+        vault,
+        primary_targets=primary_targets,
+        supporting_targets=dedupe_preserve_order(
+            [*supporting_targets, *extra_supporting_targets]
+        ),
+    )
     must_change_tests = _must_change_test_paths(
         vault,
         current_repo_target_paths(
@@ -1487,6 +1636,7 @@ def _next_run_repair_proposal(
     must_change_tests = dedupe_preserve_order(
         [
             *must_change_tests,
+            *extra_must_change_tests,
             *_generated_must_change_tests(vault, [*primary_targets, *supporting_targets]),
         ]
     )
@@ -1498,8 +1648,6 @@ def _next_run_repair_proposal(
             supporting_targets=supporting_targets,
         )
 
-    failure_taxonomy = str(decision.get("failure_taxonomy", "")).strip()
-    source_run_id = str(decision.get("source_run_id", "")).strip()
     target_proposal_id = str(decision.get("target_proposal_id", "")).strip()
     proposal_id = target_proposal_id or next_run_failure_repair_proposal_id(
         primary_targets,
@@ -1509,11 +1657,6 @@ def _next_run_repair_proposal(
     role_fragment = f" from {blocking_role}" if blocking_role else ""
     source_proposal_id = str(decision.get("proposal_id", "")).strip()
     scoped_targets = ", ".join(f"`{target}`" for target in primary_targets)
-    evidence_paths = [
-        str(path).strip()
-        for path in decision.get("evidence_paths", [])
-        if str(path).strip()
-    ]
     evidence_fragment = ", ".join(f"`{path}`" for path in evidence_paths[:3])
     if len(evidence_paths) > 3:
         evidence_fragment += f", +{len(evidence_paths) - 3} more"

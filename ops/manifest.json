@@ -1507,8 +1507,8 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
-      "sha256": "16949d081734da06ff235b3f9389817344a56863d9ce5e3c582e43940b1ba816",
-      "size_bytes": 27913
+      "sha256": "010a9c6ebd93d648f63cf561efab594256724212e5f0d687708bf86b590e47bb",
+      "size_bytes": 29527
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_iteration_runtime.py",
@@ -1527,8 +1527,8 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
-      "sha256": "5091ca07df1ced3dfe5e324b04f1e5d7190ddcb3ae76f1bc8bbaade9d473d710",
-      "size_bytes": 9457
+      "sha256": "f2864807c1ea08deb216d0077cfc2a6c94ca22266c8496a967e08986d1feafbd",
+      "size_bytes": 12917
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_outcome_runtime.py",
@@ -1807,8 +1807,8 @@
     },
     {
       "path": "ops/scripts/mechanism/mutation_proposal_runtime.py",
-      "sha256": "ed9508aa3577531559288aa5e485dd93287163898a732ff0dfa08ca886012f0c",
-      "size_bytes": 94896
+      "sha256": "e6f31befd434bbd76e69210d2cbef0b01f0ddf200aa59214b00394ae1ffa8835",
+      "size_bytes": 100369
     },
     {
       "path": "ops/scripts/mechanism/outcome_metrics.py",
@@ -4827,23 +4827,23 @@
     },
     {
       "path": "system/system-log.md",
-      "sha256": "ea2ae8e4ca3addf46a1af9fe74defbd9abb9aedd2e7a22661f5f023c5ae5167e",
-      "size_bytes": 415686
+      "sha256": "7e19925a8f3be86ff029b066d9740f834b1e51fb82d7e431f8bf21894fd240ac",
+      "size_bytes": 418068
     },
     {
       "path": "system/system-raw-registry.md",
-      "sha256": "1e9498f9a904ba3a15377e6ef341577b68bccb1a567cb42a99af214c4fc7837c",
-      "size_bytes": 6568
+      "sha256": "f3a632fbf624b97f22b19ca6fbc96ecaf7e233e2c0670784c307b4baefd9838a",
+      "size_bytes": 6604
     },
     {
       "path": "system/system-raw-registry/system.md",
-      "sha256": "229cf033575beacf1bc0a7647b4a6b241861f434503e4964decce43edff2be1b",
-      "size_bytes": 14884
+      "sha256": "f27a1c0e82a180bc7d40db7c93bb23bdf1593b341c1813297f9efcdc69c27ed4",
+      "size_bytes": 14902
     },
     {
       "path": "system/system-raw-registry/wiki.md",
-      "sha256": "988cf3faefb4fb6b8e0399fa9365916df4c44edbc7b376de0246dc57f4f12140",
-      "size_bytes": 26272
+      "sha256": "31ecbd65568f4f282a2fe0aec8eab714dd25b298c4dd9418ade274ffc1222735",
+      "size_bytes": 26290
     },
     {
       "path": "system/system-raw-registry/wiki/ai-capability-governance-intake-2026-04-21.md",
@@ -5022,13 +5022,13 @@
     },
     {
       "path": "tests/test_auto_improve_iteration_runtime.py",
-      "sha256": "381a6129545b696a6c05325845b338f51eb40bd1c22c2667b88b22909cb70597",
-      "size_bytes": 64625
+      "sha256": "9d2139421c294fa9c4069b01f140170e90016ea8d3f330919442850a4994a03f",
+      "size_bytes": 69996
     },
     {
       "path": "tests/test_auto_improve_next_run_decision_runtime.py",
-      "sha256": "17eb56448c4016d60f2fd0b092c16732de4f5ba53dd464deb02c759c3766f618",
-      "size_bytes": 3848
+      "sha256": "78372a862aecb918fc943f60fb53361f481ddcc9da7aadc501fee4ed7059d730",
+      "size_bytes": 5209
     },
     {
       "path": "tests/test_auto_improve_outcome_runtime.py",
@@ -5377,8 +5377,8 @@
     },
     {
       "path": "tests/test_mutation_proposal.py",
-      "sha256": "e44ad0be89dbad04b3aea37717f3cc747f488e5681103322454afc688cbc5e89",
-      "size_bytes": 122774
+      "sha256": "2b92de90564bd8cceb0fdfeefb2ff02f03d7c0706b3282de20bf698037796a63",
+      "size_bytes": 131629
     },
     {
       "path": "tests/test_observability_artifacts_runtime.py",

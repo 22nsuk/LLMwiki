@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/mechanism-review-candidates.schema.json",
   "artifact_kind": "mechanism_review_candidates_report",
-  "generated_at": "2026-05-20T23:36:37Z",
+  "generated_at": "2026-05-21T01:21:01Z",
   "producer": "ops.scripts.mechanism_review_runtime",
   "source_command": "python -m ops.scripts.mechanism_review",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "f4f48d9f5c39daa41d8269e07551f35d4ea359b255dde572241117150e1c8c23",
+  "source_tree_fingerprint": "af6140cef363ee9127f558f3ea9ce1de2c3fae5380045ca6281cfa3d2b9fbcd5",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "c730a4570492eaf5cb038d51227064a8c9404069f62cb3920049a985951e876a",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b6a97e444164d60ea21111ba0d6068ce8e345c212c78dd4070013da1d67097f4",
-    "excluded_promotion_reports": "d77ae483e89ba69696759320a7aa7d280ccaaeee86e65232e0827efb11b7b811",
-    "promotion_reports": "7b9db39eed3df2d543cf76c49482bf3a4b04693fb210e6a3f11f9d8a27711791",
+    "excluded_promotion_reports": "af1491d73a8d7c18ded3e2469f7b3e60c4e22ee5eafada4c1515e0d91f1587df",
+    "promotion_reports": "57a53d3e191d3f2db2932c65e41a15271c2492efb6fb8da5f2959ad89f8078a7",
     "skipped_artifacts": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "mechanism_review_enabled": "3cbc87c7681f34db4617feaa2c8801931bc5e42d8d0f560e756dd4cd92885f18",
     "mechanism_review_max_candidates": "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-20T23:36:37Z"
+    "checked_at": "2026-05-21T01:21:01Z"
   },
   "vault": ".",
   "policy": {
@@ -33,9 +33,9 @@
   },
   "status": "pass",
   "summary": {
-    "runs_discovered": 42,
-    "runs_considered": 13,
-    "runs_excluded": 29,
+    "runs_discovered": 48,
+    "runs_considered": 14,
+    "runs_excluded": 34,
     "runs_skipped": 0,
     "candidates_emitted": 1
   },
@@ -77,6 +77,36 @@
         "status": "quarantined",
         "reason": "incomplete goal self-improvement attempt lacks required promotion input artifacts; not valid active mechanism-history evidence after superseding certificate repair work",
         "path": "runs/active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
+      },
+      {
+        "run_id": "active-report-self-improve-certificate-rerun6-run-03-auto-improve-iteration-persistence-runtime",
+        "status": "quarantined",
+        "reason": "operator-aborted mis-scoped next-run repair before worker completion; superseded by repair-scope propagation mechanism update",
+        "path": "runs/active-report-self-improve-certificate-rerun6-run-03-auto-improve-iteration-persistence-runtime/promotion-report.json"
+      },
+      {
+        "run_id": "active-report-self-improve-certificate-rerun6-run-02-auto-improve-iteration-persistence-runtime",
+        "status": "quarantined",
+        "reason": "review-blocked goal self-improvement attempt stopped before candidate eval artifacts; keep session decision evidence only after next-run repair scope update",
+        "path": "runs/active-report-self-improve-certificate-rerun6-run-02-auto-improve-iteration-persistence-runtime/promotion-report.json"
+      },
+      {
+        "run_id": "active-report-self-improve-certificate-rerun5-run-03-auto-improve-iteration-persistence-runtime",
+        "status": "quarantined",
+        "reason": "operator-aborted misdirected follow-up before candidate artifacts; superseded by raw-registry source-trace repair and next-run repair-scope update",
+        "path": "runs/active-report-self-improve-certificate-rerun5-run-03-auto-improve-iteration-persistence-runtime/promotion-report.json"
+      },
+      {
+        "run_id": "active-report-self-improve-certificate-rerun5-run-02-auto-improve-iteration-persistence-runtime",
+        "status": "quarantined",
+        "reason": "validation-blocked goal self-improvement attempt lacks required promotion input artifacts; keep as run-local failure evidence after source-trace repair",
+        "path": "runs/active-report-self-improve-certificate-rerun5-run-02-auto-improve-iteration-persistence-runtime/promotion-report.json"
+      },
+      {
+        "run_id": "active-report-self-improve-certificate-rerun5-run-01-auto-improve-iteration-persistence-runtime",
+        "status": "quarantined",
+        "reason": "pre-candidate blocked goal self-improvement attempt lacks required promotion input artifacts; keep as run-local failure evidence, not active mechanism-review history",
+        "path": "runs/active-report-self-improve-certificate-rerun5-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
       },
       {
         "run_id": "active-report-self-improve-certificate-rerun4-run-03-auto-improve-iteration-persistence-runtime",
@@ -364,14 +394,14 @@
         "defect_escape_pair_count": 1
       },
       "global_signals": {
-        "attempt_count": 42,
+        "attempt_count": 48,
         "recent_attempt_count": 20,
         "moving_averages": {
-          "hold": 0.85,
-          "discard": 0.1,
+          "hold": 0.8,
+          "discard": 0.15,
           "rollback_signal": 0.0
         },
-        "rework_count": 18,
+        "rework_count": 24,
         "rollback_signal_count": 0,
         "defect_escape_pair_count": 0
       },
@@ -393,13 +423,8 @@
             "contract_regression_signals": 1
           },
           "current_priority_max": 100,
-          "attempt_count": 19,
+          "attempt_count": 20,
           "source_run_ids": [
-            "5day-auto-improve-runtime-rerun15-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
-            "5day-auto-improve-runtime-rerun16-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
-            "5day-auto-improve-runtime-rerun17-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
-            "5day-auto-improve-runtime-rerun20-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
-            "5day-auto-improve-runtime-rerun21-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
             "active-report-self-improve-certificate-rerun-run-01-auto-improve-iteration-persistence-runtime",
             "active-report-self-improve-certificate-rerun-run-02-auto-improve-iteration-persistence-runtime",
             "active-report-self-improve-certificate-rerun-run-03-auto-improve-iteration-persistence-runtime",
@@ -411,6 +436,12 @@
             "active-report-self-improve-certificate-rerun4-run-01-auto-improve-iteration-persistence-runtime",
             "active-report-self-improve-certificate-rerun4-run-02-auto-improve-iteration-persistence-runtime",
             "active-report-self-improve-certificate-rerun4-run-03-auto-improve-iteration-persistence-runtime",
+            "active-report-self-improve-certificate-rerun5-run-01-auto-improve-iteration-persistence-runtime",
+            "active-report-self-improve-certificate-rerun5-run-02-auto-improve-iteration-persistence-runtime",
+            "active-report-self-improve-certificate-rerun5-run-03-auto-improve-iteration-persistence-runtime",
+            "active-report-self-improve-certificate-rerun6-run-01-auto-improve-iteration-persistence-runtime",
+            "active-report-self-improve-certificate-rerun6-run-02-auto-improve-iteration-persistence-runtime",
+            "active-report-self-improve-certificate-rerun6-run-03-auto-improve-iteration-persistence-runtime",
             "active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime",
             "active-report-self-improve-certificate-run-02-auto-improve-iteration-persistence-runtime",
             "active-report-self-improve-certificate-run-03-auto-improve-iteration-persistence-runtime",
@@ -421,12 +452,12 @@
             "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
           ],
           "hold_count": 16,
-          "discard_count": 2,
-          "hold_moving_average": 0.8421,
-          "discard_moving_average": 0.1053,
+          "discard_count": 3,
+          "hold_moving_average": 0.8,
+          "discard_moving_average": 0.15,
           "rollback_signal_count": 0,
           "rollback_signal_ratio": 0.0,
-          "rework_count": 14,
+          "rework_count": 20,
           "defect_escape_pair_count": 0,
           "preview_flags": [
             "high_rework",
@@ -439,18 +470,18 @@
           "family": "contract_regression_signals",
           "target_count": 1,
           "candidate_count": 1,
-          "attempt_count": 19,
+          "attempt_count": 20,
           "hold_count": 16,
-          "discard_count": 2,
+          "discard_count": 3,
           "rollback_signal_count": 0,
-          "rework_count": 14,
+          "rework_count": 20,
           "defect_escape_pair_count": 0,
           "preview_flags": [
             "high_rework",
             "recent_hold_moving_average"
           ],
-          "hold_moving_average": 0.8421,
-          "discard_moving_average": 0.1053,
+          "hold_moving_average": 0.8,
+          "discard_moving_average": 0.15,
           "rollback_signal_ratio": 0.0
         }
       ],
@@ -462,13 +493,8 @@
           "families": [
             "contract_regression_signals"
           ],
-          "rework_count": 14,
+          "rework_count": 20,
           "source_run_ids": [
-            "5day-auto-improve-runtime-rerun15-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
-            "5day-auto-improve-runtime-rerun16-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
-            "5day-auto-improve-runtime-rerun17-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
-            "5day-auto-improve-runtime-rerun20-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
-            "5day-auto-improve-runtime-rerun21-30m_trial-run-01-auto-improve-iteration-persistence-runtime",
             "active-report-self-improve-certificate-rerun-run-01-auto-improve-iteration-persistence-runtime",
             "active-report-self-improve-certificate-rerun-run-02-auto-improve-iteration-persistence-runtime",
             "active-report-self-improve-certificate-rerun-run-03-auto-improve-iteration-persistence-runtime",
@@ -480,6 +506,12 @@
             "active-report-self-improve-certificate-rerun4-run-01-auto-improve-iteration-persistence-runtime",
             "active-report-self-improve-certificate-rerun4-run-02-auto-improve-iteration-persistence-runtime",
             "active-report-self-improve-certificate-rerun4-run-03-auto-improve-iteration-persistence-runtime",
+            "active-report-self-improve-certificate-rerun5-run-01-auto-improve-iteration-persistence-runtime",
+            "active-report-self-improve-certificate-rerun5-run-02-auto-improve-iteration-persistence-runtime",
+            "active-report-self-improve-certificate-rerun5-run-03-auto-improve-iteration-persistence-runtime",
+            "active-report-self-improve-certificate-rerun6-run-01-auto-improve-iteration-persistence-runtime",
+            "active-report-self-improve-certificate-rerun6-run-02-auto-improve-iteration-persistence-runtime",
+            "active-report-self-improve-certificate-rerun6-run-03-auto-improve-iteration-persistence-runtime",
             "active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime",
             "active-report-self-improve-certificate-run-02-auto-improve-iteration-persistence-runtime",
             "active-report-self-improve-certificate-run-03-auto-improve-iteration-persistence-runtime",
@@ -498,7 +530,7 @@
         "min_attempts_considered": 10,
         "min_target_attempts": 2,
         "shadow_priority_max_delta": 10,
-        "attempts_considered": 42,
+        "attempts_considered": 48,
         "current_order": [
           "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime"
         ],

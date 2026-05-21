@@ -93,6 +93,37 @@ class AutoImproveNextRunDecisionRuntimeTests(unittest.TestCase):
         self.assertEqual(decision["status"], "closed")
         self.assertEqual(decision["target_proposal_id"], "")
 
+    def test_promotion_failure_taxonomy_override_is_carried_forward(self) -> None:
+        decision = build_next_run_decision(
+            session_id="auto-improve-session",
+            iteration=3,
+            run_id="auto-improve-session-run-03-example-runtime",
+            proposal=_proposal(),
+            outcome=ExecutionOutcome(
+                outcome="discarded",
+                next_consecutive_failures=1,
+                result={"decision": "DISCARD"},
+            ),
+            roles=["worker", "reviewer"],
+            scope_freeze_rel="runs/run-03/scope-freeze.json",
+            routing_report_rels=[
+                "runs/run-03/subagent-routing.worker.json",
+                "runs/run-03/subagent-routing.reviewer.json",
+            ],
+            telemetry_rel="runs/run-03/run-telemetry.json",
+            context=_context(),
+            failure_taxonomy_override="changed_files_manifest_scope",
+        )
+
+        assert decision is not None
+        self.assertEqual(decision["decision"], CARRY_FORWARD_DECISION)
+        self.assertEqual(decision["failure_taxonomy"], "changed_files_manifest_scope")
+        self.assertEqual(decision["blocking_role"], "promotion_gate")
+        self.assertEqual(
+            decision["target_proposal_id"],
+            "next_run_failure_repair__example-runtime__changed-files-manifest-scope",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

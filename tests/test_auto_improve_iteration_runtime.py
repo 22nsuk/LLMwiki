@@ -548,6 +548,123 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                 decision["evidence_paths"],
             )
 
+    def test_persist_iteration_phase_carries_specific_discard_failure_taxonomy(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-changed-files-scope"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            for role in ("worker", "reviewer"):
+                (run_dir / f"subagent-routing.{role}.json").write_text("{}", encoding="utf-8")
+            _write_iteration_executor_report(vault, run_id, role="worker", status="pass")
+            _write_iteration_executor_report(vault, run_id, role="reviewer", status="pass")
+            promotion_rel = f"runs/{run_id}/promotion-report.json"
+            contract = reduce_decision_proposals(
+                [
+                    {
+                        "rule_id": "changed_files_manifest_scope",
+                        "decision": "DISCARD",
+                        "evidence_refs": ["changed_files_manifest_scope"],
+                    }
+                ],
+                subject_id=run_id,
+                subject_kind="system_mechanism",
+                policy_version=1,
+                source_pass="system_mechanism",
+                signoff={"required": False, "status": "not_required"},
+            )
+            (vault / promotion_rel).write_text(
+                json.dumps(
+                    {
+                        "run_id": run_id,
+                        "decision": "DISCARD",
+                        "checks": [
+                            {"id": "candidate_eval_pass", "status": "PASS"},
+                            {"id": "eval_score_improves", "status": "WARN"},
+                            {"id": "lint_non_regression", "status": "PASS"},
+                            {"id": "structural_complexity_non_regression", "status": "PASS"},
+                            {"id": "tests_non_regression", "status": "PASS"},
+                            {"id": "changed_files_manifest_scope", "status": "FAIL"},
+                        ],
+                        "decision_record": contract["decision_record"],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            session = {
+                "iterations": [],
+                "next_run_decisions": [],
+                "loop_state": {},
+            }
+            proposal = {
+                "proposal_id": (
+                    "next_run_failure_repair__example-runtime__validation-blocked"
+                ),
+                "source_candidate_id": "candidate-1",
+                "family": "next_run_failure_repair",
+                "tier": "supporting",
+                "primary_targets": ["ops/scripts/mechanism/example_runtime.py"],
+                "supporting_targets": ["ops/schemas/run-telemetry.schema.json"],
+                "must_change_tests": ["tests/test_example_runtime.py"],
+            }
+            route_scaffold = SimpleNamespace(
+                run_id=run_id,
+                phase_durations={"routing": 0.1},
+                scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                routing_report_rels=[
+                    f"runs/{run_id}/subagent-routing.worker.json",
+                    f"runs/{run_id}/subagent-routing.reviewer.json",
+                ],
+                roles=["worker", "reviewer"],
+            )
+            execution = ExecuteEvaluatePhaseResult(
+                outcome=ExecutionOutcome(
+                    outcome="discarded",
+                    next_consecutive_failures=1,
+                    result={
+                        "decision": "DISCARD",
+                        "promotion_report": promotion_rel,
+                    },
+                ),
+                phase_durations={"experiment": 0.2},
+            )
+
+            persist_iteration_phase(
+                vault,
+                session,
+                session_id="auto-session",
+                iteration=1,
+                proposal=proposal,
+                route_scaffold=route_scaffold,
+                execution=execution,
+                quarantined=set(),
+                context=_context(),
+                dependencies=PersistIterationDependencies(
+                    apply_execution_outcome=lambda *_args, **_kwargs: 1,
+                    write_iteration_telemetry=write_iteration_telemetry,
+                    write_run_artifact_fingerprint=lambda *_args, **_kwargs: "",
+                    write_session_report=lambda *_args, **_kwargs: Path(
+                        "ops/reports/session.json"
+                    ),
+                ),
+            )
+
+            telemetry = json.loads(
+                (vault / "runs" / run_id / "run-telemetry.json").read_text(encoding="utf-8")
+            )
+            decision = session["next_run_decisions"][0]
+            self.assertEqual(telemetry["failure_taxonomy"], "changed_files_manifest_scope")
+            self.assertEqual(decision["failure_taxonomy"], "changed_files_manifest_scope")
+            self.assertEqual(decision["blocking_role"], "promotion_gate")
+            self.assertEqual(
+                decision["target_proposal_id"],
+                "next_run_failure_repair__example-runtime__changed-files-manifest-scope",
+            )
+
     def test_write_iteration_telemetry_records_behavior_delta_digest_and_same_eval_reason(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

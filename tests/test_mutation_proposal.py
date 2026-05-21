@@ -2114,6 +2114,177 @@ class MutationProposalTest(unittest.TestCase):
             )
             self.assertTrue(repair["must_not_expand_apply_roots"])
 
+    def test_next_run_decision_adds_changed_files_scope_from_source_run_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            script_target = "ops/scripts/mechanism/example_runtime.py"
+            declared_test = "tests/test_example_runtime.py"
+            extra_test = "tests/test_report_schemas.py"
+            (vault / script_target).parent.mkdir(parents=True, exist_ok=True)
+            (vault / script_target).write_text("VALUE = 1\n", encoding="utf-8")
+            (vault / declared_test).write_text(
+                "def test_example_runtime():\n    assert True\n",
+                encoding="utf-8",
+            )
+            (vault / extra_test).write_text(
+                "def test_report_schema_scope():\n    assert True\n",
+                encoding="utf-8",
+            )
+            source_run_id = "auto-session-a-run-01-example-runtime"
+            run_dir = vault / "runs" / source_run_id
+            run_dir.mkdir(parents=True, exist_ok=True)
+            write_json(
+                run_dir / "changed-files-manifest.json",
+                {
+                    "declared_targets": {
+                        "primary_targets": [script_target],
+                        "supporting_targets": ["ops/script-output-surfaces.json"],
+                        "test_files": [declared_test],
+                    },
+                    "files": [
+                        {"path": script_target, "change_type": "modified"},
+                        {"path": declared_test, "change_type": "modified"},
+                        {"path": extra_test, "change_type": "modified"},
+                    ],
+                },
+            )
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:changed-files",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": source_run_id,
+                            "proposal_id": "original-proposal",
+                            "source_candidate_id": "original-candidate",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__example-runtime__changed-files-manifest-scope"
+                            ),
+                            "proposal_family": "next_run_failure_repair",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "changed_files_manifest_scope",
+                            "blocking_role": "promotion_gate",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "changed-files scope should become bounded repair work",
+                            "quarantined_source_proposal": False,
+                            "primary_targets": [script_target],
+                            "supporting_targets": ["ops/script-output-surfaces.json"],
+                            "must_change_tests": [declared_test],
+                            "evidence_paths": [
+                                f"runs/{source_run_id}/run-telemetry.json",
+                                f"runs/{source_run_id}/promotion-report.json",
+                            ],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            repair = next(
+                proposal
+                for proposal in proposal_report["proposals"]
+                if proposal["failure_mode"] == "next_run_failure_repair"
+            )
+
+            self.assertEqual(
+                repair["proposal_id"],
+                "next_run_failure_repair__example-runtime__changed-files-manifest-scope",
+            )
+            self.assertEqual(repair["must_change_tests"], [declared_test, extra_test])
+
+    def test_next_run_decision_adds_reviewer_diagnostic_paths_to_repair_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            primary_target = "ops/scripts/mechanism/example_runtime.py"
+            diagnostic_target = "ops/scripts/mechanism/example_outcome_runtime.py"
+            diagnostic_test = "tests/test_example_outcome_runtime.py"
+            for path, content in (
+                (primary_target, "VALUE = 1\n"),
+                (diagnostic_target, "VALUE = 2\n"),
+                (diagnostic_test, "def test_example_outcome_runtime():\n    assert True\n"),
+            ):
+                file_path = vault / path
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+                file_path.write_text(content, encoding="utf-8")
+            source_run_id = "auto-session-a-run-02-example-runtime"
+            run_dir = vault / "runs" / source_run_id
+            run_dir.mkdir(parents=True, exist_ok=True)
+            write_json(
+                run_dir / "reviewer-executor-report.json",
+                {
+                    "status": "fail",
+                    "diagnostics": {
+                        "notes": [
+                            (
+                                "Finding P1: repair also needs "
+                                f"{diagnostic_target}:42 and {diagnostic_test}:7."
+                            )
+                        ]
+                    },
+                },
+            )
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:review",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 2,
+                            "source_run_id": source_run_id,
+                            "proposal_id": "original-proposal",
+                            "source_candidate_id": "original-candidate",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__example-runtime__review-blocked"
+                            ),
+                            "proposal_family": "next_run_failure_repair",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "review_blocked",
+                            "blocking_role": "reviewer",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "review failure should become bounded repair work",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [primary_target],
+                            "supporting_targets": ["ops/script-output-surfaces.json"],
+                            "must_change_tests": ["tests/test_example_runtime.py"],
+                            "evidence_paths": [
+                                f"runs/{source_run_id}/reviewer-executor-report.json",
+                            ],
+                        }
+                    ]
+                },
+            )
+            (vault / "tests" / "test_example_runtime.py").write_text(
+                "def test_example_runtime():\n    assert True\n",
+                encoding="utf-8",
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            repair = next(
+                proposal
+                for proposal in proposal_report["proposals"]
+                if proposal["failure_mode"] == "next_run_failure_repair"
+            )
+
+            self.assertIn(diagnostic_target, repair["supporting_targets"])
+            self.assertIn(diagnostic_test, repair["must_change_tests"])
+
     def test_consumed_next_run_decision_does_not_emit_repair_proposal(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
