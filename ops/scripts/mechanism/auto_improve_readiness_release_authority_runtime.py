@@ -415,6 +415,7 @@ def _release_authority_preflight_summary(payload: dict[str, Any]) -> dict[str, A
             "expected_blocked_preflight": False,
             "clean_required_preflight": True,
             "failure_ids": [],
+            "unexpected_failure_ids": [],
             "failure_details": [],
             "blocker_reason_ids": [],
             "linked_promotion_blocker_ids": [],
@@ -451,6 +452,7 @@ def _release_authority_preflight_summary(payload: dict[str, Any]) -> dict[str, A
     if not isinstance(failure_details, list):
         failure_details = []
     failure_details = [item for item in failure_details if isinstance(item, dict)]
+    unexpected_failure_ids = _string_list(payload.get("unexpected_failure_ids"))
     return {
         "path": path,
         "artifact_kind": artifact_kind,
@@ -466,6 +468,7 @@ def _release_authority_preflight_summary(payload: dict[str, Any]) -> dict[str, A
         "expected_blocked_preflight": expected_blocked_preflight,
         "clean_required_preflight": clean_required_preflight,
         "failure_ids": _string_list(payload.get("failures")),
+        "unexpected_failure_ids": unexpected_failure_ids,
         "failure_details": failure_details,
         "blocker_reason_ids": blocker_reason_ids,
         "linked_promotion_blocker_ids": linked_blockers,
@@ -476,6 +479,41 @@ def _release_authority_preflight_summary(payload: dict[str, Any]) -> dict[str, A
             f"authority_preflight_status={authority_preflight_status}"
         ),
     }
+
+
+SELF_REFERENTIAL_PREFLIGHT_FAILURE_IDS = frozenset(
+    {
+        "batch_release_authority_not_clean_pass",
+        "batch_sealed_release_not_clean_pass",
+    }
+)
+SELF_REFERENTIAL_PREFLIGHT_BLOCKER_REASON_IDS = frozenset(
+    {
+        "release_authority_not_clean_pass",
+        "machine_release_not_allowed",
+        "sealed_release_not_clean_pass",
+    }
+)
+
+
+def _expected_blocked_preflight_is_self_referential(summary: dict[str, Any]) -> bool:
+    if not bool(summary.get("expected_blocked_preflight", False)):
+        return False
+    if str(summary.get("preflight_status", "")).strip() != "binding_pass_authority_blocked":
+        return False
+    if str(summary.get("preflight_mode", "")).strip() != "expected_blocked":
+        return False
+    if str(summary.get("distribution_binding_status", "")).strip() != "pass":
+        return False
+    if str(summary.get("authority_preflight_status", "")).strip() != "blocked":
+        return False
+    if _string_list(summary.get("unexpected_failure_ids")):
+        return False
+    failure_ids = set(_string_list(summary.get("failure_ids")))
+    blocker_reason_ids = set(_string_list(summary.get("blocker_reason_ids")))
+    return failure_ids <= SELF_REFERENTIAL_PREFLIGHT_FAILURE_IDS and (
+        blocker_reason_ids <= SELF_REFERENTIAL_PREFLIGHT_BLOCKER_REASON_IDS
+    )
 
 
 def _release_finality_gate(payload: dict[str, Any]) -> dict[str, Any]:
@@ -684,6 +722,8 @@ def _release_authority_preflight_promotion_blockers(
         and clean_required_preflight
     )
     if gate_pass:
+        return []
+    if _expected_blocked_preflight_is_self_referential(summary):
         return []
 
     signal_ids = _unique_strings(

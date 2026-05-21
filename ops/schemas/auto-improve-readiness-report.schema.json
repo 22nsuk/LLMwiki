@@ -1169,6 +1169,7 @@
         "expected_blocked_preflight",
         "clean_required_preflight",
         "failure_ids",
+        "unexpected_failure_ids",
         "failure_details",
         "blocker_reason_ids",
         "linked_promotion_blocker_ids",
@@ -1204,6 +1205,10 @@
         "expected_blocked_preflight": { "type": "boolean" },
         "clean_required_preflight": { "type": "boolean" },
         "failure_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "unexpected_failure_ids": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         },

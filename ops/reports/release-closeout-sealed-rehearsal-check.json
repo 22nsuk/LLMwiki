@@ -18,7 +18,7 @@
   ],
   "clean_required_preflight": false,
   "currentness": {
-    "checked_at": "2026-05-21T02:41:44Z",
+    "checked_at": "2026-05-21T02:52:43Z",
     "status": "current"
   },
   "distribution_binding_status": "pass",
@@ -26,7 +26,7 @@
     "entry_count": 1610,
     "exists": true,
     "path": "tmp/release-closeout-sealed-dry-run/LLMwiki-source.zip",
-    "sha256": "155f1a31cd3747b0f25e242247747b16d5f22136a46810a1b79ab0afa165a44a"
+    "sha256": "c1c1f9522b4e0c1702d76c112ce72b418af73bbc5177b4c606193dc4807c24f4"
   },
   "encoding": "utf-8",
   "expected_blocked_preflight": true,
@@ -53,12 +53,12 @@
     "batch_release_authority_not_clean_pass",
     "batch_sealed_release_not_clean_pass"
   ],
-  "generated_at": "2026-05-21T02:41:44Z",
+  "generated_at": "2026-05-21T02:52:43Z",
   "input_fingerprints": {
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "batch_manifest": "f6e03b50ef16878a1e56989ee2c8aa427721c992741fe6e85169fefbcd387346",
+    "batch_manifest": "9937291ec7c8fb27de9f9d0769ec5ea831e3a32c2c924bec71d800b53eb0fd85",
     "distribution_zip": "c3091a294f08983270e68a07ff6044a38d21d42f1b6e4cbefa0b59cf7e514205",
-    "external_manifest": "1c1452c9c6cb468ef4ca9fefd4be5284b9d29b95d7eae24238055a17b90c938d",
+    "external_manifest": "63c2a3cda605d1fc775137e8c6b5bccf72181d89e21c30dcd406b49a6f0341e4",
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "014ce08f655cddbd6777d046f238b21ccf8d35240c0d87a5f2462806271ce7aa",
     "source_paths": "eb0b5032641773cbb40586bce05cff05f649c5e1a238a000dcfd0982b38486c4"
@@ -71,7 +71,7 @@
   "schema_version": 1,
   "source_command": "python -m ops.scripts.release_closeout_sealed_rehearsal_check --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "1f0b9ce55c7a2f5739e084031d3d82d03e21882ab73759ebbe01d9adfe5706a9",
+  "source_tree_fingerprint": "42f5eccae47cf4322d795aaf8caad68a8e0570543f67d746256d263768041713",
   "status": "fail",
   "summary": "distribution binding pass; release authority blocked",
   "unexpected_failure_ids": []

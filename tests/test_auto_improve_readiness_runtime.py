@@ -734,6 +734,47 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "runs/goal-local/state/remediation-backlog.json",
         )
 
+    def test_repeat_only_remediation_backlog_does_not_block_promotion(self) -> None:
+        self._write_ready_queue_reports()
+        self._write_report(
+            "ops/reports/remediation-backlog.json",
+            {
+                "status": "attention",
+                "summary": {
+                    "backlog_item_count": 1,
+                    "repeated_blocker_count": 1,
+                    "active_blocker_count": 0,
+                    "open_item_count": 1,
+                    "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
+                    "next_action": "Close repeated blocker before rerunning the same shape.",
+                },
+                "items": [
+                    {
+                        "item_id": "auto_session_repeated_blocker_example",
+                        "blocker_id": "mutation_failed",
+                        "source": "auto_improve_session.loop_state",
+                        "item_type": "repeated_auto_improve_blocker",
+                        "status": "open",
+                        "severity": "blocks_repeat",
+                        "occurrence_count": 2,
+                        "evidence_paths": ["ops/reports/auto-improve-sessions/example.json"],
+                        "repair_target": "Resolve repeated mutation failure.",
+                        "next_action": "Close this repeat item before rerunning this shape.",
+                    }
+                ],
+                "inputs": {},
+            },
+        )
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        blocker_ids = {item["id"] for item in report["promotion_blockers"]}
+        self.assertNotIn("promotion_blocked_by_remediation_backlog_open", blocker_ids)
+        self.assertEqual(report["diagnostics"]["remediation_backlog_summary"]["status"], "pass")
+        self.assertFalse(
+            report["diagnostics"]["remediation_backlog_summary"]["release_blocking"]
+        )
+
     def test_missing_goal_worktree_guard_blocks_promotion_not_trial(self) -> None:
         (self.vault / "tmp" / "goal-worktree-guard.json").unlink()
         self._write_ready_queue_reports()
@@ -1137,6 +1178,50 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             ],
         )
         self.assertEqual(report["diagnostics"]["artifact_finalization_summary"]["status"], "not_run")
+
+    def test_expected_blocked_preflight_self_reference_does_not_block_readiness(self) -> None:
+        self._write_ready_queue_reports()
+        self._write_report(
+            "ops/reports/release-closeout-sealed-rehearsal-check.json",
+            {
+                "artifact_kind": "release_closeout_sealed_rehearsal_check",
+                "status": "fail",
+                "preflight_status": "binding_pass_authority_blocked",
+                "preflight_mode": "expected_blocked",
+                "distribution_binding_status": "pass",
+                "authority_preflight_status": "blocked",
+                "expected_blocked_preflight": True,
+                "clean_required_preflight": False,
+                "failures": [
+                    "batch_release_authority_not_clean_pass",
+                    "batch_sealed_release_not_clean_pass",
+                ],
+                "unexpected_failure_ids": [],
+                "failure_details": [
+                    {
+                        "failure_id": "batch_release_authority_not_clean_pass",
+                        "vocabulary_reason_id": "release_authority_not_clean_pass",
+                        "status_axis": "release_authority",
+                    }
+                ],
+                "blocking_reason_ids": [
+                    "release_authority_not_clean_pass",
+                    "machine_release_not_allowed",
+                    "sealed_release_not_clean_pass",
+                ],
+                "summary": "distribution binding pass; release authority blocked",
+            },
+            enveloped=False,
+        )
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        blocker_ids = {item["id"] for item in report["promotion_blockers"]}
+        self.assertNotIn("promotion_blocked_by_release_authority_preflight_failure", blocker_ids)
+        self.assertTrue(report["can_promote_result"])
+        preflight = report["diagnostics"]["release_authority_preflight_summary"]
+        self.assertTrue(preflight["expected_blocked_preflight"])
+        self.assertEqual(preflight["unexpected_failure_ids"], [])
 
     def test_release_closeout_summary_gate_prefers_status_v2_authority(self) -> None:
         self._write_ready_queue_reports()

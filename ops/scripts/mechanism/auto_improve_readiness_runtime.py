@@ -327,10 +327,8 @@ def _remediation_backlog_summary(
             "summary": "remediation backlog report is missing",
         }
 
-    summary = _dict_field(payload, "summary")
-    open_item_count = int(summary.get("open_item_count", 0) or 0)
-    active_blocker_count = int(summary.get("active_blocker_count", 0) or 0)
     blocking_signal_ids: list[str] = []
+    open_blocks_promotion_count = 0
     items = payload.get("items", [])
     if isinstance(items, list):
         for item in items:
@@ -340,18 +338,14 @@ def _remediation_backlog_summary(
                 continue
             if str(item.get("severity", "")).strip() != "blocks_promotion":
                 continue
+            open_blocks_promotion_count += 1
             blocker_id = str(item.get("blocker_id", "")).strip()
             if blocker_id:
                 blocking_signal_ids.append(blocker_id)
 
     blocking_signal_ids = list(dict.fromkeys(blocking_signal_ids))
     report_status = str(payload.get("status", "")).strip() or "unknown"
-    release_blocking = (
-        report_status != "pass"
-        or open_item_count > 0
-        or active_blocker_count > 0
-        or bool(blocking_signal_ids)
-    )
+    release_blocking = open_blocks_promotion_count > 0 or bool(blocking_signal_ids)
     signal_ids = blocking_signal_ids or (
         ["remediation_backlog_open"] if release_blocking else []
     )
@@ -360,17 +354,17 @@ def _remediation_backlog_summary(
         "expected_artifact_kind": "remediation_backlog",
         "artifact_kind": str(payload.get("artifact_kind", "")).strip(),
         "status": "fail" if release_blocking else "pass",
-        "source_status": "attention" if release_blocking else "pass",
+        "source_status": report_status if release_blocking else "pass",
         "release_blocking": release_blocking,
-        "open_item_count": open_item_count,
-        "active_blocker_count": active_blocker_count,
+        "open_item_count": open_blocks_promotion_count,
+        "active_blocker_count": open_blocks_promotion_count,
         "blocking_item_count": len(blocking_signal_ids),
         "signal_ids": signal_ids,
         "currentness_status": str(_dict_field(payload, "currentness").get("status", "")).strip(),
         "summary": (
             "remediation backlog "
-            f"status={report_status}; open_item_count={open_item_count}; "
-            f"active_blocker_count={active_blocker_count}; "
+            f"status={report_status}; open_item_count={open_blocks_promotion_count}; "
+            f"active_blocker_count={open_blocks_promotion_count}; "
             f"blocking_item_count={len(blocking_signal_ids)}"
         ),
     }

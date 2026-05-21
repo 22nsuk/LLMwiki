@@ -42,6 +42,14 @@ DERIVED_REMEDIATION_BACKLOG_BLOCKER_IDS = {
     "goal_status_promotion_blocked_by_remediation_backlog_open",
     "promotion_blocked_by_remediation_backlog_open",
 }
+TERMINAL_QUEUE_STOP_REASONS = {"queue_exhausted", "proposal_budget_exhausted"}
+TERMINAL_QUEUE_READINESS_BLOCKER_IDS = {
+    "execution_blocked_by_no_runnable_proposal",
+    "learning_blocked_by_execution_not_runnable",
+}
+TERMINAL_QUEUE_GOAL_STATUS_BLOCKER_IDS = {
+    "self_improvement_loop_certificate_incomplete",
+}
 
 
 def _dict_list(value: object) -> list[dict[str, Any]]:
@@ -150,6 +158,58 @@ def _goal_status_blockers(
     return blockers
 
 
+def _session_report_path_from_status(status_report: dict[str, Any]) -> str:
+    run = status_report.get("run")
+    run = run if isinstance(run, dict) else {}
+    run_id = str(run.get("run_id", "")).strip()
+    return f"ops/reports/auto-improve-sessions/{run_id}.json" if run_id else ""
+
+
+def _successful_session_iteration(iteration: Mapping[str, Any]) -> bool:
+    return (
+        str(iteration.get("decision", "")).strip() == "PROMOTE"
+        or str(iteration.get("outcome", "")).strip() == "promoted"
+        or str(iteration.get("status", "")).strip() == "promoted"
+    )
+
+
+def _completed_self_improvement_terminal_queue(
+    vault: Path,
+    status_report: dict[str, Any],
+) -> bool:
+    run = status_report.get("run")
+    run = run if isinstance(run, dict) else {}
+    if str(run.get("status", "")).strip() != "completed":
+        return False
+    if str(run.get("runtime_mode", "")).strip() != "self_improvement_loop":
+        return False
+    session_report_path = _session_report_path_from_status(status_report)
+    if not session_report_path:
+        return False
+    session = load_optional_json_object(vault / session_report_path)
+    if str(session.get("status", "")).strip() != "complete":
+        return False
+    if str(session.get("stop_reason", "")).strip() not in TERMINAL_QUEUE_STOP_REASONS:
+        return False
+    return any(
+        _successful_session_iteration(iteration)
+        for iteration in _dict_list(session.get("iterations"))
+    )
+
+
+def _learning_claim_gate_active(activation: dict[str, Any]) -> bool:
+    summary = activation.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    gate_effect = str(summary.get("gate_effect", "")).strip()
+    activation_status = str(summary.get("activation_status", "")).strip()
+    claim_level = str(summary.get("claim_level", "")).strip()
+    return not (
+        gate_effect == "none"
+        and activation_status == "not_candidate"
+        and claim_level in {"", "none"}
+    )
+
+
 def _active_goal_link(status_report: dict[str, Any], *, goal_run_status_path: str) -> dict[str, Any]:
     if not status_report:
         return {
@@ -198,17 +258,25 @@ def _active_goal_link(status_report: dict[str, Any], *, goal_run_status_path: st
     }
 
 
-def _recent_blockers(inputs: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+def _recent_blockers(vault: Path, inputs: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     blockers: list[dict[str, Any]] = []
     readiness = inputs["auto_improve_readiness"]
     activation = inputs["learning_claim_activation"]
     goal_status = inputs["goal_run_status"]
     goal_runtime_certificate = _goal_runtime_certificate(goal_status)
+    terminal_queue_completed = _completed_self_improvement_terminal_queue(vault, goal_status)
+    goal_status_suppressed_ids = set[str]()
+    readiness_suppressed_ids = set[str]()
+    if terminal_queue_completed:
+        goal_status_suppressed_ids.update(TERMINAL_QUEUE_GOAL_STATUS_BLOCKER_IDS)
+        readiness_suppressed_ids.update(TERMINAL_QUEUE_READINESS_BLOCKER_IDS)
     readiness_blockers: list[dict[str, Any]] = []
     readiness_blocker_ids: set[str] = set()
     for blocker in _dict_list(readiness.get("promotion_blockers")):
         blocker_id = str(blocker.get("id", "")).strip()
         if not blocker_id:
+            continue
+        if blocker_id in readiness_suppressed_ids:
             continue
         if blocker_id in DERIVED_REMEDIATION_BACKLOG_BLOCKER_IDS:
             continue
@@ -226,23 +294,24 @@ def _recent_blockers(inputs: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
         _goal_status_blockers(
             goal_status,
             goal_runtime_certificate,
-            suppressed_blocker_ids=readiness_blocker_ids,
+            suppressed_blocker_ids=readiness_blocker_ids | goal_status_suppressed_ids,
         )
     )
     blockers.extend(readiness_blockers)
-    for predicate in _dict_list(activation.get("blocked_predicates")):
-        predicate_id = str(predicate.get("id", "")).strip()
-        if not predicate_id:
-            continue
-        blockers.append(
-            {
-                "id": predicate_id,
-                "source": "learning_claim_activation.blocked_predicates",
-                "status": str(predicate.get("status", "blocked")).strip() or "blocked",
-                "reason": str(predicate.get("observed_value", "")).strip(),
-                "repair_target": str(predicate.get("repair_target", "")).strip(),
-            }
-        )
+    if _learning_claim_gate_active(activation):
+        for predicate in _dict_list(activation.get("blocked_predicates")):
+            predicate_id = str(predicate.get("id", "")).strip()
+            if not predicate_id:
+                continue
+            blockers.append(
+                {
+                    "id": predicate_id,
+                    "source": "learning_claim_activation.blocked_predicates",
+                    "status": str(predicate.get("status", "blocked")).strip() or "blocked",
+                    "reason": str(predicate.get("observed_value", "")).strip(),
+                    "repair_target": str(predicate.get("repair_target", "")).strip(),
+                }
+            )
 
     deduped: dict[str, dict[str, Any]] = {}
     for blocker in blockers:
@@ -333,6 +402,8 @@ def _recommended_seed_runs(inputs: dict[str, dict[str, Any]]) -> list[dict[str, 
 def _evidence_gaps(inputs: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
     activation = inputs["learning_claim_activation"]
+    if not _learning_claim_gate_active(activation):
+        return []
     anti_slop = activation.get("anti_slop_preview_ledger")
     anti_slop = anti_slop if isinstance(anti_slop, dict) else {}
     for axis in _dict_list(anti_slop.get("axes")):
@@ -433,7 +504,7 @@ def build_report(
     runtime_context = context or RuntimeContext.from_policy(policy)
     input_paths = resolve_input_paths(input_path_overrides)
     inputs = _load_inputs(vault, input_paths)
-    blockers = _recent_blockers(inputs)
+    blockers = _recent_blockers(vault, inputs)
     success_patterns = _last_success_patterns(inputs)
     forbidden_patterns = _forbidden_repeat_patterns(inputs)
     seed_runs = _recommended_seed_runs(inputs)

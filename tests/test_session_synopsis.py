@@ -341,6 +341,107 @@ class SessionSynopsisTests(unittest.TestCase):
             self.assertIn("promotion_blocked_by_goal_worktree_guard_failure", blocker_ids)
             self.assertNotIn("promotion_blocked_by_remediation_backlog_open", blocker_ids)
 
+    def test_completed_terminal_queue_suppresses_finalization_only_blockers(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_synopsis_inputs(vault)
+            write_json(
+                vault,
+                "ops/reports/auto-improve-readiness.json",
+                {
+                    "can_promote_result": False,
+                    "next_action": "Refresh sealed authority preflight.",
+                    "promotion_blockers": [
+                        {
+                            "id": "execution_blocked_by_no_runnable_proposal",
+                            "status": "open",
+                            "reason": "queue exhausted after successful terminal iteration",
+                            "recommended_next_step": "Seed a new runnable proposal.",
+                        },
+                        {
+                            "id": "learning_blocked_by_execution_not_runnable",
+                            "status": "open",
+                            "reason": "execution is not runnable",
+                            "recommended_next_step": "Wait for a runnable proposal.",
+                        },
+                        {
+                            "id": "promotion_blocked_by_artifact_contract_failure",
+                            "status": "open",
+                            "reason": "artifact freshness attention",
+                            "recommended_next_step": "Refresh generated artifacts.",
+                        },
+                    ],
+                    "fallback": {"seed_runs": []},
+                },
+            )
+            goal_status = json.loads(
+                (vault / "ops/reports/goal-run-status.json").read_text(encoding="utf-8")
+            )
+            goal_status["run"] = {
+                "run_id": "terminal-loop",
+                "status": "completed",
+                "runtime_mode": "self_improvement_loop",
+            }
+            goal_status["blockers"] = ["self-improvement loop certificate incomplete"]
+            write_json(vault, "ops/reports/goal-run-status.json", goal_status)
+            write_json(
+                vault,
+                "ops/reports/auto-improve-sessions/terminal-loop.json",
+                {
+                    "status": "complete",
+                    "stop_reason": "queue_exhausted",
+                    "iterations": [{"decision": "PROMOTE", "outcome": "promoted"}],
+                },
+            )
+            write_json(
+                vault,
+                "ops/reports/learning_claim_activation_report.json",
+                {
+                    "status": "pass",
+                    "summary": {
+                        "activation_status": "not_candidate",
+                        "claim_level": "none",
+                        "claim_wording_allowed": False,
+                        "gate_effect": "none",
+                    },
+                    "blocked_predicates": [
+                        {
+                            "id": "learning_claim_unlock_review_not_approved",
+                            "status": "stale",
+                            "repair_target": "Approve only for an active learning claim.",
+                        }
+                    ],
+                    "anti_slop_preview_ledger": {
+                        "axes": [
+                            {
+                                "axis": "context_efficiency",
+                                "status": "warn",
+                                "current": "not bound",
+                                "required": "active learning claim",
+                                "repair_target": "Bind before claiming learning.",
+                            }
+                        ]
+                    },
+                },
+            )
+
+            report = build_report(vault, context=fixed_context())
+            blocker_ids = {blocker["id"] for blocker in report["recent_blockers"]}
+            gap_ids = {gap["id"] for gap in report["evidence_gaps"]}
+
+            self.assertNotIn("execution_blocked_by_no_runnable_proposal", blocker_ids)
+            self.assertNotIn("learning_blocked_by_execution_not_runnable", blocker_ids)
+            self.assertNotIn(
+                "goal_status_self_improvement_loop_certificate_incomplete",
+                blocker_ids,
+            )
+            self.assertNotIn("learning_claim_unlock_review_not_approved", blocker_ids)
+            self.assertNotIn("learning_claim_unlock_review_not_approved", gap_ids)
+            self.assertNotIn("context_efficiency", gap_ids)
+            self.assertIn("promotion_blocked_by_artifact_contract_failure", blocker_ids)
+
     def test_build_report_can_read_run_local_readiness_and_goal_status(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
