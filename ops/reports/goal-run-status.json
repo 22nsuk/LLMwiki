@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/goal-run-status.schema.json",
   "artifact_kind": "goal_run_status",
-  "generated_at": "2026-05-21T09:17:33Z",
+  "generated_at": "2026-05-21T09:25:45Z",
   "producer": "ops.scripts.goal_run_status",
   "source_command": "python -m ops.scripts.goal_run_status --vault .",
   "source_revision": "unknown",
@@ -11,7 +11,7 @@
     "schema": "d5f30c4146c3ec45940e3b0679f503e2ed7b45e3cfc5f0cd0846521f4db56bb6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "c660ba929519efa6d5bd79feab56de8e74b35b4617b309ed4fb1c330b86fa795",
-    "goal_contract": "f704220afe2483a389d54170f9738dbb58cb4d3fb2701103dd80988660ab47ee",
+    "goal_contract": "726a81ea410f31cf225b74ce300804e4f99e6318a9df7403a130eae4c8157f6f",
     "session_synopsis_link": "7cbf10072f9b38b0b7b209442fe7e61976148ae82e700c307dc8c735ff054848"
   },
   "schema_version": 1,
@@ -20,11 +20,11 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T09:17:33Z"
+    "checked_at": "2026-05-21T09:25:45Z"
   },
   "goal": {
     "contract_path": "runs/goal-auto-improve-trial/state/codex-goal-contract.json",
-    "contract_sha256": "469bef8cff3d2ca250f091e4eda847809dc4200ab10a217804b94eb2705f393e",
+    "contract_sha256": "cf4820fe82ada154a9e4e204e96d8c20014fba4adfdebf70d463673f6d78e2e7",
     "contract_status": "loaded",
     "contract_id": "auto-improve-goal",
     "objective": "Run a bounded self-improvement loop whose result is certified by current readiness, release, source-package, public-check, status, and session evidence.",
@@ -38,15 +38,15 @@
     "run_id": "auto-improve-trial",
     "status": "blocked",
     "runtime_mode": "self_improvement_loop",
-    "started_at": "2026-05-21T09:17:33Z",
-    "updated_at": "2026-05-21T09:17:33Z",
+    "started_at": "2026-05-21T09:25:45Z",
+    "updated_at": "2026-05-21T09:25:45Z",
     "completed_at": ""
   },
   "observability": {
     "heartbeat_interval_seconds": 300,
     "checkpoint_interval_seconds": 1800,
-    "last_heartbeat_at": "2026-05-21T09:17:33Z",
-    "last_checkpoint_at": "2026-05-21T09:17:33Z",
+    "last_heartbeat_at": "2026-05-21T09:25:45Z",
+    "last_checkpoint_at": "2026-05-21T09:25:45Z",
     "last_command_heartbeat_at": "",
     "quiet_seconds": 0,
     "command_observation_mode": "",
@@ -150,7 +150,7 @@
       {
         "checkpoint_id": "checkpoint_6h",
         "due_after_seconds": 21600,
-        "due_at": "2026-05-21T15:17:33Z",
+        "due_at": "2026-05-21T15:25:45Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -169,13 +169,13 @@
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "status": "present",
-            "generated_at": "2026-05-21T08:53:55Z",
+            "generated_at": "2026-05-21T09:19:24Z",
             "freshness_status": "not_due"
           },
           {
             "path": "ops/reports/session-synopsis.json",
             "status": "present",
-            "generated_at": "2026-05-21T07:11:30Z",
+            "generated_at": "2026-05-21T09:17:33Z",
             "freshness_status": "not_due"
           }
         ]
@@ -183,7 +183,7 @@
       {
         "checkpoint_id": "checkpoint_12h",
         "due_after_seconds": 43200,
-        "due_at": "2026-05-21T21:17:33Z",
+        "due_at": "2026-05-21T21:25:45Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -201,7 +201,7 @@
           {
             "path": "ops/reports/test-execution-summary.json",
             "status": "present",
-            "generated_at": "2026-05-21T08:54:33Z",
+            "generated_at": "2026-05-21T09:20:03Z",
             "freshness_status": "not_due"
           },
           {
@@ -215,7 +215,7 @@
       {
         "checkpoint_id": "checkpoint_24h",
         "due_after_seconds": 86400,
-        "due_at": "2026-05-22T09:17:33Z",
+        "due_at": "2026-05-22T09:25:45Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -250,10 +250,10 @@
     "link_status": "linked",
     "report_path": "ops/reports/session-synopsis.json",
     "status": "attention",
-    "generated_at": "2026-05-21T07:11:30Z",
-    "recent_blocker_count": 6,
+    "generated_at": "2026-05-21T09:17:33Z",
+    "recent_blocker_count": 4,
     "evidence_gap_count": 0,
-    "next_action": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
+    "next_action": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded runtime with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
   },
   "artifacts": {
     "status_report_path": "runs/goal-auto-improve-trial/state/goal-run-status.json",

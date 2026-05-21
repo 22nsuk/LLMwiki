@@ -1,16 +1,16 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-21T09:20:06Z",
+  "generated_at": "2026-05-21T09:32:21Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "d631159363e4169dded6b589d5a93a2f7e6e1088d1663b2d472d1bb27d4d936e",
+  "source_tree_fingerprint": "c10fe5f96ce083d613effcb80b11cfeab14d7953ebe6f41816a479635057827a",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "834eb6cfec958f35d3989a742cfd58414bb50bb75040ab9283e4c90ed61f1657",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "083f2e66fd702dd04ab35c7c0f6fc6b093daead89c9bde8cf15ca2ede2098c4d",
+    "source_paths": "e1ec23c1aeb35fa28ad7804c1ab5acfc2e0dd52cd8dcb757c7a8f9096feec435",
     "run_promotion_reports": "18ea7595097965a5be7d294043892b10117e9d6b84b7076229584b1783b8010f",
     "external_report_inventory": "aad6591b2dc1c1d32dbbad9a2d9c4b2bece19eebfd3f78ecb258ef509e7de8a1",
     "operator_report_inventory": "0479590a186415fa72ba934ab4431828124b8ca576b06322a6eae193e9627721",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T09:20:06Z"
+    "checked_at": "2026-05-21T09:32:21Z"
   },
   "vault": ".",
   "policy": {

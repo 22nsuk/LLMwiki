@@ -2919,8 +2919,8 @@ class MakefileStaticGateTests(unittest.TestCase):
             "goal-runtime-run-admission-converge",
             "goal-runtime-python-preflight",
         )
-        _assert_target_depends_on(self, text, "goal-runtime-run-admission", "goal-runtime-run-admission-converge")
-        _assert_target_depends_on(self, text, "long-run-preflight-clean", "goal-runtime-run-admission")
+        _assert_target_depends_on(self, text, "goal-runtime-run-admission", "auto-improve-goal-preflight")
+        _assert_target_depends_on(self, text, "long-run-preflight-clean", "goal-runtime-run-admission-converge")
         _assert_target_depends_on(self, text, "auto-improve-goal-preflight", "goal-runtime-lock-check")
         _assert_target_depends_on(
             self,

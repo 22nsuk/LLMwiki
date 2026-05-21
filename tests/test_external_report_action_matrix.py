@@ -400,7 +400,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "\t$(MAKE) goal-runtime-quarantine-preflight\n"
             "goal-runtime-run-admission: goal-runtime-run-admission-converge\n"
             "\tpython -m ops.scripts.goal_runtime_run_admission --strict\n"
-            "long-run-preflight-clean: goal-runtime-run-admission\n",
+            "long-run-preflight-clean: goal-runtime-run-admission-converge\n",
             encoding="utf-8",
         )
         contract = {

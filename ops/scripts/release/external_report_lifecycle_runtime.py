@@ -985,7 +985,7 @@ def goal_runtime_transient_cleanup_gate_status(
         and "goal-runtime-run-admission:" in makefile_text
         and "goal-runtime-run-admission-converge:" in makefile_text
         and "long-run-preflight-clean:" in makefile_text
-        and "long-run-preflight-clean: goal-runtime-run-admission" in makefile_text
+        and "long-run-preflight-clean: goal-runtime-run-admission-converge" in makefile_text
         and report.get("artifact_kind") == "goal_runtime_clean_transient"
         and report.get("producer") == "ops.scripts.goal_runtime_clean_transient"
         and report.get("status") == "pass"

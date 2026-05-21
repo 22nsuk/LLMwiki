@@ -222,7 +222,7 @@ goal-runtime-run-admission-converge: goal-runtime-lock-check goal-runtime-python
 	$(MAKE) goal-runtime-publish-local-evidence
 	$(MAKE) goal-runtime-fixed-point-check
 
-goal-runtime-run-admission: goal-runtime-run-admission-converge
+goal-runtime-run-admission: auto-improve-goal-preflight
 	$(PYTHON) -m ops.scripts.goal_runtime_run_admission --vault "$(VAULT)" --out "$(GOAL_RUNTIME_RUN_ADMISSION_OUT)" --cleanup-report "$(GOAL_RUNTIME_CLEAN_TRANSIENT_OUT)" --quarantine-preflight-report "$(GOAL_RUNTIME_QUARANTINE_PREFLIGHT_OUT)" --fixed-point-report "$(GOAL_RUNTIME_FIXED_POINT_CHECK_OUT)" --goal-worktree-guard-report "$(GOAL_WORKTREE_GUARD_OUT)" --mutation-proposals-report "$(MUTATION_PROPOSAL_OUT)" --readiness-report "$(AUTO_IMPROVE_READINESS_OUT)" --remediation-backlog-report "$(REMEDIATION_BACKLOG_OUT)" --strict
 
 goal-runtime-lock-check:
@@ -237,7 +237,7 @@ goal-runtime-lock-stop:
 goal-runtime-python-preflight:
 	$(PYTHON) -m ops.scripts.bootstrap_preflight --vault "$(VAULT)" --dev --environment-class goal-runtime --out "$(GOAL_RUNTIME_PYTHON_PREFLIGHT_OUT)"
 
-long-run-preflight-clean: goal-runtime-run-admission
+long-run-preflight-clean: goal-runtime-run-admission-converge
 
 codex-goal-client:
 	$(PYTHON) -m pytest tests/test_codex_goal_contract.py tests/test_codex_goal_client.py tests/test_codex_goal_prompt.py $(PYTEST_SERIAL_FLAGS)

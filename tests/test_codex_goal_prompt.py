@@ -85,6 +85,7 @@ Promotion gate guidance:
 - If blockers remain, record the next repair in remediation/session evidence and keep promotion banned.
 
 Run admission discipline:
+- If tracked canonical reports need refresh, run `make goal-runtime-run-admission-converge`, settle those generated changes, then rerun `make goal-runtime-run-admission`.
 - Before starting or resuming a goal run, pass `make goal-runtime-run-admission` instead of relying on remembered cleanup steps.
 - Treat `tmp/goal-runtime-run-admission.json` as the start gate: dirty/stale worktree, fixed-point drift, or zero runnable proposals means pause and follow `recommended_next_action`.
 - A promotion-only attention result may still allow bounded repair work, but it never weakens the final promotion gate.
