@@ -400,8 +400,17 @@ def _readiness_promotion_check(readiness: dict[str, Any], path: str) -> dict[str
 def _remediation_backlog_check(remediation_backlog: dict[str, Any], path: str) -> dict[str, Any]:
     kind_status = _artifact_kind_check(remediation_backlog, "remediation_backlog")
     status = str(remediation_backlog.get("status", "missing")).strip() or "missing"
-    open_item_count = _as_int(remediation_backlog.get("open_item_count"))
-    active_blocker_count = _as_int(remediation_backlog.get("active_blocker_count"))
+    summary = _dict_field(remediation_backlog, "summary")
+    open_item_count = _as_int(
+        remediation_backlog.get("open_item_count")
+        if "open_item_count" in remediation_backlog
+        else summary.get("open_item_count")
+    )
+    active_blocker_count = _as_int(
+        remediation_backlog.get("active_blocker_count")
+        if "active_blocker_count" in remediation_backlog
+        else summary.get("active_blocker_count")
+    )
     items = _list_field(remediation_backlog, "items")
     open_blockers = [
         str(item.get("blocker_id", "") or item.get("id", "")).strip()

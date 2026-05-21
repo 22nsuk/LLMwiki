@@ -159,6 +159,20 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         self.assertGreater(report["summary"]["promotion_blocker_count"], 0)
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_remediation_backlog_check_reads_schema_summary_counts(self) -> None:
+        backlog = json.loads((self.vault / "ops/reports/remediation-backlog.json").read_text(encoding="utf-8"))
+        backlog.pop("open_item_count")
+        backlog.pop("active_blocker_count")
+        backlog["summary"] = {"open_item_count": 1, "active_blocker_count": 1}
+        self._write_json("ops/reports/remediation-backlog.json", backlog)
+
+        report = self._build_report()
+
+        backlog_check = next(check for check in report["checks"] if check["id"] == "promotion_remediation_backlog_clear")
+        self.assertEqual(backlog_check["observed"]["open_item_count"], 1)
+        self.assertEqual(backlog_check["observed"]["active_blocker_count"], 1)
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_build_report_blocks_start_when_cleanup_was_not_applied(self) -> None:
         cleanup = json.loads((self.vault / "tmp/goal-runtime-clean-transient.json").read_text(encoding="utf-8"))
         cleanup["summary"]["apply"] = False
