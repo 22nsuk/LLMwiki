@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-21T13:28:12Z",
+  "generated_at": "2026-05-21T13:31:32Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
@@ -12,10 +12,10 @@
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "7eb90914c0915d5e3d6e1407c2447511073f92f54b851a6c480e58dbea56127f",
     "goal_runtime_certificate": "3bb824b5fd060c45ce9e706eb4b92cd030cbbc9bfe2685ff7d457e2d48e6ef46",
-    "learning_claim_activation": "89881f1f70fdfcf21f4088688d5a6a5d87e36cb44752fd78a918b402335aed4c",
+    "learning_claim_activation": "bed9ff9db045f7ae37e96cf59ec8a1e65e0f1024dbb18b2e5346f661aba840ae",
     "learning_readiness_signoff": "1ec9a280330bf4c9f5cc6a77f7ea7590acaf29d0718a80299d25d8f466576e9d",
-    "self_improvement_negative_lessons": "2cb2bae22360bae698329e483cf64dbf7d0e23b4c46b7f554c97616fe10c5241",
-    "session_synopsis": "b60cf998cff0e8a4159da6b113e28c5907a91321f014ec017412cf1d83c1db5a",
+    "self_improvement_negative_lessons": "89ab7f72ed5dd48ab5cc13b484ff83e98f9ed68fb218fb13e6a32b4c9fb2a679",
+    "session_synopsis": "04207f3561e2d0562128570140bc70e287573e88908989b63194dfeae917bbb0",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
     "auto_improve_sessions": "045839dd6979b19e7b1e2cf2c9ed4675b6db02844a8f4ea94a33326f904f690f"
   },
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T13:28:12Z"
+    "checked_at": "2026-05-21T13:31:32Z"
   },
   "vault": ".",
   "policy": {
@@ -34,10 +34,10 @@
   },
   "status": "attention",
   "summary": {
-    "backlog_item_count": 6,
+    "backlog_item_count": 5,
     "repeated_blocker_count": 3,
-    "active_blocker_count": 3,
-    "open_item_count": 4,
+    "active_blocker_count": 2,
+    "open_item_count": 3,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
     "next_action": "Close or explicitly defer remediation backlog items before promotion."
   },
@@ -71,20 +71,6 @@
       ],
       "repair_target": "Run the bounded self-improvement loop and full gates, then refresh goal-runtime-certificate.",
       "next_action": "Verified goal-runtime-certificate evidence is present."
-    },
-    {
-      "item_id": "active_blocker_promotion_blocked_by_goal_worktree_guard_failure",
-      "blocker_id": "promotion_blocked_by_goal_worktree_guard_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness.",
-      "next_action": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     },
     {
       "item_id": "auto_session_repeated_blocker_active_report_self_improve_certificate_rerun4_review_blocked",

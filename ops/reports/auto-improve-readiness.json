@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-21T13:28:12Z",
+  "generated_at": "2026-05-21T13:31:32Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -11,8 +11,8 @@
     "schema": "e9c42be01059ee1830316ef368cb7947f0cc164dad1401ac3e2787e898b58975",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "aa05a308998431aa823f2c0e3e92f0370a59f6eff4e1b0a0674beea84f356ae3",
-    "artifact_freshness_report": "a8587503376660a3242cf551a2bc2fd5c487b9414f6a39c8d79c06df1a474f29",
-    "goal_worktree_guard_report": "ff4fa975b08c455b471153a435d10d693579c81105f0436eded3b674d55c4985",
+    "artifact_freshness_report": "fc37d2422a663b0d779491a6c418ab5265817ea450c7ca5980461d62a2f5f900",
+    "goal_worktree_guard_report": "7ce16b748a9fd8f7209b7d0716526482bddcc1f4f4b99cddbfe282a4c04e81cc",
     "learning_readiness_signoff_report": "1ec9a280330bf4c9f5cc6a77f7ea7590acaf29d0718a80299d25d8f466576e9d",
     "mechanism_review_report": "c0ce20ec25a239564685ae3847793ac41bb2c7d8306c15ca9eb33852c87f6eb1",
     "mutation_proposal_report": "492329681d9c2848fb24ea13914c4bdd7201d1bdf672d2c8ea8ecf49677bf6da",
@@ -23,8 +23,8 @@
     "release_closeout_post_check_finalizer_report": "missing",
     "release_closeout_summary_report": "2a602d2f2d109181a4968cdb99489957ee9378ab31f50d636b0272ac74e24f16",
     "release_evidence_cohort_report": "694897fe672515f02ad9230367e2e81a064634b56bc1a581a52afd9d587d715a",
-    "remediation_backlog_report": "6454147b2d4b90b576d81fc1eade66a49869f3bd3bd30e5059d99dd2d3d32ec4",
-    "selected_contract_summary_report": "53041220c598e2f94aeab2ebbea9d954de69656a078704bdbf7439846b02cbf5",
+    "remediation_backlog_report": "26955fc4b3e41178acdc0e82a9ae73185c1d2c714792a42c89854ef7b13d2d0a",
+    "selected_contract_summary_report": "ce89b46c765cae036b21f9be56435c1bc073f822a074d8eaf3ec03d3dda705f0",
     "source_package_clean_extract_report": "136f0187ac37fe12a1803ed575b2e917b2f5c091b7ab99fdc1381ccfed40d770",
     "release_authority_preflight_report_candidates": "e8dc01ac45cb5a4e75255479f3287ac412199e04a71006f82a6d3b996a3b48ba"
   },
@@ -34,7 +34,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T13:28:12Z"
+    "checked_at": "2026-05-21T13:31:32Z"
   },
   "vault": ".",
   "policy": {
@@ -42,7 +42,7 @@
     "version": 4
   },
   "can_execute_trial": true,
-  "can_promote_result": false,
+  "can_promote_result": true,
   "execution_readiness": {
     "status": "pass",
     "gate_effect": "active",
@@ -130,48 +130,7 @@
       "recommended_next_step": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded runtime with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
     }
   ],
-  "promotion_blockers": [
-    {
-      "id": "promotion_blocked_by_goal_worktree_guard_failure",
-      "scope": "worktree_guard",
-      "status": "open",
-      "severity": "blocker",
-      "release_blocker": true,
-      "accepted_risk": false,
-      "gate_effect": "active",
-      "source_status": "attention",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=36",
-      "signal_ids": [
-        "git_worktree_dirty"
-      ],
-      "required_evidence": [
-        "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
-        "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
-        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal."
-      ],
-      "recommended_next_step": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
-    },
-    {
-      "id": "promotion_blocked_by_remediation_backlog_open",
-      "scope": "remediation_backlog",
-      "status": "open",
-      "severity": "blocker",
-      "release_blocker": true,
-      "accepted_risk": false,
-      "gate_effect": "active",
-      "source_status": "attention",
-      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=1; active_blocker_count=1; blocking_item_count=1",
-      "signal_ids": [
-        "promotion_blocked_by_goal_worktree_guard_failure"
-      ],
-      "required_evidence": [
-        "Run make remediation-backlog and confirm status=pass with open_item_count=0.",
-        "Close or explicitly defer blocks_promotion backlog items before promotion.",
-        "can_promote_result must stay false while remediation backlog items are open."
-      ],
-      "recommended_next_step": "Close or explicitly defer remediation backlog items, rerun make remediation-backlog, then rerun make auto-improve-readiness."
-    }
-  ],
+  "promotion_blockers": [],
   "release_blockers": [
     {
       "id": "learning_blocked_by_review_required",
@@ -365,35 +324,31 @@
     "goal_worktree_guard_summary": {
       "path": "tmp/goal-worktree-guard.json",
       "artifact_kind": "goal_worktree_guard",
-      "status": "attention",
+      "status": "pass",
       "requested_mode": "git",
       "detected_mode": "git_worktree",
       "can_execute_goal_runtime": true,
-      "can_promote_result": false,
+      "can_promote_result": true,
       "zip_mode_replay_only": false,
       "dirty_worktree_allowed": false,
-      "dirty_entry_count": 36,
+      "dirty_entry_count": 0,
       "fatal_blockers": [],
-      "promotion_blockers": [
-        "git_worktree_dirty"
-      ],
-      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=36"
+      "promotion_blockers": [],
+      "summary": "goal worktree guard status=pass; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=true; dirty_entry_count=0"
     },
     "remediation_backlog_summary": {
       "path": "ops/reports/remediation-backlog.json",
       "expected_artifact_kind": "remediation_backlog",
       "artifact_kind": "remediation_backlog",
-      "status": "fail",
-      "source_status": "attention",
-      "release_blocking": true,
-      "open_item_count": 1,
-      "active_blocker_count": 1,
-      "blocking_item_count": 1,
-      "signal_ids": [
-        "promotion_blocked_by_goal_worktree_guard_failure"
-      ],
+      "status": "pass",
+      "source_status": "pass",
+      "release_blocking": false,
+      "open_item_count": 0,
+      "active_blocker_count": 0,
+      "blocking_item_count": 0,
+      "signal_ids": [],
       "currentness_status": "current",
-      "summary": "remediation backlog status=attention; open_item_count=1; active_blocker_count=1; blocking_item_count=1"
+      "summary": "remediation backlog status=attention; open_item_count=0; active_blocker_count=0; blocking_item_count=0"
     },
     "learning_signoff_summary": {
       "path": "ops/reports/learning-readiness-signoff.json",

@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-21T13:28:11Z",
+  "generated_at": "2026-05-21T13:31:31Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
@@ -11,10 +11,10 @@
     "schema": "f7dd295621a34a54cb5018604760de77e8685c6f0e0dc086056a7362e25a7519",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ea66bebc6dcb1e56d35893c8f4a0557a3dd3ad55888a83b5b2678e5b822c5ba7",
-    "auto_improve_readiness": "abe8f5e5a051460f4345469b15be27d6eb4183e6c1c2fe21493b63b1c1f6530a",
+    "auto_improve_readiness": "48cf8798b3c7a0cc522ad7a46a82f436126c1240e22244534afcc99ae4fc1c51",
     "goal_run_status": "89bcf3369f431294e511e43d87633d6fa1a5f3f0f17578e9e81beef61a51f85b",
-    "learning_claim_activation": "89881f1f70fdfcf21f4088688d5a6a5d87e36cb44752fd78a918b402335aed4c",
-    "learning_delta_scoreboard": "0dd757d80efff6d4e4b02f55f3909d4cc2d42eb57ba8afbeb1dcb271135ed37a",
+    "learning_claim_activation": "bed9ff9db045f7ae37e96cf59ec8a1e65e0f1024dbb18b2e5346f661aba840ae",
+    "learning_delta_scoreboard": "72bd8865e5cd01a190b2881591b04506a7e7f0dd634660c4038a5817a9352bfc",
     "source_package_clean_extract": "136f0187ac37fe12a1803ed575b2e917b2f5c091b7ab99fdc1381ccfed40d770",
     "task_observations": "5ee6fc130d9ca93cc1189b0816c3aca7b2fe351a203f126ba6f09522decfd6ea"
   },
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T13:28:11Z"
+    "checked_at": "2026-05-21T13:31:31Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
   },
   "status": "attention",
   "summary": {
-    "recent_blocker_count": 3,
+    "recent_blocker_count": 2,
     "last_success_pattern_count": 5,
     "forbidden_repeat_pattern_count": 5,
     "recommended_seed_run_count": 3,
@@ -61,13 +61,6 @@
       "status": "open",
       "reason": "self-improvement loop certificate incomplete",
       "repair_target": "Run the bounded self-improvement loop and full gates, then refresh goal-runtime-certificate."
-    },
-    {
-      "id": "promotion_blocked_by_goal_worktree_guard_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "status": "open",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=36",
-      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     }
   ],
   "last_success_patterns": [
@@ -246,7 +239,7 @@
     "target_runtime_mode": "self_improvement_loop",
     "runtime_certificate_status": "pending",
     "runtime_certificate_full_gate_clean": false,
-    "open_blocker_count": 3,
+    "open_blocker_count": 2,
     "forbidden_pattern_count": 5,
     "evidence_gap_count": 0
   },
