@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-21T04:44:40Z",
+  "generated_at": "2026-05-21T04:45:48Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -12,7 +12,7 @@
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "c81a53851286949be4152bf3484570bc2540afd45f2ca65919e6973aebd7192c",
     "artifact_freshness_report": "ee13732cb02ff436e63f0930bec10d842dd5e785c1963ccd0711204780ff12b4",
-    "goal_worktree_guard_report": "12599ba2644b619fd69f3d0ff793e29cfd437ed437f73a3b47068b482bab37dd",
+    "goal_worktree_guard_report": "63614bb98e049392fb010063d469a87fbb66e813513d7f04c0f999f78c61d8e5",
     "mechanism_review_report": "d31a021dec1cb2cb3ba2a904018bfb6215fb12944da019a3ed87b478ef21c478",
     "mutation_proposal_report": "aa709a7db8981b00d9d6e921fbd8bdd1e478ab3733ca54445a643a4cf88508f5",
     "outcome_metrics_report": "13f05b837dd3ebf374e55533bb4600af98445494176ec940dd20a1bc3c8fb7e6",
@@ -22,7 +22,7 @@
     "release_closeout_post_check_finalizer_report": "missing",
     "release_closeout_summary_report": "2a602d2f2d109181a4968cdb99489957ee9378ab31f50d636b0272ac74e24f16",
     "release_evidence_cohort_report": "694897fe672515f02ad9230367e2e81a064634b56bc1a581a52afd9d587d715a",
-    "remediation_backlog_report": "f86e8ef951b062b66e948f4f1a6a215e11d0141533028742a3a1ad30baaf03b0",
+    "remediation_backlog_report": "9641b2bb0a1a297c9d2bf7c450ffa079eed2840c4fed57c2edd585b32a57cb6b",
     "selected_contract_summary_report": "661821fb895cac6ae4f9f0e4e6b7f63851d9c479481bd39ac2043698f8c35052",
     "source_package_clean_extract_report": "061877385fe66c20a5f8302fa9f32ad19830a123d62a3d2290baa6e71c53d2d9",
     "release_authority_preflight_report_candidates": "abedb45c8f9a9b0da8f2a7ea4833cdafe88392d8e089f1f835cd36816b7db097"
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T04:44:40Z"
+    "checked_at": "2026-05-21T04:45:48Z"
   },
   "vault": ".",
   "policy": {
@@ -170,26 +170,6 @@
       "recommended_next_step": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty."
     },
     {
-      "id": "promotion_blocked_by_goal_worktree_guard_failure",
-      "scope": "worktree_guard",
-      "status": "open",
-      "severity": "blocker",
-      "release_blocker": true,
-      "accepted_risk": false,
-      "gate_effect": "active",
-      "source_status": "attention",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=36",
-      "signal_ids": [
-        "git_worktree_dirty"
-      ],
-      "required_evidence": [
-        "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
-        "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
-        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal."
-      ],
-      "recommended_next_step": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
-    },
-    {
       "id": "promotion_blocked_by_remediation_backlog_open",
       "scope": "remediation_backlog",
       "status": "open",
@@ -198,10 +178,9 @@
       "accepted_risk": false,
       "gate_effect": "active",
       "source_status": "attention",
-      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=2; active_blocker_count=2; blocking_item_count=2",
+      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=1; active_blocker_count=1; blocking_item_count=1",
       "signal_ids": [
-        "goal_status_git_worktree_dirty",
-        "promotion_blocked_by_goal_worktree_guard_failure"
+        "goal_status_promotion_blocked_by_goal_worktree_guard_failure"
       ],
       "required_evidence": [
         "Run make remediation-backlog and confirm status=pass with open_item_count=0.",
@@ -403,19 +382,17 @@
     "goal_worktree_guard_summary": {
       "path": "tmp/goal-worktree-guard.json",
       "artifact_kind": "goal_worktree_guard",
-      "status": "attention",
+      "status": "pass",
       "requested_mode": "git",
       "detected_mode": "git_worktree",
       "can_execute_goal_runtime": true,
-      "can_promote_result": false,
+      "can_promote_result": true,
       "zip_mode_replay_only": false,
       "dirty_worktree_allowed": false,
-      "dirty_entry_count": 36,
+      "dirty_entry_count": 0,
       "fatal_blockers": [],
-      "promotion_blockers": [
-        "git_worktree_dirty"
-      ],
-      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=36"
+      "promotion_blockers": [],
+      "summary": "goal worktree guard status=pass; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=true; dirty_entry_count=0"
     },
     "remediation_backlog_summary": {
       "path": "runs/goal-active-report-self-improve-certificate-rerun7/state/remediation-backlog.json",
@@ -424,15 +401,14 @@
       "status": "fail",
       "source_status": "attention",
       "release_blocking": true,
-      "open_item_count": 2,
-      "active_blocker_count": 2,
-      "blocking_item_count": 2,
+      "open_item_count": 1,
+      "active_blocker_count": 1,
+      "blocking_item_count": 1,
       "signal_ids": [
-        "goal_status_git_worktree_dirty",
-        "promotion_blocked_by_goal_worktree_guard_failure"
+        "goal_status_promotion_blocked_by_goal_worktree_guard_failure"
       ],
       "currentness_status": "current",
-      "summary": "remediation backlog status=attention; open_item_count=2; active_blocker_count=2; blocking_item_count=2"
+      "summary": "remediation backlog status=attention; open_item_count=1; active_blocker_count=1; blocking_item_count=1"
     }
   },
   "queue": {

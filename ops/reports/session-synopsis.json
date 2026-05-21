@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-21T04:44:40Z",
+  "generated_at": "2026-05-21T04:45:48Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
@@ -11,8 +11,8 @@
     "schema": "f7dd295621a34a54cb5018604760de77e8685c6f0e0dc086056a7362e25a7519",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ea66bebc6dcb1e56d35893c8f4a0557a3dd3ad55888a83b5b2678e5b822c5ba7",
-    "auto_improve_readiness": "309676c83158e34be31ab9c95c396acad4b332a63b232be56a0b214f9dcf38e6",
-    "goal_run_status": "3e939b0a3db9fc90ee33fd4447f44bb264c2053b2286f70b562cea87b64290b4",
+    "auto_improve_readiness": "47acf6bc41a1f4e0ca96b658b7e73c3e9733035526c3e03e6b288160ae775c2a",
+    "goal_run_status": "f265102896d591628fa308c5d8f9b6cd1ff4d0d06f81fa2a199e09514c0c4bba",
     "learning_claim_activation": "f90a59b26c0aafc739d67a3d2bdde627f879afb337ca0220af680861946a0b81",
     "learning_delta_scoreboard": "bbd6f92d95bac554925d3fe657a3b370f2ece6ee67c189501d48d6695fc12014",
     "source_package_clean_extract": "061877385fe66c20a5f8302fa9f32ad19830a123d62a3d2290baa6e71c53d2d9",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T04:44:40Z"
+    "checked_at": "2026-05-21T04:45:48Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
   },
   "status": "attention",
   "summary": {
-    "recent_blocker_count": 2,
+    "recent_blocker_count": 1,
     "last_success_pattern_count": 5,
     "forbidden_repeat_pattern_count": 3,
     "recommended_seed_run_count": 3,
@@ -49,18 +49,11 @@
   },
   "recent_blockers": [
     {
-      "id": "goal_status_git_worktree_dirty",
+      "id": "goal_status_promotion_blocked_by_goal_worktree_guard_failure",
       "source": "goal_run_status.blockers",
       "status": "open",
-      "reason": "git_worktree_dirty",
+      "reason": "promotion_blocked_by_goal_worktree_guard_failure",
       "repair_target": "Refresh goal run status and close the active blocker before resuming."
-    },
-    {
-      "id": "promotion_blocked_by_goal_worktree_guard_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "status": "open",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=36",
-      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     }
   ],
   "last_success_patterns": [
@@ -216,7 +209,7 @@
     "target_runtime_mode": "self_improvement_loop",
     "runtime_certificate_status": "pending",
     "runtime_certificate_full_gate_clean": false,
-    "open_blocker_count": 2,
+    "open_blocker_count": 1,
     "forbidden_pattern_count": 3,
     "evidence_gap_count": 0
   },

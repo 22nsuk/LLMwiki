@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-21T04:44:41Z",
+  "generated_at": "2026-05-21T04:45:49Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
@@ -12,8 +12,8 @@
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "04d709548fae3fbea7087eb8bc62a9aa1f424113a60ebcbe2b410ccba8cb34c5",
     "learning_claim_activation": "f90a59b26c0aafc739d67a3d2bdde627f879afb337ca0220af680861946a0b81",
-    "self_improvement_negative_lessons": "5b4a04e562927ed7e7500f886ab10c55fdb18dd0d5ee67fd485f15538b0033b8",
-    "session_synopsis": "1dcd59ec8857065e284ff0ce6066ecd7422653ad34a3f76edfd055042cf6f1e4",
+    "self_improvement_negative_lessons": "6e6107a9a91e8fb4099c898584df81af3db5dbb1fe9cd05a4ed2ad2c37234b17",
+    "session_synopsis": "2428e149ea14e3f7bca725a9f9da15cc2017e1ffa67ff48e46ce85c8ef75cce7",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
     "auto_improve_sessions": "045839dd6979b19e7b1e2cf2c9ed4675b6db02844a8f4ea94a33326f904f690f"
   },
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T04:44:41Z"
+    "checked_at": "2026-05-21T04:45:49Z"
   },
   "vault": ".",
   "policy": {
@@ -32,17 +32,17 @@
   },
   "status": "attention",
   "summary": {
-    "backlog_item_count": 4,
+    "backlog_item_count": 3,
     "repeated_blocker_count": 2,
-    "active_blocker_count": 2,
-    "open_item_count": 4,
+    "active_blocker_count": 1,
+    "open_item_count": 3,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
     "next_action": "Close or explicitly defer remediation backlog items before promotion."
   },
   "items": [
     {
-      "item_id": "active_blocker_goal_status_git_worktree_dirty",
-      "blocker_id": "goal_status_git_worktree_dirty",
+      "item_id": "active_blocker_goal_status_promotion_blocked_by_goal_worktree_guard_failure",
+      "blocker_id": "goal_status_promotion_blocked_by_goal_worktree_guard_failure",
       "source": "goal_run_status.blockers",
       "item_type": "active_blocker",
       "status": "open",
@@ -53,20 +53,6 @@
       ],
       "repair_target": "Refresh goal run status and close the active blocker before resuming.",
       "next_action": "Refresh goal run status and close the active blocker before resuming."
-    },
-    {
-      "item_id": "active_blocker_promotion_blocked_by_goal_worktree_guard_failure",
-      "blocker_id": "promotion_blocked_by_goal_worktree_guard_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "runs/goal-active-report-self-improve-certificate-rerun7/state/session-synopsis.json"
-      ],
-      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness.",
-      "next_action": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     },
     {
       "item_id": "auto_session_repeated_blocker_active_report_self_improve_certificate_rerun4_review_blocked",

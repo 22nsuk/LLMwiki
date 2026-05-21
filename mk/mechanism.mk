@@ -116,9 +116,16 @@ goal-runtime-local-evidence-converge:
 	$(MAKE) goal-runtime-local-negative-lessons
 	$(MAKE) goal-runtime-local-remediation-backlog
 	$(MAKE) goal-runtime-local-readiness
+	$(MAKE) goal-runtime-refresh
 	$(MAKE) goal-runtime-local-session-synopsis
 	$(MAKE) goal-runtime-local-negative-lessons
 	$(MAKE) goal-runtime-local-remediation-backlog
+	$(MAKE) goal-runtime-local-readiness
+	$(MAKE) goal-runtime-refresh
+	$(MAKE) goal-runtime-local-session-synopsis
+	$(MAKE) goal-runtime-local-negative-lessons
+	$(MAKE) goal-runtime-local-remediation-backlog
+	$(MAKE) goal-runtime-local-readiness
 	$(MAKE) goal-runtime-local-fixed-point-check
 
 goal-runtime-publish-local-evidence:

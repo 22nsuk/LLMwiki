@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/goal-run-status.schema.json",
   "artifact_kind": "goal_run_status",
-  "generated_at": "2026-05-21T04:44:37Z",
+  "generated_at": "2026-05-21T04:45:45Z",
   "producer": "ops.scripts.goal_run_status",
   "source_command": "python -m ops.scripts.goal_run_status --vault .",
   "source_revision": "unknown",
@@ -11,7 +11,7 @@
     "schema": "d5f30c4146c3ec45940e3b0679f503e2ed7b45e3cfc5f0cd0846521f4db56bb6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "c660ba929519efa6d5bd79feab56de8e74b35b4617b309ed4fb1c330b86fa795",
-    "goal_contract": "12e50d8fc0dc17681e72cfdb83e7ea9cb5e0196bb71716f8523f9f1e13875938",
+    "goal_contract": "82c0e5a275342083fa96882bfe9a0b228028de9218d4078b2cf599605336b8c8",
     "session_synopsis_link": "7cbf10072f9b38b0b7b209442fe7e61976148ae82e700c307dc8c735ff054848"
   },
   "schema_version": 1,
@@ -20,11 +20,11 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T04:44:37Z"
+    "checked_at": "2026-05-21T04:45:45Z"
   },
   "goal": {
     "contract_path": "runs/goal-active-report-self-improve-certificate-rerun7/state/codex-goal-contract.json",
-    "contract_sha256": "a8e54c364488cf622653a6b5d9a9c77ec05ab971cda55b305109acb807d0f8b0",
+    "contract_sha256": "f9e8e02dab13bb2038a0cfde53189b8ff089ed65eddc0309a7dc2b012f03e050",
     "contract_status": "loaded",
     "contract_id": "auto-improve-goal",
     "objective": "Run a bounded self-improvement loop whose result is certified by current readiness, release, source-package, public-check, status, and session evidence.",
@@ -39,7 +39,7 @@
     "status": "completed",
     "runtime_mode": "self_improvement_loop",
     "started_at": "2026-05-21T01:23:59Z",
-    "updated_at": "2026-05-21T04:44:37Z",
+    "updated_at": "2026-05-21T04:45:45Z",
     "completed_at": "2026-05-21T01:59:20Z"
   },
   "observability": {
@@ -83,7 +83,8 @@
     "can_promote_result": false,
     "sealed_authority_clean": true,
     "promotion_blockers": [
-      "git_worktree_dirty"
+      "promotion_blocked_by_goal_worktree_guard_failure",
+      "promotion_blocked_by_remediation_backlog_open"
     ],
     "required_evidence": [
       {
@@ -95,13 +96,13 @@
         "evidence_id": "goal_run_status",
         "path": "runs/goal-active-report-self-improve-certificate-rerun7/state/goal-run-status.json",
         "status": "present",
-        "report_status": "pass"
+        "report_status": "attention"
       },
       {
         "evidence_id": "session_synopsis",
         "path": "ops/reports/session-synopsis.json",
         "status": "present",
-        "report_status": "pass"
+        "report_status": "attention"
       },
       {
         "evidence_id": "remediation_backlog",
@@ -131,7 +132,7 @@
         "evidence_id": "goal_worktree_guard",
         "path": "tmp/goal-worktree-guard.json",
         "status": "present",
-        "report_status": "attention"
+        "report_status": "pass"
       }
     ],
     "missing_evidence": []
@@ -166,13 +167,13 @@
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "status": "present",
-            "generated_at": "2026-05-21T04:27:22Z",
+            "generated_at": "2026-05-21T04:44:40Z",
             "freshness_status": "not_due"
           },
           {
             "path": "ops/reports/session-synopsis.json",
             "status": "present",
-            "generated_at": "2026-05-21T04:13:41Z",
+            "generated_at": "2026-05-21T04:44:40Z",
             "freshness_status": "not_due"
           }
         ]
@@ -246,9 +247,9 @@
   "session_synopsis": {
     "link_status": "linked",
     "report_path": "ops/reports/session-synopsis.json",
-    "status": "pass",
-    "generated_at": "2026-05-21T04:13:41Z",
-    "recent_blocker_count": 0,
+    "status": "attention",
+    "generated_at": "2026-05-21T04:44:40Z",
+    "recent_blocker_count": 2,
     "evidence_gap_count": 0,
     "next_action": "Generated proposals exist but none are runnable yet. Keep auto-improve paused, inspect `blocked_by` in `ops/reports/mutation-proposals.json`, let the current chronology move past the blocker or clear the blocking condition, then rerun `make auto-improve-readiness`. Current blocker(s): recent_log_overlap."
   },
@@ -262,7 +263,8 @@
   "promotion_guard": {
     "can_promote_result": false,
     "promotion_blockers": [
-      "git_worktree_dirty"
+      "promotion_blocked_by_goal_worktree_guard_failure",
+      "promotion_blocked_by_remediation_backlog_open"
     ],
     "sealed_authority_clean": true,
     "runtime_certificate_verified": true,
@@ -270,7 +272,8 @@
     "no_sustained_claim_before_certificate_verified": true
   },
   "blockers": [
-    "git_worktree_dirty",
+    "promotion_blocked_by_goal_worktree_guard_failure",
+    "promotion_blocked_by_remediation_backlog_open",
     "self-improvement loop certificate incomplete"
   ],
   "status": "attention"

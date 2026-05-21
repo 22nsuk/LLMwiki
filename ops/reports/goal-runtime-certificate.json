@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/goal-runtime-certificate.schema.json",
   "artifact_kind": "goal_runtime_certificate",
-  "generated_at": "2026-05-21T04:44:55Z",
+  "generated_at": "2026-05-21T04:46:00Z",
   "producer": "ops.scripts.goal_runtime_certificate_report",
   "source_command": "python -m ops.scripts.goal_runtime_certificate_report --vault .",
   "source_revision": "unknown",
@@ -12,11 +12,11 @@
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "4166161eb918d6d706b5717ca486bd1971f790bbc8a6e4466cd50b2403470a07",
     "auto_improve_session": "8e8b3072dd44ac518d8c60462f70fc1af63c4f7ffe6d73da7312de34092bf4e7",
-    "goal_contract": "42fe27b765c84091b41f002d516a514aee51180b9d316083653f275c085c1fcc",
-    "goal_run_status": "3e939b0a3db9fc90ee33fd4447f44bb264c2053b2286f70b562cea87b64290b4",
-    "run_audit_log": "d11f3314ceebf42db8df2c3a74b1ca15fa5323ef9f6fca6d71ce0a0cf124802d",
-    "run_resume_metadata": "f487bc5a114d636e993870364ba99e20aded6d66752f33e81f886caa8c7691a3",
-    "run_status_markdown": "9dc956dba31c82d7c27b2033564b239134db037cc5a3d8a53d4eb1414c1a07fa"
+    "goal_contract": "6c55c9b49997ffee41cbd522a0458c985a5a72549713f07eac6760c0a531549a",
+    "goal_run_status": "f265102896d591628fa308c5d8f9b6cd1ff4d0d06f81fa2a199e09514c0c4bba",
+    "run_audit_log": "d54d6e474b69c07f1f431ffd4d8f28005772105861d6a16d12984baadc038892",
+    "run_resume_metadata": "ebb2c71e7c2f5d2840ba8c6b4a9aad4bb166d0982379625f42af1e04ae5a44e0",
+    "run_status_markdown": "027a41c31cf00d9ff9c598e0dce38c77a5746db678fda76dec779ae07d2b00a5"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -24,14 +24,14 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T04:44:55Z"
+    "checked_at": "2026-05-21T04:46:00Z"
   },
   "vault": ".",
   "goal": {
     "contract_path": "runs/goal-active-report-self-improve-certificate-rerun7/state/codex-goal-contract.json",
     "contract_id": "auto-improve-goal",
-    "contract_sha256_before": "4d7a719e8729e8e156ff4c282071c6491c38d895a0a754fb77df788a5858e3e2",
-    "contract_sha256_after": "4d7a719e8729e8e156ff4c282071c6491c38d895a0a754fb77df788a5858e3e2"
+    "contract_sha256_before": "43fab9ee67a3539edb897acc1948eeb54a0512e80b82608aaccb597837522f7d",
+    "contract_sha256_after": "43fab9ee67a3539edb897acc1948eeb54a0512e80b82608aaccb597837522f7d"
   },
   "certificate": {
     "target_runtime_mode": "self_improvement_loop",
@@ -88,7 +88,7 @@
         "status": "pass"
       }
     ],
-    "audit_event_count": 27,
+    "audit_event_count": 28,
     "runner_command_audit_current": true
   },
   "session_evidence": {
@@ -172,7 +172,7 @@
       "evidence_id": "goal_worktree_guard",
       "path": "tmp/goal-worktree-guard.json",
       "status": "present",
-      "report_status": "attention"
+      "report_status": "pass"
     }
   ],
   "contract_update": {
