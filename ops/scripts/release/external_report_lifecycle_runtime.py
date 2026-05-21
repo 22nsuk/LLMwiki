@@ -423,9 +423,11 @@ ACTION_CATALOG: list[dict[str, Any]] = [
             r"transient cleanup gate",
             r"goal-runtime-clean-transient",
             r"goal-runtime-run-admission",
+            r"goal-runtime-run-admission-local-refresh",
             r"long-run-preflight-clean",
             r"runnable proposal",
             r"fixed-point",
+            r"run-local evidence",
             r"obsolete tracked goal",
             r"stale legacy runtime",
         ],
@@ -982,8 +984,11 @@ def goal_runtime_transient_cleanup_gate_status(
         makefile_text = ""
     if (
         "goal-runtime-clean-transient:" in makefile_text
-        and "goal-runtime-run-admission:" in makefile_text
+        and "goal-runtime-run-admission-local-refresh:" in makefile_text
+        and "goal-runtime-run-admission: goal-runtime-run-admission-local-refresh" in makefile_text
         and "goal-runtime-run-admission-converge:" in makefile_text
+        and "--readiness-report \"$(GOAL_LOCAL_READINESS_OUT)\"" in makefile_text
+        and "--remediation-backlog-report \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\"" in makefile_text
         and "long-run-preflight-clean:" in makefile_text
         and "long-run-preflight-clean: goal-runtime-run-admission-converge" in makefile_text
         and report.get("artifact_kind") == "goal_runtime_clean_transient"

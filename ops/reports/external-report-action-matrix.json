@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-21T09:30:54Z",
+  "generated_at": "2026-05-21T09:49:50Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "c10fe5f96ce083d613effcb80b11cfeab14d7953ebe6f41816a479635057827a",
+  "source_tree_fingerprint": "088cd9a077d9233d4f0f2cd1f39f27410c158512eb3de72ac0b7710ff4aa86d6",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "4ba40475c7b74778c25aa9f3c4fa1da62a8259f0e77f1b361104648b374f9be1",
+    "source_paths": "7339fd3727fc86ae92083fffb214ec2d7db28ba7dcdf0ec77664485157ab1a2a",
     "active_external_reports": "092f2ee56969cd869ccb50461f6158a5eead83e11aabf2b613ff31877ce63e41",
-    "action_catalog": "72dc25d77152e70f7503a12d1a38805d07730ac48dc6078075ab1d418307ad9c"
+    "action_catalog": "0e6d605b2d695f98c9569882a711fc415b302950b71210213bf5a51f11a99964"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T09:30:54Z"
+    "checked_at": "2026-05-21T09:49:50Z"
   },
   "vault": ".",
   "status": "pass",
@@ -841,7 +841,7 @@
         {
           "path": "tmp/goal-worktree-guard.json",
           "exists": true,
-          "status": "attention",
+          "status": "pass",
           "producer": "ops.scripts.goal_worktree_guard"
         },
         {
@@ -929,7 +929,7 @@
         {
           "path": "tmp/goal-runtime-run-admission.json",
           "exists": true,
-          "status": "fail",
+          "status": "attention",
           "producer": "ops.scripts.goal_runtime_run_admission"
         },
         {

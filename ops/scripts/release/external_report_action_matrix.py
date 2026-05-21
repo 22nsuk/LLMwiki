@@ -105,6 +105,16 @@ def _summary(
     }
 
 
+def _stabilize_self_evidence(actions: list[dict[str, Any]], *, status: str) -> None:
+    for action in actions:
+        for evidence in action.get("evidence", []):
+            if not isinstance(evidence, dict):
+                continue
+            if evidence.get("path") == DEFAULT_OUT:
+                evidence["status"] = status
+                evidence["producer"] = PRODUCER
+
+
 def build_report(
     vault: Path,
     *,
@@ -135,6 +145,7 @@ def build_report(
         )
         else "pass"
     )
+    _stabilize_self_evidence(actions, status=status)
     return {
         **build_canonical_report_envelope(
             resolved_vault,

@@ -191,6 +191,10 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertTrue(write_report(self.vault, report).exists())
 
     def test_matrix_passes_when_reference_manifest_matches_active_reports(self) -> None:
+        self._write_json(
+            "ops/reports/external-report-action-matrix.json",
+            {"status": "fail", "producer": "stale.previous.run"},
+        )
         (self.external / "release.md").write_text(
             "# Release Review\n\nexternal report lifecycle.\n",
             encoding="utf-8",
@@ -212,6 +216,13 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertEqual(report["summary"]["reference_manifest_missing_active_report_count"], 0)
         self.assertEqual(report["summary"]["reference_manifest_stale_reference_count"], 0)
         self.assertEqual(actions["external_report_lifecycle"]["current_status"], "implemented")
+        self_evidence = [
+            item
+            for item in actions["external_report_lifecycle"]["evidence"]
+            if item["path"] == "ops/reports/external-report-action-matrix.json"
+        ][0]
+        self.assertEqual(self_evidence["status"], report["status"])
+        self.assertEqual(self_evidence["producer"], "ops.scripts.external_report_action_matrix")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_release_verified_actions_become_implemented_after_closeout(self) -> None:
@@ -398,8 +409,10 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "\tpython -m ops.scripts.goal_runtime_quarantine_preflight --strict\n"
             "goal-runtime-run-admission-converge: goal-runtime-clean-transient auto-improve-goal-preflight\n"
             "\t$(MAKE) goal-runtime-quarantine-preflight\n"
-            "goal-runtime-run-admission: goal-runtime-run-admission-converge\n"
-            "\tpython -m ops.scripts.goal_runtime_run_admission --strict\n"
+            "goal-runtime-run-admission-local-refresh: goal-runtime-lock-check goal-runtime-python-preflight\n"
+            "\t$(MAKE) goal-runtime-local-evidence-converge\n"
+            "goal-runtime-run-admission: goal-runtime-run-admission-local-refresh\n"
+            "\tpython -m ops.scripts.goal_runtime_run_admission --readiness-report \"$(GOAL_LOCAL_READINESS_OUT)\" --remediation-backlog-report \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\" --strict\n"
             "long-run-preflight-clean: goal-runtime-run-admission-converge\n",
             encoding="utf-8",
         )

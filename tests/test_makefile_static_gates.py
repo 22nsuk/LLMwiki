@@ -2892,6 +2892,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "goal-runtime-quarantine-preflight",
             "goal-runtime-fixed-point-check",
             "goal-runtime-run-admission-converge",
+            "goal-runtime-run-admission-local-refresh",
             "goal-runtime-run-admission",
             "goal-runtime-lock-check",
             "goal-runtime-lock-status",
@@ -2919,7 +2920,14 @@ class MakefileStaticGateTests(unittest.TestCase):
             "goal-runtime-run-admission-converge",
             "goal-runtime-python-preflight",
         )
-        _assert_target_depends_on(self, text, "goal-runtime-run-admission", "auto-improve-goal-preflight")
+        _assert_target_depends_on(self, text, "goal-runtime-run-admission-local-refresh", "goal-runtime-lock-check")
+        _assert_target_depends_on(
+            self,
+            text,
+            "goal-runtime-run-admission-local-refresh",
+            "goal-runtime-python-preflight",
+        )
+        _assert_target_depends_on(self, text, "goal-runtime-run-admission", "goal-runtime-run-admission-local-refresh")
         _assert_target_depends_on(self, text, "long-run-preflight-clean", "goal-runtime-run-admission-converge")
         _assert_target_depends_on(self, text, "auto-improve-goal-preflight", "goal-runtime-lock-check")
         _assert_target_depends_on(
@@ -2953,13 +2961,24 @@ class MakefileStaticGateTests(unittest.TestCase):
         _assert_recipe_contains_tokens(
             self,
             text,
+            "goal-runtime-run-admission-local-refresh",
+            (
+                "$(MAKE) goal-runtime-clean-transient",
+                "$(MAKE) goal-runtime-quarantine-preflight",
+                "$(MAKE) goal-runtime-local-evidence-converge",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
             "goal-runtime-run-admission",
             (
                 "ops.scripts.goal_runtime_run_admission",
                 "--out \"$(GOAL_RUNTIME_RUN_ADMISSION_OUT)\"",
                 "--quarantine-preflight-report \"$(GOAL_RUNTIME_QUARANTINE_PREFLIGHT_OUT)\"",
                 "--mutation-proposals-report \"$(MUTATION_PROPOSAL_OUT)\"",
-                "--readiness-report \"$(AUTO_IMPROVE_READINESS_OUT)\"",
+                "--readiness-report \"$(GOAL_LOCAL_READINESS_OUT)\"",
+                "--remediation-backlog-report \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\"",
                 "--strict",
             ),
         )
