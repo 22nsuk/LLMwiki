@@ -353,6 +353,26 @@ class SessionSynopsisTests(unittest.TestCase):
                 {
                     "can_promote_result": False,
                     "next_action": "Refresh sealed authority preflight.",
+                    "diagnostics": {
+                        "release_authority_preflight_summary": {
+                            "status": "fail",
+                            "preflight_status": "binding_pass_authority_blocked",
+                            "preflight_mode": "expected_blocked",
+                            "distribution_binding_status": "pass",
+                            "authority_preflight_status": "blocked",
+                            "expected_blocked_preflight": True,
+                            "failure_ids": [
+                                "batch_release_authority_not_clean_pass",
+                                "batch_sealed_release_not_clean_pass",
+                            ],
+                            "unexpected_failure_ids": [],
+                            "blocker_reason_ids": [
+                                "release_authority_not_clean_pass",
+                                "machine_release_not_allowed",
+                                "sealed_release_not_clean_pass",
+                            ],
+                        }
+                    },
                     "promotion_blockers": [
                         {
                             "id": "execution_blocked_by_no_runnable_proposal",
@@ -384,7 +404,10 @@ class SessionSynopsisTests(unittest.TestCase):
                 "status": "completed",
                 "runtime_mode": "self_improvement_loop",
             }
-            goal_status["blockers"] = ["self-improvement loop certificate incomplete"]
+            goal_status["blockers"] = [
+                "self-improvement loop certificate incomplete",
+                "sealed authority clean pass not verified",
+            ]
             write_json(vault, "ops/reports/goal-run-status.json", goal_status)
             write_json(
                 vault,
@@ -437,6 +460,7 @@ class SessionSynopsisTests(unittest.TestCase):
                 "goal_status_self_improvement_loop_certificate_incomplete",
                 blocker_ids,
             )
+            self.assertNotIn("goal_status_sealed_authority_clean_pass_not_verified", blocker_ids)
             self.assertNotIn("learning_claim_unlock_review_not_approved", blocker_ids)
             self.assertNotIn("learning_claim_unlock_review_not_approved", gap_ids)
             self.assertNotIn("context_efficiency", gap_ids)

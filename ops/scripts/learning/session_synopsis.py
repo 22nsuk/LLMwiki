@@ -50,6 +50,19 @@ TERMINAL_QUEUE_READINESS_BLOCKER_IDS = {
 TERMINAL_QUEUE_GOAL_STATUS_BLOCKER_IDS = {
     "self_improvement_loop_certificate_incomplete",
 }
+SELF_REFERENTIAL_AUTHORITY_GOAL_STATUS_BLOCKER_IDS = {
+    "promotion_blocked_by_release_authority_preflight_failure",
+    "sealed_authority_clean_pass_not_verified",
+}
+SELF_REFERENTIAL_PREFLIGHT_FAILURE_IDS = {
+    "batch_release_authority_not_clean_pass",
+    "batch_sealed_release_not_clean_pass",
+}
+SELF_REFERENTIAL_PREFLIGHT_BLOCKER_REASON_IDS = {
+    "release_authority_not_clean_pass",
+    "machine_release_not_allowed",
+    "sealed_release_not_clean_pass",
+}
 
 
 def _dict_list(value: object) -> list[dict[str, Any]]:
@@ -210,6 +223,30 @@ def _learning_claim_gate_active(activation: dict[str, Any]) -> bool:
     )
 
 
+def _expected_blocked_preflight_is_self_referential(readiness: dict[str, Any]) -> bool:
+    diagnostics = readiness.get("diagnostics")
+    diagnostics = diagnostics if isinstance(diagnostics, dict) else {}
+    summary = diagnostics.get("release_authority_preflight_summary")
+    summary = summary if isinstance(summary, dict) else {}
+    if not bool(summary.get("expected_blocked_preflight", False)):
+        return False
+    if str(summary.get("preflight_status", "")).strip() != "binding_pass_authority_blocked":
+        return False
+    if str(summary.get("preflight_mode", "")).strip() != "expected_blocked":
+        return False
+    if str(summary.get("distribution_binding_status", "")).strip() != "pass":
+        return False
+    if str(summary.get("authority_preflight_status", "")).strip() != "blocked":
+        return False
+    if _string_list(summary.get("unexpected_failure_ids")):
+        return False
+    failure_ids = set(_string_list(summary.get("failure_ids")))
+    blocker_reason_ids = set(_string_list(summary.get("blocker_reason_ids")))
+    return failure_ids <= SELF_REFERENTIAL_PREFLIGHT_FAILURE_IDS and (
+        blocker_reason_ids <= SELF_REFERENTIAL_PREFLIGHT_BLOCKER_REASON_IDS
+    )
+
+
 def _active_goal_link(status_report: dict[str, Any], *, goal_run_status_path: str) -> dict[str, Any]:
     if not status_report:
         return {
@@ -270,6 +307,8 @@ def _recent_blockers(vault: Path, inputs: dict[str, dict[str, Any]]) -> list[dic
     if terminal_queue_completed:
         goal_status_suppressed_ids.update(TERMINAL_QUEUE_GOAL_STATUS_BLOCKER_IDS)
         readiness_suppressed_ids.update(TERMINAL_QUEUE_READINESS_BLOCKER_IDS)
+    if _expected_blocked_preflight_is_self_referential(readiness):
+        goal_status_suppressed_ids.update(SELF_REFERENTIAL_AUTHORITY_GOAL_STATUS_BLOCKER_IDS)
     readiness_blockers: list[dict[str, Any]] = []
     readiness_blocker_ids: set[str] = set()
     for blocker in _dict_list(readiness.get("promotion_blockers")):
