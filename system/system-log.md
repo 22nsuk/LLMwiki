@@ -6258,3 +6258,22 @@ Updated iteration telemetry and next-run decision construction so DISCARD promot
 ### Consequence
 - Future self-improvement runs should repair the specific failed gate or reviewer finding instead of replaying a generic `discarded` or under-scoped `review_blocked` proposal.
 - Interrupted pre-candidate rerun5/rerun6 attempts are quarantined as run-local failure evidence rather than active mechanism-review history.
+---
+
+## [2026-05-21 10:59 KST] improve | Finalize mechanism run active-report-self-improve-certificate-rerun7-run-02-mechanism-run-validation-runtime (PROMOTE)
+
+### Summary
+Execute proposal recent_log_overlap_queue_blocked__mechanism-run-validation-runtime on ops/scripts/mechanism/mechanism_run_validation_runtime.py
+
+### Artifacts
+- `runs/active-report-self-improve-certificate-rerun7-run-02-mechanism-run-validation-runtime/promotion-report.json`
+- `runs/active-report-self-improve-certificate-rerun7-run-02-mechanism-run-validation-runtime/run-ledger.json`
+- `runs/active-report-self-improve-certificate-rerun7-run-02-mechanism-run-validation-runtime/changed-files-manifest.json`
+- `ops/script-output-surfaces.json`
+- `ops/scripts/mechanism/mechanism_run_validation_runtime.py`
+- `tests/test_mechanism_run_validation_runtime.py`
+
+### Consequence
+- Decision: `PROMOTE`
+- Promotion report log status is now recorded.
+- This run is available as historical input for mechanism review and mutation proposal.

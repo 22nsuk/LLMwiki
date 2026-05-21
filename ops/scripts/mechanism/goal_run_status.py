@@ -41,6 +41,8 @@ SESSION_SYNOPSIS_PATH = "ops/reports/session-synopsis.json"
 PRODUCER = "ops.scripts.goal_run_status"
 SCHEMA_PATH = "ops/schemas/goal-run-status.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.goal_run_status --vault ."
+TERMINAL_RUN_STATUSES = {"completed", "failed", "stopped"}
+STATUS_REFRESH_RUN_STATUSES = {"running", "blocked"}
 
 
 @dataclass(frozen=True)
@@ -175,9 +177,21 @@ def _prior_status_for_run(vault: Path, request: GoalRunStatusRequest) -> Mapping
     prior_run = mapping_field(prior_report, "run")
     prior_status = str(prior_run.get("status", "")).strip()
     same_run = str(prior_run.get("run_id", "")).strip() == request.run_id
-    if same_run and prior_status in {"running", "paused"}:
+    if same_run and prior_status in {"running", "paused", *TERMINAL_RUN_STATUSES}:
         return prior_report
     return {}
+
+
+def _should_preserve_terminal_run_status(
+    request: GoalRunStatusRequest,
+    prior_report: Mapping[str, Any],
+) -> bool:
+    prior_status = _prior_text_field(prior_report, "run", "status")
+    if prior_status not in TERMINAL_RUN_STATUSES:
+        return False
+    if request.status not in STATUS_REFRESH_RUN_STATUSES:
+        return False
+    return not bool(request.started_at or request.completed_at)
 
 
 def _prior_text_field(prior_report: Mapping[str, Any], section: str, field: str) -> str:
@@ -212,6 +226,20 @@ def build_report(
     runtime_context = request.context or RuntimeContext.from_policy(policy)
     generated_at = runtime_context.isoformat_z()
     prior_report = _prior_status_for_run(vault, request)
+    preserve_terminal_status = _should_preserve_terminal_run_status(request, prior_report)
+    run_status = (
+        _prior_text_field(prior_report, "run", "status")
+        if preserve_terminal_status
+        else request.status
+    )
+    completed_at = (
+        request.completed_at
+        or (
+            _prior_text_field(prior_report, "run", "completed_at")
+            if preserve_terminal_status
+            else ""
+        )
+    )
     started_at = request.started_at or _prior_text_field(prior_report, "run", "started_at") or generated_at
     last_heartbeat_at = (
         request.last_heartbeat_at
@@ -317,9 +345,14 @@ def build_report(
         request.run_id,
         status_report_path=request.status_report_path,
     )
+    periodic_generated_at = (
+        completed_at
+        if run_status in TERMINAL_RUN_STATUSES and completed_at
+        else generated_at
+    )
     periodic_evidence = build_periodic_evidence(
         vault,
-        generated_at=generated_at,
+        generated_at=periodic_generated_at,
         started_at=started_at,
         last_checkpoint_at=last_checkpoint_at,
         checkpoint_command_log_path=paths.checkpoint_command_log_path,
@@ -334,13 +367,13 @@ def build_report(
     blockers = list(
         dict.fromkeys(
             [
-                *promotion_blockers,
-                *runtime_certificate_blockers(runtime_certificate),
-                *health_blockers(
-                    health,
-                    run_status=request.status,
-                    periodic_evidence=periodic_evidence,
-                ),
+                    *promotion_blockers,
+                    *runtime_certificate_blockers(runtime_certificate),
+                    *health_blockers(
+                        health,
+                        run_status=run_status,
+                        periodic_evidence=periodic_evidence,
+                    ),
             ]
         )
     )
@@ -381,11 +414,11 @@ def build_report(
         },
         "run": {
             "run_id": request.run_id,
-            "status": request.status,
+            "status": run_status,
             "runtime_mode": request.runtime_mode,
             "started_at": started_at,
             "updated_at": generated_at,
-            "completed_at": request.completed_at,
+            "completed_at": completed_at,
         },
         "observability": {
             "heartbeat_interval_seconds": request.heartbeat_interval_seconds,
@@ -421,7 +454,7 @@ def build_report(
         },
         "promotion_guard": promotion_guard,
         "blockers": blockers,
-        "status": _status_from_blockers(request.status, blockers),
+        "status": _status_from_blockers(run_status, blockers),
     }
 
 

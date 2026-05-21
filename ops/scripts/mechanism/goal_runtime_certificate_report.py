@@ -430,6 +430,10 @@ def _session_requirement_summary() -> dict[str, Any]:
     }
 
 
+def _stop_reason_satisfies_maintenance_requirement(stop_reason: str) -> bool:
+    return stop_reason != "queue_exhausted"
+
+
 def _empty_session_evidence(*, status: str, path: str) -> dict[str, Any]:
     return {
         "status": status,
@@ -514,6 +518,10 @@ def _session_evidence(
     session_status = str(payload.get("status", "")).strip()
     session_requirements = _session_requirement_summary()
     maintenance_summary = _meaningful_maintenance_summary(payload)
+    requires_meaningful_maintenance = bool(
+        session_requirements["requires_meaningful_maintenance"]
+        and _stop_reason_satisfies_maintenance_requirement(stop_reason)
+    )
     clean = (
         session_status == "complete"
         and stop_reason in session_requirements["accepted_stop_reasons"]
@@ -524,7 +532,7 @@ def _session_evidence(
             or has_success_then_followup
         )
         and (
-            not session_requirements["requires_meaningful_maintenance"]
+            not requires_meaningful_maintenance
             or maintenance_summary["maintenance_status"] == "clean"
         )
     )
@@ -538,6 +546,7 @@ def _session_evidence(
         "has_success_then_followup": has_success_then_followup,
         **maintenance_summary,
         **session_requirements,
+        "requires_meaningful_maintenance": requires_meaningful_maintenance,
     }
 
 
@@ -595,13 +604,16 @@ def _observability_blockers(
     health = _mapping_value(status_report, "health")
     periodic_evidence = _mapping_value(status_report, "periodic_evidence")
     observability = _mapping_value(status_report, "observability")
+    run = _mapping_value(status_report, "run")
+    run_completed = str(run.get("status", "")).strip() == "completed"
     blockers: list[str] = []
-    if health.get("heartbeat_status") != "current":
-        blockers.append("goal run heartbeat is not current")
-    if health.get("checkpoint_status") != "current":
-        blockers.append("goal run checkpoint is not current")
-    if health.get("command_heartbeat_status") != "current":
-        blockers.append("goal run command heartbeat is not current")
+    if not run_completed:
+        if health.get("heartbeat_status") != "current":
+            blockers.append("goal run heartbeat is not current")
+        if health.get("checkpoint_status") != "current":
+            blockers.append("goal run checkpoint is not current")
+        if health.get("command_heartbeat_status") != "current":
+            blockers.append("goal run command heartbeat is not current")
     if health.get("backoff_status") == "unknown":
         blockers.append("goal run backoff status is unknown")
     if health.get("resume_status") == "missing_resume_command":

@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/outcome-metrics.schema.json",
   "artifact_kind": "outcome_metrics_report",
-  "generated_at": "2026-05-21T01:21:01Z",
+  "generated_at": "2026-05-21T02:31:58Z",
   "producer": "ops.scripts.observability_decision_metrics_runtime",
   "source_command": "python -m ops.scripts.outcome_metrics --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "af6140cef363ee9127f558f3ea9ce1de2c3fae5380045ca6281cfa3d2b9fbcd5",
+  "source_tree_fingerprint": "e14bad6b0a02e3c90c9fb04560e3cf7648f40ec1b3e95523b978c6ddccc95b08",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "aadbf232f7dc6bf40f35290f0dabcc4e9320b93c70cc2f0177f1167b24ecff29",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "af0acc94281d5ba550838e9b62e4da8290962d8710300629e7d8d0050bb67d3c",
-    "defect_escape_closures": "23b08fbc8cc3ac7d1611baa1e7933e8233c9d64e78aa14880ef69e192f99ac3f",
-    "rework_closures": "3a39cf58bc81885d92fe4cb2ad7b9e11991e7b2efc5c21a0a72cab5df2f10e78",
-    "run_inputs": "f244676e09c11f23ec0716184bd5f9fe06488ac7db683135df696ed483cd4282",
-    "session_reports": "e6ee21b321f477d1e4f73c13cd5af654522092ccef4a1804b234f89384f71b62",
+    "defect_escape_closures": "20578dc061629da1d3ea23ac9944fbeb884923ef51f0a548d78c26630393d9ad",
+    "rework_closures": "f55409c710ce4b6f09e139442909dd68acaedfbed8a71deaad5cf0675305717d",
+    "run_inputs": "ac0246059a69ddecdd17e8c2024c04bf507e4e4e64c5ced63ca1989e27ffd736",
+    "session_reports": "045839dd6979b19e7b1e2cf2c9ed4675b6db02844a8f4ea94a33326f904f690f",
     "recent_window": "f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T01:21:01Z"
+    "checked_at": "2026-05-21T02:31:58Z"
   },
   "vault": ".",
   "policy": {
@@ -31,36 +31,36 @@
     "version": 4
   },
   "summary": {
-    "attempts_considered": 48,
+    "attempts_considered": 50,
     "recent_window": 20,
     "recent_attempt_count": 20,
-    "session_reports_considered": 25
+    "session_reports_considered": 26
   },
   "metrics": {
-    "attempt_count": 48,
+    "attempt_count": 50,
     "recent_window": 20,
     "recent_attempt_count": 20,
-    "rework_count": 24,
+    "rework_count": 26,
     "rollback_signal_count": 0,
-    "rollback_rehearsal_coverage_count": 3,
+    "rollback_rehearsal_coverage_count": 4,
     "moving_averages": {
       "hold": 0.8,
-      "discard": 0.15,
+      "discard": 0.1,
       "rollback_signal": 0.0
     },
     "operator_effort_proxy": {
       "phase_totals_seconds": {
-        "scope_freeze": 0.41,
-        "routing": 16.079,
-        "scaffold": 12.635,
-        "experiment": 24159.979,
+        "scope_freeze": 0.446,
+        "routing": 17.443,
+        "scaffold": 13.651,
+        "experiment": 26386.831,
         "typed_same_eval_evidence": 0.0
       },
-      "executor_report_count": 55,
-      "reviewer_dispatch_count": 15,
-      "validator_dispatch_count": 9,
-      "auditor_dispatch_count": 7,
-      "hold_count": 33
+      "executor_report_count": 60,
+      "reviewer_dispatch_count": 16,
+      "validator_dispatch_count": 10,
+      "auditor_dispatch_count": 8,
+      "hold_count": 34
     },
     "rework_keys": [
       {
@@ -85,12 +85,13 @@
       },
       {
         "key": "proposal:next_run_failure_repair__auto-improve-iteration-persistence-runtime__review-blocked",
-        "attempt_count": 3,
-        "rework_count": 2,
+        "attempt_count": 4,
+        "rework_count": 3,
         "run_ids": [
           "active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime",
           "active-report-self-improve-certificate-rerun4-run-02-auto-improve-iteration-persistence-runtime",
-          "active-report-self-improve-certificate-rerun5-run-01-auto-improve-iteration-persistence-runtime"
+          "active-report-self-improve-certificate-rerun5-run-01-auto-improve-iteration-persistence-runtime",
+          "active-report-self-improve-certificate-rerun7-run-01-auto-improve-iteration-persistence-runtime"
         ]
       },
       {
@@ -113,12 +114,13 @@
       },
       {
         "key": "proposal:recent_log_overlap_queue_blocked__mechanism-run-validation-runtime",
-        "attempt_count": 3,
-        "rework_count": 2,
+        "attempt_count": 4,
+        "rework_count": 3,
         "run_ids": [
           "5day-auto-improve-runtime-rerun6-30m_trial-run-01-mechanism-run-validation-runtime",
           "5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime",
-          "5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime"
+          "5day-auto-improve-runtime-rerun9-30m_trial-run-01-mechanism-run-validation-runtime",
+          "active-report-self-improve-certificate-rerun7-run-02-mechanism-run-validation-runtime"
         ]
       },
       {
@@ -230,7 +232,7 @@
         }
       ]
     },
-    "raw_rework_count": 30,
+    "raw_rework_count": 32,
     "closed_rework_count": 6,
     "closed_rework_keys": [
       {
@@ -297,6 +299,40 @@
     ]
   },
   "recent_attempts": [
+    {
+      "run_id": "active-report-self-improve-certificate-rerun7-run-02-mechanism-run-validation-runtime",
+      "session_id": "active-report-self-improve-certificate-rerun7",
+      "proposal_id": "recent_log_overlap_queue_blocked__mechanism-run-validation-runtime",
+      "source_candidate_id": "recent_log_overlap_queue_unblock__mechanism-run-validation-runtime",
+      "observed_at": "2026-05-21T01:59:16Z",
+      "decision": "PROMOTE",
+      "outcome": "promoted",
+      "primary_targets": [
+        "ops/scripts/mechanism/mechanism_run_validation_runtime.py"
+      ],
+      "rework_key": "proposal:recent_log_overlap_queue_blocked__mechanism-run-validation-runtime",
+      "rollback_rehearsal_covered": true,
+      "rollback_signal": false,
+      "run_telemetry": "runs/active-report-self-improve-certificate-rerun7-run-02-mechanism-run-validation-runtime/run-telemetry.json",
+      "promotion_report": "runs/active-report-self-improve-certificate-rerun7-run-02-mechanism-run-validation-runtime/promotion-report.json"
+    },
+    {
+      "run_id": "active-report-self-improve-certificate-rerun7-run-01-auto-improve-iteration-persistence-runtime",
+      "session_id": "active-report-self-improve-certificate-rerun7",
+      "proposal_id": "next_run_failure_repair__auto-improve-iteration-persistence-runtime__review-blocked",
+      "source_candidate_id": "next-run-decision:active-report-self-improve-certificate-rerun6-run-02-auto-improve-iteration-persistence-runtime:7dbf3d0dab9b9974",
+      "observed_at": "2026-05-21T01:32:17Z",
+      "decision": "HOLD",
+      "outcome": "mutation_failed",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "rework_key": "proposal:next_run_failure_repair__auto-improve-iteration-persistence-runtime__review-blocked",
+      "rollback_rehearsal_covered": false,
+      "rollback_signal": false,
+      "run_telemetry": "runs/active-report-self-improve-certificate-rerun7-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+      "promotion_report": "runs/active-report-self-improve-certificate-rerun7-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
+    },
     {
       "run_id": "active-report-self-improve-certificate-rerun6-run-03-auto-improve-iteration-persistence-runtime",
       "session_id": "",
@@ -602,40 +638,6 @@
       "rollback_signal": false,
       "run_telemetry": "runs/active-report-self-improve-certificate-run-03-auto-improve-iteration-persistence-runtime/run-telemetry.json",
       "promotion_report": "runs/active-report-self-improve-certificate-run-03-auto-improve-iteration-persistence-runtime/promotion-report.json"
-    },
-    {
-      "run_id": "active-report-self-improve-certificate-run-02-auto-improve-iteration-persistence-runtime",
-      "session_id": "active-report-self-improve-certificate",
-      "proposal_id": "next_run_failure_repair__auto-improve-iteration-persistence-runtime__mutation-failed",
-      "source_candidate_id": "next-run-decision:active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime:7d29258f6de6d051",
-      "observed_at": "2026-05-20T19:44:15Z",
-      "decision": "DISCARD",
-      "outcome": "discarded",
-      "primary_targets": [
-        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
-      ],
-      "rework_key": "proposal:next_run_failure_repair__auto-improve-iteration-persistence-runtime__mutation-failed",
-      "rollback_rehearsal_covered": false,
-      "rollback_signal": false,
-      "run_telemetry": "runs/active-report-self-improve-certificate-run-02-auto-improve-iteration-persistence-runtime/run-telemetry.json",
-      "promotion_report": "runs/active-report-self-improve-certificate-run-02-auto-improve-iteration-persistence-runtime/promotion-report.json"
-    },
-    {
-      "run_id": "active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime",
-      "session_id": "active-report-self-improve-certificate",
-      "proposal_id": "repeated_discard_runs__auto-improve-iteration-persistence-runtime",
-      "source_candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
-      "observed_at": "2026-05-20T19:19:21Z",
-      "decision": "HOLD",
-      "outcome": "mutation_failed",
-      "primary_targets": [
-        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
-      ],
-      "rework_key": "proposal:repeated_discard_runs__auto-improve-iteration-persistence-runtime",
-      "rollback_rehearsal_covered": false,
-      "rollback_signal": false,
-      "run_telemetry": "runs/active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
-      "promotion_report": "runs/active-report-self-improve-certificate-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
     }
   ]
 }

@@ -2,30 +2,34 @@
   "$schema": "ops/schemas/release-closeout-sealed-rehearsal-check.schema.json",
   "artifact_kind": "release_closeout_sealed_rehearsal_check",
   "artifact_status": "current",
-  "authority_preflight_status": "clean",
+  "authority_preflight_status": "blocked",
   "batch_manifest": {
     "distribution_package_status": "materialized",
     "external_source_zip_bound_status": "bound",
     "load_status": "ok",
     "path": "tmp/release-closeout-sealed-dry-run/release-closeout-batch-manifest.json",
-    "release_authority_status": "clean_pass",
-    "sealed_release_status": "sealed_clean_pass"
+    "release_authority_status": "conditional_pass",
+    "sealed_release_status": "sealed_conditional_pass"
   },
-  "blocking_reason_ids": [],
-  "clean_required_preflight": true,
+  "blocking_reason_ids": [
+    "release_authority_not_clean_pass",
+    "machine_release_not_allowed",
+    "sealed_release_not_clean_pass"
+  ],
+  "clean_required_preflight": false,
   "currentness": {
-    "checked_at": "2026-05-17T20:09:09Z",
+    "checked_at": "2026-05-21T02:41:44Z",
     "status": "current"
   },
   "distribution_binding_status": "pass",
   "distribution_zip": {
-    "entry_count": 1589,
+    "entry_count": 1610,
     "exists": true,
     "path": "tmp/release-closeout-sealed-dry-run/LLMwiki-source.zip",
-    "sha256": "ad88b81733433e30e760781c2539d1cbb56af0266f00ecd6fee459228c65feb5"
+    "sha256": "155f1a31cd3747b0f25e242247747b16d5f22136a46810a1b79ab0afa165a44a"
   },
   "encoding": "utf-8",
-  "expected_blocked_preflight": false,
+  "expected_blocked_preflight": true,
   "external_report_reference_manifest": {
     "basis_zip_matches_current_distribution": true,
     "load_status": "ok",
@@ -33,28 +37,42 @@
     "path": "tmp/release-closeout-sealed-dry-run/external-report-reference-manifest.json",
     "status": "basis_current_match"
   },
-  "failure_details": [],
-  "failures": [],
-  "generated_at": "2026-05-17T20:09:09Z",
+  "failure_details": [
+    {
+      "failure_id": "batch_release_authority_not_clean_pass",
+      "status_axis": "release_authority",
+      "vocabulary_reason_id": "release_authority_not_clean_pass"
+    },
+    {
+      "failure_id": "batch_sealed_release_not_clean_pass",
+      "status_axis": "sealed_distribution",
+      "vocabulary_reason_id": "sealed_release_not_clean_pass"
+    }
+  ],
+  "failures": [
+    "batch_release_authority_not_clean_pass",
+    "batch_sealed_release_not_clean_pass"
+  ],
+  "generated_at": "2026-05-21T02:41:44Z",
   "input_fingerprints": {
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "batch_manifest": "5b69baf0853e184a5e446527adeb0ad4a7730745966c8b44ee25eb061e9a3f0b",
+    "batch_manifest": "f6e03b50ef16878a1e56989ee2c8aa427721c992741fe6e85169fefbcd387346",
     "distribution_zip": "c3091a294f08983270e68a07ff6044a38d21d42f1b6e4cbefa0b59cf7e514205",
-    "external_manifest": "41857a57fb17504eec95bb6ba2bab5da6334e3839b522893c34eb2524d1eee8a",
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "external_manifest": "1c1452c9c6cb468ef4ca9fefd4be5284b9d29b95d7eae24238055a17b90c938d",
+    "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "014ce08f655cddbd6777d046f238b21ccf8d35240c0d87a5f2462806271ce7aa",
     "source_paths": "eb0b5032641773cbb40586bce05cff05f649c5e1a238a000dcfd0982b38486c4"
   },
-  "operator_summary": "sealed release evidence clean",
-  "preflight_mode": "clean_required",
-  "preflight_status": "sealed_clean_pass",
+  "operator_summary": "distribution binding pass; release authority blocked",
+  "preflight_mode": "expected_blocked",
+  "preflight_status": "binding_pass_authority_blocked",
   "producer": "ops.scripts.release_closeout_sealed_rehearsal_check",
   "retention_policy": "canonical_report",
   "schema_version": 1,
   "source_command": "python -m ops.scripts.release_closeout_sealed_rehearsal_check --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "39e1453c68ad37f95f24b1912650e920af05441bc7135a1473f59d14d7cfb829",
-  "status": "pass",
-  "summary": "sealed closeout rehearsal passed: batch sealed clean pass and external strict manifest bind the distribution ZIP",
+  "source_tree_fingerprint": "1f0b9ce55c7a2f5739e084031d3d82d03e21882ab73759ebbe01d9adfe5706a9",
+  "status": "fail",
+  "summary": "distribution binding pass; release authority blocked",
   "unexpected_failure_ids": []
 }

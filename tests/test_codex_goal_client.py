@@ -370,6 +370,109 @@ class CodexGoalClientTests(unittest.TestCase):
             "missing",
         )
 
+    def test_cli_treats_completed_queue_exhausted_loop_as_result_promotable(self) -> None:
+        seed_minimal_vault(self.vault)
+        reports = self.vault / "ops" / "reports"
+        readiness_path = reports / "auto-improve-readiness.json"
+        readiness_path.parent.mkdir(parents=True, exist_ok=True)
+        readiness_path.write_text(
+            json.dumps(
+                {
+                    "can_promote_result": False,
+                    "promotion_blockers": [
+                        {"id": "execution_blocked_by_no_runnable_proposal"},
+                        {"id": "learning_blocked_by_execution_not_runnable"},
+                    ],
+                    "diagnostics": {
+                        "release_authority_preflight_summary": {
+                            "artifact_kind": "release_closeout_sealed_rehearsal_check",
+                            "status": "pass",
+                            "preflight_status": "sealed_clean_pass",
+                            "distribution_binding_status": "pass",
+                            "authority_preflight_status": "clean",
+                        }
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        goal_status_path = (
+            self.vault
+            / "runs"
+            / "goal-terminal-loop"
+            / "state"
+            / "goal-run-status.json"
+        )
+        goal_status_path.parent.mkdir(parents=True, exist_ok=True)
+        goal_status_path.write_text(
+            json.dumps(
+                {
+                    "run": {
+                        "run_id": "terminal-loop",
+                        "status": "completed",
+                        "runtime_mode": "self_improvement_loop",
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        session_path = reports / "auto-improve-sessions" / "terminal-loop.json"
+        session_path.parent.mkdir(parents=True, exist_ok=True)
+        session_path.write_text(
+            json.dumps(
+                {
+                    "status": "complete",
+                    "stop_reason": "queue_exhausted",
+                    "iterations": [{"decision": "PROMOTE", "outcome": "promoted"}],
+                }
+            ),
+            encoding="utf-8",
+        )
+        guard_path = self.vault / "tmp" / "goal-worktree-guard.json"
+        guard_path.parent.mkdir(parents=True, exist_ok=True)
+        guard_path.write_text(
+            json.dumps(
+                {
+                    "artifact_kind": "goal_worktree_guard",
+                    "decisions": {
+                        "can_promote_result": True,
+                        "promotion_blockers": [],
+                        "fatal_blockers": [],
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        exit_code = main(
+            [
+                "--vault",
+                self.vault.as_posix(),
+                "--out",
+                "ops/reports/terminal-goal-contract.json",
+                "--created-at",
+                "2026-05-17T00:00:00Z",
+                "--goal-status-path",
+                "runs/goal-terminal-loop/state/goal-run-status.json",
+                "--worktree-guard-report",
+                "tmp/goal-worktree-guard.json",
+            ]
+        )
+
+        self.assertEqual(exit_code, 0)
+        loaded = get_goal(vault=self.vault, contract_path="ops/reports/terminal-goal-contract.json")
+        self.assertTrue(loaded["promotion_guard"]["can_promote_result"])
+        self.assertEqual(loaded["promotion_guard"]["promotion_blockers"], [])
+        envelope = json.loads(
+            next(
+                item["value"]
+                for item in loaded["metadata"]["properties"]
+                if item["name"] == "urn:openai:artifact-envelope"
+            )
+        )
+        self.assertNotEqual(envelope["input_fingerprints"]["goal_run_status"], "missing")
+        self.assertNotEqual(envelope["input_fingerprints"]["auto_improve_session"], "missing")
+
     def test_cli_preserves_existing_runtime_certificate_state(self) -> None:
         contract_path = "ops/reports/preserved-goal-contract.json"
         contract = build_auto_improve_goal_contract(

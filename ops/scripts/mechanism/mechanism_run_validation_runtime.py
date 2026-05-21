@@ -126,9 +126,7 @@ def path_in_declared_scope(path: str, declared_targets: list[str]) -> bool:
 
 def normalize_changed_file_path(path: str) -> str:
     normalized = normalize_repo_path_text(path)
-    if normalized is None or normalized in {".", ".."} or normalized.startswith("../"):
-        return path
-    if Path(normalized).is_absolute():
+    if normalized is None:
         return path
     return normalized
 

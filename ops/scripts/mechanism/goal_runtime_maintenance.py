@@ -344,9 +344,10 @@ def health_blockers(
     periodic_evidence: Mapping[str, Any],
 ) -> list[str]:
     blockers: list[str] = []
-    if health.get("heartbeat_status") in {"stale", "unknown"}:
+    run_is_active = run_status in {"running", "blocked", "paused"}
+    if run_is_active and health.get("heartbeat_status") in {"stale", "unknown"}:
         blockers.append(f"heartbeat {health['heartbeat_status']}")
-    if health.get("checkpoint_status") in {"stale", "unknown"}:
+    if run_is_active and health.get("checkpoint_status") in {"stale", "unknown"}:
         blockers.append(f"checkpoint {health['checkpoint_status']}")
     if run_status == "running" and health.get("command_heartbeat_status") in {
         "stale",

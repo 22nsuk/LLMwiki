@@ -1047,8 +1047,8 @@
     },
     {
       "path": "ops/scripts/core/codex_goal_client.py",
-      "sha256": "110b13328f7c818fb7aa5b59a4af5e80bfd8217d408d00890f05d63a1188d798",
-      "size_bytes": 26958
+      "sha256": "9e308ff32dadfe398543af3897fc6b9f446262721e879fdf557ba57a12b54e1e",
+      "size_bytes": 29726
     },
     {
       "path": "ops/scripts/core/command_runtime.py",
@@ -1642,8 +1642,8 @@
     },
     {
       "path": "ops/scripts/mechanism/goal_run_status.py",
-      "sha256": "1dbc4df44f1d6e40be24ae2e257416a779113f10d033e5945de57845b75e3afd",
-      "size_bytes": 25563
+      "sha256": "ab37a34261dabb53ad37c014256baea8dc7053f3c22ec3709a2b930be38fadfb",
+      "size_bytes": 26715
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_backoff.py",
@@ -1652,13 +1652,13 @@
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_certificate.py",
-      "sha256": "9122c4b1c4a95b795eeb04fa0d231bc58666a752f7739533243d7d12fecac8e8",
-      "size_bytes": 6129
+      "sha256": "7dc19c35a2f43dc424c5b7af2554e0594f78f1c636c124c48de59f33b0610af4",
+      "size_bytes": 6179
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_certificate_report.py",
-      "sha256": "6a05bd3a0e25ad98830638f58fc226b9c4aee41600975c26667d2737e1c5103c",
-      "size_bytes": 39166
+      "sha256": "e5359002da087ee9acffdbde618fd12a495f87a99ae13288104c4f47b5446775",
+      "size_bytes": 39695
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_clean_transient.py",
@@ -1677,8 +1677,8 @@
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_maintenance.py",
-      "sha256": "001a3758e2d8108335ea44ec8f92bae08add2f71071eb92f334dc10412166abd",
-      "size_bytes": 12167
+      "sha256": "bea8c76b71b6eec3392145668ae22dae284d91b02382e97c3330e2cbdf6ef365",
+      "size_bytes": 12270
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_resume.py",
@@ -1792,8 +1792,8 @@
     },
     {
       "path": "ops/scripts/mechanism/mechanism_run_validation_runtime.py",
-      "sha256": "09c8e06d978b7cd00ecab4320c6f2206b2766bf5dff331d47a1282ba872e7c0f",
-      "size_bytes": 25756
+      "sha256": "cdb31ab89db015ce62fee44ab7c5382fa33f53f1e665d6009177be4ab0630c8e",
+      "size_bytes": 25636
     },
     {
       "path": "ops/scripts/mechanism/mechanism_run_workspace_runtime.py",
@@ -4827,8 +4827,8 @@
     },
     {
       "path": "system/system-log.md",
-      "sha256": "7e19925a8f3be86ff029b066d9740f834b1e51fb82d7e431f8bf21894fd240ac",
-      "size_bytes": 418068
+      "sha256": "bcb20066b62bb5cc0e93306acc6f80416110eee1c44cd86e418c3c9810156a6a",
+      "size_bytes": 419075
     },
     {
       "path": "system/system-raw-registry.md",
@@ -5102,8 +5102,8 @@
     },
     {
       "path": "tests/test_codex_goal_client.py",
-      "sha256": "86967afb2bdc6ab256c9f2ec513f29c0cb2aae2d186a594d850735713bc11c78",
-      "size_bytes": 16853
+      "sha256": "4e03722ed95b4626f3dee0397d00d71211279bd317c82433ba9cd6485e048e74",
+      "size_bytes": 20888
     },
     {
       "path": "tests/test_codex_goal_contract.py",
@@ -5222,13 +5222,13 @@
     },
     {
       "path": "tests/test_goal_run_status.py",
-      "sha256": "beb53f9d073d6285b675e15380a196d741bbac5354a10ce23039f37152c4ca7c",
-      "size_bytes": 27887
+      "sha256": "ad45304f7f7b30b2f041be552a4c9fc3c4f81bf0e602373e2ad77f111cc4ff5d",
+      "size_bytes": 30780
     },
     {
       "path": "tests/test_goal_runtime_certificate.py",
-      "sha256": "2a14258ad40ddb65d94dafb146a731c28df47ac817397c803cdf9efade4bf25a",
-      "size_bytes": 11386
+      "sha256": "00d07e2c11da70671298d8639581468618d5d2bb9312cf4b287142a2a29cf3f3",
+      "size_bytes": 13151
     },
     {
       "path": "tests/test_goal_runtime_clean_transient.py",
@@ -5372,8 +5372,8 @@
     },
     {
       "path": "tests/test_mechanism_run_validation_runtime.py",
-      "sha256": "7f16e56df7c7b33b8907836bcff7633990ed972f46407d950c704097d1be2654",
-      "size_bytes": 15900
+      "sha256": "90bf61eb600c4470da4b924f89fcefddd039c9eb53f6967726a6a54936d994e9",
+      "size_bytes": 16996
     },
     {
       "path": "tests/test_mutation_proposal.py",

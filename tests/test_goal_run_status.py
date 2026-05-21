@@ -238,6 +238,30 @@ class GoalRunStatusTests(unittest.TestCase):
         self.assertEqual(report["status"], "attention")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_goal_run_status_does_not_age_completed_run_into_active_heartbeat_blocker(self) -> None:
+        self._seed_goal_contract()
+
+        report = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-completed",
+                status="completed",
+                started_at="2026-05-17T05:00:00Z",
+                completed_at="2026-05-17T05:30:00Z",
+                last_heartbeat_at="2026-05-17T05:30:00Z",
+                last_checkpoint_at="2026-05-17T05:30:00Z",
+                last_command_heartbeat_at="2026-05-17T05:30:00Z",
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(report["health"]["heartbeat_status"], "stale")
+        self.assertEqual(report["periodic_evidence"]["status"], "not_due")
+        self.assertNotIn("heartbeat stale", report["blockers"])
+        self.assertNotIn("checkpoint stale", report["blockers"])
+        self.assertNotIn("periodic evidence checkpoint missing", report["blockers"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_goal_run_status_marks_due_periodic_evidence_as_attention_blocker(self) -> None:
         self._seed_goal_contract()
 
@@ -502,6 +526,48 @@ class GoalRunStatusTests(unittest.TestCase):
         )
         self.assertEqual(final["health"]["heartbeat_status"], "stale")
         self.assertEqual(validate_with_schema(final, load_schema(SCHEMA_PATH)), [])
+
+    def test_goal_run_status_refresh_preserves_terminal_runner_status(self) -> None:
+        self._seed_goal_contract()
+        final = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="completed",
+                started_at="2026-05-17T11:00:00Z",
+                completed_at="2026-05-17T12:00:00Z",
+                last_heartbeat_at="2026-05-17T12:00:00Z",
+                last_checkpoint_at="2026-05-17T12:00:00Z",
+                last_command_heartbeat_at="2026-05-17T12:00:00Z",
+                command_observation_mode="process_heartbeat",
+                command_heartbeat_count=12,
+                command_timeout_seconds=7200,
+                last_command_returncode=0,
+                last_command_termination_reason="completed",
+                context=context_at(12, 0),
+            )
+        )
+        write_report(self.vault, final)
+        write_run_artifacts(self.vault, final)
+
+        refreshed = build_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="20260517-trial",
+                status="blocked",
+                context=context_at(12, 5),
+            )
+        )
+
+        self.assertEqual(refreshed["run"]["status"], "completed")
+        self.assertEqual(refreshed["run"]["started_at"], "2026-05-17T11:00:00Z")
+        self.assertEqual(refreshed["run"]["completed_at"], "2026-05-17T12:00:00Z")
+        self.assertEqual(refreshed["observability"]["last_command_returncode"], 0)
+        self.assertEqual(
+            refreshed["observability"]["last_command_termination_reason"],
+            "completed",
+        )
+        self.assertEqual(validate_with_schema(refreshed, load_schema(SCHEMA_PATH)), [])
 
     def test_goal_run_status_requires_existing_persistent_goal_contract(self) -> None:
         with self.assertRaises(Exception):

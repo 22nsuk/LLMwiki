@@ -258,6 +258,51 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         self.assertEqual(loaded["runtime"]["certificate_status"], "verified")
         self.assertTrue(loaded["promotion_guard"]["runtime_certificate_verified"])
 
+    def test_queue_exhausted_after_success_is_eligible_without_maintenance_cycles(self) -> None:
+        self._seed_goal_contract()
+        self._seed_full_gate_reports()
+        self._write_completed_goal_status(completed_at="2026-05-17T11:30:00Z")
+        session_path = (
+            self.vault
+            / "ops"
+            / "reports"
+            / "auto-improve-sessions"
+            / "20260517-loop.json"
+        )
+        session_path.parent.mkdir(parents=True, exist_ok=True)
+        session_path.write_text(
+            json.dumps(
+                {
+                    "status": "complete",
+                    "stop_reason": "queue_exhausted",
+                    "iterations": [
+                        {
+                            "index": 1,
+                            "status": "promoted",
+                            "outcome": "promoted",
+                            "decision": "PROMOTE",
+                            "run_id": "20260517-loop-run-01",
+                        }
+                    ],
+                },
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_certificate_report(
+            GoalRuntimeCertificateRequest(
+                vault=self.vault,
+                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.timezone.utc)),
+            )
+        )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["certificate"]["verification_status"], "eligible")
+        self.assertEqual(report["session_evidence"]["stop_reason"], "queue_exhausted")
+        self.assertEqual(report["session_evidence"]["maintenance_status"], "missing")
+        self.assertFalse(report["session_evidence"]["requires_meaningful_maintenance"])
+
     def test_runtime_duration_is_a_maximum_budget_not_a_minimum(self) -> None:
         self._seed_goal_contract()
         self._seed_full_gate_reports()

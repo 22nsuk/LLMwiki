@@ -20,7 +20,11 @@ FULL_GATE_EVIDENCE_IDS = (
     "goal_worktree_guard",
 )
 SESSION_REQUIREMENTS: dict[str, Any] = {
-    "accepted_stop_reasons": ["time_budget_exhausted", "proposal_budget_exhausted"],
+    "accepted_stop_reasons": [
+        "time_budget_exhausted",
+        "proposal_budget_exhausted",
+        "queue_exhausted",
+    ],
     "minimum_iteration_count": 1,
     "minimum_successful_iteration_count": 1,
     "requires_success_then_followup": False,

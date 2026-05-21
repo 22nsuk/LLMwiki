@@ -32,6 +32,11 @@ SEALED_PREFLIGHT_REPORT_PATH = "ops/reports/release-closeout-sealed-rehearsal-ch
 DEFAULT_WORKTREE_GUARD_REPORT_PATH = "tmp/goal-worktree-guard.json"
 DEFAULT_GOAL_STATUS_PATH = "ops/reports/goal-run-status.json"
 GOAL_BACKEND_TYPES = ("file", "run_local_file", "app_server")
+TERMINAL_QUEUE_BLOCKERS = {
+    "execution_blocked_by_no_runnable_proposal",
+    "learning_blocked_by_execution_not_runnable",
+}
+TERMINAL_QUEUE_STOP_REASONS = {"queue_exhausted", "proposal_budget_exhausted"}
 
 
 class GoalBackendError(RuntimeError):
@@ -201,6 +206,48 @@ def _promotion_blocker_ids(readiness: Mapping[str, Any]) -> list[str]:
     return blockers
 
 
+def _successful_session_iteration(iteration: Mapping[str, Any]) -> bool:
+    return (
+        str(iteration.get("decision", "")).strip() == "PROMOTE"
+        or str(iteration.get("outcome", "")).strip() == "promoted"
+        or str(iteration.get("status", "")).strip() == "promoted"
+    )
+
+
+def _session_report_path_from_status(status_report: Mapping[str, Any]) -> str:
+    run_id = str(_mapping_value(status_report, "run").get("run_id", "")).strip()
+    return f"ops/reports/auto-improve-sessions/{run_id}.json" if run_id else ""
+
+
+def _completed_self_improvement_terminal_queue(
+    vault: Path,
+    *,
+    goal_status_path: str,
+) -> bool:
+    status_report = load_optional_json_object(vault / goal_status_path)
+    run = _mapping_value(status_report, "run")
+    if str(run.get("status", "")).strip() != "completed":
+        return False
+    if str(run.get("runtime_mode", "")).strip() != DEFAULT_RUNTIME_MODE:
+        return False
+    session_report_path = _session_report_path_from_status(status_report)
+    if not session_report_path:
+        return False
+    session = load_optional_json_object(vault / session_report_path)
+    if str(session.get("status", "")).strip() != "complete":
+        return False
+    if str(session.get("stop_reason", "")).strip() not in TERMINAL_QUEUE_STOP_REASONS:
+        return False
+    iterations = session.get("iterations")
+    if not isinstance(iterations, list):
+        return False
+    return any(
+        _successful_session_iteration(iteration)
+        for iteration in iterations
+        if isinstance(iteration, Mapping)
+    )
+
+
 def _worktree_guard_promotion_blockers(
     vault: Path,
     worktree_guard_report_path: str,
@@ -242,6 +289,7 @@ def promotion_guard_from_readiness(
     *,
     readiness_report_path: str = DEFAULT_READINESS_REPORT_PATH,
     worktree_guard_report_path: str = "",
+    goal_status_path: str = DEFAULT_GOAL_STATUS_PATH,
 ) -> dict[str, Any] | None:
     readiness = load_optional_json_object(vault / readiness_report_path)
     if not readiness:
@@ -251,8 +299,18 @@ def promotion_guard_from_readiness(
     if not preflight:
         preflight = load_optional_json_object(vault / SEALED_PREFLIGHT_REPORT_PATH)
     sealed_clean = _preflight_is_clean(preflight)
-    can_promote = bool(readiness.get("can_promote_result", False)) and sealed_clean
-    blockers = [] if can_promote else _promotion_blocker_ids(readiness)
+    readiness_promotes = bool(readiness.get("can_promote_result", False))
+    blockers = [] if readiness_promotes else _promotion_blocker_ids(readiness)
+    terminal_queue_completed = _completed_self_improvement_terminal_queue(
+        vault,
+        goal_status_path=goal_status_path,
+    )
+    if terminal_queue_completed:
+        blockers = [
+            blocker for blocker in blockers if blocker not in TERMINAL_QUEUE_BLOCKERS
+        ]
+    terminal_queue_promotes = terminal_queue_completed and not blockers
+    can_promote = (readiness_promotes or terminal_queue_promotes) and sealed_clean
     worktree_guard_blockers = _worktree_guard_promotion_blockers(
         vault,
         worktree_guard_report_path,
@@ -603,6 +661,7 @@ def _embed_contract_artifact_envelope(
     generated_at: str,
     readiness_report_path: str = DEFAULT_READINESS_REPORT_PATH,
     worktree_guard_report_path: str = "",
+    goal_status_path: str = DEFAULT_GOAL_STATUS_PATH,
     readiness_sync_enabled: bool = True,
 ) -> dict[str, Any]:
     try:
@@ -610,6 +669,11 @@ def _embed_contract_artifact_envelope(
         file_inputs: dict[str, str] = {}
         if readiness_sync_enabled:
             file_inputs["auto_improve_readiness"] = readiness_report_path
+            file_inputs["goal_run_status"] = goal_status_path
+            status_report = load_optional_json_object(vault / goal_status_path)
+            session_report_path = _session_report_path_from_status(status_report)
+            if session_report_path:
+                file_inputs["auto_improve_session"] = session_report_path
         if worktree_guard_report_path.strip():
             file_inputs["goal_worktree_guard_report"] = worktree_guard_report_path
         envelope = build_canonical_report_envelope(
@@ -665,6 +729,7 @@ def main(argv: list[str] | None = None) -> int:
             vault,
             readiness_report_path=args.readiness_report,
             worktree_guard_report_path=args.worktree_guard_report,
+            goal_status_path=args.goal_status_path,
         )
     contract = build_auto_improve_goal_contract(
         contract_id=args.contract_id,
@@ -691,6 +756,7 @@ def main(argv: list[str] | None = None) -> int:
         generated_at=_utc_now(),
         readiness_report_path=args.readiness_report,
         worktree_guard_report_path=args.worktree_guard_report,
+        goal_status_path=args.goal_status_path,
         readiness_sync_enabled=not args.no_readiness_sync,
     )
     backend = FileGoalBackend(vault=vault, contract_path=args.out)
