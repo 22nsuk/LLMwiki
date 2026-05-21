@@ -1,19 +1,19 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-21T09:25:47Z",
+  "generated_at": "2026-05-21T09:54:01Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "22e88f9dbc96dc81cec8752befe6e56849aff65c2ec5c3747d0e835b6e8122b7",
+  "source_tree_fingerprint": "918a4773b438d3347b99ce38c660951fc40feb789a959c476454fc666bb5c1f8",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "2da703e289dbd3c7c5f7a977cff5a810f0552dc1252827a86d0b8a2941f49ada",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "04d709548fae3fbea7087eb8bc62a9aa1f424113a60ebcbe2b410ccba8cb34c5",
     "learning_claim_activation": "f90a59b26c0aafc739d67a3d2bdde627f879afb337ca0220af680861946a0b81",
-    "self_improvement_negative_lessons": "32fb3e6ab8c30cf80e1f748c2e3a71a4525abb5917039a4d28e553a6a4c7d072",
-    "session_synopsis": "ff29f262f2a1599d10e2c863b69f2353481716b8fc2a9506ecbce6f17a7f92c5",
+    "self_improvement_negative_lessons": "b022e7eb6e3b5c871736d81b45001804f0aefa65a935430ea4ca7a463e3fd711",
+    "session_synopsis": "1cd7bdc13e564e6d57525615d9ce4a252c999806faecbf2e301caaadee72ab14",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
     "auto_improve_sessions": "045839dd6979b19e7b1e2cf2c9ed4675b6db02844a8f4ea94a33326f904f690f"
   },
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T09:25:47Z"
+    "checked_at": "2026-05-21T09:54:01Z"
   },
   "vault": ".",
   "policy": {
@@ -32,28 +32,14 @@
   },
   "status": "attention",
   "summary": {
-    "backlog_item_count": 6,
+    "backlog_item_count": 4,
     "repeated_blocker_count": 2,
-    "active_blocker_count": 4,
-    "open_item_count": 6,
+    "active_blocker_count": 2,
+    "open_item_count": 4,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
     "next_action": "Close or explicitly defer remediation backlog items before promotion."
   },
   "items": [
-    {
-      "item_id": "active_blocker_goal_status_git_worktree_dirty",
-      "blocker_id": "goal_status_git_worktree_dirty",
-      "source": "goal_run_status.blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "runs/goal-auto-improve-trial/state/session-synopsis.json"
-      ],
-      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
-      "next_action": "Refresh goal run status and close the active blocker before resuming."
-    },
     {
       "item_id": "active_blocker_goal_status_self_improvement_loop_certificate_incomplete",
       "blocker_id": "goal_status_self_improvement_loop_certificate_incomplete",
@@ -81,20 +67,6 @@
       ],
       "repair_target": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded runtime with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete.",
       "next_action": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded runtime with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
-    },
-    {
-      "item_id": "active_blocker_promotion_blocked_by_goal_worktree_guard_failure",
-      "blocker_id": "promotion_blocked_by_goal_worktree_guard_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "runs/goal-auto-improve-trial/state/session-synopsis.json"
-      ],
-      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness.",
-      "next_action": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     },
     {
       "item_id": "auto_session_repeated_blocker_active_report_self_improve_certificate_rerun4_review_blocked",

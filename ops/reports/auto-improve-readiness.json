@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-21T09:53:11Z",
+  "generated_at": "2026-05-21T09:54:02Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -11,8 +11,8 @@
     "schema": "27cd71440c75698e6e1aceea8885fb72c3c91ad83cfff20c1d5c81358e688c04",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "c81a53851286949be4152bf3484570bc2540afd45f2ca65919e6973aebd7192c",
-    "artifact_freshness_report": "35940957d3d3b1ad6e5383d92db42f8ffd1c8999305dacf514684cfa2947b279",
-    "goal_worktree_guard_report": "8d5b0dcdb86da4b9333204290acc1e89f2dfcd8f98328fc1922cbd48a90b2c20",
+    "artifact_freshness_report": "79f98462b2fe2b2937049e4c9c867e4676db57f2e8814542388431fd37dc46b3",
+    "goal_worktree_guard_report": "b1f9b74ae941fe1fe26c573227bdbc6b0758f5a7cbe3c724eefe5bcbffe3f8b2",
     "mechanism_review_report": "7d1bcf493d740c17b4f88b9e00caf1392ff877e8ab4da5e85b29cfb1e57bc7d1",
     "mutation_proposal_report": "251686022abd1421acf459ff39befd4ac47950edd702b13f94de0a51709afeb3",
     "outcome_metrics_report": "6d56ca81c165aa8ac7014c86ce6af8793a89ef4b236d0ffb129c788a52eccd96",
@@ -22,7 +22,7 @@
     "release_closeout_post_check_finalizer_report": "missing",
     "release_closeout_summary_report": "2a602d2f2d109181a4968cdb99489957ee9378ab31f50d636b0272ac74e24f16",
     "release_evidence_cohort_report": "694897fe672515f02ad9230367e2e81a064634b56bc1a581a52afd9d587d715a",
-    "remediation_backlog_report": "c9aa81c5bdf93d41cf5f186bc1cc45293cfc2fceb33b01af50377610b95707ae",
+    "remediation_backlog_report": "e8b61ca395b176e1aeef5001eab2b83565c948ac2600b5ce86088e62f5796be2",
     "selected_contract_summary_report": "d18ec7300a873b0331f39ce463a9f94b6d51b08d91f55df252911205333b5903",
     "source_package_clean_extract_report": "136f0187ac37fe12a1803ed575b2e917b2f5c091b7ab99fdc1381ccfed40d770",
     "release_authority_preflight_report_candidates": "e8dc01ac45cb5a4e75255479f3287ac412199e04a71006f82a6d3b996a3b48ba"
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T09:53:11Z"
+    "checked_at": "2026-05-21T09:54:02Z"
   },
   "vault": ".",
   "policy": {
@@ -159,12 +159,10 @@
       "accepted_risk": false,
       "gate_effect": "active",
       "source_status": "attention",
-      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=4; active_blocker_count=4; blocking_item_count=4",
+      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_item_count=2; active_blocker_count=2; blocking_item_count=2",
       "signal_ids": [
-        "goal_status_git_worktree_dirty",
         "goal_status_self_improvement_loop_certificate_incomplete",
-        "learning_blocked_by_review_required",
-        "promotion_blocked_by_goal_worktree_guard_failure"
+        "learning_blocked_by_review_required"
       ],
       "required_evidence": [
         "Run make remediation-backlog and confirm status=pass with open_item_count=0.",
@@ -211,7 +209,7 @@
     "release_closeout_post_check_finalizer_report": "tmp/release-closeout-post-check-finalizer.json",
     "release_authority_preflight_report": "ops/reports/release-closeout-sealed-rehearsal-check.json",
     "goal_worktree_guard_report": "tmp/goal-worktree-guard.json",
-    "remediation_backlog_report": "ops/reports/remediation-backlog.json"
+    "remediation_backlog_report": "runs/goal-auto-improve-trial/state/remediation-backlog.json"
   },
   "diagnostics": {
     "loop_health_summary": {
@@ -379,23 +377,21 @@
       "summary": "goal worktree guard status=pass; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=true; dirty_entry_count=0"
     },
     "remediation_backlog_summary": {
-      "path": "ops/reports/remediation-backlog.json",
+      "path": "runs/goal-auto-improve-trial/state/remediation-backlog.json",
       "expected_artifact_kind": "remediation_backlog",
       "artifact_kind": "remediation_backlog",
       "status": "fail",
       "source_status": "attention",
       "release_blocking": true,
-      "open_item_count": 4,
-      "active_blocker_count": 4,
-      "blocking_item_count": 4,
+      "open_item_count": 2,
+      "active_blocker_count": 2,
+      "blocking_item_count": 2,
       "signal_ids": [
-        "goal_status_git_worktree_dirty",
         "goal_status_self_improvement_loop_certificate_incomplete",
-        "learning_blocked_by_review_required",
-        "promotion_blocked_by_goal_worktree_guard_failure"
+        "learning_blocked_by_review_required"
       ],
       "currentness_status": "current",
-      "summary": "remediation backlog status=attention; open_item_count=4; active_blocker_count=4; blocking_item_count=4"
+      "summary": "remediation backlog status=attention; open_item_count=2; active_blocker_count=2; blocking_item_count=2"
     }
   },
   "queue": {
