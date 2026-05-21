@@ -26,6 +26,11 @@ DERIVED_REMEDIATION_BACKLOG_BLOCKER_IDS = {
     "goal_status_promotion_blocked_by_remediation_backlog_open",
     "promotion_blocked_by_remediation_backlog_open",
 }
+TERMINAL_QUEUE_STOP_REASONS = {"queue_exhausted", "proposal_budget_exhausted"}
+TERMINAL_QUEUE_READINESS_BLOCKER_IDS = {
+    "execution_blocked_by_no_runnable_proposal",
+    "learning_blocked_by_execution_not_runnable",
+}
 
 
 @dataclass(frozen=True)
@@ -59,6 +64,45 @@ def _string_list(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _successful_session_iteration(iteration: dict[str, Any]) -> bool:
+    return (
+        str(iteration.get("decision", "")).strip() == "PROMOTE"
+        or str(iteration.get("outcome", "")).strip() == "promoted"
+        or str(iteration.get("status", "")).strip() == "promoted"
+    )
+
+
+def _auto_improve_session_path(status_report: dict[str, Any]) -> str:
+    run = status_report.get("run")
+    run = run if isinstance(run, dict) else {}
+    run_id = str(run.get("run_id", "")).strip()
+    return f"ops/reports/auto-improve-sessions/{run_id}.json" if run_id else ""
+
+
+def _completed_self_improvement_terminal_queue(
+    vault: Path,
+    status_report: dict[str, Any],
+) -> bool:
+    run = status_report.get("run")
+    run = run if isinstance(run, dict) else {}
+    if str(run.get("status", "")).strip() != "completed":
+        return False
+    if str(run.get("runtime_mode", "")).strip() != "self_improvement_loop":
+        return False
+    session_path = _auto_improve_session_path(status_report)
+    if not session_path:
+        return False
+    session = _load_json_object(vault / session_path)
+    if str(session.get("status", "")).strip() != "complete":
+        return False
+    if str(session.get("stop_reason", "")).strip() not in TERMINAL_QUEUE_STOP_REASONS:
+        return False
+    return any(
+        _successful_session_iteration(iteration)
+        for iteration in _dict_list(session.get("iterations"))
+    )
 
 
 def _check(
@@ -187,12 +231,21 @@ def _session_active_goal_alignment(reports: dict[str, dict[str, Any]]) -> list[d
     ]
 
 
-def _readiness_blocker_ids(readiness: dict[str, Any]) -> list[str]:
+def _readiness_blocker_ids(
+    readiness: dict[str, Any],
+    *,
+    status_report: dict[str, Any],
+    vault: Path,
+) -> list[str]:
+    suppressed_ids = set[str]()
+    if _completed_self_improvement_terminal_queue(vault, status_report):
+        suppressed_ids.update(TERMINAL_QUEUE_READINESS_BLOCKER_IDS)
     return sorted(
         blocker_id
         for blocker in _dict_list(readiness.get("promotion_blockers"))
         for blocker_id in [str(blocker.get("id", "")).strip()]
         if blocker_id and blocker_id not in DERIVED_REMEDIATION_BACKLOG_BLOCKER_IDS
+        if blocker_id not in suppressed_ids
     )
 
 
@@ -234,15 +287,20 @@ def _readiness_remediation_signal_ids(readiness: dict[str, Any]) -> list[str]:
     return []
 
 
-def _blocker_alignment_checks(reports: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+def _blocker_alignment_checks(
+    reports: dict[str, dict[str, Any]],
+    *,
+    vault: Path,
+) -> list[dict[str, Any]]:
     readiness = reports["readiness"]
     session = reports["session"]
     backlog = reports["backlog"]
+    status = reports["status"]
     active_backlog_ids = _backlog_open_active_blocker_ids(backlog)
     return [
         _check(
             "session_readiness_blockers",
-            expected=_readiness_blocker_ids(readiness),
+            expected=_readiness_blocker_ids(readiness, status_report=status, vault=vault),
             observed=_session_readiness_blocker_ids(session),
             reason="session synopsis readiness blockers must match current auto-improve readiness blockers",
         ),
@@ -299,7 +357,7 @@ def build_report(request: GoalRuntimeFixedPointCheckRequest) -> dict[str, Any]:
         *_report_loaded_checks(reports, report_paths=report_paths),
         *_contract_status_alignment(reports),
         *_session_active_goal_alignment(reports),
-        *_blocker_alignment_checks(reports),
+        *_blocker_alignment_checks(reports, vault=vault),
     ]
     summary = _summary(checks)
     return {

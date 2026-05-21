@@ -190,6 +190,74 @@ class GoalRuntimeFixedPointCheckTests(unittest.TestCase):
         self.assertEqual(check["observed"], ["learning_blocked_by_review_required"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_completed_terminal_queue_allows_suppressed_readiness_blockers(self) -> None:
+        for rel_path in (
+            "ops/reports/codex-goal-contract.json",
+            "ops/reports/goal-run-status.json",
+        ):
+            payload = json.loads((self.vault / rel_path).read_text(encoding="utf-8"))
+            payload["promotion_guard"] = {
+                "can_promote_result": False,
+                "promotion_blockers": [],
+            }
+            if rel_path.endswith("goal-run-status.json"):
+                payload["run"] = {
+                    "run_id": "terminal-loop",
+                    "status": "completed",
+                    "runtime_mode": "self_improvement_loop",
+                }
+            self._write_json(rel_path, payload)
+        self._write_json(
+            "ops/reports/auto-improve-readiness.json",
+            {
+                "promotion_blockers": [
+                    {
+                        "id": "execution_blocked_by_no_runnable_proposal",
+                        "status": "open",
+                    },
+                    {
+                        "id": "learning_blocked_by_execution_not_runnable",
+                        "status": "open",
+                    },
+                ],
+            },
+        )
+        self._write_json(
+            "ops/reports/auto-improve-sessions/terminal-loop.json",
+            {
+                "status": "complete",
+                "stop_reason": "queue_exhausted",
+                "iterations": [{"decision": "PROMOTE", "outcome": "promoted"}],
+            },
+        )
+        self._write_json(
+            "ops/reports/session-synopsis.json",
+            {
+                "active_goal": {
+                    "contract_id": "auto-improve-goal",
+                    "run_id": "terminal-loop",
+                    "run_status": "completed",
+                    "runtime_mode": "self_improvement_loop",
+                    "can_promote_result": False,
+                },
+                "recent_blockers": [],
+            },
+        )
+        self._write_json("ops/reports/remediation-backlog.json", {"items": []})
+
+        report = build_report(
+            GoalRuntimeFixedPointCheckRequest(
+                vault=self.vault,
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(report["status"], "pass")
+        check = next(item for item in report["checks"] if item["id"] == "session_readiness_blockers")
+        self.assertEqual(check["expected"], [])
+        self.assertEqual(check["observed"], [])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_repeated_backlog_items_do_not_have_to_echo_in_session_or_readiness(self) -> None:
         self._write_json(
             "ops/reports/remediation-backlog.json",
