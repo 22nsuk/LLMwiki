@@ -142,8 +142,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "b7ec23d7f49abc08dcb97b6a1cd8d724936652280c508b524ea924dcd68f6361",
-      "size_bytes": 88271
+      "sha256": "4410472060d2df6491eb78f831090772887c8deaeafc1ad2963fa0c29de364a0",
+      "size_bytes": 88445
     },
     {
       "path": "SECURITY.md",
@@ -172,8 +172,8 @@
     },
     {
       "path": "mk/mechanism.mk",
-      "sha256": "c1e1cdf612e0c24bc9c7f8642aeeba54b3bd68a9c789013d71e754a42e6a240d",
-      "size_bytes": 27523
+      "sha256": "ddfb4c10eeca82d9feb94958eb7977ded11f08a9ebcbe36ccfa906fe5ea3c696",
+      "size_bytes": 27810
     },
     {
       "path": "mk/public.mk",
@@ -207,8 +207,8 @@
     },
     {
       "path": "ops/README.md",
-      "sha256": "3b1384df31151d563e254b9a79d79933f3c95313f9fce0fcf99ab7563c2d30cb",
-      "size_bytes": 116282
+      "sha256": "382bf360e8c5aa3b8364e5150f666d0fd33fefe42eb903c74a862a23df498bd4",
+      "size_bytes": 116456
     },
     {
       "path": "ops/__init__.py",
@@ -1612,8 +1612,8 @@
     },
     {
       "path": "ops/scripts/mechanism/codex_goal_prompt.py",
-      "sha256": "5c3af466e92416e7ccd8518b6f8d9222c8dfadd66cde8bf1c17b7b459d0f9bc5",
-      "size_bytes": 13990
+      "sha256": "9d583b0cac8e02887f0ff8618fc8d12131592cee2fb3c30b5353d5eeb38338c1",
+      "size_bytes": 14201
     },
     {
       "path": "ops/scripts/mechanism/current_target_path_runtime.py",
@@ -2052,13 +2052,13 @@
     },
     {
       "path": "ops/scripts/release/external_report_action_matrix.py",
-      "sha256": "349ab88eae7ebd70e283dd607c981feb078d3143de2604938ef0747ca4902001",
-      "size_bytes": 8318
+      "sha256": "af641ffdc72e17afa8bb102dc2ee989b0208cfa82ea8d4ed64b7161c9707b3fb",
+      "size_bytes": 8753
     },
     {
       "path": "ops/scripts/release/external_report_lifecycle_runtime.py",
-      "sha256": "f3eaa14c280c731ddd529b1bda08e8b9f1dda32175bfe329d56f4e054bdcfd23",
-      "size_bytes": 55713
+      "sha256": "1328971076e8d126cf03c0eff1876d6197e7257174de6a7ce5f650bd4674fd07",
+      "size_bytes": 56103
     },
     {
       "path": "ops/scripts/release/external_report_reference_manifest.py",
@@ -5142,8 +5142,8 @@
     },
     {
       "path": "tests/test_codex_goal_prompt.py",
-      "sha256": "f0b9203e2c3730598180b9d21db35d4be17f1afbd892fb6fab706b9d97dcbe9e",
-      "size_bytes": 8785
+      "sha256": "1eeeea7fa084769233b559ffa69e0222e097dc114def8bdaf36edbebd88fe665",
+      "size_bytes": 8981
     },
     {
       "path": "tests/test_command_runtime.py",
@@ -5202,8 +5202,8 @@
     },
     {
       "path": "tests/test_external_report_action_matrix.py",
-      "sha256": "b890b6344ab5fb110206546457942e5cb7edbf3b3bb5f69960a3f2bfc9ca093e",
-      "size_bytes": 50604
+      "sha256": "c597de2c211f91a01841e85d56949ab9f9b93bd17d8984a947cb244438e2fd3a",
+      "size_bytes": 51444
     },
     {
       "path": "tests/test_external_report_lifecycle_static.py",
@@ -5362,8 +5362,8 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "717d04a15ceb760c8023663f11cb365a0e3cb5616c56cbdb4396b4eff902e7cf",
-      "size_bytes": 168530
+      "sha256": "8ef323d9dd480aeca87208f19f13e1a177b936d0e13aacd85cce0c009a27674d",
+      "size_bytes": 169338
     },
     {
       "path": "tests/test_manifest_export_symlink_safety.py",
