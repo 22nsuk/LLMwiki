@@ -1405,40 +1405,63 @@ class MakefileStaticGateTests(unittest.TestCase):
             _target_block(text, "release-smoke-fast"),
         )
         preflight_block = _target_block(text, "release-check-preflight-converge")
+        core_block = _target_block(text, "release-check-core")
         release_check_block = _target_block(text, "release-check")
+        all_surfaces_block = _target_block(text, "release-check-all-surfaces")
         post_block = _target_block(text, "release-check-post-converge")
         self.assertIn("release-check-preflight-converge", _target_block(text, ".PHONY"))
+        self.assertIn("release-check-core", _target_block(text, ".PHONY"))
         self.assertIn("release-check-post-converge", _target_block(text, ".PHONY"))
+        self.assertIn("release-check-all-surfaces", _target_block(text, ".PHONY"))
         self.assertIn("$(MAKE) test-execution-summary-report-contract-refresh", preflight_block)
         self.assertIn("$(MAKE) test-execution-summary-report-contract-refresh-no-smoke", preflight_block)
         self.assertNotIn("$(MAKE) test-execution-summary-report-contract-refresh\n", preflight_block)
-        self.assertIn("$(MAKE) release-check-preflight-converge", release_check_block)
-        self.assertIn("$(MAKE) static", release_check_block)
-        self.assertIn("$(MAKE) artifact-freshness-check", release_check_block)
-        self.assertIn("$(MAKE) registry-preflight", release_check_block)
-        self.assertIn("$(MAKE) lint", release_check_block)
-        self.assertIn("$(MAKE) eval", release_check_block)
-        self.assertIn("$(MAKE) stage2-eval", release_check_block)
-        self.assertIn("$(MAKE) planning-gate", release_check_block)
-        self.assertIn("$(MAKE) unit-tests-release-check", release_check_block)
-        self.assertIn("$(MAKE) release-smoke-full-reuse", release_check_block)
+        self.assertIn("$(MAKE) release-check-preflight-converge", core_block)
+        self.assertIn("$(MAKE) static", core_block)
+        self.assertIn("$(MAKE) artifact-freshness-check", core_block)
+        self.assertIn("$(MAKE) registry-preflight", core_block)
+        self.assertIn("$(MAKE) lint", core_block)
+        self.assertIn("$(MAKE) eval", core_block)
+        self.assertIn("$(MAKE) stage2-eval", core_block)
+        self.assertIn("$(MAKE) planning-gate", core_block)
+        self.assertIn("$(MAKE) unit-tests-release-check", core_block)
+        self.assertIn("$(MAKE) release-smoke-full-reuse", core_block)
+        self.assertNotIn("$(MAKE) release-check-post-converge", core_block)
+        self.assertIn("$(MAKE) release-check-core", release_check_block)
         self.assertIn("$(MAKE) release-check-post-converge", release_check_block)
-        self.assertNotIn("$(MAKE) check-all", release_check_block)
-        self.assertNotIn("$(MAKE) unit-tests-all", release_check_block)
+        self.assertNotIn("$(MAKE) check-all", core_block)
+        self.assertNotIn("$(MAKE) unit-tests-all", core_block)
         self.assertIn("$(MAKE) generated-artifact-index", post_block)
         self.assertIn("$(MAKE) artifact-freshness", post_block)
         self.assertIn("$(MAKE) test-artifact-finalization", post_block)
         self.assertLess(
-            release_check_block.index("$(MAKE) release-check-preflight-converge"),
-            release_check_block.index("$(MAKE) unit-tests-release-check"),
+            core_block.index("$(MAKE) release-check-preflight-converge"),
+            core_block.index("$(MAKE) unit-tests-release-check"),
         )
         self.assertLess(
-            release_check_block.index("$(MAKE) unit-tests-release-check"),
-            release_check_block.index("$(MAKE) release-smoke-full-reuse"),
+            core_block.index("$(MAKE) unit-tests-release-check"),
+            core_block.index("$(MAKE) release-smoke-full-reuse"),
         )
         self.assertLess(
-            release_check_block.index("$(MAKE) release-smoke-full-reuse"),
+            release_check_block.index("$(MAKE) release-check-core"),
             release_check_block.index("$(MAKE) release-check-post-converge"),
+        )
+        self.assertIn("$(MAKE) release-check-core", all_surfaces_block)
+        self.assertIn("$(MAKE) sync-public-policy", all_surfaces_block)
+        self.assertIn("$(MAKE) public-check-all", all_surfaces_block)
+        self.assertIn("$(MAKE) release-check-post-converge", all_surfaces_block)
+        self.assertNotIn("$(MAKE) release-check\n", all_surfaces_block)
+        self.assertLess(
+            all_surfaces_block.index("$(MAKE) release-check-core"),
+            all_surfaces_block.index("$(MAKE) sync-public-policy"),
+        )
+        self.assertLess(
+            all_surfaces_block.index("$(MAKE) sync-public-policy"),
+            all_surfaces_block.index("$(MAKE) public-check-all"),
+        )
+        self.assertLess(
+            all_surfaces_block.index("$(MAKE) public-check-all"),
+            all_surfaces_block.index("$(MAKE) release-check-post-converge"),
         )
         finalized_block = _target_block(text, "release-check-finalized")
         self.assertIn("release-check-finalized", _target_block(text, ".PHONY"))

@@ -297,7 +297,8 @@
         "make release-check"
       ],
       "documented_entrypoints": [
-        "make release-check"
+        "make release-check",
+        "make release-check-all-surfaces"
       ]
     },
     {
@@ -618,6 +619,11 @@
     },
     {
       "kind": "make_target",
+      "name": "release-check-all-surfaces",
+      "maps_to": "release_check_unit_complement"
+    },
+    {
+      "kind": "make_target",
       "name": "report-contracts",
       "maps_to": "report_contract_core"
     },
@@ -779,6 +785,11 @@
     {
       "kind": "documented_entrypoint",
       "name": "make release-check",
+      "maps_to": "release_check_unit_complement"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-check-all-surfaces",
       "maps_to": "release_check_unit_complement"
     },
     {

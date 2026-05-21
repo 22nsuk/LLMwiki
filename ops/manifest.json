@@ -142,8 +142,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "0509d536f4fd6f3669b983fa448c5bc634b07e22238812b9a5a7f2a3d42123c2",
-      "size_bytes": 86590
+      "sha256": "e3913c67806c5ecedb0c8116815643318bb12fad086ceb4b44e4fab5dc86f7c1",
+      "size_bytes": 87249
     },
     {
       "path": "SECURITY.md",
@@ -187,8 +187,8 @@
     },
     {
       "path": "mk/release.mk",
-      "sha256": "b1de5f603a08de416c7de82e6ae1c5e77f5e7f6d19d1dccf5bef8ae6dd7f61a5",
-      "size_bytes": 45372
+      "sha256": "f104c0049f7466cf0d72e483d4b121a457eb6322475eccda2a7cc67af08663a8",
+      "size_bytes": 45615
     },
     {
       "path": "mk/static.mk",
@@ -207,8 +207,8 @@
     },
     {
       "path": "ops/README.md",
-      "sha256": "c0d2ea1d9cd650c29dfcf72c83f8a624b049725d879c77e4b44037cadf7615d0",
-      "size_bytes": 115015
+      "sha256": "6a0216c02624b27174a65a641df95ea0c3617fbfc3e4cb6129cc75eda65e5516",
+      "size_bytes": 115302
     },
     {
       "path": "ops/__init__.py",
@@ -2332,8 +2332,8 @@
     },
     {
       "path": "ops/test-lane-registry.json",
-      "sha256": "0985bed74ec4b3cb2544c3891fb3bc4cc6eee5279c563d70337e842c1fe38be1",
-      "size_bytes": 29334
+      "sha256": "e2a8c6394a8731d958b6e3ec006a438a20a10ea668d16eee90ae0f65e5b5503c",
+      "size_bytes": 29662
     },
     {
       "path": "pyproject.toml",
@@ -5332,8 +5332,8 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "dacd146588df52995e177377f71584ee9135e4c3023e0c941db5624159322753",
-      "size_bytes": 165535
+      "sha256": "f4842090706508277ee01be30dd9e6b94b316fceab6e51814d97762c8ed3c454",
+      "size_bytes": 166719
     },
     {
       "path": "tests/test_manifest_export_symlink_safety.py",

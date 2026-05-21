@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/defect-escape-closures.schema.json",
   "artifact_kind": "defect_escape_closures",
-  "generated_at": "2026-05-21T07:55:16Z",
+  "generated_at": "2026-05-21T08:13:52Z",
   "producer": "ops.scripts.closure_registry_envelope",
   "source_command": "python -m ops.scripts.closure_registry_envelope --vault . --registry defect_escape",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "25b1c76f97dea7e93a8499a311e9c54350d9861c7317de58fd19cfb52247c60b",
+  "source_tree_fingerprint": "cba2ca57643af3cbe76c591dca5eedb3857f571189759b706453e44e935b6c4e",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "162eb9660688c5928da2f3b4dedc31cbd164590519aace452b5e597bee72200f",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T07:55:16Z"
+    "checked_at": "2026-05-21T08:13:52Z"
   },
   "summary": {
     "closure_count": 5

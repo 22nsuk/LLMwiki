@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-21T07:50:17Z",
+  "generated_at": "2026-05-21T08:09:45Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "25b1c76f97dea7e93a8499a311e9c54350d9861c7317de58fd19cfb52247c60b",
+  "source_tree_fingerprint": "cba2ca57643af3cbe76c591dca5eedb3857f571189759b706453e44e935b6c4e",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "27cd71440c75698e6e1aceea8885fb72c3c91ad83cfff20c1d5c81358e688c04",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "c81a53851286949be4152bf3484570bc2540afd45f2ca65919e6973aebd7192c",
-    "artifact_freshness_report": "13001f6d245ee13f787c08933afad12bba2c674d548ccc738aeb803f0e0c7fc9",
-    "goal_worktree_guard_report": "b0401da2d9ffa58569abe7830ebabf93615b22efe7f2a823541558bc5b586660",
-    "mechanism_review_report": "95c435dd7ba04b745a764ed434b26ca3925bbcc00b1696e7abf35ceb79ffc6da",
-    "mutation_proposal_report": "a6ab9679e786acac7567e66e237dcb5c108a3cb3264f37bf4b8d4fb0c78a70fd",
-    "outcome_metrics_report": "c72e89100f6ee740b490351e3b16807b74207e4e587ccec829dfe1608f4a2503",
+    "artifact_freshness_report": "a64d43a5a1ed1cbc8f8334cea07971b9ff5a37e0b07c8352e1f7e886cdb11dfd",
+    "goal_worktree_guard_report": "209af12554adeb70bd5ea8a8dabc46ad510d41b69cb05b4855f11390fc3a19b7",
+    "mechanism_review_report": "1a46faf387f17c35095bd4155204a79e102a76480ab344248fe26b0aa4a1b571",
+    "mutation_proposal_report": "16f27dd6fc46353386a8934589a97351779aad614618f2607b4ecbd07f5a7527",
+    "outcome_metrics_report": "11b20958351dbbb30293c3031198a0b6b765eec5dd0e6b1d04a836add7aa2b5c",
     "release_authority_preflight_report": "2298cfa17310094796edc9e88516a1004d4212deea3e5d6a64b8c10b6d50a158",
     "release_closeout_batch_manifest_report": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
     "release_closeout_finality_attestation_report": "7dd3b5e276deee3a02a3e664f5e2c8e28adf36ed7e19eacedd884942521c03ea",
@@ -23,7 +23,7 @@
     "release_closeout_summary_report": "2a602d2f2d109181a4968cdb99489957ee9378ab31f50d636b0272ac74e24f16",
     "release_evidence_cohort_report": "694897fe672515f02ad9230367e2e81a064634b56bc1a581a52afd9d587d715a",
     "remediation_backlog_report": "2c922f04186c5677525aa1e78fa93fef912944994031bc6046193a495f7f8640",
-    "selected_contract_summary_report": "ac715248a718ea236f736b07b6ae9a1a8d1fb2092e289ca37ea3ebef441ff874",
+    "selected_contract_summary_report": "8ffe932e534dfdc8c84ac34fbf46857ebce8c4e426f72fc48c59264144f23536",
     "source_package_clean_extract_report": "136f0187ac37fe12a1803ed575b2e917b2f5c091b7ab99fdc1381ccfed40d770",
     "release_authority_preflight_report_candidates": "e8dc01ac45cb5a4e75255479f3287ac412199e04a71006f82a6d3b996a3b48ba"
   },
@@ -33,7 +33,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T07:50:17Z"
+    "checked_at": "2026-05-21T08:09:45Z"
   },
   "vault": ".",
   "policy": {
@@ -170,25 +170,6 @@
       "recommended_next_step": "Execution readiness is blocked, so keep auto-improve paused until the runnable proposal queue is non-empty."
     },
     {
-      "id": "promotion_blocked_by_selected_contract_failure",
-      "scope": "release_gate",
-      "status": "open",
-      "severity": "blocker",
-      "release_blocker": true,
-      "accepted_risk": false,
-      "gate_effect": "active",
-      "source_status": "fail",
-      "reason": "selected_contract release gate is not pass: selected contract summary status=pass; selected_contract_currentness_status=current; operational_attention=test_target_fingerprint_mismatch:tests/test_makefile_static_gates.py",
-      "signal_ids": [
-        "selected_contract_currentness_not_current"
-      ],
-      "required_evidence": [
-        "Run make test-execution-summary-report-contract-refresh and confirm selected contract status=pass.",
-        "can_promote_result must stay false until this release gate is pass."
-      ],
-      "recommended_next_step": "Refresh selected contract evidence, then rerun make auto-improve-readiness."
-    },
-    {
       "id": "promotion_blocked_by_goal_worktree_guard_failure",
       "scope": "worktree_guard",
       "status": "open",
@@ -197,7 +178,7 @@
       "accepted_risk": false,
       "gate_effect": "active",
       "source_status": "attention",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=51",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=13",
       "signal_ids": [
         "git_worktree_dirty"
       ],
@@ -278,7 +259,7 @@
       "status": "available",
       "gate_effect": "none",
       "source_report": "ops/reports/routing-provenance-aggregates/active-report-self-improve-certificate-rerun7.json",
-      "source_generated_at": "2026-05-21T07:50:13Z",
+      "source_generated_at": "2026-05-21T08:09:41Z",
       "session_id": "active-report-self-improve-certificate-rerun7",
       "summary": "attempts=2, finalized=1, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=1.00 | alerts: unfinalized runs present, recent HOLD trend",
       "health_flags": [
@@ -340,14 +321,11 @@
       "path": "ops/reports/test-execution-summary.json",
       "expected_artifact_kind": "test_execution_summary",
       "artifact_kind": "test_execution_summary",
-      "status": "fail",
-      "source_status": "currentness_operational_attention",
-      "release_blocking": true,
-      "summary": "selected contract summary status=pass; selected_contract_currentness_status=current; operational_attention=test_target_fingerprint_mismatch:tests/test_makefile_static_gates.py",
-      "currentness_status": "current",
-      "signal_ids": [
-        "selected_contract_currentness_not_current"
-      ]
+      "status": "pass",
+      "source_status": "pass",
+      "release_blocking": false,
+      "summary": "selected contract summary status=pass",
+      "currentness_status": "current"
     },
     "source_package_clean_extract_summary": {
       "path": "ops/reports/source-package-clean-extract.json",
@@ -436,12 +414,12 @@
       "can_promote_result": false,
       "zip_mode_replay_only": false,
       "dirty_worktree_allowed": false,
-      "dirty_entry_count": 51,
+      "dirty_entry_count": 13,
       "fatal_blockers": [],
       "promotion_blockers": [
         "git_worktree_dirty"
       ],
-      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=51"
+      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=13"
     },
     "remediation_backlog_summary": {
       "path": "ops/reports/remediation-backlog.json",

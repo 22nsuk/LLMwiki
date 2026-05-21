@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-21T07:55:18Z",
+  "generated_at": "2026-05-21T08:13:54Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "25b1c76f97dea7e93a8499a311e9c54350d9861c7317de58fd19cfb52247c60b",
+  "source_tree_fingerprint": "cba2ca57643af3cbe76c591dca5eedb3857f571189759b706453e44e935b6c4e",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "834eb6cfec958f35d3989a742cfd58414bb50bb75040ab9283e4c90ed61f1657",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T07:55:18Z"
+    "checked_at": "2026-05-21T08:13:54Z"
   },
   "vault": ".",
   "policy": {
