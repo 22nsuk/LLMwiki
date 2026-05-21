@@ -418,5 +418,5 @@ tags:
 ## Source trace
 - `system/system-raw-registry.md`
 - `ops/policies/wiki-maintainer-policy.yaml`
-- `ops/scripts/raw_registry_runtime.py`
-- `ops/scripts/raw_registry_preflight.py`
+- `ops/scripts/registry/raw_registry_runtime.py`
+- `ops/scripts/registry/raw_registry_preflight.py`

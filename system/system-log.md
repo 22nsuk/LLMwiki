@@ -6217,3 +6217,22 @@ The next attempt will be launched with `systemd-run --user --scope`, so the long
 ### Consequence
 - Rerun16 remains blocked evidence, not profile progress.
 - Status polling must stay read-only and short; process lifetime should be delegated to the user service manager for long profile runs.
+
+---
+
+## [2026-05-21 09:12 KST] maintenance | Repair raw-registry Source trace paths
+
+### Summary
+The self-improvement rerun5 provenance audit found that raw-registry Source trace entries still cited legacy flat `ops/scripts/raw_registry_*.py` file paths after the scripts had moved under `ops/scripts/registry/`.
+
+Updated the raw-registry summary and corpus shard Source trace entries to the current canonical file paths, and updated the summary preflight command to the canonical registry module path.
+
+### Artifacts
+- `system/system-raw-registry.md`
+- `system/system-raw-registry/system.md`
+- `system/system-raw-registry/wiki.md`
+- `system/system-log.md`
+
+### Consequence
+- Raw-registry Source trace now resolves to live vault files instead of relying on import compatibility aliases.
+- The next self-improvement evidence pass should treat this as a provenance-maintenance repair, not as a mutation to raw source content.
