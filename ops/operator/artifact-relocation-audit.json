@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/artifact-relocation-audit.schema.json",
   "artifact_kind": "artifact_relocation_audit",
-  "generated_at": "2026-05-22T02:09:51Z",
+  "generated_at": "2026-05-22T10:30:55Z",
   "producer": "ops.scripts.artifact_relocation_audit",
   "source_command": "python -m ops.scripts.artifact_relocation_audit --vault . --out ops/operator/artifact-relocation-audit.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "c67d8e092c8c4eb06c711b524ddad2422eec7443337fca78130ae405e4bb146c",
+  "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "2bca24a2fb1f0a7c49b35b6df2aac4e0676e137502b48691d033ad62e3769173",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T02:09:51Z"
+    "checked_at": "2026-05-22T10:30:55Z"
   },
   "vault": ".",
   "policy": {
@@ -771,7 +771,7 @@
           "match_count": 1,
           "matches": [
             {
-              "line": 107,
+              "line": 108,
               "excerpt": "- `make operator-release-summary`는 closeout, batch manifest, self-check, test summary, learning revalidation, learning delta scoreboard를 한 장짜리 JSON으로 모아 `semantic_release_status`, `sealed_release_status`, `source_zip_policy_status`, full-su"
             }
           ]
@@ -791,7 +791,7 @@
           "match_count": 1,
           "matches": [
             {
-              "line": 424,
+              "line": 414,
               "excerpt": "\"operator-release-summary\": \"ops/operator/operator-release-summary.json\","
             }
           ]

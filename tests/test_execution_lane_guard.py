@@ -101,6 +101,9 @@ class ExecutionLaneGuardTests(unittest.TestCase):
 
         for target in (
             "release-distribution-zip",
+            "release-evidence-converge",
+            "release-verify-current",
+            "release-sealed-verify",
             "release-smoke",
             "release-evidence-closeout",
             "release-builder-full",

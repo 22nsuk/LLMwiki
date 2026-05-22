@@ -221,7 +221,7 @@ goal-runtime-run-admission-local-refresh: goal-runtime-lock-check goal-runtime-p
 	$(MAKE) goal-runtime-local-evidence-converge
 
 goal-runtime-run-admission: goal-runtime-run-admission-local-refresh
-	$(PYTHON) -m ops.scripts.goal_runtime_run_admission --vault "$(VAULT)" --out "$(GOAL_RUNTIME_RUN_ADMISSION_OUT)" --cleanup-report "$(GOAL_RUNTIME_CLEAN_TRANSIENT_OUT)" --quarantine-preflight-report "$(GOAL_RUNTIME_QUARANTINE_PREFLIGHT_OUT)" --fixed-point-report "$(GOAL_RUNTIME_FIXED_POINT_CHECK_OUT)" --goal-worktree-guard-report "$(GOAL_WORKTREE_GUARD_OUT)" --mutation-proposals-report "$(MUTATION_PROPOSAL_OUT)" --readiness-report "$(GOAL_LOCAL_READINESS_OUT)" --remediation-backlog-report "$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)" --strict
+	$(PYTHON) -m ops.scripts.goal_runtime_run_admission --vault "$(VAULT)" --out "$(GOAL_RUNTIME_RUN_ADMISSION_OUT)" --cleanup-report "$(GOAL_RUNTIME_CLEAN_TRANSIENT_OUT)" --quarantine-preflight-report "$(GOAL_RUNTIME_QUARANTINE_PREFLIGHT_OUT)" --fixed-point-report "$(GOAL_RUNTIME_FIXED_POINT_CHECK_OUT)" --goal-worktree-guard-report "$(GOAL_WORKTREE_GUARD_OUT)" --mutation-proposals-report "$(MUTATION_PROPOSAL_OUT)" --readiness-report "$(GOAL_LOCAL_READINESS_OUT)" --remediation-backlog-report "$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --goal-run-status "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --runtime-certificate-report "$(GOAL_RUNTIME_CERTIFICATE_OUT)" --strict
 
 goal-runtime-lock-check:
 	$(PYTHON) -m ops.scripts.goal_runtime_lock check --vault "$(VAULT)" --lock-path "$(GOAL_RUNTIME_LOCK_PATH)" --cleanup-stale

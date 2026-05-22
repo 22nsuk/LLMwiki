@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -27,6 +28,11 @@ def fixed_context() -> RuntimeContext:
         display_timezone=dt.timezone.utc,
         clock=lambda: dt.datetime(2026, 5, 21, 0, 0, tzinfo=dt.timezone.utc),
     )
+
+
+def _canonical_json_digest(payload: dict) -> str:
+    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
 class GoalRuntimeRunAdmissionTests(unittest.TestCase):
@@ -140,6 +146,45 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
                         "status": "open",
                     }
                 ],
+            },
+        )
+        contract = {
+            "goal_backend": {"process_persistent": True},
+            "runtime": {"certificate_status": "verified"},
+            "promotion_guard": {"runtime_certificate_verified": True},
+        }
+        contract_digest = _canonical_json_digest(contract)
+        self._write_json("ops/reports/codex-goal-contract.json", contract)
+        self._write_json(
+            "ops/reports/goal-run-status.json",
+            {
+                "artifact_kind": "goal_run_status",
+                "currentness": {"status": "current"},
+                "goal": {
+                    "contract_path": "ops/reports/codex-goal-contract.json",
+                    "contract_sha256": contract_digest,
+                    "contract_status": "loaded",
+                    "backend": {"process_persistent": True},
+                },
+            },
+        )
+        self._write_json(
+            "ops/reports/goal-runtime-certificate.json",
+            {
+                "artifact_kind": "goal_runtime_certificate",
+                "status": "pass",
+                "currentness": {"status": "current"},
+                "goal": {
+                    "contract_path": "ops/reports/codex-goal-contract.json",
+                    "contract_sha256_after": contract_digest,
+                },
+                "run": {"status_report_path": "ops/reports/goal-run-status.json"},
+                "certificate": {
+                    "verification_status": "already_verified",
+                    "eligible": True,
+                },
+                "contract_update": {"runtime_certificate_verified_after": True},
+                "blockers": [],
             },
         )
 
@@ -277,4 +322,21 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         worktree_check = next(check for check in report["checks"] if check["id"] == "start_worktree_promotable")
         self.assertEqual(worktree_check["status"], "fail")
         self.assertEqual(worktree_check["observed"]["dirty_entry_count"], 2)
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_build_report_blocks_promotion_when_goal_status_digest_is_stale(self) -> None:
+        status = json.loads((self.vault / "ops/reports/goal-run-status.json").read_text(encoding="utf-8"))
+        status["goal"]["contract_sha256"] = "0" * 64
+        self._write_json("ops/reports/goal-run-status.json", status)
+
+        report = self._build_report()
+
+        self.assertEqual(report["status"], "attention")
+        self.assertTrue(report["decisions"]["can_start_goal_runtime"])
+        self.assertFalse(report["decisions"]["can_promote_result_later"])
+        authority_check = next(
+            check for check in report["checks"] if check["id"] == "promotion_durable_goal_authority_current"
+        )
+        self.assertEqual(authority_check["status"], "attention")
+        self.assertFalse(authority_check["observed"]["goal_status_contract_digest_matches"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])

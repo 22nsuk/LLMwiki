@@ -35,6 +35,7 @@ Goal contract:
 - status: active
 - runtime_mode: self_improvement_loop
 - backend_storage: ops/reports/codex-goal-contract.json
+- native_goal_state: advisory_only; durable authority is backend_storage plus required evidence.
 
 Objective:
 Run bounded auto-improve only after the loop certificate is durable.
@@ -93,6 +94,8 @@ Run admission discipline:
 
 Resume discipline:
 - Keep the same contract digest across resume.
+- Treat native Codex goal state as coordination only; the file-backed contract, goal-run-status, checkpoint/resume metadata, and runtime certificate are durable proof.
+- Keep native goal status aligned when possible, but never mark it complete before durable evidence clears blockers.
 - Treat the wall-clock duration as a maximum budget, not as proof by itself.
 - Stop with proposal_budget_exhausted or failure_budget_exhausted when those separate caps are reached.
 - Write heartbeat, checkpoint, status, readiness, source-package, public-check, and release evidence before certifying the loop.
@@ -137,6 +140,8 @@ Generated artifact convergence:
             self.assertTrue(persisted["prompt"]["includes_sustained_claim_ban"])
             self.assertIn("PROMOTION BAN: can_promote_result=false.", persisted["prompt"]["text"])
             self.assertIn("Promotion gate guidance:", persisted["prompt"]["text"])
+            self.assertIn("native_goal_state: advisory_only", persisted["prompt"]["text"])
+            self.assertIn("native Codex goal state as coordination only", persisted["prompt"]["text"])
             self.assertIn("Do not lower thresholds", persisted["prompt"]["text"])
             self.assertIn("Generated artifact convergence:", persisted["prompt"]["text"])
             self.assertIn("make goal-runtime-closeout", persisted["prompt"]["text"])
@@ -152,6 +157,7 @@ Generated artifact convergence:
         self.assertIn("Fix underlying code, tests, docs, or report generators", prompt)
         self.assertIn("Do not lower thresholds", prompt)
         self.assertIn("keep promotion banned", prompt)
+        self.assertIn("native Codex goal state as coordination only", prompt)
 
     def test_self_improvement_docs_name_generated_artifact_convergence_order(self) -> None:
         required_phrases = (

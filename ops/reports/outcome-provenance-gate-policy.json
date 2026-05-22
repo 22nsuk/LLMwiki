@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/outcome-provenance-gate-policy.schema.json",
   "artifact_kind": "outcome_provenance_gate_policy",
-  "generated_at": "2026-05-15T19:07:09Z",
+  "generated_at": "2026-05-22T10:06:30Z",
   "producer": "ops.scripts.outcome_provenance_gate_policy",
   "source_command": "python -m ops.scripts.outcome_provenance_gate_policy --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
+  "source_tree_fingerprint": "2ac6e9a28c041742b0836b317a3d833e6e641cc38c675f4fecd33e748e21c76d",
   "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "491c2fc72584794aa6c2d631c3f45a1be2025b491c45936f7c46f217db62b71f",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "bbc7d8ac04bb0f58ebe245b6b6411e9cf23d2ed2eea39cde3f291de2a327ab74",
-    "outcome_metrics": "10018db8d4bada3e06119d46d6f12cb723552dcd34dde80eae29423f4a4f2d60",
+    "source_paths": "7185b95be7db1e3e287b111d1a9ddbf9d6fc4147565d5ca8a5d4d6b6e2a265b2",
+    "outcome_metrics": "1b9f5ecb0dd12e0a9f124ad1646a11e239846062476b913feca8b6f1a235567b",
     "rollback_rehearsal_schema": "22255b30356abc88b7fd12dc1962e5fcaee39a15d114914336f931bd6d72985c",
     "supply_chain_gate": "8c57d941a01fd12d2fb416ae94b6b5340bc1c91f1ccd353e3d2276c13bbcb4b4",
-    "routing_provenance_aggregates": "b5aa2aafadbdff49816acc6c6cd5e12e74e4cc42f959c148b08b44a82f1f7d87",
+    "routing_provenance_aggregates": "d44c1417d7823f96de98863f6b3dddc7c4bf7a76415b2deeed880d6613220bbf",
     "escalation_conditions": "ee7b078cf0af2a0fd1e8e4a5cd1448b64849de897f86850b7d055628f787a866"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T19:07:09Z"
+    "checked_at": "2026-05-22T10:06:30Z"
   },
   "vault": ".",
   "status": "pass",
@@ -36,9 +36,9 @@
   "summary": {
     "escalation_condition_count": 4,
     "default_gate_blocker_count": 0,
-    "routing_aggregate_count": 3,
+    "routing_aggregate_count": 26,
     "rollback_signal_count": 0,
-    "rollback_rehearsal_coverage_count": 3,
+    "rollback_rehearsal_coverage_count": 4,
     "defect_escape_count": 0
   },
   "promotion_blocker_escalation_conditions": [
@@ -72,20 +72,20 @@
       "path": "ops/reports/outcome-metrics.json",
       "load_status": "ok",
       "status": "unknown",
-      "attempts_considered": 13,
-      "recent_attempt_count": 13,
-      "rework_count": 0,
+      "attempts_considered": 50,
+      "recent_attempt_count": 20,
+      "rework_count": 26,
       "rollback_signal_count": 0,
-      "rollback_rehearsal_coverage_count": 3,
+      "rollback_rehearsal_coverage_count": 4,
       "defect_escape_count": 0,
-      "moving_average_hold": 0.2308,
-      "moving_average_discard": 0.2308,
-      "maturity_status": "pass"
+      "moving_average_hold": 0.8,
+      "moving_average_discard": 0.1,
+      "maturity_status": "attention"
     },
     "routing_provenance": {
       "path_glob": "ops/reports/routing-provenance-aggregates/*.json",
-      "aggregate_count": 3,
-      "complete_aggregate_count": 3,
+      "aggregate_count": 26,
+      "complete_aggregate_count": 26,
       "status": "pass",
       "health_flags": []
     },

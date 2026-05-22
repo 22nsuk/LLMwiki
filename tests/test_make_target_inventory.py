@@ -90,8 +90,8 @@ class MakeTargetInventoryTests(unittest.TestCase):
             encoding="utf-8",
         )
         (self.vault / "mk" / "release.mk").write_text(
-            ".PHONY: release-evidence-closeout\n"
-            "release-evidence-closeout:\n"
+            ".PHONY: release-evidence-converge\n"
+            "release-evidence-converge:\n"
             "\t@echo release\n",
             encoding="utf-8",
         )
@@ -99,7 +99,7 @@ class MakeTargetInventoryTests(unittest.TestCase):
         report = build_report(self.vault, context=fixed_context())
 
         self.assertEqual(report["status"], "pass")
-        self.assertIn("release-evidence-closeout", report["phony_targets"])
+        self.assertIn("release-evidence-converge", report["phony_targets"])
         self.assertIn(
             "mk/release.mk",
             report["input_fingerprints"],

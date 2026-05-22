@@ -1,26 +1,26 @@
 {
   "$schema": "ops/schemas/release-evidence-cohort.schema.json",
   "artifact_kind": "release_evidence_cohort",
-  "generated_at": "2026-05-21T18:01:01Z",
+  "generated_at": "2026-05-22T10:31:08Z",
   "producer": "ops.scripts.release_evidence_cohort",
   "source_command": "python -m ops.scripts.release_evidence_cohort --vault . --profile base --cohort-policy allowed_divergence_with_explicit_risk --provenance-mode embedded_currentness",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e87210163d5661241576ab225b9a05e7286084eb4bf5aad231abbef7132b41b8",
+  "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "0b84c2e52e7ad2450bda1a020aa7a42f19e3123e5c5de760f0eff6850218e0b8",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "e1f598a24b155599760548c30a56fd59002056d94e7b0136d0f8eb52c8545b2b",
-    "artifact_freshness": "a80608b6a13249eb2d468971098a711ba58fe4b9c93aa339df0f91317ec1dc05",
-    "auto_improve_readiness": "76bc57e56e1380693c5d2a87fec47c59b03225c0d3bfd97329b116fd9aec6542",
-    "bootstrap_preflight": "0020a0db53a13e5f951f0bf408038a27c4cfed3644499e800d586475827d94f2",
-    "generated_index": "0220ea32953db1f54973fa3a4b348e59e9742a1a8e0080d0a0d61e115f515e5d",
-    "raw_registry": "50e41e6b174ba660d05cd9938de0b16b29b3513c1a2eecac317ef13d105656f3",
-    "release_closeout_summary": "b91eb5fd6288c93b97105943ac3366ba2e68f38637ac441eb14049d2b130e996",
-    "release_smoke": "84d81a42686c0c6aa63e72f7dd12453f09add3336de34ee9bc0cc424ec5fe81c",
-    "source_package_clean_extract": "136f0187ac37fe12a1803ed575b2e917b2f5c091b7ab99fdc1381ccfed40d770",
-    "test_summary": "2038ed7ca6102ee07a5f74bc10193cc357afdebafee0b57d5e0013fdd951a3f7",
-    "test_summary_full": "37b8f152b14a9344cacad21afb621a4056d80503d21196a1e6f553784da24524",
+    "source_paths": "4e3048356287d8763e181e1b0dc02536841f6b678a3d519da321db34ad79610e",
+    "artifact_freshness": "fe1e6386566832c092086737c5cc82fabb11f389bfe68fe7bbf1d2ac6a7b5fae",
+    "auto_improve_readiness": "729352ce84fc39c5188533450422ea1d681d59fca0065bcc3fd0777655823d67",
+    "bootstrap_preflight": "47ead81d53d81089be0617eec986927025812f4b489b1a995af645f8e6acb38c",
+    "generated_index": "e0e674223f9baf3c3611afdc1098b8f8f95a5bbff32ce5f3b4beb9905a5f18e7",
+    "raw_registry": "546ee67243bcf69c859f62f9f3232069880a90bbc09f0b9d12b9c96b0f510220",
+    "release_closeout_summary": "2908d53d910e3e621d7225cb106958ccc2dd2fcbd13714b3d71ff1d51c4c88ff",
+    "release_smoke": "8c9ee7d0b54660d09bf9e29374ca59cf2eff506e3f10f5e7311b718e0acee704",
+    "source_package_clean_extract": "44fc427df836dbc7752f29b6d42df0952cfea7b5668380809fa86bc09c9dd653",
+    "test_summary": "d52cfeb0cf90d136bec853f9bfcb36fa7e30bfd1555e782bdd4751aaf9dae26d",
+    "test_summary_full": "be3f75b4820303435f21045297617f4c737109601f2fedc0054f592f9dca8397",
     "cohort_policy": "1d487a20a973f5728bd68e1ba20116676965128a8587ad911fe05af33a8b543a",
     "profile": "cae662172fd450bb0cd710a769079c05bfc5d8e35efa6576edc7d0377afdd4a2",
     "provenance_mode": "9883ec29a0dfa7e11bf00fe98269a76af9da9c44a95aa40b76bffec6af6326cf",
@@ -32,7 +32,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T18:01:01Z"
+    "checked_at": "2026-05-22T10:31:08Z"
   },
   "vault": ".",
   "policy": {
@@ -49,7 +49,7 @@
     "issue_count": 0,
     "risk_count": 1,
     "strict_same_fingerprint": false,
-    "component_fingerprint_count": 3,
+    "component_fingerprint_count": 2,
     "modified_after_generated_at_count": 0,
     "deselected_test_count": 0,
     "accepted_risk_family_count": 1,
@@ -111,11 +111,10 @@
     "strict_same_fingerprint": false,
     "component_count": 10,
     "loaded_component_count": 10,
-    "component_fingerprint_count": 3,
+    "component_fingerprint_count": 2,
     "fingerprints": [
-      "4b13c78d093040547a7c6ad8bccb113000efc6dbf2d7a1b1963cd0e615e032c7",
-      "926b16ecda58cb1c2c4e0cec3a8bacdc70db6faa2805f292861a8f2cde736376",
-      "e87210163d5661241576ab225b9a05e7286084eb4bf5aad231abbef7132b41b8"
+      "2ac6e9a28c041742b0836b317a3d833e6e641cc38c675f4fecd33e748e21c76d",
+      "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6"
     ],
     "missing_fingerprint_components": [],
     "modified_after_generated_at_components": [],
@@ -125,153 +124,38 @@
         {
           "name": "bootstrap_preflight",
           "path": "ops/reports/bootstrap-preflight-report.json",
-          "generated_at": "2026-05-21T04:35:41Z",
-          "source_tree_fingerprint": "4b13c78d093040547a7c6ad8bccb113000efc6dbf2d7a1b1963cd0e615e032c7",
+          "generated_at": "2026-05-22T09:48:27Z",
+          "source_tree_fingerprint": "2ac6e9a28c041742b0836b317a3d833e6e641cc38c675f4fecd33e748e21c76d",
           "matches_current_source_tree_fingerprint": false,
           "modified_after_generated_at": false,
-          "changed_after_generated_at_count": 82,
+          "changed_after_generated_at_count": 2,
           "changed_after_generated_at": [
             {
-              "path": "ops/schemas/goal-runtime-closeout-plan.schema.json",
-              "mtime": "2026-05-21T05:19:37Z"
+              "path": "ops/scripts/release/external_report_lifecycle_runtime.py",
+              "mtime": "2026-05-22T10:13:18Z"
             },
             {
-              "path": "ops/schemas/goal-runtime-certificate.schema.json",
-              "mtime": "2026-05-21T06:44:50Z"
-            },
-            {
-              "path": "tests/test_external_report_lifecycle_static.py",
-              "mtime": "2026-05-21T07:06:47Z"
-            },
-            {
-              "path": "tests/test_writer_output_paths.py",
-              "mtime": "2026-05-21T07:28:42Z"
-            },
-            {
-              "path": "ops/test-lane-registry.json",
-              "mtime": "2026-05-21T08:09:13Z"
-            },
-            {
-              "path": "ops/scripts/mechanism/mutation_proposal_runtime.py",
-              "mtime": "2026-05-21T09:08:29Z"
-            },
-            {
-              "path": "ops/scripts/mechanism/goal_runtime_quarantine_preflight.py",
-              "mtime": "2026-05-21T09:09:27Z"
-            },
-            {
-              "path": "ops/schemas/goal-runtime-quarantine-preflight.schema.json",
-              "mtime": "2026-05-21T09:10:00Z"
-            },
-            {
-              "path": "ops/schemas/goal-runtime-run-admission.schema.json",
-              "mtime": "2026-05-21T09:10:35Z"
-            },
-            {
-              "path": "ops/scripts/core/schema_constants_runtime.py",
-              "mtime": "2026-05-21T09:11:11Z"
+              "path": "tests/test_external_report_action_matrix.py",
+              "mtime": "2026-05-22T10:13:48Z"
             }
           ]
         },
         {
           "name": "source_package_clean_extract",
           "path": "ops/reports/source-package-clean-extract.json",
-          "generated_at": "2026-05-21T07:12:12Z",
-          "source_tree_fingerprint": "926b16ecda58cb1c2c4e0cec3a8bacdc70db6faa2805f292861a8f2cde736376",
+          "generated_at": "2026-05-22T09:49:03Z",
+          "source_tree_fingerprint": "2ac6e9a28c041742b0836b317a3d833e6e641cc38c675f4fecd33e748e21c76d",
           "matches_current_source_tree_fingerprint": false,
           "modified_after_generated_at": false,
-          "changed_after_generated_at_count": 79,
+          "changed_after_generated_at_count": 2,
           "changed_after_generated_at": [
             {
-              "path": "tests/test_writer_output_paths.py",
-              "mtime": "2026-05-21T07:28:42Z"
+              "path": "ops/scripts/release/external_report_lifecycle_runtime.py",
+              "mtime": "2026-05-22T10:13:18Z"
             },
             {
-              "path": "ops/test-lane-registry.json",
-              "mtime": "2026-05-21T08:09:13Z"
-            },
-            {
-              "path": "ops/scripts/mechanism/mutation_proposal_runtime.py",
-              "mtime": "2026-05-21T09:08:29Z"
-            },
-            {
-              "path": "ops/scripts/mechanism/goal_runtime_quarantine_preflight.py",
-              "mtime": "2026-05-21T09:09:27Z"
-            },
-            {
-              "path": "ops/schemas/goal-runtime-quarantine-preflight.schema.json",
-              "mtime": "2026-05-21T09:10:00Z"
-            },
-            {
-              "path": "ops/schemas/goal-runtime-run-admission.schema.json",
-              "mtime": "2026-05-21T09:10:35Z"
-            },
-            {
-              "path": "ops/scripts/core/schema_constants_runtime.py",
-              "mtime": "2026-05-21T09:11:11Z"
-            },
-            {
-              "path": "tests/minimal_vault_runtime.py",
-              "mtime": "2026-05-21T09:11:21Z"
-            },
-            {
-              "path": "tests/test_goal_runtime_quarantine_preflight.py",
-              "mtime": "2026-05-21T09:11:45Z"
-            },
-            {
-              "path": "tests/test_mutation_proposal.py",
-              "mtime": "2026-05-21T09:12:12Z"
-            }
-          ]
-        },
-        {
-          "name": "test_summary_full",
-          "path": "ops/reports/test-execution-summary-full.json",
-          "generated_at": "2026-05-21T07:26:26Z",
-          "source_tree_fingerprint": "926b16ecda58cb1c2c4e0cec3a8bacdc70db6faa2805f292861a8f2cde736376",
-          "matches_current_source_tree_fingerprint": false,
-          "modified_after_generated_at": false,
-          "changed_after_generated_at_count": 79,
-          "changed_after_generated_at": [
-            {
-              "path": "tests/test_writer_output_paths.py",
-              "mtime": "2026-05-21T07:28:42Z"
-            },
-            {
-              "path": "ops/test-lane-registry.json",
-              "mtime": "2026-05-21T08:09:13Z"
-            },
-            {
-              "path": "ops/scripts/mechanism/mutation_proposal_runtime.py",
-              "mtime": "2026-05-21T09:08:29Z"
-            },
-            {
-              "path": "ops/scripts/mechanism/goal_runtime_quarantine_preflight.py",
-              "mtime": "2026-05-21T09:09:27Z"
-            },
-            {
-              "path": "ops/schemas/goal-runtime-quarantine-preflight.schema.json",
-              "mtime": "2026-05-21T09:10:00Z"
-            },
-            {
-              "path": "ops/schemas/goal-runtime-run-admission.schema.json",
-              "mtime": "2026-05-21T09:10:35Z"
-            },
-            {
-              "path": "ops/scripts/core/schema_constants_runtime.py",
-              "mtime": "2026-05-21T09:11:11Z"
-            },
-            {
-              "path": "tests/minimal_vault_runtime.py",
-              "mtime": "2026-05-21T09:11:21Z"
-            },
-            {
-              "path": "tests/test_goal_runtime_quarantine_preflight.py",
-              "mtime": "2026-05-21T09:11:45Z"
-            },
-            {
-              "path": "tests/test_mutation_proposal.py",
-              "mtime": "2026-05-21T09:12:12Z"
+              "path": "tests/test_external_report_action_matrix.py",
+              "mtime": "2026-05-22T10:13:48Z"
             }
           ]
         }
@@ -305,12 +189,12 @@
       "expected_artifact_kind": "bootstrap_preflight_report",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-21T04:35:41Z",
-      "source_tree_fingerprint": "4b13c78d093040547a7c6ad8bccb113000efc6dbf2d7a1b1963cd0e615e032c7",
+      "generated_at": "2026-05-22T09:48:27Z",
+      "source_tree_fingerprint": "2ac6e9a28c041742b0836b317a3d833e6e641cc38c675f4fecd33e748e21c76d",
       "producer_input_fingerprint": "5b9b1f6dc768c9bac4a26884c6d69f09eefe8cdd59d68c02d0002438486fcaaa",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-21T04:35:41Z",
+      "currentness_checked_at": "2026-05-22T09:48:27Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -332,12 +216,12 @@
       "expected_artifact_kind": "release_smoke_report",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-21T17:42:10Z",
-      "source_tree_fingerprint": "e87210163d5661241576ab225b9a05e7286084eb4bf5aad231abbef7132b41b8",
+      "generated_at": "2026-05-22T10:19:54Z",
+      "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
       "producer_input_fingerprint": "a010e7fbf424fc4e9e234e4174b92d10bae2b7a00a918cb6bc3b4917016493cf",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-21T17:42:10Z",
+      "currentness_checked_at": "2026-05-22T10:19:54Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -359,12 +243,12 @@
       "expected_artifact_kind": "source_package_clean_extract",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-21T07:12:12Z",
-      "source_tree_fingerprint": "926b16ecda58cb1c2c4e0cec3a8bacdc70db6faa2805f292861a8f2cde736376",
-      "producer_input_fingerprint": "d958d7644275c096ef482fd0a7de51fee2b7d80f8c2dd177e94215572822fee5",
+      "generated_at": "2026-05-22T09:49:03Z",
+      "source_tree_fingerprint": "2ac6e9a28c041742b0836b317a3d833e6e641cc38c675f4fecd33e748e21c76d",
+      "producer_input_fingerprint": "5276817dfbadb8ed717130e5494a8c0973ccb5d70b881bcd7ec26593470f9ba7",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-21T07:12:12Z",
+      "currentness_checked_at": "2026-05-22T09:49:03Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -386,12 +270,12 @@
       "expected_artifact_kind": "raw_registry_preflight_report",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-21T17:55:58Z",
-      "source_tree_fingerprint": "e87210163d5661241576ab225b9a05e7286084eb4bf5aad231abbef7132b41b8",
+      "generated_at": "2026-05-22T10:22:35Z",
+      "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
       "producer_input_fingerprint": "bd4f82b333673287c719fceb79920b031baade5bf3fb4143ce944d5ce40b3a96",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-21T17:55:58Z",
+      "currentness_checked_at": "2026-05-22T10:22:35Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -413,12 +297,12 @@
       "expected_artifact_kind": "test_execution_summary",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-21T17:55:43Z",
-      "source_tree_fingerprint": "e87210163d5661241576ab225b9a05e7286084eb4bf5aad231abbef7132b41b8",
-      "producer_input_fingerprint": "c5970d6536e6caa1ef9e8a3df9394142bdad68e49b82fdee38de3a5fbc8bcdb9",
+      "generated_at": "2026-05-22T10:23:30Z",
+      "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
+      "producer_input_fingerprint": "7d60909cf5d323baf16f25c850be8972a624b9dce6f72687e16d867efc0792c0",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-21T17:55:43Z",
+      "currentness_checked_at": "2026-05-22T10:23:30Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -440,12 +324,12 @@
       "expected_artifact_kind": "test_execution_summary",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-21T07:26:26Z",
-      "source_tree_fingerprint": "926b16ecda58cb1c2c4e0cec3a8bacdc70db6faa2805f292861a8f2cde736376",
-      "producer_input_fingerprint": "c2211b4c657e74d9e6b4e795948486c9c3ae16ca465cb6d9acda960ef526f9c8",
+      "generated_at": "2026-05-22T10:30:32Z",
+      "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
+      "producer_input_fingerprint": "132ea291149de30f1688d05d42d063b07f54da541b8febd0d0210a885ddaa3d3",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-21T07:26:26Z",
+      "currentness_checked_at": "2026-05-22T10:30:32Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -463,20 +347,20 @@
           "kind": "execution_log",
           "path": "build/release-payloads/test-execution-summary-full.log",
           "exists": true,
-          "size_bytes": 1772,
-          "sha256": "a50b8b4a7e59ed570eee4f48358b573c453603edda3cf06b82210f1b2520c207",
+          "size_bytes": 1852,
+          "sha256": "811c726f242793e228d44113b2e635d68b7a19d0fe835fddb3517b474428caa2",
           "source": "captured_pytest_stdout_stderr"
         },
         {
           "kind": "junit_xml",
           "path": "build/release-payloads/test-execution-summary-full.junit.xml",
           "exists": true,
-          "size_bytes": 241303,
-          "sha256": "bfc061f5d39dae9ede1e56a56be7af55c361ced42c820b803516159f8d68e6c6",
+          "size_bytes": 249188,
+          "sha256": "cabd04edfb63d9b335bc4af65c0895ca1c93bd7a833805892278f7ba33e0c873",
           "source": "pytest_junit_xml",
           "consistency_status": "pass",
-          "observed_count": 1423,
-          "expected_count": 1423,
+          "observed_count": 1467,
+          "expected_count": 1467,
           "consistency_reason": "junit testcase count matches pytest summary"
         },
         {
@@ -500,12 +384,12 @@
       "expected_artifact_kind": "auto_improve_readiness_report",
       "load_status": "ok",
       "source_status": "unknown",
-      "generated_at": "2026-05-21T18:01:01Z",
-      "source_tree_fingerprint": "e87210163d5661241576ab225b9a05e7286084eb4bf5aad231abbef7132b41b8",
-      "producer_input_fingerprint": "b0db5de0656fcadfefb3e9f533b65b2f8650eee77849aefc0caa0612b4663552",
+      "generated_at": "2026-05-22T10:31:08Z",
+      "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
+      "producer_input_fingerprint": "da674a0d960a48062517f4adb1448e95d31edcffc2cc9998aae0607cb9f77ada",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-21T18:01:01Z",
+      "currentness_checked_at": "2026-05-22T10:31:08Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -527,12 +411,12 @@
       "expected_artifact_kind": "generated_artifact_index_report",
       "load_status": "ok",
       "source_status": "attention",
-      "generated_at": "2026-05-21T18:01:01Z",
-      "source_tree_fingerprint": "e87210163d5661241576ab225b9a05e7286084eb4bf5aad231abbef7132b41b8",
-      "producer_input_fingerprint": "7c0bfada97d1d69377fce333f73a8c040b9a380851e807d1a31c77a2c3b9db8b",
+      "generated_at": "2026-05-22T10:31:08Z",
+      "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
+      "producer_input_fingerprint": "215783a8c84be8e17e7ded945f57808e5b38a4052abfad10ffdef69d6f884244",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-21T18:01:01Z",
+      "currentness_checked_at": "2026-05-22T10:31:08Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -554,12 +438,12 @@
       "expected_artifact_kind": "artifact_freshness_report",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-21T18:01:01Z",
-      "source_tree_fingerprint": "e87210163d5661241576ab225b9a05e7286084eb4bf5aad231abbef7132b41b8",
+      "generated_at": "2026-05-22T10:31:08Z",
+      "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
       "producer_input_fingerprint": "6b811e7006ebce190e923eaaad503b9f18a500f3ee4dda06c642732f924e22d3",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-21T18:01:01Z",
+      "currentness_checked_at": "2026-05-22T10:31:08Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -581,12 +465,12 @@
       "expected_artifact_kind": "release_closeout_summary",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-21T18:01:01Z",
-      "source_tree_fingerprint": "e87210163d5661241576ab225b9a05e7286084eb4bf5aad231abbef7132b41b8",
-      "producer_input_fingerprint": "855a6decb8eae0194e0598a634d24e9f9d94b383d0810558311eb010e5baf27c",
+      "generated_at": "2026-05-22T10:31:08Z",
+      "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
+      "producer_input_fingerprint": "83ee9c90584ea1db6cc8a6801f3c470faeac307970385deec36120c9ce00cb29",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-21T18:01:01Z",
+      "currentness_checked_at": "2026-05-22T10:31:08Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -617,8 +501,8 @@
       ],
       "risk_acceptance": {
         "accepted_by": "release_evidence_cohort_policy",
-        "accepted_at": "2026-05-21T18:01:01Z",
-        "expires_at": "2026-05-28T18:01:01Z",
+        "accepted_at": "2026-05-22T10:31:08Z",
+        "expires_at": "2026-05-29T10:31:08Z",
         "risk_owner": "runtime-maintainer",
         "revalidation_condition": "Rerun the ordered release evidence chain before the next release closeout.",
         "rollback_trigger": "Treat cohort fingerprint divergence as a blocker if policy requires strict same-fingerprint evidence.",

@@ -1,23 +1,23 @@
 {
   "$schema": "ops/schemas/operator-release-summary.schema.json",
   "artifact_kind": "operator_release_summary",
-  "generated_at": "2026-05-15T19:08:59Z",
+  "generated_at": "2026-05-22T02:44:05Z",
   "producer": "ops.scripts.operator_release_summary",
   "source_command": "python -m ops.scripts.operator_release_summary --vault . --out ops/operator/operator-release-summary.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "46b8c0219b8518d8dd0a1e96942a5de705e0428b935130a7f30aaa880413aaf3",
+  "source_tree_fingerprint": "c67d8e092c8c4eb06c711b524ddad2422eec7443337fca78130ae405e4bb146c",
   "input_fingerprints": {
-    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "1162baa2c95574cfa3e9f1f29ed14e34f2df775a2bd8acd3b6e0301827537805",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "6d79652d2ad35694dd11eaaa9c85cd5ededf5b750c2c9975712d69f72efa2471",
-    "batch_manifest": "0780c269c242d496e3ff715ed5a3d838fccdfbf680a7c85f3b980781e61d6a19",
-    "closeout": "44a45b6591a17a02b77fe5ce3f9f6b292b6e82b9163125a9436d119f476c2ad2",
-    "full_test_summary": "8529387d5cd28d2bfae1b2345d296cdabd50f3db26843b106a556a25f69cf6b9",
-    "learning_delta_scoreboard": "f2f6d879019ebe3191111ea3cf5b6e2b6c2d2860b6045556c4b563fab91d58a1",
-    "learning_revalidation": "d082dc702fb5c7539b8fff77e9fcc09fa024db6edf940bc0282e86c2c66345ad",
-    "self_check": "d1106e387c86d0bd1af4d70a4cd5a309516a3b7ca57e4366d7bf0df64175aaf7",
-    "test_summary": "8dd9c713907ae84bbd1e28fd5f4b261a6f5bdf79dabae671950f13ebb02f0875"
+    "batch_manifest": "57f20a85180e72d2300d548a4eb4250f8db899b129213c6cb50e98cadb52864d",
+    "closeout": "b60107094ae256e85042e64030f724af0df548276d7d1cdc9f92929c2810de34",
+    "full_test_summary": "42fc363817182d3519411c0b80e7ab96fb666b5b6c5a22fa596b8817ad588121",
+    "learning_delta_scoreboard": "a7f1d1df9f99a636c58f7c0c339ac27a29571b0de4cafc65dbd9f3261d122346",
+    "learning_revalidation": "8adaca257620e8f727ad8c06ba370cdc47fa748e3a619b241f99a8ebc09dff35",
+    "self_check": "9fed5698534056a46d0e81be0eb3ac7af3215a2ae7ef47e4ca5dbd5e8ca5c983",
+    "test_summary": "e6643e7856296a17873c19ad6b24b9ed565d65fce53529bcf3b3570c9f60bf62"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-15T19:08:59Z"
+    "checked_at": "2026-05-22T02:44:05Z"
   },
   "vault": ".",
   "policy": {
@@ -42,11 +42,11 @@
     "distribution_status": "materialized",
     "archive_profile": "source_content_package",
     "path": "build/release/LLMwiki-source.zip",
-    "sha256": "c8cf6e9af0026bb0167858aa0758cd2c4d1b6b50792d50eb1115db3a33fbd76b",
-    "actual_sha256": "c8cf6e9af0026bb0167858aa0758cd2c4d1b6b50792d50eb1115db3a33fbd76b",
+    "sha256": "0e2ba57dd60502fbc3abc08af3c041a651b600d9f30eb46a61c0bd80bd7db75a",
+    "actual_sha256": "0e2ba57dd60502fbc3abc08af3c041a651b600d9f30eb46a61c0bd80bd7db75a",
     "file_exists": true,
     "file_digest_matches_batch": true,
-    "entry_count": 1574,
+    "entry_count": 1628,
     "path_set_matches_release_manifest": true,
     "content_digest_matches_release_manifest": true,
     "summary": "source_zip=match; distribution_status=materialized; path_matches=True; content_matches=True; file_digest_matches_batch=True"
@@ -82,31 +82,34 @@
     "primary_suite_scope": "report_contract_summary",
     "primary_represents_full_suite": false,
     "primary_status": "pass",
-    "primary_passed_count": 172,
+    "primary_passed_count": 191,
     "full_suite_status": "pass",
     "full_suite_summary_load_status": "ok",
     "full_suite_reason": "this execution has no pytest selectors and is treated as full-suite evidence"
   },
   "learning_readiness": {
     "load_status": "ok",
-    "status": "pass",
-    "revalidation_status": "metrics_close_candidate",
+    "status": "attention",
+    "revalidation_status": "due",
     "accepted_learning_risk": false,
     "release_effect": {
       "clean_release_effect": "clean_allowed",
-      "operator_summary": "learning revalidation=metrics_close_candidate; release_authority_status=clean_pass; release_readiness_state=clean_pass; machine_release_allowed=True; operator_release_allowed=True"
+      "operator_summary": "learning revalidation=due; release_authority_status=clean_pass; release_readiness_state=clean_pass; machine_release_allowed=True; operator_release_allowed=True"
     }
   },
   "learning_claim": {
     "load_status": "ok",
-    "claim_level": "confirmed_learning_improvement",
-    "bounded_learning_claim_allowed": true,
-    "confirmed_learning_improvement_allowed": true,
-    "improvement_claim_status": "auto_confirmed",
-    "confirmed_learning_improvement_status": "auto_confirmed",
+    "claim_level": "none",
+    "bounded_learning_claim_allowed": false,
+    "confirmed_learning_improvement_allowed": false,
+    "improvement_claim_status": "not_ready",
+    "confirmed_learning_improvement_status": "not_ready",
     "evidence_cohort_status": "auto_confirmed",
-    "learning_claim_blocker_status": "clear",
-    "confirmed_blocking_predicate_ids": [],
+    "learning_claim_blocker_status": "blocked",
+    "confirmed_blocking_predicate_ids": [
+      "rollback_revalidation_clean",
+      "learning_claim_blocker_absence"
+    ],
     "confirmed_evidence_summary": {
       "evidence_cohort_status": "auto_confirmed",
       "confirmed_evidence_status": "auto_confirmed",
@@ -272,37 +275,37 @@
       },
       {
         "id": "rollback_revalidation_clean",
-        "status": "pass",
+        "status": "fail",
         "source_path": "ops/reports/learning-readiness-signoff-revalidation.json",
-        "observed_value": "status=pass"
+        "observed_value": "status=attention"
       },
       {
         "id": "learning_claim_blocker_absence",
-        "status": "pass",
+        "status": "fail",
         "source_path": "ops/reports/release-clean-blocker-ledger.json",
-        "observed_value": "learning_claim_blocker_count=0"
+        "observed_value": "learning_claim_blocker_count=4"
       }
     ],
-    "learning_claim_evidence_bundle_status": "active",
-    "learning_claim_evidence_bundle_sha256": "197a6c46809897c6545d8b15dd54cb9f3f78bfda9390bf79b222864aea8c1500",
+    "learning_claim_evidence_bundle_status": "not_evaluated",
+    "learning_claim_evidence_bundle_sha256": "add1b979307b900ce34623e90d228713eb285d4c2631112bd07b0106cb7a10ae",
     "learning_confirmed_evidence_cohort_status": "active",
-    "learning_confirmed_evidence_cohort_sha256": "fd616f2c2f4c7801ce235fba597529d8c341c71eb021e94d7f3503dcc51e1178",
-    "claim_wording_allowed": true,
-    "claim_wording_policy_status": "pre_seal_ready",
-    "confirmed_wording_allowed": true,
-    "confirmed_wording_policy_status": "pre_seal_ready",
-    "confirmed_wording_policy_reason": "confirmed wording is pre-seal ready; release sidecar must still bind post-seal attestation",
-    "summary": "claim_level=confirmed_learning_improvement; bounded=True; confirmed_learning=auto_confirmed; valid_runs=3/3; eligible_families=1; rejected_runs=2; legacy_reconstruction=pass; legacy_reconstructed_runs=1/1; confirmed_blockers=none"
+    "learning_confirmed_evidence_cohort_sha256": "c1e623fced77d87e2b2d167b8fe51e64fb2c65d0e4f179bc10c47e97f3c4cc89",
+    "claim_wording_allowed": false,
+    "claim_wording_policy_status": "blocked",
+    "confirmed_wording_allowed": false,
+    "confirmed_wording_policy_status": "blocked",
+    "confirmed_wording_policy_reason": "confirmed wording blocked: claim_level=none; confirmed_status=not_ready; bundle=not_evaluated; cohort=active; blockers=rollback_revalidation_clean,learning_claim_blocker_absence",
+    "summary": "claim_level=none; bounded=False; confirmed_learning=auto_confirmed; valid_runs=3/3; eligible_families=1; rejected_runs=2; legacy_reconstruction=pass; legacy_reconstructed_runs=1/1; confirmed_blockers=rollback_revalidation_clean,learning_claim_blocker_absence"
   },
   "accepted_risk": {
-    "operator_accepted_risk_family_count": 0,
+    "operator_accepted_risk_family_count": 1,
     "clean_lane_blocking_accepted_risk_family_count": 0,
-    "accepted_risk_count": 0,
-    "release_accepted_risk_count": 0,
+    "accepted_risk_count": 1,
+    "release_accepted_risk_count": 1,
     "accepted_learning_risk_count": 0,
-    "gate_attention_count": 0,
-    "learning_claim_blocking_family_count": 0,
-    "advisory_lifecycle_family_count": 0,
+    "gate_attention_count": 3,
+    "learning_claim_blocking_family_count": 2,
+    "advisory_lifecycle_family_count": 1,
     "count_sources": {
       "operator_accepted_risk_family_count": {
         "source_artifact": "release_closeout_summary",
@@ -405,5 +408,5 @@
       }
     }
   },
-  "operator_summary": "semantic=clean_pass; sealed=sealed_clean_pass; source_zip=match; artifact_digest=match; artifact_mismatches=0; tmp_json=0; full_suite=pass; auto_improve_lane=pass; learning_revalidation=metrics_close_candidate; confirmed_learning=auto_confirmed; valid_runs=3/3; eligible_families=1; rejected_runs=2; legacy_reconstruction=pass; legacy_reconstructed_runs=1/1; confirmed_blockers=none; release_risk_acceptances=0; learning_risk_acceptances=0; gate_attention=0; learning_claim_blocking=0; advisory_lifecycle=0"
+  "operator_summary": "semantic=clean_pass; sealed=sealed_clean_pass; source_zip=match; artifact_digest=match; artifact_mismatches=0; tmp_json=0; full_suite=pass; auto_improve_lane=blocked; learning_revalidation=due; confirmed_learning=auto_confirmed; valid_runs=3/3; eligible_families=1; rejected_runs=2; legacy_reconstruction=pass; legacy_reconstructed_runs=1/1; confirmed_blockers=rollback_revalidation_clean,learning_claim_blocker_absence; release_risk_acceptances=1; learning_risk_acceptances=0; gate_attention=3; learning_claim_blocking=2; advisory_lifecycle=1"
 }

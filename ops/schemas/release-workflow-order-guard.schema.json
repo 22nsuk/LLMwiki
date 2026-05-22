@@ -95,7 +95,7 @@
         "check_count",
         "fail_count",
         "attention_count",
-        "release_closeout_invocation_count",
+        "release_converge_invocation_count",
         "check_finalized_invocation_count",
         "fixed_point_writer_count"
       ],
@@ -103,7 +103,7 @@
         "check_count": { "type": "integer", "minimum": 0 },
         "fail_count": { "type": "integer", "minimum": 0 },
         "attention_count": { "type": "integer", "minimum": 0 },
-        "release_closeout_invocation_count": { "type": "integer", "minimum": 0 },
+        "release_converge_invocation_count": { "type": "integer", "minimum": 0 },
         "check_finalized_invocation_count": { "type": "integer", "minimum": 0 },
         "fixed_point_writer_count": { "type": "integer", "minimum": 0 }
       }

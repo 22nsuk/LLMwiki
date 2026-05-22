@@ -264,7 +264,7 @@ class LearningReadinessSignoffRevalidationTests(unittest.TestCase):
             [LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID],
         )
         self.assertIn(LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID, report["revalidation"]["status_reason"])
-        self.assertEqual(report["required_actions"][0]["id"], "rerun_clean_release_evidence_closeout")
+        self.assertEqual(report["required_actions"][0]["id"], "rerun_clean_release_evidence_converge")
         decision_options = {item["id"]: item for item in report["decision_options"]}
         self.assertFalse(decision_options["renew_signoff_after_clean_closeout"]["available"])
         self.assertTrue(decision_options["restore_runnable_proposal_queue"]["available"])

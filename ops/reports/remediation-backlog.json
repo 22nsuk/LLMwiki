@@ -1,22 +1,22 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-22T02:05:10Z",
+  "generated_at": "2026-05-22T10:22:48Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "505815c07662b7ee2ef0c6107ed4f00ba01a19dd58f7f6fbba8606eff2f6d205",
+  "source_tree_fingerprint": "a9550bda726a0842093711da21234d6c1d6729db812de5ab364ce41d4843e0cb",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "a3518b983af5151b2388090f2addc8f0f528d38be74c4bb4e90f53aac939c23e",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "531bcf6558c5193624be83c0f0c3bdb2b532cdef9c04eff7cf606c6448d8fbf3",
     "goal_runtime_certificate": "3bb824b5fd060c45ce9e706eb4b92cd030cbbc9bfe2685ff7d457e2d48e6ef46",
-    "goal_worktree_guard": "c87ab61868922a424f28973f2b07db37cc86914b3f52421972496bb69459bfde",
-    "learning_claim_activation": "9ac21cfab043de0a5b6cc604ff3311226b1077d3b35e9b14ad5462b938085ff6",
+    "goal_worktree_guard": "cbe43b412d3f888dc5a5e19e346472206f30bde0592728f1cfe296bcde0d0e22",
+    "learning_claim_activation": "48577cc88ed3ce52215ccfd19158051c3a6c0c9f69f19f71c722d59da69ff498",
     "learning_readiness_signoff": "1ec9a280330bf4c9f5cc6a77f7ea7590acaf29d0718a80299d25d8f466576e9d",
-    "self_improvement_negative_lessons": "0d4206583cc109e1068296cd76aa875a2422af1975977b08aae8be8fff741b0a",
-    "session_synopsis": "0fa4ea4fa003a4a1fc277af9ad35f5640d72f9c863735ec56e41b6c279e49cb7",
+    "self_improvement_negative_lessons": "4e63e7ba18af7ac99e547d86068db756fa3e7cbaf08731e70875d8fae3994d80",
+    "session_synopsis": "7b2afdebc5ec2dd6220a0ab8075eddb963f9cd0745c7183e74a3829e260eeaef",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
     "auto_improve_sessions": "045839dd6979b19e7b1e2cf2c9ed4675b6db02844a8f4ea94a33326f904f690f"
   },
@@ -26,7 +26,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T02:05:10Z"
+    "checked_at": "2026-05-22T10:22:48Z"
   },
   "vault": ".",
   "policy": {
@@ -38,27 +38,68 @@
     "backlog_item_count": 10,
     "repeated_blocker_count": 3,
     "active_blocker_count": 7,
-    "open_total_count": 8,
-    "open_promotion_count": 5,
+    "open_total_count": 9,
+    "open_promotion_count": 6,
     "open_repeat_count": 3,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
     "next_action": "Close or explicitly defer promotion-blocking remediation backlog items before promotion."
   },
   "items": [
     {
-      "item_id": "active_blocker_goal_status_learning_blocked_by_review_required",
-      "blocker_id": "goal_status_learning_blocked_by_review_required",
+      "item_id": "active_blocker_goal_status_goal_worktree_guard_missing",
+      "blocker_id": "goal_status_goal_worktree_guard_missing",
       "source": "goal_run_status.blockers",
       "item_type": "active_blocker",
-      "status": "deferred",
+      "status": "open",
       "severity": "blocks_promotion",
       "occurrence_count": 1,
       "evidence_paths": [
-        "ops/reports/learning-readiness-signoff.json",
         "ops/reports/session-synopsis.json"
       ],
       "repair_target": "Refresh goal run status and close the active blocker before resuming.",
-      "next_action": "Operator learning-readiness signoff accepts this promotion risk; learning improvement claims remain review-gated until readiness metrics pass."
+      "next_action": "Refresh goal run status and close the active blocker before resuming."
+    },
+    {
+      "item_id": "active_blocker_goal_status_promotion_blocked_by_artifact_contract_failure",
+      "blocker_id": "goal_status_promotion_blocked_by_artifact_contract_failure",
+      "source": "goal_run_status.blockers",
+      "item_type": "active_blocker",
+      "status": "open",
+      "severity": "blocks_promotion",
+      "occurrence_count": 1,
+      "evidence_paths": [
+        "ops/reports/session-synopsis.json"
+      ],
+      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
+      "next_action": "Refresh goal run status and close the active blocker before resuming."
+    },
+    {
+      "item_id": "active_blocker_goal_status_promotion_blocked_by_release_closeout_summary_failure",
+      "blocker_id": "goal_status_promotion_blocked_by_release_closeout_summary_failure",
+      "source": "goal_run_status.blockers",
+      "item_type": "active_blocker",
+      "status": "open",
+      "severity": "blocks_promotion",
+      "occurrence_count": 1,
+      "evidence_paths": [
+        "ops/reports/session-synopsis.json"
+      ],
+      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
+      "next_action": "Refresh goal run status and close the active blocker before resuming."
+    },
+    {
+      "item_id": "active_blocker_goal_status_promotion_blocked_by_release_lineage_mismatch",
+      "blocker_id": "goal_status_promotion_blocked_by_release_lineage_mismatch",
+      "source": "goal_run_status.blockers",
+      "item_type": "active_blocker",
+      "status": "open",
+      "severity": "blocks_promotion",
+      "occurrence_count": 1,
+      "evidence_paths": [
+        "ops/reports/session-synopsis.json"
+      ],
+      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
+      "next_action": "Refresh goal run status and close the active blocker before resuming."
     },
     {
       "item_id": "active_blocker_goal_status_self_improvement_loop_certificate_incomplete",
@@ -76,8 +117,8 @@
       "next_action": "Verified goal-runtime-certificate evidence is present."
     },
     {
-      "item_id": "active_blocker_promotion_blocked_by_artifact_contract_failure",
-      "blocker_id": "promotion_blocked_by_artifact_contract_failure",
+      "item_id": "active_blocker_promotion_blocked_by_goal_worktree_guard_failure",
+      "blocker_id": "promotion_blocked_by_goal_worktree_guard_failure",
       "source": "auto_improve_readiness.promotion_blockers",
       "item_type": "active_blocker",
       "status": "open",
@@ -86,8 +127,8 @@
       "evidence_paths": [
         "ops/reports/session-synopsis.json"
       ],
-      "repair_target": "Regenerate schema-invalid artifacts, then rerun make artifact-freshness and make auto-improve-readiness.",
-      "next_action": "Regenerate schema-invalid artifacts, then rerun make artifact-freshness and make auto-improve-readiness."
+      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness.",
+      "next_action": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     },
     {
       "item_id": "active_blocker_promotion_blocked_by_release_batch_manifest_failure",
@@ -102,48 +143,6 @@
       ],
       "repair_target": "Seal the release batch manifest, then rerun make auto-improve-readiness.",
       "next_action": "Seal the release batch manifest, then rerun make auto-improve-readiness."
-    },
-    {
-      "item_id": "active_blocker_promotion_blocked_by_release_closeout_summary_failure",
-      "blocker_id": "promotion_blocked_by_release_closeout_summary_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Refresh release closeout summary, then rerun make auto-improve-readiness.",
-      "next_action": "Refresh release closeout summary, then rerun make auto-improve-readiness."
-    },
-    {
-      "item_id": "active_blocker_promotion_blocked_by_release_lineage_mismatch",
-      "blocker_id": "promotion_blocked_by_release_lineage_mismatch",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Refresh release evidence cohort until the release lineage is a single strict fingerprint, then rerun make auto-improve-readiness.",
-      "next_action": "Refresh release evidence cohort until the release lineage is a single strict fingerprint, then rerun make auto-improve-readiness."
-    },
-    {
-      "item_id": "active_blocker_promotion_blocked_by_selected_contract_failure",
-      "blocker_id": "promotion_blocked_by_selected_contract_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "open",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Refresh selected contract evidence, then rerun make auto-improve-readiness.",
-      "next_action": "Refresh selected contract evidence, then rerun make auto-improve-readiness."
     },
     {
       "item_id": "auto_session_repeated_blocker_active_report_self_improve_certificate_rerun4_review_blocked",

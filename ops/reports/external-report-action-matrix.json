@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-22T02:09:51Z",
+  "generated_at": "2026-05-22T10:30:55Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "c67d8e092c8c4eb06c711b524ddad2422eec7443337fca78130ae405e4bb146c",
+  "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "7339fd3727fc86ae92083fffb214ec2d7db28ba7dcdf0ec77664485157ab1a2a",
-    "active_external_reports": "092f2ee56969cd869ccb50461f6158a5eead83e11aabf2b613ff31877ce63e41",
-    "action_catalog": "0e6d605b2d695f98c9569882a711fc415b302950b71210213bf5a51f11a99964"
+    "source_paths": "a32093b8ebe66e305fdac7bcb67f6ded10c36c5fe06cdec6ecf01986bb376f92",
+    "active_external_reports": "052906363688c5b5553ec74e73c064dacf8d90d0ec301596fb85960bd6709874",
+    "action_catalog": "33f45279ed7e4f5a7e0f63a87843d09bd4408a10a140af465073b09d4a244a52"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T02:09:51Z"
+    "checked_at": "2026-05-22T10:30:55Z"
   },
   "vault": ".",
   "status": "pass",
@@ -29,10 +29,10 @@
     "version": 4
   },
   "summary": {
-    "active_report_count": 2,
+    "active_report_count": 3,
     "archived_report_count": 67,
-    "action_item_count": 24,
-    "implemented_count": 24,
+    "action_item_count": 28,
+    "implemented_count": 28,
     "partially_automated_count": 0,
     "requires_release_run_verification_count": 0,
     "planned_count": 0,
@@ -44,15 +44,39 @@
   "reference_manifest_alignment": {
     "status": "current",
     "expected_reference_paths": [
+      "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md",
       "external-reports/llmwiki_code_change_implementation_report_20260516.md"
     ],
     "manifest_reference_paths": [
+      "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md",
       "external-reports/llmwiki_code_change_implementation_report_20260516.md"
     ],
     "missing_active_report_paths": [],
     "stale_reference_paths": []
   },
   "active_report_coverage": [
+    {
+      "path": "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md",
+      "report_type": "narrative_report",
+      "priority_mentions": {
+        "P0": 4,
+        "P1": 4,
+        "P2": 4
+      },
+      "matched_action_ids": [
+        "release_writer_dependency_single_source",
+        "release_lane_mutability_split",
+        "sealed_summary_vocabulary_demotion",
+        "selector_marker_scope_parity",
+        "source_package_distribution_binding",
+        "release_evidence_bundle_and_attestation",
+        "full_suite_evidence_currentness",
+        "goal_execution_runtime_certificate",
+        "sealed_preflight_canonicalization",
+        "goal_runtime_transient_cleanup_gate"
+      ],
+      "matched_action_count": 10
+    },
     {
       "path": "external-reports/llmwiki_code_change_implementation_report_20260516.md",
       "report_type": "narrative_report",
@@ -86,9 +110,10 @@
         "P2": 0
       },
       "matched_action_ids": [
+        "active_report_manifest_freshness",
         "external_report_lifecycle"
       ],
-      "matched_action_count": 1
+      "matched_action_count": 2
     }
   ],
   "action_items": [
@@ -115,20 +140,22 @@
       "priority": "P0",
       "theme": "release writer ordering single source",
       "current_status": "implemented",
-      "source_report_paths": [],
+      "source_report_paths": [
+        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md"
+      ],
       "recommended_target": "release-workflow-order-guard",
       "evidence": [
         {
           "path": "tmp/workflow-dependency-planner.json",
-          "exists": false,
-          "status": "",
-          "producer": ""
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.workflow_dependency_planner"
         },
         {
           "path": "tmp/release-workflow-order-guard.json",
-          "exists": true,
-          "status": "pass",
-          "producer": "ops.scripts.release_workflow_order_guard"
+          "exists": false,
+          "status": "",
+          "producer": ""
         }
       ]
     },
@@ -219,11 +246,132 @@
       ]
     },
     {
+      "action_id": "active_report_manifest_freshness",
+      "priority": "P0",
+      "theme": "active external report manifest freshness",
+      "current_status": "implemented",
+      "source_report_paths": [
+        "external-reports/report-reference-manifest.json"
+      ],
+      "recommended_target": "external-report-reference-manifest-settle",
+      "evidence": [
+        {
+          "path": "external-reports/report-reference-manifest.json",
+          "exists": true,
+          "status": "",
+          "producer": "ops.scripts.external_report_reference_manifest"
+        },
+        {
+          "path": "ops/reports/external-report-action-matrix.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.external_report_action_matrix"
+        }
+      ]
+    },
+    {
+      "action_id": "release_lane_mutability_split",
+      "priority": "P0",
+      "theme": "release lane mutability split",
+      "current_status": "implemented",
+      "source_report_paths": [
+        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md"
+      ],
+      "recommended_target": "release-evidence-converge",
+      "evidence": [
+        {
+          "path": "mk/release.mk",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/scripts/release/release_workflow_order_guard.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_makefile_static_gates.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "sealed_summary_vocabulary_demotion",
+      "priority": "P0",
+      "theme": "sealed summary vocabulary demotion",
+      "current_status": "implemented",
+      "source_report_paths": [
+        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md"
+      ],
+      "recommended_target": "release-closeout-summary-report",
+      "evidence": [
+        {
+          "path": "ops/scripts/release/release_closeout_summary.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/schemas/release-closeout-summary.schema.json",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_release_closeout_summary.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_release_status_v2.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "selector_marker_scope_parity",
+      "priority": "P1",
+      "theme": "explicit selector and marker-wide lane parity",
+      "current_status": "implemented",
+      "source_report_paths": [
+        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md"
+      ],
+      "recommended_target": "test-release-sealing",
+      "evidence": [
+        {
+          "path": "mk/test.mk",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/test-lane-registry.json",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_makefile_static_gates.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
       "action_id": "source_package_distribution_binding",
       "priority": "P0",
       "theme": "source package and distribution ZIP binding",
       "current_status": "implemented",
       "source_report_paths": [
+        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md",
         "external-reports/llmwiki_code_change_implementation_report_20260516.md"
       ],
       "recommended_target": "release-source-package-check",
@@ -254,6 +402,7 @@
       "theme": "release evidence bundle and attestation",
       "current_status": "implemented",
       "source_report_paths": [
+        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md",
         "external-reports/llmwiki_code_change_implementation_report_20260516.md"
       ],
       "recommended_target": "release-evidence-closeout-sealed-dry-run",
@@ -278,6 +427,7 @@
       "theme": "full-suite evidence currentness",
       "current_status": "implemented",
       "source_report_paths": [
+        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md",
         "external-reports/llmwiki_code_change_implementation_report_20260516.md"
       ],
       "recommended_target": "test-execution-summary-full-refresh",
@@ -512,6 +662,7 @@
       "theme": "bounded goal execution runtime certificate",
       "current_status": "implemented",
       "source_report_paths": [
+        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md",
         "external-reports/llmwiki_code_change_implementation_report_20260516.md"
       ],
       "recommended_target": "goal-runtime-certificate",
@@ -708,6 +859,7 @@
       "theme": "sealed authority preflight clean-required canonical evidence",
       "current_status": "implemented",
       "source_report_paths": [
+        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md",
         "external-reports/llmwiki_code_change_implementation_report_20260516.md"
       ],
       "recommended_target": "release-authority-sealed-preflight",
@@ -827,6 +979,12 @@
       "recommended_target": "auto-improve-goal-preflight",
       "evidence": [
         {
+          "path": "mk/mechanism.mk",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
           "path": "ops/scripts/mechanism/goal_worktree_guard.py",
           "exists": true,
           "status": "",
@@ -837,12 +995,6 @@
           "exists": true,
           "status": "",
           "producer": ""
-        },
-        {
-          "path": "tmp/goal-worktree-guard.json",
-          "exists": true,
-          "status": "attention",
-          "producer": "ops.scripts.goal_worktree_guard"
         },
         {
           "path": "tests/test_goal_worktree_guard.py",
@@ -857,7 +1009,9 @@
       "priority": "P1",
       "theme": "pre-run cleanup and admission gate for long goal runs",
       "current_status": "implemented",
-      "source_report_paths": [],
+      "source_report_paths": [
+        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md"
+      ],
       "recommended_target": "goal-runtime-run-admission",
       "evidence": [
         {
@@ -879,12 +1033,6 @@
           "producer": ""
         },
         {
-          "path": "tmp/goal-runtime-clean-transient.json",
-          "exists": true,
-          "status": "pass",
-          "producer": "ops.scripts.goal_runtime_clean_transient"
-        },
-        {
           "path": "tests/test_goal_runtime_clean_transient.py",
           "exists": true,
           "status": "",
@@ -903,12 +1051,6 @@
           "producer": ""
         },
         {
-          "path": "tmp/goal-runtime-quarantine-preflight.json",
-          "exists": true,
-          "status": "pass",
-          "producer": "ops.scripts.goal_runtime_quarantine_preflight"
-        },
-        {
           "path": "tests/test_goal_runtime_quarantine_preflight.py",
           "exists": true,
           "status": "",
@@ -925,12 +1067,6 @@
           "exists": true,
           "status": "",
           "producer": ""
-        },
-        {
-          "path": "tmp/goal-runtime-run-admission.json",
-          "exists": true,
-          "status": "attention",
-          "producer": "ops.scripts.goal_runtime_run_admission"
         },
         {
           "path": "tests/test_goal_runtime_run_admission.py",

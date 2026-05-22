@@ -73,6 +73,7 @@ REPORT_CONTRACT_EXTENDED_TESTS ?= \
 	tests/test_manifest_export_symlink_safety.py \
 	tests/test_report_generation_smoke.py
 REPORT_CONTRACT_TESTS ?= $(REPORT_CONTRACT_CORE_TESTS)
+REPORT_CONTRACT_ALL_TESTS ?= -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)"
 REPORT_CONTRACT_SUMMARY_MARK_EXPR ?= $(PYTEST_REPORT_CONTRACT_MARK_EXPR)
 REPORT_CONTRACT_SUMMARY_TESTS ?= -m "$(REPORT_CONTRACT_SUMMARY_MARK_EXPR)" $(REPORT_CONTRACT_TESTS)
 REPORT_CONTRACT_FINALIZATION_TESTS ?= \
@@ -85,10 +86,11 @@ REPORT_CONTRACT_FINALIZATION_TESTS ?= \
 	tests/test_generated_report_contracts.py::test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflight_state \
 	tests/test_generated_report_contracts.py::test_checked_in_auto_improve_readiness_keeps_evidence_ledgers_in_sync \
 	tests/test_writer_output_paths.py::WriterOutputPathsTest::test_script_output_surface_registry_matches_current_ast_inventory
-RELEASE_SEALING_TESTS ?= \
+RELEASE_SEALING_CORE_TESTS ?= \
 	tests/test_release_closeout_batch_manifest.py \
 	tests/test_release_evidence_closeout_self_check.py \
 	tests/test_release_sealing_lane.py
+RELEASE_SEALING_TESTS ?= $(RELEASE_SEALING_CORE_TESTS)
 SUBPROCESS_TESTS ?= \
 	tests/test_command_runtime_subprocess.py
 TEST_EXECUTION_SUMMARY_OUT ?= ops/reports/test-execution-summary.json
@@ -112,13 +114,19 @@ RELEASE_CLOSEOUT_REGRESSION_TESTS ?= tests/test_release_closeout_finality_attest
 RELEASE_CLOSEOUT_REGRESSION_FRESHNESS_CHECK_OUT ?= tmp/release-closeout-regression-artifact-freshness-check.json
 RELEASE_CLOSEOUT_COST_EVIDENCE_CI_OUT ?= tmp/release-closeout-fixed-point-cost-trend-ci.json
 
-.PHONY: fast-smoke report-contracts report-contracts-extended test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact test-report-contract report-contract-summary test-artifact-finalization test-artifact-finalization-lane-guard report-contract-finalization test-release-sealing test-subprocess report-schema-samples-check report-schema-samples-regenerate report-contract-closeout-precheck report-contract-closeout test-execution-summary-fast test-execution-summary-report-contract test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary test-execution-summary-full test-execution-summary-full-refresh test-execution-summary-reuse test-execution-summary-aggregate test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
+.PHONY: fast-smoke report-contracts report-contracts-core report-contracts-all report-contracts-extended test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact test-report-contract test-report-contract-core test-report-contract-all report-contract-summary test-artifact-finalization test-artifact-finalization-lane-guard report-contract-finalization test-release-sealing test-release-sealing-core test-release-sealing-all test-subprocess report-schema-samples-check report-schema-samples-regenerate report-contract-closeout-precheck report-contract-closeout test-execution-summary-fast test-execution-summary-report-contract test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary test-execution-summary-full test-execution-summary-full-refresh test-execution-summary-reuse test-execution-summary-aggregate test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
 
 fast-smoke:
 	$(PYTHON) -m pytest -m "$(PYTEST_FAST_SMOKE_MARK_EXPR)" $(FAST_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)
 
-report-contracts:
+report-contracts: report-contracts-all
+	@echo "report-contracts is a compatibility alias; prefer report-contracts-all or test-report-contract-all."
+
+report-contracts-core:
 	$(PYTHON) -m pytest -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" $(REPORT_CONTRACT_TESTS) $(PYTEST_SERIAL_FLAGS)
+
+report-contracts-all:
+	$(PYTHON) -m pytest $(REPORT_CONTRACT_ALL_TESTS) $(PYTEST_SERIAL_FLAGS)
 
 report-contracts-extended:
 	$(PYTHON) -m pytest $(REPORT_CONTRACT_EXTENDED_TESTS) $(PYTEST_SERIAL_FLAGS)
@@ -134,10 +142,16 @@ release-closeout-regression-dry-run: tmp-json-clean
 release-closeout-cost-evidence-ci-artifact:
 	$(PYTHON) -m ops.scripts.release_closeout_fixed_point_cost_trend --vault "$(VAULT)" --previous "$(RELEASE_CLOSEOUT_FIXED_POINT_COST_TREND_OUT)" --out "$(RELEASE_CLOSEOUT_COST_EVIDENCE_CI_OUT)" --no-fail
 
-test-report-contract:
+test-report-contract: test-report-contract-all
+	@echo "test-report-contract is a compatibility alias; prefer test-report-contract-all or test-report-contract-core."
+
+test-report-contract-core:
 	$(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_SERIAL_FLAGS)
 
-report-contract-summary: test-report-contract
+test-report-contract-all:
+	$(PYTHON) -m pytest $(REPORT_CONTRACT_ALL_TESTS) $(PYTEST_SERIAL_FLAGS)
+
+report-contract-summary: test-report-contract-core
 
 test-artifact-finalization: test-artifact-finalization-lane-guard
 	$(PYTHON) -m pytest $(REPORT_CONTRACT_FINALIZATION_TESTS) $(PYTEST_SERIAL_FLAGS)
@@ -147,8 +161,14 @@ test-artifact-finalization-lane-guard:
 
 report-contract-finalization: test-artifact-finalization
 
-test-release-sealing:
+test-release-sealing: test-release-sealing-all
+	@echo "test-release-sealing is a compatibility alias; prefer test-release-sealing-all or test-release-sealing-core."
+
+test-release-sealing-core:
 	$(PYTHON) -m pytest $(RELEASE_SEALING_TESTS) $(PYTEST_SERIAL_FLAGS)
+
+test-release-sealing-all:
+	$(PYTHON) -m pytest -m "$(PYTEST_RELEASE_SEALING_MARK_EXPR)" $(PYTEST_SERIAL_FLAGS)
 
 test-subprocess:
 	$(PYTHON) -m pytest $(SUBPROCESS_TESTS) $(PYTEST_SERIAL_FLAGS)

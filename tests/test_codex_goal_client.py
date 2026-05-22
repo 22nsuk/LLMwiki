@@ -114,6 +114,10 @@ class CodexGoalClientTests(unittest.TestCase):
         contract = build_auto_improve_goal_contract(created_at="2026-05-17T00:00:00Z")
 
         self.assertIn("non_goals", contract)
+        self.assertIn(
+            "Do not treat native Codex goal state as durable proof without file-backed goal, status, checkpoint, and certificate evidence.",
+            contract["non_goals"],
+        )
         self.assertIn("allowed_roots", contract)
         self.assertEqual(contract["budgets"]["max_wall_clock_seconds"], 21600)
         self.assertEqual(contract["budgets"]["max_proposals"], 1)

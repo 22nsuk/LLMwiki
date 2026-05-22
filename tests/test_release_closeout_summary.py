@@ -383,6 +383,14 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
         self.assertEqual(report["release_authority_status"], "clean_pass")
         self.assertEqual(report["semantic_release_status"], "clean_pass")
         self.assertEqual(
+            report["pre_distribution_package_binding_status"],
+            "not_materialized_by_summary",
+        )
+        self.assertEqual(
+            report["source_closeout_distribution_binding_status"],
+            "unsealed_distribution_not_provided",
+        )
+        self.assertEqual(
             report["sealed_release_status"], "unsealed_distribution_not_provided"
         )
         self.assertEqual(report["status_v2_preview"], report["status_v2"])
@@ -394,6 +402,30 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
         self.assertEqual(
             report["status_v2"]["status_axes"]["sealed_release_status"],
             report["sealed_release_status"],
+        )
+        self.assertEqual(
+            report["status_v2"]["status_axes"][
+                "pre_distribution_package_binding_status"
+            ],
+            report["pre_distribution_package_binding_status"],
+        )
+        self.assertEqual(
+            report["status_v2"]["status_axes"][
+                "source_closeout_distribution_binding_status"
+            ],
+            report["source_closeout_distribution_binding_status"],
+        )
+        self.assertEqual(
+            report["status_v2"]["sealed_status_field"],
+            "source_closeout_distribution_binding_status",
+        )
+        self.assertEqual(
+            report["status_v2"]["proposed_top_level_status_replacement"],
+            "source_closeout_distribution_binding_status",
+        )
+        self.assertIn(
+            "source_closeout_distribution_binding_status",
+            report["status_v2"]["recommended_consumer_fields"],
         )
         self.assertEqual(
             report["status_v2"]["status_classification"], "semantic_clean_unsealed"
@@ -1571,6 +1603,10 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
         self.assertEqual(persisted["release_readiness_state"], "conditional_pass")
         self.assertEqual(persisted["release_authority_status"], "conditional_pass")
         self.assertEqual(persisted["semantic_release_status"], "conditional_pass")
+        self.assertEqual(
+            persisted["source_closeout_distribution_binding_status"],
+            "unsealed_distribution_not_provided",
+        )
         self.assertEqual(
             persisted["sealed_release_status"], "unsealed_distribution_not_provided"
         )

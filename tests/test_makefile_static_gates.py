@@ -128,11 +128,11 @@ def _assert_recipe_contains_tokens(
     case.assertEqual(missing, [], f"{target} recipe missing required tokens")
 
 
-def _release_evidence_closeout_expanded_recipe_lines(text: str) -> list[str]:
+def _release_evidence_converge_expanded_recipe_lines(text: str) -> list[str]:
     return [
-        *_recipe_lines(text, "release-evidence-closeout-phase-1"),
-        *_recipe_lines(text, "release-evidence-closeout-phase-2"),
-        *_recipe_lines(text, "release-evidence-closeout-phase-3"),
+        *_recipe_lines(text, "release-evidence-converge-phase-1"),
+        *_recipe_lines(text, "release-evidence-converge-phase-2"),
+        *_recipe_lines(text, "release-evidence-converge-phase-3"),
     ]
 
 
@@ -274,12 +274,15 @@ def _assert_sealed_release_closeout_targets(case: unittest.TestCase, text: str) 
     for needle in (
         '$(MAKE) release-distribution-zip RELEASE_DISTRIBUTION_ZIP_OUT="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
         '$(MAKE) external-report-reference-manifest-strict EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
-        '$(MAKE) release-evidence-closeout RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_CLOSEOUT_SEALED_ZIP_METADATA)" EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
+        '$(MAKE) release-evidence-converge RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_CLOSEOUT_SEALED_ZIP_METADATA)" EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
         "$(MAKE) operator-release-summary",
         '$(MAKE) release-post-seal-attestation RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
-        '$(MAKE) release-evidence-closeout-sealed-check RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_OUT="$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_RELEASE_OUT)"',
+        '$(MAKE) release-sealed-verify RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_OUT="$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_RELEASE_OUT)"',
     ):
         case.assertIn(needle, sealed_block)
+    sealed_verify_block = _target_block(text, "release-sealed-verify")
+    case.assertIn("$(MAKE) release-verify-current", sealed_verify_block)
+    case.assertIn("$(MAKE) release-evidence-closeout-sealed-check", sealed_verify_block)
     case.assertIn(
         "ops.scripts.release_closeout_sealed_rehearsal_check",
         _target_block(text, "release-evidence-closeout-sealed-check"),
@@ -769,7 +772,7 @@ def _assert_workflow_dependency_planner_target(case: unittest.TestCase, text: st
     for target in ("static", "check", "check-all", "release-check", "release-clean"):
         with case.subTest(target=target):
             case.assertNotIn("workflow-dependency-planner", _target_block(text, target))
-    case.assertNotIn("$(MAKE) workflow-dependency-planner", _target_block(text, "release-evidence-closeout"))
+    case.assertNotIn("$(MAKE) workflow-dependency-planner", _target_block(text, "release-evidence-converge"))
     case.assertNotIn("$(MAKE) workflow-dependency-planner", _target_block(text, "check-finalized"))
 
 
@@ -784,7 +787,7 @@ def _assert_release_workflow_order_guard_target(case: unittest.TestCase, text: s
     case.assertIn("--schema ops/schemas/release-workflow-order-guard.schema.json", order_guard_block)
     case.assertIn("--expected-artifact-kind release_workflow_order_guard", order_guard_block)
     case.assertIn("--expected-producer ops.scripts.release_workflow_order_guard", order_guard_block)
-    case.assertNotIn("$(MAKE) release-workflow-order-guard", _target_block(text, "release-evidence-closeout"))
+    case.assertNotIn("$(MAKE) release-workflow-order-guard", _target_block(text, "release-evidence-converge"))
     case.assertNotIn("$(MAKE) release-workflow-order-guard", _target_block(text, "check-finalized"))
 
 
@@ -887,9 +890,14 @@ class MakefileStaticGateTests(unittest.TestCase):
             '$(PYTHON) -m ops.scripts.execution_lane_guard --vault "$(VAULT)" --policy "$(EXECUTION_LANE_POLICY)" --target test-artifact-finalization',
             _target_block(text, "test-artifact-finalization-lane-guard"),
         )
+        self.assertIn("release-evidence-converge-lane-guard", _target_block(text, ".PHONY"))
+        self.assertIn(
+            '$(PYTHON) -m ops.scripts.execution_lane_guard --vault "$(VAULT)" --policy "$(EXECUTION_LANE_POLICY)" --target release-evidence-converge',
+            _target_block(text, "release-evidence-converge-lane-guard"),
+        )
         self.assertIn("release-evidence-closeout-lane-guard", _target_block(text, ".PHONY"))
         self.assertIn(
-            '$(PYTHON) -m ops.scripts.execution_lane_guard --vault "$(VAULT)" --policy "$(EXECUTION_LANE_POLICY)" --target release-evidence-closeout',
+            "release-evidence-closeout-lane-guard is a compatibility alias",
             _target_block(text, "release-evidence-closeout-lane-guard"),
         )
         self.assertIn("release-builder-full-lane-guard", _target_block(text, ".PHONY"))
@@ -915,7 +923,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn("release-conditional: release-evidence-refresh-fast", text)
         self.assertIn(
-            "release-clean: release-check warning-budget release-evidence-closeout release-evidence-cohort-check",
+            "release-clean: release-check warning-budget release-evidence-converge release-evidence-cohort-check",
             text,
         )
         self.assertIn(
@@ -967,9 +975,9 @@ class MakefileStaticGateTests(unittest.TestCase):
             "test-integration": "PYTEST_INTEGRATION_MARK_EXPR",
             "test-integration-heavy": "PYTEST_INTEGRATION_HEAVY_MARK_EXPR",
             "test-public": "PYTEST_PUBLIC_MARK_EXPR",
-            "test-report-contract": "PYTEST_REPORT_CONTRACT_MARK_EXPR",
+            "test-report-contract-all": "PYTEST_REPORT_CONTRACT_MARK_EXPR",
             "test-artifact-finalization": "PYTEST_ARTIFACT_FINALIZATION_MARK_EXPR",
-            "test-release-sealing": "PYTEST_RELEASE_SEALING_MARK_EXPR",
+            "test-release-sealing-all": "PYTEST_RELEASE_SEALING_MARK_EXPR",
             "test-subprocess": "PYTEST_SUBPROCESS_MARK_EXPR",
         }
 
@@ -1123,8 +1131,12 @@ class MakefileStaticGateTests(unittest.TestCase):
         for target in (
             "test-fast",
             "test-report-contract",
+            "test-report-contract-core",
+            "test-report-contract-all",
             "test-artifact-finalization",
             "test-release-sealing",
+            "test-release-sealing-core",
+            "test-release-sealing-all",
             "test-subprocess",
             "test-source-package",
             "release-source-package-check",
@@ -1150,7 +1162,8 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("PYTEST_RELEASE_SEALING_MARK_EXPR ?= release_sealing", text)
         self.assertIn("PYTEST_SUBPROCESS_MARK_EXPR ?= subprocess", text)
         self.assertIn("not report_contract and not artifact_finalization", text)
-        self.assertIn("RELEASE_SEALING_TESTS ?=", text)
+        self.assertIn("RELEASE_SEALING_CORE_TESTS ?=", text)
+        self.assertIn("RELEASE_SEALING_TESTS ?= $(RELEASE_SEALING_CORE_TESTS)", text)
         self.assertIn("SUBPROCESS_TESTS ?=", text)
         self.assertIn(
             '$(PYTHON) -m pytest -m "$(PYTEST_FAST_MARK_EXPR)" $(PYTEST_FLAGS)',
@@ -1168,11 +1181,19 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("unit-tests: test-fast", text)
         self.assertIn("report-contract-finalization: test-artifact-finalization", text)
         self.assertIn(
-            "release-builder-full: release-builder-full-lane-guard bootstrap-preflight static release-evidence-closeout",
+            "release-builder-full: release-builder-full-lane-guard bootstrap-preflight static release-evidence-converge",
             text,
         )
         self.assertIn(
             "$(PYTHON) -m pytest $(RELEASE_SEALING_TESTS) $(PYTEST_SERIAL_FLAGS)",
+            _target_block(text, "test-release-sealing-core"),
+        )
+        self.assertIn(
+            '$(PYTHON) -m pytest -m "$(PYTEST_RELEASE_SEALING_MARK_EXPR)" $(PYTEST_SERIAL_FLAGS)',
+            _target_block(text, "test-release-sealing-all"),
+        )
+        self.assertIn(
+            "test-release-sealing is a compatibility alias",
             _target_block(text, "test-release-sealing"),
         )
         self.assertIn(
@@ -1546,7 +1567,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             ],
         )
         self.assertIn("$(MAKE) release-worktree-clean-check", core_block)
-        self.assertIn("$(MAKE) test-report-contract", core_block)
+        self.assertIn("$(MAKE) test-report-contract-all", core_block)
         self.assertIn("$(MAKE) static", core_block)
         self.assertIn("$(MAKE) artifact-freshness-check", core_block)
         self.assertIn("$(MAKE) registry-preflight-check", core_block)
@@ -1722,7 +1743,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn("LEARNING_READINESS_SIGNOFF_REVALIDATION_WINDOW_DAYS ?= 7", text)
         self.assertIn(
-            "LEARNING_READINESS_SIGNOFF_REVALIDATION_COMMAND ?= make release-evidence-closeout PYTHON=.venv/bin/python",
+            "LEARNING_READINESS_SIGNOFF_REVALIDATION_COMMAND ?= make release-evidence-converge PYTHON=.venv/bin/python",
             text,
         )
         self.assertIn(
@@ -1923,14 +1944,19 @@ class MakefileStaticGateTests(unittest.TestCase):
         registry = _test_lane_registry()
         text = _makefile_text()
         block = _target_block(text, "report-contracts")
+        core_block = _target_block(text, "report-contracts-core")
+        all_block = _target_block(text, "report-contracts-all")
         extended_block = _target_block(text, "report-contracts-extended")
         expected_core_tests = pack_selectors(registry, "report_contract_core")
         expected_extended_tests = pack_selectors(registry, "report_contract_extended")
 
         self.assertIn("report-contracts", _target_block(text, ".PHONY"))
+        self.assertIn("report-contracts-core", _target_block(text, ".PHONY"))
+        self.assertIn("report-contracts-all", _target_block(text, ".PHONY"))
         self.assertIn("report-contracts-extended", _target_block(text, ".PHONY"))
         self.assertIn("REPORT_CONTRACT_CORE_TESTS ?=", text)
         self.assertIn("REPORT_CONTRACT_EXTENDED_TESTS ?=", text)
+        self.assertIn('REPORT_CONTRACT_ALL_TESTS ?= -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)"', text)
         self.assertIn("REPORT_CONTRACT_TESTS ?=", text)
         self.assertIn("REPORT_CONTRACT_TESTS ?= $(REPORT_CONTRACT_CORE_TESTS)", text)
         core_items = _makefile_assignment_items(text, "REPORT_CONTRACT_CORE_TESTS")
@@ -1948,6 +1974,14 @@ class MakefileStaticGateTests(unittest.TestCase):
                 self.assertNotIn(test_path, core_items)
         self.assertIn(
             '$(PYTHON) -m pytest -m "$(PYTEST_REPORT_CONTRACT_MARK_EXPR)" $(REPORT_CONTRACT_TESTS) $(PYTEST_SERIAL_FLAGS)',
+            core_block,
+        )
+        self.assertIn(
+            "$(PYTHON) -m pytest $(REPORT_CONTRACT_ALL_TESTS) $(PYTEST_SERIAL_FLAGS)",
+            all_block,
+        )
+        self.assertIn(
+            "report-contracts is a compatibility alias",
             block,
         )
         self.assertIn(
@@ -1961,10 +1995,14 @@ class MakefileStaticGateTests(unittest.TestCase):
         registry = _test_lane_registry()
         text = _makefile_text()
         block = _target_block(text, "test-report-contract")
+        core_block = _target_block(text, "test-report-contract-core")
+        all_block = _target_block(text, "test-report-contract-all")
         finalization_block = _target_block(text, "test-artifact-finalization")
         finalization_selectors = pack_selectors(registry, "artifact_finalization_checks")
 
         self.assertIn("test-report-contract", _target_block(text, ".PHONY"))
+        self.assertIn("test-report-contract-core", _target_block(text, ".PHONY"))
+        self.assertIn("test-report-contract-all", _target_block(text, ".PHONY"))
         self.assertIn("test-artifact-finalization", _target_block(text, ".PHONY"))
         self.assertIn("report-contract-summary", _target_block(text, ".PHONY"))
         self.assertIn("report-contract-finalization", _target_block(text, ".PHONY"))
@@ -1990,9 +2028,17 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertNotIn("--deselect=tests/test_generated_report_contracts.py::", text)
         self.assertIn(
             "$(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_SERIAL_FLAGS)",
+            core_block,
+        )
+        self.assertIn(
+            "$(PYTHON) -m pytest $(REPORT_CONTRACT_ALL_TESTS) $(PYTEST_SERIAL_FLAGS)",
+            all_block,
+        )
+        self.assertIn(
+            "test-report-contract is a compatibility alias",
             block,
         )
-        self.assertIn("report-contract-summary: test-report-contract", text)
+        self.assertIn("report-contract-summary: test-report-contract-core", text)
         self.assertIn(
             "$(PYTHON) -m pytest $(REPORT_CONTRACT_FINALIZATION_TESTS) $(PYTEST_SERIAL_FLAGS)",
             finalization_block,
@@ -2086,28 +2132,32 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertEqual(completed.stdout.splitlines(), expected_targets)
         self.assertEqual(completed.stderr, "")
 
-    def test_release_evidence_closeout_enforces_strict_recipe_order(self) -> None:
+    def test_release_evidence_converge_enforces_strict_recipe_order(self) -> None:
         text = _makefile_text()
         block = _target_block(text, "release-evidence-closeout")
-        recipe_lines = _release_evidence_closeout_expanded_recipe_lines(text)
+        converge_block = _target_block(text, "release-evidence-converge")
+        recipe_lines = _release_evidence_converge_expanded_recipe_lines(text)
 
         self.assertIn("release-evidence-closeout", _target_block(text, ".PHONY"))
-        self.assertIn("release-evidence-closeout-phase-1", _target_block(text, ".PHONY"))
-        self.assertIn("release-evidence-closeout-phase-2", _target_block(text, ".PHONY"))
-        self.assertIn("release-evidence-closeout-phase-3", _target_block(text, ".PHONY"))
-        self.assertEqual(block.splitlines()[0], "release-evidence-closeout: release-evidence-closeout-phase-3")
+        self.assertIn("release-evidence-converge", _target_block(text, ".PHONY"))
+        self.assertIn("release-evidence-converge-phase-1", _target_block(text, ".PHONY"))
+        self.assertIn("release-evidence-converge-phase-2", _target_block(text, ".PHONY"))
+        self.assertIn("release-evidence-converge-phase-3", _target_block(text, ".PHONY"))
+        self.assertEqual(block.splitlines()[0], "release-evidence-closeout: release-evidence-converge")
+        self.assertIn("compatibility alias", block)
+        self.assertEqual(converge_block.splitlines()[0], "release-evidence-converge: release-evidence-converge-phase-3")
         self.assertEqual(
-            _target_block(text, "release-evidence-closeout-phase-2").splitlines()[0],
-            "release-evidence-closeout-phase-2: release-evidence-closeout-phase-1",
+            _target_block(text, "release-evidence-converge-phase-2").splitlines()[0],
+            "release-evidence-converge-phase-2: release-evidence-converge-phase-1",
         )
         self.assertEqual(
-            _target_block(text, "release-evidence-closeout-phase-3").splitlines()[0],
-            "release-evidence-closeout-phase-3: release-evidence-closeout-phase-2",
+            _target_block(text, "release-evidence-converge-phase-3").splitlines()[0],
+            "release-evidence-converge-phase-3: release-evidence-converge-phase-2",
         )
         self.assertEqual(
             recipe_lines,
             [
-                "$(MAKE) release-evidence-closeout-lane-guard",
+                "$(MAKE) release-evidence-converge-lane-guard",
                 "$(MAKE) refresh-generated-core",
                 "$(MAKE) bootstrap-preflight",
                 "$(MAKE) registry-preflight",
@@ -2156,11 +2206,11 @@ class MakefileStaticGateTests(unittest.TestCase):
             ],
         )
 
-    def test_release_evidence_closeout_uses_fixed_point_finalizer(self) -> None:
+    def test_release_evidence_converge_uses_fixed_point_finalizer(self) -> None:
         text = _makefile_text()
-        recipe_lines = _release_evidence_closeout_expanded_recipe_lines(text)
+        recipe_lines = _release_evidence_converge_expanded_recipe_lines(text)
 
-        self.assertTrue(recipe_lines, "release-evidence-closeout has no recipe lines")
+        self.assertTrue(recipe_lines, "release-evidence-converge has no recipe lines")
 
         fixed_point_index = next(
             (
@@ -2183,6 +2233,50 @@ class MakefileStaticGateTests(unittest.TestCase):
             "$(MAKE) release-closeout-batch-manifest-promote", recipe_lines
         )
         self.assertNotIn("$(MAKE) release-evidence-closeout-self-check", recipe_lines)
+
+    def test_release_verify_current_and_sealed_verify_are_check_lanes(self) -> None:
+        text = _makefile_text()
+        verify_lines = _recipe_lines(text, "release-verify-current")
+        sealed_lines = _recipe_lines(text, "release-sealed-verify")
+
+        self.assertIn("release-verify-current", _target_block(text, ".PHONY"))
+        self.assertIn("release-sealed-verify", _target_block(text, ".PHONY"))
+        self.assertEqual(
+            verify_lines,
+            [
+                "$(MAKE) release-check-finalized",
+                "$(MAKE) release-closeout-finality-verify",
+            ],
+        )
+        self.assertEqual(
+            sealed_lines,
+            [
+                "$(MAKE) release-verify-current",
+                "$(MAKE) release-evidence-closeout-sealed-check",
+            ],
+        )
+        for line in verify_lines + sealed_lines:
+            self.assertNotIn("release-closeout-finality-attestation", line)
+            self.assertNotIn("release-evidence-converge", line)
+            self.assertNotIn("release-distribution-zip", line)
+
+    def test_release_finality_resettle_is_focused_terminal_wrapper(self) -> None:
+        text = _makefile_text()
+        recipe_lines = _recipe_lines(text, "release-finality-resettle")
+
+        self.assertIn("release-finality-resettle", _target_block(text, ".PHONY"))
+        self.assertEqual(
+            recipe_lines,
+            [
+                "$(MAKE) workflow-dependency-planner",
+                "$(MAKE) generated-artifact-converge",
+                "$(MAKE) release-closeout-fixed-point",
+                "$(MAKE) tmp-json-clean",
+                "$(MAKE) release-closeout-finality-verify",
+            ],
+        )
+        self.assertNotIn("$(MAKE) release-evidence-converge", recipe_lines)
+        self.assertEqual(recipe_lines[-1], "$(MAKE) release-closeout-finality-verify")
 
     def test_check_finalized_runs_post_check_dry_run_before_mutating_finalizer(self) -> None:
         text = _makefile_text()
@@ -2227,13 +2321,15 @@ class MakefileStaticGateTests(unittest.TestCase):
             ],
         )
 
-    def test_release_evidence_closeout_canonical_writers_are_ordered_with_fixed_point_last(
+    def test_release_evidence_converge_canonical_writers_are_ordered_with_fixed_point_last(
         self,
     ) -> None:
         text = _makefile_text()
+        converge_block = _target_block(text, "release-evidence-converge")
         closeout_block = _target_block(text, "release-evidence-closeout")
-        self.assertEqual(closeout_block.splitlines()[0], "release-evidence-closeout: release-evidence-closeout-phase-3")
-        closeout_lines = _release_evidence_closeout_expanded_recipe_lines(text)
+        self.assertEqual(converge_block.splitlines()[0], "release-evidence-converge: release-evidence-converge-phase-3")
+        self.assertEqual(closeout_block.splitlines()[0], "release-evidence-closeout: release-evidence-converge")
+        converge_lines = _release_evidence_converge_expanded_recipe_lines(text)
 
         # Identify canonical writer targets (those using canonical_artifact_promote)
         canonical_writers: set[str] = set()
@@ -2245,9 +2341,9 @@ class MakefileStaticGateTests(unittest.TestCase):
             if "ops.scripts.canonical_artifact_promote" in match.group("body"):
                 canonical_writers.add(match.group("target"))
 
-        # Find all canonical writer occurrences in the closeout recipe
+        # Find all canonical writer occurrences in the converge recipe
         occurrences: list[tuple[str, int]] = []
-        for i, line in enumerate(closeout_lines):
+        for i, line in enumerate(converge_lines):
             for writer in canonical_writers:
                 invocation = f"$(MAKE) {writer}"
                 if line == invocation or line.startswith(f"{invocation} "):
@@ -2255,7 +2351,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                     break
 
         self.assertTrue(
-            occurrences, "no canonical writers found in release-evidence-closeout"
+            occurrences, "no canonical writers found in release-evidence-converge"
         )
 
         late_operator_refresh_writers = {"auto-improve-readiness-report-body"}
@@ -2266,7 +2362,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         ]
         self.assertTrue(
             sealing_occurrences,
-            "no sealing-inventory canonical writers found in release-evidence-closeout",
+            "no sealing-inventory canonical writers found in release-evidence-converge",
         )
 
         # The very last sealing-inventory canonical writer must be the fixed-point finalizer.
@@ -2292,7 +2388,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 )
         self.assertLessEqual(
             last_index,
-            len(closeout_lines) - 1,
+            len(converge_lines) - 1,
             "batch manifest index out of range",
         )
 
@@ -2303,7 +2399,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertEqual(
             fixed_point_count,
             1,
-            "release-closeout-fixed-point must appear exactly once in release-evidence-closeout",
+            "release-closeout-fixed-point must appear exactly once in release-evidence-converge",
         )
 
     def test_release_evidence_refresh_fast_reuses_existing_expensive_evidence(

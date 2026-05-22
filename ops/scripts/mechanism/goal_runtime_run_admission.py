@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,9 @@ DEFAULT_GOAL_WORKTREE_GUARD_REPORT = "tmp/goal-worktree-guard.json"
 DEFAULT_MUTATION_PROPOSALS_REPORT = "ops/reports/mutation-proposals.json"
 DEFAULT_READINESS_REPORT = "ops/reports/auto-improve-readiness.json"
 DEFAULT_REMEDIATION_BACKLOG_REPORT = "ops/reports/remediation-backlog.json"
+DEFAULT_GOAL_CONTRACT_REPORT = "ops/reports/codex-goal-contract.json"
+DEFAULT_GOAL_RUN_STATUS_REPORT = "ops/reports/goal-run-status.json"
+DEFAULT_RUNTIME_CERTIFICATE_REPORT = "ops/reports/goal-runtime-certificate.json"
 PRODUCER = "ops.scripts.goal_runtime_run_admission"
 SCHEMA_PATH = "ops/schemas/goal-runtime-run-admission.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.goal_runtime_run_admission --vault ."
@@ -40,6 +44,9 @@ class GoalRuntimeRunAdmissionRequest:
     mutation_proposals_report_path: str = DEFAULT_MUTATION_PROPOSALS_REPORT
     readiness_report_path: str = DEFAULT_READINESS_REPORT
     remediation_backlog_report_path: str = DEFAULT_REMEDIATION_BACKLOG_REPORT
+    goal_contract_path: str = DEFAULT_GOAL_CONTRACT_REPORT
+    goal_run_status_path: str = DEFAULT_GOAL_RUN_STATUS_REPORT
+    runtime_certificate_report_path: str = DEFAULT_RUNTIME_CERTIFICATE_REPORT
     context: RuntimeContext | None = None
 
 
@@ -77,6 +84,11 @@ def _dict_field(payload: dict[str, Any], key: str) -> dict[str, Any]:
 def _list_field(payload: dict[str, Any], key: str) -> list[Any]:
     value = payload.get(key)
     return value if isinstance(value, list) else []
+
+
+def _canonical_json_digest(payload: dict[str, Any]) -> str:
+    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
 def _blocker_ids(value: object, key: str = "id") -> list[str]:
@@ -443,6 +455,117 @@ def _remediation_backlog_check(remediation_backlog: dict[str, Any], path: str) -
     )
 
 
+def _durable_goal_authority_check(
+    *,
+    contract: dict[str, Any],
+    contract_path: str,
+    goal_run_status: dict[str, Any],
+    goal_run_status_path: str,
+    runtime_certificate: dict[str, Any],
+    runtime_certificate_path: str,
+) -> dict[str, Any]:
+    contract_digest = _canonical_json_digest(contract) if contract else ""
+    contract_backend = _dict_field(contract, "goal_backend")
+    contract_runtime = _dict_field(contract, "runtime")
+    contract_guard = _dict_field(contract, "promotion_guard")
+    status_goal = _dict_field(goal_run_status, "goal")
+    status_backend = _dict_field(status_goal, "backend")
+    status_currentness = _dict_field(goal_run_status, "currentness")
+    certificate_goal = _dict_field(runtime_certificate, "goal")
+    certificate_run = _dict_field(runtime_certificate, "run")
+    certificate_currentness = _dict_field(runtime_certificate, "currentness")
+    certificate = _dict_field(runtime_certificate, "certificate")
+    contract_update = _dict_field(runtime_certificate, "contract_update")
+    blockers = _blocker_ids(runtime_certificate.get("blockers"), key="blocker_id")
+    if not blockers:
+        blockers = _blocker_ids(runtime_certificate.get("blockers"))
+
+    status_contract_sha = str(status_goal.get("contract_sha256", "")).strip()
+    certificate_contract_sha = str(certificate_goal.get("contract_sha256_after", "")).strip()
+    checks = {
+        "contract_present": bool(contract),
+        "contract_backend_process_persistent": _as_bool(contract_backend.get("process_persistent")),
+        "contract_runtime_certificate_verified": str(
+            contract_runtime.get("certificate_status", "")
+        ).strip()
+        == "verified",
+        "contract_promotion_guard_verified": _as_bool(
+            contract_guard.get("runtime_certificate_verified")
+        ),
+        "goal_status_present": _artifact_kind_check(goal_run_status, "goal_run_status") == "present",
+        "goal_status_current": str(status_currentness.get("status", "")).strip() == "current",
+        "goal_status_contract_path_matches": str(status_goal.get("contract_path", "")).strip()
+        == contract_path,
+        "goal_status_contract_digest_matches": bool(contract_digest)
+        and status_contract_sha == contract_digest,
+        "goal_status_backend_process_persistent": _as_bool(
+            status_backend.get("process_persistent")
+        ),
+        "certificate_present": _artifact_kind_check(
+            runtime_certificate,
+            "goal_runtime_certificate",
+        )
+        == "present",
+        "certificate_status_pass": str(runtime_certificate.get("status", "")).strip() == "pass",
+        "certificate_current": str(certificate_currentness.get("status", "")).strip()
+        == "current",
+        "certificate_contract_path_matches": str(certificate_goal.get("contract_path", "")).strip()
+        == contract_path,
+        "certificate_contract_digest_matches": bool(contract_digest)
+        and certificate_contract_sha == contract_digest,
+        "certificate_status_report_matches": str(
+            certificate_run.get("status_report_path", "")
+        ).strip()
+        == goal_run_status_path,
+        "certificate_eligible": str(certificate.get("verification_status", "")).strip()
+        in {"eligible", "already_verified"}
+        and _as_bool(certificate.get("eligible")),
+        "certificate_contract_update_verified": _as_bool(
+            contract_update.get("runtime_certificate_verified_after")
+        ),
+        "certificate_blockers_clear": not blockers,
+    }
+    passed = all(checks.values())
+    return _check(
+        check_id="promotion_durable_goal_authority_current",
+        status="pass" if passed else "attention",
+        severity=PROMOTION_BLOCKER_SEVERITY,
+        expected={
+            "contract_backend.process_persistent": True,
+            "contract.runtime.certificate_status": "verified",
+            "contract.promotion_guard.runtime_certificate_verified": True,
+            "goal_run_status.goal.contract_path": contract_path,
+            "goal_run_status.goal.contract_sha256": contract_digest or "<current contract digest>",
+            "goal_run_status.currentness.status": "current",
+            "runtime_certificate.goal.contract_path": contract_path,
+            "runtime_certificate.goal.contract_sha256_after": contract_digest
+            or "<current contract digest>",
+            "runtime_certificate.run.status_report_path": goal_run_status_path,
+            "runtime_certificate.status": "pass",
+            "runtime_certificate.currentness.status": "current",
+            "runtime_certificate.blockers": [],
+        },
+        observed={
+            **checks,
+            "contract_digest": contract_digest,
+            "goal_status_contract_sha256": status_contract_sha,
+            "certificate_contract_sha256_after": certificate_contract_sha,
+            "certificate_blockers": blockers,
+        },
+        reason=(
+            "file-backed goal contract, run status, and runtime certificate agree on the verified contract digest"
+            if passed
+            else "native Codex goal state is advisory until file-backed contract, goal-run-status, and runtime certificate evidence agree on a verified digest"
+        ),
+        next_action=(
+            "Proceed with promotion authority checks."
+            if passed
+            else "Run `make auto-improve-goal-contract auto-improve-goal-status goal-runtime-certificate` with the same GOAL_RUN_ID, then rerun admission before claiming completion or promotion."
+        ),
+        evidence_paths=[contract_path, goal_run_status_path, runtime_certificate_path],
+    )
+
+
 def _summary(checks: list[dict[str, Any]]) -> dict[str, Any]:
     start_blockers = [
         check
@@ -500,6 +623,12 @@ def build_report(
     mutation_proposals = _load_json_object(vault, active_request.mutation_proposals_report_path)
     readiness = _load_json_object(vault, active_request.readiness_report_path)
     remediation_backlog = _load_json_object(vault, active_request.remediation_backlog_report_path)
+    goal_contract = _load_json_object(vault, active_request.goal_contract_path)
+    goal_run_status = _load_json_object(vault, active_request.goal_run_status_path)
+    runtime_certificate = _load_json_object(
+        vault,
+        active_request.runtime_certificate_report_path,
+    )
     checks = [
         _cleanup_check(cleanup, active_request.cleanup_report_path),
         _quarantine_preflight_check(
@@ -512,6 +641,14 @@ def build_report(
         _readiness_execution_check(readiness, active_request.readiness_report_path),
         _readiness_promotion_check(readiness, active_request.readiness_report_path),
         _remediation_backlog_check(remediation_backlog, active_request.remediation_backlog_report_path),
+        _durable_goal_authority_check(
+            contract=goal_contract,
+            contract_path=active_request.goal_contract_path,
+            goal_run_status=goal_run_status,
+            goal_run_status_path=active_request.goal_run_status_path,
+            runtime_certificate=runtime_certificate,
+            runtime_certificate_path=active_request.runtime_certificate_report_path,
+        ),
     ]
     summary = _summary(checks)
     decisions = {
@@ -544,6 +681,9 @@ def build_report(
                 "mutation_proposals_report": active_request.mutation_proposals_report_path,
                 "readiness_report": active_request.readiness_report_path,
                 "remediation_backlog_report": active_request.remediation_backlog_report_path,
+                "goal_contract": active_request.goal_contract_path,
+                "goal_run_status": active_request.goal_run_status_path,
+                "runtime_certificate_report": active_request.runtime_certificate_report_path,
             },
             source_tree_excluded_files=(active_request.out_path or DEFAULT_OUT,),
         ),
@@ -560,6 +700,9 @@ def build_report(
             "mutation_proposals_report": active_request.mutation_proposals_report_path,
             "readiness_report": active_request.readiness_report_path,
             "remediation_backlog_report": active_request.remediation_backlog_report_path,
+            "goal_contract": active_request.goal_contract_path,
+            "goal_run_status": active_request.goal_run_status_path,
+            "runtime_certificate_report": active_request.runtime_certificate_report_path,
         },
         "checks": checks,
     }
@@ -590,6 +733,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--mutation-proposals-report", default=DEFAULT_MUTATION_PROPOSALS_REPORT)
     parser.add_argument("--readiness-report", default=DEFAULT_READINESS_REPORT)
     parser.add_argument("--remediation-backlog-report", default=DEFAULT_REMEDIATION_BACKLOG_REPORT)
+    parser.add_argument("--goal-contract", default=DEFAULT_GOAL_CONTRACT_REPORT)
+    parser.add_argument("--goal-run-status", default=DEFAULT_GOAL_RUN_STATUS_REPORT)
+    parser.add_argument("--runtime-certificate-report", default=DEFAULT_RUNTIME_CERTIFICATE_REPORT)
     parser.add_argument("--policy-path", default=None)
     parser.add_argument(
         "--strict",
@@ -614,6 +760,9 @@ def main(argv: list[str] | None = None) -> int:
             mutation_proposals_report_path=args.mutation_proposals_report,
             readiness_report_path=args.readiness_report,
             remediation_backlog_report_path=args.remediation_backlog_report,
+            goal_contract_path=args.goal_contract,
+            goal_run_status_path=args.goal_run_status,
+            runtime_certificate_report_path=args.runtime_certificate_report,
         )
     )
     destination = write_report(vault, report, args.out)

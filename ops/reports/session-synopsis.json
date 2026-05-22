@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-22T02:05:10Z",
+  "generated_at": "2026-05-22T10:22:47Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "c67d8e092c8c4eb06c711b524ddad2422eec7443337fca78130ae405e4bb146c",
+  "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "f7dd295621a34a54cb5018604760de77e8685c6f0e0dc086056a7362e25a7519",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ea66bebc6dcb1e56d35893c8f4a0557a3dd3ad55888a83b5b2678e5b822c5ba7",
-    "auto_improve_readiness": "522382b183a61a6cfa12210fbcca0bbacb6af90cc633999cc24dab4b3a1f4b98",
-    "goal_run_status": "89bcf3369f431294e511e43d87633d6fa1a5f3f0f17578e9e81beef61a51f85b",
-    "learning_claim_activation": "9ac21cfab043de0a5b6cc604ff3311226b1077d3b35e9b14ad5462b938085ff6",
-    "learning_delta_scoreboard": "625270dd4f418e366206d483aa677388002137c3d0e5615c1945ff039771cae1",
-    "source_package_clean_extract": "136f0187ac37fe12a1803ed575b2e917b2f5c091b7ab99fdc1381ccfed40d770",
+    "auto_improve_readiness": "a11febde882a22884d52b79bb9e78b3050b3a0b9ee35a9e901ce57fe754a3793",
+    "goal_run_status": "34914490f7009be300451d08e6bcaadd29084006a9faf4fda2213398afc04dca",
+    "learning_claim_activation": "48577cc88ed3ce52215ccfd19158051c3a6c0c9f69f19f71c722d59da69ff498",
+    "learning_delta_scoreboard": "c928f6ef0cd1b62f2a2f1b65cb934960a4e536da0e724f742b052a379157d54a",
+    "source_package_clean_extract": "44fc427df836dbc7752f29b6d42df0952cfea7b5668380809fa86bc09c9dd653",
     "task_observations": "5ee6fc130d9ca93cc1189b0816c3aca7b2fe351a203f126ba6f09522decfd6ea"
   },
   "schema_version": 1,
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T02:05:10Z"
+    "checked_at": "2026-05-22T10:22:47Z"
   },
   "vault": ".",
   "policy": {
@@ -49,10 +49,31 @@
   },
   "recent_blockers": [
     {
-      "id": "goal_status_learning_blocked_by_review_required",
+      "id": "goal_status_promotion_blocked_by_release_closeout_summary_failure",
       "source": "goal_run_status.blockers",
       "status": "open",
-      "reason": "learning_blocked_by_review_required",
+      "reason": "promotion_blocked_by_release_closeout_summary_failure",
+      "repair_target": "Refresh goal run status and close the active blocker before resuming."
+    },
+    {
+      "id": "goal_status_promotion_blocked_by_release_lineage_mismatch",
+      "source": "goal_run_status.blockers",
+      "status": "open",
+      "reason": "promotion_blocked_by_release_lineage_mismatch",
+      "repair_target": "Refresh goal run status and close the active blocker before resuming."
+    },
+    {
+      "id": "goal_status_promotion_blocked_by_artifact_contract_failure",
+      "source": "goal_run_status.blockers",
+      "status": "open",
+      "reason": "promotion_blocked_by_artifact_contract_failure",
+      "repair_target": "Refresh goal run status and close the active blocker before resuming."
+    },
+    {
+      "id": "goal_status_goal_worktree_guard_missing",
+      "source": "goal_run_status.blockers",
+      "status": "open",
+      "reason": "goal_worktree_guard_missing",
       "repair_target": "Refresh goal run status and close the active blocker before resuming."
     },
     {
@@ -63,20 +84,6 @@
       "repair_target": "Run the bounded self-improvement loop and full gates, then refresh goal-runtime-certificate."
     },
     {
-      "id": "promotion_blocked_by_selected_contract_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "status": "open",
-      "reason": "selected_contract release gate is not pass: selected contract summary status=pass; selected_contract_currentness_status=current; operational_attention=test_target_fingerprint_mismatch:tests/test_makefile_static_gates.py",
-      "repair_target": "Refresh selected contract evidence, then rerun make auto-improve-readiness."
-    },
-    {
-      "id": "promotion_blocked_by_release_closeout_summary_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "status": "open",
-      "reason": "release_closeout_summary release gate is not pass: release closeout summary status=pass; machine_release_allowed=false; clean_release_ready=false; release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided",
-      "repair_target": "Refresh release closeout summary, then rerun make auto-improve-readiness."
-    },
-    {
       "id": "promotion_blocked_by_release_batch_manifest_failure",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
@@ -84,18 +91,11 @@
       "repair_target": "Seal the release batch manifest, then rerun make auto-improve-readiness."
     },
     {
-      "id": "promotion_blocked_by_release_lineage_mismatch",
+      "id": "promotion_blocked_by_goal_worktree_guard_failure",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
-      "reason": "release_evidence_cohort release gate is not pass: release evidence cohort status=attention; strict_same_fingerprint=false; component_fingerprint_count=3; clean_lane_contract_status=fail",
-      "repair_target": "Refresh release evidence cohort until the release lineage is a single strict fingerprint, then rerun make auto-improve-readiness."
-    },
-    {
-      "id": "promotion_blocked_by_artifact_contract_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "status": "open",
-      "reason": "artifact freshness schema validation failed for 5 canonical artifact(s): ops/reports/auto-improve-readiness.json, runs/goal-auto-improve-trial/state/auto-improve-readiness.candidate.json, runs/goal-auto-improve-trial/state/auto-improve-readiness.json, runs/goal-auto-improve-trial/state/remediation-backlog.candidate.json, runs/goal-auto-improve-trial/state/remediation-backlog.json",
-      "repair_target": "Regenerate schema-invalid artifacts, then rerun make artifact-freshness and make auto-improve-readiness."
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=84",
+      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     }
   ],
   "last_success_patterns": [
@@ -248,7 +248,13 @@
     "duration_seconds": 21600,
     "certificate_status": "unverified",
     "full_gate_clean": false,
-    "missing_evidence": []
+    "missing_evidence": [
+      {
+        "evidence_id": "goal_worktree_guard",
+        "path": "tmp/goal-worktree-guard.json",
+        "status": "missing"
+      }
+    ]
   },
   "next_session_entrypoint": {
     "promotion_allowed": false,

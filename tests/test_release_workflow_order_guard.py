@@ -136,7 +136,9 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             [
                 "check",
                 "check-finalized",
+                "release-evidence-converge",
                 "release-evidence-closeout",
+                "release-finality-resettle",
                 "release-source-ready",
                 "release-source-ready-snapshot",
                 "release-source-ready-commit",
@@ -175,7 +177,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "\t@true\n"
             "check-finalized: check\n"
             f"{check_finalized_lines}"
-            "release-evidence-closeout:\n"
+            "release-evidence-converge:\n"
             "\t$(MAKE) auto-improve-readiness-report-body\n"
             "\t$(MAKE) generated-artifact-converge\n"
             "\t$(MAKE) release-closeout-summary\n"
@@ -185,6 +187,14 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "\t$(MAKE) generated-artifact-converge\n"
             "\t$(MAKE) test-artifact-finalization\n"
             "\t$(MAKE) release-closeout-post-check-finalizer-dry-run\n"
+            "\t$(MAKE) release-closeout-fixed-point\n"
+            "\t$(MAKE) tmp-json-clean\n"
+            "\t$(MAKE) release-closeout-finality-verify\n"
+            "release-evidence-closeout: release-evidence-converge\n"
+            "\t@echo compatibility alias\n"
+            "release-finality-resettle:\n"
+            "\t$(MAKE) workflow-dependency-planner\n"
+            "\t$(MAKE) generated-artifact-converge\n"
             "\t$(MAKE) release-closeout-fixed-point\n"
             "\t$(MAKE) tmp-json-clean\n"
             "\t$(MAKE) release-closeout-finality-verify\n"
@@ -243,11 +253,14 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
 
         self.assertEqual(report["status"], "pass")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
-        self.assertIn("release-evidence-closeout", {item["target"] for item in report["target_recipes"]})
+        self.assertIn("release-evidence-converge", {item["target"] for item in report["target_recipes"]})
         self.assertIn("release-source-ready", {item["target"] for item in report["target_recipes"]})
         self.assertEqual(report["fixed_point_policy"]["writer_count"], 2)
         planner_hook = next(item for item in report["checks"] if item["id"] == "workflow_dependency_planner_closeout_hooks")
         self.assertEqual(planner_hook["status"], "pass")
+        resettle_check = next(item for item in report["checks"] if item["id"] == "release_finality_resettle_sequence")
+        self.assertEqual(resettle_check["status"], "pass")
+        self.assertIn("release-finality-resettle", {item["target"] for item in report["target_recipes"]})
         self.assertTrue(write_report(self.vault, report).exists())
 
     def test_guard_fails_when_check_finalized_skips_initial_dry_run(self) -> None:
@@ -304,7 +317,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         check = next(
             item
             for item in report["checks"]
-            if item["id"] == "release_evidence_closeout_repetition_budget"
+            if item["id"] == "release_evidence_converge_repetition_budget"
         )
         self.assertEqual(report["status"], "fail")
         self.assertEqual(check["status"], "fail")

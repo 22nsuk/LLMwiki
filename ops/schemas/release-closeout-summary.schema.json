@@ -42,6 +42,8 @@
     "summary",
     "release_authority_status",
     "semantic_release_status",
+    "pre_distribution_package_binding_status",
+    "source_closeout_distribution_binding_status",
     "sealed_release_status",
     "release_authority_vocabulary",
     "learning_readiness_signoff",
@@ -235,6 +237,12 @@
     "semantic_release_status": {
       "$ref": "#/$defs/release_authority_status"
     },
+    "pre_distribution_package_binding_status": {
+      "$ref": "#/$defs/pre_distribution_package_binding_status"
+    },
+    "source_closeout_distribution_binding_status": {
+      "$ref": "#/$defs/sealed_release_status"
+    },
     "sealed_release_status": {
       "$ref": "#/$defs/sealed_release_status"
     },
@@ -420,6 +428,10 @@
         "unsealed_release_blocked"
       ]
     },
+    "pre_distribution_package_binding_status": {
+      "type": "string",
+      "const": "not_materialized_by_summary"
+    },
     "status_v2": {
       "type": "object",
       "additionalProperties": false,
@@ -470,11 +482,19 @@
           "required": [
             "release_authority_status",
             "semantic_release_status",
+            "pre_distribution_package_binding_status",
+            "source_closeout_distribution_binding_status",
             "sealed_release_status"
           ],
           "properties": {
             "release_authority_status": { "$ref": "#/$defs/release_authority_status" },
             "semantic_release_status": { "$ref": "#/$defs/release_authority_status" },
+            "pre_distribution_package_binding_status": {
+              "$ref": "#/$defs/pre_distribution_package_binding_status"
+            },
+            "source_closeout_distribution_binding_status": {
+              "$ref": "#/$defs/sealed_release_status"
+            },
             "sealed_release_status": { "$ref": "#/$defs/sealed_release_status" }
           }
         },
@@ -490,12 +510,18 @@
         "semantic_release_status_value": { "$ref": "#/$defs/release_authority_status" },
         "sealed_status_field": {
           "type": "string",
-          "const": "sealed_release_status"
+          "enum": [
+            "sealed_release_status",
+            "source_closeout_distribution_binding_status"
+          ]
         },
         "sealed_status_value": { "$ref": "#/$defs/sealed_release_status" },
         "proposed_top_level_status_replacement": {
           "type": "string",
-          "const": "sealed_release_status"
+          "enum": [
+            "sealed_release_status",
+            "source_closeout_distribution_binding_status"
+          ]
         },
         "status_classification": {
           "type": "string",
@@ -525,6 +551,7 @@
             "type": "string",
             "enum": [
               "release_authority_status",
+              "source_closeout_distribution_binding_status",
               "sealed_release_status",
               "release_authority_vocabulary.blocker_reason_ids"
             ]

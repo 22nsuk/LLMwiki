@@ -186,6 +186,8 @@ class CloseoutStatusDecision:
     release_authority_status: str
     semantic_release_status: str
     sealed_release_status: str
+    pre_distribution_package_binding_status: str
+    source_closeout_distribution_binding_status: str
     release_authority_vocabulary: dict[str, Any]
     status_v2: dict[str, Any]
 
@@ -2049,6 +2051,7 @@ def _closeout_snapshot_phase(
 def _summary_distribution_package_placeholder() -> dict[str, Any]:
     return {
         "status": "not_provided",
+        "pre_distribution_package_binding_status": "not_materialized_by_summary",
         "path": "",
         "sha256": "",
     }
@@ -2078,6 +2081,9 @@ def _closeout_status_decision(readiness: CloseoutReadinessState) -> CloseoutStat
     semantic_release_status = readiness.release_readiness_state
     batch_integrity_status = _summary_batch_integrity_status(readiness)
     distribution_package = _summary_distribution_package_placeholder()
+    pre_distribution_package_binding_status = str(
+        distribution_package["pre_distribution_package_binding_status"]
+    )
     sealed_release_status = decide_sealed_release_status(
         batch_integrity_status=batch_integrity_status,
         distribution_unsealed_status="unsealed_distribution_not_provided",
@@ -2085,6 +2091,7 @@ def _closeout_status_decision(readiness: CloseoutReadinessState) -> CloseoutStat
         machine_release_allowed=readiness.machine_release_allowed,
         release_readiness_state=readiness.release_readiness_state,
     )
+    source_closeout_distribution_binding_status = sealed_release_status
     vocabulary = release_authority_vocabulary_payload(
         release_authority_status=release_authority_status,
         semantic_release_status=semantic_release_status,
@@ -2100,12 +2107,25 @@ def _closeout_status_decision(readiness: CloseoutReadinessState) -> CloseoutStat
         semantic_release_status=semantic_release_status,
         sealed_release_status=sealed_release_status,
         release_authority_vocabulary=vocabulary,
+        sealed_status_field="source_closeout_distribution_binding_status",
+        proposed_top_level_status_replacement="source_closeout_distribution_binding_status",
+        recommended_consumer_fields=[
+            "release_authority_status",
+            "source_closeout_distribution_binding_status",
+            "release_authority_vocabulary.blocker_reason_ids",
+        ],
+        extra_status_axes={
+            "pre_distribution_package_binding_status": pre_distribution_package_binding_status,
+            "source_closeout_distribution_binding_status": source_closeout_distribution_binding_status,
+        },
     )
     return CloseoutStatusDecision(
         status=status,
         release_authority_status=release_authority_status,
         semantic_release_status=semantic_release_status,
         sealed_release_status=sealed_release_status,
+        pre_distribution_package_binding_status=pre_distribution_package_binding_status,
+        source_closeout_distribution_binding_status=source_closeout_distribution_binding_status,
         release_authority_vocabulary=vocabulary,
         status_v2=status_v2,
     )
@@ -2193,6 +2213,12 @@ def _render_closeout_report(inputs: CloseoutRenderInputs) -> dict[str, Any]:
         "summary": _closeout_summary_payload(inputs),
         "release_authority_status": status_decision.release_authority_status,
         "semantic_release_status": status_decision.semantic_release_status,
+        "pre_distribution_package_binding_status": (
+            status_decision.pre_distribution_package_binding_status
+        ),
+        "source_closeout_distribution_binding_status": (
+            status_decision.source_closeout_distribution_binding_status
+        ),
         "sealed_release_status": status_decision.sealed_release_status,
         "release_authority_vocabulary": status_decision.release_authority_vocabulary,
         "learning_readiness_signoff": inputs.learning_signoff,

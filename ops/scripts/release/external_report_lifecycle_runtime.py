@@ -85,6 +85,81 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         "recommended_target": "external-report-action-matrix",
     },
     {
+        "action_id": "active_report_manifest_freshness",
+        "priority": "P0",
+        "theme": "active external report manifest freshness",
+        "patterns": [
+            r"active reference set",
+            r"missing active report",
+            r"report-reference-manifest",
+            r"active report set",
+            r"active external report",
+        ],
+        "evidence_paths": [
+            "external-reports/report-reference-manifest.json",
+            "ops/reports/external-report-action-matrix.json",
+        ],
+        "recommended_target": "external-report-reference-manifest-settle",
+    },
+    {
+        "action_id": "release_lane_mutability_split",
+        "priority": "P0",
+        "theme": "release lane mutability split",
+        "patterns": [
+            r"lane mutability",
+            r"release-evidence-converge",
+            r"release-verify-current",
+            r"release-sealed-verify",
+            r"Generate once in converge lane",
+            r"Verify without writing in current lane",
+        ],
+        "evidence_paths": [
+            "mk/release.mk",
+            "ops/scripts/release/release_workflow_order_guard.py",
+            "tests/test_makefile_static_gates.py",
+        ],
+        "recommended_target": "release-evidence-converge",
+    },
+    {
+        "action_id": "sealed_summary_vocabulary_demotion",
+        "priority": "P0",
+        "theme": "sealed summary vocabulary demotion",
+        "patterns": [
+            r"pre_distribution_package_binding_status",
+            r"source_closeout_distribution_binding_status",
+            r"sealed_release_status.*pre[- ]distribution",
+            r"source closeout.*sealed",
+            r"field rename/demotion",
+        ],
+        "evidence_paths": [
+            "ops/scripts/release/release_closeout_summary.py",
+            "ops/schemas/release-closeout-summary.schema.json",
+            "tests/test_release_closeout_summary.py",
+            "tests/test_release_status_v2.py",
+        ],
+        "recommended_target": "release-closeout-summary-report",
+    },
+    {
+        "action_id": "selector_marker_scope_parity",
+        "priority": "P1",
+        "theme": "explicit selector and marker-wide lane parity",
+        "patterns": [
+            r"marker-wide",
+            r"marker expression",
+            r"explicit selector",
+            r"test-release-sealing-core",
+            r"test-report-contract-core",
+            r"RELEASE_SEALING_TESTS",
+            r"REPORT_CONTRACT_CORE_TESTS",
+        ],
+        "evidence_paths": [
+            "mk/test.mk",
+            "ops/test-lane-registry.json",
+            "tests/test_makefile_static_gates.py",
+        ],
+        "recommended_target": "test-release-sealing",
+    },
+    {
         "action_id": "source_package_distribution_binding",
         "priority": "P0",
         "theme": "source package and distribution ZIP binding",
@@ -407,9 +482,9 @@ ACTION_CATALOG: list[dict[str, Any]] = [
             r"private repo",
         ],
         "evidence_paths": [
+            "mk/mechanism.mk",
             "ops/scripts/mechanism/goal_worktree_guard.py",
             "ops/schemas/goal-worktree-guard.schema.json",
-            "tmp/goal-worktree-guard.json",
             "tests/test_goal_worktree_guard.py",
         ],
         "recommended_target": "auto-improve-goal-preflight",
@@ -435,15 +510,12 @@ ACTION_CATALOG: list[dict[str, Any]] = [
             "mk/mechanism.mk",
             "ops/scripts/mechanism/goal_runtime_clean_transient.py",
             "ops/schemas/goal-runtime-clean-transient.schema.json",
-            "tmp/goal-runtime-clean-transient.json",
             "tests/test_goal_runtime_clean_transient.py",
             "ops/scripts/mechanism/goal_runtime_quarantine_preflight.py",
             "ops/schemas/goal-runtime-quarantine-preflight.schema.json",
-            "tmp/goal-runtime-quarantine-preflight.json",
             "tests/test_goal_runtime_quarantine_preflight.py",
             "ops/scripts/mechanism/goal_runtime_run_admission.py",
             "ops/schemas/goal-runtime-run-admission.schema.json",
-            "tmp/goal-runtime-run-admission.json",
             "tests/test_goal_runtime_run_admission.py",
         ],
         "recommended_target": "goal-runtime-run-admission",
@@ -669,6 +741,86 @@ def _all_evidence_status(existing_count: int, expected_count: int) -> str | None
     if existing_count < expected_count:
         return "partially_automated"
     return None
+
+
+def _read_text_or_empty(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
+
+
+def active_report_manifest_freshness_status(vault: Path) -> str:
+    alignment = reference_manifest_alignment(vault)
+    if alignment["status"] == "current":
+        return "implemented"
+    if (vault / REFERENCE_MANIFEST).is_file():
+        return "partially_automated"
+    return "planned"
+
+
+def release_lane_mutability_split_status(vault: Path) -> str:
+    makefile_text = _read_text_or_empty(vault / "mk/release.mk")
+    required_targets = (
+        "release-evidence-converge:",
+        "release-verify-current:",
+        "release-sealed-verify:",
+    )
+    present_count = sum(1 for target in required_targets if target in makefile_text)
+    if present_count == len(required_targets):
+        return "implemented"
+    if present_count:
+        return "partially_automated"
+    return "planned"
+
+
+def sealed_summary_vocabulary_demotion_status(vault: Path) -> str:
+    surface_text = "\n".join(
+        _read_text_or_empty(vault / rel_path)
+        for rel_path in (
+            "ops/scripts/release/release_closeout_summary.py",
+            "ops/schemas/release-closeout-summary.schema.json",
+            "tests/test_release_closeout_summary.py",
+            "tests/test_release_status_v2.py",
+        )
+    )
+    has_pre_distribution = "pre_distribution_package_binding_status" in surface_text
+    has_source_closeout_axis = "source_closeout_distribution_binding_status" in surface_text
+    if has_pre_distribution and has_source_closeout_axis:
+        return "implemented"
+    if has_pre_distribution or has_source_closeout_axis:
+        return "partially_automated"
+    return "planned"
+
+
+def selector_marker_scope_parity_status(vault: Path) -> str:
+    makefile_text = _read_text_or_empty(vault / "mk/test.mk")
+    registry_text = _read_text_or_empty(vault / "ops/test-lane-registry.json")
+    required_make_targets = (
+        "test-release-sealing-core:",
+        "test-release-sealing-all:",
+        "test-report-contract-core:",
+        "test-report-contract-all:",
+    )
+    present_make_target_count = sum(1 for target in required_make_targets if target in makefile_text)
+    registered_target_count = sum(
+        1
+        for target in (
+            "test-release-sealing-core",
+            "test-release-sealing-all",
+            "test-report-contract-core",
+            "test-report-contract-all",
+        )
+        if target in registry_text
+    )
+    if (
+        present_make_target_count == len(required_make_targets)
+        and registered_target_count == len(required_make_targets)
+    ):
+        return "implemented"
+    if present_make_target_count or registered_target_count or "tests/test_release_status_v2.py" in makefile_text:
+        return "partially_automated"
+    return "planned"
 
 
 def _goal_contract_is_bounded(contract: dict[str, Any]) -> bool:
@@ -950,17 +1102,16 @@ def git_worktree_goal_guard_status(
     status = _all_evidence_status(existing_count, expected_count)
     if status:
         return status
-    report = load_json_object(vault / "tmp/goal-worktree-guard.json")
-    decisions = as_dict(report.get("decisions"))
+    try:
+        makefile_text = (vault / "mk/mechanism.mk").read_text(encoding="utf-8")
+    except OSError:
+        makefile_text = ""
     if (
-        report.get("artifact_kind") == "goal_worktree_guard"
-        and report.get("producer") == "ops.scripts.goal_worktree_guard"
-        and report.get("status") in {"pass", "attention", "fail"}
-        and report.get("requested_mode") in {"auto", "git", "zip"}
-        and report.get("detected_mode") in {"git_worktree", "zip_extract", "unknown"}
-        and isinstance(decisions.get("can_execute_goal_runtime"), bool)
-        and isinstance(decisions.get("can_promote_result"), bool)
-        and isinstance(report.get("blockers"), list)
+        "auto-improve-goal-preflight: goal-runtime-lock-check goal-runtime-python-preflight" in makefile_text
+        and "ops.scripts.goal_worktree_guard" in makefile_text
+        and "--requested-mode \"$(GOAL_WORKTREE_MODE)\"" in makefile_text
+        and "--out \"$(GOAL_WORKTREE_GUARD_OUT)\"" in makefile_text
+        and "goal-worktree-guard: auto-improve-goal-preflight" in makefile_text
     ):
         return "implemented"
     return "requires_release_run_verification"
@@ -972,12 +1123,6 @@ def goal_runtime_transient_cleanup_gate_status(
     status = _all_evidence_status(existing_count, expected_count)
     if status:
         return status
-    report = load_json_object(vault / "tmp/goal-runtime-clean-transient.json")
-    summary = as_dict(report.get("summary"))
-    quarantine = load_json_object(vault / "tmp/goal-runtime-quarantine-preflight.json")
-    quarantine_summary = as_dict(quarantine.get("summary"))
-    admission = load_json_object(vault / "tmp/goal-runtime-run-admission.json")
-    admission_decisions = as_dict(admission.get("decisions"))
     try:
         makefile_text = (vault / "mk/mechanism.mk").read_text(encoding="utf-8")
     except OSError:
@@ -987,26 +1132,12 @@ def goal_runtime_transient_cleanup_gate_status(
         and "goal-runtime-run-admission-local-refresh:" in makefile_text
         and "goal-runtime-run-admission: goal-runtime-run-admission-local-refresh" in makefile_text
         and "goal-runtime-run-admission-converge:" in makefile_text
+        and "$(MAKE) goal-runtime-clean-transient" in makefile_text
+        and "$(MAKE) goal-runtime-quarantine-preflight" in makefile_text
         and "--readiness-report \"$(GOAL_LOCAL_READINESS_OUT)\"" in makefile_text
         and "--remediation-backlog-report \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\"" in makefile_text
         and "long-run-preflight-clean:" in makefile_text
         and "long-run-preflight-clean: goal-runtime-run-admission-converge" in makefile_text
-        and report.get("artifact_kind") == "goal_runtime_clean_transient"
-        and report.get("producer") == "ops.scripts.goal_runtime_clean_transient"
-        and report.get("status") == "pass"
-        and summary.get("apply") is True
-        and as_int(summary.get("failed_count")) == 0
-        and quarantine.get("artifact_kind") == "goal_runtime_quarantine_preflight"
-        and quarantine.get("producer") == "ops.scripts.goal_runtime_quarantine_preflight"
-        and quarantine.get("status") == "pass"
-        and as_int(quarantine_summary.get("operator_decision_required_count")) == 0
-        and admission.get("artifact_kind") == "goal_runtime_run_admission"
-        and admission.get("producer") == "ops.scripts.goal_runtime_run_admission"
-        and admission.get("status") in {"pass", "attention", "fail"}
-        and isinstance(admission_decisions.get("can_start_goal_runtime"), bool)
-        and isinstance(admission_decisions.get("can_mutate_candidate"), bool)
-        and isinstance(admission_decisions.get("can_promote_result_later"), bool)
-        and isinstance(admission_decisions.get("should_pause_before_run"), bool)
     ):
         return "implemented"
     return "requires_release_run_verification"
@@ -1127,6 +1258,14 @@ def status_from_evidence(vault: Path, action: dict[str, Any]) -> tuple[str, list
             status = "partially_automated"
         else:
             status = "planned"
+    elif action_id == "active_report_manifest_freshness":
+        status = active_report_manifest_freshness_status(vault)
+    elif action_id == "release_lane_mutability_split":
+        status = release_lane_mutability_split_status(vault)
+    elif action_id == "sealed_summary_vocabulary_demotion":
+        status = sealed_summary_vocabulary_demotion_status(vault)
+    elif action_id == "selector_marker_scope_parity":
+        status = selector_marker_scope_parity_status(vault)
     elif action_id in {
         "script_output_surfaces_currentness",
         "function_budget_proposal_adapter",
@@ -1253,6 +1392,8 @@ def report_coverage_item(vault: Path, path: Path) -> dict[str, Any]:
     rel_path = report_path(vault, path)
     text = report_text(path)
     action_ids = matched_actions(text) if text else ["external_report_lifecycle"]
+    if path.name == Path(REFERENCE_MANIFEST).name:
+        action_ids = sorted(set(action_ids) | {"active_report_manifest_freshness"})
     return {
         "path": rel_path,
         "report_type": "reference_manifest" if path.name == "report-reference-manifest.json" else "narrative_report",

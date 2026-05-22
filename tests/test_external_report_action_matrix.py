@@ -150,7 +150,10 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
     def test_matrix_covers_non_archived_reports_and_validates_schema(self) -> None:
         (self.external / "release.md").write_text(
             "# Release Review\n\nP0: script-output-surfaces, workflow_dependency_planner, "
-            "source package, evidence bundle, full-suite, promotion_blockers.\n",
+            "source package, evidence bundle, full-suite, promotion_blockers, active reference set, "
+            "release-evidence-converge, release-verify-current, release-sealed-verify, "
+            "pre_distribution_package_binding_status, source_closeout_distribution_binding_status, "
+            "marker-wide explicit selector parity, test-release-sealing-core, test-report-contract-core.\n",
             encoding="utf-8",
         )
         (self.external / "maintenance.md").write_text(
@@ -183,6 +186,21 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertEqual(actions["release_writer_dependency_single_source"]["current_status"], "implemented")
         self.assertEqual(actions["outcome_provenance_gate_policy"]["current_status"], "implemented")
         self.assertEqual(actions["external_report_lifecycle"]["current_status"], "partially_automated")
+        self.assertEqual(actions["active_report_manifest_freshness"]["current_status"], "partially_automated")
+        self.assertEqual(actions["release_lane_mutability_split"]["current_status"], "planned")
+        self.assertEqual(actions["sealed_summary_vocabulary_demotion"]["current_status"], "implemented")
+        self.assertEqual(actions["selector_marker_scope_parity"]["current_status"], "planned")
+        for action_id in (
+            "active_report_manifest_freshness",
+            "release_lane_mutability_split",
+            "sealed_summary_vocabulary_demotion",
+            "selector_marker_scope_parity",
+        ):
+            self.assertIn("external-reports/release.md", actions[action_id]["source_report_paths"])
+        self.assertIn(
+            "external-reports/report-reference-manifest.json",
+            actions["active_report_manifest_freshness"]["source_report_paths"],
+        )
         self.assertIn(
             "external-reports/release.md",
             actions["script_output_surfaces_currentness"]["source_report_paths"],
@@ -408,12 +426,18 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "goal-runtime-quarantine-preflight:\n"
             "\tpython -m ops.scripts.goal_runtime_quarantine_preflight --strict\n"
             "goal-runtime-run-admission-converge: goal-runtime-clean-transient auto-improve-goal-preflight\n"
+            "\t$(MAKE) goal-runtime-clean-transient\n"
             "\t$(MAKE) goal-runtime-quarantine-preflight\n"
             "goal-runtime-run-admission-local-refresh: goal-runtime-lock-check goal-runtime-python-preflight\n"
+            "\t$(MAKE) goal-runtime-clean-transient\n"
+            "\t$(MAKE) goal-runtime-quarantine-preflight\n"
             "\t$(MAKE) goal-runtime-local-evidence-converge\n"
             "goal-runtime-run-admission: goal-runtime-run-admission-local-refresh\n"
             "\tpython -m ops.scripts.goal_runtime_run_admission --readiness-report \"$(GOAL_LOCAL_READINESS_OUT)\" --remediation-backlog-report \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\" --strict\n"
-            "long-run-preflight-clean: goal-runtime-run-admission-converge\n",
+            "long-run-preflight-clean: goal-runtime-run-admission-converge\n"
+            "auto-improve-goal-preflight: goal-runtime-lock-check goal-runtime-python-preflight\n"
+            "\tpython -m ops.scripts.goal_worktree_guard --requested-mode \"$(GOAL_WORKTREE_MODE)\" --out \"$(GOAL_WORKTREE_GUARD_OUT)\"\n"
+            "goal-worktree-guard: auto-improve-goal-preflight\n",
             encoding="utf-8",
         )
         contract = {
@@ -639,6 +663,16 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "goal_runtime_transient_cleanup_gate",
         }:
             self.assertEqual(actions[action_id]["current_status"], "implemented", action_id)
+        cleanup_gate_evidence = actions["goal_runtime_transient_cleanup_gate"]["evidence"]
+        self.assertFalse(
+            any(item["path"].startswith("tmp/goal-runtime-") for item in cleanup_gate_evidence),
+            "active report completion should depend on durable cleanup/admission surfaces, not transient tmp reports",
+        )
+        worktree_guard_evidence = actions["git_worktree_goal_guard"]["evidence"]
+        self.assertFalse(
+            any(item["path"] == "tmp/goal-worktree-guard.json" for item in worktree_guard_evidence),
+            "active report completion should depend on durable worktree guard surfaces, not transient tmp reports",
+        )
 
     def test_goal_certificate_action_requires_verified_clean_certificate_report(self) -> None:
         for rel_path in (

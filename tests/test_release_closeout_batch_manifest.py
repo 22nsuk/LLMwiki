@@ -1097,9 +1097,9 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
 
         recipe_lines: list[str] = []
         for target in (
-            "release-evidence-closeout-phase-1",
-            "release-evidence-closeout-phase-2",
-            "release-evidence-closeout-phase-3",
+            "release-evidence-converge-phase-1",
+            "release-evidence-converge-phase-2",
+            "release-evidence-converge-phase-3",
         ):
             match = re.search(
                 rf"^{target}:[^\n]*(?P<body>(?:\n\t[^\n]*)*)",
@@ -1114,7 +1114,7 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
                 if line.startswith("\t")
             )
 
-        self.assertTrue(recipe_lines, "release-evidence-closeout has no recipe lines")
+        self.assertTrue(recipe_lines, "release-evidence-converge has no recipe lines")
         self.assertEqual(recipe_lines[-1], "$(MAKE) release-closeout-finality-verify")
         fixed_point_index = next(
             (

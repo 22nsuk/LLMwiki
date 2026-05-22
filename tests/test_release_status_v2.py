@@ -56,6 +56,46 @@ def test_status_v2_payload_separates_legacy_authority_and_seal_axes() -> None:
     ]
 
 
+def test_status_v2_payload_can_demote_source_closeout_distribution_binding() -> None:
+    payload = release_status_v2_payload(
+        status="pass",
+        release_authority_status="clean_pass",
+        semantic_release_status="clean_pass",
+        sealed_release_status="unsealed_distribution_not_provided",
+        release_authority_vocabulary={
+            "authority_reason_ids": [],
+            "sealed_reason_ids": ["distribution_package_not_materialized"],
+            "blocker_reason_ids": ["distribution_package_not_materialized"],
+        },
+        sealed_status_field="source_closeout_distribution_binding_status",
+        proposed_top_level_status_replacement="source_closeout_distribution_binding_status",
+        recommended_consumer_fields=[
+            "release_authority_status",
+            "source_closeout_distribution_binding_status",
+            "release_authority_vocabulary.blocker_reason_ids",
+        ],
+        extra_status_axes={
+            "pre_distribution_package_binding_status": "not_materialized_by_summary",
+            "source_closeout_distribution_binding_status": "unsealed_distribution_not_provided",
+        },
+    )
+
+    assert payload["status_axes"]["sealed_release_status"] == "unsealed_distribution_not_provided"
+    assert (
+        payload["status_axes"]["pre_distribution_package_binding_status"]
+        == "not_materialized_by_summary"
+    )
+    assert (
+        payload["status_axes"]["source_closeout_distribution_binding_status"]
+        == "unsealed_distribution_not_provided"
+    )
+    assert payload["sealed_status_field"] == "source_closeout_distribution_binding_status"
+    assert payload["proposed_top_level_status_replacement"] == (
+        "source_closeout_distribution_binding_status"
+    )
+    assert "sealed_release_status" not in payload["recommended_consumer_fields"]
+
+
 def test_status_v2_view_prefers_v2_axes_and_reports_legacy_fallbacks() -> None:
     view = release_status_v2_view(
         {

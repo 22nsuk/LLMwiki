@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-claim-activation-report.schema.json",
   "artifact_kind": "learning_claim_activation_report",
-  "generated_at": "2026-05-22T02:05:09Z",
+  "generated_at": "2026-05-22T10:22:47Z",
   "producer": "ops.scripts.learning_claim_activation_report",
   "source_command": "python -m ops.scripts.learning_claim_activation_report --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "c67d8e092c8c4eb06c711b524ddad2422eec7443337fca78130ae405e4bb146c",
+  "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "d366a06d6c9fbade9f99a3a702f7e88409d8e793328122ab6b196c4d7d670305",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e2f27ca894f489f00bc7349aa20591f1431c1b4a1f8cc5c9d019283145bd94c8",
-    "learning_claim_activation_inputs": "799c141b5856c8c054a96c5cc54597f8c85f61b4525ab7b694e2e4d7169301b3"
+    "learning_claim_activation_inputs": "1a9bb6505119025e9a1d10c058c4b6e19ec4519d3ee07e5e9ad9e0ba792d0d2d"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T02:05:09Z"
+    "checked_at": "2026-05-22T10:22:47Z"
   },
   "vault": ".",
   "policy": {
@@ -31,7 +31,7 @@
     "activation_status": "not_candidate",
     "claim_level": "none",
     "claim_wording_allowed": false,
-    "blocked_predicate_count": 2,
+    "blocked_predicate_count": 7,
     "anti_slop_preview_status": "attention",
     "negative_learning_pattern_count": 7,
     "gate_effect": "none"
@@ -54,60 +54,165 @@
       "bounded_learning_likely": "learning_claim_allowed == true with full same-eval reason, strict-secondary, behavior-delta digest, placeholder-free external report, and approved unlock review",
       "confirmed_learning_improvement": "confirmed evidence cohort, active evidence bundle, clean full/public/revalidation evidence, no learning blockers, and post-seal attestation authority"
     },
-    "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean.",
+    "repair_target": "Clear release authority, sealed preflight, and promotion blockers before treating auto-improve learning as claimable.",
     "evidence_digest": {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "625270dd4f418e366206d483aa677388002137c3d0e5615c1945ff039771cae1",
+      "sha256": "c928f6ef0cd1b62f2a2f1b65cb934960a4e536da0e724f742b052a379157d54a",
       "status": "present"
     },
     "post_seal_linkage": {
       "path": "build/release/release-post-seal-attestation.json",
-      "sha256": "",
-      "post_seal_verified": false
+      "sha256": "ecfe4ddaa81688ff766a8f53619e7e6612121bda94e60224c48bc8027f5bf350",
+      "post_seal_verified": true
     }
   },
   "blocked_predicates": [
     {
-      "id": "learning_claim_unlock_review_not_approved",
-      "status": "stale",
-      "source": "learning_delta_scoreboard.learning_claim_unlock_review",
-      "source_path": "ops/reports/learning-delta-scoreboard.json",
-      "current": "approved=False; status=stale",
-      "required": "learning_claim_unlock_review.approved == true",
-      "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean.",
-      "summary": "learning claim auto approval is no longer active for the current evidence bundle: learning claim evidence bundle digest no longer matches current evidence",
+      "id": "auto_improve_can_promote_result",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.machine_policy_decision",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "current": "can_promote_result=False",
+      "required": "auto_improve_readiness.can_promote_result == true",
+      "repair_target": "Clear release authority, sealed preflight, and promotion blockers before treating auto-improve learning as claimable.",
+      "summary": "Auto-improve result promotion gate is clean.",
       "evidence_digest": {
-        "path": "ops/reports/learning-delta-scoreboard.json",
+        "path": "ops/reports/auto-improve-readiness.json",
         "exists": true,
-        "sha256": "625270dd4f418e366206d483aa677388002137c3d0e5615c1945ff039771cae1",
+        "sha256": "a11febde882a22884d52b79bb9e78b3050b3a0b9ee35a9e901ce57fe754a3793",
         "status": "present"
       },
       "post_seal_linkage": {
         "path": "build/release/release-post-seal-attestation.json",
-        "sha256": "",
-        "linked": false
+        "sha256": "ecfe4ddaa81688ff766a8f53619e7e6612121bda94e60224c48bc8027f5bf350",
+        "linked": true
       }
     },
     {
-      "id": "post_seal_learning_claim_linkage",
+      "id": "learning_readiness_likely",
       "status": "fail",
-      "source": "release_post_seal_attestation",
-      "source_path": "build/release/release-post-seal-attestation.json",
-      "current": "post_seal_verified=False",
-      "required": "release_post_seal_attestation.status == pass",
-      "repair_target": "Run release-post-seal-attestation after the candidate evidence is sealed and verify the learning claim authority binding.",
-      "summary": "Post-seal learning claim authority is not verified for the current evidence set.",
+      "source": "learning_claim_unlock_review.machine_policy_decision",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "current": "status=learning_uncertain; likely_to_learn=False",
+      "required": "learning_readiness.status == learning_likely and likely_to_learn == true",
+      "repair_target": "Repair the predicate source evidence, rerun the owning report, and keep claim_level=none until it passes.",
+      "summary": "Learning readiness is in the narrow machine-claimable state.",
       "evidence_digest": {
-        "path": "build/release/release-post-seal-attestation.json",
-        "exists": false,
-        "sha256": "",
-        "status": "missing"
+        "path": "ops/reports/auto-improve-readiness.json",
+        "exists": true,
+        "sha256": "a11febde882a22884d52b79bb9e78b3050b3a0b9ee35a9e901ce57fe754a3793",
+        "status": "present"
       },
       "post_seal_linkage": {
         "path": "build/release/release-post-seal-attestation.json",
-        "sha256": "",
-        "linked": false
+        "sha256": "ecfe4ddaa81688ff766a8f53619e7e6612121bda94e60224c48bc8027f5bf350",
+        "linked": true
+      }
+    },
+    {
+      "id": "learning_readiness_no_blockers",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.machine_policy_decision",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "current": "learning_readiness.signals=recent_hold_moving_average,high_rework; learning_claim_blockers=learning_blocked_by_review_required",
+      "required": "learning_readiness.signals == [] and learning_claim_blockers == []",
+      "repair_target": "Repair the predicate source evidence, rerun the owning report, and keep claim_level=none until it passes.",
+      "summary": "Learning readiness exposes no blocking learning claim signals.",
+      "evidence_digest": {
+        "path": "ops/reports/auto-improve-readiness.json",
+        "exists": true,
+        "sha256": "a11febde882a22884d52b79bb9e78b3050b3a0b9ee35a9e901ce57fe754a3793",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "ecfe4ddaa81688ff766a8f53619e7e6612121bda94e60224c48bc8027f5bf350",
+        "linked": true
+      }
+    },
+    {
+      "id": "rework_and_escape_budget_clean",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.machine_policy_decision",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "current": "rework_count=26; defect_escape_pair_count=0",
+      "required": "rework_count <= 0 and defect_escape_pair_count <= 0",
+      "repair_target": "Repair the predicate source evidence, rerun the owning report, and keep claim_level=none until it passes.",
+      "summary": "Shadow learning risk budget is clean for automatic narrow claim unlock.",
+      "evidence_digest": {
+        "path": "ops/reports/auto-improve-readiness.json",
+        "exists": true,
+        "sha256": "a11febde882a22884d52b79bb9e78b3050b3a0b9ee35a9e901ce57fe754a3793",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "ecfe4ddaa81688ff766a8f53619e7e6612121bda94e60224c48bc8027f5bf350",
+        "linked": true
+      }
+    },
+    {
+      "id": "rollback_revalidation_clean",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.confirmed_policy",
+      "source_path": "ops/reports/learning-readiness-signoff-revalidation.json",
+      "current": "status=attention",
+      "required": "learning_readiness_signoff_revalidation.status == pass",
+      "repair_target": "Repair the predicate source evidence, rerun the owning report, and keep claim_level=none until it passes.",
+      "summary": "Rollback/revalidation evidence must be clean.",
+      "evidence_digest": {
+        "path": "ops/reports/learning-readiness-signoff-revalidation.json",
+        "exists": true,
+        "sha256": "76c95a927d6b07ceea5680d0e7372ae32a3a549a09ead693e32364beae32b767",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "ecfe4ddaa81688ff766a8f53619e7e6612121bda94e60224c48bc8027f5bf350",
+        "linked": true
+      }
+    },
+    {
+      "id": "learning_claim_blocker_absence",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.confirmed_policy",
+      "source_path": "ops/reports/release-clean-blocker-ledger.json",
+      "current": "learning_claim_blocker_count=3",
+      "required": "release_clean_blocker_ledger.learning_claim_blockers == []",
+      "repair_target": "Resolve release-clean-blocker-ledger learning claim blockers or keep claim_level=none.",
+      "summary": "No accepted learning risk or learning-claim blocker may remain.",
+      "evidence_digest": {
+        "path": "ops/reports/release-clean-blocker-ledger.json",
+        "exists": true,
+        "sha256": "cafc6ca88eadd4ff25264711af7041f18974e691a9191d5c026d5d4c6dcdc6c9",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "ecfe4ddaa81688ff766a8f53619e7e6612121bda94e60224c48bc8027f5bf350",
+        "linked": true
+      }
+    },
+    {
+      "id": "learning_claim_unlock_review_not_approved",
+      "status": "required",
+      "source": "learning_delta_scoreboard.learning_claim_unlock_review",
+      "source_path": "ops/reports/learning-delta-scoreboard.json",
+      "current": "approved=False; status=required",
+      "required": "learning_claim_unlock_review.approved == true",
+      "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean.",
+      "summary": "typed same-eval coverage is complete, but auto_improve_readiness still reports learning claim blockers requiring operator review: recent_hold_moving_average, high_rework, learning_blocked_by_review_required",
+      "evidence_digest": {
+        "path": "ops/reports/learning-delta-scoreboard.json",
+        "exists": true,
+        "sha256": "c928f6ef0cd1b62f2a2f1b65cb934960a4e536da0e724f742b052a379157d54a",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "ecfe4ddaa81688ff766a8f53619e7e6612121bda94e60224c48bc8027f5bf350",
+        "linked": true
       }
     }
   ],
@@ -115,55 +220,55 @@
     {
       "path": "ops/reports/auto-improve-readiness.json",
       "exists": true,
-      "sha256": "522382b183a61a6cfa12210fbcca0bbacb6af90cc633999cc24dab4b3a1f4b98",
+      "sha256": "a11febde882a22884d52b79bb9e78b3050b3a0b9ee35a9e901ce57fe754a3793",
       "status": "present"
     },
     {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "625270dd4f418e366206d483aa677388002137c3d0e5615c1945ff039771cae1",
+      "sha256": "c928f6ef0cd1b62f2a2f1b65cb934960a4e536da0e724f742b052a379157d54a",
       "status": "present"
     },
     {
       "path": "ops/reports/learning-claim-unlock-review.json",
       "exists": true,
-      "sha256": "5998bc4e4ac84df4a9e71e6a54efc8e8883e25b0bb7964169b870a872b2e8e0c",
+      "sha256": "b9ee03c32399843016b36fb99285db0896b38f5622de4f58b5311690c7a261d7",
       "status": "present"
     },
     {
       "path": "ops/reports/learning-claim-evidence-bundle.json",
       "exists": true,
-      "sha256": "886901cf0d5ac77d3eff235bb33d6eb063e7c62f3c691dafbbf7f8fc8472f802",
+      "sha256": "06f0c02dae04a54de16d7cad95f3b809a32283c22ec6da77dcdf7683e15f6b34",
       "status": "present"
     },
     {
       "path": "ops/reports/release-clean-blocker-ledger.json",
       "exists": true,
-      "sha256": "cb1818d85902c5de5021334b8d34a54a5508726ceff05e0918f001f5cd2276ba",
+      "sha256": "cafc6ca88eadd4ff25264711af7041f18974e691a9191d5c026d5d4c6dcdc6c9",
       "status": "present"
     },
     {
       "path": "ops/reports/source-package-clean-extract.json",
       "exists": true,
-      "sha256": "136f0187ac37fe12a1803ed575b2e917b2f5c091b7ab99fdc1381ccfed40d770",
+      "sha256": "44fc427df836dbc7752f29b6d42df0952cfea7b5668380809fa86bc09c9dd653",
       "status": "present"
     },
     {
       "path": "build/release/release-post-seal-attestation.json",
-      "exists": false,
-      "sha256": "",
-      "status": "missing"
+      "exists": true,
+      "sha256": "ecfe4ddaa81688ff766a8f53619e7e6612121bda94e60224c48bc8027f5bf350",
+      "status": "present"
     }
   ],
   "post_seal_linkage": {
     "path": "build/release/release-post-seal-attestation.json",
-    "exists": false,
-    "sha256": "",
-    "status": "missing",
-    "attestation_status": "missing",
-    "claim_level": "",
-    "learning_claim_evidence_bundle_sha256": "",
-    "post_seal_verified": false
+    "exists": true,
+    "sha256": "ecfe4ddaa81688ff766a8f53619e7e6612121bda94e60224c48bc8027f5bf350",
+    "status": "present",
+    "attestation_status": "pass",
+    "claim_level": "none",
+    "learning_claim_evidence_bundle_sha256": "add1b979307b900ce34623e90d228713eb285d4c2631112bd07b0106cb7a10ae",
+    "post_seal_verified": true
   },
   "anti_slop_preview_ledger": {
     "mode": "preview",
@@ -214,8 +319,8 @@
       },
       {
         "axis": "operator_override_pressure",
-        "status": "pass",
-        "current": "unlock_review_status=auto_approved; approved=True",
+        "status": "warn",
+        "current": "unlock_review_status=required; approved=False",
         "required": "Manual override pressure should stay explicit and should not silently unlock claim wording.",
         "repair_target": "Keep review_status required until machine policy and operator signoff are clean.",
         "gate_effect": "none"
@@ -241,7 +346,7 @@
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "exists": true,
-            "sha256": "522382b183a61a6cfa12210fbcca0bbacb6af90cc633999cc24dab4b3a1f4b98",
+            "sha256": "a11febde882a22884d52b79bb9e78b3050b3a0b9ee35a9e901ce57fe754a3793",
             "status": "present"
           }
         ]
@@ -261,7 +366,7 @@
           {
             "path": "ops/reports/learning-delta-scoreboard.json",
             "exists": true,
-            "sha256": "625270dd4f418e366206d483aa677388002137c3d0e5615c1945ff039771cae1",
+            "sha256": "c928f6ef0cd1b62f2a2f1b65cb934960a4e536da0e724f742b052a379157d54a",
             "status": "present"
           }
         ]

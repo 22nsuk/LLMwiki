@@ -76,7 +76,7 @@ jobs:
       - name: Run report-contract tier
         if: matrix.tier == 'report-contract'
         run: |
-          make test-report-contract
+          make test-report-contract-all
           make external-report-reference-manifest-release-check
 
       - name: Run release closeout regression tier
@@ -123,7 +123,7 @@ jobs:
 
       - name: Run release-sealing tier
         if: matrix.tier == 'release-sealing'
-        run: make test-release-sealing
+        run: make test-release-sealing-all
 
       - name: Run subprocess tier
         if: matrix.tier == 'subprocess'

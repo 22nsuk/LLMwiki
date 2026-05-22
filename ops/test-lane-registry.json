@@ -97,12 +97,12 @@
       "authority": "persistent",
       "semantics": "Report, schema, template, and generated artifact contract tests.",
       "ci_tier": "report-contract",
-      "ci_entrypoint": "test-report-contract",
+      "ci_entrypoint": "test-report-contract-all",
       "ci_steps": [
-        "make test-report-contract",
+        "make test-report-contract-all",
         "make external-report-reference-manifest-release-check"
       ],
-      "make_target": "test-report-contract",
+      "make_target": "test-report-contract-all",
       "allowed_markers": [
         "public",
         "integration",
@@ -141,11 +141,11 @@
       "authority": "persistent",
       "semantics": "Release-builder sealing, batch manifest, and final artifact immutability checks.",
       "ci_tier": "release-sealing",
-      "ci_entrypoint": "test-release-sealing",
+      "ci_entrypoint": "test-release-sealing-all",
       "ci_steps": [
-        "make test-release-sealing"
+        "make test-release-sealing-all"
       ],
-      "make_target": "test-release-sealing",
+      "make_target": "test-release-sealing-all",
       "allowed_markers": [
         "public"
       ],
@@ -307,8 +307,8 @@
       "status": "derived_from_registry",
       "semantics": "Targeted core verification slice for report-contract summary evidence.",
       "backing_targets": [
-        "report-contracts",
-        "test-report-contract"
+        "report-contracts-core",
+        "test-report-contract-core"
       ],
       "selection": {
         "mode": "explicit_selectors",
@@ -334,13 +334,13 @@
         "summary_target": "ops/reports/test-execution-summary.json",
         "make_summary_target": "test-execution-summary-report-contract"
       },
-      "ci_entrypoint": "test-report-contract",
+      "ci_entrypoint": "test-report-contract-core",
       "ci_steps": [
-        "make test-report-contract",
+        "make test-report-contract-core",
         "make external-report-reference-manifest-release-check"
       ],
       "documented_entrypoints": [
-        "make test-report-contract",
+        "make test-report-contract-core",
         "make test-execution-summary",
         "make test-execution-summary-report-contract"
       ]
@@ -454,12 +454,12 @@
       ]
     },
     {
-      "pack_id": "release_sealing_checks",
+      "pack_id": "release_sealing_core",
       "authority": "derived",
       "status": "derived_from_registry",
       "semantics": "Concrete selector set for the release-sealing lane.",
       "backing_targets": [
-        "test-release-sealing"
+        "test-release-sealing-core"
       ],
       "selection": {
         "mode": "explicit_selectors",
@@ -473,14 +473,14 @@
         "suite_id": "release-sealing",
         "suite_scope": "release_sealing",
         "summary_target": "ops/reports/test-execution-summary.json",
-        "make_summary_target": "test-release-sealing"
+        "make_summary_target": "test-release-sealing-core"
       },
-      "ci_entrypoint": "test-release-sealing",
+      "ci_entrypoint": "test-release-sealing-core",
       "ci_steps": [
-        "make test-release-sealing"
+        "make test-release-sealing-core"
       ],
       "documented_entrypoints": [
-        "make test-release-sealing"
+        "make test-release-sealing-core"
       ]
     },
     {
@@ -625,7 +625,17 @@
     {
       "kind": "make_target",
       "name": "report-contracts",
+      "maps_to": "report_contract"
+    },
+    {
+      "kind": "make_target",
+      "name": "report-contracts-core",
       "maps_to": "report_contract_core"
+    },
+    {
+      "kind": "make_target",
+      "name": "report-contracts-all",
+      "maps_to": "report_contract"
     },
     {
       "kind": "make_target",
@@ -674,6 +684,16 @@
     },
     {
       "kind": "make_target",
+      "name": "test-report-contract-core",
+      "maps_to": "report_contract_core"
+    },
+    {
+      "kind": "make_target",
+      "name": "test-report-contract-all",
+      "maps_to": "report_contract"
+    },
+    {
+      "kind": "make_target",
       "name": "test-artifact-finalization",
       "maps_to": "artifact_finalization"
     },
@@ -685,6 +705,16 @@
     {
       "kind": "make_target",
       "name": "test-release-sealing",
+      "maps_to": "release_sealing"
+    },
+    {
+      "kind": "make_target",
+      "name": "test-release-sealing-core",
+      "maps_to": "release_sealing_core"
+    },
+    {
+      "kind": "make_target",
+      "name": "test-release-sealing-all",
       "maps_to": "release_sealing"
     },
     {
@@ -800,7 +830,27 @@
     {
       "kind": "documented_entrypoint",
       "name": "make report-contracts",
+      "maps_to": "report_contract"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make test-report-contract-core",
       "maps_to": "report_contract_core"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make test-report-contract-all",
+      "maps_to": "report_contract"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make report-contracts-core",
+      "maps_to": "report_contract_core"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make report-contracts-all",
+      "maps_to": "report_contract"
     },
     {
       "kind": "documented_entrypoint",
@@ -820,6 +870,16 @@
     {
       "kind": "documented_entrypoint",
       "name": "make test-release-sealing",
+      "maps_to": "release_sealing"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make test-release-sealing-core",
+      "maps_to": "release_sealing_core"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make test-release-sealing-all",
       "maps_to": "release_sealing"
     },
     {

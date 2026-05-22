@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/goal-run-status.schema.json",
   "artifact_kind": "goal_run_status",
-  "generated_at": "2026-05-21T09:54:00Z",
+  "generated_at": "2026-05-22T05:39:40Z",
   "producer": "ops.scripts.goal_run_status",
   "source_command": "python -m ops.scripts.goal_run_status --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "4f0a0819acf29c2eb7828cbd5a84ec35a5b9411ca2c6a1482c5c801a443b4d62",
+  "source_tree_fingerprint": "947ac64a80b4cceef9c20ddbe7335b57ea877fd6039a29daa56a4f4808470be4",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "d5f30c4146c3ec45940e3b0679f503e2ed7b45e3cfc5f0cd0846521f4db56bb6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "c660ba929519efa6d5bd79feab56de8e74b35b4617b309ed4fb1c330b86fa795",
-    "goal_contract": "4559908c0e8e873ac248dc55b419e06fb25af145d36bc5012fd70c8875d82568",
+    "source_paths": "4b201d14581798855ef56967c1152526f1a3ebf07ca4e607e59e28698b50180d",
+    "goal_contract": "e6f2513843fd9b26a85f53558f1099fb772394500306a63210626c033d70c663",
     "session_synopsis_link": "7cbf10072f9b38b0b7b209442fe7e61976148ae82e700c307dc8c735ff054848"
   },
   "schema_version": 1,
@@ -20,11 +20,11 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T09:54:00Z"
+    "checked_at": "2026-05-22T05:39:40Z"
   },
   "goal": {
     "contract_path": "runs/goal-auto-improve-trial/state/codex-goal-contract.json",
-    "contract_sha256": "126d067ac2e9a72008dbc7eacda4f1a65dc84dca6150f85f435caab4505ffb0d",
+    "contract_sha256": "c9a1358d4f6194764323b3f970a15f1e0de199245dc36c3b30c51dc16c05aa1b",
     "contract_status": "loaded",
     "contract_id": "auto-improve-goal",
     "objective": "Run a bounded self-improvement loop whose result is certified by current readiness, release, source-package, public-check, status, and session evidence.",
@@ -38,15 +38,15 @@
     "run_id": "auto-improve-trial",
     "status": "blocked",
     "runtime_mode": "self_improvement_loop",
-    "started_at": "2026-05-21T09:54:00Z",
-    "updated_at": "2026-05-21T09:54:00Z",
+    "started_at": "2026-05-22T05:39:40Z",
+    "updated_at": "2026-05-22T05:39:40Z",
     "completed_at": ""
   },
   "observability": {
     "heartbeat_interval_seconds": 300,
     "checkpoint_interval_seconds": 1800,
-    "last_heartbeat_at": "2026-05-21T09:54:00Z",
-    "last_checkpoint_at": "2026-05-21T09:54:00Z",
+    "last_heartbeat_at": "2026-05-22T05:39:40Z",
+    "last_checkpoint_at": "2026-05-22T05:39:40Z",
     "last_command_heartbeat_at": "",
     "quiet_seconds": 0,
     "command_observation_mode": "",
@@ -83,8 +83,13 @@
     "can_promote_result": false,
     "sealed_authority_clean": true,
     "promotion_blockers": [
-      "learning_blocked_by_review_required",
-      "promotion_blocked_by_remediation_backlog_open"
+      "promotion_blocked_by_release_closeout_summary_failure",
+      "promotion_blocked_by_release_batch_manifest_failure",
+      "promotion_blocked_by_release_lineage_mismatch",
+      "promotion_blocked_by_artifact_contract_failure",
+      "promotion_blocked_by_goal_worktree_guard_failure",
+      "promotion_blocked_by_remediation_backlog_open",
+      "goal_worktree_guard_missing"
     ],
     "required_evidence": [
       {
@@ -131,11 +136,16 @@
       {
         "evidence_id": "goal_worktree_guard",
         "path": "tmp/goal-worktree-guard.json",
-        "status": "present",
-        "report_status": "pass"
+        "status": "missing"
       }
     ],
-    "missing_evidence": []
+    "missing_evidence": [
+      {
+        "evidence_id": "goal_worktree_guard",
+        "path": "tmp/goal-worktree-guard.json",
+        "status": "missing"
+      }
+    ]
   },
   "periodic_evidence": {
     "status": "not_due",
@@ -148,7 +158,7 @@
       {
         "checkpoint_id": "checkpoint_6h",
         "due_after_seconds": 21600,
-        "due_at": "2026-05-21T15:54:00Z",
+        "due_at": "2026-05-22T11:39:40Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -167,13 +177,13 @@
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "status": "present",
-            "generated_at": "2026-05-21T09:53:11Z",
+            "generated_at": "2026-05-22T02:42:03Z",
             "freshness_status": "not_due"
           },
           {
             "path": "ops/reports/session-synopsis.json",
             "status": "present",
-            "generated_at": "2026-05-21T09:25:46Z",
+            "generated_at": "2026-05-22T02:40:29Z",
             "freshness_status": "not_due"
           }
         ]
@@ -181,7 +191,7 @@
       {
         "checkpoint_id": "checkpoint_12h",
         "due_after_seconds": 43200,
-        "due_at": "2026-05-21T21:54:00Z",
+        "due_at": "2026-05-22T17:39:40Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -199,13 +209,13 @@
           {
             "path": "ops/reports/test-execution-summary.json",
             "status": "present",
-            "generated_at": "2026-05-21T09:52:11Z",
+            "generated_at": "2026-05-22T02:35:43Z",
             "freshness_status": "not_due"
           },
           {
             "path": "ops/reports/source-package-clean-extract.json",
             "status": "present",
-            "generated_at": "2026-05-21T07:12:12Z",
+            "generated_at": "2026-05-22T02:18:38Z",
             "freshness_status": "not_due"
           }
         ]
@@ -213,7 +223,7 @@
       {
         "checkpoint_id": "checkpoint_24h",
         "due_after_seconds": 86400,
-        "due_at": "2026-05-22T09:54:00Z",
+        "due_at": "2026-05-23T05:39:40Z",
         "due": false,
         "status": "pending",
         "commands": [
@@ -231,7 +241,7 @@
           {
             "path": "ops/reports/public-check-summary.json",
             "status": "present",
-            "generated_at": "2026-05-21T08:13:51Z",
+            "generated_at": "2026-05-22T02:37:02Z",
             "freshness_status": "not_due"
           },
           {
@@ -248,8 +258,8 @@
     "link_status": "linked",
     "report_path": "ops/reports/session-synopsis.json",
     "status": "attention",
-    "generated_at": "2026-05-21T09:25:46Z",
-    "recent_blocker_count": 4,
+    "generated_at": "2026-05-22T02:40:29Z",
+    "recent_blocker_count": 3,
     "evidence_gap_count": 0,
     "next_action": "Execution readiness is pass, but learning readiness still requires explicit operator review. Rerun goal-native auto-improve with `make auto-improve-goal-run PYTHON=.venv/bin/python VAULT=. GOAL_ALLOW_LEARNING_UNCERTAIN=1` only if you want a bounded runtime with runner heartbeat, checkpoint, resume, and timeout evidence while session evidence remains incomplete."
   },
@@ -263,8 +273,13 @@
   "promotion_guard": {
     "can_promote_result": false,
     "promotion_blockers": [
-      "learning_blocked_by_review_required",
-      "promotion_blocked_by_remediation_backlog_open"
+      "promotion_blocked_by_release_closeout_summary_failure",
+      "promotion_blocked_by_release_batch_manifest_failure",
+      "promotion_blocked_by_release_lineage_mismatch",
+      "promotion_blocked_by_artifact_contract_failure",
+      "promotion_blocked_by_goal_worktree_guard_failure",
+      "promotion_blocked_by_remediation_backlog_open",
+      "goal_worktree_guard_missing"
     ],
     "sealed_authority_clean": true,
     "runtime_certificate_verified": false,
@@ -272,8 +287,13 @@
     "no_sustained_claim_before_certificate_verified": true
   },
   "blockers": [
-    "learning_blocked_by_review_required",
+    "promotion_blocked_by_release_closeout_summary_failure",
+    "promotion_blocked_by_release_batch_manifest_failure",
+    "promotion_blocked_by_release_lineage_mismatch",
+    "promotion_blocked_by_artifact_contract_failure",
+    "promotion_blocked_by_goal_worktree_guard_failure",
     "promotion_blocked_by_remediation_backlog_open",
+    "goal_worktree_guard_missing",
     "self-improvement loop certificate incomplete"
   ],
   "status": "attention"

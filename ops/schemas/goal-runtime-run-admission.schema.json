@@ -106,7 +106,10 @@
         "goal_worktree_guard_report",
         "mutation_proposals_report",
         "readiness_report",
-        "remediation_backlog_report"
+        "remediation_backlog_report",
+        "goal_contract",
+        "goal_run_status",
+        "runtime_certificate_report"
       ],
       "properties": {
         "cleanup_report": { "type": "string", "minLength": 1 },
@@ -115,7 +118,10 @@
         "goal_worktree_guard_report": { "type": "string", "minLength": 1 },
         "mutation_proposals_report": { "type": "string", "minLength": 1 },
         "readiness_report": { "type": "string", "minLength": 1 },
-        "remediation_backlog_report": { "type": "string", "minLength": 1 }
+        "remediation_backlog_report": { "type": "string", "minLength": 1 },
+        "goal_contract": { "type": "string", "minLength": 1 },
+        "goal_run_status": { "type": "string", "minLength": 1 },
+        "runtime_certificate_report": { "type": "string", "minLength": 1 }
       }
     },
     "checks": {

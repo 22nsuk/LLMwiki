@@ -48,12 +48,13 @@ DEFAULT_OUT = "tmp/release-workflow-order-guard.json"
 PRODUCER = "ops.scripts.release_workflow_order_guard"
 SCHEMA_PATH = "ops/schemas/release-workflow-order-guard.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.release_workflow_order_guard --vault ."
-RELEASE_CLOSEOUT_TARGET = "release-evidence-closeout"
+RELEASE_CONVERGE_TARGET = "release-evidence-converge"
 CHECK_FINALIZED_TARGET = "check-finalized"
+RELEASE_FINALITY_RESETTLE_TARGET = "release-finality-resettle"
 RELEASE_SOURCE_READY_TARGET = "release-source-ready"
 RELEASE_SOURCE_READY_POST_COMMIT_CONVERGE_TARGET = "release-source-ready-post-commit-converge"
 STRICT_FINALIZER_FLAG = "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required"
-ALLOWED_REPEATED_CLOSEOUT_TARGETS = {
+ALLOWED_REPEATED_CONVERGE_TARGETS = {
     "auto-improve-readiness-report-body",
     "generated-artifact-converge",
     "release-closeout-summary-report",
@@ -370,7 +371,7 @@ def _check_planner_fixed_point_writer_order(
     )
 
 
-def _release_closeout_finalizer_check(invocations: list[dict[str, Any]]) -> dict[str, Any]:
+def _release_converge_finalizer_check(invocations: list[dict[str, Any]]) -> dict[str, Any]:
     finality_index = _first_index(invocations, "release-closeout-finality-verify")
     fixed_point_index = _first_index(invocations, "release-closeout-fixed-point")
     tmp_after_fixed_point = _first_index(invocations, "tmp-json-clean", after=fixed_point_index)
@@ -399,15 +400,15 @@ def _release_closeout_finalizer_check(invocations: list[dict[str, Any]]) -> dict
             }
         )
     return _check(
-        "release_evidence_closeout_finalizer_sequence",
+        "release_evidence_converge_finalizer_sequence",
         expected_order=expected,
         observed_order=[str(item["role"]) for item in invocations],
         violations=violations,
-        details="release-evidence-closeout must run a dry-run finalizer, converge fixed-point writers, clean tmp JSON, and end with finality verification.",
+        details="release-evidence-converge must run a dry-run finalizer, converge fixed-point writers, clean tmp JSON, and end with finality verification.",
     )
 
 
-def _release_closeout_repetition_budget(invocations: list[dict[str, Any]]) -> dict[str, Any]:
+def _release_converge_repetition_budget(invocations: list[dict[str, Any]]) -> dict[str, Any]:
     counts: dict[str, int] = {}
     for invocation in invocations:
         target = str(invocation["target"])
@@ -420,18 +421,55 @@ def _release_closeout_repetition_budget(invocations: list[dict[str, Any]]) -> di
             "reason": "unexpected_repeated_closeout_target",
         }
         for target in repeated_targets
-        if target not in ALLOWED_REPEATED_CLOSEOUT_TARGETS
+        if target not in ALLOWED_REPEATED_CONVERGE_TARGETS
     ]
     return _check(
-        "release_evidence_closeout_repetition_budget",
-        expected_order=sorted(ALLOWED_REPEATED_CLOSEOUT_TARGETS),
+        "release_evidence_converge_repetition_budget",
+        expected_order=sorted(ALLOWED_REPEATED_CONVERGE_TARGETS),
         observed_order=[f"{target} x{counts[target]}" for target in repeated_targets],
         violations=violations,
         details=(
-            "Repeated closeout refresh targets must stay explicit and bounded. "
+            "Repeated release evidence converge refresh targets must stay explicit and bounded. "
             "Fixed-point owns iterative convergence; new repeated Make targets need an intentional contract update."
         ),
     )
+
+
+def _release_finality_resettle_check(invocations: list[dict[str, Any]]) -> dict[str, Any]:
+    expected = [
+        "workflow-dependency-planner",
+        "generated-artifact-converge",
+        "release-closeout-fixed-point",
+        "tmp-json-clean",
+        "release-closeout-finality-verify",
+    ]
+    check = _check_subsequence(
+        "release_finality_resettle_sequence",
+        invocations,
+        expected,
+        details=(
+            "release-finality-resettle must keep narrow generated-report repairs cheap, "
+            "then make release-closeout-fixed-point the terminal writer before finality verify."
+        ),
+    )
+    finality_index = _first_index(invocations, "release-closeout-finality-verify")
+    if finality_index and finality_index != len(invocations):
+        check["status"] = "fail"
+        check["violations"].append(
+            {
+                "expected_role": "release-closeout-finality-verify",
+                "reason": "finality_verify_must_be_terminal",
+            }
+        )
+    if _first_index(invocations, "release-evidence-converge"):
+        check["status"] = "fail"
+        check["violations"].append(
+            {
+                "target": "release-evidence-converge",
+                "reason": "resettle_lane_must_not_call_full_converge",
+            }
+        )
+    return check
 
 
 def _release_source_ready_transaction_check(invocations: list[dict[str, Any]]) -> dict[str, Any]:
@@ -534,8 +572,12 @@ def build_report(
     makefile_text, makefile_sources = load_makefile_text(resolved_vault)
     fixed_point_policy = _load_json(resolved_vault / FIXED_POINT_POLICY_PATH)
     writers = _fixed_point_writer_specs(fixed_point_policy)
-    release_closeout_invocations = _recipe_invocations(makefile_text, RELEASE_CLOSEOUT_TARGET)
+    release_converge_invocations = _recipe_invocations(makefile_text, RELEASE_CONVERGE_TARGET)
     check_finalized_invocations = _recipe_invocations(makefile_text, CHECK_FINALIZED_TARGET)
+    release_finality_resettle_invocations = _recipe_invocations(
+        makefile_text,
+        RELEASE_FINALITY_RESETTLE_TARGET,
+    )
     release_source_ready_invocations = _recipe_invocations(makefile_text, RELEASE_SOURCE_READY_TARGET)
     release_source_ready_post_commit_invocations = _recipe_invocations(
         makefile_text,
@@ -548,8 +590,9 @@ def build_report(
         context=runtime_context,
     )
     checks = [
-        _release_closeout_finalizer_check(release_closeout_invocations),
-        _release_closeout_repetition_budget(release_closeout_invocations),
+        _release_converge_finalizer_check(release_converge_invocations),
+        _release_converge_repetition_budget(release_converge_invocations),
+        _release_finality_resettle_check(release_finality_resettle_invocations),
         _check_subsequence(
             "check_finalized_post_check_sequence",
             check_finalized_invocations,
@@ -585,7 +628,7 @@ def build_report(
         _check_fixed_point_policy_order(writers),
         _release_source_ready_transaction_check(release_source_ready_invocations),
         _release_source_ready_post_commit_converge_check(release_source_ready_post_commit_invocations),
-        _check_planner_hooks(planner_report, release_closeout_invocations),
+        _check_planner_hooks(planner_report, release_converge_invocations),
         _check_planner_fixed_point_writer_order(planner_report, writers),
     ]
     return {
@@ -632,14 +675,18 @@ def build_report(
             "check_count": len(checks),
             "fail_count": sum(1 for check in checks if check["status"] == "fail"),
             "attention_count": sum(1 for check in checks if check["status"] == "attention"),
-            "release_closeout_invocation_count": len(release_closeout_invocations),
+            "release_converge_invocation_count": len(release_converge_invocations),
             "check_finalized_invocation_count": len(check_finalized_invocations),
             "fixed_point_writer_count": len(writers),
         },
         "checks": checks,
         "target_recipes": [
-            _target_recipe_payload(RELEASE_CLOSEOUT_TARGET, release_closeout_invocations),
+            _target_recipe_payload(RELEASE_CONVERGE_TARGET, release_converge_invocations),
             _target_recipe_payload(CHECK_FINALIZED_TARGET, check_finalized_invocations),
+            _target_recipe_payload(
+                RELEASE_FINALITY_RESETTLE_TARGET,
+                release_finality_resettle_invocations,
+            ),
             _target_recipe_payload(RELEASE_SOURCE_READY_TARGET, release_source_ready_invocations),
             _target_recipe_payload(
                 RELEASE_SOURCE_READY_POST_COMMIT_CONVERGE_TARGET,
@@ -665,7 +712,7 @@ def write_report(vault: Path, report: dict[str, Any], out_path: str | None = Non
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Validate release closeout Make ordering against planner and fixed-point policy hooks.",
+        description="Validate release evidence converge Make ordering against planner and fixed-point policy hooks.",
     )
     parser.add_argument("--vault", default=".")
     parser.add_argument("--policy-path")

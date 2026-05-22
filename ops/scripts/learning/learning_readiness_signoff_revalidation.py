@@ -42,7 +42,7 @@ SUPPORTED_BLOCKER_ID = LEARNING_REVIEW_REQUIRED_BLOCKER_ID
 SIGNOFF_ARTIFACT_KIND = "learning_readiness_signoff"
 ARTIFACT_KIND = "learning_readiness_signoff_revalidation"
 PRODUCER = "ops.scripts.learning_readiness_signoff_revalidation"
-DEFAULT_REQUIRED_COMMAND = "make release-evidence-closeout PYTHON=.venv/bin/python"
+DEFAULT_REQUIRED_COMMAND = "make release-evidence-converge PYTHON=.venv/bin/python"
 DEFAULT_REQUIRED_ENVIRONMENT = ".venv clean release-builder"
 
 
@@ -487,7 +487,7 @@ def _required_actions_for_revalidation(
     if decision.clean_closeout_required:
         return [
             _required_action(
-                "rerun_clean_release_evidence_closeout",
+                "rerun_clean_release_evidence_converge",
                 command=required_command,
                 environment=required_environment,
                 reason=decision.status_reason,

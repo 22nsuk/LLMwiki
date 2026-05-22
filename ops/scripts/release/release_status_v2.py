@@ -176,6 +176,10 @@ def release_status_v2_payload(
     semantic_release_status: str,
     sealed_release_status: str,
     release_authority_vocabulary: dict[str, Any],
+    sealed_status_field: str = "sealed_release_status",
+    proposed_top_level_status_replacement: str = "sealed_release_status",
+    recommended_consumer_fields: list[str] | None = None,
+    extra_status_axes: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     authority_reason_ids = _string_list(
         release_authority_vocabulary.get("authority_reason_ids")
@@ -189,6 +193,12 @@ def release_status_v2_payload(
         release_authority_status=release_authority_status,
         sealed_release_status=sealed_release_status,
     )
+    status_axes = {
+        "release_authority_status": release_authority_status,
+        "semantic_release_status": semantic_release_status,
+        "sealed_release_status": sealed_release_status,
+    }
+    status_axes.update(extra_status_axes or {})
     return {
         "schema_version": STATUS_V2_SCHEMA_VERSION,
         "migration_readiness_status": STATUS_V2_MIGRATION_READINESS_STATUS,
@@ -196,23 +206,20 @@ def release_status_v2_payload(
         "compatibility_status_value": status,
         "compatibility_status_deprecated": True,
         "compatibility_alias_retention": "one_to_two_releases",
-        "status_axes": {
-            "release_authority_status": release_authority_status,
-            "semantic_release_status": semantic_release_status,
-            "sealed_release_status": sealed_release_status,
-        },
+        "status_axes": status_axes,
         "release_authority_status_field": "release_authority_status",
         "release_authority_status_value": release_authority_status,
         "semantic_release_status_field": "semantic_release_status",
         "semantic_release_status_value": semantic_release_status,
-        "sealed_status_field": "sealed_release_status",
+        "sealed_status_field": sealed_status_field,
         "sealed_status_value": sealed_release_status,
-        "proposed_top_level_status_replacement": "sealed_release_status",
+        "proposed_top_level_status_replacement": proposed_top_level_status_replacement,
         "status_classification": status_classification,
         "authority_reason_ids": authority_reason_ids,
         "sealed_reason_ids": sealed_reason_ids,
         "blocker_reason_ids": blocker_reason_ids,
-        "recommended_consumer_fields": STATUS_V2_RECOMMENDED_CONSUMER_FIELDS,
+        "recommended_consumer_fields": recommended_consumer_fields
+        or STATUS_V2_RECOMMENDED_CONSUMER_FIELDS,
         "summary": (
             f"status_v2={status_classification}; legacy status={status}; "
             f"release_authority_status={release_authority_status}; "

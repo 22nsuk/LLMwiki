@@ -394,6 +394,7 @@ def build_auto_improve_goal_contract(
         ),
         "non_goals": [
             "Do not treat wall-clock duration as proof without the self-improvement loop certificate.",
+            "Do not treat native Codex goal state as durable proof without file-backed goal, status, checkpoint, and certificate evidence.",
             "Do not promote release, learning, or improvement claims while promotion blockers remain.",
             "Do not mutate private corpus surfaces from a public/runtime maintenance goal.",
         ],

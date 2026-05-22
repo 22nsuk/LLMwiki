@@ -36,20 +36,24 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         (self.vault / ".github" / "workflows").mkdir(parents=True, exist_ok=True)
         (self.vault / ".github" / "workflows" / "ci.yml").write_text("name: CI\n", encoding="utf-8")
         (self.vault / "Makefile").write_text(
-            ".PHONY: static ruff typecheck release-evidence-closeout release-smoke-full "
+            ".PHONY: static ruff typecheck release-evidence-converge release-smoke-full "
+            "release-evidence-closeout "
             "test-execution-summary generated-artifact-converge script-output-surfaces "
             "external-report-action-matrix generated-artifact-index artifact-freshness "
-            "operator-release-summary report-contract-closeout\n"
+            "release-closeout-fixed-point tmp-json-clean release-closeout-finality-verify "
+            "operator-release-summary report-contract-closeout workflow-dependency-planner\n"
             "static: ruff typecheck\n"
             "\t@echo static\n"
             "ruff:\n"
             "\t@echo ruff\n"
             "typecheck:\n"
             "\t@echo typecheck\n"
-            "release-evidence-closeout:\n"
+            "release-evidence-converge:\n"
             "\t$(MAKE) static\n"
             "\t$(MAKE) release-smoke-full\n"
             "\t$(MAKE) test-execution-summary\n"
+            "release-evidence-closeout: release-evidence-converge\n"
+            "\t@echo compatibility alias\n"
             "release-smoke-full:\n"
             "\t@echo smoke\n"
             "test-execution-summary:\n"
@@ -69,6 +73,14 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "\t@echo freshness\n"
             "operator-release-summary:\n"
             "\t@echo operator\n"
+            "release-closeout-fixed-point:\n"
+            "\t@echo fixed point\n"
+            "tmp-json-clean:\n"
+            "\t@echo tmp clean\n"
+            "release-closeout-finality-verify:\n"
+            "\t@echo finality\n"
+            "workflow-dependency-planner:\n"
+            "\t@echo planner\n"
             "report-contract-closeout:\n"
             "\t$(MAKE) test-execution-summary\n"
             "\t$(MAKE) generated-artifact-converge\n",
@@ -117,11 +129,11 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertEqual(report["status"], "pass")
         self.assertEqual(validate_with_schema(report, load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH)), [])
         self.assertIn(
-            {"from": "release-evidence-closeout", "to": "static", "source": "make_recipe"},
+            {"from": "release-evidence-converge", "to": "static", "source": "make_recipe"},
             report["dependency_edges"],
         )
         self.assertIn(
-            {"from": "release-evidence-closeout", "to": "release-smoke-full", "source": "make_recipe"},
+            {"from": "release-evidence-converge", "to": "release-smoke-full", "source": "make_recipe"},
             report["dependency_edges"],
         )
         self.assertEqual(report["summary"]["missing_dependency_count"], 0)
@@ -136,8 +148,8 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             encoding="utf-8",
         )
         (self.vault / "mk" / "release.mk").write_text(
-            ".PHONY: release-evidence-closeout static\n"
-            "release-evidence-closeout: static\n"
+            ".PHONY: release-evidence-converge static\n"
+            "release-evidence-converge: static\n"
             "\t$(MAKE) generated-artifact-index\n"
             "static:\n"
             "\t@echo static\n"
@@ -150,11 +162,11 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
 
         self.assertIn("mk/release.mk", report["input_fingerprints"])
         self.assertIn(
-            {"from": "release-evidence-closeout", "to": "static", "source": "make_prerequisite"},
+            {"from": "release-evidence-converge", "to": "static", "source": "make_prerequisite"},
             report["dependency_edges"],
         )
         self.assertIn(
-            {"from": "release-evidence-closeout", "to": "generated-artifact-index", "source": "make_recipe"},
+            {"from": "release-evidence-converge", "to": "generated-artifact-index", "source": "make_recipe"},
             report["dependency_edges"],
         )
 
@@ -201,7 +213,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 )
                 self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
 
-    def test_canonical_release_script_path_selects_release_evidence_closeout(self) -> None:
+    def test_canonical_release_script_path_selects_release_evidence_converge(self) -> None:
         report = build_report(
             self.vault,
             changed_paths=["ops/scripts/release/operator_release_summary.py"],
@@ -211,12 +223,56 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         workflow = next(
             item
             for item in report["selected_workflows"]
-            if item["workflow_id"] == "release_evidence_closeout"
+            if item["workflow_id"] == "release_evidence_converge"
         )
-        self.assertEqual(workflow["recommended_lane"], "release-evidence-closeout")
+        self.assertEqual(workflow["recommended_lane"], "release-evidence-converge")
         self.assertEqual(workflow["matched_paths"], ["ops/scripts/release/operator_release_summary.py"])
-        self.assertEqual([step["target"] for step in workflow["steps"]], ["release-evidence-closeout", "operator-release-summary"])
+        self.assertEqual([step["target"] for step in workflow["steps"]], ["release-evidence-converge", "operator-release-summary"])
         self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
+
+    def test_canonical_report_change_selects_finality_resettle_lane(self) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=["ops/reports/release-closeout-summary.json"],
+            context=fixed_context(),
+        )
+
+        workflow = next(
+            item
+            for item in report["selected_workflows"]
+            if item["workflow_id"] == "canonical_report_finalization"
+        )
+        self.assertEqual(workflow["recommended_lane"], "release-finality-resettle")
+        self.assertEqual(workflow["matched_paths"], ["ops/reports/release-closeout-summary.json"])
+        self.assertEqual(
+            [step["target"] for step in workflow["steps"]],
+            [
+                "workflow-dependency-planner",
+                "generated-artifact-converge",
+                "release-closeout-fixed-point",
+                "tmp-json-clean",
+                "release-closeout-finality-verify",
+            ],
+        )
+        self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
+
+    def test_observation_change_selects_finality_resettle_lane(self) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=[
+                "ops/reports/task-improvement-observations/task-20260522-active-external-report-review/improvement-observations.json"
+            ],
+            context=fixed_context(),
+        )
+
+        workflow = next(
+            item
+            for item in report["selected_workflows"]
+            if item["workflow_id"] == "observation_inventory_closeout"
+        )
+        self.assertEqual(workflow["recommended_lane"], "release-finality-resettle")
+        self.assertIn("release-closeout-fixed-point", [step["target"] for step in workflow["steps"]])
+        self.assertEqual([step["target"] for step in workflow["steps"]][-1], "release-closeout-finality-verify")
 
     def test_planner_closeout_steps_are_derived_from_fixed_point_policy(self) -> None:
         self._write_fixed_point_policy()
@@ -376,8 +432,8 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
 
     def test_missing_make_dependency_fails_with_diagnostic(self) -> None:
         (self.vault / "Makefile").write_text(
-            ".PHONY: release-evidence-closeout\n"
-            "release-evidence-closeout:\n"
+            ".PHONY: release-evidence-converge\n"
+            "release-evidence-converge:\n"
             "\t$(MAKE) missing-target\n",
             encoding="utf-8",
         )
@@ -389,7 +445,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             report["diagnostics"]["missing_dependencies"],
             [
                 {
-                    "consumer": "release-evidence-closeout",
+                    "consumer": "release-evidence-converge",
                     "dependency": "missing-target",
                     "source": "make_recipe",
                 }

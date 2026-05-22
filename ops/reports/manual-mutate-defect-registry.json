@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/manual-mutate-defect-registry.schema.json",
   "artifact_kind": "manual_mutate_defect_registry",
-  "generated_at": "2026-05-22T02:09:52Z",
+  "generated_at": "2026-05-22T10:31:08Z",
   "producer": "ops.scripts.manual_mutate_defect_registry",
   "source_command": "python -m ops.scripts.manual_mutate_defect_registry",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "c67d8e092c8c4eb06c711b524ddad2422eec7443337fca78130ae405e4bb146c",
+  "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "5aa37bb776f4459c05d34323a1270cdbbfb51cfb2d2e12387ff652ad3abc031d",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T02:09:52Z"
+    "checked_at": "2026-05-22T10:31:08Z"
   },
   "vault": ".",
   "policy": {

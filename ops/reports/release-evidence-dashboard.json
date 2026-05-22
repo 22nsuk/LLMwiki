@@ -1,23 +1,23 @@
 {
   "$schema": "ops/schemas/release-evidence-dashboard.schema.json",
   "artifact_kind": "release_evidence_dashboard",
-  "generated_at": "2026-05-21T18:01:01Z",
+  "generated_at": "2026-05-22T10:31:08Z",
   "producer": "ops.scripts.release_evidence_dashboard",
   "source_command": "python -m ops.scripts.release_evidence_dashboard --vault . --out ops/reports/release-evidence-dashboard.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e87210163d5661241576ab225b9a05e7286084eb4bf5aad231abbef7132b41b8",
+  "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "3d201c44c8525de4f9e7af11e9bcba6a5572a46b2f246bc43324bf377c45ab56",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "1f1f3bd032cee1eefa980d121c683a4e6dce5b242938dc96a51ce61ffbbf2c1d",
-    "artifact_freshness": "a80608b6a13249eb2d468971098a711ba58fe4b9c93aa339df0f91317ec1dc05",
-    "learning_delta_scoreboard": "766e22a2456ec7c9f7643fa65731a6ee8cc98b79d8f9ec5aa1f9239cd3b22d3e",
-    "learning_readiness_signoff_revalidation": "251ae85f5d13bca04d4f2171c07d85e9e1a63ca7ca062ff38c51e23a3cebd56e",
-    "release_closeout_fixed_point": "47d7a5cd7b3db1cdb4912969646df450a7d68eee3acb0dbd27be52bae6504e83",
+    "source_paths": "8a839eb559be445fd0cf2b20e810404ef4f94d756575b0301118331167bc6bb6",
+    "artifact_freshness": "fe1e6386566832c092086737c5cc82fabb11f389bfe68fe7bbf1d2ac6a7b5fae",
+    "learning_delta_scoreboard": "c928f6ef0cd1b62f2a2f1b65cb934960a4e536da0e724f742b052a379157d54a",
+    "learning_readiness_signoff_revalidation": "e351d4c1541448d6bf746c4efecba6ddccb25e8a369b63ee0e0408cae65c6445",
+    "release_closeout_fixed_point": "93770f4aabe71601c0748dad13d7125f6b6a52bd9cd8b5ad9ee49ba10a6138f4",
     "release_closeout_fixed_point_cost_trend": "4ad9945123b2cb8856267681013cf7200acf64fef40079a738488071907344ef",
-    "release_closeout_summary": "b91eb5fd6288c93b97105943ac3366ba2e68f38637ac441eb14049d2b130e996",
-    "current_source_tree_fingerprint": "1e116a9b732c4812a6dbfc30a540b2c5fcc0b1de74f6a3cbab0a99c5eb40e114"
+    "release_closeout_summary": "2908d53d910e3e621d7225cb106958ccc2dd2fcbd13714b3d71ff1d51c4c88ff",
+    "current_source_tree_fingerprint": "9e9966de65d3a1939ec09077750d48844b8e8e74984113f06a90c879ca369038"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T18:01:01Z"
+    "checked_at": "2026-05-22T10:31:08Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
     "version": 4
   },
   "status": "attention",
-  "source_tree_fingerprint_current": "e87210163d5661241576ab225b9a05e7286084eb4bf5aad231abbef7132b41b8",
+  "source_tree_fingerprint_current": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
   "inputs": {
     "release_closeout_summary": {
       "path": "ops/reports/release-closeout-summary.json",
@@ -89,11 +89,14 @@
       "learning_likely": false,
       "bounded_learning_claim_allowed": false,
       "confirmed_learning_improvement_allowed": false,
-      "improvement_claim_status": "auto_confirmed",
-      "confirmed_learning_improvement_status": "auto_confirmed",
+      "improvement_claim_status": "not_ready",
+      "confirmed_learning_improvement_status": "not_ready",
       "evidence_cohort_status": "auto_confirmed",
-      "learning_claim_blocker_status": "clear",
-      "confirmed_blocking_predicate_ids": [],
+      "learning_claim_blocker_status": "blocked",
+      "confirmed_blocking_predicate_ids": [
+        "rollback_revalidation_clean",
+        "learning_claim_blocker_absence"
+      ],
       "confirmed_evidence_summary": {
         "evidence_cohort_status": "auto_confirmed",
         "confirmed_evidence_status": "auto_confirmed",
@@ -271,27 +274,27 @@
         },
         {
           "id": "rollback_revalidation_clean",
-          "status": "pass",
+          "status": "fail",
           "source_path": "ops/reports/learning-readiness-signoff-revalidation.json",
           "required_condition": "learning_readiness_signoff_revalidation.status == pass",
-          "observed_value": "status=pass",
+          "observed_value": "status=attention",
           "summary": "Rollback/revalidation evidence must be clean."
         },
         {
           "id": "learning_claim_blocker_absence",
-          "status": "pass",
+          "status": "fail",
           "source_path": "ops/reports/release-clean-blocker-ledger.json",
           "required_condition": "release_clean_blocker_ledger.learning_claim_blockers == []",
-          "observed_value": "learning_claim_blocker_count=0",
+          "observed_value": "learning_claim_blocker_count=3",
           "summary": "No accepted learning risk or learning-claim blocker may remain."
         }
       ],
       "claim_level": "none",
       "claim_scope": "bounded_learning_likely_auto_improve_readiness",
-      "learning_claim_unlock_review_status": "stale",
+      "learning_claim_unlock_review_status": "required",
       "learning_claim_unlock_review_approved": false,
-      "learning_claim_unlock_review_revocation_status": "stale",
-      "learning_claim_evidence_bundle_status": "stale",
+      "learning_claim_unlock_review_revocation_status": "not_evaluated",
+      "learning_claim_evidence_bundle_status": "not_evaluated",
       "claim_wording_allowed": false,
       "claim_wording_policy_status": "blocked",
       "confirmed_wording_allowed": false,
@@ -334,11 +337,11 @@
           },
           {
             "stage": "persistence",
-            "status": "pass",
+            "status": "blocked",
             "evidence": [
               "evidence_cohort_status=auto_confirmed",
-              "learning_claim_blocker_status=clear",
-              "blocking_predicate_ids=[]"
+              "learning_claim_blocker_status=blocked",
+              "blocking_predicate_ids=rollback_revalidation_clean,learning_claim_blocker_absence"
             ],
             "summary": "Persistence requires the confirmed evidence cohort to auto-confirm without blocking predicates."
           },
@@ -346,21 +349,21 @@
             "stage": "production_learning",
             "status": "blocked",
             "evidence": [
-              "improvement_claim_status=auto_confirmed",
+              "improvement_claim_status=not_ready",
               "evidence_cohort_status=auto_confirmed",
-              "bundle_status=stale",
+              "bundle_status=not_evaluated",
               "claim_level=none"
             ],
             "summary": "Production learning wording opens only after confirmed claim, confirmed cohort, and active bundle evidence align."
           }
         ],
-        "highest_supported_stage": "persistence",
-        "improvement_claim_status": "auto_confirmed",
+        "highest_supported_stage": "regression_safe",
+        "improvement_claim_status": "not_ready",
         "evidence_cohort_status": "auto_confirmed",
-        "learning_claim_blocker_status": "clear",
+        "learning_claim_blocker_status": "blocked",
         "claim_wording_allowed": false,
         "claim_wording_policy_status": "blocked",
-        "summary": "highest_supported_stage=persistence; improvement_claim_status=auto_confirmed; evidence_cohort_status=auto_confirmed; learning_claim_blocker_status=clear; claim_wording_allowed=false"
+        "summary": "highest_supported_stage=regression_safe; improvement_claim_status=not_ready; evidence_cohort_status=auto_confirmed; learning_claim_blocker_status=blocked; claim_wording_allowed=false"
       },
       "learning_claim_unlock_review_source": "ops/reports/learning-claim-unlock-review.json",
       "same_eval_run_count": 2,
@@ -394,16 +397,16 @@
       "converged": true,
       "iteration_count": 5,
       "command_run_count": 55,
-      "total_duration_ms": 73087,
+      "total_duration_ms": 75953,
       "writer_costs": [
         {
           "name": "generated-artifact-index",
           "target": "generated-artifact-index-body",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 3002,
-          "average_duration_ms": 600,
-          "max_duration_ms": 617,
+          "total_duration_ms": 3956,
+          "average_duration_ms": 791,
+          "max_duration_ms": 800,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -411,9 +414,9 @@
           "target": "artifact-freshness",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 47808,
-          "average_duration_ms": 9562,
-          "max_duration_ms": 9626,
+          "total_duration_ms": 49083,
+          "average_duration_ms": 9817,
+          "max_duration_ms": 9969,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -421,9 +424,9 @@
           "target": "auto-improve-readiness-report-body",
           "run_count": 3,
           "selected_iteration_count": 3,
-          "total_duration_ms": 1463,
-          "average_duration_ms": 488,
-          "max_duration_ms": 494,
+          "total_duration_ms": 1516,
+          "average_duration_ms": 505,
+          "max_duration_ms": 512,
           "skipped_after_first_iteration_count": 2
         },
         {
@@ -431,9 +434,9 @@
           "target": "release-closeout-summary-report",
           "run_count": 4,
           "selected_iteration_count": 4,
-          "total_duration_ms": 2275,
-          "average_duration_ms": 569,
-          "max_duration_ms": 583,
+          "total_duration_ms": 2373,
+          "average_duration_ms": 593,
+          "max_duration_ms": 596,
           "skipped_after_first_iteration_count": 1
         },
         {
@@ -441,9 +444,9 @@
           "target": "learning-readiness-signoff-revalidation",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 1862,
-          "average_duration_ms": 372,
-          "max_duration_ms": 390,
+          "total_duration_ms": 1891,
+          "average_duration_ms": 378,
+          "max_duration_ms": 380,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -451,9 +454,9 @@
           "target": "release-evidence-cohort",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2500,
-          "average_duration_ms": 500,
-          "max_duration_ms": 529,
+          "total_duration_ms": 2593,
+          "average_duration_ms": 519,
+          "max_duration_ms": 523,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -461,9 +464,9 @@
           "target": "release-evidence-dashboard-report",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2641,
-          "average_duration_ms": 528,
-          "max_duration_ms": 554,
+          "total_duration_ms": 2695,
+          "average_duration_ms": 539,
+          "max_duration_ms": 543,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -471,9 +474,9 @@
           "target": "release-lane-summary",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2178,
-          "average_duration_ms": 436,
-          "max_duration_ms": 460,
+          "total_duration_ms": 2219,
+          "average_duration_ms": 444,
+          "max_duration_ms": 449,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -481,9 +484,9 @@
           "target": "release-clean-blocker-ledger",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2297,
-          "average_duration_ms": 459,
-          "max_duration_ms": 474,
+          "total_duration_ms": 2331,
+          "average_duration_ms": 466,
+          "max_duration_ms": 470,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -491,9 +494,9 @@
           "target": "release-closeout-batch-manifest-promote",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 4102,
-          "average_duration_ms": 820,
-          "max_duration_ms": 829,
+          "total_duration_ms": 4236,
+          "average_duration_ms": 847,
+          "max_duration_ms": 861,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -501,9 +504,9 @@
           "target": "release-evidence-closeout-self-check",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 1688,
-          "average_duration_ms": 338,
-          "max_duration_ms": 345,
+          "total_duration_ms": 1755,
+          "average_duration_ms": 351,
+          "max_duration_ms": 354,
           "skipped_after_first_iteration_count": 0
         }
       ],
@@ -519,7 +522,7 @@
         "post_first_iteration_selected_count": 0,
         "post_first_iteration_run_count": 0,
         "skipped_post_first_iteration_selection_count": 12,
-        "total_duration_ms": 1271,
+        "total_duration_ms": 1305,
         "skip_policy_effective": true,
         "summary": "expensive prerequisites were selected only in iteration 1"
       },
@@ -531,9 +534,9 @@
       },
       "evidence_basis": {
         "fixed_point_report_path": "ops/reports/release-closeout-fixed-point.json",
-        "fixed_point_report_digest": "47d7a5cd7b3db1cdb4912969646df450a7d68eee3acb0dbd27be52bae6504e83",
-        "current_fixed_point_report_digest": "47d7a5cd7b3db1cdb4912969646df450a7d68eee3acb0dbd27be52bae6504e83",
-        "fixed_point_generated_at": "2026-05-21T17:59:14Z",
+        "fixed_point_report_digest": "93770f4aabe71601c0748dad13d7125f6b6a52bd9cd8b5ad9ee49ba10a6138f4",
+        "current_fixed_point_report_digest": "93770f4aabe71601c0748dad13d7125f6b6a52bd9cd8b5ad9ee49ba10a6138f4",
+        "fixed_point_generated_at": "2026-05-22T10:20:13Z",
         "cost_trend_path": "ops/reports/release-closeout-fixed-point-cost-trend.json",
         "cost_trend_load_status": "ok",
         "cost_trend_digest": "4ad9945123b2cb8856267681013cf7200acf64fef40079a738488071907344ef",
@@ -542,7 +545,7 @@
         "sampled_fixed_point_report_digest": "4b9a7cd57062b69f1eaedd9002bdf6d487a3c73d11c103bd7bf9b7c5d8a61b00",
         "basis_relation_to_current_fixed_point": "sampled_different_fixed_point"
       },
-      "summary": "11 writers ran 55 commands across 5 iterations; total_duration_ms=73087; expensive_prerequisite_skip_effective=True"
+      "summary": "11 writers ran 55 commands across 5 iterations; total_duration_ms=75953; expensive_prerequisite_skip_effective=True"
     }
   },
   "confirmed_evidence_summary": {
@@ -673,7 +676,7 @@
   },
   "accepted_risk_delta": {
     "status": "unchanged",
-    "previous_report_generated_at": "2026-05-21T18:01:01Z",
+    "previous_report_generated_at": "2026-05-22T10:31:08Z",
     "added_count": 0,
     "removed_count": 0,
     "unchanged_count": 3,
@@ -688,10 +691,10 @@
   },
   "summary": {
     "gate_count": 16,
-    "authoritative_gate_count": 8,
+    "authoritative_gate_count": 9,
     "checked_in_fail_count": 0,
     "live_rerun_fail_count": 0,
-    "live_rerun_not_run_count": 4,
+    "live_rerun_not_run_count": 3,
     "accepted_risk_count": 3,
     "gate_attention_count": 4,
     "required_input_fail_count": 0,
@@ -700,11 +703,14 @@
     "learning_likely": false,
     "bounded_learning_claim_allowed": false,
     "confirmed_learning_improvement_allowed": false,
-    "improvement_claim_status": "auto_confirmed",
-    "confirmed_learning_improvement_status": "auto_confirmed",
+    "improvement_claim_status": "not_ready",
+    "confirmed_learning_improvement_status": "not_ready",
     "evidence_cohort_status": "auto_confirmed",
-    "learning_claim_blocker_status": "clear",
-    "confirmed_blocking_predicate_ids": [],
+    "learning_claim_blocker_status": "blocked",
+    "confirmed_blocking_predicate_ids": [
+      "rollback_revalidation_clean",
+      "learning_claim_blocker_absence"
+    ],
     "confirmed_evidence_summary": {
       "evidence_cohort_status": "auto_confirmed",
       "confirmed_evidence_status": "auto_confirmed",
@@ -833,10 +839,10 @@
     },
     "claim_level": "none",
     "claim_scope": "bounded_learning_likely_auto_improve_readiness",
-    "learning_claim_unlock_review_status": "stale",
+    "learning_claim_unlock_review_status": "required",
     "learning_claim_unlock_review_approved": false,
-    "learning_claim_unlock_review_revocation_status": "stale",
-    "learning_claim_evidence_bundle_status": "stale",
+    "learning_claim_unlock_review_revocation_status": "not_evaluated",
+    "learning_claim_evidence_bundle_status": "not_evaluated",
     "claim_wording_allowed": false,
     "claim_wording_policy_status": "blocked",
     "confirmed_wording_allowed": false,
@@ -879,11 +885,11 @@
         },
         {
           "stage": "persistence",
-          "status": "pass",
+          "status": "blocked",
           "evidence": [
             "evidence_cohort_status=auto_confirmed",
-            "learning_claim_blocker_status=clear",
-            "blocking_predicate_ids=[]"
+            "learning_claim_blocker_status=blocked",
+            "blocking_predicate_ids=rollback_revalidation_clean,learning_claim_blocker_absence"
           ],
           "summary": "Persistence requires the confirmed evidence cohort to auto-confirm without blocking predicates."
         },
@@ -891,21 +897,21 @@
           "stage": "production_learning",
           "status": "blocked",
           "evidence": [
-            "improvement_claim_status=auto_confirmed",
+            "improvement_claim_status=not_ready",
             "evidence_cohort_status=auto_confirmed",
-            "bundle_status=stale",
+            "bundle_status=not_evaluated",
             "claim_level=none"
           ],
           "summary": "Production learning wording opens only after confirmed claim, confirmed cohort, and active bundle evidence align."
         }
       ],
-      "highest_supported_stage": "persistence",
-      "improvement_claim_status": "auto_confirmed",
+      "highest_supported_stage": "regression_safe",
+      "improvement_claim_status": "not_ready",
       "evidence_cohort_status": "auto_confirmed",
-      "learning_claim_blocker_status": "clear",
+      "learning_claim_blocker_status": "blocked",
       "claim_wording_allowed": false,
       "claim_wording_policy_status": "blocked",
-      "summary": "highest_supported_stage=persistence; improvement_claim_status=auto_confirmed; evidence_cohort_status=auto_confirmed; learning_claim_blocker_status=clear; claim_wording_allowed=false"
+      "summary": "highest_supported_stage=regression_safe; improvement_claim_status=not_ready; evidence_cohort_status=auto_confirmed; learning_claim_blocker_status=blocked; claim_wording_allowed=false"
     },
     "same_eval_reason_coverage_status": "full",
     "strict_secondary_improvement_coverage_status": "full",
@@ -1043,7 +1049,7 @@
         ]
       },
       "owner": "runtime-maintainer",
-      "expiry": "2026-05-28T18:01:01Z",
+      "expiry": "2026-05-29T10:31:08Z",
       "next_action": "Rerun the sealed closeout lane with a current distribution ZIP before external review signoff.",
       "required_evidence": [],
       "claims": [
@@ -1090,10 +1096,10 @@
       "source_path": "ops/reports/test-execution-summary-full.json",
       "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "not_run",
-        "reason": "component fingerprint differs from current source tree"
+        "status": "pass",
+        "reason": "checked-in component matches current source tree"
       },
-      "authoritative_for_release": false,
+      "authoritative_for_release": true,
       "accepted_risk": {
         "count": 0,
         "codes": []
@@ -1108,8 +1114,8 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "live_make_check fingerprint/currentness diagnostic state is not_run",
-          "provenance_label": "diagnostic_workspace_only"
+          "claim": "live_make_check fingerprint/currentness diagnostic state is pass",
+          "provenance_label": "fingerprint_equivalent_to_checked_in"
         }
       ]
     },
@@ -1185,7 +1191,7 @@
         ]
       },
       "owner": "runtime-maintainer",
-      "expiry": "2026-05-28T18:01:01Z",
+      "expiry": "2026-05-29T10:31:08Z",
       "next_action": "Rerun generated-artifact-index before the next release closeout.",
       "required_evidence": [],
       "claims": [
@@ -1214,15 +1220,14 @@
       },
       "owner": "runtime-maintainer",
       "expiry": "",
-      "next_action": "Run make release-closeout-summary and confirm machine_release_allowed=true.",
+      "next_action": "Run make release-closeout-batch-manifest-promote with a bound distribution ZIP.",
       "required_evidence": [
-        "Run make release-closeout-summary and confirm machine_release_allowed=true.",
-        "can_promote_result must stay false until this release gate is pass.",
         "Run make release-closeout-batch-manifest-promote with a bound distribution ZIP.",
         "can_promote_result must stay false until this release gate is pass.",
-        "Run make release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint and confirm strict_same_fingerprint=true.",
-        "can_promote_result must stay false until this release gate is pass.",
-        "Run make remediation-backlog and confirm status=pass with open_item_count=0.",
+        "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
+        "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
+        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal.",
+        "Run make remediation-backlog and confirm open_promotion_count=0.",
         "Close or explicitly defer blocks_promotion backlog items before promotion.",
         "can_promote_result must stay false while remediation backlog items are open."
       ],
@@ -1326,7 +1331,7 @@
         ]
       },
       "owner": "runtime-maintainer",
-      "expiry": "2026-05-28T18:01:01Z",
+      "expiry": "2026-05-29T10:31:08Z",
       "next_action": "Review advisory accepted-risk lifecycle before operator signoff.",
       "required_evidence": [
         "Rerun generated-artifact-index before the next release closeout.",
@@ -1367,11 +1372,11 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "learning claim unlock review is stale; approved=False; revocation=stale; bundle=stale; source=ops/reports/learning-claim-unlock-review.json",
+          "claim": "learning claim unlock review is required; approved=False; revocation=not_evaluated; bundle=not_evaluated; source=ops/reports/learning-claim-unlock-review.json",
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "confirmed learning predicates are evidence_bundle_active=pass, confirmed_evidence_bundle_active=pass, repeated_same_family_evidence=pass, behavior_delta_artifact_digest_readback=pass, full_suite_pass=pass, public_check_pass=pass, rollback_revalidation_clean=pass, learning_claim_blocker_absence=pass; blocking=none",
+          "claim": "confirmed learning predicates are evidence_bundle_active=pass, confirmed_evidence_bundle_active=pass, repeated_same_family_evidence=pass, behavior_delta_artifact_digest_readback=pass, full_suite_pass=pass, public_check_pass=pass, rollback_revalidation_clean=fail, learning_claim_blocker_absence=fail; blocking=rollback_revalidation_clean,learning_claim_blocker_absence",
           "provenance_label": "checked_in_json_confirmed"
         },
         {
