@@ -212,8 +212,8 @@
     },
     {
       "path": "mk/release.mk",
-      "sha256": "34a2c94dc5bcb76e1d5ee8a032a8a71f06ba260149984546df5fec5f38d4345d",
-      "size_bytes": 50258
+      "sha256": "215d724047532c02631316545512bb213de0b8d13cdfa337e9abae2080712a6c",
+      "size_bytes": 50763
     },
     {
       "path": "mk/static.mk",
@@ -2212,8 +2212,8 @@
     },
     {
       "path": "ops/scripts/release/release_source_ready_commit.py",
-      "sha256": "9e820b285b517941e60daed8f5698c7a2f8633043c8446432115cf08dbd361d8",
-      "size_bytes": 22879
+      "sha256": "a7f97c730d7ba91f2b23f6fd9766011d037df85a802a64c410be263ba99e1246",
+      "size_bytes": 22896
     },
     {
       "path": "ops/scripts/release/release_source_ready_status.py",
@@ -2227,8 +2227,8 @@
     },
     {
       "path": "ops/scripts/release/release_workflow_order_guard.py",
-      "sha256": "6e7f81fb745be41e303be05054acef0cd41060a8bdf6b41626977d046294541f",
-      "size_bytes": 28617
+      "sha256": "0235f203f2d3ca49b2ef8423d70c41ac8b4771d3a77bb840e61b084a8e67156f",
+      "size_bytes": 28743
     },
     {
       "path": "ops/scripts/release/review_archive.py",
@@ -5422,8 +5422,8 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "d9bf0ecab2a03235a40e9f96ef5cfe66c4bbef6f07474d3b71174652d44e37ce",
-      "size_bytes": 186974
+      "sha256": "cfe43724f25ccca612ef858cfd92ed9474bc750a299766cece3a76538db10373",
+      "size_bytes": 187921
     },
     {
       "path": "tests/test_manifest_export_symlink_safety.py",
@@ -5727,8 +5727,8 @@
     },
     {
       "path": "tests/test_release_source_ready_commit.py",
-      "sha256": "0d6e06c1e9a954154b90dadbc612ebe7abf4aff7b111db6d6769695e015b957a",
-      "size_bytes": 19389
+      "sha256": "b9dfd30e7f0475515b3865df470e77c58333022ad06eb046252864d454d250c7",
+      "size_bytes": 22070
     },
     {
       "path": "tests/test_release_source_ready_status.py",
@@ -5742,8 +5742,8 @@
     },
     {
       "path": "tests/test_release_workflow_order_guard.py",
-      "sha256": "ee05c1d3b0a2663571e8d210de3709e800c23437462022482a6f1fd4b09d24f2",
-      "size_bytes": 16326
+      "sha256": "167c742ba143c3627832b2f062f157e852126e379c09317c159ef90026b9c1e2",
+      "size_bytes": 16598
     },
     {
       "path": "tests/test_release_workflow_static.py",

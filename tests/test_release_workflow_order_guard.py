@@ -96,6 +96,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "\t$(MAKE) release-source-ready-commit\n"
             "\t$(MAKE) release-source-ready-post-commit-converge\n"
             "\t$(MAKE) release-source-ready-amend\n"
+            "\t$(MAKE) release-source-ready-final-guard-amend\n"
             "\t$(MAKE) release-check-all-surfaces\n"
             "\t$(MAKE) release-source-ready-status\n"
         )
@@ -108,6 +109,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "\t$(MAKE) release-source-ready-status\n"
                 "\t$(MAKE) release-source-ready-post-commit-converge\n"
                 "\t$(MAKE) release-source-ready-amend\n"
+                "\t$(MAKE) release-source-ready-final-guard-amend\n"
             )
         release_source_ready_post_commit_lines = (
             "\t$(MAKE) auto-improve-readiness-worktree-guard\n"
@@ -144,6 +146,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "release-source-ready-commit",
                 "release-source-ready-post-commit-converge",
                 "release-source-ready-amend",
+                "release-source-ready-final-guard-amend",
                 "release-source-ready-status",
                 "release-converge-all-surfaces",
                 "release-converge",
@@ -217,6 +220,8 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "release-source-ready-commit:\n"
             "\t@true\n"
             "release-source-ready-amend:\n"
+            "\t@true\n"
+            "release-source-ready-final-guard-amend:\n"
             "\t@true\n"
             "release-source-ready-status:\n"
             "\t@true\n"

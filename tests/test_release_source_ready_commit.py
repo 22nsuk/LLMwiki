@@ -348,6 +348,71 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertTrue(report["amend"])
         self.assertEqual(report["expected_head_before_amend"], first_head)
 
+    def test_allows_chained_final_guard_amend_after_post_converge_amend(self) -> None:
+        initial_commit_count = int(_git(self.vault, "rev-list", "--count", "HEAD"))
+        (self.vault / "README.md").write_text("# Test\n\nChanged.\n", encoding="utf-8")
+        commit_rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-source-ready-commit.json",
+                "--message",
+                "release: ready",
+            ]
+        )
+        (self.vault / "ops" / "reports" / "release-smoke-report.json").write_text(
+            '{"status": "pass", "phase": "post-converge"}\n',
+            encoding="utf-8",
+        )
+        amend_rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-source-ready-amend.json",
+                "--amend",
+                "--amend-of",
+                "tmp/release-source-ready-commit.json",
+            ]
+        )
+        post_converge_head = _git(self.vault, "rev-parse", "HEAD")
+        (self.vault / "ops" / "reports" / "goal-worktree-guard.json").write_text(
+            '{"status": "pass", "phase": "final-clean-guard"}\n',
+            encoding="utf-8",
+        )
+
+        final_guard_rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-source-ready-final-guard-amend.json",
+                "--amend",
+                "--amend-of",
+                "tmp/release-source-ready-amend.json",
+            ]
+        )
+
+        self.assertEqual(commit_rc, 0)
+        self.assertEqual(amend_rc, 0)
+        self.assertEqual(final_guard_rc, 0)
+        self.assertEqual(_git(self.vault, "status", "--short"), "")
+        self.assertEqual(int(_git(self.vault, "rev-list", "--count", "HEAD")), initial_commit_count + 1)
+        self.assertNotEqual(_git(self.vault, "rev-parse", "HEAD"), post_converge_head)
+        changed_paths = _git(self.vault, "show", "--name-only", "--format=", "HEAD").splitlines()
+        self.assertIn("README.md", changed_paths)
+        self.assertIn("ops/reports/release-smoke-report.json", changed_paths)
+        self.assertIn("ops/reports/goal-worktree-guard.json", changed_paths)
+        report = json.loads(
+            (self.vault / "tmp" / "release-source-ready-final-guard-amend.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(report["status"], "amended")
+        self.assertEqual(report["amend_of_status"], "amended")
+        self.assertEqual(report["expected_head_before_amend"], post_converge_head)
+
     def test_amend_rejects_intervening_head_change(self) -> None:
         (self.vault / "README.md").write_text("# Test\n\nChanged.\n", encoding="utf-8")
         commit_rc = main(

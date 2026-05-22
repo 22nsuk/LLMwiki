@@ -1,23 +1,23 @@
 {
   "$schema": "ops/schemas/release-evidence-dashboard.schema.json",
   "artifact_kind": "release_evidence_dashboard",
-  "generated_at": "2026-05-22T19:26:11Z",
+  "generated_at": "2026-05-22T19:41:16Z",
   "producer": "ops.scripts.release_evidence_dashboard",
   "source_command": "python -m ops.scripts.release_evidence_dashboard --vault . --out ops/reports/release-evidence-dashboard.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "51d70b07abec760c16cbdf1bbfb44ba490ad921353573c82992104f38f097070",
+  "source_tree_fingerprint": "344c2730bfc80b6e4ac3c735c491cab4a4746e58dea4702d9fd6d15edbb33f18",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "3d201c44c8525de4f9e7af11e9bcba6a5572a46b2f246bc43324bf377c45ab56",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "62c75a1737d4a2f63f26ac5fd0477b2b3d1f4f830478fc59c9ddc764382f410c",
-    "artifact_freshness": "4eb2be5dbe2d449cac90207d6892c0d3be623e1d721e684dfe35c82e70152fa5",
-    "learning_delta_scoreboard": "423ec876bcae436c5a543eaffbb4967404eeb601eda40fbf2e9ec165e684ee0a",
-    "learning_readiness_signoff_revalidation": "21672c750396d19caa77e2c5574d6a9315c03c704887b98170fc33ec0e7b3634",
-    "release_closeout_fixed_point": "99187ce57c9129c5feb01cda001f20babbc9a2019053abe4a0e1866c6b5c65b4",
+    "artifact_freshness": "95074abfd5df012cdb4b74412d758796f206cbd62b91051ba14ebd58ba3b5c66",
+    "learning_delta_scoreboard": "86eb71f76599b3a461b033f71feffd8136bccfa763766581ce5f265cc630afb2",
+    "learning_readiness_signoff_revalidation": "d4cc2c672a2e7b3981a147b307a3644bf943a5facad528eac34db4a450b6131b",
+    "release_closeout_fixed_point": "3024368d68a92d4313ada90b98c2b9daacdff78f80d57ec93cf4e09227043884",
     "release_closeout_fixed_point_cost_trend": "4ad9945123b2cb8856267681013cf7200acf64fef40079a738488071907344ef",
-    "release_closeout_summary": "86d41b1cf35eb5cce77bf04cee085dde96cb1f5d965f97dd6bfc101bddd23739",
-    "current_source_tree_fingerprint": "30ea1a749d2fd63a0162582c446310c7beeffcdf1f1a80fec2a1caa507de6aec"
+    "release_closeout_summary": "87dd4a1b3311b6c89c909e3f2f175d6f927c6e85c978fb701f44f20c7d197ace",
+    "current_source_tree_fingerprint": "2e34333c3269c6c0b1adfe91096d8c3ea49c6877d8ed3a6d03224a64bec6afa5"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T19:26:11Z"
+    "checked_at": "2026-05-22T19:41:16Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
     "version": 4
   },
   "status": "attention",
-  "source_tree_fingerprint_current": "51d70b07abec760c16cbdf1bbfb44ba490ad921353573c82992104f38f097070",
+  "source_tree_fingerprint_current": "344c2730bfc80b6e4ac3c735c491cab4a4746e58dea4702d9fd6d15edbb33f18",
   "inputs": {
     "release_closeout_summary": {
       "path": "ops/reports/release-closeout-summary.json",
@@ -397,16 +397,16 @@
       "converged": true,
       "iteration_count": 5,
       "command_run_count": 56,
-      "total_duration_ms": 44828,
+      "total_duration_ms": 44981,
       "writer_costs": [
         {
           "name": "goal-worktree-guard",
           "target": "auto-improve-readiness-worktree-guard",
           "run_count": 1,
           "selected_iteration_count": 1,
-          "total_duration_ms": 384,
-          "average_duration_ms": 384,
-          "max_duration_ms": 384,
+          "total_duration_ms": 391,
+          "average_duration_ms": 391,
+          "max_duration_ms": 391,
           "skipped_after_first_iteration_count": 4
         },
         {
@@ -414,9 +414,9 @@
           "target": "generated-artifact-index-body",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2446,
+          "total_duration_ms": 2444,
           "average_duration_ms": 489,
-          "max_duration_ms": 493,
+          "max_duration_ms": 495,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -424,9 +424,9 @@
           "target": "artifact-freshness",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 18848,
-          "average_duration_ms": 3770,
-          "max_duration_ms": 3793,
+          "total_duration_ms": 18886,
+          "average_duration_ms": 3777,
+          "max_duration_ms": 3837,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -434,9 +434,9 @@
           "target": "auto-improve-readiness-report-body",
           "run_count": 3,
           "selected_iteration_count": 3,
-          "total_duration_ms": 1518,
-          "average_duration_ms": 506,
-          "max_duration_ms": 508,
+          "total_duration_ms": 1535,
+          "average_duration_ms": 512,
+          "max_duration_ms": 517,
           "skipped_after_first_iteration_count": 2
         },
         {
@@ -444,9 +444,9 @@
           "target": "release-closeout-summary-report",
           "run_count": 4,
           "selected_iteration_count": 4,
-          "total_duration_ms": 2354,
-          "average_duration_ms": 588,
-          "max_duration_ms": 590,
+          "total_duration_ms": 2359,
+          "average_duration_ms": 590,
+          "max_duration_ms": 594,
           "skipped_after_first_iteration_count": 1
         },
         {
@@ -454,9 +454,9 @@
           "target": "learning-readiness-signoff-revalidation",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 1906,
-          "average_duration_ms": 381,
-          "max_duration_ms": 390,
+          "total_duration_ms": 1920,
+          "average_duration_ms": 384,
+          "max_duration_ms": 396,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -464,8 +464,8 @@
           "target": "release-evidence-cohort",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2544,
-          "average_duration_ms": 509,
+          "total_duration_ms": 2552,
+          "average_duration_ms": 510,
           "max_duration_ms": 515,
           "skipped_after_first_iteration_count": 0
         },
@@ -474,9 +474,9 @@
           "target": "release-evidence-dashboard-report",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2701,
-          "average_duration_ms": 540,
-          "max_duration_ms": 548,
+          "total_duration_ms": 2706,
+          "average_duration_ms": 541,
+          "max_duration_ms": 543,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -484,9 +484,9 @@
           "target": "release-lane-summary",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2216,
-          "average_duration_ms": 443,
-          "max_duration_ms": 446,
+          "total_duration_ms": 2235,
+          "average_duration_ms": 447,
+          "max_duration_ms": 454,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -494,9 +494,9 @@
           "target": "release-clean-blocker-ledger",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2347,
-          "average_duration_ms": 469,
-          "max_duration_ms": 473,
+          "total_duration_ms": 2353,
+          "average_duration_ms": 471,
+          "max_duration_ms": 472,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -504,9 +504,9 @@
           "target": "release-closeout-batch-manifest-promote",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 4498,
-          "average_duration_ms": 900,
-          "max_duration_ms": 910,
+          "total_duration_ms": 4496,
+          "average_duration_ms": 899,
+          "max_duration_ms": 904,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -514,9 +514,9 @@
           "target": "release-evidence-closeout-self-check",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 1757,
-          "average_duration_ms": 351,
-          "max_duration_ms": 355,
+          "total_duration_ms": 1772,
+          "average_duration_ms": 354,
+          "max_duration_ms": 356,
           "skipped_after_first_iteration_count": 0
         }
       ],
@@ -532,7 +532,7 @@
         "post_first_iteration_selected_count": 0,
         "post_first_iteration_run_count": 0,
         "skipped_post_first_iteration_selection_count": 12,
-        "total_duration_ms": 1309,
+        "total_duration_ms": 1332,
         "skip_policy_effective": true,
         "summary": "expensive prerequisites were selected only in iteration 1"
       },
@@ -544,9 +544,9 @@
       },
       "evidence_basis": {
         "fixed_point_report_path": "ops/reports/release-closeout-fixed-point.json",
-        "fixed_point_report_digest": "99187ce57c9129c5feb01cda001f20babbc9a2019053abe4a0e1866c6b5c65b4",
-        "current_fixed_point_report_digest": "99187ce57c9129c5feb01cda001f20babbc9a2019053abe4a0e1866c6b5c65b4",
-        "fixed_point_generated_at": "2026-05-22T19:24:57Z",
+        "fixed_point_report_digest": "3024368d68a92d4313ada90b98c2b9daacdff78f80d57ec93cf4e09227043884",
+        "current_fixed_point_report_digest": "3024368d68a92d4313ada90b98c2b9daacdff78f80d57ec93cf4e09227043884",
+        "fixed_point_generated_at": "2026-05-22T19:40:01Z",
         "cost_trend_path": "ops/reports/release-closeout-fixed-point-cost-trend.json",
         "cost_trend_load_status": "ok",
         "cost_trend_digest": "4ad9945123b2cb8856267681013cf7200acf64fef40079a738488071907344ef",
@@ -555,7 +555,7 @@
         "sampled_fixed_point_report_digest": "4b9a7cd57062b69f1eaedd9002bdf6d487a3c73d11c103bd7bf9b7c5d8a61b00",
         "basis_relation_to_current_fixed_point": "sampled_different_fixed_point"
       },
-      "summary": "12 writers ran 56 commands across 5 iterations; total_duration_ms=44828; expensive_prerequisite_skip_effective=True"
+      "summary": "12 writers ran 56 commands across 5 iterations; total_duration_ms=44981; expensive_prerequisite_skip_effective=True"
     }
   },
   "confirmed_evidence_summary": {
@@ -686,7 +686,7 @@
   },
   "accepted_risk_delta": {
     "status": "unchanged",
-    "previous_report_generated_at": "2026-05-22T19:26:11Z",
+    "previous_report_generated_at": "2026-05-22T19:41:16Z",
     "added_count": 0,
     "removed_count": 0,
     "unchanged_count": 1,

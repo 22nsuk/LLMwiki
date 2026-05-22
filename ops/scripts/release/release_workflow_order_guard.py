@@ -482,6 +482,7 @@ def _release_source_ready_transaction_check(invocations: list[dict[str, Any]]) -
         "release-source-ready-commit",
         "release-source-ready-post-commit-converge",
         "release-source-ready-amend",
+        "release-source-ready-final-guard-amend",
         "release-check-all-surfaces",
         "release-source-ready-status",
     ]
@@ -491,7 +492,8 @@ def _release_source_ready_transaction_check(invocations: list[dict[str, Any]]) -
         expected,
         details=(
             "release-source-ready must snapshot the starting HEAD, converge all mutating surfaces, "
-            "create one release-source-ready commit, amend only post-commit canonical evidence, "
+            "create one release-source-ready commit, amend post-commit canonical evidence, "
+            "refresh the canonical worktree guard from the amended clean tree, "
             "finish with the non-mutating all-surfaces release check, "
             "then print the source-ready versus sealed machine-release authority summary."
         ),

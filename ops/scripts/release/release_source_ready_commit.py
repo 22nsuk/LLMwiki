@@ -522,7 +522,7 @@ def run_commit(
         print("release-source-ready-commit refused: staged changes are present", file=sys.stderr)
         return 1
 
-    if amend and paths and report["amend_of_status"] != "committed":
+    if amend and paths and report["amend_of_status"] not in {"committed", "amended"}:
         report["status"] = "blocked"
         report["reason"] = "amend_base_not_committed"
         report["paths_after_uncommitted_base"] = paths

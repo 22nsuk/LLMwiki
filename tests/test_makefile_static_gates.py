@@ -1478,6 +1478,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("release-source-ready-commit", _target_block(text, ".PHONY"))
         self.assertIn("release-source-ready-post-commit-converge", _target_block(text, ".PHONY"))
         self.assertIn("release-source-ready-amend", _target_block(text, ".PHONY"))
+        self.assertIn("release-source-ready-final-guard-amend", _target_block(text, ".PHONY"))
         self.assertNotIn("release-source-ready-post-commit", phony_targets)
         self.assertIn("release-source-ready", _target_block(text, ".PHONY"))
         self.assertNotIn("release-converge-artifact-commit", _target_block(text, ".PHONY"))
@@ -1514,6 +1515,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("RELEASE_SOURCE_READY_PRE_STATUS_OUT ?= tmp/release-source-ready-pre-status.json", text)
         self.assertIn("RELEASE_SOURCE_READY_COMMIT_OUT ?= tmp/release-source-ready-commit.json", text)
         self.assertIn("RELEASE_SOURCE_READY_AMEND_OUT ?= tmp/release-source-ready-amend.json", text)
+        self.assertIn(
+            "RELEASE_SOURCE_READY_FINAL_GUARD_AMEND_OUT ?= tmp/release-source-ready-final-guard-amend.json",
+            text,
+        )
         self.assertIn("RELEASE_SOURCE_READY_STATUS_OUT ?= tmp/release-source-ready-status.json", text)
         self.assertIn("RELEASE_WORKTREE_CLEAN_CHECK_OUT ?= tmp/release-worktree-clean-check.json", text)
         worktree_clean_block = _target_block(text, "release-worktree-clean-check")
@@ -1526,11 +1531,17 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn('--pre-status "$(RELEASE_SOURCE_READY_PRE_STATUS_OUT)"', ready_commit_block)
         self.assertIn('--message "$(RELEASE_SOURCE_READY_COMMIT_MESSAGE)"', ready_commit_block)
         amend_block = _target_block(text, "release-source-ready-amend")
+        final_guard_amend_block = _target_block(text, "release-source-ready-final-guard-amend")
         post_commit_converge_block = _target_block(text, "release-source-ready-post-commit-converge")
         self.assertIn("ops.scripts.release_source_ready_commit", amend_block)
         self.assertIn('--out "$(RELEASE_SOURCE_READY_AMEND_OUT)"', amend_block)
         self.assertIn("--amend", amend_block)
         self.assertIn('--amend-of "$(RELEASE_SOURCE_READY_COMMIT_OUT)"', amend_block)
+        self.assertIn("$(MAKE) auto-improve-readiness-worktree-guard", final_guard_amend_block)
+        self.assertIn("ops.scripts.release_source_ready_commit", final_guard_amend_block)
+        self.assertIn('--out "$(RELEASE_SOURCE_READY_FINAL_GUARD_AMEND_OUT)"', final_guard_amend_block)
+        self.assertIn("--amend", final_guard_amend_block)
+        self.assertIn('--amend-of "$(RELEASE_SOURCE_READY_AMEND_OUT)"', final_guard_amend_block)
         self.assertIn("$(MAKE) auto-improve-readiness-worktree-guard", post_commit_converge_block)
         self.assertIn("$(MAKE) generated-artifact-converge", post_commit_converge_block)
         self.assertIn("$(MAKE) remediation-backlog", post_commit_converge_block)
@@ -1544,6 +1555,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("$(MAKE) release-source-ready-commit", ready_block)
         self.assertIn("$(MAKE) release-source-ready-post-commit-converge", ready_block)
         self.assertIn("$(MAKE) release-source-ready-amend", ready_block)
+        self.assertIn("$(MAKE) release-source-ready-final-guard-amend", ready_block)
         self.assertIn("$(MAKE) release-check-all-surfaces", ready_block)
         self.assertIn("$(MAKE) release-source-ready-status", ready_block)
         status_block = _target_block(text, "release-source-ready-status")
@@ -1557,6 +1569,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-source-ready-commit",
                 "$(MAKE) release-source-ready-post-commit-converge",
                 "$(MAKE) release-source-ready-amend",
+                "$(MAKE) release-source-ready-final-guard-amend",
                 "$(MAKE) release-check-all-surfaces",
                 "$(MAKE) release-source-ready-status",
             ],
