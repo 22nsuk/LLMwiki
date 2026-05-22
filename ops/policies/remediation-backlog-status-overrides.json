@@ -1,4 +1,67 @@
 {
   "$schema": "ops/schemas/remediation-backlog-status-overrides.schema.json",
-  "overrides": []
+  "overrides": [
+    {
+      "item_id": "active_blocker_goal_status_git_worktree_dirty",
+      "status": "deferred",
+      "reason": "Deferred as a duplicate goal-status backlog item: ops/reports/goal-worktree-guard.json is the authoritative live gate and continues to block promotion until the worktree is clean.",
+      "evidence_paths": [
+        "ops/reports/goal-worktree-guard.json",
+        "ops/reports/goal-run-status.json",
+        "ops/reports/session-synopsis.json"
+      ]
+    },
+    {
+      "item_id": "active_blocker_promotion_blocked_by_goal_worktree_guard_failure",
+      "status": "deferred",
+      "reason": "Deferred as a duplicate promotion-backlog item: ops/reports/goal-worktree-guard.json remains the authoritative live gate and still blocks promotion while the worktree is dirty.",
+      "evidence_paths": [
+        "ops/reports/goal-worktree-guard.json",
+        "ops/reports/auto-improve-readiness.json",
+        "ops/reports/session-synopsis.json"
+      ]
+    },
+    {
+      "item_id": "active_blocker_promotion_blocked_by_release_batch_manifest_failure",
+      "status": "deferred",
+      "reason": "Deferred as a duplicate promotion-backlog item: release-closeout-batch-manifest remains the authoritative sealed-distribution gate and still blocks promotion until a bound distribution ZIP is provided.",
+      "evidence_paths": [
+        "ops/reports/release-closeout-batch-manifest.json",
+        "ops/reports/auto-improve-readiness.json",
+        "ops/reports/session-synopsis.json"
+      ]
+    },
+    {
+      "item_id": "auto_session_repeated_blocker_active_report_self_improve_certificate_rerun4_review_blocked",
+      "status": "closed",
+      "reason": "Closed by the active external-report review: the 2026-05-22 self-improvement report is archived and its matrix actions are all implemented, so this review-blocked repeat shape is no longer actionable.",
+      "evidence_paths": [
+        "ops/reports/external-report-action-matrix.json",
+        "external-reports/report-reference-manifest.json",
+        "external-reports/archive/llmwiki_self_improvement_review_report_20260522.md"
+      ]
+    },
+    {
+      "item_id": "auto_session_repeated_blocker_active_report_self_improve_certificate_rerun_mutation_failed",
+      "status": "closed",
+      "reason": "Closed by implemented report-lifecycle and strategy predicates: repo-boundary, maintainability-backlog, and external-verification evidence now resolve the mutation failure that kept the active report partial.",
+      "evidence_paths": [
+        "ops/scripts/release/external_report_lifecycle_runtime.py",
+        "ops/reports/external-report-action-matrix.json",
+        "ops/reports/public-check-summary.json",
+        "ops/reports/function-budget-refactor-proposals.json",
+        "ops/reports/sigstore-bundle-verification.json"
+      ]
+    },
+    {
+      "item_id": "negative_lesson_discard_equal_score_secondary_eligibility",
+      "status": "closed",
+      "reason": "Closed by changing the evidence predicates instead of rerunning the same shape: the active-report strategy actions now require canonical repo-boundary, maintainability-backlog, and supply-chain verification evidence before implementation is credited.",
+      "evidence_paths": [
+        "ops/scripts/release/external_report_lifecycle_runtime.py",
+        "tests/test_external_report_action_matrix.py",
+        "ops/reports/external-report-action-matrix.json"
+      ]
+    }
+  ]
 }

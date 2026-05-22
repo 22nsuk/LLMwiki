@@ -110,7 +110,7 @@ def sample_goal_contract() -> dict[str, Any]:
             },
             {
                 "evidence_id": "goal_worktree_guard",
-                "path": "tmp/goal-worktree-guard.json",
+                "path": "ops/reports/goal-worktree-guard.json",
                 "description": "Git/ZIP preflight blocks promotion from dirty, non-Git, or replay-only trees.",
                 "freshness": "current_source_tree",
                 "required_for_promotion": True,

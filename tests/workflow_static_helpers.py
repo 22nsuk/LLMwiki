@@ -1,9 +1,27 @@
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 
 import yaml
+
+PINNED_CHECKOUT_ACTION = "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"
+PINNED_SETUP_PYTHON_ACTION = "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405"
+PINNED_SETUP_UV_ACTION = "astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b"
+PINNED_UPLOAD_ARTIFACT_ACTION = "actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4"
+PINNED_DOWNLOAD_ARTIFACT_ACTION = "actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0"
+PINNED_ATTEST_BUILD_PROVENANCE_ACTION = (
+    "actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f"
+)
+PINNED_PYPI_PUBLISH_ACTION = (
+    "pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b"
+)
+PINNED_CODEQL_ACTION_PREFIX = "github/codeql-action/"
+PINNED_DEPENDENCY_REVIEW_ACTION = (
+    "actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294"
+)
+PINNED_ACTION_REF_RE = re.compile(r"^[^@\s]+@[0-9a-f]{40}$")
 
 
 def load_workflow(path: Path) -> dict[str, object]:
@@ -81,7 +99,6 @@ def assert_workflow_run_contains(
 def assert_locked_install_shape(
     case: unittest.TestCase, workflow: dict[str, object], expected_job_count: int
 ) -> None:
-    setup_uv_action = "astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b"
     jobs = workflow_jobs(workflow)
     case.assertEqual(len(jobs), expected_job_count)
     for job_name, job in jobs.items():
@@ -89,12 +106,13 @@ def assert_locked_install_shape(
             raise AssertionError(f"workflow job must be a mapping: {job_name}")
         with case.subTest(job=job_name):
             setup_python = workflow_step(job, "Setup Python")
+            case.assertEqual(setup_python.get("uses"), PINNED_SETUP_PYTHON_ACTION)
             setup_python_with = setup_python.get("with", {})
             case.assertIsInstance(setup_python_with, dict)
             cache_paths = str(setup_python_with.get("cache-dependency-path", ""))
             case.assertIn("uv.lock", cache_paths.split())
             setup_uv = workflow_step(job, "Setup uv")
-            case.assertEqual(setup_uv.get("uses"), setup_uv_action)
+            case.assertEqual(setup_uv.get("uses"), PINNED_SETUP_UV_ACTION)
             install = next(
                 step
                 for step in workflow_steps(job)
@@ -108,3 +126,20 @@ def assert_locked_install_shape(
                     "python -m pip install -r tmp/locked-requirements.ci.txt",
                 ),
             )
+
+
+def assert_workflow_uses_are_sha_pinned(
+    case: unittest.TestCase, workflow: dict[str, object]
+) -> None:
+    for job_name, job in workflow_jobs(workflow).items():
+        if not isinstance(job, dict):
+            raise AssertionError(f"workflow job must be a mapping: {job_name}")
+        for step in workflow_steps(job):
+            uses = step.get("uses")
+            if not uses:
+                continue
+            with case.subTest(job=job_name, step=step.get("name", ""), uses=uses):
+                case.assertIsInstance(uses, str)
+                if str(uses).startswith("./"):
+                    continue
+                case.assertRegex(str(uses), PINNED_ACTION_REF_RE)

@@ -44,10 +44,13 @@ else:
     )
 
 
-DEFAULT_OUT = "tmp/release-workflow-order-guard.json"
+DEFAULT_OUT = "ops/reports/release-workflow-order-guard.json"
 PRODUCER = "ops.scripts.release_workflow_order_guard"
 SCHEMA_PATH = "ops/schemas/release-workflow-order-guard.schema.json"
-SOURCE_COMMAND = "python -m ops.scripts.release_workflow_order_guard --vault ."
+SOURCE_COMMAND = (
+    "python -m ops.scripts.release_workflow_order_guard "
+    "--vault . --out ops/reports/release-workflow-order-guard.json"
+)
 RELEASE_CONVERGE_TARGET = "release-evidence-converge"
 CHECK_FINALIZED_TARGET = "check-finalized"
 RELEASE_FINALITY_RESETTLE_TARGET = "release-finality-resettle"

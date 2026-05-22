@@ -35,7 +35,7 @@ ACTIVATION_REPORT_PATH = "ops/reports/learning_claim_activation_report.json"
 AUTO_IMPROVE_SESSIONS_DIR = "ops/reports/auto-improve-sessions"
 STATUS_OVERRIDES_PATH = "ops/policies/remediation-backlog-status-overrides.json"
 GOAL_RUNTIME_CERTIFICATE_PATH = "ops/reports/goal-runtime-certificate.json"
-GOAL_WORKTREE_GUARD_PATH = "tmp/goal-worktree-guard.json"
+GOAL_WORKTREE_GUARD_PATH = "ops/reports/goal-worktree-guard.json"
 GOAL_CERTIFICATE_INCOMPLETE_ITEM_ID = (
     "active_blocker_goal_status_self_improvement_loop_certificate_incomplete"
 )

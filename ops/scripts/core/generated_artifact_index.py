@@ -69,6 +69,25 @@ NON_SEALING_INDEX_REPORTS = {
 }
 
 
+def tracking_policy() -> dict[str, Any]:
+    return {
+        "policy_id": "generated_artifact_tracking_policy",
+        "commit_policy": (
+            "Track decision-grade canonical_report artifacts in stable top-level namespaces; "
+            "move superseded archive artifacts to archive namespaces; keep ephemeral run-local "
+            "or dry-run outputs out of stable commit surfaces unless promoted by a schema-backed writer."
+        ),
+        "decision_grade_surfaces": [
+            "ops/reports stable current reports",
+            "ops/operator operator-only reports",
+            "external-reports private reference manifest and active review reports",
+            "runs active mechanism histories",
+        ],
+        "retention_classes": ["canonical_report", "archive", "ephemeral"],
+        "archive_execution_target": "archive-execution-manifest",
+    }
+
+
 def _compact_date(value: str) -> str:
     return f"{value[0:4]}-{value[4:6]}-{value[6:8]}"
 
@@ -254,7 +273,11 @@ def _external_reports(vault: Path) -> tuple[list[dict[str, Any]], list[dict[str,
                 "surface": "external_reports",
                 "family": record["family"],
                 "path": record["path"],
-                "role": "current_review_report",
+                "role": (
+                    "current_reference_manifest"
+                    if profile["report_type"] == "reference_manifest"
+                    else "current_review_report"
+                ),
                 "date": record["date"],
                 "reason": str(decision["reason"]),
             }
@@ -377,8 +400,8 @@ def archive_rules() -> list[dict[str, str]]:
         },
         {
             "surface": "external_reports",
-            "canonical_rule": "Root external reports stay current when they carry unique unresolved action themes or reference-manifest lifecycle evidence.",
-            "archive_rule": "Root external reports become archive candidates when their structured action themes are implemented, explicitly superseded, or fully covered by a broader active report.",
+            "canonical_rule": "The private reference manifest stays current as release provenance; root narrative external reports stay current only when they carry unique unresolved action themes.",
+            "archive_rule": "Root narrative external reports become archive candidates when their structured action themes are implemented, explicitly superseded, or fully covered by a broader active report.",
             "gate_effect": "advisory",
         },
         {
@@ -541,6 +564,7 @@ def build_report(
         },
         "status": "attention" if archive_candidates else "pass",
         "archive_rules": archive_rules(),
+        "tracking_policy": tracking_policy(),
         "now": now,
         "next": next_steps,
         "why_blocked": why_blocked,

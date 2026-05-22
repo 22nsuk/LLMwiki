@@ -22,6 +22,7 @@
     "status",
     "summary",
     "public_export",
+    "public_export_negative_assertions",
     "commands"
   ],
   "properties": {
@@ -79,6 +80,9 @@
         "public_surface_policy_sha256",
         "command_count",
         "command_fail_count",
+        "negative_assertion_fail_count",
+        "physical_repo_split_status",
+        "private_surface_history_absence_status",
         "pytest_passed",
         "pytest_failed",
         "pytest_errors",
@@ -94,6 +98,9 @@
         "public_surface_policy_sha256": { "$ref": "#/$defs/sha256" },
         "command_count": { "type": "integer", "minimum": 0 },
         "command_fail_count": { "type": "integer", "minimum": 0 },
+        "negative_assertion_fail_count": { "type": "integer", "minimum": 0 },
+        "physical_repo_split_status": { "type": "string", "enum": ["pass", "fail"] },
+        "private_surface_history_absence_status": { "type": "string", "enum": ["pass", "fail"] },
         "pytest_passed": { "type": "integer", "minimum": 0 },
         "pytest_failed": { "type": "integer", "minimum": 0 },
         "pytest_errors": { "type": "integer", "minimum": 0 },
@@ -124,10 +131,41 @@
       "type": "array",
       "minItems": 3,
       "items": { "$ref": "#/$defs/command_result" }
+    },
+    "public_export_negative_assertions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "excluded_prefix_absence",
+        "local_path_absence",
+        "private_pattern_absence"
+      ],
+      "properties": {
+        "excluded_prefix_absence": { "$ref": "#/$defs/negative_assertion" },
+        "local_path_absence": { "$ref": "#/$defs/negative_assertion" },
+        "private_pattern_absence": { "$ref": "#/$defs/negative_assertion" }
+      }
     }
   },
   "$defs": {
     "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "negative_assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "violation_count",
+        "violations"
+      ],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "fail"] },
+        "violation_count": { "type": "integer", "minimum": 0 },
+        "violations": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
     "command_result": {
       "type": "object",
       "additionalProperties": false,

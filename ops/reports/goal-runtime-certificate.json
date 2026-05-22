@@ -170,7 +170,7 @@
     },
     {
       "evidence_id": "goal_worktree_guard",
-      "path": "tmp/goal-worktree-guard.json",
+      "path": "ops/reports/goal-worktree-guard.json",
       "status": "present",
       "report_status": "pass"
     }

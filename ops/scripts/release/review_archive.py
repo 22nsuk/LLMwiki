@@ -38,7 +38,7 @@ else:
     from ops.scripts.schema_constants_runtime import REVIEW_ARCHIVE_REPORT_SCHEMA_PATH
 
 
-DEFAULT_REVIEW_ARCHIVE_OUT = "tmp/llm-wiki-vnext-review.zip"
+DEFAULT_REVIEW_ARCHIVE_OUT = "build/review/llm-wiki-vnext-review.zip"
 DEFAULT_REVIEW_ARCHIVE_REPORT = "ops/reports/review-archive-report.json"
 PRODUCER = "ops.scripts.review_archive"
 ADVISORY_PROFILE = "default"
@@ -47,11 +47,11 @@ DEFAULT_PROFILE = CLEAN_PROFILE
 PROFILES = {ADVISORY_PROFILE, CLEAN_PROFILE}
 DEFAULT_SOURCE_COMMAND = (
     "python -m ops.scripts.release.review_archive --vault . "
-    "--archive-out tmp/llm-wiki-vnext-review.zip --out ops/reports/review-archive-report.json --profile default"
+    "--archive-out build/review/llm-wiki-vnext-review.zip --out ops/reports/review-archive-report.json --profile default"
 )
 CLEAN_SOURCE_COMMAND = (
     "python -m ops.scripts.release.review_archive --vault . "
-    "--archive-out tmp/llm-wiki-vnext-review.zip --out ops/reports/review-archive-report.json --profile clean"
+    "--archive-out build/review/llm-wiki-vnext-review.zip --out ops/reports/review-archive-report.json --profile clean"
 )
 CLEAN_PROFILE_RULES = (
     "tmp/**/*.candidate.json",

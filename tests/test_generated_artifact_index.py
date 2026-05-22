@@ -84,6 +84,16 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
             self.assertEqual(validate_with_schema(report, envelope_schema), [])
             self.assertEqual(destination, (vault / "ops" / "reports" / "generated-artifact-index.json").resolve())
             self.assertEqual(report["status"], "attention")
+            self.assertEqual(
+                report["tracking_policy"]["policy_id"],
+                "generated_artifact_tracking_policy",
+            )
+            self.assertIn("decision-grade", report["tracking_policy"]["commit_policy"])
+            self.assertIn("ephemeral", report["tracking_policy"]["retention_classes"])
+            self.assertIn(
+                "external-reports private reference manifest and active review reports",
+                report["tracking_policy"]["decision_grade_surfaces"],
+            )
             self.assertTrue(report["now"])
             self.assertTrue(report["next"])
             self.assertTrue(report["why_blocked"])
@@ -302,6 +312,31 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
             )
             self.assertIn("promotion-report.json:decode_error", run_record["reason"])
             self.assertIn("run-ledger.json:missing", run_record["reason"])
+
+    def test_external_report_manifest_is_not_labeled_as_review_report(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            (vault / "external-reports").mkdir(exist_ok=True)
+            (vault / "external-reports" / "report-reference-manifest.json").write_text(
+                json.dumps({"references": [], "summary": {"active_reference_set_status": "current"}}),
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+
+            manifest_record = next(
+                item
+                for item in report["canonical_reports"]
+                if item["path"] == "external-reports/report-reference-manifest.json"
+            )
+            external_rule = next(
+                item for item in report["archive_rules"] if item["surface"] == "external_reports"
+            )
+            self.assertEqual(manifest_record["role"], "current_reference_manifest")
+            self.assertIn("private reference manifest", external_rule["canonical_rule"])
+            self.assertNotIn("current review report", json.dumps(manifest_record))
 
 
 if __name__ == "__main__":

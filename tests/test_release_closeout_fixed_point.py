@@ -41,6 +41,7 @@ def fixed_context() -> RuntimeContext:
 
 
 TARGET_TO_TRACKED_PATH = {
+    "auto-improve-readiness-worktree-guard": "ops/reports/goal-worktree-guard.json",
     "generated-artifact-index-body": "ops/reports/generated-artifact-index.json",
     "artifact-freshness": "ops/reports/artifact-freshness-report.json",
     "auto-improve-readiness-report-body": "ops/reports/auto-improve-readiness.json",

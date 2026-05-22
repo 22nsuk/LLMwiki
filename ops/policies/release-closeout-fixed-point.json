@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "max_iterations": 10,
   "feedback_refresh_targets": [
     "generated-artifact-index-body",
@@ -20,10 +20,17 @@
   },
   "writers": [
     {
+      "name": "goal-worktree-guard",
+      "target": "auto-improve-readiness-worktree-guard",
+      "produces": ["ops/reports/goal-worktree-guard.json"],
+      "depends_on": [],
+      "expensive_prerequisites_once": []
+    },
+    {
       "name": "generated-artifact-index",
       "target": "generated-artifact-index-body",
       "produces": ["ops/reports/generated-artifact-index.json"],
-      "depends_on": [],
+      "depends_on": ["auto-improve-readiness-worktree-guard"],
       "expensive_prerequisites_once": [
         "closure-registry-envelope",
         "manual-mutate-defect-registry",
@@ -41,7 +48,7 @@
       "name": "auto-improve-readiness",
       "target": "auto-improve-readiness-report-body",
       "produces": ["ops/reports/auto-improve-readiness.json"],
-      "depends_on": ["artifact-freshness"],
+      "depends_on": ["auto-improve-readiness-worktree-guard", "artifact-freshness"],
       "expensive_prerequisites_once": []
     },
     {
@@ -133,6 +140,7 @@
     }
   ],
   "tracked_artifacts": [
+    "ops/reports/goal-worktree-guard.json",
     "ops/reports/generated-artifact-index.json",
     "ops/reports/artifact-freshness-report.json",
     "ops/reports/auto-improve-readiness.json",

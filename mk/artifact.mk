@@ -15,15 +15,16 @@ ARTIFACT_FRESHNESS_CANDIDATE_OUT ?= tmp/artifact-freshness-report.candidate.json
 ARTIFACT_FRESHNESS_CHECK_OUT ?= tmp/artifact-freshness-report-check.json
 ARTIFACT_FRESHNESS_MTIME_SOURCE ?= embedded_currentness
 ARTIFACT_FRESHNESS_ZIP_METADATA ?=
+ARTIFACT_FRESHNESS_PROGRESS ?= none
 ARTIFACT_RELOCATION_AUDIT_OUT ?= ops/operator/artifact-relocation-audit.json
 ARTIFACT_RELOCATION_AUDIT_CANDIDATE_OUT ?= tmp/artifact-relocation-audit.candidate.json
 MANUAL_MUTATE_DEFECT_REGISTRY_OUT ?= ops/reports/manual-mutate-defect-registry.json
 MAKE_TARGET_INVENTORY_OUT ?= tmp/make-target-inventory.json
-WORKFLOW_DEPENDENCY_PLANNER_OUT ?= tmp/workflow-dependency-planner.json
+WORKFLOW_DEPENDENCY_PLANNER_OUT ?= ops/reports/workflow-dependency-planner.json
 WORKFLOW_DEPENDENCY_PLANNER_CANDIDATE_OUT ?= tmp/workflow-dependency-planner.candidate.json
 WORKFLOW_DEPENDENCY_PLANNER_CHECK_OUT ?= tmp/workflow-dependency-planner-check.json
 WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST ?=
-RELEASE_WORKFLOW_ORDER_GUARD_OUT ?= tmp/release-workflow-order-guard.json
+RELEASE_WORKFLOW_ORDER_GUARD_OUT ?= ops/reports/release-workflow-order-guard.json
 RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT ?= tmp/release-workflow-order-guard.candidate.json
 RELEASE_RISK_TAXONOMY_MATRIX_OUT ?= ops/reports/release-risk-taxonomy-matrix.json
 RELEASE_RISK_TAXONOMY_MATRIX_CANDIDATE_OUT ?= tmp/release-risk-taxonomy-matrix.candidate.json
@@ -32,11 +33,11 @@ RELEASE_RISK_TAXONOMY_MATRIX_MD_OUT ?= ops/reports/release-risk-taxonomy-matrix.
 .PHONY: artifact-freshness artifact-freshness-check artifact-relocation-audit tmp-json-clean tmp-clean refresh-generated-core refresh-generated-observability refresh-generated generated-artifact-converge clean-fixture-regeneration-guard script-output-surfaces script-output-surfaces-clean-regenerate manual-mutate-defect-registry closure-registry-envelope make-target-inventory workflow-dependency-planner workflow-dependency-planner-check release-workflow-order-guard release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-body archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback
 
 artifact-freshness:
-	$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CANDIDATE_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",)
+	$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CANDIDATE_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" --progress "$(ARTIFACT_FRESHNESS_PROGRESS)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",)
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(ARTIFACT_FRESHNESS_CANDIDATE_OUT)" --out "$(ARTIFACT_FRESHNESS_OUT)" --schema ops/schemas/artifact-freshness-report.schema.json --expected-artifact-kind artifact_freshness_report --expected-producer ops.scripts.artifact_freshness_runtime
 
 artifact-freshness-check:
-	$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CHECK_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",) --fail-on-fail
+	$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CHECK_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" --progress "$(ARTIFACT_FRESHNESS_PROGRESS)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",) --fail-on-fail
 
 artifact-relocation-audit:
 	$(PYTHON) -m ops.scripts.artifact_relocation_audit --vault "$(VAULT)" --out "$(ARTIFACT_RELOCATION_AUDIT_CANDIDATE_OUT)" --fail-on-fail

@@ -234,7 +234,7 @@ def _write_goal_worktree_guard_sample_report(vault: Path) -> None:
         "blockers": [],
         "status": "pass",
     }
-    path = vault / "tmp" / "goal-worktree-guard.json"
+    path = vault / "ops" / "reports" / "goal-worktree-guard.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 

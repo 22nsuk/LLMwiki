@@ -16,12 +16,13 @@ from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 
 
-DEFAULT_OUT = "tmp/goal-worktree-guard.json"
+DEFAULT_OUT = "ops/reports/goal-worktree-guard.json"
 PRODUCER = "ops.scripts.goal_worktree_guard"
 SCHEMA_PATH = "ops/schemas/goal-worktree-guard.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.goal_worktree_guard --vault ."
 PUBLIC_SOURCE_LAYOUT_PATHS = ("ops", "tests", "mk", "README.md", "Makefile")
 REQUESTED_MODES = ("auto", "git", "zip")
+DURABLE_PRIVATE_IGNORED_PREFIXES = ("external-reports/",)
 
 
 @dataclass(frozen=True)
@@ -55,6 +56,10 @@ class GitInspection:
     dirty_entry_count: int
     status_porcelain_sha256: str
     status_codes: dict[str, int]
+    durable_private_ignored_entry_count: int
+    durable_private_ignored_status_porcelain_sha256: str
+    durable_private_ignored_status_codes: dict[str, int]
+    durable_private_ignored_error: str
     error: str
 
 
@@ -115,6 +120,10 @@ def _porcelain_status_codes(porcelain: str) -> dict[str, int]:
     return dict(sorted(counts.items()))
 
 
+def _ignored_porcelain_lines(porcelain: str) -> str:
+    return "\n".join(line for line in porcelain.splitlines() if line.startswith("!! "))
+
+
 def inspect_git_worktree(vault: Path, git_runner: GitRunner | None = None) -> GitInspection:
     runner = git_runner or _subprocess_git_runner(vault)
     version = runner(["--version"])
@@ -128,6 +137,10 @@ def inspect_git_worktree(vault: Path, git_runner: GitRunner | None = None) -> Gi
             dirty_entry_count=0,
             status_porcelain_sha256=_sha256_text(""),
             status_codes={},
+            durable_private_ignored_entry_count=0,
+            durable_private_ignored_status_porcelain_sha256=_sha256_text(""),
+            durable_private_ignored_status_codes={},
+            durable_private_ignored_error="",
             error=version.stderr or "git executable unavailable",
         )
 
@@ -142,6 +155,10 @@ def inspect_git_worktree(vault: Path, git_runner: GitRunner | None = None) -> Gi
             dirty_entry_count=0,
             status_porcelain_sha256=_sha256_text(""),
             status_codes={},
+            durable_private_ignored_entry_count=0,
+            durable_private_ignored_status_porcelain_sha256=_sha256_text(""),
+            durable_private_ignored_status_codes={},
+            durable_private_ignored_error="",
             error=inside.stderr,
         )
 
@@ -150,6 +167,21 @@ def inspect_git_worktree(vault: Path, git_runner: GitRunner | None = None) -> Gi
     branch = runner(["branch", "--show-current"])
     status = runner(["status", "--porcelain=v1", "--untracked-files=normal"])
     porcelain = status.stdout if status.returncode == 0 else ""
+    ignored_status = runner(
+        [
+            "status",
+            "--porcelain=v1",
+            "--ignored=matching",
+            "--untracked-files=all",
+            "--",
+            *[prefix.rstrip("/") for prefix in DURABLE_PRIVATE_IGNORED_PREFIXES],
+        ]
+    )
+    ignored_porcelain = (
+        _ignored_porcelain_lines(ignored_status.stdout)
+        if ignored_status.returncode == 0
+        else ""
+    )
     return GitInspection(
         available=True,
         inside_worktree=True,
@@ -159,6 +191,14 @@ def inspect_git_worktree(vault: Path, git_runner: GitRunner | None = None) -> Gi
         dirty_entry_count=len([line for line in porcelain.splitlines() if line.strip()]),
         status_porcelain_sha256=_sha256_text(porcelain),
         status_codes=_porcelain_status_codes(porcelain),
+        durable_private_ignored_entry_count=len(
+            [line for line in ignored_porcelain.splitlines() if line.strip()]
+        ),
+        durable_private_ignored_status_porcelain_sha256=_sha256_text(ignored_porcelain),
+        durable_private_ignored_status_codes=_porcelain_status_codes(ignored_porcelain),
+        durable_private_ignored_error=(
+            ignored_status.stderr if ignored_status.returncode != 0 else ""
+        ),
         error=status.stderr if status.returncode != 0 else "",
     )
 
@@ -251,6 +291,22 @@ def evaluate_blockers(
                 "Commit, stash, or explicitly allow dirty mode before treating goal output as promotable.",
             )
         )
+    if git.durable_private_ignored_entry_count and not allow_dirty:
+        blockers.append(
+            _blocker(
+                "git_durable_private_ignored_dirty",
+                "blocking",
+                (
+                    "Git worktree has "
+                    f"{git.durable_private_ignored_entry_count} ignored durable private evidence "
+                    "entrie(s)"
+                ),
+                (
+                    "Track, archive, or remove ignored durable private evidence before treating "
+                    "goal output as promotable."
+                ),
+            )
+        )
     return blockers
 
 
@@ -327,6 +383,9 @@ def build_report(
             ],
             text_inputs={
                 "public_source_layout_paths": json.dumps(PUBLIC_SOURCE_LAYOUT_PATHS),
+                "durable_private_ignored_prefixes": json.dumps(
+                    DURABLE_PRIVATE_IGNORED_PREFIXES
+                ),
             },
             source_tree_excluded_files=(request.out_path or DEFAULT_OUT,),
         ),
@@ -349,6 +408,14 @@ def build_report(
             "dirty_entry_count": git.dirty_entry_count,
             "status_porcelain_sha256": git.status_porcelain_sha256,
             "status_codes": git.status_codes,
+            "durable_private_ignored_entry_count": git.durable_private_ignored_entry_count,
+            "durable_private_ignored_status_porcelain_sha256": (
+                git.durable_private_ignored_status_porcelain_sha256
+            ),
+            "durable_private_ignored_status_codes": (
+                git.durable_private_ignored_status_codes
+            ),
+            "durable_private_ignored_error": git.durable_private_ignored_error,
             "error": git.error,
         },
         "decisions": {

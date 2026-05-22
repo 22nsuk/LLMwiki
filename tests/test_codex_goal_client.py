@@ -356,7 +356,7 @@ class CodexGoalClientTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        guard_path = self.vault / "tmp" / "goal-worktree-guard.json"
+        guard_path = self.vault / "ops" / "reports" / "goal-worktree-guard.json"
         guard_path.parent.mkdir(parents=True, exist_ok=True)
         guard_path.write_text(
             json.dumps(
@@ -381,7 +381,7 @@ class CodexGoalClientTests(unittest.TestCase):
                 "--created-at",
                 "2026-05-17T00:00:00Z",
                 "--worktree-guard-report",
-                "tmp/goal-worktree-guard.json",
+                "ops/reports/goal-worktree-guard.json",
             ]
         )
 
@@ -465,7 +465,7 @@ class CodexGoalClientTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        guard_path = self.vault / "tmp" / "goal-worktree-guard.json"
+        guard_path = self.vault / "ops" / "reports" / "goal-worktree-guard.json"
         guard_path.parent.mkdir(parents=True, exist_ok=True)
         guard_path.write_text(
             json.dumps(
@@ -492,7 +492,7 @@ class CodexGoalClientTests(unittest.TestCase):
                 "--goal-status-path",
                 "runs/goal-terminal-loop/state/goal-run-status.json",
                 "--worktree-guard-report",
-                "tmp/goal-worktree-guard.json",
+                "ops/reports/goal-worktree-guard.json",
             ]
         )
 

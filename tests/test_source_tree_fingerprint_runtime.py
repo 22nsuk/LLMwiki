@@ -59,6 +59,27 @@ class SourceTreeFingerprintRuntimeTests(unittest.TestCase):
 
         self.assertEqual(release_source_tree_fingerprint(self.vault), baseline)
 
+    def test_release_source_tree_fingerprint_ignores_redundant_extra_exclusions(self) -> None:
+        self._write("ops/scripts/example.py", "print('one')\n")
+        baseline = release_source_tree_fingerprint(self.vault)
+
+        self.assertEqual(
+            release_source_tree_fingerprint(
+                self.vault,
+                extra_excluded_files=(
+                    "ops/reports/canonical-report.json",
+                    "ops/operator/operator-release-summary.json",
+                    "external-reports/report-reference-manifest.json",
+                    "runs/local-run/report.json",
+                    "tmp/scratch.json",
+                    "ops/manifest.json",
+                    "ops/script-output-surfaces.json",
+                    "downloaded-report.md:Zone.Identifier",
+                ),
+            ),
+            baseline,
+        )
+
     def test_release_source_tree_fingerprint_accepts_report_specific_exclusions(self) -> None:
         self._write("ops/scripts/example.py", "print('one')\n")
         baseline = release_source_tree_fingerprint(

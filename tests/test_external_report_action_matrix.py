@@ -10,6 +10,11 @@ from pathlib import Path
 import pytest
 
 from ops.scripts.external_report_action_matrix import build_report, write_report
+from ops.scripts.external_report_lifecycle_runtime import (
+    action_statuses,
+    lifecycle_decision,
+    report_lifecycle_profiles,
+)
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
@@ -58,11 +63,11 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
 
     def _write_support_reports(self) -> None:
         self._write_json(
-            "tmp/release-workflow-order-guard.json",
+            "ops/reports/release-workflow-order-guard.json",
             {"status": "pass"},
         )
         self._write_json(
-            "tmp/workflow-dependency-planner.json",
+            "ops/reports/workflow-dependency-planner.json",
             {
                 "workflow_rules": [
                     {
@@ -168,7 +173,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
 
         report = build_report(self.vault, context=fixed_context())
 
-        self.assertEqual(report["summary"]["active_report_count"], 3)
+        self.assertEqual(report["summary"]["active_report_count"], 2)
         self.assertEqual(report["summary"]["archived_report_count"], 1)
         self.assertEqual(report["summary"]["reference_manifest_alignment_status"], "drift")
         self.assertEqual(report["summary"]["reference_manifest_missing_active_report_count"], 2)
@@ -180,7 +185,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         paths = {item["path"] for item in report["active_report_coverage"]}
         self.assertIn("external-reports/release.md", paths)
         self.assertIn("external-reports/maintenance.md", paths)
-        self.assertIn("external-reports/report-reference-manifest.json", paths)
+        self.assertNotIn("external-reports/report-reference-manifest.json", paths)
         self.assertFalse(any("/archive/" in path for path in paths))
         actions = {item["action_id"]: item for item in report["action_items"]}
         self.assertEqual(actions["release_writer_dependency_single_source"]["current_status"], "implemented")
@@ -197,10 +202,6 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "selector_marker_scope_parity",
         ):
             self.assertIn("external-reports/release.md", actions[action_id]["source_report_paths"])
-        self.assertIn(
-            "external-reports/report-reference-manifest.json",
-            actions["active_report_manifest_freshness"]["source_report_paths"],
-        )
         self.assertIn(
             "external-reports/release.md",
             actions["script_output_surfaces_currentness"]["source_report_paths"],
@@ -242,6 +243,104 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertEqual(self_evidence["status"], report["status"])
         self.assertEqual(self_evidence["producer"], "ops.scripts.external_report_action_matrix")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_self_improvement_strategy_actions_remain_open_until_canonical_evidence(self) -> None:
+        for rel_path, text in {
+            "ops/scripts/core/artifact_freshness_runtime.py": "def build_report(): pass\n",
+            "tests/test_artifact_freshness_runtime.py": "def test_placeholder(): pass\n",
+            "mk/artifact.mk": "artifact-freshness-check:\n\tpython -m ops.scripts.artifact_freshness\n",
+            ".gitignore": "raw/\nwiki/\nsystem/\nruns/\nexternal-reports/*\n",
+            "ARCHITECTURE.md": "public mirror excludes raw, wiki, system, runs, external-reports.\n",
+            "ops/scripts/public/public_surface_policy.py": "EXCLUDED_PREFIXES = ['raw/', 'wiki/', 'system/', 'runs/', 'external-reports/']\n",
+            "tests/test_public_surface_policy.py": "def test_placeholder(): pass\n",
+            "tests/test_export_public_repo.py": "def test_placeholder(): pass\n",
+            ".github/workflows/ci.yml": "name: CI\njobs:\n  test:\n    steps:\n      - uses: actions/checkout@v4\n",
+            ".github/workflows/release.yml": "name: Release\njobs:\n  release:\n    steps:\n      - uses: actions/upload-artifact@v4\n",
+            "tests/test_function_budget_refactor_proposals.py": "def test_placeholder(): pass\n",
+            "ops/scripts/eval/function_budget_refactor_proposals.py": "def build_report(): pass\n",
+            "ops/scripts/core/generated_artifact_index.py": "def build_report(): pass\n",
+            "ops/schemas/generated-artifact-index.schema.json": '{"type": "object"}\n',
+            "tests/test_generated_artifact_index.py": "def test_placeholder(): pass\n",
+            "ops/scripts/public/export_public_repo.py": "def export_public_repo(): pass\n",
+            "ops/scripts/public/public_check_summary.py": "def build_report(): pass\n",
+            "tests/test_public_check_summary.py": "def test_placeholder(): pass\n",
+            "mk/supply_chain.mk": "supply-chain-check:\n\tpython -m ops.scripts.supply_chain\n",
+            "CONTRIBUTING.md": "# Contributing\n",
+        }.items():
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        self._write_json(
+            "ops/reports/artifact-freshness-report.json",
+            {"status": "pass", "summary": {}},
+        )
+        self._write_json(
+            "ops/reports/public-check-summary.json",
+            {"status": "pass", "summary": {"public_export_status": "pass"}},
+        )
+        self._write_json(
+            "ops/reports/function-budget-refactor-proposals.json",
+            {"status": "pass", "summary": {"function_budget_candidate_count": 3, "proposal_count": 2}},
+        )
+        self._write_json(
+            "ops/reports/generated-artifact-index.json",
+            {"status": "pass", "summary": {"archive_candidate_count": 1}},
+        )
+        self._write_json("ops/reports/supply-chain-gate-report.json", {"status": "pass"})
+        self._write_json("ops/reports/sbom-readiness-gate-report.json", {"status": "pass"})
+        self._write_json(
+            "ops/reports/in-toto-statement.json",
+            {"predicateType": "https://slsa.dev/provenance/v1"},
+        )
+        self._write_json(
+            "ops/reports/sigstore-bundle-verification.json",
+            {"status": "pass", "verification_checks": [{"status": "pass"}]},
+        )
+        (self.external / "self-improvement.md").write_text(
+            "# Self Improvement\n\n"
+            "artifact freshness progress jsonl, schema validator cache, per-phase timing, check-observed. "
+            "repo boundary, private vault, public/dev repo, generated bulk. "
+            "Dependabot, CodeQL, dependency review, required status, action pinning, concurrency, GitHub-native. "
+            "complexity hotspot, giant test, function budget, orchestrator. "
+            "generated artifact commit churn, decision-grade, ephemeral, tracked set, canonical refresh. "
+            "negative assertion, excluded_prefix_absence, local_path_absence, private_pattern_absence, public export. "
+            "Scorecard, SBOM schema validation, SLSA, in-toto verification, provenance verification. "
+            "CODEOWNERS, PR template, commit taxonomy, collaboration governance.\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            "external-reports/report-reference-manifest.json",
+            {
+                "references": [{"path": "external-reports/self-improvement.md"}],
+                "summary": {"active_reference_set_status": "current"},
+            },
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        for action_id in (
+            "artifact_freshness_performance_observability",
+            "repo_boundary_history_hygiene",
+            "github_native_security_automation",
+            "maintainability_hotspot_refactor_backlog",
+            "generated_artifact_tracking_policy",
+            "public_export_negative_assertions",
+            "supply_chain_external_verification",
+            "collaboration_governance_surface",
+        ):
+            self.assertEqual(actions[action_id]["current_status"], "partially_automated", action_id)
+            self.assertIn(
+                "external-reports/self-improvement.md",
+                actions[action_id]["source_report_paths"],
+            )
+        profiles = report_lifecycle_profiles(self.vault, [self.external / "self-improvement.md"])
+        decision = lifecycle_decision(
+            profiles[0],
+            profiles=profiles,
+            statuses=action_statuses(self.vault),
+        )
+        self.assertFalse(decision["archive_recommended"])
 
     def test_release_verified_actions_become_implemented_after_closeout(self) -> None:
         self._write_release_verification_reports()
@@ -581,7 +680,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             },
         )
         self._write_json(
-            "tmp/goal-worktree-guard.json",
+            "ops/reports/goal-worktree-guard.json",
             {
                 "artifact_kind": "goal_worktree_guard",
                 "producer": "ops.scripts.goal_worktree_guard",
@@ -670,9 +769,26 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         )
         worktree_guard_evidence = actions["git_worktree_goal_guard"]["evidence"]
         self.assertFalse(
-            any(item["path"] == "tmp/goal-worktree-guard.json" for item in worktree_guard_evidence),
+            any(item["path"] == "ops/reports/goal-worktree-guard.json" for item in worktree_guard_evidence),
             "active report completion should depend on durable worktree guard surfaces, not transient tmp reports",
         )
+        contract["status"] = "completed"
+        contract_digest = _canonical_json_digest(contract)
+        self._write_json("ops/reports/codex-goal-contract.json", contract)
+        prompt_report = json.loads(
+            (self.vault / "ops/reports/codex-goal-prompt.json").read_text(encoding="utf-8")
+        )
+        prompt_report["goal_contract"]["contract_sha256"] = contract_digest
+        self._write_json("ops/reports/codex-goal-prompt.json", prompt_report)
+
+        completed_report = build_report(self.vault, context=fixed_context())
+        completed_actions = {item["action_id"]: item for item in completed_report["action_items"]}
+        for action_id in {
+            "goal_contract_schema",
+            "codex_goal_adapter",
+            "auto_improve_goal_contract_input",
+        }:
+            self.assertEqual(completed_actions[action_id]["current_status"], "implemented", action_id)
 
     def test_goal_certificate_action_requires_verified_clean_certificate_report(self) -> None:
         for rel_path in (

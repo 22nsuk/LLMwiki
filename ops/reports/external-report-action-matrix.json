@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-22T10:30:55Z",
+  "generated_at": "2026-05-22T18:51:21Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
+  "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "a32093b8ebe66e305fdac7bcb67f6ded10c36c5fe06cdec6ecf01986bb376f92",
-    "active_external_reports": "052906363688c5b5553ec74e73c064dacf8d90d0ec301596fb85960bd6709874",
-    "action_catalog": "33f45279ed7e4f5a7e0f63a87843d09bd4408a10a140af465073b09d4a244a52"
+    "source_paths": "38887c6148c9f876dc0074d136f181f675e72033cbf7fb6e61ab233ac965af36",
+    "active_external_reports": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "action_catalog": "e65b33c8cd120c9c8085f28f4766d2aeb7adcde67f23d5d30cdb2a0c08a6b217"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T10:30:55Z"
+    "checked_at": "2026-05-22T18:51:21Z"
   },
   "vault": ".",
   "status": "pass",
@@ -29,10 +29,10 @@
     "version": 4
   },
   "summary": {
-    "active_report_count": 3,
-    "archived_report_count": 67,
-    "action_item_count": 28,
-    "implemented_count": 28,
+    "active_report_count": 0,
+    "archived_report_count": 74,
+    "action_item_count": 36,
+    "implemented_count": 36,
     "partially_automated_count": 0,
     "requires_release_run_verification_count": 0,
     "planned_count": 0,
@@ -43,88 +43,19 @@
   },
   "reference_manifest_alignment": {
     "status": "current",
-    "expected_reference_paths": [
-      "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md",
-      "external-reports/llmwiki_code_change_implementation_report_20260516.md"
-    ],
-    "manifest_reference_paths": [
-      "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md",
-      "external-reports/llmwiki_code_change_implementation_report_20260516.md"
-    ],
+    "expected_reference_paths": [],
+    "manifest_reference_paths": [],
     "missing_active_report_paths": [],
     "stale_reference_paths": []
   },
-  "active_report_coverage": [
-    {
-      "path": "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md",
-      "report_type": "narrative_report",
-      "priority_mentions": {
-        "P0": 4,
-        "P1": 4,
-        "P2": 4
-      },
-      "matched_action_ids": [
-        "release_writer_dependency_single_source",
-        "release_lane_mutability_split",
-        "sealed_summary_vocabulary_demotion",
-        "selector_marker_scope_parity",
-        "source_package_distribution_binding",
-        "release_evidence_bundle_and_attestation",
-        "full_suite_evidence_currentness",
-        "goal_execution_runtime_certificate",
-        "sealed_preflight_canonicalization",
-        "goal_runtime_transient_cleanup_gate"
-      ],
-      "matched_action_count": 10
-    },
-    {
-      "path": "external-reports/llmwiki_code_change_implementation_report_20260516.md",
-      "report_type": "narrative_report",
-      "priority_mentions": {
-        "P0": 0,
-        "P1": 0,
-        "P2": 0
-      },
-      "matched_action_ids": [
-        "script_output_surfaces_currentness",
-        "outcome_provenance_gate_policy",
-        "source_package_distribution_binding",
-        "release_evidence_bundle_and_attestation",
-        "full_suite_evidence_currentness",
-        "goal_contract_schema",
-        "codex_goal_adapter",
-        "goal_run_status_audit_resume",
-        "goal_execution_runtime_certificate",
-        "command_heartbeat_observability",
-        "goal_executor_backoff_observability",
-        "sealed_preflight_canonicalization"
-      ],
-      "matched_action_count": 12
-    },
-    {
-      "path": "external-reports/report-reference-manifest.json",
-      "report_type": "reference_manifest",
-      "priority_mentions": {
-        "P0": 0,
-        "P1": 0,
-        "P2": 0
-      },
-      "matched_action_ids": [
-        "active_report_manifest_freshness",
-        "external_report_lifecycle"
-      ],
-      "matched_action_count": 2
-    }
-  ],
+  "active_report_coverage": [],
   "action_items": [
     {
       "action_id": "script_output_surfaces_currentness",
       "priority": "P0",
       "theme": "writer output surface currentness",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/llmwiki_code_change_implementation_report_20260516.md"
-      ],
+      "source_report_paths": [],
       "recommended_target": "script-output-surfaces",
       "evidence": [
         {
@@ -140,22 +71,20 @@
       "priority": "P0",
       "theme": "release writer ordering single source",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md"
-      ],
+      "source_report_paths": [],
       "recommended_target": "release-workflow-order-guard",
       "evidence": [
         {
-          "path": "tmp/workflow-dependency-planner.json",
+          "path": "ops/reports/workflow-dependency-planner.json",
           "exists": true,
           "status": "pass",
           "producer": "ops.scripts.workflow_dependency_planner"
         },
         {
-          "path": "tmp/release-workflow-order-guard.json",
-          "exists": false,
-          "status": "",
-          "producer": ""
+          "path": "ops/reports/release-workflow-order-guard.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.release_workflow_order_guard"
         }
       ]
     },
@@ -208,9 +137,7 @@
       "priority": "P2",
       "theme": "outcome/provenance policy escalation",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/llmwiki_code_change_implementation_report_20260516.md"
-      ],
+      "source_report_paths": [],
       "recommended_target": "outcome-provenance-gate-policy",
       "evidence": [
         {
@@ -226,9 +153,7 @@
       "priority": "P1",
       "theme": "active external report lifecycle",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/report-reference-manifest.json"
-      ],
+      "source_report_paths": [],
       "recommended_target": "external-report-action-matrix",
       "evidence": [
         {
@@ -250,9 +175,7 @@
       "priority": "P0",
       "theme": "active external report manifest freshness",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/report-reference-manifest.json"
-      ],
+      "source_report_paths": [],
       "recommended_target": "external-report-reference-manifest-settle",
       "evidence": [
         {
@@ -274,9 +197,7 @@
       "priority": "P0",
       "theme": "release lane mutability split",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md"
-      ],
+      "source_report_paths": [],
       "recommended_target": "release-evidence-converge",
       "evidence": [
         {
@@ -304,9 +225,7 @@
       "priority": "P0",
       "theme": "sealed summary vocabulary demotion",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md"
-      ],
+      "source_report_paths": [],
       "recommended_target": "release-closeout-summary-report",
       "evidence": [
         {
@@ -340,9 +259,7 @@
       "priority": "P1",
       "theme": "explicit selector and marker-wide lane parity",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md"
-      ],
+      "source_report_paths": [],
       "recommended_target": "test-release-sealing",
       "evidence": [
         {
@@ -370,10 +287,7 @@
       "priority": "P0",
       "theme": "source package and distribution ZIP binding",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md",
-        "external-reports/llmwiki_code_change_implementation_report_20260516.md"
-      ],
+      "source_report_paths": [],
       "recommended_target": "release-source-package-check",
       "evidence": [
         {
@@ -401,10 +315,7 @@
       "priority": "P1",
       "theme": "release evidence bundle and attestation",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md",
-        "external-reports/llmwiki_code_change_implementation_report_20260516.md"
-      ],
+      "source_report_paths": [],
       "recommended_target": "release-evidence-closeout-sealed-dry-run",
       "evidence": [
         {
@@ -426,10 +337,7 @@
       "priority": "P1",
       "theme": "full-suite evidence currentness",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md",
-        "external-reports/llmwiki_code_change_implementation_report_20260516.md"
-      ],
+      "source_report_paths": [],
       "recommended_target": "test-execution-summary-full-refresh",
       "evidence": [
         {
@@ -473,9 +381,7 @@
       "priority": "P0",
       "theme": "goal contract schema for long-running auto-improve",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/llmwiki_code_change_implementation_report_20260516.md"
-      ],
+      "source_report_paths": [],
       "recommended_target": "codex-goal-contract",
       "evidence": [
         {
@@ -503,9 +409,7 @@
       "priority": "P0",
       "theme": "local set_goal adapter and backend detection",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/llmwiki_code_change_implementation_report_20260516.md"
-      ],
+      "source_report_paths": [],
       "recommended_target": "codex-goal-client",
       "evidence": [
         {
@@ -601,9 +505,7 @@
       "priority": "P0",
       "theme": "goal run status, audit log, checkpoint, and resume contract",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/llmwiki_code_change_implementation_report_20260516.md"
-      ],
+      "source_report_paths": [],
       "recommended_target": "auto-improve-goal-run",
       "evidence": [
         {
@@ -661,10 +563,7 @@
       "priority": "P0",
       "theme": "bounded goal execution runtime certificate",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md",
-        "external-reports/llmwiki_code_change_implementation_report_20260516.md"
-      ],
+      "source_report_paths": [],
       "recommended_target": "goal-runtime-certificate",
       "evidence": [
         {
@@ -722,9 +621,7 @@
       "priority": "P1",
       "theme": "long command heartbeat and quiet-run observability",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/llmwiki_code_change_implementation_report_20260516.md"
-      ],
+      "source_report_paths": [],
       "recommended_target": "test-subprocess",
       "evidence": [
         {
@@ -776,9 +673,7 @@
       "priority": "P1",
       "theme": "goal executor retry-after backoff and status observability",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/llmwiki_code_change_implementation_report_20260516.md"
-      ],
+      "source_report_paths": [],
       "recommended_target": "auto-improve-goal-run",
       "evidence": [
         {
@@ -858,10 +753,7 @@
       "priority": "P0",
       "theme": "sealed authority preflight clean-required canonical evidence",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md",
-        "external-reports/llmwiki_code_change_implementation_report_20260516.md"
-      ],
+      "source_report_paths": [],
       "recommended_target": "release-authority-sealed-preflight",
       "evidence": [
         {
@@ -879,7 +771,7 @@
         {
           "path": "ops/reports/release-closeout-sealed-rehearsal-check.json",
           "exists": true,
-          "status": "pass",
+          "status": "fail",
           "producer": "ops.scripts.release_closeout_sealed_rehearsal_check"
         },
         {
@@ -1009,9 +901,7 @@
       "priority": "P1",
       "theme": "pre-run cleanup and admission gate for long goal runs",
       "current_status": "implemented",
-      "source_report_paths": [
-        "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md"
-      ],
+      "source_report_paths": [],
       "recommended_target": "goal-runtime-run-admission",
       "evidence": [
         {
@@ -1070,6 +960,296 @@
         },
         {
           "path": "tests/test_goal_runtime_run_admission.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "artifact_freshness_performance_observability",
+      "priority": "P0",
+      "theme": "artifact freshness performance and long-gate observability",
+      "current_status": "implemented",
+      "source_report_paths": [],
+      "recommended_target": "artifact-freshness-check",
+      "evidence": [
+        {
+          "path": "ops/scripts/core/artifact_freshness_runtime.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/reports/artifact-freshness-report.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.artifact_freshness_runtime"
+        },
+        {
+          "path": "tests/test_artifact_freshness_runtime.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "mk/artifact.mk",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "repo_boundary_history_hygiene",
+      "priority": "P0",
+      "theme": "private vault and public/dev repo boundary hygiene",
+      "current_status": "implemented",
+      "source_report_paths": [],
+      "recommended_target": "public-check",
+      "evidence": [
+        {
+          "path": ".gitignore",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ARCHITECTURE.md",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/scripts/public/public_surface_policy.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_public_surface_policy.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_export_public_repo.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/reports/public-check-summary.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.public_check_summary"
+        }
+      ]
+    },
+    {
+      "action_id": "github_native_security_automation",
+      "priority": "P0",
+      "theme": "GitHub-native security and workflow governance",
+      "current_status": "implemented",
+      "source_report_paths": [],
+      "recommended_target": "github-security-automation",
+      "evidence": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": ".github/workflows/release.yml",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": ".github/dependabot.yml",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": ".github/workflows/codeql.yml",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": ".github/workflows/dependency-review.yml",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "maintainability_hotspot_refactor_backlog",
+      "priority": "P1",
+      "theme": "complexity hotspot and giant test decomposition",
+      "current_status": "implemented",
+      "source_report_paths": [],
+      "recommended_target": "function-budget-refactor-proposals",
+      "evidence": [
+        {
+          "path": "ops/reports/function-budget-refactor-proposals.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.function_budget_refactor_proposals"
+        },
+        {
+          "path": "tests/test_function_budget_refactor_proposals.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/scripts/eval/function_budget_refactor_proposals.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "generated_artifact_tracking_policy",
+      "priority": "P1",
+      "theme": "generated artifact tracking and churn policy",
+      "current_status": "implemented",
+      "source_report_paths": [],
+      "recommended_target": "generated-artifact-index",
+      "evidence": [
+        {
+          "path": "ops/reports/generated-artifact-index.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.generated_artifact_index"
+        },
+        {
+          "path": "ops/scripts/core/generated_artifact_index.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/schemas/generated-artifact-index.schema.json",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_generated_artifact_index.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "public_export_negative_assertions",
+      "priority": "P2",
+      "theme": "public/private export negative assertions",
+      "current_status": "implemented",
+      "source_report_paths": [],
+      "recommended_target": "public-check",
+      "evidence": [
+        {
+          "path": "ops/scripts/public/export_public_repo.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/scripts/public/public_check_summary.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_export_public_repo.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "tests/test_public_check_summary.py",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/reports/public-check-summary.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.public_check_summary"
+        }
+      ]
+    },
+    {
+      "action_id": "supply_chain_external_verification",
+      "priority": "P2",
+      "theme": "external supply-chain verification",
+      "current_status": "implemented",
+      "source_report_paths": [],
+      "recommended_target": "supply-chain-check",
+      "evidence": [
+        {
+          "path": "ops/reports/supply-chain-gate-report.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.supply_chain_gate_runtime"
+        },
+        {
+          "path": "ops/reports/sbom-readiness-gate-report.json",
+          "exists": true,
+          "status": "pass",
+          "producer": "ops.scripts.sbom_readiness_gate_runtime"
+        },
+        {
+          "path": "ops/reports/in-toto-statement.json",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "ops/reports/sigstore-bundle-verification.json",
+          "exists": true,
+          "status": "local-integrity-only",
+          "producer": ""
+        },
+        {
+          "path": "mk/supply_chain.mk",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        }
+      ]
+    },
+    {
+      "action_id": "collaboration_governance_surface",
+      "priority": "P2",
+      "theme": "collaboration governance surface",
+      "current_status": "implemented",
+      "source_report_paths": [],
+      "recommended_target": "collaboration-governance",
+      "evidence": [
+        {
+          "path": ".github/CODEOWNERS",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": ".github/pull_request_template.md",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "CONTRIBUTING.md",
           "exists": true,
           "status": "",
           "producer": ""

@@ -33,6 +33,12 @@ PUBLIC_EXCLUDED_FILES = (
     "ops/raw-registry.json",
 )
 
+PUBLIC_INCLUDED_REPORT_FILES = (
+    "ops/reports/goal-worktree-guard.json",
+    "ops/reports/release-workflow-order-guard.json",
+    "ops/reports/workflow-dependency-planner.json",
+)
+
 PUBLIC_EXCLUDED_PREFIXES = (
     ".obsidian/",
     ".venv/",
@@ -72,8 +78,7 @@ def render_public_gitignore_block() -> str:
         "!/.codex/agents/",
         "!/.codex/agents/**",
         "!/.github/",
-        "!/.github/workflows/",
-        "!/.github/workflows/**",
+        "!/.github/**",
         "!/mk/",
         "!/mk/**",
         "!/AGENTS.md",
@@ -98,7 +103,9 @@ def render_public_gitignore_block() -> str:
         "AGENTS.local.md",
         "ops/manifest.json",
         "ops/raw-registry.json",
-        "ops/reports/",
+        "ops/reports/*",
+        "# Policy-approved durable generated evidence under ops/reports.",
+        *[f"!{path}" for path in PUBLIC_INCLUDED_REPORT_FILES],
         PUBLIC_GITIGNORE_END,
     ]
     return "\n".join(lines) + "\n"

@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/release-lane-summary.schema.json",
   "artifact_kind": "release_lane_summary",
-  "generated_at": "2026-05-22T10:31:08Z",
+  "generated_at": "2026-05-22T18:51:29Z",
   "producer": "ops.scripts.release_lane_summary",
   "source_command": "python -m ops.scripts.release_lane_summary --vault . --out ops/reports/release-lane-summary.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
+  "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "0d52985f1a335ba2c86dcfcd891717a3c35fc67c6a4f95df49e73822041aa523",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e61b0bc0bda4784ff61850ac5b3d8f5a63b95209cdd9f1e84e6e4142763be1a0",
-    "learning_delta_scoreboard": "c928f6ef0cd1b62f2a2f1b65cb934960a4e536da0e724f742b052a379157d54a",
-    "release_closeout_summary": "2908d53d910e3e621d7225cb106958ccc2dd2fcbd13714b3d71ff1d51c4c88ff",
-    "release_evidence_cohort": "39f26e647986a726b8e31cf31021b10003819a80c3b5b06470d1b5d697b5cce9",
-    "release_evidence_dashboard": "78cb9a58a9e87dae78bca3b4629d4417fd46dc9ccb0b545abd13ca0cb29ba882",
-    "current_source_tree_fingerprint": "9e9966de65d3a1939ec09077750d48844b8e8e74984113f06a90c879ca369038"
+    "learning_delta_scoreboard": "16df3f62f0b59fbe4b16821f674bd0a13eb2b27a9e4cc21c4c7d24541d07b6ca",
+    "release_closeout_summary": "6fb4d8de336abd971fbfa8465c74f888b5228fe941a0fb177be504f4530e6643",
+    "release_evidence_cohort": "7cf520b9339639a311fa6a2bd61ed7e065928f3786528cec8aff4b3ef8d7de7e",
+    "release_evidence_dashboard": "82d33ee2beffe31257c55fbf1e3e254acb85b07cef71151318c14700f6f2bc43",
+    "current_source_tree_fingerprint": "f3b68dec2e4b83dea1d3b3ee92ce4ddcf8fa97c29bd379e4017eff14b66afee7"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T10:31:08Z"
+    "checked_at": "2026-05-22T18:51:29Z"
   },
   "vault": ".",
   "policy": {
@@ -44,13 +44,13 @@
     "learning_claim_guard_status": "pass",
     "learning_claim_allowed": false,
     "claims_learning_improved": false,
-    "accepted_risk_family_count": 3,
-    "accepted_risk_instance_count": 3,
-    "accepted_risk_count": 3,
-    "gate_attention_count": 4,
+    "accepted_risk_family_count": 1,
+    "accepted_risk_instance_count": 1,
+    "accepted_risk_count": 1,
+    "gate_attention_count": 3,
     "clean_lane_blocking_family_count": 1,
-    "learning_claim_blocking_family_count": 3,
-    "advisory_lifecycle_family_count": 2
+    "learning_claim_blocking_family_count": 5,
+    "advisory_lifecycle_family_count": 0
   },
   "provenance": {
     "cohort_source": "ops/reports/release-evidence-cohort.json",

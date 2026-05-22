@@ -15,16 +15,23 @@ on:
 env:
   REVIEW_ARCHIVE_PROFILE: clean
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   verify-clean-release:
     name: verify clean release readiness
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.12"
           cache: "pip"
@@ -61,7 +68,7 @@ jobs:
 
       - name: Upload post-check finalizer diagnostics
         if: always() && (github.event_name != 'workflow_dispatch' || inputs.upload_post_check_finalizer_artifact)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: post-check-finalizer-diagnostics
           path: |
@@ -74,18 +81,18 @@ jobs:
         run: make release-post-seal-attestation RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP=build/release/live-source.zip
 
       - name: Materialize verified evidence bundle
-        run: make release-audit-pack RELEASE_AUDIT_PACK_OUT=tmp/release-evidence-bundle.zip
+        run: make release-audit-pack RELEASE_AUDIT_PACK_OUT=build/release/release-evidence-bundle.zip
 
       - name: Bind live release artifacts
         run: |
           python -m ops.scripts.release.release_live_artifact_attestation build \
             --vault . \
             --source-zip-path build/release/live-source.zip \
-            --evidence-bundle-path tmp/release-evidence-bundle.zip \
-            --out tmp/release-live-attestation.json
+            --evidence-bundle-path build/release/release-evidence-bundle.zip \
+            --out build/release/release-live-attestation.json
 
       - name: Upload verified source zip
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: verified-source-zip
           path: |
@@ -93,11 +100,11 @@ jobs:
           if-no-files-found: error
 
       - name: Upload verified evidence bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: verified-evidence-bundle
           path: |
-            tmp/release-evidence-bundle.zip
+            build/release/release-evidence-bundle.zip
             ops/reports/release-closeout-summary.json
             ops/reports/release-closeout-batch-manifest.json
             ops/reports/release-evidence-closeout-self-check.json
@@ -107,10 +114,10 @@ jobs:
           if-no-files-found: error
 
       - name: Upload verified release attestation
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: verified-release-attestation
-          path: tmp/release-live-attestation.json
+          path: build/release/release-live-attestation.json
           if-no-files-found: error
 
   publish:
@@ -123,10 +130,10 @@ jobs:
       attestations: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.12"
           cache: "pip"
@@ -149,19 +156,19 @@ jobs:
           python -m pip install -r tmp/locked-requirements.ci.txt
 
       - name: Download verified source zip
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: verified-source-zip
           path: tmp/live-release/source
 
       - name: Download verified evidence bundle
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: verified-evidence-bundle
           path: tmp/live-release/evidence
 
       - name: Download verified release attestation
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: verified-release-attestation
           path: tmp/live-release/attestation
@@ -192,7 +199,7 @@ jobs:
           make supply-chain-benchmark
 
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: release-artifacts
           path: |
@@ -212,11 +219,11 @@ jobs:
           if-no-files-found: error
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
         with:
           subject-path: dist/*
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1.14
         with:
           packages-dir: dist/

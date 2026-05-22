@@ -45,7 +45,7 @@ def _sha256_json(payload: Any) -> str:
 
 def release_source_tree_fingerprint(vault: Path, *, extra_excluded_files: tuple[str, ...] = ()) -> str:
     resolved_vault = vault.resolve()
-    extra_excluded = _normalized_extra_excluded_files(extra_excluded_files)
+    extra_excluded = _effective_extra_excluded_files(extra_excluded_files)
     _, signature = _build_release_source_manifest(
         resolved_vault,
         hash_files=False,
@@ -73,7 +73,7 @@ def release_source_tree_change_sample(
     path_limit: int = DEFAULT_SOURCE_TREE_CHANGE_PATH_LIMIT,
 ) -> dict[str, Any]:
     resolved_vault = vault.resolve()
-    extra_excluded = _normalized_extra_excluded_files(extra_excluded_files)
+    extra_excluded = _effective_extra_excluded_files(extra_excluded_files)
     generated_dt = _parse_iso_z(generated_at)
     entries = _iter_release_source_entries(
         resolved_vault.as_posix(),
@@ -135,10 +135,20 @@ def _normalized_extra_excluded_files(extra_excluded_files: tuple[str, ...]) -> t
     return tuple(sorted(str(path).strip("/") for path in extra_excluded_files if str(path).strip("/")))
 
 
+def _effective_extra_excluded_files(extra_excluded_files: tuple[str, ...]) -> tuple[str, ...]:
+    base_excluded_files = set(DEFAULT_EXCLUDED_FILES)
+    base_excluded_files.add(DEFAULT_RELEASE_MANIFEST_PATH)
+    return tuple(
+        rel_path
+        for rel_path in _normalized_extra_excluded_files(extra_excluded_files)
+        if _should_include(rel_path, base_excluded_files)
+    )
+
+
 def _release_source_excluded_files(extra_excluded_files: tuple[str, ...]) -> set[str]:
     excluded_files = set(DEFAULT_EXCLUDED_FILES)
     excluded_files.add(DEFAULT_RELEASE_MANIFEST_PATH)
-    excluded_files.update(extra_excluded_files)
+    excluded_files.update(_effective_extra_excluded_files(extra_excluded_files))
     return excluded_files
 
 

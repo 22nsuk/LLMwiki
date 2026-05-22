@@ -108,7 +108,7 @@ class GoalRunStatusTests(unittest.TestCase):
             "release-closeout-summary.json",
         ):
             (reports / name).write_text(json.dumps({"status": "pass"}), encoding="utf-8")
-        guard = self.vault / "tmp" / "goal-worktree-guard.json"
+        guard = self.vault / "ops" / "reports" / "goal-worktree-guard.json"
         guard.parent.mkdir(parents=True, exist_ok=True)
         guard.write_text(
             json.dumps(

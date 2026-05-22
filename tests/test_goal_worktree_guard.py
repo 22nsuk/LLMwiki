@@ -37,7 +37,17 @@ class FakeGit:
         self.responses = responses
 
     def __call__(self, args):
-        return self.responses.get(tuple(args), GitCommandResult(1, "", "unexpected git command"))
+        key = tuple(args)
+        if key == (
+            "status",
+            "--porcelain=v1",
+            "--ignored=matching",
+            "--untracked-files=all",
+            "--",
+            "external-reports",
+        ):
+            return self.responses.get(key, GitCommandResult(0, "", ""))
+        return self.responses.get(key, GitCommandResult(1, "", "unexpected git command"))
 
 
 class GoalWorktreeGuardTests(unittest.TestCase):
@@ -89,6 +99,7 @@ class GoalWorktreeGuardTests(unittest.TestCase):
         self.assertEqual(report["detected_mode"], "git_worktree")
         self.assertEqual(report["git"]["worktree_root"], ".")
         self.assertEqual(report["git"]["dirty_entry_count"], 0)
+        self.assertEqual(report["git"]["durable_private_ignored_entry_count"], 0)
         self.assertEqual(report["decisions"]["can_execute_goal_runtime"], True)
         self.assertEqual(report["decisions"]["can_promote_result"], True)
         self.assertEqual(report["blockers"], [])
@@ -125,7 +136,54 @@ class GoalWorktreeGuardTests(unittest.TestCase):
         self.assertEqual(report["decisions"]["promotion_blockers"], ["git_worktree_dirty"])
         self.assertEqual(report["git"]["dirty_entry_count"], 2)
         self.assertEqual(report["git"]["status_codes"], {"??": 1, "M": 1})
+        self.assertEqual(report["git"]["durable_private_ignored_entry_count"], 0)
         self.assertNotIn("ops/scripts/example.py", json.dumps(report))
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_ignored_durable_external_reports_block_promotion_without_path_leak(self) -> None:
+        fake_git = FakeGit(
+            {
+                ("--version",): GitCommandResult(0, "git version 2.0", ""),
+                ("rev-parse", "--is-inside-work-tree"): GitCommandResult(0, "true", ""),
+                ("rev-parse", "--show-toplevel"): GitCommandResult(0, str(self.vault), ""),
+                ("rev-parse", "--verify", "HEAD"): GitCommandResult(0, "d" * 40, ""),
+                ("branch", "--show-current"): GitCommandResult(0, "main", ""),
+                ("status", "--porcelain=v1", "--untracked-files=normal"): GitCommandResult(
+                    0,
+                    "",
+                    "",
+                ),
+                (
+                    "status",
+                    "--porcelain=v1",
+                    "--ignored=matching",
+                    "--untracked-files=all",
+                    "--",
+                    "external-reports",
+                ): GitCommandResult(0, "!! external-reports/private-new-review.md", ""),
+            }
+        )
+
+        report = build_report(
+            GoalWorktreeGuardRequest(
+                vault=self.vault,
+                requested_mode="git",
+                git_runner=fake_git,
+                context=fixed_context(),
+            )
+        )
+        serialized = json.dumps(report)
+
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["decisions"]["can_execute_goal_runtime"], True)
+        self.assertEqual(report["decisions"]["can_promote_result"], False)
+        self.assertEqual(
+            report["decisions"]["promotion_blockers"],
+            ["git_durable_private_ignored_dirty"],
+        )
+        self.assertEqual(report["git"]["durable_private_ignored_entry_count"], 1)
+        self.assertEqual(report["git"]["durable_private_ignored_status_codes"], {"!!": 1})
+        self.assertNotIn("private-new-review.md", serialized)
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_zip_extract_mode_is_distinct_and_non_promotable(self) -> None:
@@ -207,7 +265,7 @@ class GoalWorktreeGuardTests(unittest.TestCase):
         path = write_report(self.vault, report)
         payload = path.read_text(encoding="utf-8")
 
-        self.assertEqual(path, self.vault / "tmp" / "goal-worktree-guard.json")
+        self.assertEqual(path, self.vault / "ops" / "reports" / "goal-worktree-guard.json")
         self.assertNotIn(str(self.vault), payload)
 
 

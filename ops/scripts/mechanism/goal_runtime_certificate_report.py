@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from collections.abc import Mapping
+from copy import deepcopy
 from dataclasses import dataclass
 import datetime as dt
 import hashlib
@@ -17,6 +18,7 @@ from ops.scripts.artifact_io_runtime import (
 )
 from ops.scripts.codex_goal_client import (
     DEFAULT_CONTRACT_PATH,
+    DEFAULT_WORKTREE_GUARD_REPORT_PATH,
     FileGoalBackend,
 )
 from ops.scripts.output_runtime import display_path
@@ -34,6 +36,7 @@ from .goal_runtime_certificate import (
 
 DEFAULT_OUT = "ops/reports/goal-runtime-certificate.json"
 DEFAULT_STATUS_REPORT_PATH = "ops/reports/goal-run-status.json"
+LEGACY_WORKTREE_GUARD_REPORT_PATH = "tmp/goal-worktree-guard.json"
 PRODUCER = "ops.scripts.goal_runtime_certificate_report"
 RUNNER_PRODUCER = "ops.scripts.goal_runtime_runner"
 SCHEMA_PATH = "ops/schemas/goal-runtime-certificate.schema.json"
@@ -502,7 +505,7 @@ def _preserved_verified_report(
     *,
     existing_report: Mapping[str, Any],
 ) -> dict[str, Any]:
-    preserved = dict(existing_report)
+    preserved = _migrate_preserved_report_paths(existing_report)
     if "diagnosis" in preserved:
         return preserved
     run = _mapping_value(existing_report, "run")
@@ -521,6 +524,18 @@ def _preserved_verified_report(
     )
     preserved["blockers"] = []
     preserved["status"] = "pass"
+    return preserved
+
+
+def _migrate_preserved_report_paths(existing_report: Mapping[str, Any]) -> dict[str, Any]:
+    preserved = deepcopy(dict(existing_report))
+    evidence_paths = preserved.get("evidence_paths")
+    if isinstance(evidence_paths, list):
+        for item in evidence_paths:
+            if not isinstance(item, dict):
+                continue
+            if item.get("path") == LEGACY_WORKTREE_GUARD_REPORT_PATH:
+                item["path"] = DEFAULT_WORKTREE_GUARD_REPORT_PATH
     return preserved
 
 

@@ -5,6 +5,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test-tier:
     name: ${{ matrix.tier }} / py${{ matrix.python-version }}
@@ -33,10 +40,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
@@ -90,7 +97,7 @@ jobs:
 
       - name: Upload release closeout cost evidence
         if: always() && matrix.tier == 'release-closeout-regression'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: release-closeout-cost-evidence-${{ matrix.python-version }}
           path: |
@@ -98,7 +105,7 @@ jobs:
             ops/reports/release-closeout-fixed-point.json
             ops/reports/release-closeout-fixed-point-cost-trend.json
             ops/reports/release-evidence-dashboard.json
-            tmp/release-workflow-order-guard.json
+            ops/reports/release-workflow-order-guard.json
             tmp/release-closeout-post-check-finalizer.json
             tmp/release-closeout-post-check-finalizer-recommended-targets.txt
             tmp/release-closeout-post-check-finalizer-plan.json
@@ -106,14 +113,14 @@ jobs:
 
       - name: Upload release authority blocked preflight
         if: always() && matrix.tier == 'release-closeout-regression'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: release-authority-blocked-preflight-${{ matrix.python-version }}
           path: |
-            tmp/release-closeout-sealed-dry-run/LLMwiki-source.zip
-            tmp/release-closeout-sealed-dry-run/release-closeout-batch-manifest.json
-            tmp/release-closeout-sealed-dry-run/external-report-reference-manifest.json
-            tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json
+            build/release/release-closeout-sealed-dry-run/LLMwiki-source.zip
+            build/release/release-closeout-sealed-dry-run/release-closeout-batch-manifest.json
+            build/release/release-closeout-sealed-dry-run/external-report-reference-manifest.json
+            build/release/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json
             ops/reports/release-closeout-sealed-rehearsal-check.json
           if-no-files-found: error
 
@@ -157,10 +164,10 @@ jobs:
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.12"
           cache: "pip"
@@ -199,7 +206,7 @@ jobs:
 
       - name: Upload Windows smoke artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: windows-release-smoke-report
           path: ops/reports/release-smoke-report-windows.json
@@ -224,10 +231,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.12"
           cache: "pip"
@@ -260,7 +267,7 @@ jobs:
 
       - name: Upload raw registry cross-environment matrix
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: raw-registry-cross-environment-${{ matrix.profile }}
           path: ops/reports/raw-registry-cross-environment-matrix-${{ matrix.profile }}.json
@@ -276,10 +283,10 @@ jobs:
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.12"
           cache: "pip"
@@ -302,7 +309,7 @@ jobs:
           python -m pip install -r tmp/locked-requirements.ci.txt
 
       - name: Download raw registry cross-environment matrices
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           pattern: raw-registry-cross-environment-*
           path: ops/reports
@@ -317,7 +324,7 @@ jobs:
 
       - name: Upload raw registry cross-environment evidence bundle
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: raw-registry-cross-environment-evidence-bundle
           path: ops/reports/raw-registry-cross-environment-evidence-bundle.json
@@ -329,10 +336,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.12"
           cache: "pip"
@@ -364,7 +371,7 @@ jobs:
         run: make openvex-draft-cached
 
       - name: Upload supply-chain artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: supply-chain-reports
           path: |

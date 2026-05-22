@@ -1,19 +1,19 @@
 {
   "$schema": "ops/schemas/learning-readiness-signoff-revalidation.schema.json",
   "artifact_kind": "learning_readiness_signoff_revalidation",
-  "generated_at": "2026-05-22T10:31:08Z",
+  "generated_at": "2026-05-22T18:51:29Z",
   "producer": "ops.scripts.learning_readiness_signoff_revalidation",
   "source_command": "python -m ops.scripts.learning_readiness_signoff_revalidation --vault . --window-days 7",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
+  "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "8c536891a172cbe9ad11fa91c7851a82490e204151bd3076dc7ca35e9ad25720",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b1b150975deb8e75740e0bc14053b7cd35beecaa57988305cf49bcf835707941",
-    "auto_improve_readiness": "729352ce84fc39c5188533450422ea1d681d59fca0065bcc3fd0777655823d67",
+    "auto_improve_readiness": "8ce5f330396edf448e39b8ef857e7a3116cf6e528617bf72f90e3b27f6cab0eb",
     "learning_readiness_signoff": "1ec9a280330bf4c9f5cc6a77f7ea7590acaf29d0718a80299d25d8f466576e9d",
-    "release_closeout_summary": "2908d53d910e3e621d7225cb106958ccc2dd2fcbd13714b3d71ff1d51c4c88ff",
+    "release_closeout_summary": "6fb4d8de336abd971fbfa8465c74f888b5228fe941a0fb177be504f4530e6643",
     "required_command": "37dc5b3c58acdb8873773bb36f1352af5f7cc9fcc23e0bffcd16727b59f15ce1",
     "required_environment": "1de70756b4dc6ba51342a117ebf94ebc3114606c630cb2f0525a1b333d697bf0",
     "window_days": "7902699be42c8a8e46fbbb4501726517e86b22c56a189f7625a6da49081b2451"
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T10:31:08Z"
+    "checked_at": "2026-05-22T18:51:29Z"
   },
   "vault": ".",
   "policy": {
@@ -41,8 +41,8 @@
     "accepted_by": "operator-requested-via-codex-20260521",
     "accepted_at": "2026-05-21T11:00:29Z",
     "expires_at": "2026-05-28T11:00:29Z",
-    "seconds_until_expiry": 520161,
-    "days_until_expiry": 6.0204,
+    "seconds_until_expiry": 490140,
+    "days_until_expiry": 5.6729,
     "risk_owner": "runtime-maintainer",
     "revalidation_condition": "Rerun make release-evidence-closeout and inspect learning readiness metrics before release.",
     "rollback_trigger": "Treat learning_blocked_by_review_required as active again if release evidence changes, learning telemetry regresses, or this signoff expires.",
@@ -51,7 +51,7 @@
   "closeout": {
     "path": "ops/reports/release-closeout-summary.json",
     "load_status": "ok",
-    "generated_at": "2026-05-22T10:31:08Z",
+    "generated_at": "2026-05-22T18:51:29Z",
     "checked_in_release_ready": true,
     "release_readiness_state": "conditional_pass",
     "release_authority_status": "conditional_pass",
@@ -70,8 +70,8 @@
     "status": "pass",
     "accepted_learning_risk": false,
     "learning_blocker_active": false,
-    "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
-    "producer_input_fingerprint": "83ee9c90584ea1db6cc8a6801f3c470faeac307970385deec36120c9ce00cb29",
+    "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
+    "producer_input_fingerprint": "2b027b3ae7c9870e1c834b53da02bcd3a4ca6273e37d037e2d442629e4e2c7e6",
     "currentness_status": "current",
     "summary": "release_authority_status=conditional_pass; release_readiness_state=conditional_pass; machine_release_allowed=False; operator_release_allowed=True; requires_accepted_risk_review=True"
   },
@@ -138,7 +138,7 @@
   "revalidation": {
     "status": "due",
     "window_days": 7,
-    "window_ends_at": "2026-05-29T10:31:08Z",
+    "window_ends_at": "2026-05-29T18:51:29Z",
     "clean_closeout_required": true,
     "status_reason": "learning readiness signoff expires within the revalidation window; clean release evidence closeout is required before release or renewal; release effect: release_authority_status=conditional_pass; release_readiness_state=conditional_pass; machine_release_allowed=False; operator_release_allowed=True; requires_accepted_risk_review=True"
   },

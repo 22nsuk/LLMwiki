@@ -85,7 +85,7 @@ def seed_source_package_evidence(vault: Path, *, status: str = "pass") -> None:
             {
                 "status": status,
                 "source_zip": {
-                    "path": "tmp/source-package-check/LLMwiki-source.zip",
+                    "path": "build/source-package-check/LLMwiki-source.zip",
                     "exists": True,
                     "sha256": SOURCE_ZIP_SHA256,
                 },

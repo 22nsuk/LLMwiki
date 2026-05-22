@@ -15,8 +15,8 @@ from ops.scripts.workflow_dependency_planner import build_report as build_workfl
 
 
 REFERENCE_MANIFEST = "external-reports/report-reference-manifest.json"
-REPORT_EXTENSIONS = {".md", ".json"}
 REFERENCE_MANIFEST_EXTENSIONS = {".md", ".pdf", ".docx"}
+REPORT_EXTENSIONS = REFERENCE_MANIFEST_EXTENSIONS
 NARRATIVE_REPORT_EXTENSIONS = {".md"}
 RELEASE_VERIFIED_ACTION_IDS = {
     "source_package_distribution_binding",
@@ -40,8 +40,8 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         "theme": "release writer ordering single source",
         "patterns": [r"workflow_dependency_planner", r"fixed-point", r"writer dependency", r"single source"],
         "evidence_paths": [
-            "tmp/workflow-dependency-planner.json",
-            "tmp/release-workflow-order-guard.json",
+            "ops/reports/workflow-dependency-planner.json",
+            "ops/reports/release-workflow-order-guard.json",
         ],
         "recommended_target": "release-workflow-order-guard",
     },
@@ -520,6 +520,171 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         ],
         "recommended_target": "goal-runtime-run-admission",
     },
+    {
+        "action_id": "artifact_freshness_performance_observability",
+        "priority": "P0",
+        "theme": "artifact freshness performance and long-gate observability",
+        "patterns": [
+            r"artifact freshness",
+            r"schema validator cache",
+            r"validator cache",
+            r"progress jsonl",
+            r"per-phase timing",
+            r"check-observed",
+            r"incremental --changed-only",
+            r"long-running gate",
+        ],
+        "evidence_paths": [
+            "ops/scripts/core/artifact_freshness_runtime.py",
+            "ops/reports/artifact-freshness-report.json",
+            "tests/test_artifact_freshness_runtime.py",
+            "mk/artifact.mk",
+        ],
+        "recommended_target": "artifact-freshness-check",
+    },
+    {
+        "action_id": "repo_boundary_history_hygiene",
+        "priority": "P0",
+        "theme": "private vault and public/dev repo boundary hygiene",
+        "patterns": [
+            r"repo boundary",
+            r"vault/code",
+            r"public/dev repo",
+            r"private vault",
+            r"public mirror",
+            r"raw/runs/archive",
+            r"generated bulk",
+        ],
+        "evidence_paths": [
+            ".gitignore",
+            "ARCHITECTURE.md",
+            "ops/scripts/public/public_surface_policy.py",
+            "tests/test_public_surface_policy.py",
+            "tests/test_export_public_repo.py",
+            "ops/reports/public-check-summary.json",
+        ],
+        "recommended_target": "public-check",
+    },
+    {
+        "action_id": "github_native_security_automation",
+        "priority": "P0",
+        "theme": "GitHub-native security and workflow governance",
+        "patterns": [
+            r"Dependabot",
+            r"CodeQL",
+            r"dependency review",
+            r"required status",
+            r"action pinning",
+            r"concurrency",
+            r"GitHub-native",
+        ],
+        "evidence_paths": [
+            ".github/workflows/ci.yml",
+            ".github/workflows/release.yml",
+            ".github/dependabot.yml",
+            ".github/workflows/codeql.yml",
+            ".github/workflows/dependency-review.yml",
+        ],
+        "recommended_target": "github-security-automation",
+    },
+    {
+        "action_id": "maintainability_hotspot_refactor_backlog",
+        "priority": "P1",
+        "theme": "complexity hotspot and giant test decomposition",
+        "patterns": [
+            r"complexity hotspot",
+            r"giant test",
+            r"fixture cache",
+            r"function budget",
+            r"orchestrator",
+            r"hotspot refactor",
+        ],
+        "evidence_paths": [
+            "ops/reports/function-budget-refactor-proposals.json",
+            "tests/test_function_budget_refactor_proposals.py",
+            "ops/scripts/eval/function_budget_refactor_proposals.py",
+        ],
+        "recommended_target": "function-budget-refactor-proposals",
+    },
+    {
+        "action_id": "generated_artifact_tracking_policy",
+        "priority": "P1",
+        "theme": "generated artifact tracking and churn policy",
+        "patterns": [
+            r"generated artifact",
+            r"commit churn",
+            r"decision-grade",
+            r"ephemeral",
+            r"tracked set",
+            r"canonical refresh",
+        ],
+        "evidence_paths": [
+            "ops/reports/generated-artifact-index.json",
+            "ops/scripts/core/generated_artifact_index.py",
+            "ops/schemas/generated-artifact-index.schema.json",
+            "tests/test_generated_artifact_index.py",
+        ],
+        "recommended_target": "generated-artifact-index",
+    },
+    {
+        "action_id": "public_export_negative_assertions",
+        "priority": "P2",
+        "theme": "public/private export negative assertions",
+        "patterns": [
+            r"negative assertion",
+            r"excluded_prefix_absence",
+            r"private_pattern_absence",
+            r"local_path_absence",
+            r"public export",
+            r"public/private boundary",
+        ],
+        "evidence_paths": [
+            "ops/scripts/public/export_public_repo.py",
+            "ops/scripts/public/public_check_summary.py",
+            "tests/test_export_public_repo.py",
+            "tests/test_public_check_summary.py",
+            "ops/reports/public-check-summary.json",
+        ],
+        "recommended_target": "public-check",
+    },
+    {
+        "action_id": "supply_chain_external_verification",
+        "priority": "P2",
+        "theme": "external supply-chain verification",
+        "patterns": [
+            r"Scorecard",
+            r"SBOM schema validation",
+            r"SLSA",
+            r"in-toto verification",
+            r"supply-chain external verification",
+            r"provenance verification",
+        ],
+        "evidence_paths": [
+            "ops/reports/supply-chain-gate-report.json",
+            "ops/reports/sbom-readiness-gate-report.json",
+            "ops/reports/in-toto-statement.json",
+            "ops/reports/sigstore-bundle-verification.json",
+            "mk/supply_chain.mk",
+        ],
+        "recommended_target": "supply-chain-check",
+    },
+    {
+        "action_id": "collaboration_governance_surface",
+        "priority": "P2",
+        "theme": "collaboration governance surface",
+        "patterns": [
+            r"CODEOWNERS",
+            r"PR template",
+            r"commit taxonomy",
+            r"collaboration governance",
+        ],
+        "evidence_paths": [
+            ".github/CODEOWNERS",
+            ".github/pull_request_template.md",
+            "CONTRIBUTING.md",
+        ],
+        "recommended_target": "collaboration-governance",
+    },
 ]
 
 ARCHIVE_STATUS_RE = re.compile(
@@ -562,9 +727,12 @@ def active_report_paths(vault: Path) -> list[Path]:
     root = vault / "external-reports"
     if not root.is_dir():
         return []
+    manifest_path = (vault / REFERENCE_MANIFEST).resolve()
     paths: list[Path] = []
     for path in sorted(root.iterdir()):
         if not path.is_file() or path.suffix.lower() not in REPORT_EXTENSIONS:
+            continue
+        if path.resolve() == manifest_path:
             continue
         if path.parent.name in {"archive", "archived"}:
             continue
@@ -831,7 +999,7 @@ def _goal_contract_is_bounded(contract: dict[str, Any]) -> bool:
     return bool(
         contract.get("$schema") == "ops/schemas/codex-goal-contract.schema.json"
         and contract.get("schema_version") == 1
-        and contract.get("status") == "active"
+        and contract.get("status") in {"active", "completed"}
         and as_int(budgets.get("max_wall_clock_seconds")) > 0
         and as_int(budgets.get("max_proposals")) > 0
         and as_int(budgets.get("max_consecutive_failures")) > 0
@@ -1143,9 +1311,277 @@ def goal_runtime_transient_cleanup_gate_status(
     return "requires_release_run_verification"
 
 
+def artifact_freshness_performance_observability_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    if existing_count == 0:
+        return "planned"
+    surface_text = "\n".join(
+        _read_text_or_empty(vault / rel_path)
+        for rel_path in (
+            "ops/scripts/core/artifact_freshness_runtime.py",
+            "tests/test_artifact_freshness_runtime.py",
+            "mk/artifact.mk",
+        )
+    )
+    has_run_context = "ArtifactFreshnessContext" in surface_text
+    has_schema_cache = any(
+        token in surface_text
+        for token in (
+            "schema_cache",
+            "validator_cache",
+            "compiled_validator_cache",
+        )
+    )
+    has_progress = "--progress" in surface_text and "jsonl" in surface_text
+    has_timing = any(
+        token in surface_text
+        for token in (
+            "phase_timing",
+            "phase_timings",
+            "elapsed_seconds",
+            "per_phase_timing",
+        )
+    )
+    report = load_json_object(vault / "ops/reports/artifact-freshness-report.json")
+    if (
+        existing_count == expected_count
+        and report.get("status") == "pass"
+        and has_run_context
+        and has_schema_cache
+        and has_progress
+        and has_timing
+    ):
+        return "implemented"
+    return "partially_automated"
+
+
+def repo_boundary_history_hygiene_status(vault: Path, existing_count: int, expected_count: int) -> str:
+    if existing_count == 0:
+        return "planned"
+    surface_text = "\n".join(
+        _read_text_or_empty(vault / rel_path)
+        for rel_path in (
+            ".gitignore",
+            "ARCHITECTURE.md",
+            "ops/scripts/public/public_surface_policy.py",
+            "tests/test_public_surface_policy.py",
+            "tests/test_export_public_repo.py",
+        )
+    )
+    report = load_json_object(vault / "ops/reports/public-check-summary.json")
+    physical_split_status = str(
+        as_dict(report.get("summary")).get("physical_repo_split_status", "")
+    ).strip()
+    history_absence_status = str(
+        as_dict(report.get("summary")).get("private_surface_history_absence_status", "")
+    ).strip()
+    negative_assertion_fail_count = as_int(
+        as_dict(report.get("summary")).get("negative_assertion_fail_count")
+    )
+    if (
+        report.get("status") == "pass"
+        and physical_split_status == "pass"
+        and history_absence_status == "pass"
+        and negative_assertion_fail_count == 0
+    ):
+        return "implemented"
+    has_public_policy = all(
+        token in surface_text
+        for token in (
+            "raw/",
+            "wiki/",
+            "system/",
+            "runs/",
+            "external-reports/",
+        )
+    )
+    if has_public_policy or existing_count:
+        return "partially_automated"
+    return "planned"
+
+
+def github_native_security_automation_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    if existing_count == 0:
+        return "planned"
+    workflow_text = "\n".join(
+        _read_text_or_empty(vault / rel_path)
+        for rel_path in (
+            ".github/workflows/ci.yml",
+            ".github/workflows/release.yml",
+            ".github/workflows/codeql.yml",
+            ".github/workflows/dependency-review.yml",
+        )
+    )
+    has_dependabot = (vault / ".github/dependabot.yml").is_file()
+    has_codeql = "github/codeql-action" in workflow_text or "codeql" in _read_text_or_empty(
+        vault / ".github/workflows/codeql.yml"
+    ).lower()
+    has_dependency_review = "actions/dependency-review-action" in workflow_text
+    has_concurrency = "concurrency:" in workflow_text
+    external_uses = re.findall(r"uses:\s+([^\s#]+)", workflow_text)
+    pinned_uses = [
+        use
+        for use in external_uses
+        if re.search(r"@[0-9a-f]{40}\b", use)
+        or use.startswith("./")
+        or use.startswith("docker://sha256:")
+    ]
+    all_external_uses_pinned = bool(external_uses) and len(pinned_uses) == len(external_uses)
+    if (
+        existing_count == expected_count
+        and has_dependabot
+        and has_codeql
+        and has_dependency_review
+        and has_concurrency
+        and all_external_uses_pinned
+    ):
+        return "implemented"
+    return "partially_automated"
+
+
+def maintainability_hotspot_refactor_backlog_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    if existing_count == 0:
+        return "planned"
+    report = load_json_object(vault / "ops/reports/function-budget-refactor-proposals.json")
+    summary = as_dict(report.get("summary"))
+    proposal_count = as_int(summary.get("proposal_count"))
+    candidate_count = as_int(summary.get("function_budget_candidate_count"))
+    owner_backlog_count = as_int(summary.get("owner_backlog_count"))
+    large_main_count = as_int(summary.get("large_main_without_tests_or_docs_count"))
+    if (
+        existing_count == expected_count
+        and report.get("artifact_kind") == "function_budget_refactor_proposals"
+        and report.get("producer") == "ops.scripts.function_budget_refactor_proposals"
+        and report.get("status") == "pass"
+        and candidate_count > 0
+        and proposal_count > 0
+        and owner_backlog_count > 0
+        and large_main_count == 0
+    ):
+        return "implemented"
+    if report or candidate_count or existing_count:
+        return "partially_automated"
+    return "planned"
+
+
+def generated_artifact_tracking_policy_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    if existing_count == 0:
+        return "planned"
+    surface_text = "\n".join(
+        _read_text_or_empty(vault / rel_path)
+        for rel_path in (
+            "ops/scripts/core/generated_artifact_index.py",
+            "ops/schemas/generated-artifact-index.schema.json",
+            "tests/test_generated_artifact_index.py",
+        )
+    )
+    report = load_json_object(vault / "ops/reports/generated-artifact-index.json")
+    summary = as_dict(report.get("summary"))
+    explicit_policy = any(
+        token in surface_text
+        for token in (
+            "decision_grade",
+            "decision-grade",
+            "tracking_policy",
+            "commit_policy",
+        )
+    )
+    has_ephemeral_class = "ephemeral" in surface_text
+    if (
+        existing_count == expected_count
+        and report.get("status") == "pass"
+        and explicit_policy
+        and has_ephemeral_class
+        and as_int(summary.get("archive_candidate_count")) == 0
+    ):
+        return "implemented"
+    return "partially_automated"
+
+
+def public_export_negative_assertions_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    if existing_count == 0:
+        return "planned"
+    report = load_json_object(vault / "ops/reports/public-check-summary.json")
+    report_text_value = json.dumps(report, ensure_ascii=False, sort_keys=True)
+    required_assertions = (
+        "excluded_prefix_absence",
+        "local_path_absence",
+        "private_pattern_absence",
+    )
+    if (
+        existing_count == expected_count
+        and report.get("status") == "pass"
+        and all(token in report_text_value for token in required_assertions)
+        and not re.search(r'"(?:status|result)"\s*:\s*"(?:fail|attention)"', report_text_value)
+    ):
+        return "implemented"
+    return "partially_automated"
+
+
+def supply_chain_external_verification_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    if existing_count == 0:
+        return "planned"
+    gate = load_json_object(vault / "ops/reports/supply-chain-gate-report.json")
+    sbom = load_json_object(vault / "ops/reports/sbom-readiness-gate-report.json")
+    in_toto = load_json_object(vault / "ops/reports/in-toto-statement.json")
+    sigstore = load_json_object(vault / "ops/reports/sigstore-bundle-verification.json")
+    surface_text = "\n".join(
+        _read_text_or_empty(vault / rel_path)
+        for rel_path in (
+            "mk/supply_chain.mk",
+            "ops/reports/supply-chain-gate-report.json",
+            ".github/workflows/release.yml",
+            ".github/workflows/dependency-review.yml",
+        )
+    )
+    has_slsa_predicate = in_toto.get("predicateType") == "https://slsa.dev/provenance/v1"
+    sigstore_checks = as_list(sigstore.get("verification_checks"))
+    has_release_attestation = "attest-build-provenance@" in surface_text
+    has_dependency_review = "dependency-review-action@" in surface_text
+    has_sigstore_bundle_target = "sigstore-bundle:" in surface_text
+    external_bundle_rule_present = any(
+        as_dict(check).get("rule") == "external_bundle_observed" for check in sigstore_checks
+    )
+    if (
+        existing_count == expected_count
+        and gate.get("status") == "pass"
+        and sbom.get("status") == "pass"
+        and has_slsa_predicate
+        and sigstore.get("status") in {"local-integrity-only", "verified-external-bundle"}
+        and sigstore_checks
+        and has_release_attestation
+        and has_dependency_review
+        and has_sigstore_bundle_target
+        and external_bundle_rule_present
+    ):
+        return "implemented"
+    return "partially_automated"
+
+
+def collaboration_governance_surface_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    if existing_count == 0:
+        return "planned"
+    if existing_count == expected_count:
+        return "implemented"
+    return "partially_automated"
+
+
 def single_source_status(vault: Path) -> str:
-    planner_path = vault / "tmp" / "workflow-dependency-planner.json"
-    guard_path = vault / "tmp" / "release-workflow-order-guard.json"
+    planner_path = vault / "ops" / "reports" / "workflow-dependency-planner.json"
+    guard_path = vault / "ops" / "reports" / "release-workflow-order-guard.json"
     planner = load_json_object(planner_path)
     guard = load_json_object(guard_path)
     if not planner or not guard:
@@ -1366,6 +1802,54 @@ def status_from_evidence(vault: Path, action: dict[str, Any]) -> tuple[str, list
         )
     elif action_id == "goal_runtime_transient_cleanup_gate":
         status = goal_runtime_transient_cleanup_gate_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "artifact_freshness_performance_observability":
+        status = artifact_freshness_performance_observability_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "repo_boundary_history_hygiene":
+        status = repo_boundary_history_hygiene_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "github_native_security_automation":
+        status = github_native_security_automation_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "maintainability_hotspot_refactor_backlog":
+        status = maintainability_hotspot_refactor_backlog_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "generated_artifact_tracking_policy":
+        status = generated_artifact_tracking_policy_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "public_export_negative_assertions":
+        status = public_export_negative_assertions_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "supply_chain_external_verification":
+        status = supply_chain_external_verification_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "collaboration_governance_surface":
+        status = collaboration_governance_surface_status(
             vault,
             existing_count,
             len(action["evidence_paths"]),

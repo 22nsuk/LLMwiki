@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-22T10:31:08Z",
+  "generated_at": "2026-05-22T18:51:29Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
+  "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
-    "schema": "834eb6cfec958f35d3989a742cfd58414bb50bb75040ab9283e4c90ed61f1657",
+    "schema": "1cb96fa3f869674feca57aaa444ff0bb92d38f3f0ac15a2fa29c72cb5ea61b01",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "9f1d161031f8fabec2b849b6cba75d6468d4d953aa3708d52313ed1f9ad096c4",
-    "run_promotion_reports": "18ea7595097965a5be7d294043892b10117e9d6b84b7076229584b1783b8010f",
-    "external_report_inventory": "09816e418165a4cbb1e558aee47b9f9a1b5b9e2f58f1f03cc374239b3219fa88",
+    "source_paths": "ff213cc263cfe17e506e036d73290a29c929bfb0af15b09c5d83ad2290b11eca",
+    "run_promotion_reports": "11ad86c5412aebbb3dd6e2817a81f103b9ff21d42d213265c1647504f06bcb59",
+    "external_report_inventory": "52f2841be7931aafca988168a8f7e781da90dffa1bf966de43b2e378f4e0326c",
     "operator_report_inventory": "0479590a186415fa72ba934ab4431828124b8ca576b06322a6eae193e9627721",
-    "ops_report_inventory": "5f7ceda816bf9f579c986c2d9fe1b946aa493c0e4ed2339eba5002cbabfd96be",
+    "ops_report_inventory": "8e97ba0b72fdef2c0c7d9092a35ea11482dc38d842cb3a361a70f8c43a947798",
     "task_improvement_observation_inventory": "fa118ed9f7a32fadc97847b84e78227a1fb37447244efedd9ac0ea134d13691d"
   },
   "schema_version": 1,
@@ -23,14 +23,14 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T10:31:08Z"
+    "checked_at": "2026-05-22T18:51:29Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "status": "attention",
+  "status": "pass",
   "archive_rules": [
     {
       "surface": "ops_reports",
@@ -40,8 +40,8 @@
     },
     {
       "surface": "external_reports",
-      "canonical_rule": "Root external reports stay current when they carry unique unresolved action themes or reference-manifest lifecycle evidence.",
-      "archive_rule": "Root external reports become archive candidates when their structured action themes are implemented, explicitly superseded, or fully covered by a broader active report.",
+      "canonical_rule": "The private reference manifest stays current as release provenance; root narrative external reports stay current only when they carry unique unresolved action themes.",
+      "archive_rule": "Root narrative external reports become archive candidates when their structured action themes are implemented, explicitly superseded, or fully covered by a broader active report.",
       "gate_effect": "advisory"
     },
     {
@@ -57,27 +57,40 @@
       "gate_effect": "advisory"
     }
   ],
+  "tracking_policy": {
+    "policy_id": "generated_artifact_tracking_policy",
+    "commit_policy": "Track decision-grade canonical_report artifacts in stable top-level namespaces; move superseded archive artifacts to archive namespaces; keep ephemeral run-local or dry-run outputs out of stable commit surfaces unless promoted by a schema-backed writer.",
+    "decision_grade_surfaces": [
+      "ops/reports stable current reports",
+      "ops/operator operator-only reports",
+      "external-reports private reference manifest and active review reports",
+      "runs active mechanism histories"
+    ],
+    "retention_classes": [
+      "canonical_report",
+      "archive",
+      "ephemeral"
+    ],
+    "archive_execution_target": "archive-execution-manifest"
+  },
   "now": [
-    "121 canonical artifact(s) are currently indexed.",
-    "3 archive candidate(s) remain in active namespaces."
+    "123 canonical artifact(s) are currently indexed.",
+    "0 archive candidate(s) remain in active namespaces."
   ],
   "next": [
-    "Archive the root-level candidates after confirming their content lifecycle decision and linked replacement evidence."
+    "No archive hygiene action is currently recommended."
   ],
-  "why_blocked": [
-    "All structured action themes from this external report are implemented in canonical evidence.",
-    "promotion-report.history.status=archived but the run remains in the top-level runs namespace."
-  ],
+  "why_blocked": [],
   "summary": {
-    "ops_reports_root_file_count": 68,
+    "ops_reports_root_file_count": 69,
     "task_improvement_observation_count": 65,
     "operator_reports_root_file_count": 2,
-    "external_reports_root_file_count": 3,
-    "external_reports_archive_file_count": 70,
+    "external_reports_root_file_count": 1,
+    "external_reports_archive_file_count": 74,
     "run_directory_count": 51,
-    "run_archive_directory_count": 4,
-    "canonical_report_count": 121,
-    "archive_candidate_count": 3
+    "run_archive_directory_count": 5,
+    "canonical_report_count": 123,
+    "archive_candidate_count": 0
   },
   "canonical_reports": [
     {
@@ -205,6 +218,17 @@
       "surface": "ops_reports",
       "family": "goal_runtime_certificate",
       "path": "ops/reports/goal-runtime-certificate.json",
+      "role": "current_stable_report",
+      "date": "",
+      "reason": "Top-level ops/reports files with stable names are current operational reports.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "operator_preflight"
+    },
+    {
+      "surface": "ops_reports",
+      "family": "goal_worktree_guard",
+      "path": "ops/reports/goal-worktree-guard.json",
       "role": "current_stable_report",
       "date": "",
       "reason": "Top-level ops/reports files with stable names are current operational reports.",
@@ -854,7 +878,7 @@
       "surface": "external_reports",
       "family": "report_reference_manifest",
       "path": "external-reports/report-reference-manifest.json",
-      "role": "current_review_report",
+      "role": "current_reference_manifest",
       "date": "",
       "reason": "Reference manifest remains active lifecycle evidence.",
       "supersedes": [],
@@ -1260,6 +1284,17 @@
     {
       "surface": "runs",
       "family": "mechanism_run",
+      "path": "runs/goal-active-external-report-closeout",
+      "role": "run_history_record",
+      "date": "",
+      "reason": "Run state is indexed from promotion-report.history.status; physical location is secondary. Load issues: promotion-report.json:missing, run-ledger.json:missing.",
+      "supersedes": [],
+      "superseded_by": [],
+      "decision_relevance": "run_history"
+    },
+    {
+      "surface": "runs",
+      "family": "mechanism_run",
       "path": "runs/goal-auto-improve-trial",
       "role": "run_history_record",
       "date": "",
@@ -1412,39 +1447,5 @@
       "decision_relevance": "run_history"
     }
   ],
-  "archive_candidates": [
-    {
-      "surface": "external_reports",
-      "family": "llmwiki_lane_separation_revalidation_report",
-      "path": "external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md",
-      "suggested_archive_path": "external-reports/archive/LLMwiki_lane_separation_revalidation_report_20260522.md",
-      "date": "2026-05-22",
-      "reason": "All structured action themes from this external report are implemented in canonical evidence.",
-      "superseded_by": [],
-      "supersedes": [],
-      "decision_relevance": "review_context"
-    },
-    {
-      "surface": "external_reports",
-      "family": "llmwiki_code_change_implementation_report",
-      "path": "external-reports/llmwiki_code_change_implementation_report_20260516.md",
-      "suggested_archive_path": "external-reports/archive/llmwiki_code_change_implementation_report_20260516.md",
-      "date": "2026-05-16",
-      "reason": "All structured action themes from this external report are implemented in canonical evidence.",
-      "superseded_by": [],
-      "supersedes": [],
-      "decision_relevance": "review_context"
-    },
-    {
-      "surface": "runs",
-      "family": "mechanism_run",
-      "path": "runs/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime",
-      "suggested_archive_path": "runs/archive/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime",
-      "date": "",
-      "reason": "promotion-report.history.status=archived but the run remains in the top-level runs namespace.",
-      "supersedes": [],
-      "superseded_by": [],
-      "decision_relevance": "run_history"
-    }
-  ]
+  "archive_candidates": []
 }

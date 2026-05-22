@@ -162,7 +162,7 @@ class RemediationBacklogTests(unittest.TestCase):
                 report["inputs"]["status_overrides"],
                 "ops/policies/remediation-backlog-status-overrides.json",
             )
-            self.assertEqual(report["inputs"]["goal_worktree_guard"], "tmp/goal-worktree-guard.json")
+            self.assertEqual(report["inputs"]["goal_worktree_guard"], "ops/reports/goal-worktree-guard.json")
             self.assertNotEqual(report["input_fingerprints"]["auto_improve_sessions"], "missing")
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
@@ -310,7 +310,7 @@ class RemediationBacklogTests(unittest.TestCase):
             write_json(vault, "ops/reports/learning_claim_activation_report.json", {"status": "pass"})
             write_json(
                 vault,
-                "tmp/goal-worktree-guard.json",
+                "ops/reports/goal-worktree-guard.json",
                 {
                     "artifact_kind": "goal_worktree_guard",
                     "status": "pass",
@@ -340,7 +340,7 @@ class RemediationBacklogTests(unittest.TestCase):
             )
             self.assertEqual(report["summary"]["open_promotion_count"], 1)
             self.assertIn(
-                "tmp/goal-worktree-guard.json",
+                "ops/reports/goal-worktree-guard.json",
                 items["active_blocker_promotion_blocked_by_goal_worktree_guard_failure"][
                     "evidence_paths"
                 ],

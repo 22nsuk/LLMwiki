@@ -60,7 +60,7 @@ Required evidence:
 - ops/reports/source-package-clean-extract.json
 - ops/reports/public-check-summary.json
 - ops/reports/release-closeout-summary.json
-- tmp/goal-worktree-guard.json
+- ops/reports/goal-worktree-guard.json
 
 Promotion guard:
 - can_promote_result: false

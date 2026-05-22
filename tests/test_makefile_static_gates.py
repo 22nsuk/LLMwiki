@@ -166,12 +166,12 @@ def _assert_release_closeout_manifest_phony_and_vars(case: unittest.TestCase, te
         "RELEASE_CLOSEOUT_FINALITY_ATTESTATION_OUT ?= ops/reports/release-closeout-finality-attestation.json",
         "RELEASE_CLOSEOUT_FINALITY_ATTESTATION_CANDIDATE_OUT ?= tmp/release-closeout-finality-attestation.candidate.json",
         "RELEASE_DISTRIBUTION_ZIP_OUT ?= build/release/LLMwiki-source.zip",
-        "RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT ?= tmp/release-distribution-zip-smoke.json",
+        "RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT ?= build/release/release-distribution-zip-smoke.json",
         "RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP ?=",
         "RELEASE_CLOSEOUT_SEALED_ZIP_METADATA ?=",
         "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_CANONICAL_OUT ?= ops/reports/release-closeout-sealed-rehearsal-check.json",
         "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_RELEASE_OUT ?= build/release/release-closeout-sealed-rehearsal-check.json",
-        "RELEASE_AUDIT_PACK_OUT ?= tmp/release-audit-pack.zip",
+        "RELEASE_AUDIT_PACK_OUT ?= build/release/release-audit-pack.zip",
         "RELEASE_AUDIT_PACK_INCLUDE_OPTIONAL_PAYLOADS ?=",
         "RELEASE_POST_SEAL_ATTESTATION_OUT ?= build/release/release-post-seal-attestation.json",
         "RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP ?= $(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)",
@@ -262,7 +262,7 @@ def _assert_sealed_release_closeout_targets(case: unittest.TestCase, text: str) 
     ):
         case.assertIn(target, phony)
     case.assertIn(
-        "RELEASE_CLOSEOUT_SEALED_DRY_RUN_ROOT ?= tmp/release-closeout-sealed-dry-run",
+        "RELEASE_CLOSEOUT_SEALED_DRY_RUN_ROOT ?= build/release/release-closeout-sealed-dry-run",
         text,
     )
     case.assertIn("RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_FLAGS ?= --no-fail", text)
@@ -393,6 +393,7 @@ def _assert_supply_chain_make_variables(case: unittest.TestCase, text: str) -> N
         "ARTIFACT_FRESHNESS_CHECK_OUT ?= tmp/artifact-freshness-report-check.json",
         "ARTIFACT_FRESHNESS_MTIME_SOURCE ?= embedded_currentness",
         "ARTIFACT_FRESHNESS_ZIP_METADATA ?=",
+        "ARTIFACT_FRESHNESS_PROGRESS ?= none",
         "ARTIFACT_RELOCATION_AUDIT_OUT ?= ops/operator/artifact-relocation-audit.json",
         "ARTIFACT_RELOCATION_AUDIT_CANDIDATE_OUT ?= tmp/artifact-relocation-audit.candidate.json",
         "ARCHIVE_EXECUTION_MANIFEST_OUT ?= tmp/archive-execution-manifest.json",
@@ -406,7 +407,7 @@ def _assert_supply_chain_make_variables(case: unittest.TestCase, text: str) -> N
         "STRUCTURAL_COMPLEXITY_BUDGET_TOUCHED_OUT ?= ops/reports/structural-complexity-budget-touched.json",
         "CHANGED_FILES_MANIFEST ?=",
         "STRUCTURAL_COMPLEXITY_BUDGET_TARGETS ?=",
-        "REVIEW_ARCHIVE_OUT ?= tmp/llm-wiki-vnext-review.zip",
+        "REVIEW_ARCHIVE_OUT ?= build/review/llm-wiki-vnext-review.zip",
         "REVIEW_ARCHIVE_REPORT_OUT ?= ops/reports/review-archive-report.json",
         "REVIEW_ARCHIVE_PROFILE ?= clean",
         "CLOSURE_REGISTRY_ENVELOPE_REGISTRY ?= all",
@@ -539,13 +540,13 @@ def _assert_artifact_index_and_freshness_recipes(case: unittest.TestCase, text: 
     )
     freshness_check = _target_block(text, "artifact-freshness-check")
     case.assertIn(
-        '$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CHECK_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",) --fail-on-fail',
+        '$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CHECK_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" --progress "$(ARTIFACT_FRESHNESS_PROGRESS)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",) --fail-on-fail',
         freshness_check,
     )
     case.assertNotIn("ops.scripts.canonical_artifact_promote", freshness_check)
     freshness = _target_block(text, "artifact-freshness")
     case.assertIn(
-        '$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CANDIDATE_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",)',
+        '$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CANDIDATE_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" --progress "$(ARTIFACT_FRESHNESS_PROGRESS)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",)',
         freshness,
     )
     case.assertIn("ops.scripts.canonical_artifact_promote", freshness)
@@ -716,10 +717,10 @@ def _assert_observability_output_variables(case: unittest.TestCase, text: str) -
         "CLEAN_FIXTURE_REGENERATION_GUARD_OUT ?= tmp/clean-fixture-regeneration-guard.json",
         "CLEAN_FIXTURE_REGENERATION_ALLOW_DIRTY_REPORTS ?=",
         "MAKE_TARGET_INVENTORY_OUT ?= tmp/make-target-inventory.json",
-        "WORKFLOW_DEPENDENCY_PLANNER_OUT ?= tmp/workflow-dependency-planner.json",
+        "WORKFLOW_DEPENDENCY_PLANNER_OUT ?= ops/reports/workflow-dependency-planner.json",
         "WORKFLOW_DEPENDENCY_PLANNER_CANDIDATE_OUT ?= tmp/workflow-dependency-planner.candidate.json",
         "WORKFLOW_DEPENDENCY_PLANNER_CHECK_OUT ?= tmp/workflow-dependency-planner-check.json",
-        "RELEASE_WORKFLOW_ORDER_GUARD_OUT ?= tmp/release-workflow-order-guard.json",
+        "RELEASE_WORKFLOW_ORDER_GUARD_OUT ?= ops/reports/release-workflow-order-guard.json",
         "RELEASE_WORKFLOW_ORDER_GUARD_CANDIDATE_OUT ?= tmp/release-workflow-order-guard.candidate.json",
     )
     for variable in expected_variables:
@@ -1297,7 +1298,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             self,
             text,
             "SOURCE_PACKAGE_TEST_SUMMARY_OUT",
-            "tmp/test-source-package-summary.json",
+            "$(SOURCE_PACKAGE_CHECK_ROOT)/test-source-package-summary.json",
         )
         _assert_assignment_exists(
             self,
@@ -1306,7 +1307,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             pack_deselection_policy(registry, "source_package"),
         )
         _assert_assignment_exists(
-            self, text, "SOURCE_PACKAGE_CHECK_ROOT", "tmp/source-package-check"
+            self, text, "SOURCE_PACKAGE_CHECK_ROOT", "build/source-package-check"
         )
         _assert_assignment_not_exists(self, text, "SOURCE_PACKAGE_ARCHIVE_ROOT_NAME")
         _assert_assignment_exists(
@@ -1937,6 +1938,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("ops.scripts.remediation_backlog", backlog_block)
         self.assertIn("ops/schemas/remediation-backlog.schema.json", backlog_block)
         self.assertIn("tmp-clean: tmp-json-clean", text)
+        tmp_json_clean_block = _target_block(text, "tmp-json-clean")
+        self.assertIn("find tmp -mindepth 1 -delete", tmp_json_clean_block)
+        self.assertNotIn("goal-worktree-guard.json", tmp_json_clean_block)
 
     def test_report_contracts_target_collects_schema_and_generated_artifact_checks(
         self,
@@ -2979,7 +2983,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "CODEX_GOAL_ACTIVE_CONTRACT_OUT",
                 "$(GOAL_ACTIVE_STATE_DIR)/codex-goal-contract.json",
             ),
-            ("GOAL_WORKTREE_GUARD_OUT", "tmp/goal-worktree-guard.json"),
+            ("GOAL_WORKTREE_GUARD_OUT", "ops/reports/goal-worktree-guard.json"),
             ("GOAL_WORKTREE_MODE", "git"),
             ("GOAL_RUN_STATUS_OUT", "ops/reports/goal-run-status.json"),
             (

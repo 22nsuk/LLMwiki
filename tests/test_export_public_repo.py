@@ -40,6 +40,13 @@ class ExportPublicRepoTests(unittest.TestCase):
             (vault / ".gitignore").write_text("tmp/\n", encoding="utf-8")
             (vault / ".gitattributes").write_text("* text=auto\n", encoding="utf-8")
             (vault / ".github" / "workflows").mkdir(parents=True)
+            (vault / ".github" / "CODEOWNERS").write_text("* @example\n", encoding="utf-8")
+            (vault / ".github" / "dependabot.yml").write_text(
+                "version: 2\nupdates: []\n", encoding="utf-8"
+            )
+            (vault / ".github" / "pull_request_template.md").write_text(
+                "## Summary\n", encoding="utf-8"
+            )
             (vault / ".github" / "workflows" / "ci.yml").write_text("name: CI\n", encoding="utf-8")
             (vault / "ops" / "scripts").mkdir(parents=True)
             (vault / "ops" / "scripts" / "example.py").write_text("print('ok')\n", encoding="utf-8")
@@ -62,6 +69,9 @@ class ExportPublicRepoTests(unittest.TestCase):
             (vault / "ops" / "raw-registry.json").write_text("{}", encoding="utf-8")
             (vault / "ops" / "reports").mkdir()
             (vault / "ops" / "reports" / "artifact.json").write_text("{}", encoding="utf-8")
+            (vault / "ops" / "reports" / "goal-worktree-guard.json").write_text("{}", encoding="utf-8")
+            (vault / "ops" / "reports" / "release-workflow-order-guard.json").write_text("{}", encoding="utf-8")
+            (vault / "ops" / "reports" / "workflow-dependency-planner.json").write_text("{}", encoding="utf-8")
 
             public_dir = Path(temp_dir) / "public"
             manifest = export_public_repo(vault, public_dir)
@@ -75,6 +85,9 @@ class ExportPublicRepoTests(unittest.TestCase):
             self.assertIn("THIRD_PARTY_NOTICES.md", manifest["files"])
             self.assertIn("pyproject.toml", manifest["files"])
             self.assertIn("uv.lock", manifest["files"])
+            self.assertIn(".github/CODEOWNERS", manifest["files"])
+            self.assertIn(".github/dependabot.yml", manifest["files"])
+            self.assertIn(".github/pull_request_template.md", manifest["files"])
             self.assertIn(".github/workflows/ci.yml", manifest["files"])
             self.assertIn(".codex/agents/worker.toml", manifest["files"])
             self.assertIn("ops/scripts/example.py", manifest["files"])
@@ -87,6 +100,17 @@ class ExportPublicRepoTests(unittest.TestCase):
             self.assertNotIn("AGENTS.local.md", manifest["files"])
             self.assertNotIn("ops/raw-registry.json", manifest["files"])
             self.assertNotIn("ops/reports/artifact.json", manifest["files"])
+            self.assertIn("ops/reports/goal-worktree-guard.json", manifest["files"])
+            self.assertIn("ops/reports/release-workflow-order-guard.json", manifest["files"])
+            self.assertIn("ops/reports/workflow-dependency-planner.json", manifest["files"])
+            self.assertEqual(
+                set(manifest["included_report_files"]),
+                {
+                    "ops/reports/goal-worktree-guard.json",
+                    "ops/reports/release-workflow-order-guard.json",
+                    "ops/reports/workflow-dependency-planner.json",
+                },
+            )
             self.assertEqual(manifest["source_vault"], ".")
             self.assertEqual(manifest["output_dir"], ".")
             exported_file_count = len([path for path in public_dir.rglob("*") if path.is_file()])
@@ -115,6 +139,9 @@ class ExportPublicRepoTests(unittest.TestCase):
             (vault / ".gitignore").write_text("tmp/\n", encoding="utf-8")
             (vault / ".gitattributes").write_text("* text=auto\n", encoding="utf-8")
             (vault / ".github" / "workflows").mkdir(parents=True)
+            (vault / ".github" / "dependabot.yml").write_text(
+                "version: 2\nupdates: []\n", encoding="utf-8"
+            )
             (vault / ".github" / "workflows" / "ci.yml").write_text("name: CI\n", encoding="utf-8")
             (vault / ".codex" / "agents").mkdir(parents=True)
             (vault / ".codex" / "agents" / "worker.toml").write_text("name = 'worker'\n", encoding="utf-8")

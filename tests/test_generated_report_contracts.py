@@ -41,12 +41,12 @@ IMPROVEMENT_OBSERVATIONS_PATH = (
 PUBLIC_EXPORT_MANIFEST_PATH = REPO_ROOT / "PUBLIC-EXPORT-MANIFEST.json"
 
 pytestmark = [pytest.mark.report_contract]
-if PUBLIC_EXPORT_MANIFEST_PATH.exists() and not (REPO_ROOT / "ops" / "reports").exists():
+if PUBLIC_EXPORT_MANIFEST_PATH.exists() and not ARTIFACT_FRESHNESS_REPORT_PATH.exists():
     pytestmark.append(
         pytest.mark.skip(
             reason=(
                 "checked-in generated report contracts are full-vault canonical "
-                "artifact checks; public exports intentionally omit ops/reports"
+                "artifact checks; public exports intentionally omit full ops/reports"
             )
         )
     )
@@ -1121,8 +1121,8 @@ def test_source_derived_workflow_planner_contract_is_covered_by_checked_in_artif
     assert release_writer_action.get("current_status") == "implemented"
     evidence_paths = {item.get("path") for item in release_writer_action.get("evidence", [])}
     assert evidence_paths == {
-        "tmp/workflow-dependency-planner.json",
-        "tmp/release-workflow-order-guard.json",
+        "ops/reports/workflow-dependency-planner.json",
+        "ops/reports/release-workflow-order-guard.json",
     }
 
     ordered_targets = [item.get("target") for item in cohort.get("ordered_chain", [])]

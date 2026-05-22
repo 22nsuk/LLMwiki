@@ -85,12 +85,99 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertTrue(destination.exists())
             self.assertEqual(report["status"], "pass")
             self.assertEqual(report["summary"]["public_check_status"], "pass")
+            self.assertEqual(report["summary"]["negative_assertion_fail_count"], 0)
+            self.assertEqual(report["summary"]["physical_repo_split_status"], "pass")
+            self.assertEqual(report["summary"]["private_surface_history_absence_status"], "pass")
             self.assertEqual(report["summary"]["pytest_passed"], 217)
             self.assertEqual(report["summary"]["pytest_skipped"], 5)
             self.assertRegex(report["summary"]["export_root_fingerprint"], r"^[a-f0-9]{64}$")
             self.assertRegex(report["summary"]["public_surface_policy_sha256"], r"^[a-f0-9]{64}$")
             self.assertTrue(report["public_export"]["output_dir"].startswith("<tmp>/"))
             self.assertTrue(report["public_export"]["output_dir"].endswith(f"/{public_out.name}"))
+            self.assertEqual(
+                report["public_export_negative_assertions"]["excluded_prefix_absence"]["status"],
+                "pass",
+            )
+            self.assertEqual(
+                report["public_export_negative_assertions"]["local_path_absence"]["status"],
+                "pass",
+            )
+            self.assertEqual(
+                report["public_export_negative_assertions"]["private_pattern_absence"]["status"],
+                "pass",
+            )
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_public_check_summary_fails_on_exported_local_path_leak(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_public_policy_file(vault)
+            (vault / "README.md").write_text(
+                f"Do not export local path {vault.resolve()}.\n",
+                encoding="utf-8",
+            )
+
+            report = build_report(
+                vault,
+                PublicCheckRequest(
+                    public_out=str(Path(temp_dir) / "public"),
+                    public_python="python",
+                    pytest_flags="-q",
+                ),
+                context=fixed_context(),
+                command_runner=fake_runner,
+            )
+
+            self.assertEqual(report["status"], "fail")
+            self.assertEqual(report["summary"]["negative_assertion_fail_count"], 1)
+            self.assertEqual(
+                report["public_export_negative_assertions"]["local_path_absence"]["status"],
+                "fail",
+            )
+            self.assertEqual(
+                report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                ["README.md"],
+            )
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_policy_included_report_files_are_not_private_export_violations(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_public_policy_file(vault)
+            for rel_path in (
+                "ops/reports/goal-worktree-guard.json",
+                "ops/reports/release-workflow-order-guard.json",
+                "ops/reports/workflow-dependency-planner.json",
+            ):
+                path = vault / rel_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("{}\n", encoding="utf-8")
+
+            report = build_report(
+                vault,
+                PublicCheckRequest(
+                    public_out=str(Path(temp_dir) / "public"),
+                    public_python="python",
+                    pytest_flags="-q",
+                ),
+                context=fixed_context(),
+                command_runner=fake_runner,
+            )
+
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["summary"]["negative_assertion_fail_count"], 0)
+            self.assertEqual(
+                report["public_export_negative_assertions"]["excluded_prefix_absence"]["violations"],
+                [],
+            )
+            self.assertEqual(
+                report["public_export_negative_assertions"]["private_pattern_absence"]["violations"],
+                [],
+            )
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_public_check_summary_fails_when_public_pytest_fails(self) -> None:

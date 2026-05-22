@@ -148,6 +148,14 @@ def _format_issue_message(error: ValidationError, instance_path: str) -> list[st
 
 def iter_schema_issues(data: Any, schema: dict, path: str = "$") -> list[SchemaIssue]:
     validator = _build_validator(schema)
+    return iter_validator_issues(data, validator, path)
+
+
+def build_validator_for_schema(schema: dict) -> Any:
+    return _build_validator(schema)
+
+
+def iter_validator_issues(data: Any, validator: Any, path: str = "$") -> list[SchemaIssue]:
     issues: list[SchemaIssue] = []
     errors = sorted(validator.iter_errors(data), key=lambda error: list(error.absolute_path))
     for error in errors:
@@ -167,6 +175,10 @@ def iter_schema_issues(data: Any, schema: dict, path: str = "$") -> list[SchemaI
 
 def validate_with_schema(data: Any, schema: dict, path: str = "$") -> list[str]:
     return [issue.message for issue in iter_schema_issues(data, schema, path)]
+
+
+def validate_with_validator(data: Any, validator: Any, path: str = "$") -> list[str]:
+    return [issue.message for issue in iter_validator_issues(data, validator, path)]
 
 
 def validate_or_raise(data: Any, schema: dict, context: str, path: str = "$") -> None:

@@ -62,6 +62,7 @@ PRIVATE_OR_TRANSIENT_PREFIXES = (
     "tmp/",
     "wiki/",
 )
+DURABLE_PRIVATE_IGNORED_STATUS_PREFIXES = ("external-reports/",)
 
 
 @dataclass(frozen=True)
@@ -135,15 +136,42 @@ def git_status_entries(vault: Path) -> list[StatusEntry]:
     status = _run_git(vault, ["status", "--porcelain=v1", "-z", "--untracked-files=normal"])
     if status.returncode != 0:
         raise RuntimeError(status.stderr.strip() or "git status failed")
-    return parse_status_porcelain_z(status.stdout)
+    ignored_status = _run_git(
+        vault,
+        [
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--ignored=matching",
+            "--untracked-files=all",
+            "--",
+            *[prefix.rstrip("/") for prefix in DURABLE_PRIVATE_IGNORED_STATUS_PREFIXES],
+        ],
+    )
+    if ignored_status.returncode != 0:
+        raise RuntimeError(
+            ignored_status.stderr.strip() or "git ignored durable private status failed"
+        )
+    ignored_entries = [
+        entry for entry in parse_status_porcelain_z(ignored_status.stdout) if entry.xy == "!!"
+    ]
+    entries = [*parse_status_porcelain_z(status.stdout), *ignored_entries]
+    deduped: dict[tuple[str, str, str], StatusEntry] = {}
+    for entry in entries:
+        deduped[(entry.xy, entry.path, entry.original_path)] = entry
+    return list(deduped.values())
 
 
 def _normalize_repo_path(path: str) -> str:
-    normalized = Path(path).as_posix().lstrip("./")
+    normalized = Path(path).as_posix()
     if normalized in ("", "."):
         return ""
+    if normalized.startswith("/"):
+        return "<outside-repo>"
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
     parts = normalized.split("/")
-    if normalized.startswith("/") or ".." in parts:
+    if ".." in parts:
         return "<outside-repo>"
     return normalized
 
@@ -348,6 +376,9 @@ def _base_report(vault: Path, entries: list[StatusEntry], preexisting_paths: set
         "entries": entry_payloads,
         "counts": dict(sorted(counts.items())),
         "diagnostics": _release_source_ready_diagnostics(vault),
+        "durable_private_ignored_status_prefixes": list(
+            DURABLE_PRIVATE_IGNORED_STATUS_PREFIXES
+        ),
     }
 
 

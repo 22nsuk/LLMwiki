@@ -15,13 +15,15 @@ RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH = "tmp/release-closeout-po
 REMEDIATION_BACKLOG_REPORT_REL_PATH = "ops/reports/remediation-backlog.json"
 RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH = "ops/reports/release-closeout-sealed-rehearsal-check.json"
 RELEASE_AUTHORITY_PREFLIGHT_RELEASE_REPORT_REL_PATH = "build/release/release-closeout-sealed-rehearsal-check.json"
-RELEASE_AUTHORITY_PREFLIGHT_FALLBACK_REPORT_REL_PATH = "tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json"
+RELEASE_AUTHORITY_PREFLIGHT_FALLBACK_REPORT_REL_PATH = (
+    "build/release/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json"
+)
 RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATHS = (
     RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
     RELEASE_AUTHORITY_PREFLIGHT_RELEASE_REPORT_REL_PATH,
     RELEASE_AUTHORITY_PREFLIGHT_FALLBACK_REPORT_REL_PATH,
 )
-GOAL_WORKTREE_GUARD_REPORT_REL_PATH = "tmp/goal-worktree-guard.json"
+GOAL_WORKTREE_GUARD_REPORT_REL_PATH = "ops/reports/goal-worktree-guard.json"
 ROUTING_PROVENANCE_AGGREGATE_DIR = "ops/reports/routing-provenance-aggregates"
 READINESS_REPORT_PRODUCER = "ops.scripts.auto_improve_readiness_runtime"
 READINESS_REPORT_SOURCE_COMMAND = (

@@ -22,6 +22,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.export_public_repo import DEFAULT_PUBLIC_OUT, export_public_repo
     from ops.scripts.output_runtime import display_path, sanitize_report_text
     from ops.scripts.policy_runtime import load_policy, report_path
+    from ops.scripts.public_surface_policy import PUBLIC_INCLUDED_REPORT_FILES
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.test_execution_summary import parse_pytest_counts
 else:
@@ -31,6 +32,7 @@ else:
     from .export_public_repo import DEFAULT_PUBLIC_OUT, export_public_repo
     from ops.scripts.output_runtime import display_path, sanitize_report_text
     from ops.scripts.policy_runtime import load_policy, report_path
+    from .public_surface_policy import PUBLIC_INCLUDED_REPORT_FILES
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.test_execution_summary import parse_pytest_counts
 
@@ -42,6 +44,17 @@ SOURCE_COMMAND = "python -m ops.scripts.public_check_summary --vault ."
 DEFAULT_TIMEOUT_SECONDS = 5400
 TAIL_LINE_COUNT = 80
 CommandRunner = Callable[[Sequence[str], Path, int], TimedProcessResult]
+PRIVATE_EXPORT_PATTERNS = (
+    "raw/",
+    "wiki/",
+    "system/",
+    "runs/",
+    "external-reports/",
+    "AGENTS.local.md",
+    "ops/manifest.json",
+    "ops/raw-registry.json",
+    "ops/reports/",
+)
 
 
 @dataclass(frozen=True)
@@ -133,6 +146,94 @@ def _export_file_records(public_out: Path, manifest: dict[str, Any]) -> list[dic
     return records
 
 
+def _read_public_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
+
+
+def _public_export_negative_assertions(
+    public_out: Path,
+    manifest: dict[str, Any],
+    file_records: list[dict[str, Any]],
+    *,
+    source_vault: Path,
+) -> dict[str, Any]:
+    exported_paths = [str(record["path"]) for record in file_records]
+    excluded_prefixes = tuple(
+        str(prefix)
+        for prefix in manifest.get("excluded_prefixes", [])
+        if str(prefix).strip()
+    )
+    excluded_files = {
+        str(path)
+        for path in manifest.get("excluded_files", [])
+        if str(path).strip()
+    }
+    policy_report_exceptions = {
+        str(path)
+        for path in manifest.get("included_report_files", PUBLIC_INCLUDED_REPORT_FILES)
+        if str(path).strip()
+    }
+    excluded_prefix_violations = sorted(
+        path
+        for path in exported_paths
+        if path not in policy_report_exceptions
+        and any(path.startswith(prefix) for prefix in excluded_prefixes)
+    )
+    private_pattern_violations = sorted(
+        path
+        for path in exported_paths
+        if path not in policy_report_exceptions
+        and (path in excluded_files or any(path.startswith(pattern) for pattern in PRIVATE_EXPORT_PATTERNS))
+    )
+    source_vault_marker = source_vault.resolve().as_posix()
+    local_path_violations = sorted(
+        path
+        for path in exported_paths
+        if source_vault_marker and source_vault_marker in _read_public_text(public_out / path)
+    )
+
+    def assertion_payload(violations: list[str]) -> dict[str, Any]:
+        return {
+            "status": "pass" if not violations else "fail",
+            "violation_count": len(violations),
+            "violations": violations,
+        }
+
+    return {
+        "excluded_prefix_absence": assertion_payload(excluded_prefix_violations),
+        "local_path_absence": assertion_payload(local_path_violations),
+        "private_pattern_absence": assertion_payload(private_pattern_violations),
+    }
+
+
+def _public_export_boundary_status(
+    vault: Path,
+    public_out: Path,
+    manifest: dict[str, Any],
+    negative_assertions: dict[str, Any],
+) -> dict[str, str]:
+    manifest_file = str(manifest.get("manifest_file", "PUBLIC-EXPORT-MANIFEST.json"))
+    try:
+        public_out.resolve().relative_to(vault.resolve())
+        outside_source_vault = False
+    except ValueError:
+        outside_source_vault = True
+    materialized = public_out.is_dir() and (public_out / manifest_file).is_file()
+    has_git_history = (public_out / ".git").exists()
+    negative_clean = _negative_assertion_status(negative_assertions) == "pass"
+    return {
+        "physical_repo_split_status": "pass"
+        if materialized and outside_source_vault
+        else "fail",
+        "private_surface_history_absence_status": "pass"
+        if materialized and not has_git_history and negative_clean
+        else "fail",
+    }
+
+
 def _default_command_runner(
     argv: Sequence[str],
     cwd: Path,
@@ -180,6 +281,13 @@ def _overall_status(commands: list[dict[str, Any]]) -> str:
     return "pass" if all(command["status"] == "pass" for command in commands) else "fail"
 
 
+def _negative_assertion_status(assertions: dict[str, Any]) -> str:
+    for assertion in assertions.values():
+        if isinstance(assertion, dict) and assertion.get("status") != "pass":
+            return "fail"
+    return "pass"
+
+
 def build_report(
     vault: Path,
     request: PublicCheckRequest | None = None,
@@ -193,6 +301,18 @@ def build_report(
     public_out_path = _resolve_out_dir(vault, request.public_out)
     manifest = export_public_repo(vault, public_out_path)
     export_records = _export_file_records(public_out_path, manifest)
+    negative_assertions = _public_export_negative_assertions(
+        public_out_path,
+        manifest,
+        export_records,
+        source_vault=vault,
+    )
+    boundary_status = _public_export_boundary_status(
+        vault,
+        public_out_path,
+        manifest,
+        negative_assertions,
+    )
     export_root_fingerprint = _canonical_sha256(export_records)
     manifest_path = public_out_path / str(manifest.get("manifest_file", "PUBLIC-EXPORT-MANIFEST.json"))
     runner = command_runner or _default_command_runner
@@ -223,7 +343,9 @@ def build_report(
         )
         for command_id, argv in commands_to_run
     ]
-    status = _overall_status(commands)
+    command_status = _overall_status(commands)
+    assertion_status = _negative_assertion_status(negative_assertions)
+    status = command_status if command_status != "pass" else assertion_status
     pytest_counts = commands[-1].get("pytest_counts", {})
     source_paths = [
         "Makefile",
@@ -262,6 +384,12 @@ def build_report(
             "public_surface_policy_sha256": _sha256_file(vault / "ops/scripts/public/public_surface_policy.py"),
             "command_count": len(commands),
             "command_fail_count": sum(1 for command in commands if command["status"] != "pass"),
+            "negative_assertion_fail_count": sum(
+                1
+                for assertion in negative_assertions.values()
+                if isinstance(assertion, dict) and assertion.get("status") != "pass"
+            ),
+            **boundary_status,
             "pytest_passed": int(pytest_counts.get("passed", 0) or 0),
             "pytest_failed": int(pytest_counts.get("failed", 0) or 0),
             "pytest_errors": int(pytest_counts.get("errors", 0) or 0),
@@ -275,6 +403,7 @@ def build_report(
             "export_root_fingerprint": export_root_fingerprint,
             "manifest_sha256": _sha256_file(manifest_path),
         },
+        "public_export_negative_assertions": negative_assertions,
         "commands": commands,
     }
 

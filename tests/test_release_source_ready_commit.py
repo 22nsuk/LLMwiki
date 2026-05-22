@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 import unittest
 
-from ops.scripts.release.release_source_ready_commit import main
+from ops.scripts.release.release_source_ready_commit import classify_path, main
 
 
 def _git(vault: Path, *args: str) -> str:
@@ -39,6 +39,12 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.tmp.cleanup()
+
+    def test_classifies_dot_prefixed_public_surface_paths_without_stripping_dot(self) -> None:
+        self.assertEqual(classify_path(".gitignore"), "generated_canonical")
+        self.assertEqual(classify_path(".github/workflows/ci.yml"), "public_source")
+        self.assertEqual(classify_path("./.github/CODEOWNERS"), "public_source")
+        self.assertEqual(classify_path("github/workflows/ci.yml"), "unexpected")
 
     def test_commits_public_source_and_generated_evidence_together(self) -> None:
         (self.vault / "README.md").write_text("# Test\n\nChanged.\n", encoding="utf-8")
@@ -193,6 +199,41 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertEqual(report["status"], "blocked")
         self.assertEqual(report["reason"], "unexpected_dirty_paths")
         self.assertEqual(report["unexpected_paths"], ["raw"])
+
+    def test_rejects_ignored_durable_external_reports_before_staging(self) -> None:
+        (self.vault / ".gitignore").write_text("tmp/\nexternal-reports/\n", encoding="utf-8")
+        _git(self.vault, "add", ".gitignore")
+        _git(self.vault, "commit", "-m", "ignore external reports")
+        (self.vault / "external-reports").mkdir()
+        (self.vault / "external-reports" / "private-new-review.md").write_text(
+            "# Review\n",
+            encoding="utf-8",
+        )
+
+        rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-source-ready-commit.json",
+                "--message",
+                "release: ready",
+            ]
+        )
+
+        self.assertEqual(rc, 1)
+        report = json.loads(
+            (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(report["status"], "blocked")
+        self.assertEqual(report["reason"], "unexpected_dirty_paths")
+        self.assertEqual(report["unexpected_paths"], ["external-reports"])
+        categories = {entry["path"]: entry["category"] for entry in report["entries"]}
+        self.assertEqual(categories["external-reports"], "unexpected")
+        self.assertEqual(
+            report["durable_private_ignored_status_prefixes"],
+            ["external-reports/"],
+        )
 
     def test_rejects_preexisting_staged_changes_by_default(self) -> None:
         (self.vault / "README.md").write_text("# Test\n\nStaged.\n", encoding="utf-8")

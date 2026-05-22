@@ -86,7 +86,7 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
             },
         )
         self._write_json(
-            "tmp/goal-worktree-guard.json",
+            "ops/reports/goal-worktree-guard.json",
             {
                 "artifact_kind": "goal_worktree_guard",
                 "status": "pass",
@@ -308,12 +308,12 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_build_report_blocks_start_from_dirty_worktree_guard(self) -> None:
-        guard = json.loads((self.vault / "tmp/goal-worktree-guard.json").read_text(encoding="utf-8"))
+        guard = json.loads((self.vault / "ops/reports/goal-worktree-guard.json").read_text(encoding="utf-8"))
         guard["status"] = "attention"
         guard["git"]["dirty_entry_count"] = 2
         guard["decisions"]["can_promote_result"] = False
         guard["decisions"]["promotion_blockers"] = ["git_worktree_dirty"]
-        self._write_json("tmp/goal-worktree-guard.json", guard)
+        self._write_json("ops/reports/goal-worktree-guard.json", guard)
 
         report = self._build_report()
 

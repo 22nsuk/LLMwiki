@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/mechanism-review-candidates.schema.json",
   "artifact_kind": "mechanism_review_candidates_report",
-  "generated_at": "2026-05-22T10:22:41Z",
+  "generated_at": "2026-05-22T18:46:35Z",
   "producer": "ops.scripts.mechanism_review_runtime",
   "source_command": "python -m ops.scripts.mechanism_review",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
+  "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "c730a4570492eaf5cb038d51227064a8c9404069f62cb3920049a985951e876a",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "b6a97e444164d60ea21111ba0d6068ce8e345c212c78dd4070013da1d67097f4",
-    "excluded_promotion_reports": "f99089849748fea74fabadada6419d4a2c0ea9cfa474c5eeab6bb23189a40df9",
+    "excluded_promotion_reports": "a95588722edf3d9d7e08c9c15576347246fa0b4d63261bb9d25c115cc0269f50",
     "promotion_reports": "c7a330d801ac03f81c2ede4cb3439006766aafa49ee538ede1d002d11ea2a62b",
     "skipped_artifacts": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "mechanism_review_enabled": "3cbc87c7681f34db4617feaa2c8801931bc5e42d8d0f560e756dd4cd92885f18",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T10:22:41Z"
+    "checked_at": "2026-05-22T18:46:35Z"
   },
   "vault": ".",
   "policy": {
@@ -178,7 +178,7 @@
         "run_id": "5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime",
         "status": "archived",
         "reason": "superseded review-blocked candidate: reviewer terminal-event finding fixed in mechanism_run_validation_runtime before retry",
-        "path": "runs/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime/promotion-report.json"
+        "path": "runs/archive/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime/promotion-report.json"
       },
       {
         "run_id": "5day-auto-improve-runtime-rerun7-30m_trial-run-01-mechanism-run-validation-runtime",

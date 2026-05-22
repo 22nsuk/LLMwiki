@@ -10,8 +10,7 @@
 !/.codex/agents/
 !/.codex/agents/**
 !/.github/
-!/.github/workflows/
-!/.github/workflows/**
+!/.github/**
 !/mk/
 !/mk/**
 !/AGENTS.md
@@ -36,7 +35,11 @@
 AGENTS.local.md
 ops/manifest.json
 ops/raw-registry.json
-ops/reports/
+ops/reports/*
+# Policy-approved durable generated evidence under ops/reports.
+!ops/reports/goal-worktree-guard.json
+!ops/reports/release-workflow-order-guard.json
+!ops/reports/workflow-dependency-planner.json
 # <<< public-surface-policy <<<
 
 # Local Python environments and caches inside public directories

@@ -198,7 +198,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                     "learning_claim_activation": "ops/reports/learning_claim_activation_report.json",
                     "auto_improve_sessions": "ops/reports/auto-improve-sessions",
                     "goal_runtime_certificate": "ops/reports/goal-runtime-certificate.json",
-                    "goal_worktree_guard": "tmp/goal-worktree-guard.json",
+                    "goal_worktree_guard": "ops/reports/goal-worktree-guard.json",
                     "learning_readiness_signoff": "ops/reports/learning-readiness-signoff.json",
                     "status_overrides": "ops/policies/remediation-backlog-status-overrides.json",
                 },
@@ -307,7 +307,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             ],
             "status": status,
         }
-        path = self.vault / "tmp" / "goal-worktree-guard.json"
+        path = self.vault / "ops" / "reports" / "goal-worktree-guard.json"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -585,7 +585,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         )
         self.assertEqual(
             persisted["inputs"]["goal_worktree_guard_report"],
-            "tmp/goal-worktree-guard.json",
+            "ops/reports/goal-worktree-guard.json",
         )
         self.assertEqual(
             persisted["inputs"]["remediation_backlog_report"],
@@ -651,7 +651,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                     "learning_claim_activation": "ops/reports/learning_claim_activation_report.json",
                     "auto_improve_sessions": "ops/reports/auto-improve-sessions",
                     "goal_runtime_certificate": "ops/reports/goal-runtime-certificate.json",
-                    "goal_worktree_guard": "tmp/goal-worktree-guard.json",
+                    "goal_worktree_guard": "ops/reports/goal-worktree-guard.json",
                     "learning_readiness_signoff": "ops/reports/learning-readiness-signoff.json",
                     "status_overrides": "ops/policies/remediation-backlog-status-overrides.json",
                 },
@@ -792,7 +792,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         )
 
     def test_missing_goal_worktree_guard_blocks_promotion_not_trial(self) -> None:
-        (self.vault / "tmp" / "goal-worktree-guard.json").unlink()
+        (self.vault / "ops" / "reports" / "goal-worktree-guard.json").unlink()
         self._write_ready_queue_reports()
 
         report = build_readiness_report(self.vault, context=fixed_context())

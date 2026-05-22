@@ -11,6 +11,7 @@ from ops.scripts.export_public_repo import export_public_repo
 from ops.scripts.public_surface_policy import (
     PUBLIC_GITIGNORE_END,
     PUBLIC_GITIGNORE_START,
+    PUBLIC_INCLUDED_REPORT_FILES,
     render_public_gitignore_block,
 )
 
@@ -47,6 +48,9 @@ class PublicSurfacePolicyTests(unittest.TestCase):
                 "uv.lock": "version = 1\n",
                 ".gitignore": Path(".gitignore").read_text(encoding="utf-8"),
                 ".gitattributes": Path(".gitattributes").read_text(encoding="utf-8"),
+                ".github/CODEOWNERS": "* @example\n",
+                ".github/dependabot.yml": "version: 2\nupdates: []\n",
+                ".github/pull_request_template.md": "## Summary\n",
                 ".github/workflows/ci.yml": "name: CI\n",
                 ".codex/agents/worker.toml": "name = 'worker'\n",
                 "mk/core.mk": "all:\n\t@true\n",
@@ -55,6 +59,9 @@ class PublicSurfacePolicyTests(unittest.TestCase):
                 "ops/manifest.json": "{}\n",
                 "ops/raw-registry.json": "{}\n",
                 "ops/reports/example.json": "{}\n",
+                "ops/reports/goal-worktree-guard.json": "{}\n",
+                "ops/reports/release-workflow-order-guard.json": "{}\n",
+                "ops/reports/workflow-dependency-planner.json": "{}\n",
                 "tests/test_example.py": "def test_ok():\n    assert True\n",
                 "tools/helper.py": "print('helper')\n",
                 "raw/source.pdf": "pdf\n",
@@ -90,6 +97,17 @@ class PublicSurfacePolicyTests(unittest.TestCase):
             exported = set(manifest["files"])
 
             self.assertEqual(tracked, exported)
+            self.assertTrue(set(PUBLIC_INCLUDED_REPORT_FILES).issubset(exported))
+            self.assertNotIn("ops/reports/example.json", exported)
+
+    def test_generated_report_contracts_skip_full_vault_checks_in_public_export(self) -> None:
+        text = Path("tests/test_generated_report_contracts.py").read_text(encoding="utf-8")
+
+        self.assertIn(
+            "PUBLIC_EXPORT_MANIFEST_PATH.exists() and not ARTIFACT_FRESHNESS_REPORT_PATH.exists()",
+            text,
+        )
+        self.assertNotIn('not (REPO_ROOT / "ops" / "reports").exists()', text)
 
 
 if __name__ == "__main__":  # pragma: no cover

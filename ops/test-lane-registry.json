@@ -533,7 +533,7 @@
       "summary_suite": {
         "suite_id": "source-package",
         "suite_scope": "fast_unit",
-        "summary_target": "tmp/test-source-package-summary.json",
+        "summary_target": "build/source-package-check/test-source-package-summary.json",
         "make_summary_target": "test-source-package"
       },
       "ci_entrypoint": "release-source-package-check",

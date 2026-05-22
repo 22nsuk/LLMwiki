@@ -106,7 +106,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        guard = self.vault / "tmp" / "goal-worktree-guard.json"
+        guard = self.vault / "ops" / "reports" / "goal-worktree-guard.json"
         guard.parent.mkdir(parents=True, exist_ok=True)
         guard.write_text(
             json.dumps(
@@ -394,6 +394,9 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
                 context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.timezone.utc)),
             )
         )
+        for item in verified["evidence_paths"]:
+            if item["evidence_id"] == "goal_worktree_guard":
+                item["path"] = "tmp/goal-worktree-guard.json"
         existing_report = self.vault / "ops" / "reports" / "goal-runtime-certificate.json"
         existing_report.parent.mkdir(parents=True, exist_ok=True)
         existing_report.write_text(json.dumps(verified, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -424,6 +427,13 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         self.assertEqual(report["run"]["run_id"], "20260517-loop")
         self.assertEqual(report["diagnosis"]["certificate_claim_status"], "eligible")
         self.assertTrue(report["diagnosis"]["certifiable"])
+        evidence_paths = {
+            item["evidence_id"]: item["path"] for item in report["evidence_paths"]
+        }
+        self.assertEqual(
+            evidence_paths["goal_worktree_guard"],
+            "ops/reports/goal-worktree-guard.json",
+        )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_existing_verified_certificate_is_preserved_after_transient_evidence_cleanup(self) -> None:

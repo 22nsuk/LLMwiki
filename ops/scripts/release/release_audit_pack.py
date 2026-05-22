@@ -12,7 +12,7 @@ from ops.scripts.output_runtime import display_path
 
 
 DEFAULT_BATCH_MANIFEST = "ops/reports/release-closeout-batch-manifest.json"
-DEFAULT_OUT = "tmp/release-audit-pack.zip"
+DEFAULT_OUT = "build/release/release-audit-pack.zip"
 PACK_MANIFEST_NAME = "release-audit-pack-manifest.json"
 DETERMINISTIC_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 

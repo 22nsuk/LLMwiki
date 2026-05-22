@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from contextlib import redirect_stderr
 import datetime as dt
+import io
 import json
 import os
 import tempfile
@@ -10,7 +12,12 @@ from pathlib import Path
 
 import pytest
 
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope, build_report, write_report
+from ops.scripts.artifact_freshness_runtime import (
+    ArtifactFreshnessContext,
+    build_canonical_report_envelope,
+    build_report,
+    write_report,
+)
 from ops.scripts.command_runtime import TimedProcessResult
 from ops.scripts.generated_artifact_index import (
     build_report as build_generated_artifact_index,
@@ -138,6 +145,51 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             encoding="utf-8",
         )
         return artifact_path
+
+    def test_schema_validator_cache_and_progress_jsonl_are_run_scoped(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            artifact_path = self._write_current_artifact(vault)
+            payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+
+            freshness_context = ArtifactFreshnessContext(vault=vault)
+            self.assertEqual(freshness_context.validate_payload(payload), ("pass", []))
+            self.assertEqual(freshness_context.validate_payload(payload), ("pass", []))
+            self.assertIn("ops/schemas/example.schema.json", freshness_context.schema_cache)
+            self.assertIn("ops/schemas/example.schema.json", freshness_context.validator_cache)
+
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                report = build_report(vault, context=fixed_context(), progress="jsonl")
+
+            progress_events = [
+                json.loads(line)
+                for line in stderr.getvalue().splitlines()
+                if line.strip()
+            ]
+            self.assertTrue(progress_events)
+            self.assertTrue(any(event["phase"] == "json_schema_validation" for event in progress_events))
+            self.assertTrue(report["phase_timings"])
+            self.assertTrue(any(item["phase"] == "json_schema_validation" for item in report["phase_timings"]))
+            self.assertEqual(validate_with_schema(report, load_schema(REPORT_SCHEMA_PATH)), [])
+
+    def test_phase_timings_do_not_make_canonical_report_nondeterministic(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+
+            first = build_report(vault, context=fixed_context())
+            second = build_report(vault, context=fixed_context())
+
+            self.assertEqual(first, second)
+            self.assertTrue(first["phase_timings"])
+            self.assertTrue(
+                all(item["elapsed_seconds"] == 0.0 for item in first["phase_timings"])
+            )
+            self.assertEqual(validate_with_schema(first, load_schema(REPORT_SCHEMA_PATH)), [])
 
     def test_test_execution_summary_becomes_stale_when_target_test_file_is_newer(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

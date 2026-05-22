@@ -57,9 +57,9 @@
     "verified_at": ""
   },
   "goal_backend": {
-    "backend_type": "run_local_file",
+    "backend_type": "file",
     "process_persistent": true,
-    "storage_path": "runs/goal-auto-improve-trial/state/codex-goal-contract.json"
+    "storage_path": "ops/reports/codex-goal-contract.json"
   },
   "stop_conditions": [
     {
@@ -88,7 +88,7 @@
     },
     {
       "evidence_id": "goal_run_status",
-      "path": "runs/goal-auto-improve-trial/state/goal-run-status.json",
+      "path": "ops/reports/goal-run-status.json",
       "description": "Goal status records heartbeat, checkpoint, resume, and promotion blockers.",
       "freshness": "current_run",
       "required_for_promotion": true
@@ -130,7 +130,7 @@
     },
     {
       "evidence_id": "goal_worktree_guard",
-      "path": "tmp/goal-worktree-guard.json",
+      "path": "ops/reports/goal-worktree-guard.json",
       "description": "Git/ZIP preflight blocks promotion from dirty, non-Git, or replay-only trees.",
       "freshness": "current_source_tree",
       "required_for_promotion": true
@@ -139,13 +139,9 @@
   "promotion_guard": {
     "can_promote_result": false,
     "promotion_blockers": [
-      "promotion_blocked_by_release_closeout_summary_failure",
       "promotion_blocked_by_release_batch_manifest_failure",
-      "promotion_blocked_by_release_lineage_mismatch",
-      "promotion_blocked_by_artifact_contract_failure",
       "promotion_blocked_by_goal_worktree_guard_failure",
-      "promotion_blocked_by_remediation_backlog_open",
-      "goal_worktree_guard_missing"
+      "git_worktree_dirty"
     ],
     "sealed_authority_clean": true,
     "runtime_certificate_verified": false,
@@ -158,7 +154,7 @@
     "properties": [
       {
         "name": "urn:openai:artifact-envelope",
-        "value": "{\"$schema\": \"ops/schemas/codex-goal-contract.schema.json\", \"artifact_kind\": \"codex_goal_contract\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-22T05:39:39Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-22T05:39:39Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"auto_improve_readiness\": \"808b5d868e3767408214b0d50e66030b9bfad4b7f27a500a168aea3583c738dc\", \"auto_improve_session\": \"missing\", \"contract_id\": \"d6dee5d74cf954a24559fc821001ef3dc5c693b768134ad20fe8924060b7adfe\", \"goal_run_status\": \"739430a23843039e18e6312f56b7b2accd77b6b75dfbd2e64ab99835e277248e\", \"goal_worktree_guard_report\": \"missing\", \"policy\": \"db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24\", \"schema\": \"a1601bdfb503b41bc6fc4f93585cc130d12974e1fadb297ea53ef5c4aa148329\", \"source_paths\": \"c7d0a9adbe16af8c5dcf4cec402e7a91c9e371ad4a193a5d501fc4376945fde1\"}, \"producer\": \"ops.scripts.codex_goal_client\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.codex_goal_client --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"b430321ae969a9153c3e6d047e05666136463a90552a49f70845478196c79c51\"}"
+        "value": "{\"$schema\": \"ops/schemas/codex-goal-contract.schema.json\", \"artifact_kind\": \"codex_goal_contract\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-22T16:27:20Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-22T16:27:20Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"auto_improve_readiness\": \"1210634f26083bb1a3654938d54f9a39435cad733c52ca03c051f6be9ca71e10\", \"auto_improve_session\": \"missing\", \"contract_id\": \"d6dee5d74cf954a24559fc821001ef3dc5c693b768134ad20fe8924060b7adfe\", \"goal_run_status\": \"82ac424923eb633d0b80088edd4bb6d5de0e8d1d993c11ea9ed36eec89c12a28\", \"goal_worktree_guard_report\": \"f3fe791a590e7d6e2cb18c4b770c60e4c256269b3fb30dc1307bd5aff510e51a\", \"policy\": \"db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24\", \"schema\": \"a1601bdfb503b41bc6fc4f93585cc130d12974e1fadb297ea53ef5c4aa148329\", \"source_paths\": \"03c02335f04d30dbcf439b1ba031180ec025235b4c9ffce983fac4224adb60bb\"}, \"producer\": \"ops.scripts.codex_goal_client\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.codex_goal_client --vault .\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"4a99aa89a1b58c879120d9cee4974017758ab3d35760060b5c631b94097fc649\"}"
       }
     ]
   }

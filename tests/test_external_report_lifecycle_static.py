@@ -34,6 +34,8 @@ def _active_root_paths(extensions: set[str]) -> list[str]:
     for path in sorted(EXTERNAL_REPORTS.iterdir()):
         if not path.is_file() or path.suffix.lower() not in extensions:
             continue
+        if path == REFERENCE_MANIFEST:
+            continue
         paths.append(path.relative_to(REPO_ROOT).as_posix())
     return paths
 
@@ -41,11 +43,7 @@ def _active_root_paths(extensions: set[str]) -> list[str]:
 class ExternalReportLifecycleStaticTests(unittest.TestCase):
     def test_checked_in_reference_manifest_matches_active_external_reports(self) -> None:
         payload = json.loads(REFERENCE_MANIFEST.read_text(encoding="utf-8"))
-        expected = [
-            path
-            for path in _active_root_paths(REFERENCE_EXTENSIONS)
-            if path != "external-reports/report-reference-manifest.json"
-        ]
+        expected = _active_root_paths(REFERENCE_EXTENSIONS)
         actual = sorted(str(item["path"]) for item in payload.get("references", []))
 
         self.assertEqual(actual, expected)

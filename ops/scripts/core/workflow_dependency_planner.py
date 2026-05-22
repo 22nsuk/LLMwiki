@@ -43,9 +43,12 @@ else:
     from .schema_constants_runtime import WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH
 
 
-DEFAULT_OUT = "tmp/workflow-dependency-planner.json"
+DEFAULT_OUT = "ops/reports/workflow-dependency-planner.json"
 PRODUCER = "ops.scripts.workflow_dependency_planner"
-SOURCE_COMMAND = "python -m ops.scripts.workflow_dependency_planner --vault . --out tmp/workflow-dependency-planner.json"
+SOURCE_COMMAND = (
+    "python -m ops.scripts.workflow_dependency_planner "
+    "--vault . --out ops/reports/workflow-dependency-planner.json"
+)
 TARGET_RE = re.compile(r"^([A-Za-z0-9_.%/@-][A-Za-z0-9_.%/@ -]*):(?P<deps>[^\n#]*)")
 MAKE_RECIPE_RE = re.compile(r"\$\((?:MAKE|make)\)\s+(?P<args>[^\n;&|]+)")
 TARGET_TOKEN_RE = re.compile(r"^[A-Za-z0-9_.%/@-]+$")
@@ -426,7 +429,7 @@ def _primary_report_for_target(target: str) -> str:
         "release-smoke-full": "ops/reports/release-smoke-report.json",
         "test-execution-summary": "ops/reports/test-execution-summary.json",
         "test-artifact-finalization": "tests/test_generated_report_contracts.py",
-        "workflow-dependency-planner": "tmp/workflow-dependency-planner.json",
+        "workflow-dependency-planner": "ops/reports/workflow-dependency-planner.json",
     }.get(target, "")
 
 

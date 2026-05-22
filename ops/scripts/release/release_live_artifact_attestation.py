@@ -22,9 +22,9 @@ from ops.scripts.schema_runtime import load_schema_with_vault_override, validate
 
 PRODUCER = "ops.scripts.release_live_artifact_attestation"
 SCHEMA_PATH = "ops/schemas/release-live-artifact-attestation.schema.json"
-DEFAULT_OUT = "tmp/release-live-attestation.json"
-DEFAULT_SOURCE_ZIP = "tmp/live-source.zip"
-DEFAULT_EVIDENCE_BUNDLE = "tmp/release-evidence-bundle.zip"
+DEFAULT_OUT = "build/release/release-live-attestation.json"
+DEFAULT_SOURCE_ZIP = "build/release/live-source.zip"
+DEFAULT_EVIDENCE_BUNDLE = "build/release/release-evidence-bundle.zip"
 DEFAULT_CLOSEOUT_SUMMARY = "ops/reports/release-closeout-summary.json"
 DEFAULT_BATCH_MANIFEST = "ops/reports/release-closeout-batch-manifest.json"
 DEFAULT_SELF_CHECK = "ops/reports/release-evidence-closeout-self-check.json"

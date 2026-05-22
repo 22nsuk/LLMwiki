@@ -4,7 +4,11 @@ import unittest
 from pathlib import Path
 
 from tests.workflow_static_helpers import (
+    PINNED_ATTEST_BUILD_PROVENANCE_ACTION,
+    PINNED_DOWNLOAD_ARTIFACT_ACTION,
+    PINNED_PYPI_PUBLISH_ACTION,
     assert_locked_install_shape as _assert_locked_install_shape,
+    assert_workflow_uses_are_sha_pinned as _assert_workflow_uses_are_sha_pinned,
     assert_workflow_run_contains as _assert_run_contains,
     load_workflow,
     workflow_job as _job,
@@ -45,6 +49,7 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
             {"contents": "read", "id-token": "write", "attestations": "write"},
         )
         _assert_locked_install_shape(self, workflow, expected_job_count=2)
+        _assert_workflow_uses_are_sha_pinned(self, workflow)
         _assert_run_contains(
             self,
             _step(publish, "Generate supply-chain artifacts"),
@@ -52,11 +57,11 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
         )
         self.assertEqual(
             _step(publish, "Attest build provenance").get("uses"),
-            "actions/attest-build-provenance@v2",
+            PINNED_ATTEST_BUILD_PROVENANCE_ACTION,
         )
         self.assertEqual(
             _step(publish, "Publish to PyPI").get("uses"),
-            "pypa/gh-action-pypi-publish@release/v1",
+            PINNED_PYPI_PUBLISH_ACTION,
         )
         publish_runs = "\n".join(_run_text(step) for step in _steps(publish))
         self.assertNotIn("python -m pip install -r requirements-dev.txt build", publish_runs)
@@ -119,7 +124,7 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
             _step(verify, "Materialize verified evidence bundle"),
             (
                 "make release-audit-pack",
-                "RELEASE_AUDIT_PACK_OUT=tmp/release-evidence-bundle.zip",
+                "RELEASE_AUDIT_PACK_OUT=build/release/release-evidence-bundle.zip",
             ),
         )
         _assert_run_contains(
@@ -128,7 +133,7 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
             (
                 "ops.scripts.release.release_live_artifact_attestation build",
                 "--source-zip-path build/release/live-source.zip",
-                "--evidence-bundle-path tmp/release-evidence-bundle.zip",
+                "--evidence-bundle-path build/release/release-evidence-bundle.zip",
             ),
         )
         expected_uploads = {
@@ -136,7 +141,7 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
             "Upload verified evidence bundle": (
                 "verified-evidence-bundle",
                 (
-                    "tmp/release-evidence-bundle.zip",
+                    "build/release/release-evidence-bundle.zip",
                     "ops/reports/release-closeout-summary.json",
                     "ops/reports/release-closeout-batch-manifest.json",
                     "ops/reports/release-evidence-closeout-self-check.json",
@@ -147,7 +152,7 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
             ),
             "Upload verified release attestation": (
                 "verified-release-attestation",
-                ("tmp/release-live-attestation.json",),
+                ("build/release/release-live-attestation.json",),
             ),
         }
         for step_name, (artifact_name, paths) in expected_uploads.items():
@@ -177,7 +182,7 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
                 self.assertIsInstance(with_section, dict)
                 self.assertEqual(with_section.get("name"), artifact_name)
                 self.assertEqual(with_section.get("path"), path)
-                self.assertEqual(step.get("uses"), "actions/download-artifact@v4")
+                self.assertEqual(step.get("uses"), PINNED_DOWNLOAD_ARTIFACT_ACTION)
         _assert_run_contains(
             self,
             _step(publish, "Verify live release authority"),

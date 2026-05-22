@@ -14,9 +14,25 @@ from ops.scripts.test_lane_registry_runtime import (
     pack_by_id,
     pack_ci_steps,
 )
+from tests.workflow_static_helpers import (
+    PINNED_CHECKOUT_ACTION,
+    PINNED_DEPENDENCY_REVIEW_ACTION,
+    PINNED_DOWNLOAD_ARTIFACT_ACTION,
+    PINNED_SETUP_PYTHON_ACTION,
+    PINNED_SETUP_UV_ACTION,
+    PINNED_UPLOAD_ARTIFACT_ACTION,
+    assert_workflow_uses_are_sha_pinned,
+    load_workflow,
+    workflow_job,
+    workflow_step,
+)
 
 
 CI_WORKFLOW = Path(".github/workflows/ci.yml")
+RELEASE_WORKFLOW = Path(".github/workflows/release.yml")
+CODEQL_WORKFLOW = Path(".github/workflows/codeql.yml")
+DEPENDENCY_REVIEW_WORKFLOW = Path(".github/workflows/dependency-review.yml")
+DEPENDABOT_CONFIG = Path(".github/dependabot.yml")
 
 pytestmark = pytest.mark.report_contract
 
@@ -68,13 +84,13 @@ def _assert_locked_dependency_steps(case: unittest.TestCase, job: dict[str, obje
         if str(step.get("name", "")).startswith("Install dependencies")
     ]
 
-    case.assertEqual(setup_python.get("uses"), "actions/setup-python@v5")
+    case.assertEqual(setup_python.get("uses"), PINNED_SETUP_PYTHON_ACTION)
     with_config = setup_python.get("with", {})
     case.assertIsInstance(with_config, dict)
     case.assertIn("uv.lock", str(with_config.get("cache-dependency-path", "")))
     case.assertEqual(
         setup_uv.get("uses"),
-        "astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b",
+        PINNED_SETUP_UV_ACTION,
     )
     case.assertEqual(len(install_steps), 1)
     run_text = _run_text(install_steps[0])
@@ -87,6 +103,54 @@ def _assert_locked_dependency_steps(case: unittest.TestCase, job: dict[str, obje
 
 
 class CiWorkflowStaticTests(unittest.TestCase):
+    def test_github_security_automation_surface_is_present_and_pinned(self) -> None:
+        dependabot = yaml.safe_load(DEPENDABOT_CONFIG.read_text(encoding="utf-8"))
+        self.assertIsInstance(dependabot, dict)
+        self.assertEqual(dependabot.get("version"), 2)
+        updates = dependabot.get("updates", [])
+        self.assertIsInstance(updates, list)
+        ecosystems = {item.get("package-ecosystem") for item in updates if isinstance(item, dict)}
+        self.assertEqual(ecosystems, {"github-actions", "pip"})
+
+        for workflow_path in (
+            CI_WORKFLOW,
+            RELEASE_WORKFLOW,
+            CODEQL_WORKFLOW,
+            DEPENDENCY_REVIEW_WORKFLOW,
+        ):
+            with self.subTest(workflow=str(workflow_path)):
+                workflow = load_workflow(workflow_path)
+                self.assertEqual(workflow.get("permissions"), {"contents": "read"})
+                self.assertIn("concurrency", workflow)
+                assert_workflow_uses_are_sha_pinned(self, workflow)
+
+        codeql = load_workflow(CODEQL_WORKFLOW)
+        codeql_job = workflow_job(codeql, "analyze")
+        self.assertEqual(
+            codeql_job.get("permissions"),
+            {"actions": "read", "contents": "read", "security-events": "write"},
+        )
+        self.assertEqual(workflow_step(codeql_job, "Checkout").get("uses"), PINNED_CHECKOUT_ACTION)
+        self.assertRegex(
+            str(workflow_step(codeql_job, "Initialize CodeQL").get("uses")),
+            r"^github/codeql-action/init@[0-9a-f]{40}$",
+        )
+        self.assertRegex(
+            str(workflow_step(codeql_job, "Perform CodeQL Analysis").get("uses")),
+            r"^github/codeql-action/analyze@[0-9a-f]{40}$",
+        )
+
+        dependency_review = load_workflow(DEPENDENCY_REVIEW_WORKFLOW)
+        review_job = workflow_job(dependency_review, "dependency-review")
+        self.assertEqual(
+            workflow_step(review_job, "Dependency Review").get("uses"),
+            PINNED_DEPENDENCY_REVIEW_ACTION,
+        )
+        self.assertEqual(
+            workflow_step(review_job, "Dependency Review").get("with", {}).get("fail-on-severity"),
+            "moderate",
+        )
+
     def test_ci_matrix_tiers_match_registry_compatibility_contract(self) -> None:
         registry = load_registry(Path("."))
         workflow = _workflow()
@@ -176,6 +240,7 @@ class CiWorkflowStaticTests(unittest.TestCase):
             _run_text(_step_by_name(job, "Run Windows schema and allowlist smoke tests")),
         )
         upload = _step_by_name(job, "Upload Windows smoke artifact")
+        self.assertEqual(upload.get("uses"), PINNED_UPLOAD_ARTIFACT_ACTION)
         self.assertEqual(upload.get("with", {}).get("name"), "windows-release-smoke-report")
         self.assertEqual(
             upload.get("with", {}).get("path"),
@@ -212,20 +277,20 @@ class CiWorkflowStaticTests(unittest.TestCase):
         self.assertIn("ops/reports/release-closeout-fixed-point.json", text)
         self.assertIn("ops/reports/release-closeout-fixed-point-cost-trend.json", text)
         self.assertIn("ops/reports/release-evidence-dashboard.json", text)
-        self.assertIn("tmp/release-workflow-order-guard.json", text)
+        self.assertIn("ops/reports/release-workflow-order-guard.json", text)
         self.assertIn(
-            "tmp/release-closeout-sealed-dry-run/LLMwiki-source.zip", text
+            "build/release/release-closeout-sealed-dry-run/LLMwiki-source.zip", text
         )
         self.assertIn(
-            "tmp/release-closeout-sealed-dry-run/release-closeout-batch-manifest.json",
+            "build/release/release-closeout-sealed-dry-run/release-closeout-batch-manifest.json",
             text,
         )
         self.assertIn(
-            "tmp/release-closeout-sealed-dry-run/external-report-reference-manifest.json",
+            "build/release/release-closeout-sealed-dry-run/external-report-reference-manifest.json",
             text,
         )
         self.assertIn(
-            "tmp/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json",
+            "build/release/release-closeout-sealed-dry-run/release-closeout-sealed-rehearsal-check.json",
             text,
         )
         self.assertIn("ops/reports/release-closeout-sealed-rehearsal-check.json", text)
@@ -234,6 +299,21 @@ class CiWorkflowStaticTests(unittest.TestCase):
             "tmp/release-closeout-post-check-finalizer-recommended-targets.txt", text
         )
         self.assertIn("tmp/release-closeout-post-check-finalizer-plan.json", text)
+
+    def test_ci_artifact_transfer_actions_are_pinned(self) -> None:
+        workflow = _workflow()
+        for job_name, job in _jobs(workflow).items():
+            if not isinstance(job, dict):
+                continue
+            for step in _steps(job):
+                uses = str(step.get("uses", ""))
+                if not uses:
+                    continue
+                with self.subTest(job=job_name, step=step.get("name", ""), uses=uses):
+                    if "upload-artifact@" in uses:
+                        self.assertEqual(uses, PINNED_UPLOAD_ARTIFACT_ACTION)
+                    if "download-artifact@" in uses:
+                        self.assertEqual(uses, PINNED_DOWNLOAD_ARTIFACT_ACTION)
 
     def test_windows_command_runtime_smoke_step_runs_between_release_and_preview(
         self,

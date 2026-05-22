@@ -1,25 +1,25 @@
 {
   "$schema": "ops/schemas/release-evidence-cohort.schema.json",
   "artifact_kind": "release_evidence_cohort",
-  "generated_at": "2026-05-22T10:31:08Z",
+  "generated_at": "2026-05-22T18:51:29Z",
   "producer": "ops.scripts.release_evidence_cohort",
   "source_command": "python -m ops.scripts.release_evidence_cohort --vault . --profile base --cohort-policy allowed_divergence_with_explicit_risk --provenance-mode embedded_currentness",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
+  "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "0b84c2e52e7ad2450bda1a020aa7a42f19e3123e5c5de760f0eff6850218e0b8",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "4e3048356287d8763e181e1b0dc02536841f6b678a3d519da321db34ad79610e",
-    "artifact_freshness": "fe1e6386566832c092086737c5cc82fabb11f389bfe68fe7bbf1d2ac6a7b5fae",
-    "auto_improve_readiness": "729352ce84fc39c5188533450422ea1d681d59fca0065bcc3fd0777655823d67",
+    "source_paths": "fd4e7ebe7d4ab9168b5e1e8f5f116789b7339a92782c2df9edcffd497a07897d",
+    "artifact_freshness": "d2b64a8740e250a02f9134f9e7385e2c14a31438e2493f620d9448558ba1b984",
+    "auto_improve_readiness": "8ce5f330396edf448e39b8ef857e7a3116cf6e528617bf72f90e3b27f6cab0eb",
     "bootstrap_preflight": "47ead81d53d81089be0617eec986927025812f4b489b1a995af645f8e6acb38c",
-    "generated_index": "e0e674223f9baf3c3611afdc1098b8f8f95a5bbff32ce5f3b4beb9905a5f18e7",
-    "raw_registry": "546ee67243bcf69c859f62f9f3232069880a90bbc09f0b9d12b9c96b0f510220",
-    "release_closeout_summary": "2908d53d910e3e621d7225cb106958ccc2dd2fcbd13714b3d71ff1d51c4c88ff",
-    "release_smoke": "8c9ee7d0b54660d09bf9e29374ca59cf2eff506e3f10f5e7311b718e0acee704",
-    "source_package_clean_extract": "44fc427df836dbc7752f29b6d42df0952cfea7b5668380809fa86bc09c9dd653",
-    "test_summary": "d52cfeb0cf90d136bec853f9bfcb36fa7e30bfd1555e782bdd4751aaf9dae26d",
+    "generated_index": "93d7c87023571ca5febc2c7ff4db7a14453fe8c51cea92d4072f6c4cb3a9e008",
+    "raw_registry": "ba7401d7b227f2ee445c5299ef28f82f837303c540bd0f62ece8c7b1858a49f6",
+    "release_closeout_summary": "6fb4d8de336abd971fbfa8465c74f888b5228fe941a0fb177be504f4530e6643",
+    "release_smoke": "164c256cc11984d4bb2609024e34df65f4a47649f8e77868c0f09aeb263920fe",
+    "source_package_clean_extract": "8b5dffc848ba3173505eca01eb8923558b137666513241562b1c9acb2b7677af",
+    "test_summary": "259c465a3a58c2e00e53d446b1d0eaded8bbd92df6eea8d6639d719d550096da",
     "test_summary_full": "be3f75b4820303435f21045297617f4c737109601f2fedc0054f592f9dca8397",
     "cohort_policy": "1d487a20a973f5728bd68e1ba20116676965128a8587ad911fe05af33a8b543a",
     "profile": "cae662172fd450bb0cd710a769079c05bfc5d8e35efa6576edc7d0377afdd4a2",
@@ -32,7 +32,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T10:31:08Z"
+    "checked_at": "2026-05-22T18:51:29Z"
   },
   "vault": ".",
   "policy": {
@@ -49,7 +49,7 @@
     "issue_count": 0,
     "risk_count": 1,
     "strict_same_fingerprint": false,
-    "component_fingerprint_count": 2,
+    "component_fingerprint_count": 4,
     "modified_after_generated_at_count": 0,
     "deselected_test_count": 0,
     "accepted_risk_family_count": 1,
@@ -111,10 +111,12 @@
     "strict_same_fingerprint": false,
     "component_count": 10,
     "loaded_component_count": 10,
-    "component_fingerprint_count": 2,
+    "component_fingerprint_count": 4,
     "fingerprints": [
       "2ac6e9a28c041742b0836b317a3d833e6e641cc38c675f4fecd33e748e21c76d",
-      "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6"
+      "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
+      "8fda290550ddfbeaf94370df68c07e508ee21a691ed794003af9aea11c64783a",
+      "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742"
     ],
     "missing_fingerprint_components": [],
     "modified_after_generated_at_components": [],
@@ -128,34 +130,149 @@
           "source_tree_fingerprint": "2ac6e9a28c041742b0836b317a3d833e6e641cc38c675f4fecd33e748e21c76d",
           "matches_current_source_tree_fingerprint": false,
           "modified_after_generated_at": false,
-          "changed_after_generated_at_count": 2,
+          "changed_after_generated_at_count": 67,
           "changed_after_generated_at": [
             {
-              "path": "ops/scripts/release/external_report_lifecycle_runtime.py",
-              "mtime": "2026-05-22T10:13:18Z"
+              "path": "ops/schemas/artifact-freshness-report.schema.json",
+              "mtime": "2026-05-22T13:37:13Z"
             },
             {
-              "path": "tests/test_external_report_action_matrix.py",
-              "mtime": "2026-05-22T10:13:48Z"
+              "path": "ops/scripts/core/schema_runtime.py",
+              "mtime": "2026-05-22T13:38:05Z"
+            },
+            {
+              "path": ".github/CODEOWNERS",
+              "mtime": "2026-05-22T13:54:41Z"
+            },
+            {
+              "path": ".github/dependabot.yml",
+              "mtime": "2026-05-22T13:54:41Z"
+            },
+            {
+              "path": ".github/pull_request_template.md",
+              "mtime": "2026-05-22T13:54:41Z"
+            },
+            {
+              "path": ".github/workflows/codeql.yml",
+              "mtime": "2026-05-22T13:54:41Z"
+            },
+            {
+              "path": ".github/workflows/dependency-review.yml",
+              "mtime": "2026-05-22T13:54:41Z"
+            },
+            {
+              "path": "tests/workflow_static_helpers.py",
+              "mtime": "2026-05-22T13:55:30Z"
+            },
+            {
+              "path": "ops/schemas/generated-artifact-index.schema.json",
+              "mtime": "2026-05-22T14:03:16Z"
+            },
+            {
+              "path": "tests/test_external_report_lifecycle_static.py",
+              "mtime": "2026-05-22T14:13:50Z"
             }
           ]
         },
         {
           "name": "source_package_clean_extract",
           "path": "ops/reports/source-package-clean-extract.json",
-          "generated_at": "2026-05-22T09:49:03Z",
-          "source_tree_fingerprint": "2ac6e9a28c041742b0836b317a3d833e6e641cc38c675f4fecd33e748e21c76d",
+          "generated_at": "2026-05-22T17:16:50Z",
+          "source_tree_fingerprint": "8fda290550ddfbeaf94370df68c07e508ee21a691ed794003af9aea11c64783a",
           "matches_current_source_tree_fingerprint": false,
           "modified_after_generated_at": false,
-          "changed_after_generated_at_count": 2,
+          "changed_after_generated_at_count": 17,
           "changed_after_generated_at": [
             {
-              "path": "ops/scripts/release/external_report_lifecycle_runtime.py",
-              "mtime": "2026-05-22T10:13:18Z"
+              "path": "ops/scripts/release/release_live_artifact_attestation.py",
+              "mtime": "2026-05-22T17:25:01Z"
             },
             {
-              "path": "tests/test_external_report_action_matrix.py",
-              "mtime": "2026-05-22T10:13:48Z"
+              "path": ".github/workflows/release.yml",
+              "mtime": "2026-05-22T17:25:06Z"
+            },
+            {
+              "path": "tests/test_release_workflow_static.py",
+              "mtime": "2026-05-22T17:25:11Z"
+            },
+            {
+              "path": "ops/scripts/mechanism/goal_worktree_guard.py",
+              "mtime": "2026-05-22T18:18:25Z"
+            },
+            {
+              "path": "ops/schemas/goal-worktree-guard.schema.json",
+              "mtime": "2026-05-22T18:18:32Z"
+            },
+            {
+              "path": "tests/test_goal_worktree_guard.py",
+              "mtime": "2026-05-22T18:18:49Z"
+            },
+            {
+              "path": "ops/scripts/release/release_source_ready_commit.py",
+              "mtime": "2026-05-22T18:19:03Z"
+            },
+            {
+              "path": "README.md",
+              "mtime": "2026-05-22T18:19:53Z"
+            },
+            {
+              "path": "ops/README.md",
+              "mtime": "2026-05-22T18:20:01Z"
+            },
+            {
+              "path": "tests/test_release_source_ready_commit.py",
+              "mtime": "2026-05-22T18:20:34Z"
+            }
+          ]
+        },
+        {
+          "name": "test_summary_full",
+          "path": "ops/reports/test-execution-summary-full.json",
+          "generated_at": "2026-05-22T10:30:32Z",
+          "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
+          "matches_current_source_tree_fingerprint": false,
+          "modified_after_generated_at": false,
+          "changed_after_generated_at_count": 67,
+          "changed_after_generated_at": [
+            {
+              "path": "ops/schemas/artifact-freshness-report.schema.json",
+              "mtime": "2026-05-22T13:37:13Z"
+            },
+            {
+              "path": "ops/scripts/core/schema_runtime.py",
+              "mtime": "2026-05-22T13:38:05Z"
+            },
+            {
+              "path": ".github/CODEOWNERS",
+              "mtime": "2026-05-22T13:54:41Z"
+            },
+            {
+              "path": ".github/dependabot.yml",
+              "mtime": "2026-05-22T13:54:41Z"
+            },
+            {
+              "path": ".github/pull_request_template.md",
+              "mtime": "2026-05-22T13:54:41Z"
+            },
+            {
+              "path": ".github/workflows/codeql.yml",
+              "mtime": "2026-05-22T13:54:41Z"
+            },
+            {
+              "path": ".github/workflows/dependency-review.yml",
+              "mtime": "2026-05-22T13:54:41Z"
+            },
+            {
+              "path": "tests/workflow_static_helpers.py",
+              "mtime": "2026-05-22T13:55:30Z"
+            },
+            {
+              "path": "ops/schemas/generated-artifact-index.schema.json",
+              "mtime": "2026-05-22T14:03:16Z"
+            },
+            {
+              "path": "tests/test_external_report_lifecycle_static.py",
+              "mtime": "2026-05-22T14:13:50Z"
             }
           ]
         }
@@ -173,8 +290,8 @@
     "deselected_test_count": 0,
     "clean_lane_blocking_family_count": 1,
     "learning_claim_blocking_family_count": 0,
-    "advisory_lifecycle_family_count": 2,
-    "total_accepted_risk_family_count": 3,
+    "advisory_lifecycle_family_count": 0,
+    "total_accepted_risk_family_count": 1,
     "cohort_risk_count": 1,
     "failed_conditions": [
       "zero_accepted_risk_family",
@@ -216,12 +333,12 @@
       "expected_artifact_kind": "release_smoke_report",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-22T10:19:54Z",
-      "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
+      "generated_at": "2026-05-22T18:47:44Z",
+      "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
       "producer_input_fingerprint": "a010e7fbf424fc4e9e234e4174b92d10bae2b7a00a918cb6bc3b4917016493cf",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-22T10:19:54Z",
+      "currentness_checked_at": "2026-05-22T18:47:44Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -243,12 +360,12 @@
       "expected_artifact_kind": "source_package_clean_extract",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-22T09:49:03Z",
-      "source_tree_fingerprint": "2ac6e9a28c041742b0836b317a3d833e6e641cc38c675f4fecd33e748e21c76d",
-      "producer_input_fingerprint": "5276817dfbadb8ed717130e5494a8c0973ccb5d70b881bcd7ec26593470f9ba7",
+      "generated_at": "2026-05-22T17:16:50Z",
+      "source_tree_fingerprint": "8fda290550ddfbeaf94370df68c07e508ee21a691ed794003af9aea11c64783a",
+      "producer_input_fingerprint": "b7e684a8d2b58533c2d074534a0a48c01c1657977cec1adfe69a9da25e1d5797",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-22T09:49:03Z",
+      "currentness_checked_at": "2026-05-22T17:16:50Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -270,12 +387,12 @@
       "expected_artifact_kind": "raw_registry_preflight_report",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-22T10:22:35Z",
-      "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
+      "generated_at": "2026-05-22T18:47:25Z",
+      "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
       "producer_input_fingerprint": "bd4f82b333673287c719fceb79920b031baade5bf3fb4143ce944d5ce40b3a96",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-22T10:22:35Z",
+      "currentness_checked_at": "2026-05-22T18:47:25Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -297,12 +414,12 @@
       "expected_artifact_kind": "test_execution_summary",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-22T10:23:30Z",
-      "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
-      "producer_input_fingerprint": "7d60909cf5d323baf16f25c850be8972a624b9dce6f72687e16d867efc0792c0",
+      "generated_at": "2026-05-22T18:47:17Z",
+      "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
+      "producer_input_fingerprint": "d1d4e9685306e6d9ceefcc10bd87484fd7fb6ce7c2e6c7a6d60ad0fc677e29db",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-22T10:23:30Z",
+      "currentness_checked_at": "2026-05-22T18:47:17Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -384,12 +501,12 @@
       "expected_artifact_kind": "auto_improve_readiness_report",
       "load_status": "ok",
       "source_status": "unknown",
-      "generated_at": "2026-05-22T10:31:08Z",
-      "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
-      "producer_input_fingerprint": "da674a0d960a48062517f4adb1448e95d31edcffc2cc9998aae0607cb9f77ada",
+      "generated_at": "2026-05-22T18:51:29Z",
+      "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
+      "producer_input_fingerprint": "123d95ba1a75563c5edccf335c1792cbb4460baac550e87c1d9dcc8543949268",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-22T10:31:08Z",
+      "currentness_checked_at": "2026-05-22T18:51:29Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -410,13 +527,13 @@
       "path": "ops/reports/generated-artifact-index.json",
       "expected_artifact_kind": "generated_artifact_index_report",
       "load_status": "ok",
-      "source_status": "attention",
-      "generated_at": "2026-05-22T10:31:08Z",
-      "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
-      "producer_input_fingerprint": "215783a8c84be8e17e7ded945f57808e5b38a4052abfad10ffdef69d6f884244",
+      "source_status": "pass",
+      "generated_at": "2026-05-22T18:51:29Z",
+      "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
+      "producer_input_fingerprint": "447cf2ab2ca4c177c473cb860e9b86ac9631127c8857f0a5ac66ccd9984c4350",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-22T10:31:08Z",
+      "currentness_checked_at": "2026-05-22T18:51:29Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -438,12 +555,12 @@
       "expected_artifact_kind": "artifact_freshness_report",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-22T10:31:08Z",
-      "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
-      "producer_input_fingerprint": "6b811e7006ebce190e923eaaad503b9f18a500f3ee4dda06c642732f924e22d3",
+      "generated_at": "2026-05-22T18:51:29Z",
+      "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
+      "producer_input_fingerprint": "828e062353da9c4f7980b67085e21361794a728fc4b18586a7357b522f91fe6c",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-22T10:31:08Z",
+      "currentness_checked_at": "2026-05-22T18:51:29Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
@@ -465,21 +582,21 @@
       "expected_artifact_kind": "release_closeout_summary",
       "load_status": "ok",
       "source_status": "pass",
-      "generated_at": "2026-05-22T10:31:08Z",
-      "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
-      "producer_input_fingerprint": "83ee9c90584ea1db6cc8a6801f3c470faeac307970385deec36120c9ce00cb29",
+      "generated_at": "2026-05-22T18:51:29Z",
+      "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
+      "producer_input_fingerprint": "2b027b3ae7c9870e1c834b53da02bcd3a4ca6273e37d037e2d442629e4e2c7e6",
       "artifact_status": "current",
       "currentness_status": "current",
-      "currentness_checked_at": "2026-05-22T10:31:08Z",
+      "currentness_checked_at": "2026-05-22T18:51:29Z",
       "provenance_mode": "embedded_currentness",
       "report_mtime_source": "embedded_currentness",
       "report_mtime": "",
       "modified_after_generated_at": false,
       "deselected_test_count": 0,
-      "accepted_risk_family_count": 3,
+      "accepted_risk_family_count": 1,
       "clean_lane_blocking_risk_family_count": 1,
       "learning_claim_blocking_risk_family_count": 0,
-      "advisory_lifecycle_risk_family_count": 2,
+      "advisory_lifecycle_risk_family_count": 0,
       "release_readiness_state": "conditional_pass",
       "machine_release_allowed": false,
       "evidence_artifact_count": 0,
@@ -501,8 +618,8 @@
       ],
       "risk_acceptance": {
         "accepted_by": "release_evidence_cohort_policy",
-        "accepted_at": "2026-05-22T10:31:08Z",
-        "expires_at": "2026-05-29T10:31:08Z",
+        "accepted_at": "2026-05-22T18:51:29Z",
+        "expires_at": "2026-05-29T18:51:29Z",
         "risk_owner": "runtime-maintainer",
         "revalidation_condition": "Rerun the ordered release evidence chain before the next release closeout.",
         "rollback_trigger": "Treat cohort fingerprint divergence as a blocker if policy requires strict same-fingerprint evidence.",

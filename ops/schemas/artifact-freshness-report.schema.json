@@ -266,6 +266,12 @@
         "$ref": "#/$defs/owner_surface_item"
       }
     },
+    "phase_timings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/phase_timing"
+      }
+    },
     "root_ephemeral_patterns": {
       "type": "array",
       "items": {
@@ -485,6 +491,34 @@
         "recommended_next_action": {
           "type": "string",
           "minLength": 1
+        }
+      }
+    },
+    "phase_timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase",
+        "elapsed_seconds",
+        "done",
+        "total"
+      ],
+      "properties": {
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "elapsed_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "done": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0
         }
       }
     },

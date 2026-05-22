@@ -15,6 +15,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         PUBLIC_EXCLUDED_FILES,
         PUBLIC_EXCLUDED_PREFIXES,
         PUBLIC_EXCLUDED_SEGMENTS,
+        PUBLIC_INCLUDED_REPORT_FILES,
         PUBLIC_INCLUDE_FILES,
         PUBLIC_INCLUDE_PREFIXES,
     )
@@ -24,6 +25,7 @@ else:
         PUBLIC_EXCLUDED_FILES,
         PUBLIC_EXCLUDED_PREFIXES,
         PUBLIC_EXCLUDED_SEGMENTS,
+        PUBLIC_INCLUDED_REPORT_FILES,
         PUBLIC_INCLUDE_FILES,
         PUBLIC_INCLUDE_PREFIXES,
     )
@@ -35,6 +37,8 @@ DEFAULT_PUBLIC_OUT = str(Path(tempfile.gettempdir()) / "llm-wiki-public-repo")
 def should_export_public(rel_path: str) -> bool:
     if rel_path in PUBLIC_EXCLUDED_FILES:
         return False
+    if rel_path in PUBLIC_INCLUDED_REPORT_FILES:
+        return True
     if any(rel_path.startswith(prefix) for prefix in PUBLIC_EXCLUDED_PREFIXES):
         return False
     if any(segment in PUBLIC_EXCLUDED_SEGMENTS for segment in Path(rel_path).parts):
@@ -118,6 +122,7 @@ def export_public_repo(vault: Path, out_dir: Path, *, clean: bool = True) -> dic
         "files": copied,
         "excluded_prefixes": list(PUBLIC_EXCLUDED_PREFIXES),
         "excluded_files": sorted(PUBLIC_EXCLUDED_FILES),
+        "included_report_files": sorted(PUBLIC_INCLUDED_REPORT_FILES),
     }
     atomic_write_json(out_dir / "PUBLIC-EXPORT-MANIFEST.json", manifest)
     return manifest

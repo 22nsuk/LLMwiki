@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/artifact-relocation-audit.schema.json",
   "artifact_kind": "artifact_relocation_audit",
-  "generated_at": "2026-05-22T10:30:55Z",
+  "generated_at": "2026-05-22T18:51:21Z",
   "producer": "ops.scripts.artifact_relocation_audit",
   "source_command": "python -m ops.scripts.artifact_relocation_audit --vault . --out ops/operator/artifact-relocation-audit.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "549b9e6a6426e7570b1e1cd3c91360482ef94ea20bb2a676550105c1a3985cd6",
+  "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "2bca24a2fb1f0a7c49b35b6df2aac4e0676e137502b48691d033ad62e3769173",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "1ffc3cd808f7848d5e07c33875f5b587f2c166346a1e07e6617ac6b127df422c",
     "candidate_spec": "b1200b347913aa0fd79d57373d7874415448511a26db8629fc55c649d860c9c2",
-    "dependency_paths": "8d78834d1370366c15515e3aaab999b6af2f644ab441eec4bf2b16832b9b25ee",
+    "dependency_paths": "cabb3bd8a1e47cffe64d016252a93035cafbf56ccb26496441c691870a10edf1",
     "dependency_roots": "be545ec75d1f4e02ad9ba08e5ac7019a5c4bf7d0baa3aa348395f93db732be97",
     "excluded_scan_paths": "fd1a01cc9a3c77d51ba8bec1c7117e110d4c742ac36077133fbb3b0b3d4b90bd",
     "excluded_scan_prefixes": "e957c42e176e00f268bb61a907a17e555ae0d84924fcabe7c04d0ab207727581"
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T10:30:55Z"
+    "checked_at": "2026-05-22T18:51:21Z"
   },
   "vault": ".",
   "policy": {
@@ -67,9 +67,14 @@
       "system/",
       "external-reports/"
     ],
-    "file_count": 660,
+    "file_count": 665,
     "files": [
+      ".github/CODEOWNERS",
+      ".github/dependabot.yml",
+      ".github/pull_request_template.md",
       ".github/workflows/ci.yml",
+      ".github/workflows/codeql.yml",
+      ".github/workflows/dependency-review.yml",
       ".github/workflows/release.yml",
       "AGENTS.md",
       "ARCHITECTURE.md",
@@ -737,8 +742,8 @@
     "move_ready_count": 0,
     "blocking_candidate_count": 0,
     "old_reference_count": 0,
-    "new_reference_count": 28,
-    "dependency_file_count": 660
+    "new_reference_count": 29,
+    "dependency_file_count": 665
   },
   "candidates": [
     {
@@ -753,7 +758,7 @@
       "old_path_exists": false,
       "new_path_exists": true,
       "old_reference_count": 0,
-      "new_reference_count": 28,
+      "new_reference_count": 29,
       "blocking_references": [],
       "new_path_references": [
         {
@@ -761,7 +766,7 @@
           "match_count": 1,
           "matches": [
             {
-              "line": 105,
+              "line": 112,
               "excerpt": "ops/operator/operator-release-summary.json"
             }
           ]
@@ -791,7 +796,7 @@
           "match_count": 1,
           "matches": [
             {
-              "line": 414,
+              "line": 417,
               "excerpt": "\"operator-release-summary\": \"ops/operator/operator-release-summary.json\","
             }
           ]
@@ -853,11 +858,11 @@
           "match_count": 2,
           "matches": [
             {
-              "line": 362,
+              "line": 414,
               "excerpt": "self.assertIn(\"ops/operator/operator-release-summary.json\", paths)"
             },
             {
-              "line": 368,
+              "line": 420,
               "excerpt": "if record[\"path\"] == \"ops/operator/operator-release-summary.json\""
             }
           ]
@@ -881,11 +886,11 @@
           "match_count": 2,
           "matches": [
             {
-              "line": 97,
+              "line": 107,
               "excerpt": "self.assertIn(\"ops/operator/operator-release-summary.json\", current_paths)"
             },
             {
-              "line": 109,
+              "line": 119,
               "excerpt": "if item[\"path\"] == \"ops/operator/operator-release-summary.json\""
             }
           ]
@@ -943,7 +948,7 @@
           "match_count": 1,
           "matches": [
             {
-              "line": 144,
+              "line": 149,
               "excerpt": "\"ops/operator/operator-release-summary.json\","
             }
           ]
@@ -960,18 +965,22 @@
         },
         {
           "path": "tests/test_source_tree_fingerprint_runtime.py",
-          "match_count": 3,
+          "match_count": 4,
           "matches": [
             {
               "line": 54,
               "excerpt": "self._write(\"ops/operator/operator-release-summary.json\", \"{}\\n\")"
             },
             {
-              "line": 109,
+              "line": 71,
+              "excerpt": "\"ops/operator/operator-release-summary.json\","
+            },
+            {
+              "line": 130,
               "excerpt": "self._write(\"ops/operator/operator-release-summary.json\", \"{}\\n\")"
             },
             {
-              "line": 110,
+              "line": 131,
               "excerpt": "self._set_mtime(\"ops/operator/operator-release-summary.json\", \"2026-04-29T08:00:03Z\")"
             }
           ]
