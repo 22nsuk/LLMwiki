@@ -1,23 +1,23 @@
 {
   "$schema": "ops/schemas/release-evidence-dashboard.schema.json",
   "artifact_kind": "release_evidence_dashboard",
-  "generated_at": "2026-05-22T19:09:49Z",
+  "generated_at": "2026-05-22T19:16:15Z",
   "producer": "ops.scripts.release_evidence_dashboard",
   "source_command": "python -m ops.scripts.release_evidence_dashboard --vault . --out ops/reports/release-evidence-dashboard.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "83f12aa43db5fbf02472e0b75356f8a3920b9a98ff95461727b5ff319c87f1d7",
+  "source_tree_fingerprint": "2f2037ec4c069a4891022662a91063b58e039dd1cdf1c424161d5fc8f626fc28",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "3d201c44c8525de4f9e7af11e9bcba6a5572a46b2f246bc43324bf377c45ab56",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "62c75a1737d4a2f63f26ac5fd0477b2b3d1f4f830478fc59c9ddc764382f410c",
-    "artifact_freshness": "5da092ed93d85da64eb2c4ec5d08e881747e66cbb3350313d4022b28407962f8",
-    "learning_delta_scoreboard": "179a3739282c2b2c7ccba7d456f788a3cccc23cfd8e0b73bc42cba7430f208fc",
-    "learning_readiness_signoff_revalidation": "2dfb73524e1886640bf264d8a0573e0ce52bb087afd48f48de75380dfe392e35",
-    "release_closeout_fixed_point": "4e9478d1aef2b099a000181491b9ed831f2056c0600a415223e0233e6b4ae0de",
+    "artifact_freshness": "87888e18bef4337d8f55e269640d3b12632dad17e58b4dd62ef5b9e80a518f16",
+    "learning_delta_scoreboard": "7d3345e730c1d4cf79d00eca8034438db4896427ecb902c894296437b0301c3e",
+    "learning_readiness_signoff_revalidation": "2d5e5d9f1acde5e2ab4cff76850b7b32cdc8bf89ea2e31ae0afe3212269ca7fe",
+    "release_closeout_fixed_point": "f1ada0f842dfeebe049d2b71a2dbfa1e8a9d6ddd9f24e6d2383db2eebf5fa7a3",
     "release_closeout_fixed_point_cost_trend": "4ad9945123b2cb8856267681013cf7200acf64fef40079a738488071907344ef",
-    "release_closeout_summary": "401dc5f65deefbced265e86217b343fea2d6020819f69881d316c8ec184db2ce",
-    "current_source_tree_fingerprint": "e8cebb49c79e593128fcda6e5fd0e68c35587b4e3b7a546af556ebb1c1612e8b"
+    "release_closeout_summary": "a0c9c073f27c66bfe0f4c67f12c162996de5ddc6bd4cb648cebcbe47217cdf84",
+    "current_source_tree_fingerprint": "95214a571aedca698a9331d453e61959f00c4d98fe6c98795888fcd8fd49bfe6"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T19:09:49Z"
+    "checked_at": "2026-05-22T19:16:15Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
     "version": 4
   },
   "status": "attention",
-  "source_tree_fingerprint_current": "83f12aa43db5fbf02472e0b75356f8a3920b9a98ff95461727b5ff319c87f1d7",
+  "source_tree_fingerprint_current": "2f2037ec4c069a4891022662a91063b58e039dd1cdf1c424161d5fc8f626fc28",
   "inputs": {
     "release_closeout_summary": {
       "path": "ops/reports/release-closeout-summary.json",
@@ -397,16 +397,16 @@
       "converged": true,
       "iteration_count": 5,
       "command_run_count": 56,
-      "total_duration_ms": 44913,
+      "total_duration_ms": 45009,
       "writer_costs": [
         {
           "name": "goal-worktree-guard",
           "target": "auto-improve-readiness-worktree-guard",
           "run_count": 1,
           "selected_iteration_count": 1,
-          "total_duration_ms": 388,
-          "average_duration_ms": 388,
-          "max_duration_ms": 388,
+          "total_duration_ms": 389,
+          "average_duration_ms": 389,
+          "max_duration_ms": 389,
           "skipped_after_first_iteration_count": 4
         },
         {
@@ -414,9 +414,9 @@
           "target": "generated-artifact-index-body",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2436,
+          "total_duration_ms": 2435,
           "average_duration_ms": 487,
-          "max_duration_ms": 489,
+          "max_duration_ms": 490,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -424,9 +424,9 @@
           "target": "artifact-freshness",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 18890,
-          "average_duration_ms": 3778,
-          "max_duration_ms": 3810,
+          "total_duration_ms": 18959,
+          "average_duration_ms": 3792,
+          "max_duration_ms": 3853,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -434,9 +434,9 @@
           "target": "auto-improve-readiness-report-body",
           "run_count": 3,
           "selected_iteration_count": 3,
-          "total_duration_ms": 1533,
-          "average_duration_ms": 511,
-          "max_duration_ms": 514,
+          "total_duration_ms": 1537,
+          "average_duration_ms": 512,
+          "max_duration_ms": 525,
           "skipped_after_first_iteration_count": 2
         },
         {
@@ -444,8 +444,8 @@
           "target": "release-closeout-summary-report",
           "run_count": 4,
           "selected_iteration_count": 4,
-          "total_duration_ms": 2349,
-          "average_duration_ms": 587,
+          "total_duration_ms": 2355,
+          "average_duration_ms": 589,
           "max_duration_ms": 594,
           "skipped_after_first_iteration_count": 1
         },
@@ -454,9 +454,9 @@
           "target": "learning-readiness-signoff-revalidation",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 1907,
-          "average_duration_ms": 381,
-          "max_duration_ms": 383,
+          "total_duration_ms": 1913,
+          "average_duration_ms": 383,
+          "max_duration_ms": 385,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -464,9 +464,9 @@
           "target": "release-evidence-cohort",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2544,
-          "average_duration_ms": 509,
-          "max_duration_ms": 512,
+          "total_duration_ms": 2559,
+          "average_duration_ms": 512,
+          "max_duration_ms": 518,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -474,9 +474,9 @@
           "target": "release-evidence-dashboard-report",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2710,
+          "total_duration_ms": 2708,
           "average_duration_ms": 542,
-          "max_duration_ms": 552,
+          "max_duration_ms": 545,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -484,9 +484,9 @@
           "target": "release-lane-summary",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2224,
-          "average_duration_ms": 445,
-          "max_duration_ms": 447,
+          "total_duration_ms": 2219,
+          "average_duration_ms": 444,
+          "max_duration_ms": 445,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -494,9 +494,9 @@
           "target": "release-clean-blocker-ledger",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2355,
-          "average_duration_ms": 471,
-          "max_duration_ms": 477,
+          "total_duration_ms": 2370,
+          "average_duration_ms": 474,
+          "max_duration_ms": 478,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -504,9 +504,9 @@
           "target": "release-closeout-batch-manifest-promote",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 4498,
-          "average_duration_ms": 900,
-          "max_duration_ms": 903,
+          "total_duration_ms": 4490,
+          "average_duration_ms": 898,
+          "max_duration_ms": 906,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -514,9 +514,9 @@
           "target": "release-evidence-closeout-self-check",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 1764,
-          "average_duration_ms": 353,
-          "max_duration_ms": 354,
+          "total_duration_ms": 1760,
+          "average_duration_ms": 352,
+          "max_duration_ms": 357,
           "skipped_after_first_iteration_count": 0
         }
       ],
@@ -544,9 +544,9 @@
       },
       "evidence_basis": {
         "fixed_point_report_path": "ops/reports/release-closeout-fixed-point.json",
-        "fixed_point_report_digest": "4e9478d1aef2b099a000181491b9ed831f2056c0600a415223e0233e6b4ae0de",
-        "current_fixed_point_report_digest": "4e9478d1aef2b099a000181491b9ed831f2056c0600a415223e0233e6b4ae0de",
-        "fixed_point_generated_at": "2026-05-22T19:07:26Z",
+        "fixed_point_report_digest": "f1ada0f842dfeebe049d2b71a2dbfa1e8a9d6ddd9f24e6d2383db2eebf5fa7a3",
+        "current_fixed_point_report_digest": "f1ada0f842dfeebe049d2b71a2dbfa1e8a9d6ddd9f24e6d2383db2eebf5fa7a3",
+        "fixed_point_generated_at": "2026-05-22T19:13:51Z",
         "cost_trend_path": "ops/reports/release-closeout-fixed-point-cost-trend.json",
         "cost_trend_load_status": "ok",
         "cost_trend_digest": "4ad9945123b2cb8856267681013cf7200acf64fef40079a738488071907344ef",
@@ -555,7 +555,7 @@
         "sampled_fixed_point_report_digest": "4b9a7cd57062b69f1eaedd9002bdf6d487a3c73d11c103bd7bf9b7c5d8a61b00",
         "basis_relation_to_current_fixed_point": "sampled_different_fixed_point"
       },
-      "summary": "12 writers ran 56 commands across 5 iterations; total_duration_ms=44913; expensive_prerequisite_skip_effective=True"
+      "summary": "12 writers ran 56 commands across 5 iterations; total_duration_ms=45009; expensive_prerequisite_skip_effective=True"
     }
   },
   "confirmed_evidence_summary": {
@@ -686,7 +686,7 @@
   },
   "accepted_risk_delta": {
     "status": "unchanged",
-    "previous_report_generated_at": "2026-05-22T19:09:49Z",
+    "previous_report_generated_at": "2026-05-22T19:16:15Z",
     "added_count": 0,
     "removed_count": 0,
     "unchanged_count": 1,

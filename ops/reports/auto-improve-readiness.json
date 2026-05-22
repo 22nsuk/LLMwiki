@@ -1,30 +1,30 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-22T19:09:49Z",
+  "generated_at": "2026-05-22T19:16:15Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "83f12aa43db5fbf02472e0b75356f8a3920b9a98ff95461727b5ff319c87f1d7",
+  "source_tree_fingerprint": "2f2037ec4c069a4891022662a91063b58e039dd1cdf1c424161d5fc8f626fc28",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "e7dcab551802a0458f7e3e296cbad2994d5e0a3300909106981558366a4b0433",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "39826a2b5b3e40d769fd93a8b5cafedf081fcb235a3b2507df92694e250654e6",
-    "artifact_freshness_report": "5da092ed93d85da64eb2c4ec5d08e881747e66cbb3350313d4022b28407962f8",
-    "goal_worktree_guard_report": "f794c253e95c07be68e60b0da3aba595886c736f11e9e4dbcd92fa6eeaa1c2fd",
+    "artifact_freshness_report": "87888e18bef4337d8f55e269640d3b12632dad17e58b4dd62ef5b9e80a518f16",
+    "goal_worktree_guard_report": "f5ef6deee9d5885bf4c9b9903c9d060246238821ddd6aba42a9d10e4e557af61",
     "learning_readiness_signoff_report": "1ec9a280330bf4c9f5cc6a77f7ea7590acaf29d0718a80299d25d8f466576e9d",
-    "mechanism_review_report": "863e8c93f9e21dbf6bfc37bbd773ec57077c8543fc7df387acd6a058f979ebd0",
-    "mutation_proposal_report": "055263b19a2492e688588909603e77ffc469ac56ae9e8db6266965fe4b824978",
-    "outcome_metrics_report": "bbd560380cd7eb1041656a8fbbf9cb5b11116de8fe233025a09694f3f0d1a42c",
+    "mechanism_review_report": "f77586bc061ee490beac57935bfe43fbd4ec42b9bf58607d5ff0371e7c52af2e",
+    "mutation_proposal_report": "0f3ba1feec2151a31ea2647ea7217bc89bb3609b8438c6709dbb755493678e3d",
+    "outcome_metrics_report": "33c314838a7af0bed8a1a8053dd5998e7622654df66aef5efbfc402a316ff1ce",
     "release_authority_preflight_report": "6ee319c834d512fcf6dfcac4d510bca2d8e7046671d5e4576639cc5ad8d28f33",
-    "release_closeout_batch_manifest_report": "eb0a94488e06d1074fdd8ea7abae3d8b60198f99dd070019a5e991943a528cdb",
-    "release_closeout_finality_attestation_report": "6b5d0342c2070e4dfcd111747d0d2af0e3db4175c98f4a0fa6818f13732247e3",
-    "release_closeout_post_check_finalizer_report": "6c4591d0beb15ba4e9c3396f5fd201455a60ac218cdfd3a4cac5a6b8f09aa0df",
-    "release_closeout_summary_report": "063529c701b2e5f29834d4e53ee35672fc48263c236705af77d23717a3a80a11",
-    "release_evidence_cohort_report": "37cbf6af3ee0c819409ab014010232bac647d775fa3fbea3eca33d21a4024e32",
-    "remediation_backlog_report": "ee85b61241825b4c6a75dcafe39dc0502cab6e294b18913752d5b7a9c93165e1",
-    "selected_contract_summary_report": "6bba8380f32194b03889f4a4637ece3f6993d5c9e30a0ded1ee6471a70ecaa67",
+    "release_closeout_batch_manifest_report": "3dec80c85a94b35cf26ee5846005a161b36a0a4196995d9def0d59f5153b3da9",
+    "release_closeout_finality_attestation_report": "2a28f5936c2f4b68df546d7b3d1d366650b101537895a013f195b6cf948f252f",
+    "release_closeout_post_check_finalizer_report": "3e319c881e3386c0f88ac48082c5f0cf387e3ba6140a9c7b0a16a6d0ded7156f",
+    "release_closeout_summary_report": "d9983d7aeccf7f7ae663abda3b67e32d1f4a3acbe0d674e1d30aa73d74ba16f8",
+    "release_evidence_cohort_report": "793ece9a6da5f9da7722297452ed2bfd25ba3f9bc2b4654a8d2b3990b60c3f02",
+    "remediation_backlog_report": "cc1a93fcbb0c52286f4d1feb6771af6ea9ad08b4eea432bbfe3ae2d8c1c427d7",
+    "selected_contract_summary_report": "aec776fcacc024fa394385a66860994f0f98849a4d6a4e5bf15f3752fa83fae6",
     "source_package_clean_extract_report": "8b5dffc848ba3173505eca01eb8923558b137666513241562b1c9acb2b7677af",
     "release_authority_preflight_report_candidates": "9ac8422dcf015ef91025ace98b43bf0fdff1938d99d41b2299701fcf25c8958c"
   },
@@ -34,7 +34,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T19:09:49Z"
+    "checked_at": "2026-05-22T19:16:15Z"
   },
   "vault": ".",
   "policy": {
@@ -199,7 +199,7 @@
       "accepted_risk": false,
       "gate_effect": "active",
       "source_status": "attention",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=45",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=38",
       "signal_ids": [
         "git_worktree_dirty"
       ],
@@ -235,7 +235,7 @@
       "status": "available",
       "gate_effect": "none",
       "source_report": "ops/reports/routing-provenance-aggregates/active-report-self-improve-certificate-rerun7.json",
-      "source_generated_at": "2026-05-22T19:06:03Z",
+      "source_generated_at": "2026-05-22T19:12:30Z",
       "session_id": "active-report-self-improve-certificate-rerun7",
       "summary": "attempts=2, finalized=1, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=1.00 | alerts: unfinalized runs present, recent HOLD trend",
       "health_flags": [
@@ -421,12 +421,12 @@
       "can_promote_result": false,
       "zip_mode_replay_only": false,
       "dirty_worktree_allowed": false,
-      "dirty_entry_count": 45,
+      "dirty_entry_count": 38,
       "fatal_blockers": [],
       "promotion_blockers": [
         "git_worktree_dirty"
       ],
-      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=45"
+      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=38"
     },
     "remediation_backlog_summary": {
       "path": "ops/reports/remediation-backlog.json",

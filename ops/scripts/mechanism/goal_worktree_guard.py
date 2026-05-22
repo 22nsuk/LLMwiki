@@ -133,9 +133,14 @@ def _normalize_repo_path(value: str) -> str:
 
 
 def _porcelain_line_path(line: str) -> str:
-    if len(line) < 4:
+    if len(line) < 3:
         return ""
-    path = line[3:]
+    if line[1:2] == " " and line[2:3] != " ":
+        # _subprocess_git_runner strips stdout, so an unstaged-only porcelain
+        # line like " M path" can arrive as "M path".
+        path = line[2:]
+    else:
+        path = line[3:]
     if " -> " in path:
         path = path.rsplit(" -> ", 1)[1]
     return _normalize_repo_path(path)

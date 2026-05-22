@@ -1762,8 +1762,8 @@
     },
     {
       "path": "ops/scripts/mechanism/goal_worktree_guard.py",
-      "sha256": "363863b3db6839d0911609c78ea4e1c367a97ca5e5cd0096df3ada3e3690b9b4",
-      "size_bytes": 19810
+      "sha256": "37945658cf5fd1e19f780fd9b7737df190236a54997b83ae8757639d0ab4f12a",
+      "size_bytes": 20026
     },
     {
       "path": "ops/scripts/mechanism/improvement_observations.py",
@@ -5357,8 +5357,8 @@
     },
     {
       "path": "tests/test_goal_worktree_guard.py",
-      "sha256": "ccb85365fa4c9baee6729602c6feff0301f9d8d276e126db827de7ccd3123fbf",
-      "size_bytes": 12862
+      "sha256": "e885f82320db5c78c3c3c64fdbc37c3e0ea50a4e6d1ed64c31688ab4dc9a5e74",
+      "size_bytes": 12861
     },
     {
       "path": "tests/test_import_fallback_contract.py",

@@ -152,7 +152,7 @@ class GoalWorktreeGuardTests(unittest.TestCase):
                 ("branch", "--show-current"): GitCommandResult(0, "main", ""),
                 ("status", "--porcelain=v1", "--untracked-files=normal"): GitCommandResult(
                     0,
-                    " M ops/reports/goal-worktree-guard.json",
+                    "M ops/reports/goal-worktree-guard.json",
                     "",
                 ),
             }
