@@ -1,23 +1,23 @@
 {
   "$schema": "ops/schemas/release-evidence-dashboard.schema.json",
   "artifact_kind": "release_evidence_dashboard",
-  "generated_at": "2026-05-22T18:51:29Z",
+  "generated_at": "2026-05-22T19:09:49Z",
   "producer": "ops.scripts.release_evidence_dashboard",
   "source_command": "python -m ops.scripts.release_evidence_dashboard --vault . --out ops/reports/release-evidence-dashboard.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
+  "source_tree_fingerprint": "83f12aa43db5fbf02472e0b75356f8a3920b9a98ff95461727b5ff319c87f1d7",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "3d201c44c8525de4f9e7af11e9bcba6a5572a46b2f246bc43324bf377c45ab56",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "62c75a1737d4a2f63f26ac5fd0477b2b3d1f4f830478fc59c9ddc764382f410c",
-    "artifact_freshness": "d2b64a8740e250a02f9134f9e7385e2c14a31438e2493f620d9448558ba1b984",
-    "learning_delta_scoreboard": "16df3f62f0b59fbe4b16821f674bd0a13eb2b27a9e4cc21c4c7d24541d07b6ca",
-    "learning_readiness_signoff_revalidation": "a2ba90f65378a20572e65167228929770aca6c527285a1de639f8427a2fed247",
-    "release_closeout_fixed_point": "39b9007ba5ee8e1f3f807059497aabbcb76d9b0271ec242bc1915331652997da",
+    "artifact_freshness": "5da092ed93d85da64eb2c4ec5d08e881747e66cbb3350313d4022b28407962f8",
+    "learning_delta_scoreboard": "179a3739282c2b2c7ccba7d456f788a3cccc23cfd8e0b73bc42cba7430f208fc",
+    "learning_readiness_signoff_revalidation": "2dfb73524e1886640bf264d8a0573e0ce52bb087afd48f48de75380dfe392e35",
+    "release_closeout_fixed_point": "4e9478d1aef2b099a000181491b9ed831f2056c0600a415223e0233e6b4ae0de",
     "release_closeout_fixed_point_cost_trend": "4ad9945123b2cb8856267681013cf7200acf64fef40079a738488071907344ef",
-    "release_closeout_summary": "6fb4d8de336abd971fbfa8465c74f888b5228fe941a0fb177be504f4530e6643",
-    "current_source_tree_fingerprint": "f3b68dec2e4b83dea1d3b3ee92ce4ddcf8fa97c29bd379e4017eff14b66afee7"
+    "release_closeout_summary": "401dc5f65deefbced265e86217b343fea2d6020819f69881d316c8ec184db2ce",
+    "current_source_tree_fingerprint": "e8cebb49c79e593128fcda6e5fd0e68c35587b4e3b7a546af556ebb1c1612e8b"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T18:51:29Z"
+    "checked_at": "2026-05-22T19:09:49Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
     "version": 4
   },
   "status": "attention",
-  "source_tree_fingerprint_current": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
+  "source_tree_fingerprint_current": "83f12aa43db5fbf02472e0b75356f8a3920b9a98ff95461727b5ff319c87f1d7",
   "inputs": {
     "release_closeout_summary": {
       "path": "ops/reports/release-closeout-summary.json",
@@ -397,16 +397,16 @@
       "converged": true,
       "iteration_count": 5,
       "command_run_count": 56,
-      "total_duration_ms": 49598,
+      "total_duration_ms": 44913,
       "writer_costs": [
         {
           "name": "goal-worktree-guard",
           "target": "auto-improve-readiness-worktree-guard",
           "run_count": 1,
           "selected_iteration_count": 1,
-          "total_duration_ms": 384,
-          "average_duration_ms": 384,
-          "max_duration_ms": 384,
+          "total_duration_ms": 388,
+          "average_duration_ms": 388,
+          "max_duration_ms": 388,
           "skipped_after_first_iteration_count": 4
         },
         {
@@ -414,9 +414,9 @@
           "target": "generated-artifact-index-body",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2487,
-          "average_duration_ms": 497,
-          "max_duration_ms": 503,
+          "total_duration_ms": 2436,
+          "average_duration_ms": 487,
+          "max_duration_ms": 489,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -424,9 +424,9 @@
           "target": "artifact-freshness",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 19221,
-          "average_duration_ms": 3844,
-          "max_duration_ms": 3956,
+          "total_duration_ms": 18890,
+          "average_duration_ms": 3778,
+          "max_duration_ms": 3810,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -434,9 +434,9 @@
           "target": "auto-improve-readiness-report-body",
           "run_count": 3,
           "selected_iteration_count": 3,
-          "total_duration_ms": 1571,
-          "average_duration_ms": 524,
-          "max_duration_ms": 536,
+          "total_duration_ms": 1533,
+          "average_duration_ms": 511,
+          "max_duration_ms": 514,
           "skipped_after_first_iteration_count": 2
         },
         {
@@ -444,9 +444,9 @@
           "target": "release-closeout-summary-report",
           "run_count": 4,
           "selected_iteration_count": 4,
-          "total_duration_ms": 2405,
-          "average_duration_ms": 601,
-          "max_duration_ms": 613,
+          "total_duration_ms": 2349,
+          "average_duration_ms": 587,
+          "max_duration_ms": 594,
           "skipped_after_first_iteration_count": 1
         },
         {
@@ -454,9 +454,9 @@
           "target": "learning-readiness-signoff-revalidation",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 1963,
-          "average_duration_ms": 393,
-          "max_duration_ms": 410,
+          "total_duration_ms": 1907,
+          "average_duration_ms": 381,
+          "max_duration_ms": 383,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -464,9 +464,9 @@
           "target": "release-evidence-cohort",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2622,
-          "average_duration_ms": 524,
-          "max_duration_ms": 537,
+          "total_duration_ms": 2544,
+          "average_duration_ms": 509,
+          "max_duration_ms": 512,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -474,9 +474,9 @@
           "target": "release-evidence-dashboard-report",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2753,
-          "average_duration_ms": 551,
-          "max_duration_ms": 562,
+          "total_duration_ms": 2710,
+          "average_duration_ms": 542,
+          "max_duration_ms": 552,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -484,9 +484,9 @@
           "target": "release-lane-summary",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2286,
-          "average_duration_ms": 457,
-          "max_duration_ms": 483,
+          "total_duration_ms": 2224,
+          "average_duration_ms": 445,
+          "max_duration_ms": 447,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -494,9 +494,9 @@
           "target": "release-clean-blocker-ledger",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2430,
-          "average_duration_ms": 486,
-          "max_duration_ms": 506,
+          "total_duration_ms": 2355,
+          "average_duration_ms": 471,
+          "max_duration_ms": 477,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -504,9 +504,9 @@
           "target": "release-closeout-batch-manifest-promote",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 8237,
-          "average_duration_ms": 1647,
-          "max_duration_ms": 1676,
+          "total_duration_ms": 4498,
+          "average_duration_ms": 900,
+          "max_duration_ms": 903,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -514,9 +514,9 @@
           "target": "release-evidence-closeout-self-check",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 1792,
-          "average_duration_ms": 358,
-          "max_duration_ms": 367,
+          "total_duration_ms": 1764,
+          "average_duration_ms": 353,
+          "max_duration_ms": 354,
           "skipped_after_first_iteration_count": 0
         }
       ],
@@ -532,7 +532,7 @@
         "post_first_iteration_selected_count": 0,
         "post_first_iteration_run_count": 0,
         "skipped_post_first_iteration_selection_count": 12,
-        "total_duration_ms": 1447,
+        "total_duration_ms": 1315,
         "skip_policy_effective": true,
         "summary": "expensive prerequisites were selected only in iteration 1"
       },
@@ -544,9 +544,9 @@
       },
       "evidence_basis": {
         "fixed_point_report_path": "ops/reports/release-closeout-fixed-point.json",
-        "fixed_point_report_digest": "39b9007ba5ee8e1f3f807059497aabbcb76d9b0271ec242bc1915331652997da",
-        "current_fixed_point_report_digest": "39b9007ba5ee8e1f3f807059497aabbcb76d9b0271ec242bc1915331652997da",
-        "fixed_point_generated_at": "2026-05-22T18:50:21Z",
+        "fixed_point_report_digest": "4e9478d1aef2b099a000181491b9ed831f2056c0600a415223e0233e6b4ae0de",
+        "current_fixed_point_report_digest": "4e9478d1aef2b099a000181491b9ed831f2056c0600a415223e0233e6b4ae0de",
+        "fixed_point_generated_at": "2026-05-22T19:07:26Z",
         "cost_trend_path": "ops/reports/release-closeout-fixed-point-cost-trend.json",
         "cost_trend_load_status": "ok",
         "cost_trend_digest": "4ad9945123b2cb8856267681013cf7200acf64fef40079a738488071907344ef",
@@ -555,7 +555,7 @@
         "sampled_fixed_point_report_digest": "4b9a7cd57062b69f1eaedd9002bdf6d487a3c73d11c103bd7bf9b7c5d8a61b00",
         "basis_relation_to_current_fixed_point": "sampled_different_fixed_point"
       },
-      "summary": "12 writers ran 56 commands across 5 iterations; total_duration_ms=49598; expensive_prerequisite_skip_effective=True"
+      "summary": "12 writers ran 56 commands across 5 iterations; total_duration_ms=44913; expensive_prerequisite_skip_effective=True"
     }
   },
   "confirmed_evidence_summary": {
@@ -686,7 +686,7 @@
   },
   "accepted_risk_delta": {
     "status": "unchanged",
-    "previous_report_generated_at": "2026-05-22T18:51:29Z",
+    "previous_report_generated_at": "2026-05-22T19:09:49Z",
     "added_count": 0,
     "removed_count": 0,
     "unchanged_count": 1,
@@ -1234,10 +1234,7 @@
         "can_promote_result must stay false until this release gate is pass.",
         "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
         "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
-        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal.",
-        "Run make remediation-backlog and confirm open_promotion_count=0.",
-        "Close or explicitly defer blocks_promotion backlog items before promotion.",
-        "can_promote_result must stay false while remediation backlog items are open."
+        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal."
       ],
       "claims": [
         {

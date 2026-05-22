@@ -167,8 +167,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "ba312172254e2bf5b0b8bc4ef88244882b7f4a19fa50db455b9b00e3f48d91b3",
-      "size_bytes": 94264
+      "sha256": "0fa748d8293be6487ef205b8025aff306c6ffbd098266ab9ccd81c0f6caee066",
+      "size_bytes": 94566
     },
     {
       "path": "SECURITY.md",
@@ -212,8 +212,8 @@
     },
     {
       "path": "mk/release.mk",
-      "sha256": "a758fd28bf2e3e2de6f1a02237919fb1bf1863e51d57bb70fdbc7092184cfa06",
-      "size_bytes": 50175
+      "sha256": "34a2c94dc5bcb76e1d5ee8a032a8a71f06ba260149984546df5fec5f38d4345d",
+      "size_bytes": 50258
     },
     {
       "path": "mk/static.mk",
@@ -232,8 +232,8 @@
     },
     {
       "path": "ops/README.md",
-      "sha256": "6c7140e17c4dbd11e25a1f23d04e67dcf4e6e2b2b3ecd28c9488de315d7d4eda",
-      "size_bytes": 122158
+      "sha256": "7e667ae6fbab946f7030078b5e47276aa24128e1fb62b0bb8ff0d5d03af581e3",
+      "size_bytes": 122759
     },
     {
       "path": "ops/__init__.py",
@@ -307,8 +307,8 @@
     },
     {
       "path": "ops/policies/remediation-backlog-status-overrides.json",
-      "sha256": "edadd5deddbc57ece6919b9c9b062dd7c210571ef82e5459a9111f9c7bfbaeec",
-      "size_bytes": 3527
+      "sha256": "361f8e43390f28745ec7bdfedd002b9ccc38b12931894a6ea399ab58198ad4b1",
+      "size_bytes": 4662
     },
     {
       "path": "ops/policies/report-contract-closeout.json",
@@ -502,8 +502,8 @@
     },
     {
       "path": "ops/schemas/goal-worktree-guard.schema.json",
-      "sha256": "af1445710e1752c60086221155a27b3199b38d2dcc5be76def441a6bdc84a898",
-      "size_bytes": 5239
+      "sha256": "7c4c765de09ab71cbad92c21ed479008b7bce4a0f8e572e440273ca52f3ab7f6",
+      "size_bytes": 5738
     },
     {
       "path": "ops/schemas/improvement-observations.schema.json",
@@ -1762,8 +1762,8 @@
     },
     {
       "path": "ops/scripts/mechanism/goal_worktree_guard.py",
-      "sha256": "1134554cdaaa3bded50be8dda00abd751439c430519d4d27837037aa6ab8d0b4",
-      "size_bytes": 17370
+      "sha256": "363863b3db6839d0911609c78ea4e1c367a97ca5e5cd0096df3ada3e3690b9b4",
+      "size_bytes": 19810
     },
     {
       "path": "ops/scripts/mechanism/improvement_observations.py",
@@ -5037,7 +5037,7 @@
     },
     {
       "path": "tests/fixtures/report_schema_samples.json",
-      "sha256": "e7a4e6c32a394a0723f35f760774fa98edea26ce346668ad45d8d3b45da31adc",
+      "sha256": "8cb68b82a76ab4ca17a89661f7a393a4f01f7a85ec45e50125efa9705edb32d6",
       "size_bytes": 137090
     },
     {
@@ -5357,8 +5357,8 @@
     },
     {
       "path": "tests/test_goal_worktree_guard.py",
-      "sha256": "b04b49b0f963396ca0927ea656f5bff46c2db12bc79ff9237c6dfa5d8f09c003",
-      "size_bytes": 11117
+      "sha256": "ccb85365fa4c9baee6729602c6feff0301f9d8d276e126db827de7ccd3123fbf",
+      "size_bytes": 12862
     },
     {
       "path": "tests/test_import_fallback_contract.py",
@@ -5422,8 +5422,8 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "471fdb03754bcf6520db31c57f07c6c5713f63134a006de2fa59551025511d6e",
-      "size_bytes": 186531
+      "sha256": "66a1b46b483f3c7cd532fb775267a96379c54d904ca800929f04a169834a6c63",
+      "size_bytes": 186974
     },
     {
       "path": "tests/test_manifest_export_symlink_safety.py",

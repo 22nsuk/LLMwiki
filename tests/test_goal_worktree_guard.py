@@ -136,8 +136,44 @@ class GoalWorktreeGuardTests(unittest.TestCase):
         self.assertEqual(report["decisions"]["promotion_blockers"], ["git_worktree_dirty"])
         self.assertEqual(report["git"]["dirty_entry_count"], 2)
         self.assertEqual(report["git"]["status_codes"], {"??": 1, "M": 1})
+        self.assertEqual(report["git"]["self_output_dirty_entry_count"], 0)
+        self.assertEqual(report["git"]["self_output_dirty_status_codes"], {})
         self.assertEqual(report["git"]["durable_private_ignored_entry_count"], 0)
         self.assertNotIn("ops/scripts/example.py", json.dumps(report))
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_self_output_dirty_status_is_ignored_for_reentrant_report_refresh(self) -> None:
+        fake_git = FakeGit(
+            {
+                ("--version",): GitCommandResult(0, "git version 2.0", ""),
+                ("rev-parse", "--is-inside-work-tree"): GitCommandResult(0, "true", ""),
+                ("rev-parse", "--show-toplevel"): GitCommandResult(0, str(self.vault), ""),
+                ("rev-parse", "--verify", "HEAD"): GitCommandResult(0, "e" * 40, ""),
+                ("branch", "--show-current"): GitCommandResult(0, "main", ""),
+                ("status", "--porcelain=v1", "--untracked-files=normal"): GitCommandResult(
+                    0,
+                    " M ops/reports/goal-worktree-guard.json",
+                    "",
+                ),
+            }
+        )
+
+        report = build_report(
+            GoalWorktreeGuardRequest(
+                vault=self.vault,
+                requested_mode="git",
+                git_runner=fake_git,
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["decisions"]["can_promote_result"], True)
+        self.assertEqual(report["git"]["dirty_entry_count"], 0)
+        self.assertEqual(report["git"]["status_codes"], {})
+        self.assertEqual(report["git"]["self_output_dirty_entry_count"], 1)
+        self.assertEqual(report["git"]["self_output_dirty_status_codes"], {"M": 1})
+        self.assertEqual(report["blockers"], [])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_ignored_durable_external_reports_block_promotion_without_path_leak(self) -> None:

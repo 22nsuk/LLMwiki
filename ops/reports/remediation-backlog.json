@@ -1,23 +1,23 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-22T18:51:28Z",
+  "generated_at": "2026-05-22T19:09:48Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
+  "source_tree_fingerprint": "83f12aa43db5fbf02472e0b75356f8a3920b9a98ff95461727b5ff319c87f1d7",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "a3518b983af5151b2388090f2addc8f0f528d38be74c4bb4e90f53aac939c23e",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "91558bdc7e64885feb4b64e35ef3775efe61cd479f085ae62f445457137c12ba",
     "goal_runtime_certificate": "0a9ce67b950063e73514218402aa025e2454aefccde2d5a1680f1e2d31676241",
-    "goal_worktree_guard": "9c7698c6544b435989c227b4e73468303ff044e0e2242360075769cae605353c",
-    "learning_claim_activation": "e267d874bf1452b0b8f207d8af676e1b05d01482b893d068a8e7754bd1e2bec1",
+    "goal_worktree_guard": "3a1a85306b75fbe335f9d77240ee0336aaf45ee05bcb9128e24f66de50df7c36",
+    "learning_claim_activation": "a32affda15d1bfd287f2be3825c1fe17923fa46279c3d0a74e0919f789e6612f",
     "learning_readiness_signoff": "1ec9a280330bf4c9f5cc6a77f7ea7590acaf29d0718a80299d25d8f466576e9d",
-    "self_improvement_negative_lessons": "705f89d44a7a0417860029d0f43b16bee45b8d9be5b51d461a63dd4e616d7561",
-    "session_synopsis": "6bb7708d2eeaa3d7dda733dd869ede36f718fd6aaec08bce615a7d3fd165af15",
-    "status_overrides": "edadd5deddbc57ece6919b9c9b062dd7c210571ef82e5459a9111f9c7bfbaeec",
+    "self_improvement_negative_lessons": "58875e48520bca20b5884c647a99ce85b84023512999bce4ff4e42bb0fdd2c1a",
+    "session_synopsis": "0d65bd973f02818bea0b7dd498ffc1e23aa74650f431ac02d7295a5310419507",
+    "status_overrides": "361f8e43390f28745ec7bdfedd002b9ccc38b12931894a6ea399ab58198ad4b1",
     "auto_improve_sessions": "045839dd6979b19e7b1e2cf2c9ed4675b6db02844a8f4ea94a33326f904f690f"
   },
   "schema_version": 1,
@@ -26,23 +26,23 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T18:51:28Z"
+    "checked_at": "2026-05-22T19:09:48Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "status": "attention",
+  "status": "pass",
   "summary": {
     "backlog_item_count": 9,
     "repeated_blocker_count": 3,
     "active_blocker_count": 6,
-    "open_total_count": 2,
-    "open_promotion_count": 2,
+    "open_total_count": 0,
+    "open_promotion_count": 0,
     "open_repeat_count": 0,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
-    "next_action": "Close or explicitly defer promotion-blocking remediation backlog items before promotion."
+    "next_action": "No remediation backlog items detected."
   },
   "items": [
     {
@@ -113,28 +113,32 @@
       "blocker_id": "promotion_blocked_by_release_closeout_summary_failure",
       "source": "auto_improve_readiness.promotion_blockers",
       "item_type": "active_blocker",
-      "status": "open",
+      "status": "deferred",
       "severity": "blocks_promotion",
       "occurrence_count": 1,
       "evidence_paths": [
+        "ops/reports/auto-improve-readiness.json",
+        "ops/reports/release-closeout-summary.json",
         "ops/reports/session-synopsis.json"
       ],
       "repair_target": "Refresh release closeout summary, then rerun make auto-improve-readiness.",
-      "next_action": "Refresh release closeout summary, then rerun make auto-improve-readiness."
+      "next_action": "Deferred as a source-ready versus sealed-release authority item: release-closeout-summary is already pass/conditional for source release checks, while machine release remains blocked until sealed distribution evidence is provided."
     },
     {
       "item_id": "active_blocker_promotion_blocked_by_release_lineage_mismatch",
       "blocker_id": "promotion_blocked_by_release_lineage_mismatch",
       "source": "auto_improve_readiness.promotion_blockers",
       "item_type": "active_blocker",
-      "status": "open",
+      "status": "deferred",
       "severity": "blocks_promotion",
       "occurrence_count": 1,
       "evidence_paths": [
+        "ops/reports/auto-improve-readiness.json",
+        "ops/reports/release-evidence-cohort.json",
         "ops/reports/session-synopsis.json"
       ],
       "repair_target": "Refresh release evidence cohort until the release lineage is a single strict fingerprint, then rerun make auto-improve-readiness.",
-      "next_action": "Refresh release evidence cohort until the release lineage is a single strict fingerprint, then rerun make auto-improve-readiness."
+      "next_action": "Deferred as an explicit clean-release authority item: release-evidence-cohort lineage strictness remains enforced by the release gate, but the source-ready path is allowed to carry documented divergence until a sealed release package is materialized."
     },
     {
       "item_id": "auto_session_repeated_blocker_active_report_self_improve_certificate_rerun4_review_blocked",

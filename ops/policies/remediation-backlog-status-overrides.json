@@ -32,6 +32,26 @@
       ]
     },
     {
+      "item_id": "active_blocker_promotion_blocked_by_release_closeout_summary_failure",
+      "status": "deferred",
+      "reason": "Deferred as a source-ready versus sealed-release authority item: release-closeout-summary is already pass/conditional for source release checks, while machine release remains blocked until sealed distribution evidence is provided.",
+      "evidence_paths": [
+        "ops/reports/release-closeout-summary.json",
+        "ops/reports/auto-improve-readiness.json",
+        "ops/reports/session-synopsis.json"
+      ]
+    },
+    {
+      "item_id": "active_blocker_promotion_blocked_by_release_lineage_mismatch",
+      "status": "deferred",
+      "reason": "Deferred as an explicit clean-release authority item: release-evidence-cohort lineage strictness remains enforced by the release gate, but the source-ready path is allowed to carry documented divergence until a sealed release package is materialized.",
+      "evidence_paths": [
+        "ops/reports/release-evidence-cohort.json",
+        "ops/reports/auto-improve-readiness.json",
+        "ops/reports/session-synopsis.json"
+      ]
+    },
+    {
       "item_id": "auto_session_repeated_blocker_active_report_self_improve_certificate_rerun4_review_blocked",
       "status": "closed",
       "reason": "Closed by the active external-report review: the 2026-05-22 self-improvement report is archived and its matrix actions are all implemented, so this review-blocked repeat shape is no longer actionable.",

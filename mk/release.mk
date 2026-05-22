@@ -29,6 +29,7 @@ RELEASE_SOURCE_READY_PRE_STATUS_OUT ?= tmp/release-source-ready-pre-status.json
 RELEASE_SOURCE_READY_COMMIT_OUT ?= tmp/release-source-ready-commit.json
 RELEASE_SOURCE_READY_AMEND_OUT ?= tmp/release-source-ready-amend.json
 RELEASE_SOURCE_READY_STATUS_OUT ?= tmp/release-source-ready-status.json
+RELEASE_WORKTREE_CLEAN_CHECK_OUT ?= tmp/release-worktree-clean-check.json
 SOURCE_PACKAGE_CHECK_ROOT ?= build/source-package-check
 SOURCE_PACKAGE_TEST_SUMMARY_OUT ?= $(SOURCE_PACKAGE_CHECK_ROOT)/test-source-package-summary.json
 SOURCE_PACKAGE_TEST_DESELECT_POLICY ?= ops/policies/source-package-test-deselections.json
@@ -410,7 +411,7 @@ external-report-lifecycle-refresh:
 	$(MAKE) release-evidence-dashboard-report
 
 release-worktree-clean-check:
-	$(PYTHON) -m ops.scripts.goal_worktree_guard --vault "$(VAULT)" --requested-mode git --out "$(GOAL_WORKTREE_GUARD_OUT)" --strict
+	$(PYTHON) -m ops.scripts.goal_worktree_guard --vault "$(VAULT)" --requested-mode git --out "$(RELEASE_WORKTREE_CLEAN_CHECK_OUT)" --strict
 
 release-converge-preflight:
 	$(MAKE) report-schema-samples-regenerate CLEAN_FIXTURE_REGENERATION_ALLOW_DIRTY_REPORTS=1

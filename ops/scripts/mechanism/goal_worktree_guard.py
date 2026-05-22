@@ -56,6 +56,9 @@ class GitInspection:
     dirty_entry_count: int
     status_porcelain_sha256: str
     status_codes: dict[str, int]
+    self_output_dirty_entry_count: int
+    self_output_dirty_status_porcelain_sha256: str
+    self_output_dirty_status_codes: dict[str, int]
     durable_private_ignored_entry_count: int
     durable_private_ignored_status_porcelain_sha256: str
     durable_private_ignored_status_codes: dict[str, int]
@@ -120,11 +123,52 @@ def _porcelain_status_codes(porcelain: str) -> dict[str, int]:
     return dict(sorted(counts.items()))
 
 
+def _normalize_repo_path(value: str) -> str:
+    normalized = Path(value).as_posix()
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    if normalized in ("", ".") or normalized.startswith("/") or ".." in normalized.split("/"):
+        return ""
+    return normalized
+
+
+def _porcelain_line_path(line: str) -> str:
+    if len(line) < 4:
+        return ""
+    path = line[3:]
+    if " -> " in path:
+        path = path.rsplit(" -> ", 1)[1]
+    return _normalize_repo_path(path)
+
+
+def _split_self_output_status(
+    porcelain: str,
+    *,
+    self_output_path: str,
+) -> tuple[str, str]:
+    normalized_self_output_path = _normalize_repo_path(self_output_path)
+    if not normalized_self_output_path:
+        return porcelain, ""
+    kept: list[str] = []
+    self_output: list[str] = []
+    for line in porcelain.splitlines():
+        if _porcelain_line_path(line) == normalized_self_output_path:
+            self_output.append(line)
+        else:
+            kept.append(line)
+    return "\n".join(kept), "\n".join(self_output)
+
+
 def _ignored_porcelain_lines(porcelain: str) -> str:
     return "\n".join(line for line in porcelain.splitlines() if line.startswith("!! "))
 
 
-def inspect_git_worktree(vault: Path, git_runner: GitRunner | None = None) -> GitInspection:
+def inspect_git_worktree(
+    vault: Path,
+    git_runner: GitRunner | None = None,
+    *,
+    self_output_path: str = DEFAULT_OUT,
+) -> GitInspection:
     runner = git_runner or _subprocess_git_runner(vault)
     version = runner(["--version"])
     if version.returncode != 0:
@@ -137,6 +181,9 @@ def inspect_git_worktree(vault: Path, git_runner: GitRunner | None = None) -> Gi
             dirty_entry_count=0,
             status_porcelain_sha256=_sha256_text(""),
             status_codes={},
+            self_output_dirty_entry_count=0,
+            self_output_dirty_status_porcelain_sha256=_sha256_text(""),
+            self_output_dirty_status_codes={},
             durable_private_ignored_entry_count=0,
             durable_private_ignored_status_porcelain_sha256=_sha256_text(""),
             durable_private_ignored_status_codes={},
@@ -155,6 +202,9 @@ def inspect_git_worktree(vault: Path, git_runner: GitRunner | None = None) -> Gi
             dirty_entry_count=0,
             status_porcelain_sha256=_sha256_text(""),
             status_codes={},
+            self_output_dirty_entry_count=0,
+            self_output_dirty_status_porcelain_sha256=_sha256_text(""),
+            self_output_dirty_status_codes={},
             durable_private_ignored_entry_count=0,
             durable_private_ignored_status_porcelain_sha256=_sha256_text(""),
             durable_private_ignored_status_codes={},
@@ -166,7 +216,11 @@ def inspect_git_worktree(vault: Path, git_runner: GitRunner | None = None) -> Gi
     head = runner(["rev-parse", "--verify", "HEAD"])
     branch = runner(["branch", "--show-current"])
     status = runner(["status", "--porcelain=v1", "--untracked-files=normal"])
-    porcelain = status.stdout if status.returncode == 0 else ""
+    raw_porcelain = status.stdout if status.returncode == 0 else ""
+    porcelain, self_output_porcelain = _split_self_output_status(
+        raw_porcelain,
+        self_output_path=self_output_path,
+    )
     ignored_status = runner(
         [
             "status",
@@ -191,6 +245,11 @@ def inspect_git_worktree(vault: Path, git_runner: GitRunner | None = None) -> Gi
         dirty_entry_count=len([line for line in porcelain.splitlines() if line.strip()]),
         status_porcelain_sha256=_sha256_text(porcelain),
         status_codes=_porcelain_status_codes(porcelain),
+        self_output_dirty_entry_count=len(
+            [line for line in self_output_porcelain.splitlines() if line.strip()]
+        ),
+        self_output_dirty_status_porcelain_sha256=_sha256_text(self_output_porcelain),
+        self_output_dirty_status_codes=_porcelain_status_codes(self_output_porcelain),
         durable_private_ignored_entry_count=len(
             [line for line in ignored_porcelain.splitlines() if line.strip()]
         ),
@@ -355,7 +414,8 @@ def build_report(
     vault = request.vault.resolve()
     policy, resolved_policy_path = load_policy(vault, request.policy_path)
     runtime_context = request.context or RuntimeContext.from_policy(policy)
-    git = inspect_git_worktree(vault, request.git_runner)
+    out_path = request.out_path or DEFAULT_OUT
+    git = inspect_git_worktree(vault, request.git_runner, self_output_path=out_path)
     detected_mode = detect_execution_mode(vault, git)
     blockers = evaluate_blockers(
         requested_mode=request.requested_mode,
@@ -380,6 +440,7 @@ def build_report(
                 "ops/scripts/mechanism/goal_worktree_guard.py",
                 "ops/schemas/goal-worktree-guard.schema.json",
                 "mk/mechanism.mk",
+                "mk/release.mk",
             ],
             text_inputs={
                 "public_source_layout_paths": json.dumps(PUBLIC_SOURCE_LAYOUT_PATHS),
@@ -408,6 +469,11 @@ def build_report(
             "dirty_entry_count": git.dirty_entry_count,
             "status_porcelain_sha256": git.status_porcelain_sha256,
             "status_codes": git.status_codes,
+            "self_output_dirty_entry_count": git.self_output_dirty_entry_count,
+            "self_output_dirty_status_porcelain_sha256": (
+                git.self_output_dirty_status_porcelain_sha256
+            ),
+            "self_output_dirty_status_codes": git.self_output_dirty_status_codes,
             "durable_private_ignored_entry_count": git.durable_private_ignored_entry_count,
             "durable_private_ignored_status_porcelain_sha256": (
                 git.durable_private_ignored_status_porcelain_sha256

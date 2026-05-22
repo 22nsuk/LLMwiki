@@ -74,6 +74,9 @@
         "dirty_entry_count",
         "status_porcelain_sha256",
         "status_codes",
+        "self_output_dirty_entry_count",
+        "self_output_dirty_status_porcelain_sha256",
+        "self_output_dirty_status_codes",
         "durable_private_ignored_entry_count",
         "durable_private_ignored_status_porcelain_sha256",
         "durable_private_ignored_status_codes",
@@ -89,6 +92,15 @@
         "dirty_entry_count": { "type": "integer", "minimum": 0 },
         "status_porcelain_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "status_codes": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 1 }
+        },
+        "self_output_dirty_entry_count": { "type": "integer", "minimum": 0 },
+        "self_output_dirty_status_porcelain_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "self_output_dirty_status_codes": {
           "type": "object",
           "additionalProperties": { "type": "integer", "minimum": 1 }
         },

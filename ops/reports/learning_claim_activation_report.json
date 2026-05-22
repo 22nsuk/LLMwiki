@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-claim-activation-report.schema.json",
   "artifact_kind": "learning_claim_activation_report",
-  "generated_at": "2026-05-22T18:51:28Z",
+  "generated_at": "2026-05-22T19:09:47Z",
   "producer": "ops.scripts.learning_claim_activation_report",
   "source_command": "python -m ops.scripts.learning_claim_activation_report --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "9fcfb6921b06fbab39329594d8f8b0b1f74b85138a438fd1b72a818d5dbb7742",
+  "source_tree_fingerprint": "83f12aa43db5fbf02472e0b75356f8a3920b9a98ff95461727b5ff319c87f1d7",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "d366a06d6c9fbade9f99a3a702f7e88409d8e793328122ab6b196c4d7d670305",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e2f27ca894f489f00bc7349aa20591f1431c1b4a1f8cc5c9d019283145bd94c8",
-    "learning_claim_activation_inputs": "4a445b8b7d3da78ac040aefd5a05ad9b8c6e669ff4a26ae8176b65bb785c894f"
+    "learning_claim_activation_inputs": "9a80ae787de8ace463db6dad500b7b4b3b28f7c201ea85d6f6ea66ae2aeb32fe"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T18:51:28Z"
+    "checked_at": "2026-05-22T19:09:47Z"
   },
   "vault": ".",
   "policy": {
@@ -58,7 +58,7 @@
     "evidence_digest": {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "16df3f62f0b59fbe4b16821f674bd0a13eb2b27a9e4cc21c4c7d24541d07b6ca",
+      "sha256": "179a3739282c2b2c7ccba7d456f788a3cccc23cfd8e0b73bc42cba7430f208fc",
       "status": "present"
     },
     "post_seal_linkage": {
@@ -80,7 +80,7 @@
       "evidence_digest": {
         "path": "ops/reports/auto-improve-readiness.json",
         "exists": true,
-        "sha256": "f16ad6bd4ebda5c98f5a5b37574bdd7a88d365568bef6233e3bfaf653727eb56",
+        "sha256": "ca3155aadbe70e2974419f98edd4b25ece64323b71fa7df6d366c3c900a7f8fc",
         "status": "present"
       },
       "post_seal_linkage": {
@@ -101,7 +101,7 @@
       "evidence_digest": {
         "path": "ops/reports/auto-improve-readiness.json",
         "exists": true,
-        "sha256": "f16ad6bd4ebda5c98f5a5b37574bdd7a88d365568bef6233e3bfaf653727eb56",
+        "sha256": "ca3155aadbe70e2974419f98edd4b25ece64323b71fa7df6d366c3c900a7f8fc",
         "status": "present"
       },
       "post_seal_linkage": {
@@ -122,7 +122,7 @@
       "evidence_digest": {
         "path": "ops/reports/auto-improve-readiness.json",
         "exists": true,
-        "sha256": "f16ad6bd4ebda5c98f5a5b37574bdd7a88d365568bef6233e3bfaf653727eb56",
+        "sha256": "ca3155aadbe70e2974419f98edd4b25ece64323b71fa7df6d366c3c900a7f8fc",
         "status": "present"
       },
       "post_seal_linkage": {
@@ -143,7 +143,7 @@
       "evidence_digest": {
         "path": "ops/reports/auto-improve-readiness.json",
         "exists": true,
-        "sha256": "f16ad6bd4ebda5c98f5a5b37574bdd7a88d365568bef6233e3bfaf653727eb56",
+        "sha256": "ca3155aadbe70e2974419f98edd4b25ece64323b71fa7df6d366c3c900a7f8fc",
         "status": "present"
       },
       "post_seal_linkage": {
@@ -164,7 +164,7 @@
       "evidence_digest": {
         "path": "ops/reports/learning-readiness-signoff-revalidation.json",
         "exists": true,
-        "sha256": "51fa3af7b429fe91b6c27e51cc6acfe3591ae6f8460045c22e4e50de2d78c7f0",
+        "sha256": "5517e07b293cb42d3303857ed250ac5a44c7e520bfd8ec0a7db59f94c71a6191",
         "status": "present"
       },
       "post_seal_linkage": {
@@ -185,7 +185,7 @@
       "evidence_digest": {
         "path": "ops/reports/release-clean-blocker-ledger.json",
         "exists": true,
-        "sha256": "2fd043895aefac85e64be837ee692fa17576651069e3797fed9182ca08bb18d4",
+        "sha256": "4fb881cea1e61dd2b30304e9c074724c765455653e9c0071d0c8ead495dea7e6",
         "status": "present"
       },
       "post_seal_linkage": {
@@ -206,7 +206,7 @@
       "evidence_digest": {
         "path": "ops/reports/learning-delta-scoreboard.json",
         "exists": true,
-        "sha256": "16df3f62f0b59fbe4b16821f674bd0a13eb2b27a9e4cc21c4c7d24541d07b6ca",
+        "sha256": "179a3739282c2b2c7ccba7d456f788a3cccc23cfd8e0b73bc42cba7430f208fc",
         "status": "present"
       },
       "post_seal_linkage": {
@@ -220,13 +220,13 @@
     {
       "path": "ops/reports/auto-improve-readiness.json",
       "exists": true,
-      "sha256": "f16ad6bd4ebda5c98f5a5b37574bdd7a88d365568bef6233e3bfaf653727eb56",
+      "sha256": "ca3155aadbe70e2974419f98edd4b25ece64323b71fa7df6d366c3c900a7f8fc",
       "status": "present"
     },
     {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "exists": true,
-      "sha256": "16df3f62f0b59fbe4b16821f674bd0a13eb2b27a9e4cc21c4c7d24541d07b6ca",
+      "sha256": "179a3739282c2b2c7ccba7d456f788a3cccc23cfd8e0b73bc42cba7430f208fc",
       "status": "present"
     },
     {
@@ -244,7 +244,7 @@
     {
       "path": "ops/reports/release-clean-blocker-ledger.json",
       "exists": true,
-      "sha256": "2fd043895aefac85e64be837ee692fa17576651069e3797fed9182ca08bb18d4",
+      "sha256": "4fb881cea1e61dd2b30304e9c074724c765455653e9c0071d0c8ead495dea7e6",
       "status": "present"
     },
     {
@@ -346,7 +346,7 @@
           {
             "path": "ops/reports/auto-improve-readiness.json",
             "exists": true,
-            "sha256": "f16ad6bd4ebda5c98f5a5b37574bdd7a88d365568bef6233e3bfaf653727eb56",
+            "sha256": "ca3155aadbe70e2974419f98edd4b25ece64323b71fa7df6d366c3c900a7f8fc",
             "status": "present"
           }
         ]
@@ -366,7 +366,7 @@
           {
             "path": "ops/reports/learning-delta-scoreboard.json",
             "exists": true,
-            "sha256": "16df3f62f0b59fbe4b16821f674bd0a13eb2b27a9e4cc21c4c7d24541d07b6ca",
+            "sha256": "179a3739282c2b2c7ccba7d456f788a3cccc23cfd8e0b73bc42cba7430f208fc",
             "status": "present"
           }
         ]
