@@ -144,6 +144,30 @@ class AutoImproveReadinessReleaseAuthorityRuntimeTests(unittest.TestCase):
         self.assertEqual(blocker["signal_ids"], ["selected_contract_currentness_not_current"])
         self.assertIn("operational_attention=", blocker["reason"])
 
+    def test_release_closeout_gate_prefers_status_v2_axes_over_legacy_machine_booleans(
+        self,
+    ) -> None:
+        reports = _pass_release_reports()
+        reports["release_closeout"]["machine_release_allowed"] = True
+        reports["release_closeout"]["clean_release_ready"] = True
+        reports["release_closeout"]["status_v2"] = {
+            "schema_version": 2,
+            "compatibility_status_value": "pass",
+            "status_axes": {
+                "release_authority_status": "conditional_pass",
+                "sealed_release_status": "unsealed_distribution_not_provided",
+            },
+            "blocker_reason_ids": ["machine_release_not_allowed"],
+        }
+
+        summaries = _release_gate_summaries(reports)
+
+        self.assertEqual(summaries["release_closeout"]["status"], "fail")
+        self.assertEqual(
+            summaries["release_closeout"]["signal_ids"],
+            ["machine_release_not_allowed"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

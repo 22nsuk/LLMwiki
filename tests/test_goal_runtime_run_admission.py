@@ -128,8 +128,12 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
             {
                 "artifact_kind": "remediation_backlog",
                 "status": "attention",
-                "open_item_count": 1,
-                "active_blocker_count": 1,
+                "summary": {
+                    "open_total_count": 1,
+                    "open_promotion_count": 1,
+                    "open_repeat_count": 0,
+                    "active_blocker_count": 1,
+                },
                 "items": [
                     {
                         "blocker_id": "goal_status_self_improvement_loop_certificate_incomplete",
@@ -161,15 +165,20 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
 
     def test_remediation_backlog_check_reads_schema_summary_counts(self) -> None:
         backlog = json.loads((self.vault / "ops/reports/remediation-backlog.json").read_text(encoding="utf-8"))
-        backlog.pop("open_item_count")
-        backlog.pop("active_blocker_count")
-        backlog["summary"] = {"open_item_count": 1, "active_blocker_count": 1}
+        backlog["summary"] = {
+            "open_total_count": 2,
+            "open_promotion_count": 1,
+            "open_repeat_count": 1,
+            "active_blocker_count": 1,
+        }
         self._write_json("ops/reports/remediation-backlog.json", backlog)
 
         report = self._build_report()
 
         backlog_check = next(check for check in report["checks"] if check["id"] == "promotion_remediation_backlog_clear")
-        self.assertEqual(backlog_check["observed"]["open_item_count"], 1)
+        self.assertEqual(backlog_check["observed"]["open_total_count"], 2)
+        self.assertEqual(backlog_check["observed"]["open_promotion_count"], 1)
+        self.assertEqual(backlog_check["observed"]["open_repeat_count"], 1)
         self.assertEqual(backlog_check["observed"]["active_blocker_count"], 1)
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 

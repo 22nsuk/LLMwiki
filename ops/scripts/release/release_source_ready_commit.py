@@ -8,9 +8,11 @@ import subprocess
 import sys
 from typing import Any
 
+from ops.scripts.release_authority_vocabulary import REASON_MACHINE_RELEASE_NOT_ALLOWED
+from ops.scripts.release.release_status_v2 import release_status_v2_view_with_readiness_fallback
 
-DEFAULT_OUT = "tmp/release-ready-commit.json"
-DEFAULT_MESSAGE = "release: converge all surfaces"
+DEFAULT_OUT = "tmp/release-source-ready-commit.json"
+DEFAULT_MESSAGE = "release: converge source-ready surfaces"
 GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH = "tmp/goal-runtime-local-evidence-refresh.json"
 RELEASE_CLOSEOUT_SUMMARY = "ops/reports/release-closeout-summary.json"
 ARTIFACT_FRESHNESS_REPORT = "ops/reports/artifact-freshness-report.json"
@@ -237,34 +239,48 @@ def _release_closeout_summary_diagnostics(vault: Path) -> dict[str, Any]:
     payload = _load_repo_report(vault, RELEASE_CLOSEOUT_SUMMARY)
     if not payload:
         return {"path": RELEASE_CLOSEOUT_SUMMARY, "present": False}
-    status = _text_field(payload, "status")
+    status_view = release_status_v2_view_with_readiness_fallback(payload)
+    compatibility_status = str(status_view["compatibility_status_value"])
+    release_authority_status = str(status_view["release_authority_status"])
+    sealed_release_status = str(status_view["sealed_release_status"])
+    blocker_reason_ids = [str(reason) for reason in status_view["blocker_reason_ids"]]
     clean_release_ready = _bool_field(payload, "clean_release_ready")
-    machine_release_allowed = _bool_field(payload, "machine_release_allowed")
-    sealed_release_status = _text_field(payload, "sealed_release_status")
-    release_authority_status = _text_field(payload, "release_authority_status")
+    machine_release_allowed = (
+        release_authority_status == "clean_pass"
+        and REASON_MACHINE_RELEASE_NOT_ALLOWED not in blocker_reason_ids
+    )
+    source_ready = release_authority_status in {"clean_pass", "conditional_pass"} or bool(
+        payload.get("checked_in_release_ready")
+    )
     if machine_release_allowed:
         classification = "machine_release_allowed"
         note = "release closeout allows machine release."
-    elif status == "pass" and sealed_release_status == "unsealed_distribution_not_provided":
+    elif source_ready and sealed_release_status == "unsealed_distribution_not_provided":
         classification = "source_release_checks_pass_distribution_unsealed"
         note = (
-            "release-ready/check may pass, but this is not a sealed machine release "
-            "until a distribution package is provided and closeout allows machine release."
+            "release-source-ready/check may pass, but this is not a sealed machine release "
+            "until a distribution package is provided and release-evidence-closeout-sealed-check passes."
         )
     else:
         classification = "release_not_machine_allowed"
         note = (
             "release closeout does not currently allow machine release; inspect "
-            "release_authority_status and sealed_release_status before treating this as distributable."
+            "status_v2.status_axes.release_authority_status, "
+            "status_v2.status_axes.sealed_release_status, and "
+            "release_authority_vocabulary.blocker_reason_ids before treating this as distributable."
         )
     return {
         "path": RELEASE_CLOSEOUT_SUMMARY,
         "present": True,
-        "status": status,
+        "compatibility_status_value": compatibility_status,
         "clean_release_ready": clean_release_ready,
+        "source_ready": source_ready,
         "machine_release_allowed": machine_release_allowed,
         "release_authority_status": release_authority_status,
         "sealed_release_status": sealed_release_status,
+        "blocker_reason_ids": blocker_reason_ids,
+        "status_v2_used_legacy_fallback_fields": status_view["used_legacy_fallback_fields"],
+        "authoritative_machine_release_target": "release-evidence-closeout-sealed-check",
         "classification": classification,
         "operator_note": note,
     }
@@ -284,7 +300,7 @@ def _artifact_freshness_diagnostics(vault: Path) -> dict[str, Any]:
     }
 
 
-def _release_ready_diagnostics(vault: Path) -> dict[str, Any]:
+def _release_source_ready_diagnostics(vault: Path) -> dict[str, Any]:
     return {
         "goal_runtime_local_evidence_refresh": _goal_runtime_refresh_diagnostics(vault),
         "release_closeout_summary": _release_closeout_summary_diagnostics(vault),
@@ -325,13 +341,13 @@ def _base_report(vault: Path, entries: list[StatusEntry], preexisting_paths: set
         category = str(item["category"])
         counts[category] = counts.get(category, 0) + 1
     return {
-        "artifact_kind": "release_ready_commit_report",
-        "producer": "ops.scripts.release_ready_commit",
+        "artifact_kind": "release_source_ready_commit_report",
+        "producer": "ops.scripts.release_source_ready_commit",
         "vault": ".",
         "head_before": _head(vault),
         "entries": entry_payloads,
         "counts": dict(sorted(counts.items())),
-        "diagnostics": _release_ready_diagnostics(vault),
+        "diagnostics": _release_source_ready_diagnostics(vault),
     }
 
 
@@ -416,7 +432,7 @@ def run_commit(
             report["reason"] = "snapshot_head_mismatch"
             _write_report(out_path, report)
             print(
-                "release-ready-commit refused: current HEAD does not match release-ready snapshot",
+                "release-source-ready-commit refused: current HEAD does not match release-source-ready snapshot",
                 file=sys.stderr,
             )
             return 1
@@ -433,13 +449,13 @@ def run_commit(
             report["status"] = "blocked"
             report["reason"] = "amend_base_missing_head"
             _write_report(out_path, report)
-            print("release-ready-amend refused: amend base has no head_after", file=sys.stderr)
+            print("release-source-ready-amend refused: amend base has no head_after", file=sys.stderr)
             return 1
         if current_head != expected_head:
             report["status"] = "blocked"
             report["reason"] = "amend_base_head_mismatch"
             _write_report(out_path, report)
-            print("release-ready-amend refused: current HEAD does not match amend base", file=sys.stderr)
+            print("release-source-ready-amend refused: current HEAD does not match amend base", file=sys.stderr)
             return 1
 
     unexpected = [item for item in report["entries"] if item["category"] == "unexpected"]
@@ -453,7 +469,7 @@ def run_commit(
         report["reason"] = "unexpected_dirty_paths"
         report["unexpected_paths"] = [item["path"] for item in unexpected]
         _write_report(out_path, report)
-        print("release-ready-commit refused: unexpected dirty paths are present", file=sys.stderr)
+        print("release-source-ready-commit refused: unexpected dirty paths are present", file=sys.stderr)
         for item in unexpected:
             print(item["path"], file=sys.stderr)
         return 1
@@ -463,7 +479,7 @@ def run_commit(
         report["late_public_source_paths"] = [item["path"] for item in late_public_source]
         _write_report(out_path, report)
         print(
-            "release-ready-amend refused: public source changed after release-ready commit",
+            "release-source-ready-amend refused: public source changed after release-source-ready commit",
             file=sys.stderr,
         )
         return 1
@@ -472,7 +488,7 @@ def run_commit(
         report["reason"] = "preexisting_staged_changes"
         report["staged_paths"] = [item["path"] for item in staged]
         _write_report(out_path, report)
-        print("release-ready-commit refused: staged changes are present", file=sys.stderr)
+        print("release-source-ready-commit refused: staged changes are present", file=sys.stderr)
         return 1
 
     if amend and paths and report["amend_of_status"] != "committed":
@@ -481,7 +497,7 @@ def run_commit(
         report["paths_after_uncommitted_base"] = paths
         _write_report(out_path, report)
         print(
-            "release-ready-amend refused: release-ready commit did not create a commit",
+            "release-source-ready-amend refused: release-source-ready commit did not create a commit",
             file=sys.stderr,
         )
         return 1
@@ -490,8 +506,8 @@ def run_commit(
         report["status"] = "no_changes"
         report["head_after"] = _head(vault)
         _write_report(out_path, report)
-        action = "release-ready-amend" if amend else "release-ready-commit"
-        print(f"{action}: no dirty release-ready changes")
+        action = "release-source-ready-amend" if amend else "release-source-ready-commit"
+        print(f"{action}: no dirty release-source-ready changes")
         return 0
 
     report["paths_to_commit"] = paths
@@ -532,7 +548,7 @@ def run_commit(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Commit release-ready public source changes together with converged canonical artifacts."
+        description="Commit release-source-ready public source changes together with converged canonical artifacts."
     )
     parser.add_argument("--vault", default=".", help="Repository root.")
     parser.add_argument("--out", default=DEFAULT_OUT, help="Report path.")
@@ -541,19 +557,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--amend",
         action="store_true",
-        help="Amend the release-ready commit instead of creating a second stabilization commit.",
+        help="Amend the release-source-ready commit instead of creating a second stabilization commit.",
     )
     parser.add_argument(
         "--amend-of",
         default="",
-        help="Report path from the release-ready commit whose head_after must match current HEAD.",
+        help="Report path from the release-source-ready commit whose head_after must match current HEAD.",
     )
     parser.add_argument("--snapshot-only", action="store_true", help="Only write the current dirty snapshot.")
     parser.add_argument("--dry-run", action="store_true", help="Classify and report without staging or committing.")
     parser.add_argument(
         "--allow-staged",
         action="store_true",
-        help="Allow pre-staged changes to be included in the release-ready commit.",
+        help="Allow pre-staged changes to be included in the release-source-ready commit.",
     )
     return parser.parse_args(argv)
 

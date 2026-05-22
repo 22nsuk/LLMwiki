@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-21T18:01:00Z",
+  "generated_at": "2026-05-22T02:05:10Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e87210163d5661241576ab225b9a05e7286084eb4bf5aad231abbef7132b41b8",
+  "source_tree_fingerprint": "c67d8e092c8c4eb06c711b524ddad2422eec7443337fca78130ae405e4bb146c",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "f7dd295621a34a54cb5018604760de77e8685c6f0e0dc086056a7362e25a7519",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ea66bebc6dcb1e56d35893c8f4a0557a3dd3ad55888a83b5b2678e5b822c5ba7",
-    "auto_improve_readiness": "5dd1af130c90b5800864bf81007db573ae458a4d80d4515d4617ed4fc2f2c3b3",
+    "auto_improve_readiness": "522382b183a61a6cfa12210fbcca0bbacb6af90cc633999cc24dab4b3a1f4b98",
     "goal_run_status": "89bcf3369f431294e511e43d87633d6fa1a5f3f0f17578e9e81beef61a51f85b",
-    "learning_claim_activation": "de7d55053765a0f2e8d8c0e43f15b97f7c0a1b65e7630460b44ee53a010f0b12",
-    "learning_delta_scoreboard": "766e22a2456ec7c9f7643fa65731a6ee8cc98b79d8f9ec5aa1f9239cd3b22d3e",
+    "learning_claim_activation": "9ac21cfab043de0a5b6cc604ff3311226b1077d3b35e9b14ad5462b938085ff6",
+    "learning_delta_scoreboard": "625270dd4f418e366206d483aa677388002137c3d0e5615c1945ff039771cae1",
     "source_package_clean_extract": "136f0187ac37fe12a1803ed575b2e917b2f5c091b7ab99fdc1381ccfed40d770",
     "task_observations": "5ee6fc130d9ca93cc1189b0816c3aca7b2fe351a203f126ba6f09522decfd6ea"
   },
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T18:01:00Z"
+    "checked_at": "2026-05-22T02:05:10Z"
   },
   "vault": ".",
   "policy": {
@@ -33,7 +33,7 @@
   },
   "status": "attention",
   "summary": {
-    "recent_blocker_count": 6,
+    "recent_blocker_count": 7,
     "last_success_pattern_count": 5,
     "forbidden_repeat_pattern_count": 5,
     "recommended_seed_run_count": 3,
@@ -63,6 +63,13 @@
       "repair_target": "Run the bounded self-improvement loop and full gates, then refresh goal-runtime-certificate."
     },
     {
+      "id": "promotion_blocked_by_selected_contract_failure",
+      "source": "auto_improve_readiness.promotion_blockers",
+      "status": "open",
+      "reason": "selected_contract release gate is not pass: selected contract summary status=pass; selected_contract_currentness_status=current; operational_attention=test_target_fingerprint_mismatch:tests/test_makefile_static_gates.py",
+      "repair_target": "Refresh selected contract evidence, then rerun make auto-improve-readiness."
+    },
+    {
       "id": "promotion_blocked_by_release_closeout_summary_failure",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
@@ -84,11 +91,11 @@
       "repair_target": "Refresh release evidence cohort until the release lineage is a single strict fingerprint, then rerun make auto-improve-readiness."
     },
     {
-      "id": "promotion_blocked_by_goal_worktree_guard_failure",
+      "id": "promotion_blocked_by_artifact_contract_failure",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=28",
-      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
+      "reason": "artifact freshness schema validation failed for 5 canonical artifact(s): ops/reports/auto-improve-readiness.json, runs/goal-auto-improve-trial/state/auto-improve-readiness.candidate.json, runs/goal-auto-improve-trial/state/auto-improve-readiness.json, runs/goal-auto-improve-trial/state/remediation-backlog.candidate.json, runs/goal-auto-improve-trial/state/remediation-backlog.json",
+      "repair_target": "Regenerate schema-invalid artifacts, then rerun make artifact-freshness and make auto-improve-readiness."
     }
   ],
   "last_success_patterns": [
@@ -267,7 +274,7 @@
     "target_runtime_mode": "self_improvement_loop",
     "runtime_certificate_status": "pending",
     "runtime_certificate_full_gate_clean": false,
-    "open_blocker_count": 6,
+    "open_blocker_count": 7,
     "forbidden_pattern_count": 5,
     "evidence_gap_count": 0
   },

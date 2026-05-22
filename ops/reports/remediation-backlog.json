@@ -1,21 +1,22 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-21T18:01:01Z",
+  "generated_at": "2026-05-22T02:05:10Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "738feb2287a79d58b05b8c8a301be182ada20c41eb3be9fd9059962df4e36d3e",
+  "source_tree_fingerprint": "505815c07662b7ee2ef0c6107ed4f00ba01a19dd58f7f6fbba8606eff2f6d205",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
-    "schema": "24b4245045c33871aed14d97ac056f1ae202409b6cd3ad01fb4667fb70ccf17b",
+    "schema": "a3518b983af5151b2388090f2addc8f0f528d38be74c4bb4e90f53aac939c23e",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "7eb90914c0915d5e3d6e1407c2447511073f92f54b851a6c480e58dbea56127f",
+    "source_paths": "531bcf6558c5193624be83c0f0c3bdb2b532cdef9c04eff7cf606c6448d8fbf3",
     "goal_runtime_certificate": "3bb824b5fd060c45ce9e706eb4b92cd030cbbc9bfe2685ff7d457e2d48e6ef46",
-    "learning_claim_activation": "de7d55053765a0f2e8d8c0e43f15b97f7c0a1b65e7630460b44ee53a010f0b12",
+    "goal_worktree_guard": "c87ab61868922a424f28973f2b07db37cc86914b3f52421972496bb69459bfde",
+    "learning_claim_activation": "9ac21cfab043de0a5b6cc604ff3311226b1077d3b35e9b14ad5462b938085ff6",
     "learning_readiness_signoff": "1ec9a280330bf4c9f5cc6a77f7ea7590acaf29d0718a80299d25d8f466576e9d",
-    "self_improvement_negative_lessons": "08ca3b391c5fb71b238d38de0471b6a9f9c3981d8c44b1da202cb1ed270b4a3c",
-    "session_synopsis": "579dca454c4e5c76ed92d567b46e069aee30b71fe294fc4d964fc8e793136194",
+    "self_improvement_negative_lessons": "0d4206583cc109e1068296cd76aa875a2422af1975977b08aae8be8fff741b0a",
+    "session_synopsis": "0fa4ea4fa003a4a1fc277af9ad35f5640d72f9c863735ec56e41b6c279e49cb7",
     "status_overrides": "3319782df91e8c5df46af2dfa29592db9452f642316bd332f1f4c34a3b28a362",
     "auto_improve_sessions": "045839dd6979b19e7b1e2cf2c9ed4675b6db02844a8f4ea94a33326f904f690f"
   },
@@ -25,7 +26,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T18:01:01Z"
+    "checked_at": "2026-05-22T02:05:10Z"
   },
   "vault": ".",
   "policy": {
@@ -34,12 +35,14 @@
   },
   "status": "attention",
   "summary": {
-    "backlog_item_count": 9,
+    "backlog_item_count": 10,
     "repeated_blocker_count": 3,
-    "active_blocker_count": 6,
-    "open_item_count": 7,
+    "active_blocker_count": 7,
+    "open_total_count": 8,
+    "open_promotion_count": 5,
+    "open_repeat_count": 3,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
-    "next_action": "Close or explicitly defer remediation backlog items before promotion."
+    "next_action": "Close or explicitly defer promotion-blocking remediation backlog items before promotion."
   },
   "items": [
     {
@@ -73,8 +76,8 @@
       "next_action": "Verified goal-runtime-certificate evidence is present."
     },
     {
-      "item_id": "active_blocker_promotion_blocked_by_goal_worktree_guard_failure",
-      "blocker_id": "promotion_blocked_by_goal_worktree_guard_failure",
+      "item_id": "active_blocker_promotion_blocked_by_artifact_contract_failure",
+      "blocker_id": "promotion_blocked_by_artifact_contract_failure",
       "source": "auto_improve_readiness.promotion_blockers",
       "item_type": "active_blocker",
       "status": "open",
@@ -83,8 +86,8 @@
       "evidence_paths": [
         "ops/reports/session-synopsis.json"
       ],
-      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness.",
-      "next_action": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
+      "repair_target": "Regenerate schema-invalid artifacts, then rerun make artifact-freshness and make auto-improve-readiness.",
+      "next_action": "Regenerate schema-invalid artifacts, then rerun make artifact-freshness and make auto-improve-readiness."
     },
     {
       "item_id": "active_blocker_promotion_blocked_by_release_batch_manifest_failure",
@@ -127,6 +130,20 @@
       ],
       "repair_target": "Refresh release evidence cohort until the release lineage is a single strict fingerprint, then rerun make auto-improve-readiness.",
       "next_action": "Refresh release evidence cohort until the release lineage is a single strict fingerprint, then rerun make auto-improve-readiness."
+    },
+    {
+      "item_id": "active_blocker_promotion_blocked_by_selected_contract_failure",
+      "blocker_id": "promotion_blocked_by_selected_contract_failure",
+      "source": "auto_improve_readiness.promotion_blockers",
+      "item_type": "active_blocker",
+      "status": "open",
+      "severity": "blocks_promotion",
+      "occurrence_count": 1,
+      "evidence_paths": [
+        "ops/reports/session-synopsis.json"
+      ],
+      "repair_target": "Refresh selected contract evidence, then rerun make auto-improve-readiness.",
+      "next_action": "Refresh selected contract evidence, then rerun make auto-improve-readiness."
     },
     {
       "item_id": "auto_session_repeated_blocker_active_report_self_improve_certificate_rerun4_review_blocked",
@@ -178,6 +195,7 @@
     "learning_claim_activation": "ops/reports/learning_claim_activation_report.json",
     "auto_improve_sessions": "ops/reports/auto-improve-sessions",
     "goal_runtime_certificate": "ops/reports/goal-runtime-certificate.json",
+    "goal_worktree_guard": "tmp/goal-worktree-guard.json",
     "learning_readiness_signoff": "ops/reports/learning-readiness-signoff.json",
     "status_overrides": "ops/policies/remediation-backlog-status-overrides.json"
   }

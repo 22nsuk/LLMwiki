@@ -67,12 +67,12 @@
     },
     {
       "observation_id": "release-ready-generated-artifact-noop-guard",
-      "surface": "mk/release.mk release-converge-all-surfaces; mk/artifact.mk generated-artifact-converge; ops/reports/generated-artifact-index.json; ops/reports/artifact-freshness-report.json",
-      "problem": "release-ready still needs generated-artifact-converge both before and after report-producing/public-check phases, but the workflow does not expose whether the repeated converge actually changed canonical evidence.",
+      "surface": "mk/release.mk release-converge-all-surfaces; mk/artifact.mk generated-artifact-converge; tmp/generated-artifact-converge-summary.json; ops/reports/generated-artifact-index.json; ops/reports/artifact-freshness-report.json",
+      "problem": "release-source-ready still needs generated-artifact-converge both before and after report-producing/public-check phases, and operators need a machine-readable way to distinguish semantic evidence changes from raw/envelope churn.",
       "why_it_matters": "Removing the final converge would risk stale report evidence, while unconditional regeneration makes operators read logs to distinguish required convergence from no-op churn.",
       "automation_candidate": "Add a fingerprint-aware generated-artifact convergence summary that reports pre/post semantic digests and only considers conditional skip after tests prove public-check-produced reports still force the final converge when needed.",
-      "suggested_followup": "Planned only; keep the protective converge order for now and first add no-op/change diagnostics before any skip optimization.",
-      "status": "planned"
+      "suggested_followup": "Automated by adding tmp-only generated-artifact-converge before/after summaries with per-target semantic and raw digests, changed/noop classification, and changed path lists. Keep the protective converge order; any future skip optimization should be gated by these diagnostics.",
+      "status": "automated"
     }
   ],
   "task_id": "task-20260520-goal-5day-runtime-set-goal"

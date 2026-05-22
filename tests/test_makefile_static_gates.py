@@ -671,11 +671,21 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
     case.assertEqual(
         _recipe_lines(text, "generated-artifact-converge"),
         [
+            '$(PYTHON) -m ops.scripts.generated_artifact_converge_summary --vault "$(VAULT)" --phase before --out "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT)"',
             "$(MAKE) script-output-surfaces",
             "$(MAKE) external-report-action-matrix",
             "$(MAKE) generated-artifact-index",
             "$(MAKE) artifact-freshness",
+            '$(PYTHON) -m ops.scripts.generated_artifact_converge_summary --vault "$(VAULT)" --phase after --before "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT)" --out "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_OUT)"',
         ],
+    )
+    case.assertIn(
+        "GENERATED_ARTIFACT_CONVERGE_SUMMARY_OUT ?= tmp/generated-artifact-converge-summary.json",
+        text,
+    )
+    case.assertIn(
+        "GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT ?= tmp/generated-artifact-converge-summary.before.json",
+        text,
     )
     for phony_target in (
         "refresh-generated-core",
@@ -1429,9 +1439,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         converge_block = _target_block(text, "release-converge")
         converge_all_block = _target_block(text, "release-converge-all-surfaces")
-        ready_snapshot_block = _target_block(text, "release-ready-snapshot")
-        ready_commit_block = _target_block(text, "release-ready-commit")
-        ready_block = _target_block(text, "release-ready")
+        ready_snapshot_block = _target_block(text, "release-source-ready-snapshot")
+        ready_commit_block = _target_block(text, "release-source-ready-commit")
+        ready_block = _target_block(text, "release-source-ready")
         preflight_block = _target_block(text, "release-check-preflight-converge")
         core_block = _target_block(text, "release-check-core")
         release_check_block = _target_block(text, "release-check")
@@ -1442,12 +1452,12 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("release-converge", _target_block(text, ".PHONY"))
         self.assertIn("release-converge-all-surfaces", _target_block(text, ".PHONY"))
         phony_targets = _target_block(text, ".PHONY").replace(".PHONY:", "").split()
-        self.assertIn("release-ready-snapshot", _target_block(text, ".PHONY"))
-        self.assertIn("release-ready-commit", _target_block(text, ".PHONY"))
-        self.assertIn("release-ready-post-commit-converge", _target_block(text, ".PHONY"))
-        self.assertIn("release-ready-amend", _target_block(text, ".PHONY"))
-        self.assertNotIn("release-ready-post-commit", phony_targets)
-        self.assertIn("release-ready", _target_block(text, ".PHONY"))
+        self.assertIn("release-source-ready-snapshot", _target_block(text, ".PHONY"))
+        self.assertIn("release-source-ready-commit", _target_block(text, ".PHONY"))
+        self.assertIn("release-source-ready-post-commit-converge", _target_block(text, ".PHONY"))
+        self.assertIn("release-source-ready-amend", _target_block(text, ".PHONY"))
+        self.assertNotIn("release-source-ready-post-commit", phony_targets)
+        self.assertIn("release-source-ready", _target_block(text, ".PHONY"))
         self.assertNotIn("release-converge-artifact-commit", _target_block(text, ".PHONY"))
         self.assertIn("release-check-preflight-converge", _target_block(text, ".PHONY"))
         self.assertIn("release-check-core", _target_block(text, ".PHONY"))
@@ -1475,21 +1485,25 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("$(MAKE) sync-public-policy", converge_all_block)
         self.assertIn("$(MAKE) public-check-all", converge_all_block)
         self.assertIn("$(MAKE) release-converge-post", converge_all_block)
-        self.assertIn("RELEASE_READY_COMMIT_MESSAGE ?= release: converge all surfaces", text)
-        self.assertIn("RELEASE_READY_PRE_STATUS_OUT ?= tmp/release-ready-pre-status.json", text)
-        self.assertIn("RELEASE_READY_COMMIT_OUT ?= tmp/release-ready-commit.json", text)
-        self.assertIn("RELEASE_READY_AMEND_OUT ?= tmp/release-ready-amend.json", text)
-        self.assertIn("ops.scripts.release_ready_commit", ready_snapshot_block)
+        self.assertIn(
+            "RELEASE_SOURCE_READY_COMMIT_MESSAGE ?= release: converge source-ready surfaces",
+            text,
+        )
+        self.assertIn("RELEASE_SOURCE_READY_PRE_STATUS_OUT ?= tmp/release-source-ready-pre-status.json", text)
+        self.assertIn("RELEASE_SOURCE_READY_COMMIT_OUT ?= tmp/release-source-ready-commit.json", text)
+        self.assertIn("RELEASE_SOURCE_READY_AMEND_OUT ?= tmp/release-source-ready-amend.json", text)
+        self.assertIn("RELEASE_SOURCE_READY_STATUS_OUT ?= tmp/release-source-ready-status.json", text)
+        self.assertIn("ops.scripts.release_source_ready_commit", ready_snapshot_block)
         self.assertIn("--snapshot-only", ready_snapshot_block)
-        self.assertIn("ops.scripts.release_ready_commit", ready_commit_block)
-        self.assertIn('--pre-status "$(RELEASE_READY_PRE_STATUS_OUT)"', ready_commit_block)
-        self.assertIn('--message "$(RELEASE_READY_COMMIT_MESSAGE)"', ready_commit_block)
-        amend_block = _target_block(text, "release-ready-amend")
-        post_commit_converge_block = _target_block(text, "release-ready-post-commit-converge")
-        self.assertIn("ops.scripts.release_ready_commit", amend_block)
-        self.assertIn('--out "$(RELEASE_READY_AMEND_OUT)"', amend_block)
+        self.assertIn("ops.scripts.release_source_ready_commit", ready_commit_block)
+        self.assertIn('--pre-status "$(RELEASE_SOURCE_READY_PRE_STATUS_OUT)"', ready_commit_block)
+        self.assertIn('--message "$(RELEASE_SOURCE_READY_COMMIT_MESSAGE)"', ready_commit_block)
+        amend_block = _target_block(text, "release-source-ready-amend")
+        post_commit_converge_block = _target_block(text, "release-source-ready-post-commit-converge")
+        self.assertIn("ops.scripts.release_source_ready_commit", amend_block)
+        self.assertIn('--out "$(RELEASE_SOURCE_READY_AMEND_OUT)"', amend_block)
         self.assertIn("--amend", amend_block)
-        self.assertIn('--amend-of "$(RELEASE_READY_COMMIT_OUT)"', amend_block)
+        self.assertIn('--amend-of "$(RELEASE_SOURCE_READY_COMMIT_OUT)"', amend_block)
         self.assertIn("$(MAKE) auto-improve-readiness-worktree-guard", post_commit_converge_block)
         self.assertIn("$(MAKE) generated-artifact-converge", post_commit_converge_block)
         self.assertIn("$(MAKE) remediation-backlog", post_commit_converge_block)
@@ -1498,25 +1512,30 @@ class MakefileStaticGateTests(unittest.TestCase):
             "$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required",
             post_commit_converge_block,
         )
-        self.assertIn("$(MAKE) release-ready-snapshot", ready_block)
+        self.assertIn("$(MAKE) release-source-ready-snapshot", ready_block)
         self.assertIn("$(MAKE) release-converge-all-surfaces", ready_block)
-        self.assertIn("$(MAKE) release-ready-commit", ready_block)
-        self.assertIn("$(MAKE) release-ready-post-commit-converge", ready_block)
-        self.assertIn("$(MAKE) release-ready-amend", ready_block)
+        self.assertIn("$(MAKE) release-source-ready-commit", ready_block)
+        self.assertIn("$(MAKE) release-source-ready-post-commit-converge", ready_block)
+        self.assertIn("$(MAKE) release-source-ready-amend", ready_block)
         self.assertIn("$(MAKE) release-check-all-surfaces", ready_block)
+        self.assertIn("$(MAKE) release-source-ready-status", ready_block)
+        status_block = _target_block(text, "release-source-ready-status")
+        self.assertIn("ops.scripts.release_source_ready_status", status_block)
+        self.assertIn('--out "$(RELEASE_SOURCE_READY_STATUS_OUT)"', status_block)
         self.assertEqual(
-            _recipe_lines(text, "release-ready"),
+            _recipe_lines(text, "release-source-ready"),
             [
-                "$(MAKE) release-ready-snapshot",
+                "$(MAKE) release-source-ready-snapshot",
                 "$(MAKE) release-converge-all-surfaces",
-                "$(MAKE) release-ready-commit",
-                "$(MAKE) release-ready-post-commit-converge",
-                "$(MAKE) release-ready-amend",
+                "$(MAKE) release-source-ready-commit",
+                "$(MAKE) release-source-ready-post-commit-converge",
+                "$(MAKE) release-source-ready-amend",
                 "$(MAKE) release-check-all-surfaces",
+                "$(MAKE) release-source-ready-status",
             ],
         )
         self.assertEqual(
-            _recipe_lines(text, "release-ready-post-commit-converge"),
+            _recipe_lines(text, "release-source-ready-post-commit-converge"),
             [
                 "$(MAKE) auto-improve-readiness-worktree-guard",
                 "$(MAKE) goal-runtime-local-evidence-refresh",

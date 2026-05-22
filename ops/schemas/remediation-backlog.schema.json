@@ -49,7 +49,9 @@
         "backlog_item_count",
         "repeated_blocker_count",
         "active_blocker_count",
-        "open_item_count",
+        "open_total_count",
+        "open_promotion_count",
+        "open_repeat_count",
         "promotion_policy",
         "next_action"
       ],
@@ -57,7 +59,9 @@
         "backlog_item_count": { "type": "integer", "minimum": 0 },
         "repeated_blocker_count": { "type": "integer", "minimum": 0 },
         "active_blocker_count": { "type": "integer", "minimum": 0 },
-        "open_item_count": { "type": "integer", "minimum": 0 },
+        "open_total_count": { "type": "integer", "minimum": 0 },
+        "open_promotion_count": { "type": "integer", "minimum": 0 },
+        "open_repeat_count": { "type": "integer", "minimum": 0 },
         "promotion_policy": {
           "type": "string",
           "const": "do_not_retry_repeated_blockers_until_backlog_item_closed"
@@ -90,6 +94,7 @@
         "learning_claim_activation",
         "auto_improve_sessions",
         "goal_runtime_certificate",
+        "goal_worktree_guard",
         "learning_readiness_signoff",
         "status_overrides"
       ],
@@ -99,6 +104,7 @@
         "learning_claim_activation": { "type": "string", "minLength": 1 },
         "auto_improve_sessions": { "type": "string", "minLength": 1 },
         "goal_runtime_certificate": { "type": "string", "minLength": 1 },
+        "goal_worktree_guard": { "type": "string", "minLength": 1 },
         "learning_readiness_signoff": { "type": "string", "minLength": 1 },
         "status_overrides": { "type": "string", "minLength": 1 }
       }

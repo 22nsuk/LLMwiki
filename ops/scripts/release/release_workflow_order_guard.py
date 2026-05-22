@@ -50,8 +50,8 @@ SCHEMA_PATH = "ops/schemas/release-workflow-order-guard.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.release_workflow_order_guard --vault ."
 RELEASE_CLOSEOUT_TARGET = "release-evidence-closeout"
 CHECK_FINALIZED_TARGET = "check-finalized"
-RELEASE_READY_TARGET = "release-ready"
-RELEASE_READY_POST_COMMIT_CONVERGE_TARGET = "release-ready-post-commit-converge"
+RELEASE_SOURCE_READY_TARGET = "release-source-ready"
+RELEASE_SOURCE_READY_POST_COMMIT_CONVERGE_TARGET = "release-source-ready-post-commit-converge"
 STRICT_FINALIZER_FLAG = "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required"
 ALLOWED_REPEATED_CLOSEOUT_TARGETS = {
     "auto-improve-readiness-report-body",
@@ -434,38 +434,40 @@ def _release_closeout_repetition_budget(invocations: list[dict[str, Any]]) -> di
     )
 
 
-def _release_ready_transaction_check(invocations: list[dict[str, Any]]) -> dict[str, Any]:
+def _release_source_ready_transaction_check(invocations: list[dict[str, Any]]) -> dict[str, Any]:
     expected = [
-        "release-ready-snapshot",
+        "release-source-ready-snapshot",
         "release-converge-all-surfaces",
-        "release-ready-commit",
-        "release-ready-post-commit-converge",
-        "release-ready-amend",
+        "release-source-ready-commit",
+        "release-source-ready-post-commit-converge",
+        "release-source-ready-amend",
         "release-check-all-surfaces",
+        "release-source-ready-status",
     ]
     check = _check_subsequence(
-        "release_ready_transaction_sequence",
+        "release_source_ready_transaction_sequence",
         invocations,
         expected,
         details=(
-            "release-ready must snapshot the starting HEAD, converge all mutating surfaces, "
-            "create one release-ready commit, amend only post-commit canonical evidence, "
-            "and finish with the non-mutating all-surfaces release check."
+            "release-source-ready must snapshot the starting HEAD, converge all mutating surfaces, "
+            "create one release-source-ready commit, amend only post-commit canonical evidence, "
+            "finish with the non-mutating all-surfaces release check, "
+            "then print the source-ready versus sealed machine-release authority summary."
         ),
     )
-    terminal_index = _first_index(invocations, "release-check-all-surfaces")
+    terminal_index = _first_index(invocations, "release-source-ready-status")
     if terminal_index != len(invocations):
         check["status"] = "fail"
         check["violations"].append(
             {
-                "expected_role": "release-check-all-surfaces",
-                "reason": "release_check_all_surfaces_must_be_terminal",
+                "expected_role": "release-source-ready-status",
+                "reason": "release_source_ready_status_must_be_terminal",
             }
         )
     return check
 
 
-def _release_ready_post_commit_converge_check(
+def _release_source_ready_post_commit_converge_check(
     invocations: list[dict[str, Any]],
 ) -> dict[str, Any]:
     expected = [
@@ -477,13 +479,13 @@ def _release_ready_post_commit_converge_check(
         "release-closeout-post-check-finalizer-strict-dry-run",
     ]
     return _check_subsequence(
-        "release_ready_post_commit_converge_sequence",
+        "release_source_ready_post_commit_converge_sequence",
         invocations,
         expected,
         details=(
             "Post-commit converge must bind clean-commit evidence through run-local evidence "
             "convergence, generated artifact convergence, backlog refresh, fixed-point closeout, "
-            "and a strict finalizer dry run before release-ready amends the single commit."
+            "and a strict finalizer dry run before release-source-ready amends the single commit."
         ),
     )
 
@@ -534,10 +536,10 @@ def build_report(
     writers = _fixed_point_writer_specs(fixed_point_policy)
     release_closeout_invocations = _recipe_invocations(makefile_text, RELEASE_CLOSEOUT_TARGET)
     check_finalized_invocations = _recipe_invocations(makefile_text, CHECK_FINALIZED_TARGET)
-    release_ready_invocations = _recipe_invocations(makefile_text, RELEASE_READY_TARGET)
-    release_ready_post_commit_invocations = _recipe_invocations(
+    release_source_ready_invocations = _recipe_invocations(makefile_text, RELEASE_SOURCE_READY_TARGET)
+    release_source_ready_post_commit_invocations = _recipe_invocations(
         makefile_text,
-        RELEASE_READY_POST_COMMIT_CONVERGE_TARGET,
+        RELEASE_SOURCE_READY_POST_COMMIT_CONVERGE_TARGET,
     )
     planner_report = build_workflow_dependency_report(
         resolved_vault,
@@ -581,8 +583,8 @@ def build_report(
             details="check-finalized must end with release-closeout-finality-verify after any canonical refreshes.",
         ),
         _check_fixed_point_policy_order(writers),
-        _release_ready_transaction_check(release_ready_invocations),
-        _release_ready_post_commit_converge_check(release_ready_post_commit_invocations),
+        _release_source_ready_transaction_check(release_source_ready_invocations),
+        _release_source_ready_post_commit_converge_check(release_source_ready_post_commit_invocations),
         _check_planner_hooks(planner_report, release_closeout_invocations),
         _check_planner_fixed_point_writer_order(planner_report, writers),
     ]
@@ -638,10 +640,10 @@ def build_report(
         "target_recipes": [
             _target_recipe_payload(RELEASE_CLOSEOUT_TARGET, release_closeout_invocations),
             _target_recipe_payload(CHECK_FINALIZED_TARGET, check_finalized_invocations),
-            _target_recipe_payload(RELEASE_READY_TARGET, release_ready_invocations),
+            _target_recipe_payload(RELEASE_SOURCE_READY_TARGET, release_source_ready_invocations),
             _target_recipe_payload(
-                RELEASE_READY_POST_COMMIT_CONVERGE_TARGET,
-                release_ready_post_commit_invocations,
+                RELEASE_SOURCE_READY_POST_COMMIT_CONVERGE_TARGET,
+                release_source_ready_post_commit_invocations,
             ),
         ],
         "planner_snapshot": _planner_snapshot(planner_report),

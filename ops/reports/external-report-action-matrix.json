@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-21T18:00:46Z",
+  "generated_at": "2026-05-22T02:09:51Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "e87210163d5661241576ab225b9a05e7286084eb4bf5aad231abbef7132b41b8",
+  "source_tree_fingerprint": "c67d8e092c8c4eb06c711b524ddad2422eec7443337fca78130ae405e4bb146c",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-21T18:00:46Z"
+    "checked_at": "2026-05-22T02:09:51Z"
   },
   "vault": ".",
   "status": "pass",
@@ -841,7 +841,7 @@
         {
           "path": "tmp/goal-worktree-guard.json",
           "exists": true,
-          "status": "pass",
+          "status": "attention",
           "producer": "ops.scripts.goal_worktree_guard"
         },
         {

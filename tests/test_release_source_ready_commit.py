@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 import unittest
 
-from ops.scripts.release.release_ready_commit import main
+from ops.scripts.release.release_source_ready_commit import main
 
 
 def _git(vault: Path, *args: str) -> str:
@@ -21,13 +21,13 @@ def _git(vault: Path, *args: str) -> str:
     return result.stdout.strip()
 
 
-class ReleaseReadyCommitTests(unittest.TestCase):
+class ReleaseSourceReadyCommitTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
         self.vault = Path(self.tmp.name)
         _git(self.vault, "init", "-q")
-        _git(self.vault, "config", "user.email", "release-ready@example.test")
-        _git(self.vault, "config", "user.name", "Release Ready Test")
+        _git(self.vault, "config", "user.email", "release-source-ready@example.test")
+        _git(self.vault, "config", "user.name", "Release Source Ready Test")
         (self.vault / ".gitignore").write_text("tmp/\n", encoding="utf-8")
         (self.vault / "README.md").write_text("# Test\n", encoding="utf-8")
         (self.vault / "ops" / "reports").mkdir(parents=True)
@@ -55,7 +55,7 @@ class ReleaseReadyCommitTests(unittest.TestCase):
                 "--vault",
                 str(self.vault),
                 "--out",
-                "tmp/release-ready-commit.json",
+                "tmp/release-source-ready-commit.json",
                 "--message",
                 "release: ready",
             ]
@@ -68,7 +68,7 @@ class ReleaseReadyCommitTests(unittest.TestCase):
         self.assertIn("ops/reports/release-smoke-report.json", changed_paths)
         self.assertIn("ops/scripts/new_helper.py", changed_paths)
         report = json.loads(
-            (self.vault / "tmp" / "release-ready-commit.json").read_text(encoding="utf-8")
+            (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
         )
         self.assertEqual(report["status"], "committed")
         categories = {entry["path"]: entry["category"] for entry in report["entries"]}
@@ -77,7 +77,7 @@ class ReleaseReadyCommitTests(unittest.TestCase):
             categories["ops/reports/release-smoke-report.json"], "generated_canonical"
         )
 
-    def test_report_summarizes_release_ready_diagnostics_without_changing_commit_policy(
+    def test_report_summarizes_release_source_ready_diagnostics_without_changing_commit_policy(
         self,
     ) -> None:
         (self.vault / "README.md").write_text("# Test\n\nChanged.\n", encoding="utf-8")
@@ -144,7 +144,7 @@ class ReleaseReadyCommitTests(unittest.TestCase):
                 "--vault",
                 str(self.vault),
                 "--out",
-                "tmp/release-ready-commit.json",
+                "tmp/release-source-ready-commit.json",
                 "--message",
                 "release: ready",
                 "--dry-run",
@@ -153,7 +153,7 @@ class ReleaseReadyCommitTests(unittest.TestCase):
 
         self.assertEqual(rc, 0)
         report = json.loads(
-            (self.vault / "tmp" / "release-ready-commit.json").read_text(encoding="utf-8")
+            (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
         )
         diagnostics = report["diagnostics"]
         goal_refresh = diagnostics["goal_runtime_local_evidence_refresh"]
@@ -179,7 +179,7 @@ class ReleaseReadyCommitTests(unittest.TestCase):
                 "--vault",
                 str(self.vault),
                 "--out",
-                "tmp/release-ready-commit.json",
+                "tmp/release-source-ready-commit.json",
                 "--message",
                 "release: ready",
             ]
@@ -188,7 +188,7 @@ class ReleaseReadyCommitTests(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("?? raw/", _git(self.vault, "status", "--short"))
         report = json.loads(
-            (self.vault / "tmp" / "release-ready-commit.json").read_text(encoding="utf-8")
+            (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
         )
         self.assertEqual(report["status"], "blocked")
         self.assertEqual(report["reason"], "unexpected_dirty_paths")
@@ -203,7 +203,7 @@ class ReleaseReadyCommitTests(unittest.TestCase):
                 "--vault",
                 str(self.vault),
                 "--out",
-                "tmp/release-ready-commit.json",
+                "tmp/release-source-ready-commit.json",
                 "--message",
                 "release: ready",
             ]
@@ -211,7 +211,7 @@ class ReleaseReadyCommitTests(unittest.TestCase):
 
         self.assertEqual(rc, 1)
         report = json.loads(
-            (self.vault / "tmp" / "release-ready-commit.json").read_text(encoding="utf-8")
+            (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
         )
         self.assertEqual(report["status"], "blocked")
         self.assertEqual(report["reason"], "preexisting_staged_changes")
@@ -223,7 +223,7 @@ class ReleaseReadyCommitTests(unittest.TestCase):
                 "--vault",
                 str(self.vault),
                 "--out",
-                "tmp/release-ready-pre-status.json",
+                "tmp/release-source-ready-pre-status.json",
                 "--snapshot-only",
             ]
         )
@@ -240,9 +240,9 @@ class ReleaseReadyCommitTests(unittest.TestCase):
                 "--vault",
                 str(self.vault),
                 "--out",
-                "tmp/release-ready-commit.json",
+                "tmp/release-source-ready-commit.json",
                 "--pre-status",
-                "tmp/release-ready-pre-status.json",
+                "tmp/release-source-ready-pre-status.json",
                 "--message",
                 "release: ready",
             ]
@@ -252,14 +252,14 @@ class ReleaseReadyCommitTests(unittest.TestCase):
         self.assertEqual(commit_rc, 1)
         self.assertIn("ops/reports/release-smoke-report.json", _git(self.vault, "status", "--short"))
         report = json.loads(
-            (self.vault / "tmp" / "release-ready-commit.json").read_text(encoding="utf-8")
+            (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
         )
         self.assertEqual(report["status"], "blocked")
         self.assertEqual(report["reason"], "snapshot_head_mismatch")
         self.assertEqual(report["expected_head_from_snapshot"], snapshot_head)
         self.assertEqual(report["actual_head_before_commit"], _git(self.vault, "rev-parse", "HEAD"))
 
-    def test_amends_release_ready_commit_with_post_converge_evidence(self) -> None:
+    def test_amends_release_source_ready_commit_with_post_converge_evidence(self) -> None:
         initial_commit_count = int(_git(self.vault, "rev-list", "--count", "HEAD"))
         (self.vault / "README.md").write_text("# Test\n\nChanged.\n", encoding="utf-8")
 
@@ -268,7 +268,7 @@ class ReleaseReadyCommitTests(unittest.TestCase):
                 "--vault",
                 str(self.vault),
                 "--out",
-                "tmp/release-ready-commit.json",
+                "tmp/release-source-ready-commit.json",
                 "--message",
                 "release: ready",
             ]
@@ -284,10 +284,10 @@ class ReleaseReadyCommitTests(unittest.TestCase):
                 "--vault",
                 str(self.vault),
                 "--out",
-                "tmp/release-ready-amend.json",
+                "tmp/release-source-ready-amend.json",
                 "--amend",
                 "--amend-of",
-                "tmp/release-ready-commit.json",
+                "tmp/release-source-ready-commit.json",
             ]
         )
 
@@ -301,7 +301,7 @@ class ReleaseReadyCommitTests(unittest.TestCase):
         self.assertIn("README.md", changed_paths)
         self.assertIn("ops/reports/release-smoke-report.json", changed_paths)
         report = json.loads(
-            (self.vault / "tmp" / "release-ready-amend.json").read_text(encoding="utf-8")
+            (self.vault / "tmp" / "release-source-ready-amend.json").read_text(encoding="utf-8")
         )
         self.assertEqual(report["status"], "amended")
         self.assertTrue(report["amend"])
@@ -314,7 +314,7 @@ class ReleaseReadyCommitTests(unittest.TestCase):
                 "--vault",
                 str(self.vault),
                 "--out",
-                "tmp/release-ready-commit.json",
+                "tmp/release-source-ready-commit.json",
                 "--message",
                 "release: ready",
             ]
@@ -332,10 +332,10 @@ class ReleaseReadyCommitTests(unittest.TestCase):
                 "--vault",
                 str(self.vault),
                 "--out",
-                "tmp/release-ready-amend.json",
+                "tmp/release-source-ready-amend.json",
                 "--amend",
                 "--amend-of",
-                "tmp/release-ready-commit.json",
+                "tmp/release-source-ready-commit.json",
             ]
         )
 
@@ -343,7 +343,7 @@ class ReleaseReadyCommitTests(unittest.TestCase):
         self.assertEqual(amend_rc, 1)
         self.assertIn("ops/reports/release-smoke-report.json", _git(self.vault, "status", "--short"))
         report = json.loads(
-            (self.vault / "tmp" / "release-ready-amend.json").read_text(encoding="utf-8")
+            (self.vault / "tmp" / "release-source-ready-amend.json").read_text(encoding="utf-8")
         )
         self.assertEqual(report["status"], "blocked")
         self.assertEqual(report["reason"], "amend_base_head_mismatch")
@@ -355,7 +355,7 @@ class ReleaseReadyCommitTests(unittest.TestCase):
                 "--vault",
                 str(self.vault),
                 "--out",
-                "tmp/release-ready-commit.json",
+                "tmp/release-source-ready-commit.json",
                 "--message",
                 "release: ready",
             ]
@@ -367,29 +367,29 @@ class ReleaseReadyCommitTests(unittest.TestCase):
                 "--vault",
                 str(self.vault),
                 "--out",
-                "tmp/release-ready-amend.json",
+                "tmp/release-source-ready-amend.json",
                 "--amend",
                 "--amend-of",
-                "tmp/release-ready-commit.json",
+                "tmp/release-source-ready-commit.json",
             ]
         )
 
         self.assertEqual(commit_rc, 0)
         self.assertEqual(amend_rc, 1)
         report = json.loads(
-            (self.vault / "tmp" / "release-ready-amend.json").read_text(encoding="utf-8")
+            (self.vault / "tmp" / "release-source-ready-amend.json").read_text(encoding="utf-8")
         )
         self.assertEqual(report["status"], "blocked")
         self.assertEqual(report["reason"], "amend_contains_public_source_changes")
         self.assertEqual(report["late_public_source_paths"], ["README.md"])
 
-    def test_amend_noops_when_release_ready_commit_had_no_changes_and_tree_stays_clean(self) -> None:
+    def test_amend_noops_when_release_source_ready_commit_had_no_changes_and_tree_stays_clean(self) -> None:
         commit_rc = main(
             [
                 "--vault",
                 str(self.vault),
                 "--out",
-                "tmp/release-ready-commit.json",
+                "tmp/release-source-ready-commit.json",
                 "--message",
                 "release: ready",
             ]
@@ -400,28 +400,28 @@ class ReleaseReadyCommitTests(unittest.TestCase):
                 "--vault",
                 str(self.vault),
                 "--out",
-                "tmp/release-ready-amend.json",
+                "tmp/release-source-ready-amend.json",
                 "--amend",
                 "--amend-of",
-                "tmp/release-ready-commit.json",
+                "tmp/release-source-ready-commit.json",
             ]
         )
 
         self.assertEqual(commit_rc, 0)
         self.assertEqual(amend_rc, 0)
         report = json.loads(
-            (self.vault / "tmp" / "release-ready-amend.json").read_text(encoding="utf-8")
+            (self.vault / "tmp" / "release-source-ready-amend.json").read_text(encoding="utf-8")
         )
         self.assertEqual(report["status"], "no_changes")
         self.assertEqual(report["amend_of_status"], "no_changes")
 
-    def test_amend_rejects_dirty_paths_when_release_ready_commit_had_no_changes(self) -> None:
+    def test_amend_rejects_dirty_paths_when_release_source_ready_commit_had_no_changes(self) -> None:
         commit_rc = main(
             [
                 "--vault",
                 str(self.vault),
                 "--out",
-                "tmp/release-ready-commit.json",
+                "tmp/release-source-ready-commit.json",
                 "--message",
                 "release: ready",
             ]
@@ -436,10 +436,10 @@ class ReleaseReadyCommitTests(unittest.TestCase):
                 "--vault",
                 str(self.vault),
                 "--out",
-                "tmp/release-ready-amend.json",
+                "tmp/release-source-ready-amend.json",
                 "--amend",
                 "--amend-of",
-                "tmp/release-ready-commit.json",
+                "tmp/release-source-ready-commit.json",
             ]
         )
 
@@ -447,7 +447,7 @@ class ReleaseReadyCommitTests(unittest.TestCase):
         self.assertEqual(amend_rc, 1)
         self.assertIn("ops/reports/release-smoke-report.json", _git(self.vault, "status", "--short"))
         report = json.loads(
-            (self.vault / "tmp" / "release-ready-amend.json").read_text(encoding="utf-8")
+            (self.vault / "tmp" / "release-source-ready-amend.json").read_text(encoding="utf-8")
         )
         self.assertEqual(report["status"], "blocked")
         self.assertEqual(report["reason"], "amend_base_not_committed")

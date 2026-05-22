@@ -1122,7 +1122,9 @@
         "status",
         "source_status",
         "release_blocking",
-        "open_item_count",
+        "open_total_count",
+        "open_promotion_count",
+        "open_repeat_count",
         "active_blocker_count",
         "blocking_item_count",
         "signal_ids",
@@ -1144,7 +1146,9 @@
           "enum": ["pass", "attention", "missing"]
         },
         "release_blocking": { "type": "boolean" },
-        "open_item_count": { "type": "integer", "minimum": 0 },
+        "open_total_count": { "type": "integer", "minimum": 0 },
+        "open_promotion_count": { "type": "integer", "minimum": 0 },
+        "open_repeat_count": { "type": "integer", "minimum": 0 },
         "active_blocker_count": { "type": "integer", "minimum": 0 },
         "blocking_item_count": { "type": "integer", "minimum": 0 },
         "signal_ids": {

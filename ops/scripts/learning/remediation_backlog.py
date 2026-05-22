@@ -35,8 +35,12 @@ ACTIVATION_REPORT_PATH = "ops/reports/learning_claim_activation_report.json"
 AUTO_IMPROVE_SESSIONS_DIR = "ops/reports/auto-improve-sessions"
 STATUS_OVERRIDES_PATH = "ops/policies/remediation-backlog-status-overrides.json"
 GOAL_RUNTIME_CERTIFICATE_PATH = "ops/reports/goal-runtime-certificate.json"
+GOAL_WORKTREE_GUARD_PATH = "tmp/goal-worktree-guard.json"
 GOAL_CERTIFICATE_INCOMPLETE_ITEM_ID = (
     "active_blocker_goal_status_self_improvement_loop_certificate_incomplete"
+)
+GOAL_WORKTREE_GUARD_FAILURE_ITEM_ID = (
+    "active_blocker_promotion_blocked_by_goal_worktree_guard_failure"
 )
 LEARNING_REVIEW_REQUIRED_ITEM_ID = f"active_blocker_{SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID}"
 GOAL_STATUS_LEARNING_REVIEW_REQUIRED_ITEM_ID = (
@@ -141,6 +145,22 @@ def _valid_verified_goal_runtime_certificate(vault: Path) -> bool:
     return True
 
 
+def _goal_worktree_guard_currently_clean(vault: Path) -> bool:
+    report = load_optional_json_object(vault / GOAL_WORKTREE_GUARD_PATH)
+    decisions = report.get("decisions")
+    decisions = decisions if isinstance(decisions, dict) else {}
+    git = report.get("git")
+    git = git if isinstance(git, dict) else {}
+    return (
+        report.get("artifact_kind") == "goal_worktree_guard"
+        and report.get("status") == "pass"
+        and decisions.get("can_promote_result") is True
+        and git.get("dirty_entry_count") == 0
+        and not _string_list(report.get("blockers"))
+        and not _string_list(decisions.get("promotion_blockers"))
+    )
+
+
 def _evidence_status_overrides(vault: Path, *, generated_at: str) -> dict[str, dict[str, Any]]:
     overrides: dict[str, dict[str, Any]] = {}
     learning_signoff = load_learning_readiness_signoff_summary(vault, generated_at=generated_at)
@@ -159,6 +179,15 @@ def _evidence_status_overrides(vault: Path, *, generated_at: str) -> dict[str, d
             "status": "closed",
             "reason": "Verified goal-runtime-certificate evidence is present.",
             "evidence_paths": [GOAL_RUNTIME_CERTIFICATE_PATH],
+        }
+    if _goal_worktree_guard_currently_clean(vault):
+        overrides[GOAL_WORKTREE_GUARD_FAILURE_ITEM_ID] = {
+            "status": "closed",
+            "reason": (
+                "Current goal-worktree-guard evidence is pass/clean; the historical "
+                "dirty-worktree promotion blocker has been reconciled."
+            ),
+            "evidence_paths": [GOAL_WORKTREE_GUARD_PATH],
         }
     return overrides
 
@@ -340,16 +369,32 @@ def _summary(items: list[dict[str, Any]]) -> dict[str, Any]:
         1 for item in items if item["item_type"] == "repeated_auto_improve_blocker"
     )
     active_count = sum(1 for item in items if item["item_type"] == "active_blocker")
-    open_count = sum(1 for item in items if item["status"] == "open")
+    open_total_count = sum(1 for item in items if item["status"] == "open")
+    open_promotion_count = sum(
+        1
+        for item in items
+        if item["status"] == "open" and item["severity"] == "blocks_promotion"
+    )
+    open_repeat_count = sum(
+        1
+        for item in items
+        if item["status"] == "open" and item["severity"] == "blocks_repeat"
+    )
     return {
         "backlog_item_count": len(items),
         "repeated_blocker_count": repeated_count + repeated_runtime_count,
         "active_blocker_count": active_count,
-        "open_item_count": open_count,
+        "open_total_count": open_total_count,
+        "open_promotion_count": open_promotion_count,
+        "open_repeat_count": open_repeat_count,
         "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
-        "next_action": "Close or explicitly defer remediation backlog items before promotion."
-        if open_count
-        else "No remediation backlog items detected.",
+        "next_action": (
+            "Close or explicitly defer promotion-blocking remediation backlog items before promotion."
+            if open_promotion_count
+            else "Close repeat-blocking remediation backlog items before rerunning the same blocker shape."
+            if open_repeat_count
+            else "No remediation backlog items detected."
+        ),
     }
 
 
@@ -387,6 +432,7 @@ def build_report(
                 "session_synopsis": session_synopsis_path,
                 "learning_claim_activation": activation_report_path,
                 "goal_runtime_certificate": GOAL_RUNTIME_CERTIFICATE_PATH,
+                "goal_worktree_guard": GOAL_WORKTREE_GUARD_PATH,
                 "learning_readiness_signoff": SIGNOFF_REPORT_REL_PATH,
                 "status_overrides": STATUS_OVERRIDES_PATH,
             },
@@ -400,7 +446,7 @@ def build_report(
             "path": report_path(vault, resolved_policy_path),
             "version": policy.get("version"),
         },
-        "status": "attention" if summary["open_item_count"] else "pass",
+        "status": "attention" if summary["open_total_count"] else "pass",
         "summary": summary,
         "items": items,
         "inputs": {
@@ -409,6 +455,7 @@ def build_report(
             "learning_claim_activation": activation_report_path,
             "auto_improve_sessions": AUTO_IMPROVE_SESSIONS_DIR,
             "goal_runtime_certificate": GOAL_RUNTIME_CERTIFICATE_PATH,
+            "goal_worktree_guard": GOAL_WORKTREE_GUARD_PATH,
             "learning_readiness_signoff": SIGNOFF_REPORT_REL_PATH,
             "status_overrides": STATUS_OVERRIDES_PATH,
         },

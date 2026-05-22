@@ -1,6 +1,6 @@
 # Release Risk Taxonomy Matrix
 
-- Generated at: 2026-05-21T18:01:01Z
+- Generated at: 2026-05-22T02:09:53Z
 - Taxonomy: ops/policies/release-risk-taxonomy.json
 - Taxonomy version: 1
 - Risk codes: 45

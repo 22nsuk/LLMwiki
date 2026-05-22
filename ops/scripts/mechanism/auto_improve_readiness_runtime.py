@@ -328,7 +328,9 @@ def _remediation_backlog_summary(
             "status": "fail",
             "source_status": "missing",
             "release_blocking": True,
-            "open_item_count": 0,
+            "open_total_count": 0,
+            "open_promotion_count": 0,
+            "open_repeat_count": 0,
             "active_blocker_count": 0,
             "blocking_item_count": 0,
             "signal_ids": ["remediation_backlog_missing"],
@@ -336,7 +338,9 @@ def _remediation_backlog_summary(
         }
 
     blocking_signal_ids: list[str] = []
+    open_total_count = 0
     open_blocks_promotion_count = 0
+    open_blocks_repeat_count = 0
     items = payload.get("items", [])
     if isinstance(items, list):
         for item in items:
@@ -344,7 +348,11 @@ def _remediation_backlog_summary(
                 continue
             if str(item.get("status", "")).strip() != "open":
                 continue
-            if str(item.get("severity", "")).strip() != "blocks_promotion":
+            open_total_count += 1
+            severity = str(item.get("severity", "")).strip()
+            if severity == "blocks_repeat":
+                open_blocks_repeat_count += 1
+            if severity != "blocks_promotion":
                 continue
             open_blocks_promotion_count += 1
             blocker_id = str(item.get("blocker_id", "")).strip()
@@ -364,15 +372,18 @@ def _remediation_backlog_summary(
         "status": "fail" if release_blocking else "pass",
         "source_status": report_status if release_blocking else "pass",
         "release_blocking": release_blocking,
-        "open_item_count": open_blocks_promotion_count,
+        "open_total_count": open_total_count,
+        "open_promotion_count": open_blocks_promotion_count,
+        "open_repeat_count": open_blocks_repeat_count,
         "active_blocker_count": open_blocks_promotion_count,
         "blocking_item_count": len(blocking_signal_ids),
         "signal_ids": signal_ids,
         "currentness_status": str(_dict_field(payload, "currentness").get("status", "")).strip(),
         "summary": (
             "remediation backlog "
-            f"status={report_status}; open_item_count={open_blocks_promotion_count}; "
-            f"active_blocker_count={open_blocks_promotion_count}; "
+            f"status={report_status}; open_total_count={open_total_count}; "
+            f"open_promotion_count={open_blocks_promotion_count}; "
+            f"open_repeat_count={open_blocks_repeat_count}; "
             f"blocking_item_count={len(blocking_signal_ids)}"
         ),
     }
@@ -615,7 +626,7 @@ def _remediation_backlog_promotion_blockers(
             ),
             "signal_ids": signal_ids,
             "required_evidence": [
-                "Run make remediation-backlog and confirm status=pass with open_item_count=0.",
+                "Run make remediation-backlog and confirm open_promotion_count=0.",
                 "Close or explicitly defer blocks_promotion backlog items before promotion.",
                 "can_promote_result must stay false while remediation backlog items are open.",
             ],

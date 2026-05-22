@@ -5,6 +5,8 @@ CLEAN_FIXTURE_REGENERATION_ALLOW_DIRTY_REPORTS ?=
 CLOSURE_REGISTRY_ENVELOPE_REGISTRY ?= all
 GENERATED_ARTIFACT_INDEX_OUT ?= ops/reports/generated-artifact-index.json
 GENERATED_ARTIFACT_INDEX_CANDIDATE_OUT ?= tmp/generated-artifact-index.candidate.json
+GENERATED_ARTIFACT_CONVERGE_SUMMARY_OUT ?= tmp/generated-artifact-converge-summary.json
+GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT ?= tmp/generated-artifact-converge-summary.before.json
 ARCHIVE_EXECUTION_MANIFEST_OUT ?= tmp/archive-execution-manifest.json
 ARCHIVE_EXECUTION_MANIFEST_SOURCE ?= tmp/archive-execution-manifest.json
 ARCHIVE_EXECUTION_OPERATOR_CONFIRMATION ?=
@@ -58,10 +60,12 @@ refresh-generated: refresh-generated-core refresh-generated-observability
 	@echo "refresh-generated is a compatibility aggregate; use refresh-generated-core for queue inputs and refresh-generated-observability for advisory reports."
 
 generated-artifact-converge:
+	$(PYTHON) -m ops.scripts.generated_artifact_converge_summary --vault "$(VAULT)" --phase before --out "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT)"
 	$(MAKE) script-output-surfaces
 	$(MAKE) external-report-action-matrix
 	$(MAKE) generated-artifact-index
 	$(MAKE) artifact-freshness
+	$(PYTHON) -m ops.scripts.generated_artifact_converge_summary --vault "$(VAULT)" --phase after --before "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_BEFORE_OUT)" --out "$(GENERATED_ARTIFACT_CONVERGE_SUMMARY_OUT)"
 
 script-output-surfaces:
 	$(PYTHON) -m ops.scripts.script_output_surfaces --vault "$(VAULT)" --out "$(SCRIPT_OUTPUT_SURFACES_CANDIDATE_OUT)"

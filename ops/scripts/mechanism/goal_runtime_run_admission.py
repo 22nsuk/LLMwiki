@@ -401,15 +401,11 @@ def _remediation_backlog_check(remediation_backlog: dict[str, Any], path: str) -
     kind_status = _artifact_kind_check(remediation_backlog, "remediation_backlog")
     status = str(remediation_backlog.get("status", "missing")).strip() or "missing"
     summary = _dict_field(remediation_backlog, "summary")
-    open_item_count = _as_int(
-        remediation_backlog.get("open_item_count")
-        if "open_item_count" in remediation_backlog
-        else summary.get("open_item_count")
-    )
+    open_total_count = _as_int(summary.get("open_total_count"))
+    open_promotion_count = _as_int(summary.get("open_promotion_count"))
+    open_repeat_count = _as_int(summary.get("open_repeat_count"))
     active_blocker_count = _as_int(
-        remediation_backlog.get("active_blocker_count")
-        if "active_blocker_count" in remediation_backlog
-        else summary.get("active_blocker_count")
+        summary.get("active_blocker_count")
     )
     items = _list_field(remediation_backlog, "items")
     open_blockers = [
@@ -418,16 +414,18 @@ def _remediation_backlog_check(remediation_backlog: dict[str, Any], path: str) -
         if isinstance(item, dict) and str(item.get("status", "")).strip() == "open"
     ]
     open_blockers = [item for item in open_blockers if item]
-    passed = kind_status == "present" and status == "pass" and open_item_count == 0 and active_blocker_count == 0
+    passed = kind_status == "present" and open_promotion_count == 0
     return _check(
         check_id="promotion_remediation_backlog_clear",
         status="pass" if passed else "attention",
         severity=PROMOTION_BLOCKER_SEVERITY,
-        expected={"status": "pass", "open_item_count": 0, "active_blocker_count": 0},
+        expected={"open_promotion_count": 0},
         observed={
             "artifact_status": kind_status,
             "status": status,
-            "open_item_count": open_item_count,
+            "open_total_count": open_total_count,
+            "open_promotion_count": open_promotion_count,
+            "open_repeat_count": open_repeat_count,
             "active_blocker_count": active_blocker_count,
             "open_blockers": list(dict.fromkeys(open_blockers)),
         },

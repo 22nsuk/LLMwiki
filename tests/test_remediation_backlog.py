@@ -136,6 +136,9 @@ class RemediationBacklogTests(unittest.TestCase):
             self.assertEqual(report["summary"]["backlog_item_count"], 3)
             self.assertEqual(report["summary"]["repeated_blocker_count"], 2)
             self.assertEqual(report["summary"]["active_blocker_count"], 1)
+            self.assertEqual(report["summary"]["open_total_count"], 3)
+            self.assertEqual(report["summary"]["open_promotion_count"], 1)
+            self.assertEqual(report["summary"]["open_repeat_count"], 2)
             self.assertIn("negative_lesson_blocked_queue_recent_log_overlap", items)
             self.assertIn(
                 "active_blocker_promotion_blocked_by_release_authority_preflight_failure",
@@ -159,6 +162,7 @@ class RemediationBacklogTests(unittest.TestCase):
                 report["inputs"]["status_overrides"],
                 "ops/policies/remediation-backlog-status-overrides.json",
             )
+            self.assertEqual(report["inputs"]["goal_worktree_guard"], "tmp/goal-worktree-guard.json")
             self.assertNotEqual(report["input_fingerprints"]["auto_improve_sessions"], "missing")
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
@@ -199,7 +203,9 @@ class RemediationBacklogTests(unittest.TestCase):
                 "ops/reports/task-improvement-observations/example.json",
                 closed_item["evidence_paths"],
             )
-            self.assertEqual(report["summary"]["open_item_count"], 2)
+            self.assertEqual(report["summary"]["open_total_count"], 2)
+            self.assertEqual(report["summary"]["open_promotion_count"], 1)
+            self.assertEqual(report["summary"]["open_repeat_count"], 1)
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_active_learning_signoff_defers_learning_review_backlog_item(self) -> None:
@@ -268,7 +274,77 @@ class RemediationBacklogTests(unittest.TestCase):
                 ],
             )
             self.assertEqual(report["status"], "pass")
-            self.assertEqual(report["summary"]["open_item_count"], 0)
+            self.assertEqual(report["summary"]["open_total_count"], 0)
+            self.assertEqual(report["summary"]["open_promotion_count"], 0)
+            self.assertEqual(report["summary"]["open_repeat_count"], 0)
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_current_clean_goal_worktree_guard_closes_historical_dirty_blocker(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            write_json(vault, "ops/reports/self-improvement-negative-lessons.json", {"lessons": []})
+            write_json(
+                vault,
+                "ops/reports/session-synopsis.json",
+                {
+                    "recent_blockers": [
+                        {
+                            "id": "promotion_blocked_by_goal_worktree_guard_failure",
+                            "source": "auto_improve_readiness.promotion_blockers",
+                            "status": "open",
+                            "reason": "historical dirty worktree blocker",
+                            "repair_target": "Refresh goal worktree guard evidence.",
+                        },
+                        {
+                            "id": "promotion_blocked_by_release_batch_manifest_failure",
+                            "source": "auto_improve_readiness.promotion_blockers",
+                            "status": "open",
+                            "reason": "batch manifest still needs review",
+                            "repair_target": "Refresh batch manifest evidence.",
+                        },
+                    ]
+                },
+            )
+            write_json(vault, "ops/reports/learning_claim_activation_report.json", {"status": "pass"})
+            write_json(
+                vault,
+                "tmp/goal-worktree-guard.json",
+                {
+                    "artifact_kind": "goal_worktree_guard",
+                    "status": "pass",
+                    "git": {"dirty_entry_count": 0},
+                    "decisions": {
+                        "can_promote_result": True,
+                        "promotion_blockers": [],
+                    },
+                    "blockers": [],
+                },
+            )
+
+            report = build_report(vault, context=fixed_context())
+            items = {item["item_id"]: item for item in report["items"]}
+
+            self.assertEqual(
+                items["active_blocker_promotion_blocked_by_goal_worktree_guard_failure"][
+                    "status"
+                ],
+                "closed",
+            )
+            self.assertEqual(
+                items["active_blocker_promotion_blocked_by_release_batch_manifest_failure"][
+                    "status"
+                ],
+                "open",
+            )
+            self.assertEqual(report["summary"]["open_promotion_count"], 1)
+            self.assertIn(
+                "tmp/goal-worktree-guard.json",
+                items["active_blocker_promotion_blocked_by_goal_worktree_guard_failure"][
+                    "evidence_paths"
+                ],
+            )
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_verified_certificate_closes_incomplete_certificate_item_from_canonical_report(
