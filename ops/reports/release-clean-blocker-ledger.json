@@ -1,22 +1,22 @@
 {
   "$schema": "ops/schemas/release-clean-blocker-ledger.schema.json",
   "artifact_kind": "release_clean_blocker_ledger",
-  "generated_at": "2026-05-22T19:16:15Z",
+  "generated_at": "2026-05-22T19:26:11Z",
   "producer": "ops.scripts.release_clean_blocker_ledger",
   "source_command": "python -m ops.scripts.release_clean_blocker_ledger --vault . --out ops/reports/release-clean-blocker-ledger.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "2f2037ec4c069a4891022662a91063b58e039dd1cdf1c424161d5fc8f626fc28",
+  "source_tree_fingerprint": "51d70b07abec760c16cbdf1bbfb44ba490ad921353573c82992104f38f097070",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "f6aa73699b331c2043768aebbdd1a91ef5399c245b427d3c0bc1358b10789332",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "05d9ca92b669481899a02e5a557550b51eabdd6e3d3c4d5cb6757659f40de64c",
-    "learning_delta_scoreboard": "7d3345e730c1d4cf79d00eca8034438db4896427ecb902c894296437b0301c3e",
-    "release_closeout_summary": "a0c9c073f27c66bfe0f4c67f12c162996de5ddc6bd4cb648cebcbe47217cdf84",
-    "release_evidence_cohort": "ad4d9aee0ebf9c8307a02db62142f6c59fb9efda0cc627d4dcf4ecba8c519452",
-    "release_lane_summary": "8bad34cb8247095fd0c03e24c5412893f279214e219ea93d4afedf6839fdbf1e",
+    "learning_delta_scoreboard": "423ec876bcae436c5a543eaffbb4967404eeb601eda40fbf2e9ec165e684ee0a",
+    "release_closeout_summary": "86d41b1cf35eb5cce77bf04cee085dde96cb1f5d965f97dd6bfc101bddd23739",
+    "release_evidence_cohort": "d410a73bef043cbbc2f1b4b3ba81863cac56d877c2a1c9399336e6e61705284b",
+    "release_lane_summary": "ec4708362417ebb9be6098f236b3bb7e8f83b6d81d42c5d565e0c6f2a378cb30",
     "release_risk_taxonomy": "03e1c9015389ebac078be42f611e672a1f922d96552bd16980f9900f78d6b2e6",
-    "current_source_tree_fingerprint": "95214a571aedca698a9331d453e61959f00c4d98fe6c98795888fcd8fd49bfe6"
+    "current_source_tree_fingerprint": "30ea1a749d2fd63a0162582c446310c7beeffcdf1f1a80fec2a1caa507de6aec"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T19:16:15Z"
+    "checked_at": "2026-05-22T19:26:11Z"
   },
   "vault": ".",
   "policy": {
@@ -99,7 +99,7 @@
         "Regenerate release evidence in one closeout chain or document why fingerprint divergence is acceptable."
       ],
       "risk_owner": "runtime-maintainer",
-      "expires_at": "2026-05-29T19:16:15Z",
+      "expires_at": "2026-05-29T19:26:11Z",
       "acceptance_source": "ops/scripts/release_closeout_summary.py",
       "closure_action": "Rerun release evidence in one ordered closeout chain before release signoff.",
       "rollback_trigger": "Treat source tree coherence attention as a blocker if component fingerprints are missing.",
@@ -125,7 +125,7 @@
         "Regenerate release evidence in one closeout chain or document why fingerprint divergence is acceptable."
       ],
       "risk_owner": "runtime-maintainer",
-      "expires_at": "2026-05-29T19:16:15Z",
+      "expires_at": "2026-05-29T19:26:11Z",
       "acceptance_source": "ops/scripts/release_closeout_summary.py",
       "closure_action": "Rerun release evidence in one ordered closeout chain before release signoff.",
       "rollback_trigger": "Treat source tree coherence attention as a blocker if component fingerprints are missing.",
@@ -146,7 +146,7 @@
       "conditional_lane_effect": "operator_review_required",
       "learning_lane_effect": "blocks_learning_claim",
       "advisory_lifecycle_effect": "not_applicable",
-      "message": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=38",
+      "message": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=15",
       "required_evidence": [
         "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
         "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
@@ -249,7 +249,7 @@
       "conditional_lane_effect": "operator_review_required",
       "learning_lane_effect": "blocks_learning_claim",
       "advisory_lifecycle_effect": "not_applicable",
-      "message": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=38",
+      "message": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=15",
       "required_evidence": [
         "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
         "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",

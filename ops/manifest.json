@@ -197,7 +197,7 @@
     },
     {
       "path": "mk/mechanism.mk",
-      "sha256": "73136d19fcf65e63d209e5d45f80c6b8500944cdc0654966468726b3a655a93d",
+      "sha256": "00c60d2736ccb5512ea16d1447fc0029862e08087d66a3fb160d2357fc109fc1",
       "size_bytes": 28582
     },
     {
@@ -1727,7 +1727,7 @@
     },
     {
       "path": "ops/scripts/mechanism/goal_runtime_local_evidence_refresh.py",
-      "sha256": "af552f2a976d1e36db687c8cf5305e7cc023261f0e9eb6277f0d4ccb86a1e251",
+      "sha256": "e49486507d42ec1dbe3fae2a9117b3bb2b8258bd0254e415b79ebf728538d35a",
       "size_bytes": 14000
     },
     {
@@ -5422,7 +5422,7 @@
     },
     {
       "path": "tests/test_makefile_static_gates.py",
-      "sha256": "66a1b46b483f3c7cd532fb775267a96379c54d904ca800929f04a169834a6c63",
+      "sha256": "d9bf0ecab2a03235a40e9f96ef5cfe66c4bbef6f07474d3b71174652d44e37ce",
       "size_bytes": 186974
     },
     {

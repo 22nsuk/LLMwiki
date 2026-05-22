@@ -3054,7 +3054,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_OUT",
                 "tmp/goal-runtime-local-evidence-refresh.json",
             ),
-            ("GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_MAX_ITERATIONS", "4"),
+            ("GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_MAX_ITERATIONS", "6"),
             ("GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_TIMEOUT_SECONDS", "300"),
             (
                 "GOAL_RUNTIME_RUN_ADMISSION_OUT",

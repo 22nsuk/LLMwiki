@@ -17,7 +17,7 @@ from ops.scripts.output_runtime import display_path, sanitize_report_text
 DEFAULT_OUT = "tmp/goal-runtime-local-evidence-refresh.json"
 PRODUCER = "ops.scripts.goal_runtime_local_evidence_refresh"
 SOURCE_COMMAND = "make goal-runtime-local-evidence-refresh"
-DEFAULT_MAX_ITERATIONS = 4
+DEFAULT_MAX_ITERATIONS = 6
 DEFAULT_TIMEOUT_SECONDS = 300
 DEFAULT_TARGET_SEQUENCE = (
     "goal-runtime-refresh",
