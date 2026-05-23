@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-23T08:47:20Z",
+  "generated_at": "2026-05-23T08:49:52Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-23T08:47:20Z"
+    "checked_at": "2026-05-23T08:49:52Z"
   },
   "vault": ".",
   "status": "pass",

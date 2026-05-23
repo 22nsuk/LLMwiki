@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/rework-closures.schema.json",
   "artifact_kind": "rework_closures",
-  "generated_at": "2026-05-23T08:47:22Z",
+  "generated_at": "2026-05-23T08:49:53Z",
   "producer": "ops.scripts.closure_registry_envelope",
   "source_command": "python -m ops.scripts.closure_registry_envelope --vault . --registry rework",
   "source_revision": "unknown",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-23T08:47:22Z"
+    "checked_at": "2026-05-23T08:49:53Z"
   },
   "summary": {
     "closure_count": 3,

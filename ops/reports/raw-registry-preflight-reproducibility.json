@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/raw-registry-preflight-reproducibility.schema.json",
   "artifact_kind": "raw_registry_preflight_reproducibility",
-  "generated_at": "2026-05-23T08:28:14Z",
+  "generated_at": "2026-05-23T08:49:22Z",
   "producer": "ops.scripts.raw_registry_preflight",
   "source_command": "python -m ops.scripts.raw_registry_preflight --vault . --out ops/reports/raw-registry-preflight-report.json --reproducibility-out ops/reports/raw-registry-preflight-reproducibility.json",
   "source_revision": "unknown",
@@ -11,10 +11,10 @@
     "schema": "5c023ce6db63a9ff45325de2ec06a3ea2288f03d4300b92821813fdf92f78412",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "c86d9f8f701739da8e48160d9fb27a80a430b26179b22f8fe93ebccac1fea69c",
-    "stored_preflight_report": "67a46776287435d66a1fa0f7cc85d74254bdd5ed5d52ce1e4a26c2d6098cf84c",
+    "stored_preflight_report": "089cafee77ee8af52f9acca8ac6319882d10cd630e5293e979e70c9ffe4c8830",
     "compare_fields": "ffb7202bd54e074b5a14f33b47b821d61253a4c58852e12e6ed99773bc2239a4",
     "ignored_fields": "b033349b3b1191394de586fc9acc36568b3fc09a998e720ea9a798d838aafda3",
-    "live_preflight_report": "b62fa6506accdf58163c7babee6d281a2547983ab6366ff082d5a25f98489294"
+    "live_preflight_report": "8fadaed841d4bbc7abc24dfd5a116b95d1206bd4f3330937653f7063eff9a168"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -22,7 +22,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-23T08:28:14Z"
+    "checked_at": "2026-05-23T08:49:22Z"
   },
   "vault": ".",
   "policy": {
@@ -43,7 +43,7 @@
       "status": "ok"
     },
     "summary": {
-      "generated_at": "2026-05-23T08:28:13Z",
+      "generated_at": "2026-05-23T08:49:21Z",
       "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
       "input_fingerprints": {
         "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
@@ -113,7 +113,7 @@
   },
   "live_report": {
     "summary": {
-      "generated_at": "2026-05-23T08:28:13Z",
+      "generated_at": "2026-05-23T08:49:21Z",
       "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
       "input_fingerprints": {
         "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
