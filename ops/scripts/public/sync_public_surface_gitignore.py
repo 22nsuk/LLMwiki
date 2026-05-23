@@ -9,12 +9,14 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.public_surface_policy import (
         PUBLIC_GITIGNORE_END,
         PUBLIC_GITIGNORE_START,
+        PUBLIC_GITIGNORE_TEMPLATE,
         render_public_gitignore_block,
     )
 else:
     from .public_surface_policy import (
         PUBLIC_GITIGNORE_END,
         PUBLIC_GITIGNORE_START,
+        PUBLIC_GITIGNORE_TEMPLATE,
         render_public_gitignore_block,
     )
 
@@ -40,8 +42,8 @@ def gitignore_is_synced(gitignore_path: Path) -> bool:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Sync the public surface block in .gitignore.")
-    parser.add_argument("--gitignore", default=".gitignore")
+    parser = argparse.ArgumentParser(description="Sync the generated public mirror .gitignore template.")
+    parser.add_argument("--gitignore", default=PUBLIC_GITIGNORE_TEMPLATE)
     parser.add_argument("--check", action="store_true", help="Fail if .gitignore would be updated.")
     return parser
 

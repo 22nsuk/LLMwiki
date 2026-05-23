@@ -19,13 +19,9 @@ ARTIFACT_FRESHNESS_REPORT = "ops/reports/artifact-freshness-report.json"
 
 GENERATED_FILES = {
     ".gitignore",
-    "ops/manifest.json",
-    "ops/raw-registry.json",
     "ops/script-output-surfaces.json",
-    "ops/operator/artifact-relocation-audit.json",
-    "ops/operator/operator-release-summary.json",
 }
-GENERATED_PREFIXES = ("ops/reports/",)
+GENERATED_PREFIXES: tuple[str, ...] = ()
 PUBLIC_SOURCE_FILES = {
     ".editorconfig",
     ".gitattributes",
@@ -64,6 +60,8 @@ PRIVATE_OR_TRANSIENT_PREFIXES = (
     "build/",
     "dist/",
     "external-reports/",
+    "ops/operator/",
+    "ops/reports/",
     "raw/",
     "review/",
     "runs/",
@@ -71,12 +69,47 @@ PRIVATE_OR_TRANSIENT_PREFIXES = (
     "tmp/",
     "wiki/",
 )
-DURABLE_PRIVATE_IGNORED_STATUS_PREFIXES = ("external-reports/",)
-LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_STATUS_PATHS = (
-    "external-reports/report-reference-manifest.json",
+DURABLE_PRIVATE_IGNORED_STATUS_PREFIXES = (
+    "AGENTS.local.md",
+    "external-reports/",
+    "ops/manifest.json",
+    "ops/operator/",
+    "ops/raw-registry.json",
+    "ops/reports/",
+    "raw/",
+    "runs/",
+    "system/",
+    "wiki/",
 )
-LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_STATUS_PREFIXES = ("external-reports/archive/",)
-LOCAL_ONLY_PRIVATE_DEINDEX_PREFIXES = ("external-reports/",)
+LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_STATUS_PATHS = (
+    "AGENTS.local.md",
+    "external-reports/report-reference-manifest.json",
+    "ops/manifest.json",
+    "ops/raw-registry.json",
+)
+LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_STATUS_PREFIXES = (
+    "external-reports/",
+    "ops/operator/",
+    "ops/reports/",
+    "raw/",
+    "runs/",
+    "system/",
+    "wiki/",
+)
+LOCAL_ONLY_PRIVATE_DEINDEX_PATHS = (
+    "AGENTS.local.md",
+    "ops/manifest.json",
+    "ops/raw-registry.json",
+)
+LOCAL_ONLY_PRIVATE_DEINDEX_PREFIXES = (
+    "external-reports/",
+    "ops/operator/",
+    "ops/reports/",
+    "raw/",
+    "runs/",
+    "system/",
+    "wiki/",
+)
 LOCAL_ONLY_PRIVATE_DEINDEX_CATEGORY = "local_only_private_deindex"
 
 
@@ -151,7 +184,7 @@ def _is_local_only_retained_private_ignored_path(rel_path: str) -> bool:
     if rel_path in LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_STATUS_PATHS:
         return True
     return any(
-        rel_path.startswith(prefix)
+        rel_path == prefix.rstrip("/") or rel_path.startswith(prefix)
         for prefix in LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_STATUS_PREFIXES
     )
 
@@ -245,7 +278,10 @@ def classify_path(path: str) -> str:
 def _is_local_only_private_deindex(vault: Path, entry: StatusEntry, path: str) -> bool:
     if "D" not in entry.xy:
         return False
-    if not any(path.startswith(prefix) for prefix in LOCAL_ONLY_PRIVATE_DEINDEX_PREFIXES):
+    if path not in LOCAL_ONLY_PRIVATE_DEINDEX_PATHS and not any(
+        path == prefix.rstrip("/") or path.startswith(prefix)
+        for prefix in LOCAL_ONLY_PRIVATE_DEINDEX_PREFIXES
+    ):
         return False
     return (vault / path).exists()
 
@@ -460,6 +496,7 @@ def _base_report(vault: Path, entries: list[StatusEntry], preexisting_paths: set
         "local_only_retained_private_ignored_status_prefixes": list(
             LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_STATUS_PREFIXES
         ),
+        "local_only_private_deindex_paths": list(LOCAL_ONLY_PRIVATE_DEINDEX_PATHS),
         "local_only_private_deindex_prefixes": list(LOCAL_ONLY_PRIVATE_DEINDEX_PREFIXES),
     }
 
@@ -719,7 +756,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--only-generated-canonical",
         action="store_true",
-        help="Refuse to commit anything except generated canonical evidence.",
+        help="Refuse to commit anything except tracked generated source contracts.",
     )
     return parser.parse_args(argv)
 

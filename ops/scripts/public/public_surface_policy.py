@@ -34,16 +34,13 @@ PUBLIC_EXCLUDED_FILES = (
     "ops/raw-registry.json",
 )
 
-PUBLIC_INCLUDED_REPORT_FILES = (
-    "ops/reports/goal-worktree-guard.json",
-    "ops/reports/release-workflow-order-guard.json",
-    "ops/reports/workflow-dependency-planner.json",
-)
+PUBLIC_INCLUDED_REPORT_FILES: tuple[str, ...] = ()
 
 PUBLIC_EXCLUDED_PREFIXES = (
     ".obsidian/",
     ".venv/",
     "external-reports/",
+    "ops/operator/",
     "ops/reports/",
     "raw/",
     "runs/",
@@ -66,6 +63,7 @@ PUBLIC_EXCLUDED_SEGMENTS = (
 
 PUBLIC_GITIGNORE_START = "# >>> public-surface-policy >>>"
 PUBLIC_GITIGNORE_END = "# <<< public-surface-policy <<<"
+PUBLIC_GITIGNORE_TEMPLATE = "ops/templates/public-mirror.gitignore"
 
 
 def render_public_gitignore_block() -> str:
@@ -107,9 +105,9 @@ def render_public_gitignore_block() -> str:
         "AGENTS.local.md",
         "ops/manifest.json",
         "ops/raw-registry.json",
+        "ops/operator/*",
         "ops/reports/*",
-        "# Policy-approved durable generated evidence under ops/reports.",
-        *[f"!{path}" for path in PUBLIC_INCLUDED_REPORT_FILES],
+        "# Generated ops/operator and ops/reports evidence is local-only.",
         PUBLIC_GITIGNORE_END,
     ]
     return "\n".join(lines) + "\n"

@@ -76,6 +76,11 @@ class ExportPublicRepoTests(unittest.TestCase):
             (vault / "ops" / "reports" / "goal-worktree-guard.json").write_text("{}", encoding="utf-8")
             (vault / "ops" / "reports" / "release-workflow-order-guard.json").write_text("{}", encoding="utf-8")
             (vault / "ops" / "reports" / "workflow-dependency-planner.json").write_text("{}", encoding="utf-8")
+            (vault / "ops" / "operator").mkdir()
+            (vault / "ops" / "operator" / "operator-release-summary.json").write_text(
+                "{}",
+                encoding="utf-8",
+            )
 
             public_dir = Path(temp_dir) / "public"
             manifest = export_public_repo(vault, public_dir)
@@ -105,18 +110,12 @@ class ExportPublicRepoTests(unittest.TestCase):
             self.assertNotIn("runs/README.md", manifest["files"])
             self.assertNotIn("AGENTS.local.md", manifest["files"])
             self.assertNotIn("ops/raw-registry.json", manifest["files"])
+            self.assertNotIn("ops/operator/operator-release-summary.json", manifest["files"])
             self.assertNotIn("ops/reports/artifact.json", manifest["files"])
-            self.assertIn("ops/reports/goal-worktree-guard.json", manifest["files"])
-            self.assertIn("ops/reports/release-workflow-order-guard.json", manifest["files"])
-            self.assertIn("ops/reports/workflow-dependency-planner.json", manifest["files"])
-            self.assertEqual(
-                set(manifest["included_report_files"]),
-                {
-                    "ops/reports/goal-worktree-guard.json",
-                    "ops/reports/release-workflow-order-guard.json",
-                    "ops/reports/workflow-dependency-planner.json",
-                },
-            )
+            self.assertNotIn("ops/reports/goal-worktree-guard.json", manifest["files"])
+            self.assertNotIn("ops/reports/release-workflow-order-guard.json", manifest["files"])
+            self.assertNotIn("ops/reports/workflow-dependency-planner.json", manifest["files"])
+            self.assertEqual(manifest["included_report_files"], [])
             self.assertEqual(manifest["source_vault"], ".")
             self.assertEqual(manifest["output_dir"], ".")
             exported_file_count = len([path for path in public_dir.rglob("*") if path.is_file()])
@@ -149,7 +148,8 @@ class ExportPublicRepoTests(unittest.TestCase):
                 ".gitignore": "tmp/\n",
                 ".gitattributes": "* text=auto\n",
                 "ops/scripts/example.py": "print('ok')\n",
-                "ops/templates/codebase-memory-mcp.cbmignore": "raw/\nops/reports/\n.codebase-memory/\n",
+                "ops/templates/codebase-memory-mcp.cbmignore": "raw/\nops/operator/\nops/reports/\n.codebase-memory/\n",
+                "ops/operator/operator-release-summary.json": "{}\n",
                 "ops/reports/goal-worktree-guard.json": "{}\n",
                 "ops/reports/release-workflow-order-guard.json": "{}\n",
                 "ops/reports/workflow-dependency-planner.json": "{}\n",
@@ -173,6 +173,7 @@ class ExportPublicRepoTests(unittest.TestCase):
             self.assertIn(".cbmignore", manifest["files"])
             self.assertIn("docs/codebase-memory-mcp.md", manifest["files"])
             self.assertIn("ops/templates/codebase-memory-mcp.cbmignore", manifest["files"])
+            self.assertNotIn("ops/operator/operator-release-summary.json", manifest["files"])
             self.assertNotIn("ops/reports/goal-worktree-guard.json", manifest["files"])
             self.assertNotIn("ops/reports/release-workflow-order-guard.json", manifest["files"])
             self.assertNotIn("ops/reports/workflow-dependency-planner.json", manifest["files"])

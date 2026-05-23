@@ -1,0 +1,41 @@
+# >>> public-surface-policy >>>
+# Generated from ops.scripts.public_surface_policy.
+# Root public repos should track only this allowlisted surface.
+*
+!/.gitattributes
+!/.gitignore
+!/.codex/
+!/.codex/agents/
+!/.codex/agents/**
+!/.github/
+!/.github/**
+!/docs/
+!/docs/**
+!/mk/
+!/mk/**
+!/AGENTS.md
+!/ARCHITECTURE.md
+!/CONTRIBUTING.md
+!/LICENSE
+!/Makefile
+!/pyproject.toml
+!/README.md
+!/SECURITY.md
+!/THIRD_PARTY_NOTICES.md
+!/ops/
+!/ops/**
+!/pytest.ini
+!/requirements-dev.txt
+!/requirements.txt
+!/tests/
+!/tests/**
+!/tools/
+!/tools/**
+!/uv.lock
+AGENTS.local.md
+ops/manifest.json
+ops/raw-registry.json
+ops/operator/*
+ops/reports/*
+# Generated ops/operator and ops/reports evidence is local-only.
+# <<< public-surface-policy <<<

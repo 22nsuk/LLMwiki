@@ -18,6 +18,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         PUBLIC_INCLUDED_REPORT_FILES,
         PUBLIC_INCLUDE_FILES,
         PUBLIC_INCLUDE_PREFIXES,
+        render_public_gitignore_block,
     )
 else:
     from ops.scripts.filesystem_runtime import atomic_write_json
@@ -28,6 +29,7 @@ else:
         PUBLIC_INCLUDED_REPORT_FILES,
         PUBLIC_INCLUDE_FILES,
         PUBLIC_INCLUDE_PREFIXES,
+        render_public_gitignore_block,
     )
 
 
@@ -110,7 +112,10 @@ def export_public_repo(vault: Path, out_dir: Path, *, clean: bool = True) -> dic
             continue
         destination = out_dir / rel_path
         destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, destination)
+        if rel_path == ".gitignore":
+            destination.write_text(render_public_gitignore_block(), encoding="utf-8")
+        else:
+            shutil.copy2(source, destination)
         copied.append(rel_path)
 
     manifest = {

@@ -1,48 +1,10 @@
-# This file intentionally mirrors the public surface policy used by
-# ops.scripts.export_public_repo so the repo root can be published directly.
-# >>> public-surface-policy >>>
-# Generated from ops.scripts.public_surface_policy.
-# Root public repos should track only this allowlisted surface.
-*
-!/.gitattributes
-!/.gitignore
-!/.codex/
-!/.codex/agents/
-!/.codex/agents/**
-!/.github/
-!/.github/**
-!/docs/
-!/docs/**
-!/mk/
-!/mk/**
-!/AGENTS.md
-!/ARCHITECTURE.md
-!/CONTRIBUTING.md
-!/LICENSE
-!/Makefile
-!/pyproject.toml
-!/README.md
-!/SECURITY.md
-!/THIRD_PARTY_NOTICES.md
-!/ops/
-!/ops/**
-!/pytest.ini
-!/requirements-dev.txt
-!/requirements.txt
-!/tests/
-!/tests/**
-!/tools/
-!/tools/**
-!/uv.lock
-AGENTS.local.md
-ops/manifest.json
-ops/raw-registry.json
-ops/reports/*
-# Policy-approved durable generated evidence under ops/reports.
-!ops/reports/goal-worktree-guard.json
-!ops/reports/release-workflow-order-guard.json
-!ops/reports/workflow-dependency-planner.json
-# <<< public-surface-policy <<<
+# Full local vault local-only policy.
+#
+# Public mirror selection is intentionally separate from this file. The export
+# policy lives in ops/scripts/public/public_surface_policy.py, and the public
+# mirror .gitignore template lives in ops/templates/public-mirror.gitignore.
+# Paths ignored here are operator-local state. If one of these paths is tracked,
+# deindex it with git rm --cached while keeping the local file in place.
 
 # Local Python environments and caches inside public directories
 .venv/
@@ -53,6 +15,19 @@ __pycache__/
 # Temporary local work artifacts
 tmp/
 tmp_*.txt
+
+# Local-only full-vault and generated evidence surfaces
+AGENTS.local.md
+external-reports/
+raw/
+wiki/
+system/
+runs/
+review/
+ops/manifest.json
+ops/raw-registry.json
+ops/reports/
+ops/operator/
 
 # Ephemeral test run artifacts: keep pytest outputs under tmp/test-runs/<run-id>/.
 pytest_target.log
@@ -81,6 +56,9 @@ Thumbs.db
 .ruff_cache/
 .cache/
 .codebase-memory/
+.ouroboros/
+.ouroboros_eval_artifact.md
+.serena/
 .coverage
 .coverage.*
 build/

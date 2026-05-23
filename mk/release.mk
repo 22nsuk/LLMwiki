@@ -475,7 +475,7 @@ release-source-ready:
 	$(MAKE) release-source-ready-post-verify
 
 release-sealed-dirty-recovery:
-	$(PYTHON) -m ops.scripts.release_source_ready_commit --vault "$(VAULT)" --out "$(RELEASE_SOURCE_READY_COMMIT_OUT)" --message "release: recover sealed generated evidence" --only-generated-canonical
+	$(PYTHON) -m ops.scripts.release_source_ready_commit --vault "$(VAULT)" --out "$(RELEASE_SOURCE_READY_COMMIT_OUT)" --message "release: recover tracked generated contracts" --only-generated-canonical
 	$(MAKE) release-check-all-surfaces
 	$(MAKE) release-evidence-closeout-sealed
 

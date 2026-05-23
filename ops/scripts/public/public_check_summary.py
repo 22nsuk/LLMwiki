@@ -54,6 +54,7 @@ PRIVATE_EXPORT_PATTERNS = (
     "external-reports/",
     "AGENTS.local.md",
     "ops/manifest.json",
+    "ops/operator/",
     "ops/raw-registry.json",
     "ops/reports/",
 )

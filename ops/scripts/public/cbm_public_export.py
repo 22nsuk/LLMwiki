@@ -26,10 +26,12 @@ CBM_FORBIDDEN_PREFIXES = (
     "system/",
     "runs/",
     "external-reports/",
+    "ops/operator/",
     "ops/reports/",
 )
 CBM_FORBIDDEN_SEGMENTS = (".codebase-memory",)
 CBM_PRUNED_PUBLIC_EXPORT_PATHS = (
+    "ops/operator",
     "ops/reports",
     PUBLIC_MANIFEST_NAME,
 )

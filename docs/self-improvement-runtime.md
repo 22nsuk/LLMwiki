@@ -13,9 +13,10 @@ stay bounded, evidence-backed, and reversible.
 
 ## Goal Runtime
 
-Goal runtime hot state lives under `runs/goal-$(GOAL_RUN_ID)/state/` so
-heartbeat and resume updates do not constantly dirty tracked `ops/reports/`.
-Tracked snapshots are published only by explicit targets.
+Goal runtime hot state lives under `runs/goal-$(GOAL_RUN_ID)/state/`.
+Both `runs/` and `ops/reports/` are local-only evidence surfaces, so heartbeat,
+resume, and report refreshes do not dirty public source after those surfaces are
+removed from the Git index.
 
 Useful targets:
 
@@ -39,7 +40,7 @@ make test-artifact-finalization
 make goal-runtime-closeout
 ```
 
-This order keeps schema samples, reusable release smoke, checked-in generated
+This order keeps schema samples, reusable release smoke, local generated
 artifact finalization, and goal closeout from drifting apart.
 
 ## Promotion Principles

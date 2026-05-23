@@ -1604,7 +1604,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             ],
         )
         self.assertIn("--only-generated-canonical", sealed_dirty_recovery_block)
-        self.assertIn('release: recover sealed generated evidence', sealed_dirty_recovery_block)
+        self.assertIn('release: recover tracked generated contracts', sealed_dirty_recovery_block)
         self.assertIn("$(MAKE) release-check-all-surfaces", sealed_dirty_recovery_block)
         self.assertIn("$(MAKE) release-evidence-closeout-sealed", sealed_dirty_recovery_block)
         self.assertNotIn("$(MAKE) release-converge", sealed_dirty_recovery_block)
@@ -3900,6 +3900,9 @@ class MakefileStaticGateTests(unittest.TestCase):
         _assert_assignment_exists(
             self, text, "PUBLIC_CHECK_SUMMARY_REUSE_FROM", "$(PUBLIC_CHECK_SUMMARY_OUT)"
         )
+        _assert_assignment_exists(
+            self, text, "PUBLIC_GITIGNORE_TEMPLATE", "ops/templates/public-mirror.gitignore"
+        )
         self.assertIn('--public-out "$(PUBLIC_OUT)"', summary_block)
         self.assertIn('--public-python "$(PUBLIC_PYTHON)"', summary_block)
         self.assertIn('--ruff-targets "$(RUFF_TARGETS)"', summary_block)
@@ -3915,6 +3918,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn('--reuse-from "$(PUBLIC_CHECK_SUMMARY_REUSE_FROM)"', summary_current_check_block)
         self.assertNotIn("ops.scripts.canonical_artifact_promote", summary_current_check_block)
         self.assertIn("--check", sync_check_block)
+        self.assertIn('--gitignore "$(PUBLIC_GITIGNORE_TEMPLATE)"', sync_check_block)
         public_targets = (
             "public-check",
             "public-check-serial",

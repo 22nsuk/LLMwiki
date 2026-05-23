@@ -29,6 +29,7 @@ export excludes:
 - `system/`
 - `runs/`
 - `external-reports/`
+- `ops/operator/`
 - `ops/reports/`
 - `.codebase-memory`
 

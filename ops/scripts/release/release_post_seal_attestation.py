@@ -33,6 +33,38 @@ DEFAULT_LEARNING_CONFIRMED_EVIDENCE_COHORT = "ops/reports/learning-confirmed-evi
 DEFAULT_LEARNING_DELTA_SCOREBOARD = "ops/reports/learning-delta-scoreboard.json"
 DEFAULT_PUBLIC_CHECK_SUMMARY = "ops/reports/public-check-summary.json"
 ARCHIVE_SELF_DESCRIPTION_PATH = "release-archive-self-description.json"
+_LINKED_REPORT_BINDINGS: dict[str, tuple[str, str, str]] = {
+    "release_closeout_batch_manifest": (
+        DEFAULT_BATCH_MANIFEST,
+        "reports.release_closeout_batch_manifest.sha256",
+        "release_closeout_batch_manifest_sha256",
+    ),
+    "release_evidence_closeout_self_check": (
+        DEFAULT_SELF_CHECK,
+        "reports.release_evidence_closeout_self_check.sha256",
+        "release_evidence_closeout_self_check_sha256",
+    ),
+    "operator_release_summary": (
+        DEFAULT_OPERATOR_SUMMARY,
+        "reports.operator_release_summary.sha256",
+        "operator_release_summary_sha256",
+    ),
+    "learning_claim_evidence_bundle": (
+        DEFAULT_LEARNING_CLAIM_EVIDENCE_BUNDLE,
+        "reports.learning_claim_evidence_bundle.sha256",
+        "learning_claim_evidence_bundle_sha256",
+    ),
+    "learning_confirmed_evidence_cohort": (
+        DEFAULT_LEARNING_CONFIRMED_EVIDENCE_COHORT,
+        "reports.learning_confirmed_evidence_cohort.sha256",
+        "learning_confirmed_evidence_cohort_sha256",
+    ),
+    "learning_delta_scoreboard": (
+        DEFAULT_LEARNING_DELTA_SCOREBOARD,
+        "reports.learning_delta_scoreboard.sha256",
+        "learning_delta_scoreboard_sha256",
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -252,55 +284,23 @@ def _verification(
 def _report_binding_sources(
     reports: dict[str, dict[str, Any]],
 ) -> dict[str, tuple[str, str]]:
-    return {
-        "ops/reports/release-closeout-batch-manifest.json": (
-            "reports.release_closeout_batch_manifest.sha256",
-            str(reports["release_closeout_batch_manifest"].get("sha256", "")),
-        ),
-        "ops/reports/release-evidence-closeout-self-check.json": (
-            "reports.release_evidence_closeout_self_check.sha256",
-            str(reports["release_evidence_closeout_self_check"].get("sha256", "")),
-        ),
-        "ops/operator/operator-release-summary.json": (
-            "reports.operator_release_summary.sha256",
-            str(reports["operator_release_summary"].get("sha256", "")),
-        ),
-        "ops/reports/learning-claim-evidence-bundle.json": (
-            "reports.learning_claim_evidence_bundle.sha256",
-            str(reports["learning_claim_evidence_bundle"].get("sha256", "")),
-        ),
-        "ops/reports/learning-confirmed-evidence-cohort.json": (
-            "reports.learning_confirmed_evidence_cohort.sha256",
-            str(reports["learning_confirmed_evidence_cohort"].get("sha256", "")),
-        ),
-        "ops/reports/learning-delta-scoreboard.json": (
-            "reports.learning_delta_scoreboard.sha256",
-            str(reports["learning_delta_scoreboard"].get("sha256", "")),
-        ),
-    }
+    sources: dict[str, tuple[str, str]] = {}
+    for report_key, (canonical_path, source_name, _binding_key) in _LINKED_REPORT_BINDINGS.items():
+        report = reports[report_key]
+        if str(report.get("path", "")).strip() == canonical_path:
+            sources[canonical_path] = (source_name, str(report.get("sha256", "")))
+        else:
+            sources[canonical_path] = ("current_file", "")
+    return sources
 
 
-def _binding_digests(bindings: dict[str, Any]) -> dict[str, str]:
-    return {
-        "ops/reports/release-closeout-batch-manifest.json": str(
-            bindings.get("release_closeout_batch_manifest_sha256", "")
-        ),
-        "ops/reports/release-evidence-closeout-self-check.json": str(
-            bindings.get("release_evidence_closeout_self_check_sha256", "")
-        ),
-        "ops/operator/operator-release-summary.json": str(
-            bindings.get("operator_release_summary_sha256", "")
-        ),
-        "ops/reports/learning-claim-evidence-bundle.json": str(
-            bindings.get("learning_claim_evidence_bundle_sha256", "")
-        ),
-        "ops/reports/learning-confirmed-evidence-cohort.json": str(
-            bindings.get("learning_confirmed_evidence_cohort_sha256", "")
-        ),
-        "ops/reports/learning-delta-scoreboard.json": str(
-            bindings.get("learning_delta_scoreboard_sha256", "")
-        ),
-    }
+def _binding_digests(bindings: dict[str, Any], reports: dict[str, dict[str, Any]]) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for report_key, (canonical_path, _source_name, binding_key) in _LINKED_REPORT_BINDINGS.items():
+        report = reports[report_key]
+        if str(report.get("path", "")).strip() == canonical_path:
+            result[canonical_path] = str(bindings.get(binding_key, ""))
+    return result
 
 
 def _source_zip_linkage_payload(source_zip_path: Path) -> tuple[dict[str, Any], str, str]:
@@ -366,7 +366,7 @@ def _pre_seal_post_seal_linkage(
     source_zip_path_text = str(source_zip.get("path", "")).strip()
     source_zip_path = _resolve(vault, source_zip_path_text) if source_zip_path_text else Path()
     report_binding_by_path = _report_binding_sources(reports)
-    binding_by_path = _binding_digests(bindings)
+    binding_by_path = _binding_digests(bindings, reports)
     required_linked_paths = sorted(report_binding_by_path)
     self_description, self_description_status, self_description_error = (
         _source_zip_linkage_payload(source_zip_path)

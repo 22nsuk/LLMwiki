@@ -42,7 +42,8 @@ promote to the durable path.
 
 General rule:
 
-- durable evidence lives under policy-approved `ops/reports/` paths;
+- canonical evidence is written to local-only `ops/reports/` or `ops/operator/`
+  paths and should not be tracked as public source;
 - check-only or advisory scratch output lives under `tmp/`;
 - release packages, source-package extracts, and audit packs live under `build/`.
 

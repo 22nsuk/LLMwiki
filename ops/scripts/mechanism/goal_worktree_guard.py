@@ -22,11 +22,33 @@ SCHEMA_PATH = "ops/schemas/goal-worktree-guard.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.goal_worktree_guard --vault ."
 PUBLIC_SOURCE_LAYOUT_PATHS = ("ops", "tests", "mk", "docs", "README.md", "Makefile")
 REQUESTED_MODES = ("auto", "git", "zip")
-DURABLE_PRIVATE_IGNORED_PREFIXES = ("external-reports/",)
-LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_PATHS = (
-    "external-reports/report-reference-manifest.json",
+DURABLE_PRIVATE_IGNORED_PREFIXES = (
+    "AGENTS.local.md",
+    "external-reports/",
+    "ops/manifest.json",
+    "ops/operator/",
+    "ops/raw-registry.json",
+    "ops/reports/",
+    "raw/",
+    "runs/",
+    "system/",
+    "wiki/",
 )
-LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_PREFIXES = ("external-reports/archive/",)
+LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_PATHS = (
+    "AGENTS.local.md",
+    "external-reports/report-reference-manifest.json",
+    "ops/manifest.json",
+    "ops/raw-registry.json",
+)
+LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_PREFIXES = (
+    "external-reports/",
+    "ops/operator/",
+    "ops/reports/",
+    "raw/",
+    "runs/",
+    "system/",
+    "wiki/",
+)
 
 
 @dataclass(frozen=True)
@@ -172,7 +194,7 @@ def _is_local_only_retained_private_ignored_path(rel_path: str) -> bool:
     if rel_path in LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_PATHS:
         return True
     return any(
-        rel_path.startswith(prefix)
+        rel_path == prefix.rstrip("/") or rel_path.startswith(prefix)
         for prefix in LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_PREFIXES
     )
 

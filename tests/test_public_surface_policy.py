@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,6 +11,7 @@ from ops.scripts.public_surface_policy import (
     PUBLIC_EXCLUDED_SEGMENTS,
     PUBLIC_GITIGNORE_END,
     PUBLIC_GITIGNORE_START,
+    PUBLIC_GITIGNORE_TEMPLATE,
     PUBLIC_INCLUDED_REPORT_FILES,
     render_public_gitignore_block,
 )
@@ -20,14 +20,29 @@ pytestmark = pytest.mark.public
 
 
 class PublicSurfacePolicyTests(unittest.TestCase):
-    def test_gitignore_public_block_matches_policy(self) -> None:
-        gitignore_text = Path(".gitignore").read_text(encoding="utf-8")
+    def test_public_mirror_gitignore_template_matches_policy(self) -> None:
+        gitignore_text = Path(PUBLIC_GITIGNORE_TEMPLATE).read_text(encoding="utf-8")
         start = gitignore_text.index(PUBLIC_GITIGNORE_START)
         end = gitignore_text.index(PUBLIC_GITIGNORE_END) + len(PUBLIC_GITIGNORE_END)
         block = gitignore_text[start:end] + "\n"
         self.assertEqual(block, render_public_gitignore_block())
 
-    def test_root_gitignore_and_export_match_for_sample_vault(self) -> None:
+    def test_root_gitignore_is_full_vault_hygiene_not_public_policy(self) -> None:
+        gitignore_text = Path(".gitignore").read_text(encoding="utf-8")
+
+        if Path("PUBLIC-EXPORT-MANIFEST.json").exists():
+            self.assertIn(PUBLIC_GITIGNORE_START, gitignore_text)
+            self.assertIn("ops/reports/*", gitignore_text)
+            self.assertIn("ops/operator/*", gitignore_text)
+            return
+
+        self.assertNotIn(PUBLIC_GITIGNORE_START, gitignore_text)
+        self.assertIn("ops/reports/", gitignore_text)
+        self.assertIn("ops/operator/", gitignore_text)
+        self.assertIn("raw/", gitignore_text)
+        self.assertIn("external-reports/", gitignore_text)
+
+    def test_public_export_uses_policy_and_generated_gitignore_for_sample_vault(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -63,6 +78,7 @@ class PublicSurfacePolicyTests(unittest.TestCase):
                 "ops/README.md": "# ops\n",
                 "ops/manifest.json": "{}\n",
                 "ops/raw-registry.json": "{}\n",
+                "ops/operator/operator-release-summary.json": "{}\n",
                 "ops/reports/example.json": "{}\n",
                 "ops/reports/goal-worktree-guard.json": "{}\n",
                 "ops/reports/release-workflow-order-guard.json": "{}\n",
@@ -73,6 +89,7 @@ class PublicSurfacePolicyTests(unittest.TestCase):
                 "runs/README.md": "# runs\n",
                 "wiki/.gitkeep": "",
                 "system/system-index.md": "# system\n",
+                "external-reports/active-review.md": "# local review\n",
                 ".obsidian/app.json": "{}\n",
                 "tmp/public.txt": "tmp\n",
             }
@@ -82,33 +99,24 @@ class PublicSurfacePolicyTests(unittest.TestCase):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(content, encoding="utf-8")
 
-            subprocess.run(["git", "init", "-q"], cwd=vault, check=True)
-
-            status = subprocess.run(
-                ["git", "status", "--short", "--untracked-files=all"],
-                cwd=vault,
-                text=True,
-                capture_output=True,
-                check=True,
-            )
-            tracked = {
-                line[3:]
-                for line in status.stdout.splitlines()
-                if line.startswith("?? ")
-            }
-
             export_dir = Path(temp_dir) / "public-repo"
             manifest = export_public_repo(vault, export_dir)
             exported = set(manifest["files"])
+            expected_exported = {path for path in sample_files if should_export_public(path)}
 
-            self.assertEqual(tracked, exported)
-            self.assertTrue(set(PUBLIC_INCLUDED_REPORT_FILES).issubset(exported))
+            self.assertEqual(exported, expected_exported)
+            self.assertEqual(PUBLIC_INCLUDED_REPORT_FILES, ())
             self.assertIn("docs/README.md", exported)
-            self.assertIn("docs/development.md", tracked)
+            self.assertIn("docs/development.md", exported)
             self.assertIn("ops/templates/codebase-memory-mcp.cbmignore", exported)
+            self.assertNotIn("ops/operator/operator-release-summary.json", exported)
             self.assertNotIn("ops/reports/example.json", exported)
+            self.assertNotIn("ops/reports/goal-worktree-guard.json", exported)
+            self.assertNotIn("ops/reports/release-workflow-order-guard.json", exported)
+            self.assertNotIn("ops/reports/workflow-dependency-planner.json", exported)
+            self.assertNotIn("external-reports/active-review.md", exported)
             self.assertNotIn("ops/.codebase-memory/graph.db.zst", exported)
-            self.assertNotIn("ops/.codebase-memory/graph.db.zst", tracked)
+            self.assertEqual((export_dir / ".gitignore").read_text(encoding="utf-8"), render_public_gitignore_block())
 
     def test_codebase_memory_graph_artifacts_are_not_public_surface(self) -> None:
         self.assertIn(".codebase-memory", PUBLIC_EXCLUDED_SEGMENTS)

@@ -6,6 +6,7 @@ wiki/
 system/
 runs/
 external-reports/
+ops/operator/
 ops/reports/
 
 build/

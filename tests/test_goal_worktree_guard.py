@@ -38,13 +38,18 @@ class FakeGit:
 
     def __call__(self, args):
         key = tuple(args)
-        if key == (
+        if key[:5] == (
             "status",
             "--porcelain=v1",
             "--ignored=matching",
             "--untracked-files=all",
             "--",
-            "external-reports",
+        ):
+            return self.responses.get(("ignored-status",), GitCommandResult(0, "", ""))
+        if key == (
+            "status",
+            "--porcelain=v1",
+            "--untracked-files=normal",
         ):
             return self.responses.get(key, GitCommandResult(0, "", ""))
         return self.responses.get(key, GitCommandResult(1, "", "unexpected git command"))
@@ -176,7 +181,7 @@ class GoalWorktreeGuardTests(unittest.TestCase):
         self.assertEqual(report["blockers"], [])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
-    def test_ignored_durable_external_reports_block_promotion_without_path_leak(self) -> None:
+    def test_ignored_local_only_surfaces_do_not_block_promotion_or_leak_paths(self) -> None:
         fake_git = FakeGit(
             {
                 ("--version",): GitCommandResult(0, "git version 2.0", ""),
@@ -189,14 +194,17 @@ class GoalWorktreeGuardTests(unittest.TestCase):
                     "",
                     "",
                 ),
-                (
-                    "status",
-                    "--porcelain=v1",
-                    "--ignored=matching",
-                    "--untracked-files=all",
-                    "--",
-                    "external-reports",
-                ): GitCommandResult(0, "!! external-reports/private-new-review.md", ""),
+                ("ignored-status",): GitCommandResult(
+                    0,
+                    "\n".join(
+                        [
+                            "!! external-reports/private-new-review.md",
+                            "!! ops/reports/goal-worktree-guard.json",
+                            "!! raw/source.pdf",
+                        ]
+                    ),
+                    "",
+                ),
             }
         )
 
@@ -210,16 +218,14 @@ class GoalWorktreeGuardTests(unittest.TestCase):
         )
         serialized = json.dumps(report)
 
-        self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["status"], "pass")
         self.assertEqual(report["decisions"]["can_execute_goal_runtime"], True)
-        self.assertEqual(report["decisions"]["can_promote_result"], False)
-        self.assertEqual(
-            report["decisions"]["promotion_blockers"],
-            ["git_durable_private_ignored_dirty"],
-        )
-        self.assertEqual(report["git"]["durable_private_ignored_entry_count"], 1)
-        self.assertEqual(report["git"]["durable_private_ignored_status_codes"], {"!!": 1})
+        self.assertEqual(report["decisions"]["can_promote_result"], True)
+        self.assertEqual(report["decisions"]["promotion_blockers"], [])
+        self.assertEqual(report["git"]["durable_private_ignored_entry_count"], 0)
+        self.assertEqual(report["git"]["durable_private_ignored_status_codes"], {})
         self.assertNotIn("private-new-review.md", serialized)
+        self.assertNotIn("source.pdf", serialized)
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_ignored_external_report_archive_is_local_only_retained_evidence(self) -> None:
@@ -235,14 +241,7 @@ class GoalWorktreeGuardTests(unittest.TestCase):
                     "",
                     "",
                 ),
-                (
-                    "status",
-                    "--porcelain=v1",
-                    "--ignored=matching",
-                    "--untracked-files=all",
-                    "--",
-                    "external-reports",
-                ): GitCommandResult(
+                ("ignored-status",): GitCommandResult(
                     0,
                     "\n".join(
                         [

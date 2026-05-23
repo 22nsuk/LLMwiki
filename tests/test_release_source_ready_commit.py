@@ -9,6 +9,24 @@ import unittest
 from ops.scripts.release.release_source_ready_commit import classify_path, main
 
 
+LOCAL_GITIGNORE_TEXT = "\n".join(
+    [
+        "tmp/",
+        "AGENTS.local.md",
+        "external-reports/",
+        "ops/manifest.json",
+        "ops/operator/",
+        "ops/raw-registry.json",
+        "ops/reports/",
+        "raw/",
+        "runs/",
+        "system/",
+        "wiki/",
+        "",
+    ]
+)
+
+
 def _git(vault: Path, *args: str) -> str:
     result = subprocess.run(
         ["git", *args],
@@ -28,8 +46,10 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         _git(self.vault, "init", "-q")
         _git(self.vault, "config", "user.email", "release-source-ready@example.test")
         _git(self.vault, "config", "user.name", "Release Source Ready Test")
-        (self.vault / ".gitignore").write_text("tmp/\n", encoding="utf-8")
+        (self.vault / ".gitignore").write_text(LOCAL_GITIGNORE_TEXT, encoding="utf-8")
         (self.vault / "README.md").write_text("# Test\n", encoding="utf-8")
+        (self.vault / "ops").mkdir()
+        (self.vault / "ops" / "script-output-surfaces.json").write_text("{}\n", encoding="utf-8")
         (self.vault / "ops" / "reports").mkdir(parents=True)
         (self.vault / "ops" / "reports" / "release-smoke-report.json").write_text(
             "{}\n", encoding="utf-8"
@@ -47,12 +67,12 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertEqual(classify_path("AGENTS.local.md"), "local_source_contract")
         self.assertEqual(classify_path("docs"), "public_source")
         self.assertEqual(classify_path("docs/development.md"), "public_source")
-        self.assertEqual(classify_path("ops/operator/operator-release-summary.json"), "generated_canonical")
+        self.assertEqual(classify_path("ops/operator/operator-release-summary.json"), "unexpected")
         self.assertEqual(classify_path("github/workflows/ci.yml"), "unexpected")
 
-    def test_commits_public_source_and_generated_evidence_together(self) -> None:
+    def test_commits_public_source_and_tracked_generated_contract_together(self) -> None:
         (self.vault / "README.md").write_text("# Test\n\nChanged.\n", encoding="utf-8")
-        (self.vault / "ops" / "reports" / "release-smoke-report.json").write_text(
+        (self.vault / "ops" / "script-output-surfaces.json").write_text(
             '{"status": "pass"}\n', encoding="utf-8"
         )
         (self.vault / "ops" / "scripts").mkdir(parents=True)
@@ -75,7 +95,7 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertEqual(_git(self.vault, "status", "--short"), "")
         changed_paths = _git(self.vault, "show", "--name-only", "--format=", "HEAD").splitlines()
         self.assertIn("README.md", changed_paths)
-        self.assertIn("ops/reports/release-smoke-report.json", changed_paths)
+        self.assertIn("ops/script-output-surfaces.json", changed_paths)
         self.assertIn("ops/scripts/new_helper.py", changed_paths)
         report = json.loads(
             (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
@@ -83,23 +103,10 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertEqual(report["status"], "committed")
         categories = {entry["path"]: entry["category"] for entry in report["entries"]}
         self.assertEqual(categories["README.md"], "public_source")
-        self.assertEqual(
-            categories["ops/reports/release-smoke-report.json"], "generated_canonical"
-        )
+        self.assertEqual(categories["ops/script-output-surfaces.json"], "generated_canonical")
 
-    def test_only_generated_canonical_commits_narrow_sealed_recovery_evidence(self) -> None:
-        (self.vault / "ops" / "operator").mkdir(parents=True)
-        (self.vault / "ops" / "operator" / "artifact-relocation-audit.json").write_text(
-            "{}\n",
-            encoding="utf-8",
-        )
-        _git(self.vault, "add", "ops/operator/artifact-relocation-audit.json")
-        _git(self.vault, "commit", "-m", "seed operator reports")
-        (self.vault / "ops" / "operator" / "operator-release-summary.json").write_text(
-            '{"status": "pass"}\n',
-            encoding="utf-8",
-        )
-        (self.vault / "ops" / "reports" / "release-smoke-report.json").write_text(
+    def test_only_generated_canonical_commits_tracked_generated_contract(self) -> None:
+        (self.vault / "ops" / "script-output-surfaces.json").write_text(
             '{"status": "pass"}\n',
             encoding="utf-8",
         )
@@ -111,7 +118,7 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
                 "--out",
                 "tmp/release-source-ready-commit.json",
                 "--message",
-                "release: recover sealed generated evidence",
+                "release: recover generated contract",
                 "--only-generated-canonical",
             ]
         )
@@ -119,19 +126,17 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertEqual(_git(self.vault, "status", "--short"), "")
         changed_paths = _git(self.vault, "show", "--name-only", "--format=", "HEAD").splitlines()
-        self.assertIn("ops/operator/operator-release-summary.json", changed_paths)
-        self.assertIn("ops/reports/release-smoke-report.json", changed_paths)
+        self.assertIn("ops/script-output-surfaces.json", changed_paths)
         report = json.loads(
             (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
         )
         self.assertEqual(report["status"], "committed")
         categories = {entry["path"]: entry["category"] for entry in report["entries"]}
-        self.assertEqual(categories["ops/operator/operator-release-summary.json"], "generated_canonical")
-        self.assertEqual(categories["ops/reports/release-smoke-report.json"], "generated_canonical")
+        self.assertEqual(categories["ops/script-output-surfaces.json"], "generated_canonical")
 
     def test_only_generated_canonical_refuses_source_changes(self) -> None:
         (self.vault / "README.md").write_text("# Test\n\nSource drift.\n", encoding="utf-8")
-        (self.vault / "ops" / "reports" / "release-smoke-report.json").write_text(
+        (self.vault / "ops" / "script-output-surfaces.json").write_text(
             '{"status": "pass"}\n',
             encoding="utf-8",
         )
@@ -143,7 +148,7 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
                 "--out",
                 "tmp/release-source-ready-commit.json",
                 "--message",
-                "release: recover sealed generated evidence",
+                "release: recover generated contract",
                 "--only-generated-canonical",
             ]
         )
@@ -250,9 +255,9 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         freshness = diagnostics["artifact_freshness"]
         self.assertEqual(freshness["currentness_status"], "current")
 
-    def test_rejects_private_dirty_paths_before_staging(self) -> None:
-        (self.vault / "raw").mkdir()
-        (self.vault / "raw" / "private.md").write_text("secret corpus\n", encoding="utf-8")
+    def test_rejects_unexpected_dirty_paths_before_staging(self) -> None:
+        (self.vault / "private").mkdir()
+        (self.vault / "private" / "secret.md").write_text("secret corpus\n", encoding="utf-8")
 
         rc = main(
             [
@@ -266,18 +271,15 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         )
 
         self.assertEqual(rc, 1)
-        self.assertIn("?? raw/", _git(self.vault, "status", "--short"))
+        self.assertIn("?? private/", _git(self.vault, "status", "--short"))
         report = json.loads(
             (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
         )
         self.assertEqual(report["status"], "blocked")
         self.assertEqual(report["reason"], "unexpected_dirty_paths")
-        self.assertEqual(report["unexpected_paths"], ["raw"])
+        self.assertEqual(report["unexpected_paths"], ["private"])
 
-    def test_rejects_ignored_durable_external_reports_before_staging(self) -> None:
-        (self.vault / ".gitignore").write_text("tmp/\nexternal-reports/\n", encoding="utf-8")
-        _git(self.vault, "add", ".gitignore")
-        _git(self.vault, "commit", "-m", "ignore external reports")
+    def test_allows_ignored_external_reports_as_local_only_evidence(self) -> None:
         (self.vault / "external-reports").mkdir()
         (self.vault / "external-reports" / "private-new-review.md").write_text(
             "# Review\n",
@@ -295,24 +297,15 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(rc, 1)
+        self.assertEqual(rc, 0)
         report = json.loads(
             (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
         )
-        self.assertEqual(report["status"], "blocked")
-        self.assertEqual(report["reason"], "unexpected_dirty_paths")
-        self.assertEqual(report["unexpected_paths"], ["external-reports"])
-        categories = {entry["path"]: entry["category"] for entry in report["entries"]}
-        self.assertEqual(categories["external-reports"], "unexpected")
-        self.assertEqual(
-            report["durable_private_ignored_status_prefixes"],
-            ["external-reports/"],
-        )
+        self.assertEqual(report["status"], "no_changes")
+        self.assertEqual(report["entries"], [])
+        self.assertIn("external-reports/", report["durable_private_ignored_status_prefixes"])
 
     def test_allows_ignored_external_report_archive_as_local_only_evidence(self) -> None:
-        (self.vault / ".gitignore").write_text("tmp/\nexternal-reports/\n", encoding="utf-8")
-        _git(self.vault, "add", ".gitignore")
-        _git(self.vault, "commit", "-m", "ignore external reports")
         (self.vault / "external-reports" / "archive").mkdir(parents=True)
         (self.vault / "external-reports" / "report-reference-manifest.json").write_text(
             '{"references": []}\n',
@@ -340,13 +333,13 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         )
         self.assertEqual(report["status"], "no_changes")
         self.assertEqual(report["entries"], [])
-        self.assertEqual(
+        self.assertIn(
+            "external-reports/report-reference-manifest.json",
             report["local_only_retained_private_ignored_status_paths"],
-            ["external-reports/report-reference-manifest.json"],
         )
-        self.assertEqual(
+        self.assertIn(
+            "external-reports/",
             report["local_only_retained_private_ignored_status_prefixes"],
-            ["external-reports/archive/"],
         )
         self.assertIn("!! external-reports/", _git(self.vault, "status", "--short", "--ignored"))
 
@@ -374,7 +367,7 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertEqual(report["staged_paths"], ["README.md"])
 
     def test_allows_staged_external_reports_deindex_when_local_file_remains(self) -> None:
-        (self.vault / ".gitignore").write_text("tmp/\nexternal-reports/\n", encoding="utf-8")
+        (self.vault / ".gitignore").write_text(LOCAL_GITIGNORE_TEXT, encoding="utf-8")
         (self.vault / "external-reports" / "archive").mkdir(parents=True)
         archived_report = self.vault / "external-reports" / "archive" / "closed-review.md"
         archived_report.write_text("# Closed Review\n", encoding="utf-8")
@@ -422,7 +415,7 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         (self.vault / "README.md").write_text("# Test\n\nIntervening.\n", encoding="utf-8")
         _git(self.vault, "add", "README.md")
         _git(self.vault, "commit", "-m", "intervening")
-        (self.vault / "ops" / "reports" / "release-smoke-report.json").write_text(
+        (self.vault / "ops" / "script-output-surfaces.json").write_text(
             '{"status": "pass"}\n', encoding="utf-8"
         )
 
@@ -441,7 +434,7 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
 
         self.assertEqual(snapshot_rc, 0)
         self.assertEqual(commit_rc, 1)
-        self.assertIn("ops/reports/release-smoke-report.json", _git(self.vault, "status", "--short"))
+        self.assertIn("ops/script-output-surfaces.json", _git(self.vault, "status", "--short"))
         report = json.loads(
             (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
         )
@@ -465,7 +458,7 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
             ]
         )
         first_head = _git(self.vault, "rev-parse", "HEAD")
-        (self.vault / "ops" / "reports" / "release-smoke-report.json").write_text(
+        (self.vault / "ops" / "script-output-surfaces.json").write_text(
             '{"status": "pass", "phase": "post-converge"}\n',
             encoding="utf-8",
         )
@@ -490,7 +483,7 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertEqual(_git(self.vault, "log", "-1", "--format=%s"), "release: ready")
         changed_paths = _git(self.vault, "show", "--name-only", "--format=", "HEAD").splitlines()
         self.assertIn("README.md", changed_paths)
-        self.assertIn("ops/reports/release-smoke-report.json", changed_paths)
+        self.assertIn("ops/script-output-surfaces.json", changed_paths)
         report = json.loads(
             (self.vault / "tmp" / "release-source-ready-amend.json").read_text(encoding="utf-8")
         )
@@ -511,7 +504,7 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
                 "release: ready",
             ]
         )
-        (self.vault / "ops" / "reports" / "release-smoke-report.json").write_text(
+        (self.vault / "ops" / "script-output-surfaces.json").write_text(
             '{"status": "pass", "phase": "post-converge"}\n',
             encoding="utf-8",
         )
@@ -527,8 +520,8 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
             ]
         )
         post_converge_head = _git(self.vault, "rev-parse", "HEAD")
-        (self.vault / "ops" / "reports" / "goal-worktree-guard.json").write_text(
-            '{"status": "pass", "phase": "final-clean-guard"}\n',
+        (self.vault / "ops" / "script-output-surfaces.json").write_text(
+            '{"status": "pass", "phase": "final-generated-contract"}\n',
             encoding="utf-8",
         )
 
@@ -552,8 +545,7 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertNotEqual(_git(self.vault, "rev-parse", "HEAD"), post_converge_head)
         changed_paths = _git(self.vault, "show", "--name-only", "--format=", "HEAD").splitlines()
         self.assertIn("README.md", changed_paths)
-        self.assertIn("ops/reports/release-smoke-report.json", changed_paths)
-        self.assertIn("ops/reports/goal-worktree-guard.json", changed_paths)
+        self.assertIn("ops/script-output-surfaces.json", changed_paths)
         report = json.loads(
             (self.vault / "tmp" / "release-source-ready-final-guard-amend.json").read_text(
                 encoding="utf-8"
@@ -578,7 +570,7 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         (self.vault / "README.md").write_text("# Test\n\nChanged again.\n", encoding="utf-8")
         _git(self.vault, "add", "README.md")
         _git(self.vault, "commit", "-m", "intervening")
-        (self.vault / "ops" / "reports" / "release-smoke-report.json").write_text(
+        (self.vault / "ops" / "script-output-surfaces.json").write_text(
             '{"status": "pass", "phase": "post-converge"}\n',
             encoding="utf-8",
         )
@@ -597,7 +589,7 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
 
         self.assertEqual(commit_rc, 0)
         self.assertEqual(amend_rc, 1)
-        self.assertIn("ops/reports/release-smoke-report.json", _git(self.vault, "status", "--short"))
+        self.assertIn("ops/script-output-surfaces.json", _git(self.vault, "status", "--short"))
         report = json.loads(
             (self.vault / "tmp" / "release-source-ready-amend.json").read_text(encoding="utf-8")
         )
@@ -682,7 +674,7 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
                 "release: ready",
             ]
         )
-        (self.vault / "ops" / "reports" / "release-smoke-report.json").write_text(
+        (self.vault / "ops" / "script-output-surfaces.json").write_text(
             '{"status": "pass", "phase": "post-converge"}\n',
             encoding="utf-8",
         )
@@ -701,7 +693,7 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
 
         self.assertEqual(commit_rc, 0)
         self.assertEqual(amend_rc, 1)
-        self.assertIn("ops/reports/release-smoke-report.json", _git(self.vault, "status", "--short"))
+        self.assertIn("ops/script-output-surfaces.json", _git(self.vault, "status", "--short"))
         report = json.loads(
             (self.vault / "tmp" / "release-source-ready-amend.json").read_text(encoding="utf-8")
         )
@@ -710,7 +702,7 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertEqual(report["amend_of_status"], "no_changes")
         self.assertEqual(
             report["paths_after_uncommitted_base"],
-            ["ops/reports/release-smoke-report.json"],
+            ["ops/script-output-surfaces.json"],
         )
 
 

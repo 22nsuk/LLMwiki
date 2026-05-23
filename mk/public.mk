@@ -5,6 +5,7 @@ PUBLIC_CHECK_SUMMARY_REUSE_FROM ?= $(PUBLIC_CHECK_SUMMARY_OUT)
 PUBLIC_CHECK_TIMEOUT_SECONDS ?= 5400
 PUBLIC_OUT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)/llm-wiki-public-repo
 PUBLIC_PYTHON ?= $(if $(wildcard $(firstword $(PYTHON))),$(abspath $(firstword $(PYTHON))),$(shell command -v $(firstword $(PYTHON))))
+PUBLIC_GITIGNORE_TEMPLATE ?= ops/templates/public-mirror.gitignore
 CBM_BIN ?= codebase-memory-mcp
 CBM_CACHE_ROOT ?= $(if $(XDG_CACHE_HOME),$(XDG_CACHE_HOME),$(HOME)/.cache)
 CBM_PUBLIC_OUT ?= $(CBM_CACHE_ROOT)/llmwiki/codebase-memory-mcp/public-surface
@@ -15,10 +16,10 @@ CBM_PROJECT_NAME ?= $(subst /,-,$(patsubst /%,%,$(CBM_PUBLIC_OUT)))
 .PHONY: sync-public-policy sync-public-policy-check public-export public-check-summary public-check-summary-check public-check-summary-current-check public-check public-check-serial public-check-parallel public-check-all public-check-all-check public-check-all-serial public-check-all-parallel cbm-require-bin cbm-export-public cbm-index-public cbm-list-projects-public cbm-schema-public cbm-architecture-public cbm-reset-local
 
 sync-public-policy:
-	$(PYTHON) -m ops.scripts.sync_public_surface_gitignore --gitignore ".gitignore"
+	$(PYTHON) -m ops.scripts.sync_public_surface_gitignore --gitignore "$(PUBLIC_GITIGNORE_TEMPLATE)"
 
 sync-public-policy-check:
-	$(PYTHON) -m ops.scripts.sync_public_surface_gitignore --gitignore ".gitignore" --check
+	$(PYTHON) -m ops.scripts.sync_public_surface_gitignore --gitignore "$(PUBLIC_GITIGNORE_TEMPLATE)" --check
 
 public-export:
 	$(PYTHON) -m ops.scripts.export_public_repo --vault "$(VAULT)" --out "$(PUBLIC_OUT)"

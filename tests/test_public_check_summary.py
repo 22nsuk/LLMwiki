@@ -148,13 +148,14 @@ class PublicCheckSummaryTests(unittest.TestCase):
             )
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
-    def test_policy_included_report_files_are_not_private_export_violations(self) -> None:
+    def test_generated_report_files_are_excluded_without_private_export_violations(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
             seed_minimal_vault(vault)
             seed_public_policy_file(vault)
             for rel_path in (
+                "ops/operator/operator-release-summary.json",
                 "ops/reports/goal-worktree-guard.json",
                 "ops/reports/release-workflow-order-guard.json",
                 "ops/reports/workflow-dependency-planner.json",
