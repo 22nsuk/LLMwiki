@@ -397,14 +397,35 @@ def _repair_decision_ended_as_clean_repo_health(vault: Path, decision: dict) -> 
     return _repo_health_artifact_freshness_failure_now_clean(vault, source_run_id)
 
 
+def _queue_unblock_decision_superseded_by_current_rotation(
+    decision: dict,
+    current_proposal_ids: set[str],
+) -> bool:
+    if str(decision.get("failure_taxonomy", "")).strip() != "mutation_failed":
+        return False
+    if str(decision.get("proposal_family", "")).strip() != RECENT_LOG_OVERLAP_UNBLOCK_FAMILY:
+        return False
+    source_proposal_id = str(decision.get("proposal_id", "")).strip()
+    if not source_proposal_id.startswith(f"{RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE}__"):
+        return False
+    if source_proposal_id in current_proposal_ids:
+        return False
+    return any(
+        proposal_id.startswith(f"{RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE}__")
+        for proposal_id in current_proposal_ids
+    )
+
+
 def _open_carry_forward_decisions(
     next_run_decisions: list[dict],
     *,
     vault: Path | None = None,
     consumed_decision_ids: set[str] | None = None,
+    current_proposal_ids: set[str] | None = None,
 ) -> list[dict]:
     latest_by_target: dict[str, dict] = {}
     consumed_decision_ids = consumed_decision_ids or set()
+    current_proposal_ids = current_proposal_ids or set()
     for decision in next_run_decisions:
         if str(decision.get("decision", "")).strip() != CARRY_FORWARD_DECISION:
             continue
@@ -416,6 +437,11 @@ def _open_carry_forward_decisions(
         if vault is not None and _repair_decision_ended_as_noop_mutation_failure(vault, decision):
             continue
         if vault is not None and _repair_decision_ended_as_clean_repo_health(vault, decision):
+            continue
+        if _queue_unblock_decision_superseded_by_current_rotation(
+            decision,
+            current_proposal_ids,
+        ):
             continue
         target_proposal_id = str(decision.get("target_proposal_id", "")).strip()
         if not target_proposal_id:
@@ -1782,12 +1808,14 @@ def _next_run_repair_proposal_models(
     next_run_decisions: list[dict],
     *,
     consumed_decision_ids: set[str],
+    current_proposal_ids: set[str],
 ) -> list[MutationProposal]:
     models: list[MutationProposal] = []
     for decision in _open_carry_forward_decisions(
         next_run_decisions,
         vault=vault,
         consumed_decision_ids=consumed_decision_ids,
+        current_proposal_ids=current_proposal_ids,
     ):
         proposal = _next_run_repair_proposal(vault, policy, decision)
         if proposal is not None:
@@ -2033,10 +2061,18 @@ def _next_run_decision_queue_diagnostics(
     session_report_paths: list[str],
     consumed_decision_ids: set[str],
 ) -> dict:
+    current_proposal_ids = {
+        str(proposal.get("proposal_id", "")).strip()
+        for proposal in proposals
+        if str(proposal.get("failure_mode", "")).strip()
+        != NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE
+        and str(proposal.get("proposal_id", "")).strip()
+    }
     open_carry_forward = _open_carry_forward_decisions(
         next_run_decisions,
         vault=vault,
         consumed_decision_ids=consumed_decision_ids,
+        current_proposal_ids=current_proposal_ids,
     )
     repair_proposals = [
         proposal
@@ -2438,12 +2474,16 @@ def _proposal_models_from_candidates(
     )
     if recent_log_overlap_unblock is not None:
         available_proposal_models.append(recent_log_overlap_unblock)
+    current_proposal_ids = {
+        proposal.proposal_id for proposal in available_proposal_models if proposal.proposal_id
+    }
     available_proposal_models.extend(
         _next_run_repair_proposal_models(
             vault,
             effective_policy,
             next_run_decisions,
             consumed_decision_ids=set(consumed_next_run_decision_ids),
+            current_proposal_ids=current_proposal_ids,
         )
     )
     return available_proposal_models, skipped_candidates

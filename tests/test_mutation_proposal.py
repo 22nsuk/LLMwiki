@@ -788,6 +788,90 @@ class MutationProposalTest(unittest.TestCase):
             )
             self.assertEqual(rotation["blocked_by"], [])
 
+    def test_rotated_queue_unblock_suppresses_superseded_noop_repair(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            write_json(
+                vault / "ops" / "reports" / "outcome-metrics.json",
+                {
+                    "recent_attempts": [
+                        {
+                            "run_id": "auto-improve-trial-rerun-1",
+                            "proposal_id": "recent_log_overlap_queue_blocked__mutation-proposal-runtime",
+                            "outcome": "mutation_failed",
+                            "decision": "HOLD",
+                        },
+                    ],
+                },
+            )
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:queue-unblock-noop",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": "auto-improve-trial-rerun-1",
+                            "proposal_id": "recent_log_overlap_queue_blocked__mutation-proposal-runtime",
+                            "source_candidate_id": "recent_log_overlap_queue_unblock__mutation-proposal-runtime",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__mutation-proposal-runtime__mutation-failed"
+                            ),
+                            "proposal_family": "queue_unblock",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "mutation_failed",
+                            "blocking_role": "worker",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "old queue-unblock no-op should not outrank the current rotation target",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [
+                                "ops/scripts/mechanism/mutation_proposal_runtime.py"
+                            ],
+                            "supporting_targets": ["ops/script-output-surfaces.json"],
+                            "must_change_tests": [
+                                "tests/test_mutation_proposal.py",
+                                "tests/test_report_generation_smoke.py",
+                            ],
+                            "evidence_paths": [
+                                "runs/auto-improve-trial-rerun-1/mutation-command.stderr.txt"
+                            ],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text(
+                "# System Log\n\n"
+                "## [2026-04-14 00:00] decision | prior overlapping experiments\n\n"
+                "### Artifacts\n"
+                "- `ops/scripts/promotion_gate.py`\n"
+                "- `ops/scripts/wiki_lint.py`\n"
+                "- `ops/scripts/mechanism_assess.py`\n",
+                encoding="utf-8",
+            )
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+
+            self.assertEqual(proposal_report["summary"]["next_run_repair_proposals"], 0)
+            self.assertEqual(
+                proposal_report["diagnostics"]["next_run_decision_queue"][
+                    "open_carry_forward_decisions"
+                ],
+                0,
+            )
+            rotation = proposal_report["proposals"][0]
+            self.assertEqual(
+                rotation["proposal_id"],
+                "recent_log_overlap_queue_blocked__mechanism-run-validation-runtime",
+            )
+            self.assertEqual(rotation["blocked_by"], [])
+
     def test_recent_log_overlap_rotation_blocks_after_repeated_recent_outcome_rework(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
