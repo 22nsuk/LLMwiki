@@ -1,6 +1,7 @@
 PUBLIC_CHECK_SUMMARY_OUT ?= ops/reports/public-check-summary.json
 PUBLIC_CHECK_SUMMARY_CANDIDATE_OUT ?= tmp/public-check-summary.candidate.json
 PUBLIC_CHECK_SUMMARY_CHECK_OUT ?= tmp/public-check-summary-check.json
+PUBLIC_CHECK_SUMMARY_REUSE_FROM ?= $(PUBLIC_CHECK_SUMMARY_OUT)
 PUBLIC_CHECK_TIMEOUT_SECONDS ?= 5400
 PUBLIC_OUT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)/llm-wiki-public-repo
 PUBLIC_PYTHON ?= $(if $(wildcard $(firstword $(PYTHON))),$(abspath $(firstword $(PYTHON))),$(shell command -v $(firstword $(PYTHON))))
@@ -11,7 +12,7 @@ CBM_CACHE_DIR ?= $(CBM_CACHE_ROOT)/codebase-memory-mcp/llmwiki-public
 CBM_IGNORE_TEMPLATE ?= ops/templates/codebase-memory-mcp.cbmignore
 CBM_PROJECT_NAME ?= $(subst /,-,$(patsubst /%,%,$(CBM_PUBLIC_OUT)))
 
-.PHONY: sync-public-policy sync-public-policy-check public-export public-check-summary public-check-summary-check public-check public-check-serial public-check-parallel public-check-all public-check-all-check public-check-all-serial public-check-all-parallel cbm-require-bin cbm-export-public cbm-index-public cbm-list-projects-public cbm-schema-public cbm-architecture-public cbm-reset-local
+.PHONY: sync-public-policy sync-public-policy-check public-export public-check-summary public-check-summary-check public-check-summary-current-check public-check public-check-serial public-check-parallel public-check-all public-check-all-check public-check-all-serial public-check-all-parallel cbm-require-bin cbm-export-public cbm-index-public cbm-list-projects-public cbm-schema-public cbm-architecture-public cbm-reset-local
 
 sync-public-policy:
 	$(PYTHON) -m ops.scripts.sync_public_surface_gitignore --gitignore ".gitignore"
@@ -52,6 +53,9 @@ public-check-summary: script-output-surfaces
 public-check-summary-check:
 	$(PYTHON) -m ops.scripts.public_check_summary --vault "$(VAULT)" --out "$(PUBLIC_CHECK_SUMMARY_CHECK_OUT)" --public-out "$(PUBLIC_OUT)" --public-python "$(PUBLIC_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --pytest-mark-expr "$(PYTEST_PUBLIC_MARK_EXPR)" --pytest-flags "$(PYTEST_FLAGS)" --timeout-seconds "$(PUBLIC_CHECK_TIMEOUT_SECONDS)"
 
+public-check-summary-current-check:
+	$(PYTHON) -m ops.scripts.public_check_summary --vault "$(VAULT)" --out "$(PUBLIC_CHECK_SUMMARY_CHECK_OUT)" --public-out "$(PUBLIC_OUT)" --public-python "$(PUBLIC_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --pytest-mark-expr "$(PYTEST_PUBLIC_MARK_EXPR)" --pytest-flags "$(PYTEST_FLAGS)" --timeout-seconds "$(PUBLIC_CHECK_TIMEOUT_SECONDS)" --reuse-if-current --reuse-only --reuse-from "$(PUBLIC_CHECK_SUMMARY_REUSE_FROM)"
+
 public-check: public-check-summary
 
 public-check-serial:
@@ -64,7 +68,7 @@ public-check-all:
 	$(MAKE) public-check-summary PYTEST_PUBLIC_MARK_EXPR="" PYTEST_FLAGS="$(PYTEST_FLAGS)"
 
 public-check-all-check:
-	$(MAKE) public-check-summary-check PYTEST_PUBLIC_MARK_EXPR="" PYTEST_FLAGS="$(PYTEST_FLAGS)"
+	$(MAKE) public-check-summary-current-check PYTEST_PUBLIC_MARK_EXPR="" PYTEST_FLAGS="$(PYTEST_FLAGS)"
 
 public-check-all-serial:
 	$(MAKE) public-check-summary PYTEST_PUBLIC_MARK_EXPR="" PYTEST_FLAGS="$(PYTEST_SERIAL_FLAGS)"

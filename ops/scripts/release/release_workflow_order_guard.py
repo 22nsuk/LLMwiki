@@ -55,7 +55,8 @@ RELEASE_CONVERGE_TARGET = "release-evidence-converge"
 CHECK_FINALIZED_TARGET = "check-finalized"
 RELEASE_FINALITY_RESETTLE_TARGET = "release-finality-resettle"
 RELEASE_SOURCE_READY_TARGET = "release-source-ready"
-RELEASE_SOURCE_READY_POST_COMMIT_CONVERGE_TARGET = "release-source-ready-post-commit-converge"
+RELEASE_SOURCE_READY_PREPARE_TARGET = "release-source-ready-prepare"
+RELEASE_SOURCE_READY_POST_VERIFY_TARGET = "release-source-ready-post-verify"
 STRICT_FINALIZER_FLAG = "RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required"
 ALLOWED_REPEATED_CONVERGE_TARGETS = {
     "auto-improve-readiness-report-body",
@@ -477,27 +478,77 @@ def _release_finality_resettle_check(invocations: list[dict[str, Any]]) -> dict[
 
 def _release_source_ready_transaction_check(invocations: list[dict[str, Any]]) -> dict[str, Any]:
     expected = [
-        "release-source-ready-snapshot",
-        "release-converge-all-surfaces",
+        "release-source-ready-prepare",
         "release-source-ready-commit",
-        "release-source-ready-post-commit-converge",
-        "release-source-ready-amend",
-        "release-source-ready-final-guard-amend",
-        "release-check-all-surfaces",
-        "release-source-ready-status",
+        "release-source-ready-post-verify",
     ]
     check = _check_subsequence(
         "release_source_ready_transaction_sequence",
         invocations,
         expected,
         details=(
-            "release-source-ready must snapshot the starting HEAD, converge all mutating surfaces, "
-            "create one release-source-ready commit, amend post-commit canonical evidence, "
-            "refresh the canonical worktree guard from the amended clean tree, "
-            "finish with the non-mutating all-surfaces release check, "
+            "release-source-ready must prepare all mutating evidence before committing, "
+            "create one release-source-ready commit, then run a write-free post-verify lane."
+        ),
+    )
+    terminal_index = _first_index(invocations, "release-source-ready-post-verify")
+    if terminal_index != len(invocations):
+        check["status"] = "fail"
+        check["violations"].append(
+            {
+                "expected_role": "release-source-ready-post-verify",
+                "reason": "release_source_ready_post_verify_must_be_terminal",
+            }
+        )
+    return check
+
+
+def _release_source_ready_prepare_check(invocations: list[dict[str, Any]]) -> dict[str, Any]:
+    return _check_subsequence(
+        "release_source_ready_prepare_sequence",
+        invocations,
+        [
+            "release-source-ready-snapshot",
+            "release-converge-all-surfaces",
+        ],
+        details="release-source-ready-prepare must snapshot the starting HEAD before mutating convergence.",
+    )
+
+
+def _release_source_ready_post_verify_check(
+    invocations: list[dict[str, Any]],
+) -> dict[str, Any]:
+    expected = [
+        "release-check-all-surfaces",
+        "release-source-ready-status",
+    ]
+    check = _check_subsequence(
+        "release_source_ready_post_verify_sequence",
+        invocations,
+        expected,
+        details=(
+            "release-source-ready-post-verify must stay write-free: check all surfaces, "
             "then print the source-ready versus sealed machine-release authority summary."
         ),
     )
+    forbidden = [
+        "auto-improve-readiness-worktree-guard",
+        "goal-runtime-local-evidence-refresh",
+        "generated-artifact-converge",
+        "remediation-backlog",
+        "release-closeout-fixed-point",
+        "release-source-ready-amend",
+        "release-source-ready-final-guard-amend",
+    ]
+    for target in forbidden:
+        if _first_index(invocations, target):
+            check["status"] = "fail"
+            check["violations"].append(
+                {
+                    "target": target,
+                    "reason": "post_verify_must_be_write_free",
+                }
+            )
     terminal_index = _first_index(invocations, "release-source-ready-status")
     if terminal_index != len(invocations):
         check["status"] = "fail"
@@ -508,29 +559,6 @@ def _release_source_ready_transaction_check(invocations: list[dict[str, Any]]) -
             }
         )
     return check
-
-
-def _release_source_ready_post_commit_converge_check(
-    invocations: list[dict[str, Any]],
-) -> dict[str, Any]:
-    expected = [
-        "auto-improve-readiness-worktree-guard",
-        "goal-runtime-local-evidence-refresh",
-        "generated-artifact-converge",
-        "remediation-backlog",
-        "release-closeout-fixed-point",
-        "release-closeout-post-check-finalizer-strict-dry-run",
-    ]
-    return _check_subsequence(
-        "release_source_ready_post_commit_converge_sequence",
-        invocations,
-        expected,
-        details=(
-            "Post-commit converge must bind clean-commit evidence through run-local evidence "
-            "convergence, generated artifact convergence, backlog refresh, fixed-point closeout, "
-            "and a strict finalizer dry run before release-source-ready amends the single commit."
-        ),
-    )
 
 
 def _status_from_checks(checks: list[dict[str, Any]]) -> str:
@@ -584,9 +612,13 @@ def build_report(
         RELEASE_FINALITY_RESETTLE_TARGET,
     )
     release_source_ready_invocations = _recipe_invocations(makefile_text, RELEASE_SOURCE_READY_TARGET)
-    release_source_ready_post_commit_invocations = _recipe_invocations(
+    release_source_ready_prepare_invocations = _recipe_invocations(
         makefile_text,
-        RELEASE_SOURCE_READY_POST_COMMIT_CONVERGE_TARGET,
+        RELEASE_SOURCE_READY_PREPARE_TARGET,
+    )
+    release_source_ready_post_verify_invocations = _recipe_invocations(
+        makefile_text,
+        RELEASE_SOURCE_READY_POST_VERIFY_TARGET,
     )
     planner_report = build_workflow_dependency_report(
         resolved_vault,
@@ -632,7 +664,8 @@ def build_report(
         ),
         _check_fixed_point_policy_order(writers),
         _release_source_ready_transaction_check(release_source_ready_invocations),
-        _release_source_ready_post_commit_converge_check(release_source_ready_post_commit_invocations),
+        _release_source_ready_prepare_check(release_source_ready_prepare_invocations),
+        _release_source_ready_post_verify_check(release_source_ready_post_verify_invocations),
         _check_planner_hooks(planner_report, release_converge_invocations),
         _check_planner_fixed_point_writer_order(planner_report, writers),
     ]
@@ -694,8 +727,12 @@ def build_report(
             ),
             _target_recipe_payload(RELEASE_SOURCE_READY_TARGET, release_source_ready_invocations),
             _target_recipe_payload(
-                RELEASE_SOURCE_READY_POST_COMMIT_CONVERGE_TARGET,
-                release_source_ready_post_commit_invocations,
+                RELEASE_SOURCE_READY_PREPARE_TARGET,
+                release_source_ready_prepare_invocations,
+            ),
+            _target_recipe_payload(
+                RELEASE_SOURCE_READY_POST_VERIFY_TARGET,
+                release_source_ready_post_verify_invocations,
             ),
         ],
         "planner_snapshot": _planner_snapshot(planner_report),

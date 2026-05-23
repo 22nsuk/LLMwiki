@@ -72,7 +72,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         *,
         misorder_check_finalized: bool = False,
         misorder_release_source_ready: bool = False,
-        misorder_release_source_ready_post_commit: bool = False,
+        misorder_release_source_ready_post_verify: bool = False,
     ) -> None:
         check_finalized_lines = (
             "\t$(MAKE) auto-improve-readiness-report-body\n"
@@ -91,42 +91,32 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "\t$(MAKE) release-closeout-finality-verify\n"
             )
         release_source_ready_lines = (
-            "\t$(MAKE) release-source-ready-snapshot\n"
-            "\t$(MAKE) release-converge-all-surfaces\n"
+            "\t$(MAKE) release-source-ready-prepare\n"
             "\t$(MAKE) release-source-ready-commit\n"
-            "\t$(MAKE) release-source-ready-post-commit-converge\n"
-            "\t$(MAKE) release-source-ready-amend\n"
-            "\t$(MAKE) release-source-ready-final-guard-amend\n"
-            "\t$(MAKE) release-check-all-surfaces\n"
-            "\t$(MAKE) release-source-ready-status\n"
+            "\t$(MAKE) release-source-ready-post-verify\n"
         )
         if misorder_release_source_ready:
             release_source_ready_lines = (
-                "\t$(MAKE) release-source-ready-snapshot\n"
-                "\t$(MAKE) release-converge-all-surfaces\n"
+                "\t$(MAKE) release-source-ready-prepare\n"
+                "\t$(MAKE) release-source-ready-post-verify\n"
                 "\t$(MAKE) release-source-ready-commit\n"
-                "\t$(MAKE) release-check-all-surfaces\n"
-                "\t$(MAKE) release-source-ready-status\n"
-                "\t$(MAKE) release-source-ready-post-commit-converge\n"
-                "\t$(MAKE) release-source-ready-amend\n"
-                "\t$(MAKE) release-source-ready-final-guard-amend\n"
             )
-        release_source_ready_post_commit_lines = (
-            "\t$(MAKE) auto-improve-readiness-worktree-guard\n"
-            "\t$(MAKE) goal-runtime-local-evidence-refresh\n"
-            "\t$(MAKE) generated-artifact-converge\n"
-            "\t$(MAKE) remediation-backlog\n"
-            "\t$(MAKE) release-closeout-fixed-point\n"
-            "\t$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required\n"
+        release_source_ready_prepare_lines = (
+            "\t$(MAKE) release-source-ready-snapshot\n"
+            "\t$(MAKE) release-converge-all-surfaces\n"
         )
-        if misorder_release_source_ready_post_commit:
-            release_source_ready_post_commit_lines = (
-                "\t$(MAKE) auto-improve-readiness-worktree-guard\n"
+        release_source_ready_post_verify_lines = (
+            "\t$(MAKE) release-check-all-surfaces\n"
+            "\t$(MAKE) release-source-ready-status\n"
+        )
+        if misorder_release_source_ready_post_verify:
+            release_source_ready_post_verify_lines = (
+                "\t$(MAKE) release-check-all-surfaces\n"
                 "\t$(MAKE) goal-runtime-local-evidence-refresh\n"
                 "\t$(MAKE) generated-artifact-converge\n"
-                "\t$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required\n"
                 "\t$(MAKE) remediation-backlog\n"
                 "\t$(MAKE) release-closeout-fixed-point\n"
+                "\t$(MAKE) release-source-ready-status\n"
             )
         release_converge_all_lines = (
             "\t$(MAKE) release-converge\n"
@@ -143,10 +133,9 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "release-finality-resettle",
                 "release-source-ready",
                 "release-source-ready-snapshot",
+                "release-source-ready-prepare",
                 "release-source-ready-commit",
-                "release-source-ready-post-commit-converge",
-                "release-source-ready-amend",
-                "release-source-ready-final-guard-amend",
+                "release-source-ready-post-verify",
                 "release-source-ready-status",
                 "release-converge-all-surfaces",
                 "release-converge",
@@ -203,8 +192,10 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "\t$(MAKE) release-closeout-finality-verify\n"
             "release-source-ready:\n"
             f"{release_source_ready_lines}"
-            "release-source-ready-post-commit-converge:\n"
-            f"{release_source_ready_post_commit_lines}"
+            "release-source-ready-prepare:\n"
+            f"{release_source_ready_prepare_lines}"
+            "release-source-ready-post-verify:\n"
+            f"{release_source_ready_post_verify_lines}"
             "release-converge-all-surfaces:\n"
             f"{release_converge_all_lines}"
             "release-converge:\n"
@@ -218,10 +209,6 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "release-source-ready-snapshot:\n"
             "\t@true\n"
             "release-source-ready-commit:\n"
-            "\t@true\n"
-            "release-source-ready-amend:\n"
-            "\t@true\n"
-            "release-source-ready-final-guard-amend:\n"
             "\t@true\n"
             "release-source-ready-status:\n"
             "\t@true\n"
@@ -342,26 +329,28 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         self.assertEqual(check["status"], "fail")
         self.assertEqual(
             check["violations"][-1]["reason"],
-            "release_source_ready_status_must_be_terminal",
+            "release_source_ready_post_verify_must_be_terminal",
         )
 
-    def test_guard_fails_when_release_source_ready_post_commit_skips_fixed_point_before_strict_finalizer(
+    def test_guard_fails_when_release_source_ready_post_verify_runs_writers(
         self,
     ) -> None:
-        self._write_makefile(misorder_release_source_ready_post_commit=True)
+        self._write_makefile(misorder_release_source_ready_post_verify=True)
 
         report = build_report(self.vault, context=fixed_context())
 
         check = next(
             item
             for item in report["checks"]
-            if item["id"] == "release_source_ready_post_commit_converge_sequence"
+            if item["id"] == "release_source_ready_post_verify_sequence"
         )
         self.assertEqual(report["status"], "fail")
         self.assertEqual(check["status"], "fail")
-        self.assertEqual(
-            check["violations"][0]["expected_role"],
-            "release-closeout-post-check-finalizer-strict-dry-run",
+        self.assertTrue(
+            any(
+                violation.get("reason") == "post_verify_must_be_write_free"
+                for violation in check["violations"]
+            )
         )
 
 

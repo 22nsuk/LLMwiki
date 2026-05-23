@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/goal-worktree-guard.schema.json",
   "artifact_kind": "goal_worktree_guard",
-  "generated_at": "2026-05-23T05:54:29Z",
+  "generated_at": "2026-05-23T05:55:15Z",
   "producer": "ops.scripts.goal_worktree_guard",
   "source_command": "python -m ops.scripts.goal_worktree_guard --vault .",
   "source_revision": "unknown",
@@ -22,7 +22,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-23T05:54:29Z"
+    "checked_at": "2026-05-23T05:55:15Z"
   },
   "vault": ".",
   "requested_mode": "git",
@@ -43,15 +43,13 @@
     "available": true,
     "inside_worktree": true,
     "worktree_root": ".",
-    "head_sha": "07b555d4f0759b0db2c6fbf39ae64a4ef91af39d",
+    "head_sha": "4d5f78f24d60266fc201d30720b62dee35671c9b",
     "branch": "feature/codebase-memory-mcp-adoption",
-    "dirty_entry_count": 46,
-    "status_porcelain_sha256": "141490c1c2279bc30f2f79a14643dea7b64c5a923e9d90a3fdfc18f3e83f6d62",
-    "status_codes": {
-      "M": 46
-    },
+    "dirty_entry_count": 0,
+    "status_porcelain_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "status_codes": {},
     "self_output_dirty_entry_count": 1,
-    "self_output_dirty_status_porcelain_sha256": "81dcf7516e77e66da14b0a2397b3591b7e7caa1d4c3c7068cfd73319e7a42640",
+    "self_output_dirty_status_porcelain_sha256": "5c75aa33a38ceb7756d1d9fa7a317cdb9da04626327445b228f24486a4939d85",
     "self_output_dirty_status_codes": {
       "M": 1
     },
@@ -63,21 +61,12 @@
   },
   "decisions": {
     "can_execute_goal_runtime": true,
-    "can_promote_result": false,
+    "can_promote_result": true,
     "zip_mode_replay_only": false,
     "dirty_worktree_allowed": false,
     "fatal_blockers": [],
-    "promotion_blockers": [
-      "git_worktree_dirty"
-    ]
+    "promotion_blockers": []
   },
-  "blockers": [
-    {
-      "blocker_id": "git_worktree_dirty",
-      "severity": "blocking",
-      "summary": "Git worktree has 46 dirty status entries",
-      "next_action": "Commit, stash, or explicitly allow dirty mode before treating goal output as promotable."
-    }
-  ],
-  "status": "attention"
+  "blockers": [],
+  "status": "pass"
 }

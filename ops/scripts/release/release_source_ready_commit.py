@@ -23,6 +23,7 @@ GENERATED_FILES = {
     "ops/raw-registry.json",
     "ops/script-output-surfaces.json",
     "ops/operator/artifact-relocation-audit.json",
+    "ops/operator/operator-release-summary.json",
 }
 GENERATED_PREFIXES = ("ops/reports/",)
 PUBLIC_SOURCE_FILES = {
@@ -519,6 +520,7 @@ def run_commit(
     amend_of_path: Path | None,
     dry_run: bool,
     allow_staged: bool,
+    only_generated_canonical: bool,
 ) -> int:
     ok, reason = _require_git_worktree(vault)
     if not ok:
@@ -581,6 +583,11 @@ def run_commit(
         for item in report["entries"]
         if item["staged"] and item["category"] != LOCAL_ONLY_PRIVATE_DEINDEX_CATEGORY
     ]
+    non_generated = [
+        item
+        for item in report["entries"]
+        if item["category"] != "generated_canonical"
+    ]
     paths = [str(item["path"]) for item in report["entries"] if item["path"]]
     if unexpected:
         report["status"] = "blocked"
@@ -615,6 +622,18 @@ def run_commit(
         report["staged_paths"] = [item["path"] for item in staged]
         _write_report(out_path, report)
         print("release-source-ready-commit refused: staged changes are present", file=sys.stderr)
+        return 1
+    if only_generated_canonical and non_generated:
+        report["status"] = "blocked"
+        report["reason"] = "non_generated_dirty_paths"
+        report["non_generated_paths"] = [item["path"] for item in non_generated]
+        _write_report(out_path, report)
+        print(
+            "release-source-ready-commit refused: non-generated dirty paths are present",
+            file=sys.stderr,
+        )
+        for item in non_generated:
+            print(item["path"], file=sys.stderr)
         return 1
 
     if amend and paths and report["amend_of_status"] not in {"committed", "amended"}:
@@ -697,6 +716,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Allow pre-staged changes to be included in the release-source-ready commit.",
     )
+    parser.add_argument(
+        "--only-generated-canonical",
+        action="store_true",
+        help="Refuse to commit anything except generated canonical evidence.",
+    )
     return parser.parse_args(argv)
 
 
@@ -717,6 +741,7 @@ def main(argv: list[str] | None = None) -> int:
         amend_of_path=amend_of_path,
         dry_run=bool(args.dry_run),
         allow_staged=bool(args.allow_staged),
+        only_generated_canonical=bool(args.only_generated_canonical),
     )
 
 

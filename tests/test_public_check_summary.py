@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 import tempfile
 import unittest
 from pathlib import Path
 from typing import Sequence
 
 from ops.scripts.command_runtime import TimedProcessResult
-from ops.scripts.public_check_summary import PublicCheckRequest, build_report, write_report
+from ops.scripts.public_check_summary import (
+    PublicCheckRequest,
+    build_report,
+    reusable_summary_diagnostics,
+    write_report,
+)
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import seed_minimal_vault
@@ -201,6 +207,39 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertEqual(report["summary"]["command_fail_count"], 1)
             self.assertEqual(report["summary"]["pytest_failed"], 1)
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_reusable_summary_requires_current_source_tree_fingerprint(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_public_policy_file(vault)
+
+            report = build_report(
+                vault,
+                PublicCheckRequest(
+                    public_out=str(Path(temp_dir) / "public"),
+                    public_python="python",
+                    pytest_flags="-q",
+                ),
+                context=fixed_context(),
+                command_runner=fake_runner,
+            )
+            destination = write_report(vault, report)
+
+            reusable = reusable_summary_diagnostics(vault, destination)
+            self.assertTrue(reusable["reusable"])
+            self.assertEqual(reusable["reason"], "current_passing_public_check_summary")
+
+            (vault / "README.md").write_text("# Test\n\nChanged after public check.\n", encoding="utf-8")
+            stale = reusable_summary_diagnostics(vault, destination)
+
+            self.assertFalse(stale["reusable"])
+            self.assertIn("source_tree_fingerprint", stale["reason"])
+            self.assertNotEqual(
+                stale["current_source_tree_fingerprint"],
+                json.loads(destination.read_text(encoding="utf-8"))["source_tree_fingerprint"],
+            )
 
     def test_relative_public_python_resolves_against_source_vault(self) -> None:
         captured_argv: list[list[str]] = []

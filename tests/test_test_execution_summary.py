@@ -926,6 +926,109 @@ class TestExecutionSummaryTest(unittest.TestCase):
             self.assertNotEqual(payload.get("summary_mode"), "reused")
             self.assertEqual(payload["counts"]["passed"], 3)
 
+    def test_cli_reuse_only_fails_fast_when_source_tree_fingerprint_is_stale(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            test_file = vault / "tests" / "test_sample.py"
+            test_file.parent.mkdir(parents=True, exist_ok=True)
+            test_file.write_text("def test_ok():\n    assert True\n", encoding="utf-8")
+            command = [sys.executable, "-m", "pytest", "tests/test_sample.py"]
+            existing = build_report(
+                vault,
+                command=command,
+                result=_result(returncode=0, stdout="= 2 passed in 1.00s ="),
+                duration_ms=1000,
+                suite="unit",
+                context=_fixed_context(),
+            )
+            out_path = vault / "ops" / "reports" / "test-execution-summary.json"
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
+            (vault / "README.md").write_text("# Test\n\nSource tree changed.\n", encoding="utf-8")
+
+            with patch(
+                "ops.scripts.test_execution_summary.run_with_timeout",
+                return_value=_result(returncode=0, stdout="= 3 passed in 0.01s ="),
+            ) as run:
+                returncode = summary_main(
+                    [
+                        "--vault",
+                        str(vault),
+                        "--out",
+                        "tmp/test-execution-summary-check.json",
+                        "--suite",
+                        "unit",
+                        "--reuse-if-current",
+                        "--reuse-only",
+                        "--reuse-from",
+                        "ops/reports/test-execution-summary.json",
+                        "--",
+                        *command,
+                    ]
+                )
+
+            self.assertEqual(returncode, 1)
+            self.assertEqual(run.call_count, 0)
+            self.assertFalse((vault / "tmp" / "test-execution-summary-check.json").exists())
+
+    def test_cli_aggregate_reuse_only_fails_fast_when_full_suite_evidence_is_stale(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            shard = build_report(
+                vault,
+                command=[sys.executable, "-m", "pytest"],
+                result=_result(returncode=0, stdout="= 2 passed in 1.00s ="),
+                duration_ms=1000,
+                suite="full-shard-1",
+                context=_fixed_context(),
+                collect_nodeids=True,
+                collect_nodeid_digest={
+                    "status": "collected",
+                    "command": "python -m pytest --collect-only -q",
+                    "nodeid_count": 2,
+                    "sha256": "a" * 64,
+                    "reason": "",
+                },
+            )
+            shard_dir = vault / "ops" / "reports" / "test-execution-summary-full-shards"
+            shard_dir.mkdir(parents=True)
+            (shard_dir / "full-suite-shard-1.json").write_text(
+                json.dumps(shard, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            aggregate = build_aggregate_report(
+                vault,
+                shard_paths=["ops/reports/test-execution-summary-full-shards/full-suite-shard-1.json"],
+                suite="full",
+                context=_fixed_context(),
+            )
+            out_path = vault / "ops" / "reports" / "test-execution-summary-full.json"
+            out_path.write_text(json.dumps(aggregate, ensure_ascii=False, indent=2), encoding="utf-8")
+            (vault / "README.md").write_text("# Test\n\nSource tree changed.\n", encoding="utf-8")
+
+            returncode = summary_main(
+                [
+                    "--vault",
+                    str(vault),
+                    "--out",
+                    "tmp/test-execution-summary-full-check.json",
+                    "--suite",
+                    "full",
+                    "--aggregate",
+                    "--reuse-if-current",
+                    "--reuse-only",
+                    "--reuse-from",
+                    "ops/reports/test-execution-summary-full.json",
+                ]
+            )
+
+            self.assertEqual(returncode, 1)
+            self.assertFalse((vault / "tmp" / "test-execution-summary-full-check.json").exists())
+
     def test_cli_preserves_deselection_policy_in_written_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

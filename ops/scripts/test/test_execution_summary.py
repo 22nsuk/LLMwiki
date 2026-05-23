@@ -30,6 +30,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
     )
     from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_or_raise
+    from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 else:
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
     from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
@@ -42,6 +43,7 @@ else:
         TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
     )
     from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_or_raise
+    from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 
 DEFAULT_OUT = "ops/reports/test-execution-summary.json"
@@ -1452,9 +1454,11 @@ def reusable_summary_is_current(
     existing_lifecycle = existing.get("deselection_lifecycle")
     if not isinstance(existing_lifecycle, dict):
         existing_lifecycle = {}
+    current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
     return (
         existing.get("artifact_kind") == "test_execution_summary"
         and existing.get("status") == "pass"
+        and existing.get("source_tree_fingerprint") == current_source_tree_fingerprint
         and existing_lifecycle.get("status") == "pass"
         and current_lifecycle.get("status") == "pass"
         and existing.get("suite") == suite
@@ -1540,6 +1544,56 @@ def _load_summary(vault: Path, path_value: str | Path) -> dict[str, Any]:
     schema = load_schema_with_vault_override(vault, TEST_EXECUTION_SUMMARY_SCHEMA_PATH)
     validate_or_raise(payload, schema, context=f"test execution summary shard validation failed for {report_path(vault, path)}")
     return payload
+
+
+def reusable_aggregate_summary_diagnostics(
+    vault: Path,
+    path_value: str | Path,
+    *,
+    suite: str,
+) -> dict[str, Any]:
+    path = Path(path_value)
+    if not path.is_absolute():
+        path = vault / path
+    diagnostics: dict[str, Any] = {
+        "reusable": False,
+        "path": report_path(vault, path),
+        "reason": "",
+    }
+    try:
+        existing = _load_summary(vault, path)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        diagnostics["reason"] = f"summary_unavailable:{type(exc).__name__}"
+        return diagnostics
+
+    current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
+    checks = {
+        "artifact_kind": existing.get("artifact_kind") == "test_execution_summary",
+        "status": existing.get("status") == "pass",
+        "suite": existing.get("suite") == suite,
+        "summary_mode": existing.get("summary_mode") in {"aggregate", "reused"},
+        "source_tree_fingerprint": existing.get("source_tree_fingerprint") == current_source_tree_fingerprint,
+        "full_suite_evidence": (
+            suite.strip().lower().replace("_", "-") not in FULL_SUITE_SCOPES
+            or bool(existing.get("represents_full_suite"))
+        ),
+    }
+    failed = [name for name, passed in checks.items() if not passed]
+    if failed:
+        diagnostics["reason"] = f"not_current:{','.join(failed)}"
+        diagnostics["checks"] = checks
+        diagnostics["current_source_tree_fingerprint"] = current_source_tree_fingerprint
+        diagnostics["observed_source_tree_fingerprint"] = str(existing.get("source_tree_fingerprint", ""))
+        return diagnostics
+    diagnostics.update(
+        {
+            "reusable": True,
+            "reason": "current_passing_aggregate_summary",
+            "generated_at": str(existing.get("generated_at", "")),
+            "source_tree_fingerprint": str(existing.get("source_tree_fingerprint", "")),
+        }
+    )
+    return diagnostics
 
 
 def _aggregate_status(statuses: list[str]) -> str:
@@ -1871,6 +1925,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--aggregate-from", action="append", default=[])
     parser.add_argument("--reuse-if-current", action="store_true")
     parser.add_argument("--reuse-from")
+    parser.add_argument(
+        "--reuse-only",
+        action="store_true",
+        help="With --reuse-if-current, fail instead of executing when reusable evidence is stale.",
+    )
     parser.add_argument("command", nargs=argparse.REMAINDER)
     args = parser.parse_args(argv)
     if args.command and args.command[0] == "--":
@@ -2048,8 +2107,28 @@ def _executed_report_for_args(
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.reuse_only:
+        args.reuse_if_current = True
     vault = Path(args.vault).resolve()
     if args.aggregate or args.aggregate_from:
+        if args.reuse_if_current:
+            diagnostics = reusable_aggregate_summary_diagnostics(
+                vault,
+                args.reuse_from or args.out,
+                suite=args.suite,
+            )
+            if diagnostics["reusable"]:
+                print(json.dumps({"summary_mode": "reused", **diagnostics}, ensure_ascii=False, indent=2))
+                return 0
+            print(
+                json.dumps(
+                    {"summary_mode": "aggregate", "reuse_diagnostics": diagnostics},
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            if args.reuse_only:
+                return 1
         return _run_aggregate_cli(vault, args)
 
     collect_nodeid_digest = _collect_nodeid_digest_for_args(vault, args)
@@ -2061,6 +2140,22 @@ def main(argv: list[str] | None = None) -> int:
     if report is not None:
         _write_and_print_report(vault, report, args.out)
         return 0
+    if args.reuse_only:
+        print(
+            json.dumps(
+                {
+                    "summary_mode": "single",
+                    "reuse_diagnostics": {
+                        "reusable": False,
+                        "path": report_path(vault, Path(args.reuse_from or args.out)),
+                        "reason": "not_current_or_missing",
+                    },
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 1
 
     report, returncode = _executed_report_for_args(
         vault,

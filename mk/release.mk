@@ -27,8 +27,6 @@ RELEASE_SMOKE_CURRENT_CHECK_OUT ?= tmp/release-smoke-report-current-check.json
 RELEASE_SOURCE_READY_COMMIT_MESSAGE ?= release: converge source-ready surfaces
 RELEASE_SOURCE_READY_PRE_STATUS_OUT ?= tmp/release-source-ready-pre-status.json
 RELEASE_SOURCE_READY_COMMIT_OUT ?= tmp/release-source-ready-commit.json
-RELEASE_SOURCE_READY_AMEND_OUT ?= tmp/release-source-ready-amend.json
-RELEASE_SOURCE_READY_FINAL_GUARD_AMEND_OUT ?= tmp/release-source-ready-final-guard-amend.json
 RELEASE_SOURCE_READY_STATUS_OUT ?= tmp/release-source-ready-status.json
 RELEASE_WORKTREE_CLEAN_CHECK_OUT ?= tmp/release-worktree-clean-check.json
 SOURCE_PACKAGE_CHECK_ROOT ?= build/source-package-check
@@ -132,7 +130,7 @@ SELF_IMPROVEMENT_NEGATIVE_LESSONS_CANDIDATE_OUT ?= tmp/self-improvement-negative
 REMEDIATION_BACKLOG_OUT ?= ops/reports/remediation-backlog.json
 REMEDIATION_BACKLOG_CANDIDATE_OUT ?= tmp/remediation-backlog.candidate.json
 
-.PHONY: release-evidence-converge release-evidence-converge-lane-guard release-evidence-converge-phase-1 release-evidence-converge-phase-2 release-evidence-converge-phase-3 release-finality-resettle release-verify-current release-sealed-verify release-evidence-closeout release-evidence-closeout-lane-guard release-distribution-zip release-distribution-zip-lane-guard test-source-package release-source-package-check release-evidence-closeout-sealed release-evidence-closeout-sealed-check release-evidence-closeout-sealed-dry-run release-evidence-closeout-sealed-dry-run-check release-authority-sealed-preflight release-evidence-refresh-fast release-builder-full release-builder-full-lane-guard release-smoke release-smoke-lane-guard release-smoke-full release-smoke-full-reuse release-smoke-full-current-check release-smoke-fast release-closeout-summary release-closeout-summary-report release-closeout-summary-conditional release-clean-lane-evidence-review release-evidence-cohort release-evidence-cohort-check learning-readiness-signoff learning-readiness-signoff-check learning-readiness-signoff-revalidation learning-readiness-signoff-revalidation-check release-evidence-dashboard release-evidence-dashboard-report release-lane-summary release-clean-blocker-ledger operator-release-summary learning-readiness-signoff-template learning-confirmed-legacy-reconstruction learning-claim-evidence-bundle learning-confirmed-evidence-cohort learning-claim-unlock-review learning-delta-scoreboard learning-claim-activation-report session-synopsis self-improvement-negative-lessons remediation-backlog review-archive external-report-reference-manifest external-report-reference-manifest-strict external-report-reference-manifest-release-check external-report-reference-manifest-settle external-report-action-matrix external-report-lifecycle-refresh release-worktree-clean-check release-converge-preflight release-converge-post release-converge release-converge-all-surfaces release-source-ready-snapshot release-source-ready-commit release-source-ready-post-commit-converge release-source-ready-amend release-source-ready-final-guard-amend release-source-ready-status release-source-ready release-check-preflight-converge release-check-core release-check-post-check release-check-post-converge release-check release-check-all-surfaces release-check-finalized release-conditional release-clean release-provenance-clean release-sbom-clean release-closeout-fixed-point release-closeout-post-check-finalizer-dry-run release-closeout-post-check-finalizer-ci-artifact release-closeout-fixed-point-cost-trend release-closeout-finality-attestation release-closeout-finality-verify release-closeout-batch-manifest-promote release-closeout-batch-manifest-replay-verify release-closeout-batch-manifest-verify release-audit-pack release-post-seal-attestation release-evidence-closeout-self-check
+.PHONY: release-evidence-converge release-evidence-converge-lane-guard release-evidence-converge-phase-1 release-evidence-converge-phase-2 release-evidence-converge-phase-3 release-finality-resettle release-verify-current release-sealed-verify release-evidence-closeout release-evidence-closeout-lane-guard release-distribution-zip release-distribution-zip-lane-guard test-source-package release-source-package-check release-evidence-closeout-sealed release-evidence-closeout-sealed-check release-evidence-closeout-sealed-dry-run release-evidence-closeout-sealed-dry-run-check release-authority-sealed-preflight release-evidence-refresh-fast release-builder-full release-builder-full-lane-guard release-smoke release-smoke-lane-guard release-smoke-full release-smoke-full-reuse release-smoke-full-current-check release-smoke-fast release-closeout-summary release-closeout-summary-report release-closeout-summary-conditional release-clean-lane-evidence-review release-evidence-cohort release-evidence-cohort-check learning-readiness-signoff learning-readiness-signoff-check learning-readiness-signoff-revalidation learning-readiness-signoff-revalidation-check release-evidence-dashboard release-evidence-dashboard-report release-lane-summary release-clean-blocker-ledger operator-release-summary learning-readiness-signoff-template learning-confirmed-legacy-reconstruction learning-claim-evidence-bundle learning-confirmed-evidence-cohort learning-claim-unlock-review learning-delta-scoreboard learning-claim-activation-report session-synopsis self-improvement-negative-lessons remediation-backlog review-archive external-report-reference-manifest external-report-reference-manifest-strict external-report-reference-manifest-release-check external-report-reference-manifest-settle external-report-action-matrix external-report-lifecycle-refresh release-worktree-clean-check release-converge-preflight release-converge-post release-converge release-converge-all-surfaces release-source-ready-snapshot release-source-ready-prepare release-source-ready-commit release-source-ready-post-verify release-source-ready-status release-source-ready release-sealed-dirty-recovery release-check-preflight-converge release-check-core release-check-post-check release-check-post-converge release-check release-check-all-surfaces release-check-finalized release-conditional release-clean release-provenance-clean release-sbom-clean release-closeout-fixed-point release-closeout-post-check-finalizer-dry-run release-closeout-post-check-finalizer-ci-artifact release-closeout-fixed-point-cost-trend release-closeout-finality-attestation release-closeout-finality-verify release-closeout-batch-manifest-promote release-closeout-batch-manifest-replay-verify release-closeout-batch-manifest-verify release-audit-pack release-post-seal-attestation release-evidence-closeout-self-check
 
 release-evidence-converge: release-evidence-converge-phase-3
 
@@ -194,6 +192,8 @@ release-evidence-converge-phase-3: release-evidence-converge-phase-2
 	$(MAKE) test-artifact-finalization
 	$(MAKE) release-closeout-post-check-finalizer-dry-run
 	$(MAKE) release-closeout-fixed-point
+	$(MAKE) operator-release-summary
+	$(MAKE) generated-artifact-converge
 	$(MAKE) tmp-json-clean
 	$(MAKE) release-closeout-finality-verify
 
@@ -227,10 +227,9 @@ release-source-package-check:
 	@status=0; $(PYTHON) -m ops.scripts.source_package_clean_extract --vault "$(VAULT)" --source-zip "$(SOURCE_PACKAGE_ZIP_OUT)" --extract-parent "$(SOURCE_PACKAGE_EXTRACT_PARENT)" --source-python "$(SOURCE_PACKAGE_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --test-summary-out "$(SOURCE_PACKAGE_TEST_SUMMARY_OUT)" --deselection-policy "$(SOURCE_PACKAGE_TEST_DESELECT_POLICY)" --pytest-mark-expr "$(SOURCE_PACKAGE_TEST_MARK_EXPR)" --tests "$(SOURCE_PACKAGE_TESTS)" --deselects="$(SOURCE_PACKAGE_TEST_DESELECTS)" --pytest-flags="$(PYTEST_SERIAL_FLAGS)" --zip-smoke-report "$(SOURCE_PACKAGE_ZIP_SMOKE_OUT)" --heartbeat-interval-seconds "$(SOURCE_PACKAGE_HEARTBEAT_INTERVAL_SECONDS)" --out "$(SOURCE_PACKAGE_CLEAN_EXTRACT_CANDIDATE_OUT)" || status=$$?; if [ ! -f "$(SOURCE_PACKAGE_CLEAN_EXTRACT_CANDIDATE_OUT)" ]; then exit $$status; fi; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(SOURCE_PACKAGE_CLEAN_EXTRACT_CANDIDATE_OUT)" --out "$(SOURCE_PACKAGE_CLEAN_EXTRACT_OUT)" --schema ops/schemas/source-package-clean-extract.schema.json --expected-artifact-kind source_package_clean_extract --expected-producer ops.scripts.source_package_clean_extract; exit $$status
 
 release-evidence-closeout-sealed:
+	$(MAKE) release-worktree-clean-check
 	$(MAKE) release-distribution-zip RELEASE_DISTRIBUTION_ZIP_OUT="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"
 	$(MAKE) external-report-reference-manifest-strict EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"
-	$(MAKE) release-evidence-converge RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_CLOSEOUT_SEALED_ZIP_METADATA)" EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"
-	$(MAKE) operator-release-summary
 	$(MAKE) release-post-seal-attestation RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"
 	$(MAKE) release-sealed-verify RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_OUT="$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_RELEASE_OUT)"
 
@@ -423,6 +422,8 @@ release-converge-post:
 	$(MAKE) generated-artifact-converge
 	$(MAKE) remediation-backlog
 	$(MAKE) release-closeout-fixed-point
+	$(MAKE) operator-release-summary
+	$(MAKE) generated-artifact-converge
 	$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required
 	$(MAKE) test-artifact-finalization
 
@@ -441,36 +442,29 @@ release-converge-all-surfaces:
 release-source-ready-snapshot:
 	$(PYTHON) -m ops.scripts.release_source_ready_commit --vault "$(VAULT)" --out "$(RELEASE_SOURCE_READY_PRE_STATUS_OUT)" --snapshot-only
 
+release-source-ready-prepare:
+	$(MAKE) release-source-ready-snapshot
+	$(MAKE) release-converge-all-surfaces
+
 release-source-ready-commit:
 	$(PYTHON) -m ops.scripts.release_source_ready_commit --vault "$(VAULT)" --out "$(RELEASE_SOURCE_READY_COMMIT_OUT)" --pre-status "$(RELEASE_SOURCE_READY_PRE_STATUS_OUT)" --message "$(RELEASE_SOURCE_READY_COMMIT_MESSAGE)"
-
-release-source-ready-post-commit-converge:
-	$(MAKE) auto-improve-readiness-worktree-guard
-	$(MAKE) goal-runtime-local-evidence-refresh
-	$(MAKE) generated-artifact-converge
-	$(MAKE) remediation-backlog
-	$(MAKE) release-closeout-fixed-point
-	$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required
-
-release-source-ready-amend:
-	$(PYTHON) -m ops.scripts.release_source_ready_commit --vault "$(VAULT)" --out "$(RELEASE_SOURCE_READY_AMEND_OUT)" --pre-status "$(RELEASE_SOURCE_READY_PRE_STATUS_OUT)" --amend --amend-of "$(RELEASE_SOURCE_READY_COMMIT_OUT)"
-
-release-source-ready-final-guard-amend:
-	$(MAKE) auto-improve-readiness-worktree-guard
-	$(PYTHON) -m ops.scripts.release_source_ready_commit --vault "$(VAULT)" --out "$(RELEASE_SOURCE_READY_FINAL_GUARD_AMEND_OUT)" --pre-status "$(RELEASE_SOURCE_READY_PRE_STATUS_OUT)" --amend --amend-of "$(RELEASE_SOURCE_READY_AMEND_OUT)"
 
 release-source-ready-status:
 	$(PYTHON) -m ops.scripts.release_source_ready_status --vault "$(VAULT)" --out "$(RELEASE_SOURCE_READY_STATUS_OUT)"
 
-release-source-ready:
-	$(MAKE) release-source-ready-snapshot
-	$(MAKE) release-converge-all-surfaces
-	$(MAKE) release-source-ready-commit
-	$(MAKE) release-source-ready-post-commit-converge
-	$(MAKE) release-source-ready-amend
-	$(MAKE) release-source-ready-final-guard-amend
+release-source-ready-post-verify:
 	$(MAKE) release-check-all-surfaces
 	$(MAKE) release-source-ready-status
+
+release-source-ready:
+	$(MAKE) release-source-ready-prepare
+	$(MAKE) release-source-ready-commit
+	$(MAKE) release-source-ready-post-verify
+
+release-sealed-dirty-recovery:
+	$(PYTHON) -m ops.scripts.release_source_ready_commit --vault "$(VAULT)" --out "$(RELEASE_SOURCE_READY_COMMIT_OUT)" --message "release: recover sealed generated evidence" --only-generated-canonical
+	$(MAKE) release-check-all-surfaces
+	$(MAKE) release-evidence-closeout-sealed
 
 release-check-preflight-converge: release-converge-preflight
 	@echo "release-check-preflight-converge is a mutating compatibility alias; prefer release-converge-preflight before committing, then release-check."
@@ -484,7 +478,8 @@ release-check-post-check:
 
 release-check-core:
 	$(MAKE) release-worktree-clean-check
-	$(MAKE) test-report-contract-all
+	$(MAKE) test-execution-summary-current-check
+	$(MAKE) test-execution-summary-full-current-check
 	$(MAKE) static
 	$(MAKE) artifact-freshness-check
 	$(MAKE) registry-preflight-check
@@ -492,7 +487,6 @@ release-check-core:
 	$(MAKE) eval
 	$(MAKE) stage2-eval
 	$(MAKE) planning-gate
-	$(MAKE) unit-tests-release-check
 	$(MAKE) release-smoke-full-current-check
 
 release-check:
@@ -554,7 +548,7 @@ release-closeout-batch-manifest-verify: release-closeout-batch-manifest-replay-v
 release-audit-pack:
 	$(PYTHON) -m ops.scripts.release_audit_pack --vault "$(VAULT)" --batch-manifest "$(RELEASE_CLOSEOUT_BATCH_MANIFEST_OUT)" --out "$(RELEASE_AUDIT_PACK_OUT)" $(if $(RELEASE_AUDIT_PACK_INCLUDE_OPTIONAL_PAYLOADS),--include-optional-payloads,)
 
-release-post-seal-attestation: operator-release-summary
+release-post-seal-attestation:
 	$(PYTHON) -m ops.scripts.release_post_seal_attestation build --vault "$(VAULT)" --out "$(RELEASE_POST_SEAL_ATTESTATION_OUT)" $(if $(RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP),--source-zip-path "$(RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP)",)
 
 release-evidence-closeout-self-check:

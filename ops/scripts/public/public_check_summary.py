@@ -24,6 +24,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.public_surface_policy import PUBLIC_INCLUDED_REPORT_FILES
     from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
     from ops.scripts.test_execution_summary import parse_pytest_counts
 else:
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
@@ -34,6 +35,7 @@ else:
     from ops.scripts.policy_runtime import load_policy, report_path
     from .public_surface_policy import PUBLIC_INCLUDED_REPORT_FILES
     from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
     from ops.scripts.test_execution_summary import parse_pytest_counts
 
 
@@ -421,6 +423,48 @@ def write_report(vault: Path, report: dict[str, Any], out_path: str = DEFAULT_OU
     )
 
 
+def reusable_summary_diagnostics(vault: Path, path_value: str | Path) -> dict[str, Any]:
+    path = Path(path_value)
+    if not path.is_absolute():
+        path = vault / path
+    diagnostics: dict[str, Any] = {
+        "reusable": False,
+        "path": report_path(vault, path),
+        "reason": "",
+    }
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        diagnostics["reason"] = f"summary_unavailable:{type(exc).__name__}"
+        return diagnostics
+    current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
+    summary = payload.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    checks = {
+        "artifact_kind": payload.get("artifact_kind") == "public_check_summary",
+        "producer": payload.get("producer") == PRODUCER,
+        "status": payload.get("status") == "pass",
+        "public_check_status": summary.get("public_check_status") == "pass",
+        "source_tree_fingerprint": payload.get("source_tree_fingerprint") == current_source_tree_fingerprint,
+    }
+    failed = [name for name, passed in checks.items() if not passed]
+    if failed:
+        diagnostics["reason"] = f"not_current:{','.join(failed)}"
+        diagnostics["checks"] = checks
+        diagnostics["current_source_tree_fingerprint"] = current_source_tree_fingerprint
+        diagnostics["observed_source_tree_fingerprint"] = str(payload.get("source_tree_fingerprint", ""))
+        return diagnostics
+    diagnostics.update(
+        {
+            "reusable": True,
+            "reason": "current_passing_public_check_summary",
+            "generated_at": str(payload.get("generated_at", "")),
+            "source_tree_fingerprint": str(payload.get("source_tree_fingerprint", "")),
+        }
+    )
+    return diagnostics
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run public mirror checks and write a canonical summary.")
     parser.add_argument("--vault", default=".")
@@ -432,12 +476,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--pytest-mark-expr", default="public")
     parser.add_argument("--pytest-flags", default="")
     parser.add_argument("--timeout-seconds", type=int, default=DEFAULT_TIMEOUT_SECONDS)
+    parser.add_argument("--reuse-if-current", action="store_true")
+    parser.add_argument("--reuse-from")
+    parser.add_argument(
+        "--reuse-only",
+        action="store_true",
+        help="With --reuse-if-current, fail instead of rerunning when the public-check summary is stale.",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.reuse_only:
+        args.reuse_if_current = True
     vault = Path(args.vault).resolve()
+    if args.reuse_if_current:
+        diagnostics = reusable_summary_diagnostics(vault, args.reuse_from or args.out)
+        if diagnostics["reusable"]:
+            print(json.dumps({"summary_mode": "reused", **diagnostics}, ensure_ascii=False, indent=2))
+            return 0
+        print(json.dumps({"summary_mode": "executed", "reuse_diagnostics": diagnostics}, ensure_ascii=False, indent=2))
+        if args.reuse_only:
+            return 1
     report = build_report(
         vault,
         PublicCheckRequest(

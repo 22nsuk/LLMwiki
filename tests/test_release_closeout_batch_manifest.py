@@ -1131,6 +1131,8 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         )
         self.assertNotIn("$(MAKE) release-evidence-closeout-self-check", recipe_lines)
         allowed_after_fixed_point = {
+            "$(MAKE) operator-release-summary",
+            "$(MAKE) generated-artifact-converge",
             "$(MAKE) tmp-json-clean",
             "$(MAKE) release-closeout-finality-verify",
         }

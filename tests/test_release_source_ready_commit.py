@@ -47,6 +47,7 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertEqual(classify_path("AGENTS.local.md"), "local_source_contract")
         self.assertEqual(classify_path("docs"), "public_source")
         self.assertEqual(classify_path("docs/development.md"), "public_source")
+        self.assertEqual(classify_path("ops/operator/operator-release-summary.json"), "generated_canonical")
         self.assertEqual(classify_path("github/workflows/ci.yml"), "unexpected")
 
     def test_commits_public_source_and_generated_evidence_together(self) -> None:
@@ -85,6 +86,76 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertEqual(
             categories["ops/reports/release-smoke-report.json"], "generated_canonical"
         )
+
+    def test_only_generated_canonical_commits_narrow_sealed_recovery_evidence(self) -> None:
+        (self.vault / "ops" / "operator").mkdir(parents=True)
+        (self.vault / "ops" / "operator" / "artifact-relocation-audit.json").write_text(
+            "{}\n",
+            encoding="utf-8",
+        )
+        _git(self.vault, "add", "ops/operator/artifact-relocation-audit.json")
+        _git(self.vault, "commit", "-m", "seed operator reports")
+        (self.vault / "ops" / "operator" / "operator-release-summary.json").write_text(
+            '{"status": "pass"}\n',
+            encoding="utf-8",
+        )
+        (self.vault / "ops" / "reports" / "release-smoke-report.json").write_text(
+            '{"status": "pass"}\n',
+            encoding="utf-8",
+        )
+
+        rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-source-ready-commit.json",
+                "--message",
+                "release: recover sealed generated evidence",
+                "--only-generated-canonical",
+            ]
+        )
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(_git(self.vault, "status", "--short"), "")
+        changed_paths = _git(self.vault, "show", "--name-only", "--format=", "HEAD").splitlines()
+        self.assertIn("ops/operator/operator-release-summary.json", changed_paths)
+        self.assertIn("ops/reports/release-smoke-report.json", changed_paths)
+        report = json.loads(
+            (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(report["status"], "committed")
+        categories = {entry["path"]: entry["category"] for entry in report["entries"]}
+        self.assertEqual(categories["ops/operator/operator-release-summary.json"], "generated_canonical")
+        self.assertEqual(categories["ops/reports/release-smoke-report.json"], "generated_canonical")
+
+    def test_only_generated_canonical_refuses_source_changes(self) -> None:
+        (self.vault / "README.md").write_text("# Test\n\nSource drift.\n", encoding="utf-8")
+        (self.vault / "ops" / "reports" / "release-smoke-report.json").write_text(
+            '{"status": "pass"}\n',
+            encoding="utf-8",
+        )
+
+        rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-source-ready-commit.json",
+                "--message",
+                "release: recover sealed generated evidence",
+                "--only-generated-canonical",
+            ]
+        )
+
+        self.assertEqual(rc, 1)
+        self.assertIn("README.md", _git(self.vault, "status", "--short"))
+        report = json.loads(
+            (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(report["status"], "blocked")
+        self.assertEqual(report["reason"], "non_generated_dirty_paths")
+        self.assertEqual(report["non_generated_paths"], ["README.md"])
 
     def test_report_summarizes_release_source_ready_diagnostics_without_changing_commit_policy(
         self,

@@ -1,19 +1,19 @@
 {
   "$schema": "ops/schemas/test-execution-summary.schema.json",
   "artifact_kind": "test_execution_summary",
-  "generated_at": "2026-05-23T05:47:04Z",
+  "generated_at": "2026-05-23T07:38:57Z",
   "producer": "ops.scripts.test_execution_summary",
   "source_command": "python -m ops.scripts.test_execution_summary --vault . --suite full --aggregate-from ops/reports/test-execution-summary-full-shards/full-suite-shard-1.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+  "source_tree_fingerprint": "4c5e79d21101f1f353c8346826e718c0a3cfbd547f56afb4bd951b10bc38b81b",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "9723184baf2c03d63eb746bd49cfab746f2a29e2b29f05ee97b2a3a802dae4bf",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "b6a7530898be27f1c114dc37c64bb35558dff83186584c7cbfa96f0c4a181cd2",
-    "shard_1": "9871a530bfedb134f3cea7367afd791133530727cb80cb399a7545196883efed",
-    "deselection_lifecycle": "8e43c22334011a5405f58663d6866d886e46bdfcf0652b48c96495a129c454c1",
-    "evidence_artifact_consistency": "7ebdd8d93b61e66c5bee1a23a9564cc0224dd5230704a9ec68324a077279225d",
+    "source_paths": "d8ec6e205c0309f2d27bb000818e400c6cfdb1b5b863b5914629391eb48cf095",
+    "shard_1": "d55049a354bf3259db6535cc75706e56fca3b907833f85b1927a16f6b1d8f0cb",
+    "deselection_lifecycle": "e4331c4de2a7bbca79fd777e4105e3366be694b276d59dd2b1b5dfa8978bc5f4",
+    "evidence_artifact_consistency": "afbdbc6b321612374747e5f6217505b2d50c3807f40558419585c0426b25f7da",
     "shard_statuses": "9e315c02fcaa4699f86633b57d509a77d575150ce2ff062d2fbb4d06d48c14c5",
     "suite": "a18b869b2e81c0c529552a3c4fa5c92ed08b98a4e146aed778d71d27517f83ac",
     "suite_coverage": "3bb5e7571f5a9efa71bb9fff3b6da343e7d855b4a6a2af4f9c9eb7fe5c449cf1",
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-23T05:47:04Z"
+    "checked_at": "2026-05-23T07:38:57Z"
   },
   "vault": ".",
   "policy": {
@@ -48,9 +48,9 @@
   "timed_out": false,
   "timeout_seconds": 5400,
   "termination_reason": "completed",
-  "duration_ms": 427567,
+  "duration_ms": 425019,
   "counts": {
-    "passed": 1490,
+    "passed": 1495,
     "failed": 0,
     "errors": 0,
     "skipped": 0,
@@ -87,7 +87,7 @@
   "deselected_tests": [],
   "deselection_lifecycle": {
     "status": "pass",
-    "checked_at": "2026-05-23T05:47:04Z",
+    "checked_at": "2026-05-23T07:38:57Z",
     "actual_deselected_count": 0,
     "max_allowed_deselected_count": 0,
     "over_budget": false,
@@ -106,16 +106,16 @@
   "pytest_collect_nodeid_digest": {
     "status": "collected",
     "command": ".venv/bin/python -m pytest -o addopts= --collect-only -q --capture=no",
-    "nodeid_count": 1490,
-    "sha256": "ab73acd6890e5a348bdc8cb8d34db03ec0390f5fcf2b01e803c4dbd583f45dd1",
+    "nodeid_count": 1495,
+    "sha256": "ae9a71559eaf9ddfa26f0d29c23fd5128327c945ba85f314b2483f644f162364",
     "reason": "aggregate report reuses shard nodeid digests"
   },
   "nodeid_outcome_consistency": {
     "status": "pass",
-    "nodeid_count": 1490,
-    "outcome_count": 1490,
+    "nodeid_count": 1495,
+    "outcome_count": 1495,
     "counted_outcomes": {
-      "passed": 1490,
+      "passed": 1495,
       "skipped": 0,
       "xfailed": 0,
       "xpassed": 0
@@ -129,19 +129,19 @@
       "path": "build/release-payloads/test-execution-summary-full.log",
       "exists": true,
       "size_bytes": 1852,
-      "sha256": "505f40a14c86bf0da0faca111778d74414e26991f4210dfbb511f12007841501",
+      "sha256": "1847a52fafd46065b74be74a0405387dbb26f6e36b736d2df200a17a71c18482",
       "source": "captured_pytest_stdout_stderr"
     },
     {
       "kind": "junit_xml",
       "path": "build/release-payloads/test-execution-summary-full.junit.xml",
       "exists": true,
-      "size_bytes": 253172,
-      "sha256": "2c5773b0336f9237dee0e3213ad1ba710c79b470eecbadb8718d8f007fe12f7e",
+      "size_bytes": 254005,
+      "sha256": "59f6ba10210c3facf8356192ff132d10fa1db3fed4ddf92911f5e557f789fc89",
       "source": "pytest_junit_xml",
       "consistency_status": "pass",
-      "observed_count": 1490,
-      "expected_count": 1490,
+      "observed_count": 1495,
+      "expected_count": 1495,
       "consistency_reason": "junit testcase count matches pytest summary"
     },
     {
@@ -165,8 +165,8 @@
         "kind": "junit_xml",
         "path": "build/release-payloads/test-execution-summary-full.junit.xml",
         "status": "pass",
-        "expected_count": 1490,
-        "observed_count": 1490
+        "expected_count": 1495,
+        "observed_count": 1495
       },
       {
         "kind": "failed_nodeids",
@@ -178,7 +178,7 @@
     ],
     "blockers": []
   },
-  "stdout_tail": "[{\"counts\": {\"errors\": 0, \"failed\": 0, \"passed\": 1490, \"skipped\": 0, \"warnings\": 0, \"xfailed\": 0, \"xpassed\": 0}, \"duration_ms\": 427567, \"generated_at\": \"2026-05-23T05:47:03Z\", \"path\": \"ops/reports/test-execution-summary-full-shards/full-suite-shard-1.json\", \"represents_full_suite\": true, \"status\": \"pass\", \"suite\": \"full-shard-1\"}]",
+  "stdout_tail": "[{\"counts\": {\"errors\": 0, \"failed\": 0, \"passed\": 1495, \"skipped\": 0, \"warnings\": 0, \"xfailed\": 0, \"xpassed\": 0}, \"duration_ms\": 425019, \"generated_at\": \"2026-05-23T07:38:57Z\", \"path\": \"ops/reports/test-execution-summary-full-shards/full-suite-shard-1.json\", \"represents_full_suite\": true, \"status\": \"pass\", \"suite\": \"full-shard-1\"}]",
   "stderr_tail": "",
   "summary_mode": "aggregate",
   "shards": [
@@ -186,10 +186,10 @@
       "path": "ops/reports/test-execution-summary-full-shards/full-suite-shard-1.json",
       "suite": "full-shard-1",
       "status": "pass",
-      "generated_at": "2026-05-23T05:47:03Z",
-      "duration_ms": 427567,
+      "generated_at": "2026-05-23T07:38:57Z",
+      "duration_ms": 425019,
       "counts": {
-        "passed": 1490,
+        "passed": 1495,
         "failed": 0,
         "errors": 0,
         "skipped": 0,
