@@ -362,7 +362,7 @@ def _clean_extract_commands(
         ("script-output-surfaces", _script_output_surfaces_command(request)),
         ("ruff", [request.source_python, "-m", "ruff", "check", *shlex.split(request.ruff_targets)]),
         ("mypy", [request.source_python, "-m", "mypy", *shlex.split(request.mypy_targets)]),
-        ("test-source-package", _source_package_test_command(request)),
+        ("source-package-pytest", _source_package_test_command(request)),
     ]
     return [
         _command_payload(
@@ -602,7 +602,7 @@ def _render_report(
         "script_output_surfaces_status": execution.script_output_surfaces_status,
         "ruff_status": _named_command_status(command_results, "ruff"),
         "mypy_status": _named_command_status(command_results, "mypy"),
-        "test_source_package_status": _named_command_status(command_results, "test-source-package"),
+        "test_source_package_status": _named_command_status(command_results, "source-package-pytest"),
         "test_source_package_summary": {
             "path": display_path(request.vault, execution.test_summary_path),
             "load_status": execution.test_summary_load_status,

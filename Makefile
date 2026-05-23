@@ -45,7 +45,7 @@ check-conditional: check
 check-clean-lane-guard:
 	$(PYTHON) -m ops.scripts.execution_lane_guard --vault "$(VAULT)" --policy "$(EXECUTION_LANE_POLICY)" --target check-clean
 
-check-clean: check-clean-lane-guard check-conditional warning-budget test-artifact-finalization release-evidence-cohort-check
+check-clean: check-clean-lane-guard check-conditional warning-budget release-evidence-cohort-check
 
 check-serial: static artifact-freshness-check registry-preflight-check lint eval stage2-eval planning-gate unit-tests-serial
 

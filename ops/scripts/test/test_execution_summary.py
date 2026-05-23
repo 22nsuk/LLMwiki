@@ -420,8 +420,6 @@ def _suite_scope_for_key(suite_key: str) -> str:
         return "fast_unit"
     if suite_key in {"public", "public-contract", "test-public", "public-check"}:
         return "public_contract"
-    if suite_key in {"artifact-finalization", "artifact-finalisation", "report-contract-finalization"}:
-        return "artifact_finalization"
     if suite_key in {"release-sealing", "release_sealing"}:
         return "release_sealing"
     if suite_key in {"subprocess", "subprocess-integration"}:

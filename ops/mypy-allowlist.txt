@@ -180,6 +180,8 @@ ops/scripts/release/release_source_ready_status.py
 ops/scripts/release/release_risk_taxonomy_matrix.py
 ops/scripts/release/release_workflow_order_guard.py
 ops/scripts/release/release_risk_taxonomy_runtime.py
+ops/scripts/release/release_run_manifest.py
+ops/scripts/release/release_run_ready.py
 ops/scripts/release/release_smoke.py
 ops/scripts/release/release_status_v2.py
 ops/scripts/eval/report_contract_closeout_runtime.py
@@ -207,6 +209,7 @@ ops/scripts/core/select_subagent_rung.py
 ops/scripts/mechanism/set_mechanism_run_history.py
 ops/scripts/core/source_page_naming_runtime.py
 ops/scripts/core/source_package_clean_extract.py
+ops/scripts/release/source_package_smoke.py
 ops/scripts/core/source_tree_fingerprint_runtime.py
 ops/scripts/core/source_slug_curation.py
 ops/scripts/core/source_trace_profile_runtime.py

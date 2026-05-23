@@ -11,6 +11,7 @@ import sys
 import tempfile
 import time
 import zipfile
+import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -41,6 +42,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import RELEASE_SMOKE_SCHEMA_PATH
     from ops.scripts.schema_runtime import load_schema, validate_with_schema
+    from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
     from ops.scripts.wiki_manifest import build_manifest, exclusion_policy, sha256_file
 else:
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
@@ -62,6 +64,7 @@ else:
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import RELEASE_SMOKE_SCHEMA_PATH
     from ops.scripts.schema_runtime import load_schema, validate_with_schema
+    from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
     from ops.scripts.wiki_manifest import build_manifest, exclusion_policy, sha256_file
 
 
@@ -86,14 +89,15 @@ TOP_ARCHIVE_OFFENDER_LIMIT = 10
 ARCHIVE_SELF_DESCRIPTION_PATH = "release-archive-self-description.json"
 DEFAULT_ARCHIVE_ROOT_NAME = "LLMwiki"
 EVIDENCE_LINKAGE_PATHS = (
-    "ops/reports/release-closeout-batch-manifest.json",
-    "ops/reports/release-evidence-closeout-self-check.json",
-    "ops/operator/operator-release-summary.json",
+    "build/release/release-run-manifest.json",
+    "build/release/release-closeout-batch-manifest.json",
+    "build/release/release-evidence-closeout-self-check.json",
+    "build/release/operator-release-summary.json",
+    "build/release/external-report-reference-manifest.json",
     "ops/reports/learning-claim-evidence-bundle.json",
     "ops/reports/learning-confirmed-evidence-cohort.json",
     "ops/reports/learning-delta-scoreboard.json",
     "ops/reports/test-execution-summary-full.json",
-    "external-reports/report-reference-manifest.json",
 )
 SMOKE_COMMAND_SPECS = (
     (
@@ -308,6 +312,18 @@ def _evidence_linkage(vault: Path, manifest: dict) -> list[dict]:
     return linked
 
 
+def _git_commit(vault: Path) -> str:
+    completed = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=vault,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    return completed.stdout.strip() if completed.returncode == 0 else ""
+
+
 def _archive_self_description(vault: Path, manifest: dict, *, profile: str, archive_root_name: str) -> dict:
     policy_obj = manifest.get("exclusion_policy")
     policy = policy_obj if isinstance(policy_obj, dict) else {}
@@ -316,6 +332,8 @@ def _archive_self_description(vault: Path, manifest: dict, *, profile: str, arch
         "artifact_kind": "release_archive_self_description",
         "producer": PRODUCER,
         "profile": profile,
+        "git_commit": _git_commit(vault),
+        "source_tree_fingerprint": release_source_tree_fingerprint(vault),
         "archive_root_name": archive_root_name,
         "archive_member_path": _archive_member_name(archive_root_name, ARCHIVE_SELF_DESCRIPTION_PATH),
         "source_manifest": {
@@ -336,7 +354,7 @@ def _archive_self_description(vault: Path, manifest: dict, *, profile: str, arch
         "evidence_linkage": {
             "embedded_evidence_policy": "digest_link_only",
             "linkage_phase": "pre_seal_package_build_snapshot",
-            "post_seal_authority": "ops/reports/release-closeout-batch-manifest.json",
+            "post_seal_authority": "build/release/release-run-manifest.json",
             "source_package_embeds_report_payloads": False,
             "linked_artifacts": _evidence_linkage(vault, manifest),
         },

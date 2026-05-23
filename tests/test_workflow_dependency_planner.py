@@ -208,7 +208,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 self.assertEqual(workflow["matched_paths"], [path])
                 self.assertEqual(workflow["steps"][0]["target"], "workflow-dependency-planner")
                 self.assertIn(
-                    "test-artifact-finalization",
+                    "release-closeout-finality-verify",
                     [step["target"] for step in workflow["steps"]],
                 )
                 self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
@@ -297,10 +297,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 "beta-writer",
             ],
         )
-        self.assertIn(
-            "test-artifact-finalization",
-                [step["target"] for step in workflow["steps"]],
-        )
+        self.assertEqual([step["target"] for step in workflow["steps"]][-1], "release-closeout-finality-verify")
 
     def test_evidence_dag_maps_fixed_point_policy_report_flow(self) -> None:
         self._write_fixed_point_policy()

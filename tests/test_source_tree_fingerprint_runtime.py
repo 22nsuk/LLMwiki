@@ -53,6 +53,9 @@ class SourceTreeFingerprintRuntimeTests(unittest.TestCase):
         self._write("ops/reports/generated.json", "{}\n")
         self._write("ops/operator/operator-release-summary.json", "{}\n")
         self._write("external-reports/private-review.md", "operator note\n")
+        self._write("raw/private-source.md", "private raw\n")
+        self._write("wiki/private-page.md", "private wiki\n")
+        self._write("system/private-runtime.md", "private system\n")
         self._write("runs/run-local/report.json", "{}\n")
         self._write("tmp/scratch.txt", "scratch\n")
         self._write("downloaded-report.md:Zone.Identifier", "[ZoneTransfer]\nZoneId=3\n")
@@ -70,6 +73,9 @@ class SourceTreeFingerprintRuntimeTests(unittest.TestCase):
                     "ops/reports/canonical-report.json",
                     "ops/operator/operator-release-summary.json",
                     "external-reports/report-reference-manifest.json",
+                    "raw/private-source.md",
+                    "wiki/private-page.md",
+                    "system/private-runtime.md",
                     "runs/local-run/report.json",
                     "tmp/scratch.json",
                     "ops/manifest.json",
@@ -131,8 +137,14 @@ class SourceTreeFingerprintRuntimeTests(unittest.TestCase):
         self._set_mtime("ops/operator/operator-release-summary.json", "2026-04-29T08:00:03Z")
         self._write("external-reports/private-review.md", "note\n")
         self._set_mtime("external-reports/private-review.md", "2026-04-29T08:00:04Z")
+        self._write("raw/private-source.md", "private raw\n")
+        self._set_mtime("raw/private-source.md", "2026-04-29T08:00:05Z")
+        self._write("wiki/private-page.md", "private wiki\n")
+        self._set_mtime("wiki/private-page.md", "2026-04-29T08:00:06Z")
+        self._write("system/private-runtime.md", "private system\n")
+        self._set_mtime("system/private-runtime.md", "2026-04-29T08:00:07Z")
         self._write("tmp/scratch.txt", "scratch\n")
-        self._set_mtime("tmp/scratch.txt", "2026-04-29T08:00:05Z")
+        self._set_mtime("tmp/scratch.txt", "2026-04-29T08:00:08Z")
 
         sample = release_source_tree_change_sample(
             self.vault,

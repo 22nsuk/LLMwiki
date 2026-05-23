@@ -40,8 +40,6 @@ The registry-documented entrypoints are:
 - `make report-contracts-core`
 - `make report-contracts-all`
 - `make report-contracts-extended`
-- `make test-artifact-finalization`
-- `make report-contract-finalization`
 - `make test-release-sealing`
 - `make test-release-sealing-core`
 - `make test-release-sealing-all`
@@ -51,15 +49,17 @@ The registry-documented entrypoints are:
 - `make test-integration-heavy`
 - `make test-public`
 - `make public-check`
-- `make test-source-package`
+- `make release-source-package-smoke`
 - `make release-source-package-check`
+- `make release-run-ready`
+- `make release-run-ready-check`
 - `make release-closeout-regression-dry-run`
 - `make test-execution-summary`
 - `make test-execution-summary-report-contract`
 
 ## CI Tier Shape
 
-`.github/workflows/ci.yml`은 test tier를 `fast`, `report-contract`, `release-closeout-regression`, `artifact-finalization`, `release-sealing`, `subprocess`, `slow`, `integration`, `integration-heavy`, `public`으로 나눠 병렬 job으로 실행하고, 별도 Windows/raw-registry/supply-chain job도 유지한다.
+`.github/workflows/ci.yml`은 test tier를 `fast`, `report-contract`, `release-closeout-regression`, `release-sealing`, `subprocess`, `slow`, `integration`, `integration-heavy`, `public`으로 나눠 병렬 job으로 실행하고, 별도 Windows/raw-registry/supply-chain job도 유지한다.
 
 The lane contract lives in `ops/test-lane-registry.json`. CI and docs should
 point to registry-backed Make targets rather than hand-maintained pytest marker
@@ -72,9 +72,9 @@ expressions.
 | Docs only | `make test-public` | `make sync-public-policy-check` if public boundaries changed |
 | Python runtime | `make static` | focused `.venv/bin/python -m pytest ...` or `make test` |
 | Make or CI lane | `make static` | `make report-contracts-core` |
-| Schema/report contract | `make report-contracts-core` | regenerate artifacts, then `make test-artifact-finalization` |
+| Schema/report contract | `make report-contracts-core` | regenerate artifacts, then rerun the focused schema/report tests |
 | Public export policy | `make sync-public-policy` | `make public-check` |
-| Release evidence | `make release-check` | `make release-check-all-surfaces` when export/public surfaces changed |
+| Release evidence | `make release-run-ready-check` | `make release-run-ready` from the committed tree before release |
 | Supply chain | `make supply-chain-check` | `make sbom-readiness-check` for SBOM readiness |
 
 ## Editing Discipline

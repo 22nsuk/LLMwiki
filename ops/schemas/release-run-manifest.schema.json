@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/release-run-manifest.schema.json",
+  "title": "Release run manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "status",
+    "expected_source_tree_fingerprint",
+    "final_source_tree_fingerprint",
+    "git_commit",
+    "git_clean",
+    "remote_sync",
+    "ignored_tracked_file_count",
+    "steps",
+    "distribution_zip",
+    "source_package_smoke",
+    "sealed",
+    "ops_reports_reference",
+    "failures"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "const": "ops/schemas/release-run-manifest.schema.json" },
+    "artifact_kind": { "type": "string", "const": "release_run_manifest" },
+    "generated_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" },
+    "producer": { "type": "string", "const": "ops.scripts.release_run_manifest" },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string" },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "schema_version": { "type": "integer", "const": 1 },
+    "artifact_status": { "type": "string", "const": "current" },
+    "retention_policy": { "type": "string", "const": "release_sidecar_authority" },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "const": "current" },
+        "checked_at": { "type": "string", "minLength": 1 }
+      }
+    },
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "expected_source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "final_source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "git_commit": { "type": "string" },
+    "git_clean": { "type": "boolean" },
+    "remote_sync": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "upstream", "ahead", "behind"],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "fail", "unknown"] },
+        "upstream": { "type": "string" },
+        "ahead": { "type": "integer", "minimum": 0 },
+        "behind": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "ignored_tracked_file_count": { "type": "integer", "minimum": 0 },
+    "steps": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/step" }
+    },
+    "distribution_zip": { "$ref": "#/$defs/file_identity" },
+    "source_package_smoke": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "exists", "status", "sha256"],
+      "properties": {
+        "path": { "type": "string" },
+        "exists": { "type": "boolean" },
+        "status": { "type": "string" },
+        "sha256": { "type": "string" }
+      }
+    },
+    "sealed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "batch_manifest",
+        "external_manifest",
+        "operator_summary",
+        "post_seal_attestation",
+        "sealed_rehearsal_check"
+      ],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "fail"] },
+        "batch_manifest": { "$ref": "#/$defs/report_identity" },
+        "external_manifest": { "$ref": "#/$defs/report_identity" },
+        "operator_summary": { "$ref": "#/$defs/report_identity" },
+        "post_seal_attestation": { "$ref": "#/$defs/report_identity" },
+        "sealed_rehearsal_check": { "$ref": "#/$defs/report_identity" }
+      }
+    },
+    "ops_reports_reference": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/report_identity" }
+    },
+    "failures": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "file_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "exists", "size_bytes", "sha256"],
+      "properties": {
+        "path": { "type": "string" },
+        "exists": { "type": "boolean" },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "sha256": { "type": "string" }
+      }
+    },
+    "report_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "exists",
+        "size_bytes",
+        "sha256",
+        "artifact_kind",
+        "status",
+        "source_tree_fingerprint",
+        "authority_role"
+      ],
+      "properties": {
+        "path": { "type": "string" },
+        "exists": { "type": "boolean" },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "sha256": { "type": "string" },
+        "artifact_kind": { "type": "string" },
+        "status": { "type": "string" },
+        "source_tree_fingerprint": { "type": "string" },
+        "authority_role": { "type": "string", "enum": ["release_sidecar_authority", "diagnostic_only"] }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "status",
+        "command",
+        "returncode",
+        "duration_ms",
+        "source_tree_fingerprint_before",
+        "source_tree_fingerprint_after"
+      ],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["pass", "fail", "skipped"] },
+        "command": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "returncode": { "type": "integer" },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "source_tree_fingerprint_before": { "type": "string" },
+        "source_tree_fingerprint_after": { "type": "string" },
+        "stdout_tail": { "type": "string" },
+        "stderr_tail": { "type": "string" }
+      }
+    }
+  }
+}

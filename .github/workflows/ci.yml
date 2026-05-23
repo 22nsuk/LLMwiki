@@ -30,7 +30,6 @@ jobs:
           - fast
           - report-contract
           - release-closeout-regression
-          - artifact-finalization
           - release-sealing
           - subprocess
           - slow
@@ -124,13 +123,11 @@ jobs:
             ops/reports/release-closeout-sealed-rehearsal-check.json
           if-no-files-found: error
 
-      - name: Run artifact-finalization tier
-        if: matrix.tier == 'artifact-finalization'
-        run: make test-artifact-finalization
-
       - name: Run release-sealing tier
         if: matrix.tier == 'release-sealing'
-        run: make test-release-sealing-all
+        run: |
+          make test-release-sealing-all
+          make -n release-run-ready
 
       - name: Run subprocess tier
         if: matrix.tier == 'subprocess'

@@ -104,7 +104,6 @@ PLANNER_CLOSEOUT_FALLBACK_TARGETS = [
     "release-evidence-closeout-self-check",
     "tmp-json-clean",
     "operator-release-summary",
-    "test-artifact-finalization",
     "release-closeout-finality-verify",
 ]
 WORKFLOW_RULES: list[dict[str, Any]] = [
@@ -123,7 +122,7 @@ WORKFLOW_RULES: list[dict[str, Any]] = [
         "workflow_id": "workflow_dependency_planner_closeout",
         "recommended_lane": "workflow-dependency-planner",
         "reason_code": "workflow_dependency_planner_input_or_contract_changed",
-        "description": "Workflow planner source, schema, Make orchestration, CI fingerprint, or CLI/documentation surface changed; refresh the planner before generated artifact finalization.",
+        "description": "Workflow planner source, schema, Make orchestration, CI fingerprint, or CLI/documentation surface changed; refresh the planner before finality verification.",
         "targets": PLANNER_CLOSEOUT_FALLBACK_TARGETS,
         "expensive": False,
         "reusable": True,
@@ -267,7 +266,6 @@ def _planner_closeout_targets(vault: Path) -> list[str]:
         [
             "tmp-json-clean",
             "operator-release-summary",
-            "test-artifact-finalization",
             "release-closeout-finality-verify",
         ]
     )
@@ -428,7 +426,6 @@ def _primary_report_for_target(target: str) -> str:
         "release-lane-summary": "ops/reports/release-lane-summary.json",
         "release-smoke-full": "ops/reports/release-smoke-report.json",
         "test-execution-summary": "ops/reports/test-execution-summary.json",
-        "test-artifact-finalization": "tests/test_generated_report_contracts.py",
         "workflow-dependency-planner": "ops/reports/workflow-dependency-planner.json",
     }.get(target, "")
 

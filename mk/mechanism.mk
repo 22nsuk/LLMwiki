@@ -181,7 +181,6 @@ goal-runtime-closeout-publish:
 	$(MAKE) generated-artifact-converge
 
 goal-runtime-closeout-finalize:
-	$(MAKE) test-artifact-finalization
 	$(MAKE) goal-runtime-fixed-point-check
 
 goal-runtime-closeout:

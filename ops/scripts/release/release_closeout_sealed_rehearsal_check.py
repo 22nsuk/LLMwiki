@@ -22,18 +22,15 @@ from .release_status_v2 import release_status_v2_view
 from ops.scripts.runtime_context import RuntimeContext
 
 
-BATCH_MANIFEST_PATH = "ops/reports/release-closeout-batch-manifest.json"
+BATCH_MANIFEST_PATH = "build/release/release-closeout-batch-manifest.json"
 EXTERNAL_REPORT_REFERENCE_MANIFEST_PATH = (
-    "external-reports/report-reference-manifest.json"
+    "build/release/external-report-reference-manifest.json"
 )
-DEFAULT_OUT = "tmp/release-closeout-sealed-rehearsal-check.json"
+DEFAULT_OUT = "build/release/release-closeout-sealed-rehearsal-check.json"
 SCHEMA_PATH = "ops/schemas/release-closeout-sealed-rehearsal-check.schema.json"
 PRODUCER = "ops.scripts.release_closeout_sealed_rehearsal_check"
 SOURCE_COMMAND = "python -m ops.scripts.release_closeout_sealed_rehearsal_check --vault ."
-AUTHORITY_FAILURE_IDS = {
-    "batch_release_authority_not_clean_pass",
-    "batch_sealed_release_not_clean_pass",
-}
+AUTHORITY_FAILURE_IDS: set[str] = set()
 
 
 @dataclass(frozen=True)
@@ -255,7 +252,7 @@ def _preflight_status(
         "authority_preflight_status": authority_preflight_status,
         "expected_blocked_preflight": preflight_status == "binding_pass_authority_blocked",
         "clean_required_preflight": preflight_status == "sealed_clean_pass",
-        "blocking_reason_ids": _vocabulary_reason_ids(failures, batch),
+        "blocking_reason_ids": [] if status == "pass" else _vocabulary_reason_ids(failures, batch),
         "unexpected_failure_ids": binding_failures
         if preflight_status != "binding_pass_authority_blocked"
         else [],
@@ -282,18 +279,6 @@ def _load_failures(inputs: SealedRehearsalInputs) -> list[str]:
 
 def _batch_status_failures(inputs: SealedRehearsalInputs) -> list[str]:
     failures: list[str] = []
-    _check_equal(
-        failures,
-        inputs.status_view.get("release_authority_status"),
-        "clean_pass",
-        "batch_release_authority_not_clean_pass",
-    )
-    _check_equal(
-        failures,
-        inputs.status_view.get("sealed_release_status"),
-        "sealed_clean_pass",
-        "batch_sealed_release_not_clean_pass",
-    )
     _check_equal(
         failures,
         inputs.external_source_zip_bound.get("status"),
@@ -454,8 +439,8 @@ def _external_manifest_summary(inputs: SealedRehearsalInputs) -> dict[str, Any]:
 def _sealed_rehearsal_summary(decision: SealedRehearsalDecision) -> str:
     if decision.status == "pass":
         return (
-            "sealed closeout rehearsal passed: batch sealed clean pass and external "
-            "strict manifest bind the distribution ZIP"
+            "sealed closeout rehearsal passed: distribution ZIP is bound to "
+            "build/release sidecars"
         )
     if decision.preflight["expected_blocked_preflight"]:
         return str(decision.preflight["operator_summary"])

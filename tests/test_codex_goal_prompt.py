@@ -103,14 +103,14 @@ Resume discipline:
 Generated artifact convergence:
 - After code or report-generator edits, do not use test failure -> patch -> full rerun as the auto-improve loop.
 - Prefer `make goal-runtime-closeout` to run the fingerprint-based cheap closeout plan before any full-suite retry.
-- Treat that closeout as run-local candidate-converge -> single canonical publish boundary -> post-publish finalization when expensive evidence is already current.
+- Treat that closeout as run-local candidate-converge -> single canonical publish boundary -> post-publish fixed-point check when expensive evidence is already current.
 - If the cheap closeout plan reports stale expensive evidence, stop after the run-local candidate step and escalate to the full closeout budget instead of publishing canonical reports.
 - Use `make goal-runtime-closeout-full` only when the closeout plan shows stale expensive evidence and the source fingerprint changed.
 - Run `make report-schema-samples-check` before generated artifact convergence so schema fixture drift is caught before report currentness work.
 - First run `make generated-artifact-converge`; it fixes the order as script-output-surfaces -> external-report-action-matrix -> generated-artifact-index -> artifact-freshness.
 - Run `make release-smoke-full-reuse` when release source-tree evidence may have changed.
 - Treat full-suite evidence as max-once per unchanged source fingerprint; reuse it after a pass instead of rerunning for report-only drift.
-- Run artifact finalization only after that convergence, through `make report-contract-closeout` or `make test-artifact-finalization`.
+- Use `make release-run-ready` as the committed-tree release authority instead of a local report finalization lane.
 """,
         )
 
@@ -148,7 +148,7 @@ Generated artifact convergence:
             self.assertIn("single canonical publish boundary", persisted["prompt"]["text"])
             self.assertIn("make report-schema-samples-check", persisted["prompt"]["text"])
             self.assertIn("make generated-artifact-converge", persisted["prompt"]["text"])
-            self.assertIn("make test-artifact-finalization", persisted["prompt"]["text"])
+            self.assertIn("make release-run-ready", persisted["prompt"]["text"])
 
     def test_prompt_guides_promotion_work_without_reward_hacking(self) -> None:
         prompt = build_prompt_text(sample_goal_contract())
@@ -165,7 +165,7 @@ Generated artifact convergence:
             "make generated-artifact-converge",
             "make goal-runtime-closeout",
             "make release-smoke-full-reuse",
-            "make test-artifact-finalization",
+            "make release-run-ready",
         )
         surfaces = {
             "prompt": build_prompt_text(sample_goal_contract()),

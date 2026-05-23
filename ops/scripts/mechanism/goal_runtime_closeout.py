@@ -45,7 +45,6 @@ PUBLISH_TARGETS = (
     "generated-artifact-converge",
 )
 POST_PUBLISH_FINALIZATION_TARGETS = (
-    "test-artifact-finalization",
     "goal-runtime-fixed-point-check",
 )
 GENERATED_DIRTY_PREFIXES = (

@@ -42,6 +42,18 @@ class ReleasePostSealAttestationTests(unittest.TestCase):
         self._write_release_authority_reports()
         self._write_learning_reports()
         self._write_operator_summary()
+        self._write_post_seal_sidecar_copy(
+            "ops/reports/release-closeout-batch-manifest.json",
+            "build/release/release-closeout-batch-manifest.json",
+        )
+        self._write_post_seal_sidecar_copy(
+            "ops/reports/release-evidence-closeout-self-check.json",
+            "build/release/release-evidence-closeout-self-check.json",
+        )
+        self._write_post_seal_sidecar_copy(
+            "ops/operator/operator-release-summary.json",
+            "build/release/operator-release-summary.json",
+        )
 
     def _write_source_zip_with_pre_seal_description(self) -> None:
         with zipfile.ZipFile(self.source_zip, "w") as archive:
@@ -53,24 +65,24 @@ class ReleasePostSealAttestationTests(unittest.TestCase):
                         "artifact_kind": "release_archive_self_description",
                         "evidence_linkage": {
                             "linkage_phase": "pre_seal_package_build_snapshot",
-                            "post_seal_authority": "ops/reports/release-closeout-batch-manifest.json",
+                            "post_seal_authority": "build/release/release-run-manifest.json",
                             "linked_artifacts": [
                                 {
-                                    "path": "ops/reports/release-closeout-batch-manifest.json",
+                                    "path": "build/release/release-closeout-batch-manifest.json",
                                     "exists": True,
                                     "included_in_zip": False,
                                     "sha256": "0" * 64,
                                     "size_bytes": 1,
                                 },
                                 {
-                                    "path": "ops/reports/release-evidence-closeout-self-check.json",
+                                    "path": "build/release/release-evidence-closeout-self-check.json",
                                     "exists": True,
                                     "included_in_zip": False,
                                     "sha256": "0" * 64,
                                     "size_bytes": 1,
                                 },
                                 {
-                                    "path": "ops/operator/operator-release-summary.json",
+                                    "path": "build/release/operator-release-summary.json",
                                     "exists": True,
                                     "included_in_zip": False,
                                     "sha256": "0" * 64,
@@ -283,7 +295,7 @@ class ReleasePostSealAttestationTests(unittest.TestCase):
         return hashlib.sha256((self.vault / rel_path).read_bytes()).hexdigest()
 
     def _enable_pre_seal_confirmed_wording(self) -> None:
-        operator_path = self.vault / "ops" / "operator" / "operator-release-summary.json"
+        operator_path = self.vault / "build" / "release" / "operator-release-summary.json"
         operator = json.loads(operator_path.read_text(encoding="utf-8"))
         operator["learning_readiness"]["revalidation_status"] = "current"
         operator["learning_claim"]["confirmed_wording_allowed"] = True
@@ -388,7 +400,7 @@ class ReleasePostSealAttestationTests(unittest.TestCase):
         self.assertEqual(destination, (self.vault / "build" / "release" / "release-post-seal-attestation.json"))
         self.assertEqual(verified["status"], "pass")
 
-    def test_sidecar_batch_and_operator_reports_do_not_bind_canonical_pre_seal_paths(self) -> None:
+    def test_sidecar_batch_and_operator_reports_bind_release_sidecar_paths(self) -> None:
         batch_sidecar_sha = self._write_post_seal_sidecar_copy(
             "ops/reports/release-closeout-batch-manifest.json",
             "build/release/release-closeout-batch-manifest.json",
@@ -421,12 +433,18 @@ class ReleasePostSealAttestationTests(unittest.TestCase):
         self.assertEqual(linkage["status"], "pass")
         self.assertEqual(linkage["binding_mismatch_count"], 0)
         artifacts_by_path = {artifact["path"]: artifact for artifact in linkage["artifacts"]}
-        batch_link = artifacts_by_path["ops/reports/release-closeout-batch-manifest.json"]
-        operator_link = artifacts_by_path["ops/operator/operator-release-summary.json"]
-        self.assertEqual(batch_link["authoritative_post_seal_digest_source"], "current_file")
-        self.assertEqual(operator_link["authoritative_post_seal_digest_source"], "current_file")
-        self.assertEqual(batch_link["binding_sha256"], "")
-        self.assertEqual(operator_link["binding_sha256"], "")
+        batch_link = artifacts_by_path["build/release/release-closeout-batch-manifest.json"]
+        operator_link = artifacts_by_path["build/release/operator-release-summary.json"]
+        self.assertEqual(
+            batch_link["authoritative_post_seal_digest_source"],
+            "reports.release_closeout_batch_manifest.sha256",
+        )
+        self.assertEqual(
+            operator_link["authoritative_post_seal_digest_source"],
+            "reports.operator_release_summary.sha256",
+        )
+        self.assertEqual(batch_link["binding_sha256"], batch_sidecar_sha)
+        self.assertEqual(operator_link["binding_sha256"], operator_sidecar_sha)
         self.assertTrue(batch_link["binding_matches_current"])
         self.assertTrue(operator_link["binding_matches_current"])
         self.assertEqual(attestation["verification"]["failed_checks"], [])
@@ -475,11 +493,11 @@ class ReleasePostSealAttestationTests(unittest.TestCase):
                 json.dumps(self_description, ensure_ascii=False),
             )
         self.source_zip_sha256 = hashlib.sha256(self.source_zip.read_bytes()).hexdigest()
-        manifest_path = self.vault / "ops" / "reports" / "release-closeout-batch-manifest.json"
+        manifest_path = self.vault / "build" / "release" / "release-closeout-batch-manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         manifest["distribution_package"]["sha256"] = self.source_zip_sha256
         manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-        operator_path = self.vault / "ops" / "operator" / "operator-release-summary.json"
+        operator_path = self.vault / "build" / "release" / "operator-release-summary.json"
         operator = json.loads(operator_path.read_text(encoding="utf-8"))
         operator["source_zip"]["sha256"] = self.source_zip_sha256
         operator["source_zip"]["actual_sha256"] = self.source_zip_sha256
@@ -503,7 +521,7 @@ class ReleasePostSealAttestationTests(unittest.TestCase):
         )
 
     def test_operator_bundle_digest_drift_fails_learning_claim_authority_verification(self) -> None:
-        operator_path = self.vault / "ops" / "operator" / "operator-release-summary.json"
+        operator_path = self.vault / "build" / "release" / "operator-release-summary.json"
         operator = json.loads(operator_path.read_text(encoding="utf-8"))
         operator["learning_claim"]["learning_claim_evidence_bundle_sha256"] = "d" * 64
         operator_path.write_text(json.dumps(operator, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -662,7 +680,7 @@ class ReleasePostSealAttestationTests(unittest.TestCase):
         )
 
     def test_allowed_machine_release_status_is_not_reported_as_blocker(self) -> None:
-        manifest_path = self.vault / "ops" / "reports" / "release-closeout-batch-manifest.json"
+        manifest_path = self.vault / "build" / "release" / "release-closeout-batch-manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         manifest["machine_release_status"] = "allowed"
         manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -184,6 +184,7 @@
       "properties": {
         "mode": {
           "enum": [
+            "all",
             "marker_expression",
             "explicit_selectors"
           ]

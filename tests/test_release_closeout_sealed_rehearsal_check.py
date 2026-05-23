@@ -59,7 +59,7 @@ class ReleaseCloseoutSealedRehearsalCheckTests(unittest.TestCase):
     def _write_inputs(self) -> Path:
         zip_path, digest, entry_count = self._write_zip()
         self._write_json(
-            "ops/reports/release-closeout-batch-manifest.json",
+            "build/release/release-closeout-batch-manifest.json",
             {
                 "release_authority_status": "clean_pass",
                 "sealed_release_status": "sealed_clean_pass",
@@ -74,7 +74,7 @@ class ReleaseCloseoutSealedRehearsalCheckTests(unittest.TestCase):
             },
         )
         self._write_json(
-            "external-reports/report-reference-manifest.json",
+            "build/release/external-report-reference-manifest.json",
             {
                 "distribution_provenance": {
                     "mode": "strict_review_release",
@@ -149,13 +149,13 @@ class ReleaseCloseoutSealedRehearsalCheckTests(unittest.TestCase):
         batch_candidate.parent.mkdir(parents=True, exist_ok=True)
         batch_candidate.write_text(
             (
-                self.vault / "ops" / "reports" / "release-closeout-batch-manifest.json"
+                self.vault / "build" / "release" / "release-closeout-batch-manifest.json"
             ).read_text(encoding="utf-8"),
             encoding="utf-8",
         )
         external_candidate.write_text(
             (
-                self.vault / "external-reports" / "report-reference-manifest.json"
+                self.vault / "build" / "release" / "external-report-reference-manifest.json"
             ).read_text(encoding="utf-8"),
             encoding="utf-8",
         )
@@ -177,12 +177,13 @@ class ReleaseCloseoutSealedRehearsalCheckTests(unittest.TestCase):
             "tmp/sealed-dry-run/external.json",
         )
 
-    def test_sealed_rehearsal_check_fails_when_batch_is_unsealed(self) -> None:
+    def test_sealed_rehearsal_check_ignores_batch_authority_status(self) -> None:
         zip_path = self._write_inputs()
         batch_path = (
-            self.vault / "ops" / "reports" / "release-closeout-batch-manifest.json"
+            self.vault / "build" / "release" / "release-closeout-batch-manifest.json"
         )
         batch = json.loads(batch_path.read_text(encoding="utf-8"))
+        batch["release_authority_status"] = "blocked"
         batch["sealed_release_status"] = "unsealed_distribution_not_provided"
         batch_path.write_text(
             json.dumps(batch, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -194,23 +195,17 @@ class ReleaseCloseoutSealedRehearsalCheckTests(unittest.TestCase):
             context=fixed_context(),
         )
 
-        self.assertEqual(report["status"], "fail")
-        self.assertIn("batch_sealed_release_not_clean_pass", report["failures"])
-        self.assertIn(
-            {
-                "failure_id": "batch_sealed_release_not_clean_pass",
-                "vocabulary_reason_id": "sealed_release_not_clean_pass",
-                "status_axis": "sealed_distribution",
-            },
-            report["failure_details"],
-        )
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["failures"], [])
+        self.assertEqual(report["preflight_status"], "sealed_clean_pass")
+        self.assertEqual(report["distribution_binding_status"], "pass")
 
-    def test_sealed_rehearsal_check_marks_authority_only_failure_as_blocked_preflight(
+    def test_sealed_rehearsal_check_treats_authority_only_failure_as_pass(
         self,
     ) -> None:
         zip_path = self._write_inputs()
         batch_path = (
-            self.vault / "ops" / "reports" / "release-closeout-batch-manifest.json"
+            self.vault / "build" / "release" / "release-closeout-batch-manifest.json"
         )
         batch = json.loads(batch_path.read_text(encoding="utf-8"))
         batch["release_authority_status"] = "blocked"
@@ -232,25 +227,18 @@ class ReleaseCloseoutSealedRehearsalCheckTests(unittest.TestCase):
             context=fixed_context(),
         )
 
-        self.assertEqual(report["status"], "fail")
-        self.assertEqual(report["preflight_status"], "binding_pass_authority_blocked")
-        self.assertEqual(report["preflight_mode"], "expected_blocked")
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["preflight_status"], "sealed_clean_pass")
+        self.assertEqual(report["preflight_mode"], "clean_required")
         self.assertEqual(report["distribution_binding_status"], "pass")
-        self.assertEqual(report["authority_preflight_status"], "blocked")
-        self.assertTrue(report["expected_blocked_preflight"])
-        self.assertFalse(report["clean_required_preflight"])
+        self.assertEqual(report["authority_preflight_status"], "clean")
+        self.assertFalse(report["expected_blocked_preflight"])
+        self.assertTrue(report["clean_required_preflight"])
         self.assertEqual(report["unexpected_failure_ids"], [])
-        self.assertEqual(
-            report["blocking_reason_ids"],
-            [
-                "release_authority_not_clean_pass",
-                "machine_release_not_allowed",
-                "sealed_release_not_clean_pass",
-            ],
-        )
+        self.assertEqual(report["blocking_reason_ids"], [])
         self.assertEqual(
             report["summary"],
-            "distribution binding pass; release authority blocked",
+            "sealed closeout rehearsal passed: distribution ZIP is bound to build/release sidecars",
         )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
@@ -259,7 +247,7 @@ class ReleaseCloseoutSealedRehearsalCheckTests(unittest.TestCase):
     ) -> None:
         zip_path = self._write_inputs()
         batch_path = (
-            self.vault / "ops" / "reports" / "release-closeout-batch-manifest.json"
+            self.vault / "build" / "release" / "release-closeout-batch-manifest.json"
         )
         batch = json.loads(batch_path.read_text(encoding="utf-8"))
         batch["release_authority_status"] = "blocked"
@@ -300,12 +288,12 @@ class ReleaseCloseoutSealedRehearsalCheckTests(unittest.TestCase):
         self.assertEqual(validate_with_schema(persisted, schema), [])
         self.assertEqual(persisted["preflight_mode"], "clean_required")
 
-    def test_sealed_rehearsal_check_rejects_legacy_status_without_migrated_fields(
+    def test_sealed_rehearsal_check_accepts_legacy_status_when_zip_binding_is_current(
         self,
     ) -> None:
         zip_path = self._write_inputs()
         self._write_json(
-            "ops/reports/release-closeout-batch-manifest.json",
+            "build/release/release-closeout-batch-manifest.json",
             {
                 "status": "pass",
                 "distribution_package": {
@@ -325,17 +313,8 @@ class ReleaseCloseoutSealedRehearsalCheckTests(unittest.TestCase):
             context=fixed_context(),
         )
 
-        self.assertEqual(report["status"], "fail")
-        self.assertIn("batch_release_authority_not_clean_pass", report["failures"])
-        self.assertIn("batch_sealed_release_not_clean_pass", report["failures"])
-        self.assertEqual(
-            {
-                item["vocabulary_reason_id"]
-                for item in report["failure_details"]
-                if item["failure_id"].startswith("batch_")
-            },
-            {"release_authority_not_clean_pass", "sealed_release_not_clean_pass"},
-        )
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["failures"], [])
 
 
 if __name__ == "__main__":

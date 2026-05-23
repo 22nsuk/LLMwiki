@@ -305,12 +305,16 @@ class ReleaseSmokeTest(unittest.TestCase):
             )
             self.assertEqual(
                 self_description["evidence_linkage"]["post_seal_authority"],
-                "ops/reports/release-closeout-batch-manifest.json",
+                "build/release/release-run-manifest.json",
             )
             linked_paths = {
                 item["path"]
                 for item in self_description["evidence_linkage"]["linked_artifacts"]
             }
+            self.assertIn("build/release/release-run-manifest.json", linked_paths)
+            self.assertIn("build/release/release-closeout-batch-manifest.json", linked_paths)
+            self.assertIn("build/release/release-evidence-closeout-self-check.json", linked_paths)
+            self.assertIn("build/release/operator-release-summary.json", linked_paths)
             self.assertIn("ops/reports/learning-claim-evidence-bundle.json", linked_paths)
             self.assertIn("ops/reports/learning-confirmed-evidence-cohort.json", linked_paths)
             self.assertIn("ops/reports/learning-delta-scoreboard.json", linked_paths)

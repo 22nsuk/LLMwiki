@@ -22,11 +22,11 @@
   "targets": {
     "check-clean": {
       "required_lane": "full_vault",
-      "reason": "check-clean includes artifact-finalization and release evidence checks that require full-vault generated artifacts.",
+      "reason": "check-clean includes release evidence checks that require full-vault generated artifacts.",
       "alternatives": [
         "make static",
         "make test",
-        "make test-source-package",
+        "make release-source-package-smoke",
         "make release-source-package-check"
       ]
     },
@@ -35,7 +35,7 @@
       "reason": "release-distribution-zip builds a new source archive from full-vault state; source-package extracts already contain release-archive-self-description.json and must not replay packaging inside themselves.",
       "alternatives": [
         "make static",
-        "make test-source-package",
+        "make release-source-package-smoke",
         "make release-source-package-check"
       ]
     },
@@ -44,7 +44,7 @@
       "reason": "release-smoke packages and replays the full source archive profile, which requires full-vault corpus and release policy context.",
       "alternatives": [
         "make static",
-        "make test-source-package",
+        "make release-source-package-smoke",
         "make release-source-package-check"
       ]
     },
@@ -53,16 +53,16 @@
       "reason": "release-evidence-closeout is a compatibility alias for release-evidence-converge and refreshes generated release evidence that is intentionally absent from source-package extracts.",
       "alternatives": [
         "make static",
-        "make test-source-package",
+        "make release-source-package-smoke",
         "make release-source-package-check"
       ]
     },
     "release-evidence-converge": {
       "required_lane": "full_vault",
-      "reason": "release-evidence-converge refreshes generated release evidence and artifact finalization reports that are intentionally absent from source-package extracts.",
+      "reason": "release-evidence-converge refreshes generated release evidence that is intentionally absent from source-package extracts.",
       "alternatives": [
         "make static",
-        "make test-source-package",
+        "make release-source-package-smoke",
         "make release-source-package-check"
       ]
     },
@@ -71,7 +71,7 @@
       "reason": "release-verify-current checks full-vault generated release evidence and finality without mutating canonical report artifacts.",
       "alternatives": [
         "make static",
-        "make test-source-package",
+        "make release-source-package-smoke",
         "make release-source-package-check"
       ]
     },
@@ -80,7 +80,7 @@
       "reason": "release-sealed-verify checks existing sealed release evidence against a materialized source ZIP without rebuilding the distribution package.",
       "alternatives": [
         "make static",
-        "make test-source-package",
+        "make release-source-package-smoke",
         "make release-source-package-check"
       ]
     },
@@ -89,16 +89,16 @@
       "reason": "release-builder-full is the full-vault release builder lane and depends on release-evidence-converge.",
       "alternatives": [
         "make static",
-        "make test-source-package",
+        "make release-source-package-smoke",
         "make release-source-package-check"
       ]
     },
-    "test-artifact-finalization": {
-      "blocked_lanes": ["source_package_extract"],
-      "reason": "artifact-finalization validates checked-in generated reports and release artifacts that are intentionally excluded from source-package extracts.",
+    "release-run-ready": {
+      "required_lane": "full_vault",
+      "reason": "release-run-ready verifies the current committed tree and writes build/release sidecar authority evidence.",
       "alternatives": [
-        "make test-report-contract",
-        "make test-source-package",
+        "make static",
+        "make release-source-package-smoke",
         "make release-source-package-check"
       ]
     }

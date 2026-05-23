@@ -118,7 +118,7 @@ class ImportFallbackContractTests(unittest.TestCase):
         }
         all_targets = sorted(project_targets | flat_targets | direct_fallback_targets)
 
-        self.assertEqual(len(project_targets), 66)
+        self.assertEqual(len(project_targets), 69)
         self.assertTrue(flat_targets)
         self.assertTrue(direct_fallback_targets)
         for module_name in all_targets:

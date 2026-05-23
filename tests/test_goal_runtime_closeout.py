@@ -120,7 +120,7 @@ class GoalRuntimeCloseoutTests(unittest.TestCase):
             report["transaction"]["publish_boundary"]["canonical_publish_targets"],
         )
         self.assertIn(
-            "test-artifact-finalization",
+            "goal-runtime-fixed-point-check",
             report["transaction"]["post_publish_finalization_targets"],
         )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])

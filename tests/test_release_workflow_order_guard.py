@@ -153,7 +153,6 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 "release-evidence-dashboard",
                 "release-lane-summary",
                 "release-clean-blocker-ledger",
-                "test-artifact-finalization",
                 "auto-improve-readiness-report-body",
                 "script-output-surfaces",
                 "external-report-action-matrix",
@@ -177,7 +176,6 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "\t$(MAKE) release-lane-summary\n"
             "\t$(MAKE) release-clean-blocker-ledger\n"
             "\t$(MAKE) generated-artifact-converge\n"
-            "\t$(MAKE) test-artifact-finalization\n"
             "\t$(MAKE) release-closeout-post-check-finalizer-dry-run\n"
             "\t$(MAKE) release-closeout-fixed-point\n"
             "\t$(MAKE) tmp-json-clean\n"
@@ -205,7 +203,6 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "\t$(MAKE) remediation-backlog\n"
             "\t$(MAKE) release-closeout-fixed-point\n"
             "\t$(MAKE) release-closeout-post-check-finalizer-dry-run RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_FLAGS=--fail-on-refresh-required\n"
-            "\t$(MAKE) test-artifact-finalization\n"
             "release-source-ready-snapshot:\n"
             "\t@true\n"
             "release-source-ready-commit:\n"

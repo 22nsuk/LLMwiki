@@ -22,8 +22,6 @@ from ops.scripts.test_lane_registry_runtime import (
     marker_semantics,
     pack_ci_entrypoint,
     pack_ci_steps,
-    pack_deselection_policy,
-    pack_deselects,
     pack_mark_expr,
     pack_selectors,
     pack_summary_suite,
@@ -172,12 +170,14 @@ def _assert_release_closeout_manifest_phony_and_vars(case: unittest.TestCase, te
         "RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT ?= build/release/release-distribution-zip-smoke.json",
         "RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP ?=",
         "RELEASE_CLOSEOUT_SEALED_ZIP_METADATA ?=",
+        "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_OUT ?= build/release/release-closeout-sealed-rehearsal-check.json",
         "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_CANONICAL_OUT ?= ops/reports/release-closeout-sealed-rehearsal-check.json",
         "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_RELEASE_OUT ?= build/release/release-closeout-sealed-rehearsal-check.json",
         "RELEASE_AUDIT_PACK_OUT ?= build/release/release-audit-pack.zip",
         "RELEASE_AUDIT_PACK_INCLUDE_OPTIONAL_PAYLOADS ?=",
         "RELEASE_POST_SEAL_ATTESTATION_OUT ?= build/release/release-post-seal-attestation.json",
         "RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP ?= $(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)",
+        "RELEASE_POST_SEAL_ATTESTATION_SELF_CHECK ?=",
     ):
         case.assertIn(assignment, text)
 
@@ -273,9 +273,10 @@ def _assert_sealed_release_closeout_targets(case: unittest.TestCase, text: str) 
     for assignment in (
         "RELEASE_CLOSEOUT_SEALED_EXTERNAL_MANIFEST_OUT ?= build/release/external-report-reference-manifest.json",
         "RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT ?= build/release/release-closeout-batch-manifest.json",
+        "RELEASE_CLOSEOUT_SEALED_SELF_CHECK_OUT ?= build/release/release-evidence-closeout-self-check.json",
         "RELEASE_CLOSEOUT_SEALED_OPERATOR_SUMMARY_OUT ?= build/release/operator-release-summary.json",
-        "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_BATCH_MANIFEST ?= ops/reports/release-closeout-batch-manifest.json",
-        "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_EXTERNAL_MANIFEST ?= external-reports/report-reference-manifest.json",
+        "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_BATCH_MANIFEST ?= build/release/release-closeout-batch-manifest.json",
+        "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_EXTERNAL_MANIFEST ?= build/release/external-report-reference-manifest.json",
     ):
         case.assertIn(assignment, text)
     case.assertIn(
@@ -285,14 +286,12 @@ def _assert_sealed_release_closeout_targets(case: unittest.TestCase, text: str) 
     sealed_block = _target_block(text, "release-evidence-closeout-sealed")
     for needle in (
         "$(MAKE) release-worktree-clean-check",
-        '$(MAKE) release-distribution-zip RELEASE_DISTRIBUTION_ZIP_OUT="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
-        "$(MAKE) release-evidence-closeout-sealed-sidecars",
-        '$(MAKE) release-post-seal-attestation RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" RELEASE_POST_SEAL_ATTESTATION_BATCH_MANIFEST="$(RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT)" RELEASE_POST_SEAL_ATTESTATION_OPERATOR_SUMMARY="$(RELEASE_CLOSEOUT_SEALED_OPERATOR_SUMMARY_OUT)"',
-        '$(MAKE) release-sealed-verify RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_OUT="$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_RELEASE_OUT)" RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_BATCH_MANIFEST="$(RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT)" RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_EXTERNAL_MANIFEST="$(RELEASE_CLOSEOUT_SEALED_EXTERNAL_MANIFEST_OUT)"',
+        "$(MAKE) release-package-current",
+        "$(MAKE) release-seal-current",
     ):
         case.assertIn(needle, sealed_block)
     case.assertNotIn("$(MAKE) release-evidence-converge", sealed_block)
-    case.assertNotIn("$(MAKE) operator-release-summary", sealed_block)
+    case.assertNotIn("release-sealed-verify", sealed_block)
     sealed_sidecars_block = _target_block(text, "release-evidence-closeout-sealed-sidecars")
     for needle in (
         '--out "$(RELEASE_CLOSEOUT_SEALED_EXTERNAL_MANIFEST_OUT)"',
@@ -300,6 +299,8 @@ def _assert_sealed_release_closeout_targets(case: unittest.TestCase, text: str) 
         '--current-distribution-zip-path "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
         '--out "$(RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT)"',
         '--zip-metadata "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
+        "ops.scripts.release_evidence_closeout_self_check",
+        '--out "$(RELEASE_CLOSEOUT_SEALED_SELF_CHECK_OUT)"',
         "$(MAKE) tmp-json-clean",
         "ops.scripts.operator_release_summary",
         '--out "$(RELEASE_CLOSEOUT_SEALED_OPERATOR_SUMMARY_OUT)"',
@@ -386,7 +387,7 @@ def _assert_release_audit_and_post_seal_targets(case: unittest.TestCase, text: s
         audit_pack,
     )
     case.assertIn(
-        '$(PYTHON) -m ops.scripts.release_post_seal_attestation build --vault "$(VAULT)" --out "$(RELEASE_POST_SEAL_ATTESTATION_OUT)" $(if $(RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP),--source-zip-path "$(RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP)",) $(if $(RELEASE_POST_SEAL_ATTESTATION_BATCH_MANIFEST),--batch-manifest-path "$(RELEASE_POST_SEAL_ATTESTATION_BATCH_MANIFEST)",) $(if $(RELEASE_POST_SEAL_ATTESTATION_OPERATOR_SUMMARY),--operator-summary-path "$(RELEASE_POST_SEAL_ATTESTATION_OPERATOR_SUMMARY)",)',
+        '$(PYTHON) -m ops.scripts.release_post_seal_attestation build --vault "$(VAULT)" --out "$(RELEASE_POST_SEAL_ATTESTATION_OUT)" $(if $(RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP),--source-zip-path "$(RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP)",) $(if $(RELEASE_POST_SEAL_ATTESTATION_BATCH_MANIFEST),--batch-manifest-path "$(RELEASE_POST_SEAL_ATTESTATION_BATCH_MANIFEST)",) $(if $(RELEASE_POST_SEAL_ATTESTATION_SELF_CHECK),--self-check-path "$(RELEASE_POST_SEAL_ATTESTATION_SELF_CHECK)",) $(if $(RELEASE_POST_SEAL_ATTESTATION_OPERATOR_SUMMARY),--operator-summary-path "$(RELEASE_POST_SEAL_ATTESTATION_OPERATOR_SUMMARY)",)',
         _target_block(text, "release-post-seal-attestation"),
     )
     case.assertEqual(
@@ -903,23 +904,12 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn("check-conditional: check", text)
         self.assertIn(
-            "check-clean: check-clean-lane-guard check-conditional warning-budget test-artifact-finalization release-evidence-cohort-check",
+            "check-clean: check-clean-lane-guard check-conditional warning-budget release-evidence-cohort-check",
             text,
         )
         self.assertIn(
             '$(PYTHON) -m ops.scripts.execution_lane_guard --vault "$(VAULT)" --policy "$(EXECUTION_LANE_POLICY)" --target check-clean',
             _target_block(text, "check-clean-lane-guard"),
-        )
-        self.assertIn(
-            "test-artifact-finalization: test-artifact-finalization-lane-guard",
-            text,
-        )
-        self.assertIn(
-            "test-artifact-finalization-lane-guard", _target_block(text, ".PHONY")
-        )
-        self.assertIn(
-            '$(PYTHON) -m ops.scripts.execution_lane_guard --vault "$(VAULT)" --policy "$(EXECUTION_LANE_POLICY)" --target test-artifact-finalization',
-            _target_block(text, "test-artifact-finalization-lane-guard"),
         )
         self.assertIn("release-evidence-converge-lane-guard", _target_block(text, ".PHONY"))
         self.assertIn(
@@ -1007,7 +997,6 @@ class MakefileStaticGateTests(unittest.TestCase):
             "test-integration-heavy": "PYTEST_INTEGRATION_HEAVY_MARK_EXPR",
             "test-public": "PYTEST_PUBLIC_MARK_EXPR",
             "test-report-contract-all": "PYTEST_REPORT_CONTRACT_MARK_EXPR",
-            "test-artifact-finalization": "PYTEST_ARTIFACT_FINALIZATION_MARK_EXPR",
             "test-release-sealing-all": "PYTEST_RELEASE_SEALING_MARK_EXPR",
             "test-subprocess": "PYTEST_SUBPROCESS_MARK_EXPR",
         }
@@ -1031,7 +1020,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         pyproject_text = Path("pyproject.toml").read_text(encoding="utf-8")
 
         self.assertNotIn("[tool.pytest.ini_options]", pyproject_text)
-        self.assertNotIn('"finalization: checked-in generated artifact self-checks', pyproject_text)
+        self.assertNotIn('"finalization: local artifact self-checks', pyproject_text)
 
     def test_readme_and_pytest_ini_pin_supported_pytest_entrypoints(self) -> None:
         registry = _test_lane_registry()
@@ -1166,35 +1155,29 @@ class MakefileStaticGateTests(unittest.TestCase):
             "test-report-contract",
             "test-report-contract-core",
             "test-report-contract-all",
-            "test-artifact-finalization",
             "test-release-sealing",
             "test-release-sealing-core",
             "test-release-sealing-all",
             "test-subprocess",
-            "test-source-package",
+            "release-source-package-smoke",
             "release-source-package-check",
+            "release-run-ready",
+            "release-run-ready-check",
             "release-builder-full",
         ):
             with self.subTest(target=target):
                 self.assertIn(target, _target_block(text, ".PHONY"))
 
         self.assertIn(
-            "PYTEST_REPORT_CONTRACT_MARK_EXPR ?= report_contract and not artifact_finalization",
+            "PYTEST_REPORT_CONTRACT_MARK_EXPR ?= report_contract",
             text,
         )
         self.assertIn(
-            "PYTEST_ARTIFACT_FINALIZATION_MARK_EXPR ?= artifact_finalization", text
-        )
-        self.assertIn(
-            "PYTEST_DEVELOPER_FULL_MARK_EXPR ?= not artifact_finalization", text
-        )
-        self.assertIn(
-            "PYTEST_RELEASE_CHECK_MARK_EXPR ?= not artifact_finalization and not report_contract",
+            "PYTEST_RELEASE_CHECK_MARK_EXPR ?= not report_contract",
             text,
         )
         self.assertIn("PYTEST_RELEASE_SEALING_MARK_EXPR ?= release_sealing", text)
         self.assertIn("PYTEST_SUBPROCESS_MARK_EXPR ?= subprocess", text)
-        self.assertIn("not report_contract and not artifact_finalization", text)
         self.assertIn("RELEASE_SEALING_CORE_TESTS ?=", text)
         self.assertIn("RELEASE_SEALING_TESTS ?= $(RELEASE_SEALING_CORE_TESTS)", text)
         self.assertIn("SUBPROCESS_TESTS ?=", text)
@@ -1203,7 +1186,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             _target_block(text, "test-fast"),
         )
         self.assertIn(
-            '$(PYTHON) -m pytest -m "$(PYTEST_DEVELOPER_FULL_MARK_EXPR)" $(PYTEST_FLAGS)',
+            "$(PYTHON) -m pytest $(PYTEST_FLAGS)",
             _target_block(text, "unit-tests-all"),
         )
         self.assertIn(
@@ -1212,7 +1195,6 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn("test: test-fast", text)
         self.assertIn("unit-tests: test-fast", text)
-        self.assertIn("report-contract-finalization: test-artifact-finalization", text)
         self.assertIn(
             "release-builder-full: release-builder-full-lane-guard bootstrap-preflight static release-evidence-converge",
             text,
@@ -1287,26 +1269,18 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn("--no-fail", post_check_artifact)
 
-    def test_developer_full_suite_excludes_artifact_finalization_lane(self) -> None:
+    def test_developer_full_suite_runs_full_pytest_without_marker_filter(self) -> None:
         registry = _test_lane_registry()
         text = _makefile_text()
-        developer_full_expr = pack_mark_expr(registry, "developer_full")
         release_check_expr = pack_mark_expr(registry, "release_check_unit_complement")
 
-        _assert_assignment_exists(
-            self,
-            text,
-            "PYTEST_DEVELOPER_FULL_MARK_EXPR",
-            developer_full_expr,
-        )
         _assert_assignment_exists(
             self,
             text,
             "PYTEST_RELEASE_CHECK_MARK_EXPR",
             release_check_expr,
         )
-        self.assertEqual(developer_full_expr, "not artifact_finalization")
-        self.assertEqual(release_check_expr, "not artifact_finalization and not report_contract")
+        self.assertEqual(release_check_expr, "not report_contract")
         for target, flags in (
             ("unit-tests-all", "$(PYTEST_FLAGS)"),
             ("unit-tests-all-serial", "$(PYTEST_SERIAL_FLAGS)"),
@@ -1314,7 +1288,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         ):
             with self.subTest(target=target):
                 self.assertIn(
-                    f'$(PYTHON) -m pytest -m "$(PYTEST_DEVELOPER_FULL_MARK_EXPR)" {flags}',
+                    f"$(PYTHON) -m pytest {flags}",
                     _target_block(text, target),
                 )
         self.assertIn(
@@ -1322,92 +1296,53 @@ class MakefileStaticGateTests(unittest.TestCase):
             _target_block(text, "unit-tests-release-check"),
         )
 
-    def test_source_package_targets_pin_clean_extract_test_lane(self) -> None:
+    def test_source_package_targets_pin_clean_extract_smoke_lane(self) -> None:
         registry = _test_lane_registry()
         text = _makefile_text()
 
         _assert_assignment_exists(
             self,
             text,
-            "SOURCE_PACKAGE_TEST_SUMMARY_OUT",
-            "$(SOURCE_PACKAGE_CHECK_ROOT)/test-source-package-summary.json",
+            "SOURCE_PACKAGE_SMOKE_ROOT",
+            "build/source-package-smoke",
         )
         _assert_assignment_exists(
             self,
             text,
-            "SOURCE_PACKAGE_TEST_DESELECT_POLICY",
-            pack_deselection_policy(registry, "source_package"),
-        )
-        _assert_assignment_exists(
-            self, text, "SOURCE_PACKAGE_CHECK_ROOT", "build/source-package-check"
-        )
-        _assert_assignment_not_exists(self, text, "SOURCE_PACKAGE_ARCHIVE_ROOT_NAME")
-        _assert_assignment_exists(
-            self,
-            text,
-            "SOURCE_PACKAGE_EXTRACT_PARENT",
-            "$(SOURCE_PACKAGE_CHECK_ROOT)/extract",
+            "SOURCE_PACKAGE_SMOKE_OUT",
+            "$(SOURCE_PACKAGE_SMOKE_ROOT)/source-package-smoke.json",
         )
         _assert_assignment_exists(
             self,
             text,
-            "SOURCE_PACKAGE_TEST_MARK_EXPR",
-            "not artifact_finalization and not release_sealing",
-        )
-        _assert_assignment_exists(self, text, "SOURCE_PACKAGE_PYTHON", "$(PUBLIC_PYTHON)")
-        _assert_assignment_exists(
-            self,
-            text,
-            "SOURCE_PACKAGE_CLEAN_EXTRACT_OUT",
-            "ops/reports/source-package-clean-extract.json",
+            "SOURCE_PACKAGE_SMOKE_EXTRACT_PARENT",
+            "$(SOURCE_PACKAGE_SMOKE_ROOT)/extract",
         )
         _assert_assignment_exists(
             self,
             text,
-            "SOURCE_PACKAGE_CLEAN_EXTRACT_CANDIDATE_OUT",
-            "tmp/source-package-clean-extract.candidate.json",
+            "SOURCE_PACKAGE_SMOKE_PYTHON",
+            "$(PUBLIC_PYTHON)",
         )
-        _assert_assignment_exists(
+        _assert_recipe_contains_tokens(
             self,
             text,
-            "SOURCE_PACKAGE_HEARTBEAT_INTERVAL_SECONDS",
-            "30",
+            "release-source-package-smoke",
+            (
+                "ops.scripts.source_package_smoke",
+                '--source-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
+                '--extract-parent "$(SOURCE_PACKAGE_SMOKE_EXTRACT_PARENT)"',
+                '--source-python "$(SOURCE_PACKAGE_SMOKE_PYTHON)"',
+                '--out "$(SOURCE_PACKAGE_SMOKE_OUT)"',
+            ),
         )
+        self.assertEqual(pack_selectors(registry, "source_package"), ("release-source-package-smoke",))
         self.assertEqual(
-            _makefile_assignment_items(text, "SOURCE_PACKAGE_TEST_DESELECTS"),
-            pack_deselects(registry, "source_package"),
+            pack_summary_suite(registry, "source_package")["summary_target"],
+            "build/source-package-smoke/source-package-smoke.json",
         )
-        _assert_recipe_contains_tokens(
-            self,
-            text,
-            "test-source-package",
-            (
-                "ops.scripts.test_execution_summary",
-                "--collect-nodeids",
-                f'--suite {pack_summary_suite(registry, "source_package")["suite_id"]}',
-                '--deselection-policy "$(SOURCE_PACKAGE_TEST_DESELECT_POLICY)"',
-                '$(PYTHON) -m pytest -m "$(SOURCE_PACKAGE_TEST_MARK_EXPR)"',
-                "$(SOURCE_PACKAGE_TEST_DESELECTS)",
-            ),
-        )
-        _assert_recipe_contains_tokens(
-            self,
-            text,
-            "release-source-package-check",
-            (
-                "release-distribution-zip",
-                "ops.scripts.source_package_clean_extract",
-                '--source-zip "$(SOURCE_PACKAGE_ZIP_OUT)"',
-                '--extract-parent "$(SOURCE_PACKAGE_EXTRACT_PARENT)"',
-                '--source-python "$(SOURCE_PACKAGE_PYTHON)"',
-                '--zip-smoke-report "$(SOURCE_PACKAGE_ZIP_SMOKE_OUT)"',
-                '--heartbeat-interval-seconds "$(SOURCE_PACKAGE_HEARTBEAT_INTERVAL_SECONDS)"',
-                '--deselects="$(SOURCE_PACKAGE_TEST_DESELECTS)"',
-                '--pytest-flags="$(PYTEST_SERIAL_FLAGS)"',
-                "ops.scripts.canonical_artifact_promote",
-                "--schema ops/schemas/source-package-clean-extract.schema.json",
-            ),
-        )
+        self.assertIn("$(MAKE) release-package-current", _target_block(text, "release-source-package-check"))
+        self.assertIn("$(MAKE) release-source-package-smoke", _target_block(text, "release-source-package-check"))
 
     def test_ci_matrix_runs_named_lane_targets(self) -> None:
         registry = _test_lane_registry()
@@ -1436,7 +1371,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
 
         self.assertIn(
-            "`.github/workflows/ci.yml`은 test tier를 `fast`, `report-contract`, `release-closeout-regression`, `artifact-finalization`, `release-sealing`, `subprocess`, `slow`, `integration`, `integration-heavy`, `public`으로 나눠 병렬 job으로 실행하고, 별도 Windows/raw-registry/supply-chain job도 유지한다.",
+            "`.github/workflows/ci.yml`은 test tier를 `fast`, `report-contract`, `release-closeout-regression`, `release-sealing`, `subprocess`, `slow`, `integration`, `integration-heavy`, `public`으로 나눠 병렬 job으로 실행하고, 별도 Windows/raw-registry/supply-chain job도 유지한다.",
             development_text,
         )
         for entrypoint in compatibility_names(registry, "documented_entrypoint"):
@@ -1498,7 +1433,6 @@ class MakefileStaticGateTests(unittest.TestCase):
         ready_commit_block = _target_block(text, "release-source-ready-commit")
         ready_post_verify_block = _target_block(text, "release-source-ready-post-verify")
         ready_block = _target_block(text, "release-source-ready")
-        sealed_dirty_recovery_block = _target_block(text, "release-sealed-dirty-recovery")
         preflight_block = _target_block(text, "release-check-preflight-converge")
         core_block = _target_block(text, "release-check-core")
         release_check_block = _target_block(text, "release-check")
@@ -1518,7 +1452,8 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertNotIn("release-source-ready-amend", phony_targets)
         self.assertNotIn("release-source-ready-final-guard-amend", phony_targets)
         self.assertIn("release-source-ready", _target_block(text, ".PHONY"))
-        self.assertIn("release-sealed-dirty-recovery", _target_block(text, ".PHONY"))
+        self.assertIn("release-run-ready", _target_block(text, ".PHONY"))
+        self.assertIn("release-run-ready-check", _target_block(text, ".PHONY"))
         self.assertNotIn("release-converge-artifact-commit", _target_block(text, ".PHONY"))
         self.assertIn("release-check-preflight-converge", _target_block(text, ".PHONY"))
         self.assertIn("release-check-core", _target_block(text, ".PHONY"))
@@ -1603,11 +1538,8 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-source-ready-post-verify",
             ],
         )
-        self.assertIn("--only-generated-canonical", sealed_dirty_recovery_block)
-        self.assertIn('release: recover tracked generated contracts', sealed_dirty_recovery_block)
-        self.assertIn("$(MAKE) release-check-all-surfaces", sealed_dirty_recovery_block)
-        self.assertIn("$(MAKE) release-evidence-closeout-sealed", sealed_dirty_recovery_block)
-        self.assertNotIn("$(MAKE) release-converge", sealed_dirty_recovery_block)
+        self.assertIn("ops.scripts.release_run_ready", _target_block(text, "release-run-ready"))
+        self.assertIn("ops.scripts.release_run_manifest", _target_block(text, "release-run-ready-check"))
         self.assertIn("$(MAKE) release-worktree-clean-check", core_block)
         self.assertIn("$(MAKE) test-execution-summary-current-check", core_block)
         self.assertIn("$(MAKE) test-execution-summary-full-current-check", core_block)
@@ -1644,8 +1576,6 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertGreaterEqual(release_converge_post_block.count("$(MAKE) generated-artifact-converge"), 2)
         self.assertNotIn("$(MAKE) generated-artifact-index", _target_block(text, "release-converge-post"))
         self.assertNotIn("$(MAKE) artifact-freshness", _target_block(text, "release-converge-post"))
-        self.assertIn("$(MAKE) test-artifact-finalization", release_converge_post_block)
-        self.assertIn("$(MAKE) test-artifact-finalization", post_check_block)
         self.assertIn("$(MAKE) release-worktree-clean-check", post_check_block)
         self.assertNotIn("$(MAKE) generated-artifact-converge", post_check_block)
         self.assertLess(
@@ -2043,23 +1973,18 @@ class MakefileStaticGateTests(unittest.TestCase):
             extended_block,
         )
 
-    def test_report_contract_summary_moves_self_referential_artifact_checks_to_artifact_finalization_lane(
+    def test_report_contract_summary_uses_current_report_contract_lane(
         self,
     ) -> None:
-        registry = _test_lane_registry()
         text = _makefile_text()
         block = _target_block(text, "test-report-contract")
         core_block = _target_block(text, "test-report-contract-core")
         all_block = _target_block(text, "test-report-contract-all")
-        finalization_block = _target_block(text, "test-artifact-finalization")
-        finalization_selectors = pack_selectors(registry, "artifact_finalization_checks")
 
         self.assertIn("test-report-contract", _target_block(text, ".PHONY"))
         self.assertIn("test-report-contract-core", _target_block(text, ".PHONY"))
         self.assertIn("test-report-contract-all", _target_block(text, ".PHONY"))
-        self.assertIn("test-artifact-finalization", _target_block(text, ".PHONY"))
         self.assertIn("report-contract-summary", _target_block(text, ".PHONY"))
-        self.assertIn("report-contract-finalization", _target_block(text, ".PHONY"))
         self.assertIn(
             "REPORT_CONTRACT_SUMMARY_MARK_EXPR ?= $(PYTEST_REPORT_CONTRACT_MARK_EXPR)", text
         )
@@ -2070,14 +1995,6 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn(
             'REPORT_CONTRACT_SUMMARY_TESTS ?= -m "$(REPORT_CONTRACT_SUMMARY_MARK_EXPR)" $(REPORT_CONTRACT_TESTS)',
             text,
-        )
-        self.assertEqual(
-            _makefile_assignment_items(text, "REPORT_CONTRACT_FINALIZATION_TESTS"),
-            finalization_selectors,
-        )
-        self.assertIn(
-            "tests/test_writer_output_paths.py::WriterOutputPathsTest::test_script_output_surface_registry_matches_current_ast_inventory",
-            finalization_selectors,
         )
         self.assertNotIn("--deselect=tests/test_generated_report_contracts.py::", text)
         self.assertIn(
@@ -2093,11 +2010,6 @@ class MakefileStaticGateTests(unittest.TestCase):
             block,
         )
         self.assertIn("report-contract-summary: test-report-contract-core", text)
-        self.assertIn(
-            "$(PYTHON) -m pytest $(REPORT_CONTRACT_FINALIZATION_TESTS) $(PYTEST_SERIAL_FLAGS)",
-            finalization_block,
-        )
-        self.assertIn("report-contract-finalization: test-artifact-finalization", text)
 
     def test_report_contract_closeout_runs_pytest_wrapper_once_between_generated_refreshes(
         self,
@@ -2125,13 +2037,8 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertEqual(block.count("$(MAKE) release-closeout-summary-report"), 2)
         self.assertIn("$(MAKE) release-evidence-cohort", block)
         self.assertIn("$(MAKE) auto-improve-readiness-report-body", block)
-        self.assertIn("$(MAKE) test-artifact-finalization", block)
-        self.assertLess(
-            block.index("$(MAKE) auto-improve-readiness-report-body"),
-            block.index("$(MAKE) test-artifact-finalization"),
-        )
         self.assertNotIn("$(PYTHON) -m pytest", block)
-        self.assertIn("finalization self-checks", block)
+        self.assertIn("closeout artifacts", block)
         self.assertLess(
             block.index("$(MAKE) report-contract-closeout-precheck"),
             block.index("$(MAKE) release-smoke-full-reuse"),
@@ -2252,7 +2159,6 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-lane-summary",
                 "$(MAKE) release-clean-blocker-ledger",
                 "$(MAKE) generated-artifact-converge",
-                "$(MAKE) test-artifact-finalization",
                 "$(MAKE) release-closeout-post-check-finalizer-dry-run",
                 "$(MAKE) release-closeout-fixed-point",
                 "$(MAKE) operator-release-summary",
@@ -3663,7 +3569,6 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-closeout-finalize",
             (
-                "$(MAKE) test-artifact-finalization",
                 "$(MAKE) goal-runtime-fixed-point-check",
             ),
         )

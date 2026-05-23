@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/script-output-surfaces.schema.json",
   "artifact_kind": "script_output_surfaces",
-  "generated_at": "2026-05-23T09:24:26Z",
+  "generated_at": "2026-05-23T11:07:30Z",
   "producer": "ops.scripts.script_output_surfaces",
   "source_command": "python -m ops.scripts.script_output_surfaces --vault . --out ops/script-output-surfaces.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "ee335446610156ec6687b7fd2d97480f90cf1508b750903cd1b524bc6d10c7bc",
+  "source_tree_fingerprint": "cdb32f15ab21bc90302d5caee8b758362b69531821402f9e930ed9836e32b351",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "02cee320f449f8666c341a0a389855f3ef5ac34bddcdf4c2767b5d4b384a9722",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "62c5358cc97c1a41ddc8e0af71afae29a2dbcd1744aa82c4d870f5be8d95b7ac",
-    "ops_scripts": "2a234f9be0e9b0b99fa7b0c76fc826720ceb81ae2572eb3696ea684d71a779d8",
+    "ops_scripts": "4d552d00f39c09249ab9a70456f74eb9517974701a55c7eb854984fdbc5cc412",
     "classification_values": "0ba4b7fd8868f9c9d070bea6d90c2cee76e2b9c8089223c413c8e898794923f4"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-23T09:24:26Z"
+    "checked_at": "2026-05-23T11:07:30Z"
   },
   "version": 1,
   "description": "Generated inventory for ops/scripts output path surfaces. Tests compare this registry with the live AST-derived inventory.",
@@ -2289,6 +2289,28 @@
       "reason": "no configurable output path surface detected"
     },
     {
+      "path": "ops/scripts/release/release_run_manifest.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
+      "path": "ops/scripts/release/release_run_ready.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
       "path": "ops/scripts/release/release_smoke.py",
       "classification": "user_export",
       "output_options": [
@@ -2353,6 +2375,17 @@
       "references_resolve_repo_output_path": false,
       "direct_fallback_eligible": true,
       "reason": "uses permissive user export resolver"
+    },
+    {
+      "path": "ops/scripts/release/source_package_smoke.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
       "path": "ops/scripts/supply_chain/cyclonedx_sbom.py",

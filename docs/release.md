@@ -2,11 +2,19 @@
 
 Release work is evidence-driven. Converge targets update local-only reports;
 check targets verify that already-generated evidence is current.
+The run-ready release authority is `build/release/release-run-manifest.json`.
+`ops/reports/` remains diagnostic/local evidence and does not decide final
+sealed/run-ready status.
 
 ## Common Targets
 
 - `make release-check`: check-only release gate for the current tree.
 - `make release-check-all-surfaces`: release check plus public policy and public export checks.
+- `make release-run-ready`: one command to verify the current committed tree,
+  run the current test/public/package/smoke/seal sequence, and write the
+  authoritative release-run manifest.
+- `make release-run-ready-check`: revalidate the existing manifest against the
+  current HEAD, source fingerprint, source ZIP, smoke report, and sidecars.
 - `make release-converge`: mutating evidence convergence for release reports.
 - `make release-converge-all-surfaces`: convergence plus public policy/export refresh.
 - `make release-source-ready`: source-ready commit flow. Mutating convergence happens
@@ -14,9 +22,6 @@ check targets verify that already-generated evidence is current.
   is write-free and only fails if the already-generated check evidence is stale or
   failing. Operator release summary is local-only evidence and is refreshed
   during the prepare convergence flow.
-- `make release-sealed-dirty-recovery`: narrow recovery lane for the case where
-  sealed verification exposes dirty generated canonical evidence only. It refuses
-  non-generated/source changes, rechecks all surfaces, then reruns sealed closeout.
 - `make release-evidence-converge`: authoritative clean release evidence convergence.
 - `make release-evidence-closeout-sealed`: check-only sealed packaging lane for an
   already source-ready tree. It must not run mutating source/evidence convergence;
@@ -26,21 +31,25 @@ check targets verify that already-generated evidence is current.
 
 ## Recommended Order
 
-1. Run `make release-source-ready` to converge local evidence, create the
-   source-ready commit, and run write-free post-verify checks.
-2. Run `make release-evidence-closeout-sealed` from the clean source-ready tree.
-   This materializes `build/release/LLMwiki-source.zip`, writes local post-seal
-   attestation under `build/release/`, writes zip-bound batch/external/operator
-   sidecars under `build/release/`, and verifies the sealed rehearsal check against
-   those sidecars without changing tracked canonical evidence.
-3. If sealed verification reports only generated canonical evidence drift, run
-   `make release-sealed-dirty-recovery`. If it reports source or other
-   non-generated drift, fix that writer boundary explicitly.
+1. Commit the source tree you want to verify. Release tooling no longer commits
+   or pushes automatically.
+2. Run `make release-run-ready`.
+3. Run `make release-run-ready-check` if you need a readback verification of the
+   manifest after another process inspects or transfers the build directory.
+
+The command fixes the sequence to preflight, current tests, public check,
+source package build, clean-extract smoke, sealed sidecars, and manifest check.
+Each step records the starting source fingerprint and must finish with the same
+fingerprint. Full pytest, public check, and package build are each run at most
+once in this graph.
 
 ## Evidence Boundaries
 
-- `ops/reports/release-smoke-report.json` is the canonical full release smoke
-  report, but it remains local-only evidence rather than public source.
+- `build/release/release-run-manifest.json` is the final authority for a
+  run-ready release. It binds the current HEAD, source fingerprint, source ZIP,
+  source-package smoke report, and sealed sidecars.
+- `ops/reports/release-smoke-report.json` is local diagnostic evidence and is
+  not a final release authority.
 - `ops/reports/test-execution-summary.json` and
   `ops/reports/test-execution-summary-full.json` are reused by check lanes only
   when their `source_tree_fingerprint` still matches the current tree. Stale
@@ -49,14 +58,16 @@ check targets verify that already-generated evidence is current.
 - `ops/reports/public-check-summary.json` proves the exported public tree contract.
   `public-check-all-check` reuses this report only when the same
   `source_tree_fingerprint` still matches.
-- `ops/reports/release-closeout-finality-attestation.json` binds final closeout digests.
+- `ops/reports/release-closeout-finality-attestation.json` is diagnostic only;
+  final release authority is the release-run manifest plus the source ZIP digest.
 - `ops/reports/` and `ops/operator/` are preserved locally and ignored by Git.
   If older branches still track entries under those paths, remove them from the
   index with `git rm --cached` while leaving the local files on disk.
 - `external-reports/` remains private local-only input. Root reports must be
   reflected in lifecycle summaries before release; the reference manifest and
   archived reports are retained outside Git/source-release authority.
-- `build/release/` holds materialized distribution ZIPs and sidecar audit evidence.
+- `build/release/` holds materialized distribution ZIPs, sidecar audit evidence,
+  and the release-run manifest.
 - `tmp/` holds scratch checks and candidate files that must not become authority.
 
 ## Supply Chain

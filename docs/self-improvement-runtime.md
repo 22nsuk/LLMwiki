@@ -36,12 +36,12 @@ close the generated-artifact order explicitly:
 make report-schema-samples-check
 make generated-artifact-converge
 make release-smoke-full-reuse
-make test-artifact-finalization
 make goal-runtime-closeout
 ```
 
-This order keeps schema samples, reusable release smoke, local generated
-artifact finalization, and goal closeout from drifting apart.
+This order keeps schema samples, reusable release smoke, and goal closeout from
+drifting apart. Release promotion still requires the separate
+`make release-run-ready` manifest authority for the committed tree.
 
 ## Promotion Principles
 

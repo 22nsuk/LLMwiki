@@ -470,7 +470,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
                         "-m",
                         "pytest",
                         "-m",
-                        "not artifact_finalization",
+                        "not release_sealing",
                         "tests/test_collect_sample.py",
                         "--deselect=tests/test_collect_sample.py::test_two",
                     ],
@@ -490,7 +490,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
 
             self.assertEqual(digest["status"], "collected")
             self.assertEqual(digest["nodeid_count"], 1)
-            self.assertIn("-m 'not artifact_finalization'", digest["command"])
+            self.assertIn("-m 'not release_sealing'", digest["command"])
             self.assertIn("--deselect=tests/test_collect_sample.py::test_two", digest["command"])
             self.assertEqual(targets, ["tests/test_collect_sample.py"])
             self.assertEqual(run.call_count, 1)

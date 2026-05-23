@@ -106,33 +106,12 @@
       "allowed_markers": [
         "public",
         "integration",
-        "integration_heavy",
-        "artifact_finalization"
+        "integration_heavy"
       ],
       "forbidden_markers": [],
       "selection": {
         "mode": "marker_expression",
-        "pytest_mark_expr": "report_contract and not artifact_finalization"
-      }
-    },
-    {
-      "lane_id": "artifact_finalization",
-      "marker": "artifact_finalization",
-      "authority": "persistent",
-      "semantics": "Checked-in generated artifact self-checks that run after producer closeout refresh.",
-      "ci_tier": "artifact-finalization",
-      "ci_entrypoint": "test-artifact-finalization",
-      "ci_steps": [
-        "make test-artifact-finalization"
-      ],
-      "make_target": "test-artifact-finalization",
-      "allowed_markers": [
-        "report_contract"
-      ],
-      "forbidden_markers": [],
-      "selection": {
-        "mode": "marker_expression",
-        "pytest_mark_expr": "artifact_finalization"
+        "pytest_mark_expr": "report_contract"
       }
     },
     {
@@ -143,7 +122,8 @@
       "ci_tier": "release-sealing",
       "ci_entrypoint": "test-release-sealing-all",
       "ci_steps": [
-        "make test-release-sealing-all"
+        "make test-release-sealing-all",
+        "make -n release-run-ready"
       ],
       "make_target": "test-release-sealing-all",
       "allowed_markers": [
@@ -187,7 +167,7 @@
       ],
       "selection": {
         "mode": "marker_expression",
-        "pytest_mark_expr": "not slow and not integration and not integration_heavy and not public and not report_contract and not artifact_finalization and not release_sealing and not subprocess"
+        "pytest_mark_expr": "not slow and not integration and not integration_heavy and not public and not report_contract and not release_sealing and not subprocess"
       },
       "summary_suite": {
         "suite_id": "fast",
@@ -256,7 +236,7 @@
       "pack_id": "developer_full",
       "authority": "derived",
       "status": "derived_from_registry",
-      "semantics": "Developer full regression suite that excludes checked-in generated artifact finalization, which must run only after canonical report refresh.",
+      "semantics": "Developer full regression suite for all current pytest tests.",
       "backing_targets": [
         "unit-tests-all",
         "unit-tests-all-serial",
@@ -268,8 +248,7 @@
         "check-all-serial"
       ],
       "selection": {
-        "mode": "marker_expression",
-        "pytest_mark_expr": "not artifact_finalization"
+        "mode": "all"
       },
       "ci_entrypoint": "test-all",
       "ci_steps": [
@@ -284,13 +263,13 @@
       "pack_id": "release_check_unit_complement",
       "authority": "derived",
       "status": "derived_from_registry",
-      "semantics": "Release-check pytest complement that excludes report-contract tests already executed by the preflight summary and checked-in generated artifact finalization.",
+      "semantics": "Release-check pytest complement that excludes report-contract tests already executed by the preflight summary.",
       "backing_targets": [
         "unit-tests-release-check"
       ],
       "selection": {
         "mode": "marker_expression",
-        "pytest_mark_expr": "not artifact_finalization and not report_contract"
+        "pytest_mark_expr": "not report_contract"
       },
       "ci_entrypoint": "release-check",
       "ci_steps": [
@@ -386,44 +365,6 @@
       ]
     },
     {
-      "pack_id": "artifact_finalization_checks",
-      "authority": "derived",
-      "status": "derived_from_registry",
-      "semantics": "Final self-check selectors for checked-in generated artifact contracts inside the artifact-finalization lane.",
-      "backing_targets": [
-        "test-artifact-finalization",
-        "report-contract-finalization"
-      ],
-      "selection": {
-        "mode": "explicit_selectors",
-        "selectors": [
-          "tests/test_generated_report_contracts.py::test_checked_in_artifact_freshness_report_keeps_stable_debt_axes_explicit",
-          "tests/test_generated_report_contracts.py::test_checked_in_release_risk_taxonomy_matrix_has_freshness_record",
-          "tests/test_generated_report_contracts.py::test_checked_in_test_execution_summary_is_schema_backed_and_debt_free",
-          "tests/test_generated_report_contracts.py::test_checked_in_generated_artifact_index_matches_live_inventory_and_fingerprints",
-          "tests/test_generated_report_contracts.py::test_source_derived_workflow_planner_contract_is_covered_by_checked_in_artifacts",
-          "tests/test_generated_report_contracts.py::test_checked_in_release_smoke_report_matches_live_envelope_fingerprints",
-          "tests/test_generated_report_contracts.py::test_checked_in_auto_improve_readiness_reflects_trial_only_authority_preflight_state",
-          "tests/test_generated_report_contracts.py::test_checked_in_auto_improve_readiness_keeps_evidence_ledgers_in_sync",
-          "tests/test_writer_output_paths.py::WriterOutputPathsTest::test_script_output_surface_registry_matches_current_ast_inventory"
-        ]
-      },
-      "summary_suite": {
-        "suite_id": "artifact-finalization",
-        "suite_scope": "artifact_finalization",
-        "summary_target": "ops/reports/test-execution-summary.json",
-        "make_summary_target": "test-artifact-finalization"
-      },
-      "ci_entrypoint": "test-artifact-finalization",
-      "ci_steps": [
-        "make test-artifact-finalization"
-      ],
-      "documented_entrypoints": [
-        "make test-artifact-finalization",
-        "make report-contract-finalization"
-      ]
-    },
-    {
       "pack_id": "release_closeout_regression",
       "authority": "derived",
       "status": "derived_from_registry",
@@ -515,34 +456,54 @@
       "pack_id": "source_package",
       "authority": "derived",
       "status": "derived_from_registry",
-    "semantics": "Source-package validation slice layered on top of persistent lanes with explicit exclusions for checked-in generated report artifacts and external report roots omitted from source packages.",
+      "semantics": "Source-package clean-extract smoke lane that verifies import, static, and fast smoke behavior without rerunning full pytest.",
       "backing_targets": [
-        "test-source-package",
+        "release-source-package-smoke",
         "release-source-package-check"
       ],
       "selection": {
-        "mode": "marker_expression",
-        "pytest_mark_expr": "not artifact_finalization and not release_sealing",
-        "tests_argument": "tests",
-      "deselects": [
-        "--deselect=tests/test_generated_report_contracts.py",
-        "--deselect=tests/test_external_report_lifecycle_static.py"
-        ],
-        "deselection_policy": "ops/policies/source-package-test-deselections.json"
+        "mode": "explicit_selectors",
+        "selectors": [
+          "release-source-package-smoke"
+        ]
       },
       "summary_suite": {
-        "suite_id": "source-package",
+        "suite_id": "source-package-smoke",
         "suite_scope": "fast_unit",
-        "summary_target": "build/source-package-check/test-source-package-summary.json",
-        "make_summary_target": "test-source-package"
+        "summary_target": "build/source-package-smoke/source-package-smoke.json",
+        "make_summary_target": "release-source-package-smoke"
       },
       "ci_entrypoint": "release-source-package-check",
       "ci_steps": [
         "make release-source-package-check"
       ],
       "documented_entrypoints": [
-        "make test-source-package",
+        "make release-source-package-smoke",
         "make release-source-package-check"
+      ]
+    },
+    {
+      "pack_id": "release_run_ready",
+      "authority": "derived",
+      "status": "derived_from_registry",
+      "semantics": "Single release-run manifest authority for the current committed tree.",
+      "backing_targets": [
+        "release-run-ready",
+        "release-run-ready-check"
+      ],
+      "selection": {
+        "mode": "explicit_selectors",
+        "selectors": [
+          "release-run-ready"
+        ]
+      },
+      "ci_entrypoint": "release-run-ready-check",
+      "ci_steps": [
+        "make -n release-run-ready"
+      ],
+      "documented_entrypoints": [
+        "make release-run-ready",
+        "make release-run-ready-check"
       ]
     }
   ],
@@ -694,16 +655,6 @@
     },
     {
       "kind": "make_target",
-      "name": "test-artifact-finalization",
-      "maps_to": "artifact_finalization"
-    },
-    {
-      "kind": "make_target",
-      "name": "report-contract-finalization",
-      "maps_to": "artifact_finalization_checks"
-    },
-    {
-      "kind": "make_target",
       "name": "test-release-sealing",
       "maps_to": "release_sealing"
     },
@@ -724,11 +675,6 @@
     },
     {
       "kind": "make_target",
-      "name": "test-source-package",
-      "maps_to": "source_package"
-    },
-    {
-      "kind": "make_target",
       "name": "release-source-package-check",
       "maps_to": "source_package"
     },
@@ -746,11 +692,6 @@
       "kind": "ci_tier",
       "name": "release-closeout-regression",
       "maps_to": "release_closeout_regression"
-    },
-    {
-      "kind": "ci_tier",
-      "name": "artifact-finalization",
-      "maps_to": "artifact_finalization"
     },
     {
       "kind": "ci_tier",
@@ -859,16 +800,6 @@
     },
     {
       "kind": "documented_entrypoint",
-      "name": "make test-artifact-finalization",
-      "maps_to": "artifact_finalization"
-    },
-    {
-      "kind": "documented_entrypoint",
-      "name": "make report-contract-finalization",
-      "maps_to": "artifact_finalization_checks"
-    },
-    {
-      "kind": "documented_entrypoint",
       "name": "make test-release-sealing",
       "maps_to": "release_sealing"
     },
@@ -914,11 +845,6 @@
     },
     {
       "kind": "documented_entrypoint",
-      "name": "make test-source-package",
-      "maps_to": "source_package"
-    },
-    {
-      "kind": "documented_entrypoint",
       "name": "make release-source-package-check",
       "maps_to": "source_package"
     },
@@ -936,6 +862,36 @@
       "kind": "documented_entrypoint",
       "name": "make test-execution-summary-report-contract",
       "maps_to": "report_contract_core"
+    },
+    {
+      "kind": "make_target",
+      "name": "release-source-package-smoke",
+      "maps_to": "source_package"
+    },
+    {
+      "kind": "make_target",
+      "name": "release-run-ready",
+      "maps_to": "release_run_ready"
+    },
+    {
+      "kind": "make_target",
+      "name": "release-run-ready-check",
+      "maps_to": "release_run_ready"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-source-package-smoke",
+      "maps_to": "source_package"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-run-ready",
+      "maps_to": "release_run_ready"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-run-ready-check",
+      "maps_to": "release_run_ready"
     }
   ],
   "documentation_boundary": {

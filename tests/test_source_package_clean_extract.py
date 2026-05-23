@@ -150,9 +150,9 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
                 source_python="/usr/bin/python3",
                 ruff_targets="ops/scripts tests",
                 mypy_targets="@ops/mypy-allowlist.txt",
-                test_summary_out="tmp/test-source-package-summary.json",
-                deselection_policy="ops/policies/source-package-test-deselections.json",
-                pytest_mark_expr="not artifact_finalization and not release_sealing",
+                test_summary_out="tmp/source-package-pytest-summary.json",
+                deselection_policy="ops/policies/report-contract-deselections.json",
+                pytest_mark_expr="not release_sealing",
                 tests="tests",
                 deselects=(
                     "--deselect=tests/test_generated_report_contracts.py "
@@ -176,7 +176,7 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
         self.assertEqual(report["heartbeat_observability"]["heartbeat_enabled_command_count"], 4)
         self.assertEqual(report["heartbeat_observability"]["heartbeat_event_count"], 1)
         self.assertEqual(report["heartbeat_observability"]["max_quiet_seconds"], 30)
-        self.assertEqual(report["heartbeat_observability"]["quiet_command_names"], ["test-source-package"])
+        self.assertEqual(report["heartbeat_observability"]["quiet_command_names"], ["source-package-pytest"])
         self.assertEqual(report["extract"]["parent"], "tmp/source-package-check/extract")
         self.assertEqual(report["extract"]["root"], "tmp/source-package-check/extract/LLMwiki")
         self.assertEqual(report["extract"]["archive_root_name"], "LLMwiki")
@@ -234,9 +234,9 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
                     source_python="/usr/bin/python3",
                     ruff_targets="ops/scripts tests",
                     mypy_targets="@ops/mypy-allowlist.txt",
-                    test_summary_out="tmp/test-source-package-summary.json",
-                    deselection_policy="ops/policies/source-package-test-deselections.json",
-                    pytest_mark_expr="not artifact_finalization and not release_sealing",
+                    test_summary_out="tmp/source-package-pytest-summary.json",
+                    deselection_policy="ops/policies/report-contract-deselections.json",
+                    pytest_mark_expr="not release_sealing",
                     tests="tests",
                     deselects="",
                     pytest_flags="-q",

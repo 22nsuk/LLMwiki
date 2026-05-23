@@ -316,7 +316,6 @@ def _check_planner_hooks(planner_report: dict[str, Any], closeout_invocations: l
     ]
     required_steps = [
         "workflow-dependency-planner",
-        "test-artifact-finalization",
         "release-closeout-finality-verify",
     ]
     violations = [
@@ -332,7 +331,7 @@ def _check_planner_hooks(planner_report: dict[str, Any], closeout_invocations: l
         expected_order=required_steps,
         observed_order=planner_steps,
         violations=violations,
-        details="The planner closeout recommendation must keep the finalization hooks visible in the source-derived workflow graph.",
+        details="The planner closeout recommendation must keep finality hooks visible in the source-derived workflow graph.",
     )
 
 

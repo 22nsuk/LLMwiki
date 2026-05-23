@@ -211,7 +211,7 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
                 source_rel = path.relative_to(self.vault).as_posix()
                 if source_rel == rel_path or release_manifest_excludes_path(source_rel):
                     continue
-                info = zipfile.ZipInfo(source_rel, timestamp)
+                info = zipfile.ZipInfo(f"LLMwiki-source/{source_rel}", timestamp)
                 archive.writestr(info, path.read_bytes())
         return archive_path
 
@@ -711,7 +711,7 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         archive_path = self._write_release_source_zip()
         with zipfile.ZipFile(archive_path, "a") as archive:
             archive.writestr(
-                ARCHIVE_SELF_DESCRIPTION_PATH,
+                f"LLMwiki-source/{ARCHIVE_SELF_DESCRIPTION_PATH}",
                 json.dumps({"artifact_kind": "release_archive_self_description"}),
             )
 
@@ -746,7 +746,10 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         self._write_closeout_summary()
         archive_path = self._write_release_source_zip()
         with zipfile.ZipFile(archive_path, "a") as archive:
-            archive.writestr("extra-review-only.txt", "not in source manifest\n")
+            archive.writestr(
+                "LLMwiki-source/extra-review-only.txt",
+                "not in source manifest\n",
+            )
 
         report = build_batch_manifest(
             self.vault,
@@ -798,7 +801,7 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
 
-    def test_check_manifest_fails_when_source_file_is_newer_than_checked_in_generated_at(
+    def test_check_manifest_fails_when_source_file_is_newer_than_generated_at(
         self,
     ) -> None:
         self._write_required_artifacts(currentness_status="current")

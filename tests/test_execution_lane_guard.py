@@ -44,7 +44,7 @@ class ExecutionLaneGuardTests(unittest.TestCase):
         self.assertEqual(result["status"], "fail")
         self.assertEqual(result["detected_lane"], "source_package_extract")
         self.assertEqual(result["required_lane"], "full_vault")
-        self.assertIn("make test-source-package", result["alternatives"])
+        self.assertIn("make release-source-package-smoke", result["alternatives"])
 
     def test_source_package_sentinel_wins_over_corpus_sentinels(self) -> None:
         (self.vault / "raw").mkdir(exist_ok=True)
@@ -63,7 +63,7 @@ class ExecutionLaneGuardTests(unittest.TestCase):
         self.assertEqual(result["detected_lane"], "source_package_extract")
         self.assertEqual(result["required_lane"], "full_vault")
 
-    def test_guard_fails_artifact_finalization_in_source_package_extract(self) -> None:
+    def test_guard_fails_release_run_ready_in_source_package_extract(self) -> None:
         shutil.rmtree(self.vault / "raw", ignore_errors=True)
         shutil.rmtree(self.vault / "wiki", ignore_errors=True)
         shutil.rmtree(self.vault / "system", ignore_errors=True)
@@ -72,20 +72,19 @@ class ExecutionLaneGuardTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-        result = build_result(self.vault, target="test-artifact-finalization")
+        result = build_result(self.vault, target="release-run-ready")
 
         self.assertEqual(result["status"], "fail")
         self.assertEqual(result["detected_lane"], "source_package_extract")
-        self.assertEqual(result["required_lane"], "")
-        self.assertEqual(result["blocked_lanes"], ["source_package_extract"])
-        self.assertIn("make test-report-contract", result["alternatives"])
+        self.assertEqual(result["required_lane"], "full_vault")
+        self.assertIn("make release-source-package-smoke", result["alternatives"])
 
-    def test_guard_allows_artifact_finalization_in_public_or_partial_checkout(self) -> None:
+    def test_guard_allows_unknown_target_in_public_or_partial_checkout(self) -> None:
         shutil.rmtree(self.vault / "raw", ignore_errors=True)
         shutil.rmtree(self.vault / "wiki", ignore_errors=True)
         shutil.rmtree(self.vault / "system", ignore_errors=True)
 
-        result = build_result(self.vault, target="test-artifact-finalization")
+        result = build_result(self.vault, target="unregistered-local-target")
 
         self.assertEqual(result["status"], "pass")
         self.assertEqual(result["detected_lane"], "public_or_partial_checkout")
@@ -114,7 +113,7 @@ class ExecutionLaneGuardTests(unittest.TestCase):
                 self.assertEqual(result["status"], "fail")
                 self.assertEqual(result["detected_lane"], "source_package_extract")
                 self.assertEqual(result["required_lane"], "full_vault")
-                self.assertIn("make test-source-package", result["alternatives"])
+                self.assertIn("make release-source-package-smoke", result["alternatives"])
 
     def test_guard_passes_full_vault_target_when_full_vault_sentinels_exist(self) -> None:
         (self.vault / "raw").mkdir(exist_ok=True)
