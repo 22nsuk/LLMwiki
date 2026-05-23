@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-23T08:30:32Z",
+  "generated_at": "2026-05-23T08:40:23Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
@@ -18,11 +18,11 @@
     "mutation_proposal_report": "375d4b75b810273208db6b52ae3c4f40cbdf4ac78aac6b08c85896530c8ad762",
     "outcome_metrics_report": "4dc3710b2e6fc4e6cf0d5c9634e943fa9276a72a3af6d13052d33b5215935b4b",
     "release_authority_preflight_report": "6ee319c834d512fcf6dfcac4d510bca2d8e7046671d5e4576639cc5ad8d28f33",
-    "release_closeout_batch_manifest_report": "05cac72ace9f6ff6d70012e31fde36776c8e6203280082a2662a001308f0d6ce",
-    "release_closeout_finality_attestation_report": "11e7cf253048be618d2c37986462e2d02157b93246451feed3abe3853c723ae7",
-    "release_closeout_post_check_finalizer_report": "f979dfc91a47288fb5290eba9c34d2ee50717298e993e51926e8f85ad5200417",
-    "release_closeout_summary_report": "6b85693a7284904c615628c79ea0516bec6db2e52eefdf2ee44fed01143a4de0",
-    "release_evidence_cohort_report": "67bad3ed7ede7f86b011045885e018368c4f8c59c658082a802257457a2d3850",
+    "release_closeout_batch_manifest_report": "5d9420c02c5fba9e2ebfa5eca327c7e11ad01fc5e21fa45156ea2f2cb9412bd5",
+    "release_closeout_finality_attestation_report": "2b235c0ffc6810881266a6249b7ab8645a1f0d5a0cfc725993fae6ac26d4695b",
+    "release_closeout_post_check_finalizer_report": "e4014b91a44220651a10901feeaea9f55bc4282fd7c034d4ebf8edf7b55b67f9",
+    "release_closeout_summary_report": "5b685edae54e1cba968b52ac21eff269cf933729390767ed96431114c8862899",
+    "release_evidence_cohort_report": "dae23d6e3046d8d9db98b039fb1f1aa3f265ff678f33315d05569ca7d70f5631",
     "remediation_backlog_report": "a8ef3140f509d19bbfc6528c1621f1928037bfd205fe3ca25c97c9b3a857e824",
     "selected_contract_summary_report": "b1270b0dbbd2131d6c42826dcf79af0c78deb247fa6fafbcfe6a7edbec5c41e1",
     "source_package_clean_extract_report": "6f85a5e2744e029f467dc33a948db57dfcfbcb3bda372f33c787aa6f742bca37",
@@ -34,7 +34,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-23T08:30:32Z"
+    "checked_at": "2026-05-23T08:40:23Z"
   },
   "vault": ".",
   "policy": {
@@ -190,24 +190,6 @@
         "can_promote_result must stay false until this release gate is pass."
       ],
       "recommended_next_step": "Refresh release evidence cohort until the release lineage is a single strict fingerprint, then rerun make auto-improve-readiness."
-    },
-    {
-      "id": "promotion_blocked_by_artifact_finalization_failure",
-      "scope": "release_gate",
-      "status": "open",
-      "severity": "blocker",
-      "accepted_risk": false,
-      "gate_effect": "active",
-      "source_status": "fail",
-      "reason": "artifact_finalization release gate is not pass: artifact finalization post-check finalizer status=attention; refresh_required=true; affected_path_count=2",
-      "signal_ids": [
-        "artifact_finalization_status_not_pass"
-      ],
-      "required_evidence": [
-        "Run make test-artifact-finalization and make release-closeout-post-check-finalizer-dry-run.",
-        "can_promote_result must stay false until this release gate is pass."
-      ],
-      "recommended_next_step": "Refresh artifact finalization evidence, then rerun make auto-improve-readiness."
     },
     {
       "id": "promotion_blocked_by_goal_worktree_guard_failure",
@@ -406,10 +388,10 @@
       "path": "tmp/release-closeout-post-check-finalizer.json",
       "expected_artifact_kind": "release_closeout_post_check_finalizer",
       "artifact_kind": "release_closeout_post_check_finalizer",
-      "status": "fail",
-      "source_status": "attention",
-      "release_blocking": true,
-      "summary": "artifact finalization post-check finalizer status=attention; refresh_required=true; affected_path_count=2"
+      "status": "pass",
+      "source_status": "pass",
+      "release_blocking": false,
+      "summary": "artifact finalization post-check finalizer status=pass; refresh_required=false; affected_path_count=0"
     },
     "release_authority_preflight_summary": {
       "path": "ops/reports/release-closeout-sealed-rehearsal-check.json",
