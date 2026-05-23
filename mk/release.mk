@@ -229,7 +229,7 @@ release-test-current:
 	$(PYTHON) -m pytest $(PYTEST_SERIAL_FLAGS)
 
 release-public-current:
-	$(MAKE) public-check
+	$(MAKE) public-check-summary-check
 
 release-package-current:
 	$(MAKE) release-distribution-zip RELEASE_DISTRIBUTION_ZIP_OUT="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"
