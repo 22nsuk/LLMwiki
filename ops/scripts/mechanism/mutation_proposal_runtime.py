@@ -347,6 +347,56 @@ def _repair_decision_ended_as_noop_mutation_failure(vault: Path, decision: dict)
     return "reported pass without modifying any declared primary target" in stderr_text
 
 
+def _artifact_validates_against_declared_schema(vault: Path, rel_path: str) -> bool:
+    path = vault / rel_path
+    try:
+        payload = _read_json(path)
+    except (OSError, json.JSONDecodeError):
+        return False
+    schema_path = str(payload.get("$schema", "")).strip()
+    if not schema_path:
+        return False
+    try:
+        schema = load_schema_with_vault_override(vault, schema_path)
+    except (OSError, json.JSONDecodeError, ValueError):
+        return False
+    return not validate_with_schema(payload, schema)
+
+
+def _repo_health_artifact_freshness_failure_now_clean(vault: Path, source_run_id: str) -> bool:
+    report_path = vault / "runs" / source_run_id / "repo-health-artifact-freshness-report-check.json"
+    try:
+        report = _read_json(report_path)
+    except (OSError, json.JSONDecodeError):
+        return False
+    if str(report.get("status", "")).strip() != "fail":
+        return False
+    top_debt_files = report.get("top_debt_files", [])
+    if not isinstance(top_debt_files, list):
+        return False
+    schema_invalid_files = [
+        str(item.get("path", "")).strip()
+        for item in top_debt_files
+        if isinstance(item, dict)
+        and "schema_validation_failed" in {
+            str(issue).strip() for issue in item.get("issues", [])
+        }
+        and str(item.get("path", "")).strip()
+    ]
+    if not schema_invalid_files:
+        return False
+    return all(_artifact_validates_against_declared_schema(vault, path) for path in schema_invalid_files)
+
+
+def _repair_decision_ended_as_clean_repo_health(vault: Path, decision: dict) -> bool:
+    if str(decision.get("failure_taxonomy", "")).strip() != "repo_health_blocked":
+        return False
+    source_run_id = str(decision.get("source_run_id", "")).strip()
+    if not source_run_id:
+        return False
+    return _repo_health_artifact_freshness_failure_now_clean(vault, source_run_id)
+
+
 def _open_carry_forward_decisions(
     next_run_decisions: list[dict],
     *,
@@ -364,6 +414,8 @@ def _open_carry_forward_decisions(
         if decision_id and decision_id in consumed_decision_ids:
             continue
         if vault is not None and _repair_decision_ended_as_noop_mutation_failure(vault, decision):
+            continue
+        if vault is not None and _repair_decision_ended_as_clean_repo_health(vault, decision):
             continue
         target_proposal_id = str(decision.get("target_proposal_id", "")).strip()
         if not target_proposal_id:
