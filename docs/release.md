@@ -19,7 +19,8 @@ check targets verify that already-generated evidence is current.
   non-generated/source changes, rechecks all surfaces, then reruns sealed closeout.
 - `make release-evidence-converge`: authoritative clean release evidence convergence.
 - `make release-evidence-closeout-sealed`: check-only sealed packaging lane for an
-  already source-ready tree. It must not run mutating tracked evidence convergence.
+  already source-ready tree. It must not run mutating tracked evidence convergence;
+  zip-bound sealed evidence is written as sidecars under `build/release/`.
 - `make release-smoke-fast`: developer/package precheck이며 canonical release evidence로 쓰지 않는다.
 - `make release-smoke`: canonical release evidence는 이 full 단일 report인 `ops/reports/release-smoke-report.json`이다.
 
@@ -29,8 +30,9 @@ check targets verify that already-generated evidence is current.
    source-ready commit, and run write-free post-verify checks.
 2. Run `make release-evidence-closeout-sealed` from the clean source-ready tree.
    This materializes `build/release/LLMwiki-source.zip`, writes local post-seal
-   attestation under `build/release/`, and verifies the sealed rehearsal check
-   against the already tracked source-ready evidence.
+   attestation under `build/release/`, writes zip-bound batch/external/operator
+   sidecars under `build/release/`, and verifies the sealed rehearsal check against
+   those sidecars without changing tracked canonical evidence.
 3. If sealed verification reports only generated canonical evidence drift, run
    `make release-sealed-dirty-recovery`. If it reports source or other
    non-generated drift, fix that writer boundary explicitly.

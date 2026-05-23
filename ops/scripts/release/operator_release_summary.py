@@ -1117,6 +1117,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build operator release summary")
     parser.add_argument("--vault", default=".")
     parser.add_argument("--out", default=DEFAULT_OUT)
+    parser.add_argument("--closeout", default=DEFAULT_CLOSEOUT)
+    parser.add_argument("--batch-manifest", default=DEFAULT_BATCH_MANIFEST)
+    parser.add_argument("--self-check", default=DEFAULT_SELF_CHECK)
+    parser.add_argument("--test-summary", default=DEFAULT_TEST_SUMMARY)
+    parser.add_argument("--full-test-summary", default=DEFAULT_FULL_TEST_SUMMARY)
+    parser.add_argument("--learning-revalidation", default=DEFAULT_LEARNING_REVALIDATION)
+    parser.add_argument("--learning-delta-scoreboard", default=DEFAULT_LEARNING_DELTA_SCOREBOARD)
     parser.add_argument(
         "--fail-on-attention",
         action="store_true",
@@ -1128,7 +1135,30 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
-    report = build_report(vault)
+    source_command = (
+        "python -m ops.scripts.operator_release_summary "
+        f"--vault {args.vault} --out {args.out} "
+        f"--closeout {args.closeout} "
+        f"--batch-manifest {args.batch_manifest} "
+        f"--self-check {args.self_check} "
+        f"--test-summary {args.test_summary} "
+        f"--full-test-summary {args.full_test_summary} "
+        f"--learning-revalidation {args.learning_revalidation} "
+        f"--learning-delta-scoreboard {args.learning_delta_scoreboard}"
+    )
+    report = build_report(
+        vault,
+        OperatorReleaseSummaryRequest(
+            closeout_path=args.closeout,
+            batch_manifest_path=args.batch_manifest,
+            self_check_path=args.self_check,
+            test_summary_path=args.test_summary,
+            full_test_summary_path=args.full_test_summary,
+            learning_revalidation_path=args.learning_revalidation,
+            learning_delta_scoreboard_path=args.learning_delta_scoreboard,
+            source_command=source_command,
+        ),
+    )
     destination = write_report(vault, report, args.out)
     print(display_path(vault, destination))
     if args.fail_on_attention and report["status"] != "pass":

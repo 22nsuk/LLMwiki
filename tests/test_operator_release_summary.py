@@ -540,6 +540,46 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         )
         self.assertIn("tmp/_patch_vocab_refs.py", persisted["batch_verify"]["tmp_json_paths"])
 
+    def test_main_can_read_zip_bound_sidecar_batch_manifest(self) -> None:
+        default_batch_path = self.vault / "ops" / "reports" / "release-closeout-batch-manifest.json"
+        sidecar_batch_path = self.vault / "build" / "release" / "release-closeout-batch-manifest.json"
+        sidecar_batch_path.parent.mkdir(parents=True, exist_ok=True)
+        sidecar_batch_path.write_text(default_batch_path.read_text(encoding="utf-8"), encoding="utf-8")
+
+        default_batch = json.loads(default_batch_path.read_text(encoding="utf-8"))
+        default_batch["sealed_release_status"] = "unsealed_distribution_not_provided"
+        default_batch["distribution_package"] = {"status": "not_provided"}
+        default_batch_path.write_text(json.dumps(default_batch, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        exit_code = main(
+            [
+                "--vault",
+                self.vault.as_posix(),
+                "--out",
+                "build/release/operator-release-summary.json",
+                "--batch-manifest",
+                "build/release/release-closeout-batch-manifest.json",
+            ]
+        )
+
+        self.assertEqual(exit_code, 0)
+        persisted = json.loads(
+            (self.vault / "build" / "release" / "operator-release-summary.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(persisted["status"], "pass")
+        self.assertEqual(persisted["sealed_release_status"], "sealed_clean_pass")
+        self.assertEqual(persisted["source_zip_policy_status"], "match")
+        self.assertEqual(
+            persisted["source_load_status"]["batch_manifest"],
+            "ok",
+        )
+        self.assertIn(
+            "--batch-manifest build/release/release-closeout-batch-manifest.json",
+            persisted["source_command"],
+        )
+
     def test_main_can_fail_attention_for_strict_gate_usage(self) -> None:
         self._write_json("tmp/release-evidence-dashboard.candidate.json", {"candidate": True})
 

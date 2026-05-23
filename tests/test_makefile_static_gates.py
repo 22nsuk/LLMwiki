@@ -257,6 +257,7 @@ def _assert_sealed_release_closeout_targets(case: unittest.TestCase, text: str) 
     for target in (
         "release-distribution-zip",
         "release-evidence-closeout-sealed",
+        "release-evidence-closeout-sealed-sidecars",
         "release-evidence-closeout-sealed-check",
         "release-evidence-closeout-sealed-dry-run",
         "release-evidence-closeout-sealed-dry-run-check",
@@ -269,6 +270,14 @@ def _assert_sealed_release_closeout_targets(case: unittest.TestCase, text: str) 
         text,
     )
     case.assertIn("RELEASE_CLOSEOUT_SEALED_DRY_RUN_CHECK_FLAGS ?= --no-fail", text)
+    for assignment in (
+        "RELEASE_CLOSEOUT_SEALED_EXTERNAL_MANIFEST_OUT ?= build/release/external-report-reference-manifest.json",
+        "RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT ?= build/release/release-closeout-batch-manifest.json",
+        "RELEASE_CLOSEOUT_SEALED_OPERATOR_SUMMARY_OUT ?= build/release/operator-release-summary.json",
+        "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_BATCH_MANIFEST ?= ops/reports/release-closeout-batch-manifest.json",
+        "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_EXTERNAL_MANIFEST ?= external-reports/report-reference-manifest.json",
+    ):
+        case.assertIn(assignment, text)
     case.assertIn(
         '$(PYTHON) -m ops.scripts.release_smoke --vault "$(VAULT)" --profile fast --archive-out "$(RELEASE_DISTRIBUTION_ZIP_OUT)" --out "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)"',
         _target_block(text, "release-distribution-zip"),
@@ -277,20 +286,33 @@ def _assert_sealed_release_closeout_targets(case: unittest.TestCase, text: str) 
     for needle in (
         "$(MAKE) release-worktree-clean-check",
         '$(MAKE) release-distribution-zip RELEASE_DISTRIBUTION_ZIP_OUT="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
-        '$(MAKE) external-report-reference-manifest-strict EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
-        '$(MAKE) release-post-seal-attestation RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
-        '$(MAKE) release-sealed-verify RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_OUT="$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_RELEASE_OUT)"',
+        "$(MAKE) release-evidence-closeout-sealed-sidecars",
+        '$(MAKE) release-post-seal-attestation RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" RELEASE_POST_SEAL_ATTESTATION_BATCH_MANIFEST="$(RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT)" RELEASE_POST_SEAL_ATTESTATION_OPERATOR_SUMMARY="$(RELEASE_CLOSEOUT_SEALED_OPERATOR_SUMMARY_OUT)"',
+        '$(MAKE) release-sealed-verify RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_OUT="$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_RELEASE_OUT)" RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_BATCH_MANIFEST="$(RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT)" RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_EXTERNAL_MANIFEST="$(RELEASE_CLOSEOUT_SEALED_EXTERNAL_MANIFEST_OUT)"',
     ):
         case.assertIn(needle, sealed_block)
     case.assertNotIn("$(MAKE) release-evidence-converge", sealed_block)
     case.assertNotIn("$(MAKE) operator-release-summary", sealed_block)
+    sealed_sidecars_block = _target_block(text, "release-evidence-closeout-sealed-sidecars")
+    for needle in (
+        '--out "$(RELEASE_CLOSEOUT_SEALED_EXTERNAL_MANIFEST_OUT)"',
+        "--mode strict_review_release",
+        '--current-distribution-zip-path "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
+        '--out "$(RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT)"',
+        '--zip-metadata "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
+        "$(MAKE) tmp-json-clean",
+        "ops.scripts.operator_release_summary",
+        '--out "$(RELEASE_CLOSEOUT_SEALED_OPERATOR_SUMMARY_OUT)"',
+        '--batch-manifest "$(RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT)"',
+    ):
+        case.assertIn(needle, sealed_sidecars_block)
     sealed_verify_block = _target_block(text, "release-sealed-verify")
     case.assertIn("$(MAKE) release-verify-current", sealed_verify_block)
     case.assertIn("$(MAKE) release-evidence-closeout-sealed-check", sealed_verify_block)
-    case.assertIn(
-        "ops.scripts.release_closeout_sealed_rehearsal_check",
-        _target_block(text, "release-evidence-closeout-sealed-check"),
-    )
+    sealed_check_block = _target_block(text, "release-evidence-closeout-sealed-check")
+    case.assertIn("ops.scripts.release_closeout_sealed_rehearsal_check", sealed_check_block)
+    case.assertIn('--batch-manifest "$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_BATCH_MANIFEST)"', sealed_check_block)
+    case.assertIn('--external-manifest "$(RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_EXTERNAL_MANIFEST)"', sealed_check_block)
     sealed_dry_run = _target_block(text, "release-evidence-closeout-sealed-dry-run")
     for needle in (
         'RELEASE_DISTRIBUTION_ZIP_OUT="$(RELEASE_CLOSEOUT_SEALED_DRY_RUN_DISTRIBUTION_ZIP)"',
@@ -364,7 +386,7 @@ def _assert_release_audit_and_post_seal_targets(case: unittest.TestCase, text: s
         audit_pack,
     )
     case.assertIn(
-        '$(PYTHON) -m ops.scripts.release_post_seal_attestation build --vault "$(VAULT)" --out "$(RELEASE_POST_SEAL_ATTESTATION_OUT)" $(if $(RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP),--source-zip-path "$(RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP)",)',
+        '$(PYTHON) -m ops.scripts.release_post_seal_attestation build --vault "$(VAULT)" --out "$(RELEASE_POST_SEAL_ATTESTATION_OUT)" $(if $(RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP),--source-zip-path "$(RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP)",) $(if $(RELEASE_POST_SEAL_ATTESTATION_BATCH_MANIFEST),--batch-manifest-path "$(RELEASE_POST_SEAL_ATTESTATION_BATCH_MANIFEST)",) $(if $(RELEASE_POST_SEAL_ATTESTATION_OPERATOR_SUMMARY),--operator-summary-path "$(RELEASE_POST_SEAL_ATTESTATION_OPERATOR_SUMMARY)",)',
         _target_block(text, "release-post-seal-attestation"),
     )
     case.assertEqual(
