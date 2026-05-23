@@ -272,7 +272,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
             {
                 "status": "pass",
                 "command": (
-                    "pytest tests/test_generated_report_contracts.py "
+                    "pytest tests/test_report_schemas.py "
                     "tests/test_report_schema_sample_regeneration.py "
                     "tests/test_auto_improve_iteration_runtime.py::"
                     "AutoImproveIterationRuntimeTests::test_run_telemetry_preservation_contract_matches_schema_surface"
@@ -476,7 +476,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
         self.assertEqual(
             {item["lane_id"]: item["status"] for item in report["test_failure_lanes"]},
             {
-                "generated_report_contract": "pass",
+                "report_schema_contract": "pass",
                 "runtime_telemetry_schema_contract": "pass",
             },
         )
@@ -850,18 +850,18 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
                 "status": "pass",
                 "deselected_tests": [
                     {
-                        "nodeid": "tests/test_generated_report_contracts.py::test_checked_in_artifact_freshness_report_keeps_stable_debt_axes_explicit",
-                        "reason": "self-referential checked-in assertion",
-                        "policy_ref": "ops/policies/report-contract-deselections.json#artifact_freshness_self_reference",
+                        "nodeid": "tests/test_report_schemas.py::ReportSchemaContractTest::test_sample_eval_report_validates_and_requires_policy_identity",
+                        "reason": "temporary schema contract exception",
+                        "policy_ref": "ops/policies/report-contract-deselections.json#schema_contract_exception",
                         "risk_owner": "runtime-maintainer",
                         "expires_at": "2026-05-14T00:00:00Z",
                         "release_blocking": False,
                         "expected_to_pass_after_refresh": True,
                     },
                     {
-                        "nodeid": "tests/test_generated_report_contracts.py::test_checked_in_artifact_freshness_report_keeps_stable_debt_axes_explicit",
-                        "reason": "self-referential checked-in assertion",
-                        "policy_ref": "ops/policies/report-contract-deselections.json#artifact_freshness_self_reference",
+                        "nodeid": "tests/test_report_schemas.py::ReportSchemaContractTest::test_sample_eval_report_validates_and_requires_policy_identity",
+                        "reason": "temporary schema contract exception",
+                        "policy_ref": "ops/policies/report-contract-deselections.json#schema_contract_exception",
                         "risk_owner": "runtime-maintainer",
                         "expires_at": "2026-05-14T00:00:00Z",
                         "release_blocking": False,
@@ -913,7 +913,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
         self.assertEqual(report["summary"]["release_blocking_risk_family_count"], 1)
         self.assertNotIn("release_blocking_risk_count", report["summary"])
 
-    def test_test_failure_lanes_surface_generated_report_contract_failure(self) -> None:
+    def test_test_failure_lanes_surface_report_schema_contract_failure(self) -> None:
         self._write_happy_sources()
         self._write_source_report(
             "test_summary",
@@ -965,8 +965,8 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
         )
         self.assertEqual(report["summary"]["test_failure_lane_fail_count"], 1)
         lanes = {item["lane_id"]: item for item in report["test_failure_lanes"]}
-        self.assertEqual(lanes["generated_report_contract"]["status"], "fail")
-        self.assertEqual(lanes["generated_report_contract"]["failed_count"], 1)
+        self.assertEqual(lanes["report_schema_contract"]["status"], "fail")
+        self.assertEqual(lanes["report_schema_contract"]["failed_count"], 1)
         self.assertEqual(lanes["runtime_telemetry_schema_contract"]["status"], "pass")
         self.assertIn("test_summary_not_pass", {item["code"] for item in report["blockers"]})
         self.assertEqual(validate_with_schema(report, load_schema(REPORT_SCHEMA_PATH)), [])

@@ -1088,7 +1088,6 @@ class MakefileStaticGateTests(unittest.TestCase):
             "tests/test_auto_improve_readiness_runtime.py",
             "tests/test_artifact_freshness_runtime.py::test_no_root_ephemeral_test_artifacts",
             "tests/test_artifact_freshness_runtime.py::ArtifactFreshnessRuntimeTests::test_report_accepts_enveloped_current_json_artifact",
-            "tests/test_generated_report_contracts.py",
             "tests/test_release_smoke.py::ReleaseSmokeTest::test_build_smoke_commands_match_release_gate_profiles",
             "tests/test_release_smoke.py::ReleaseSmokeTest::test_run_smoke_commands_captures_returncodes_and_tails",
             "tests/test_release_smoke.py::ReleaseSmokeTest::test_build_report_uses_runtime_context_and_sanitizes_ephemeral_paths",
@@ -1996,7 +1995,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             'REPORT_CONTRACT_SUMMARY_TESTS ?= -m "$(REPORT_CONTRACT_SUMMARY_MARK_EXPR)" $(REPORT_CONTRACT_TESTS)',
             text,
         )
-        self.assertNotIn("--deselect=tests/test_generated_report_contracts.py::", text)
+        self.assertNotIn("--deselect=tests/test_", text)
         self.assertIn(
             "$(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_SERIAL_FLAGS)",
             core_block,

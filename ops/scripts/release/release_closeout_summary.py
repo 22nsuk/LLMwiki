@@ -320,19 +320,17 @@ COHERENCE_POLICY = "allowed_divergence_with_fingerprints"
 
 TEST_FAILURE_LANES = (
     {
-        "lane_id": "generated_report_contract",
-        "summary": "Generated report contract tests must pass before release evidence is authoritative.",
+        "lane_id": "report_schema_contract",
+        "summary": "Schema and source-owned report contract tests must pass before release evidence is authoritative.",
         "command_markers": (
-            "tests/test_generated_report_contracts.py",
             "tests/test_report_schema_sample_regeneration.py",
             "tests/test_report_schemas.py",
         ),
         "failure_markers": (
-            "tests/test_generated_report_contracts.py::",
             "tests/test_report_schema_sample_regeneration.py::",
             "tests/test_report_schemas.py::",
         ),
-        "next_action": "Fix or regenerate the failing generated report contract evidence, then rerun report-contract summary.",
+        "next_action": "Fix the failing schema or source-owned report contract, then rerun report-contract summary.",
     },
     {
         "lane_id": "runtime_telemetry_schema_contract",

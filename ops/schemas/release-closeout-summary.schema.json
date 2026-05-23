@@ -1595,7 +1595,7 @@
         "lane_id": {
           "type": "string",
           "enum": [
-            "generated_report_contract",
+            "report_schema_contract",
             "runtime_telemetry_schema_contract"
           ]
         },

@@ -173,13 +173,13 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
     def test_changed_path_selects_report_contract_closeout(self) -> None:
         report = build_report(
             self.vault,
-            changed_paths=["tests/test_generated_report_contracts.py"],
+            changed_paths=["tests/test_report_schemas.py"],
             context=fixed_context(),
         )
 
         workflow = next(item for item in report["selected_workflows"] if item["workflow_id"] == "report_contract_closeout")
         self.assertEqual(workflow["recommended_lane"], "report-contract-closeout")
-        self.assertEqual(workflow["matched_paths"], ["tests/test_generated_report_contracts.py"])
+        self.assertEqual(workflow["matched_paths"], ["tests/test_report_schemas.py"])
         self.assertEqual([step["target"] for step in workflow["steps"]], ["report-contract-closeout", "operator-release-summary"])
         self.assertEqual(report["status"], "pass")
 

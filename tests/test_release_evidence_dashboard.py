@@ -91,13 +91,13 @@ class ReleaseEvidenceDashboardTests(unittest.TestCase):
                 ],
                 "test_failure_lanes": [
                     {
-                        "lane_id": "generated_report_contract",
+                        "lane_id": "report_schema_contract",
                         "source_path": "ops/reports/test-execution-summary.json",
                         "status": "pass",
                         "represented_in_summary": True,
                         "failed_count": 0,
                         "failed_nodeids": [],
-                        "summary": "generated report contract lane passed",
+                        "summary": "report schema contract lane passed",
                         "next_action": "none",
                     },
                     {
@@ -681,7 +681,7 @@ class ReleaseEvidenceDashboardTests(unittest.TestCase):
         closeout_path = self.vault / "ops" / "reports" / "release-closeout-summary.json"
         closeout = json.loads(closeout_path.read_text(encoding="utf-8"))
         closeout["test_failure_lanes"][0] = {
-            "lane_id": "generated_report_contract",
+            "lane_id": "report_schema_contract",
             "source_path": "ops/reports/test-execution-summary.json",
             "status": "fail",
             "represented_in_summary": True,
@@ -689,7 +689,7 @@ class ReleaseEvidenceDashboardTests(unittest.TestCase):
             "failed_nodeids": [
                 "tests/test_report_schema_sample_regeneration.py::ReportSchemaSampleRegenerationTests::test_generated_openvex_sample_matches_frozen_fixture"
             ],
-            "summary": "Generated report contract tests must pass before release evidence is authoritative.",
+            "summary": "Schema and source-owned report contract tests must pass before release evidence is authoritative.",
             "next_action": "Regenerate schema samples and rerun report-contract summary.",
         }
         closeout_path.write_text(
@@ -702,7 +702,7 @@ class ReleaseEvidenceDashboardTests(unittest.TestCase):
         lane_gate = next(
             gate
             for gate in report["gates"]
-            if gate["gate_id"] == "test_failure_lane_generated_report_contract"
+            if gate["gate_id"] == "test_failure_lane_report_schema_contract"
         )
         self.assertEqual(lane_gate["checked_in_state"], "fail")
         self.assertEqual(lane_gate["live_rerun_state"]["status"], "fail")

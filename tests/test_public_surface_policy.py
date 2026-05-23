@@ -124,15 +124,6 @@ class PublicSurfacePolicyTests(unittest.TestCase):
         self.assertFalse(should_export_public("ops/.codebase-memory/graph.db.zst"))
         self.assertTrue(should_export_public("ops/templates/codebase-memory-mcp.cbmignore"))
 
-    def test_generated_report_contracts_skip_full_vault_checks_in_public_export(self) -> None:
-        text = Path("tests/test_generated_report_contracts.py").read_text(encoding="utf-8")
-
-        self.assertIn(
-            "PUBLIC_EXPORT_MANIFEST_PATH.exists() and not ARTIFACT_FRESHNESS_REPORT_PATH.exists()",
-            text,
-        )
-        self.assertNotIn('not (REPO_ROOT / "ops" / "reports").exists()', text)
-
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()
