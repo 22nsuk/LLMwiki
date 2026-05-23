@@ -31,7 +31,7 @@ class ManifestExportSymlinkSafetyTests(unittest.TestCase):
         self.assertTrue(release_manifest_excludes_path("ops/operator/operator-release-summary.json"))
         self.assertTrue(release_manifest_excludes_path("tmp/release.zip"))
         self.assertTrue(release_manifest_excludes_path(".venv-py312/bin/python"))
-        self.assertFalse(release_manifest_excludes_path("wiki/source--fake.md"))
+        self.assertTrue(release_manifest_excludes_path("wiki/source--fake.md"))
         self.assertFalse(release_manifest_excludes_path("../outside.txt"))
 
     def test_build_manifest_does_not_resolve_regular_files(self) -> None:

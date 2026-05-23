@@ -63,8 +63,8 @@ class SbomExportMappingTests(unittest.TestCase):
             dependency_map = {item["path"]: item for item in persisted["dependency_input_mapping"]}
             self.assertEqual(persisted["status"], "pass")
             self.assertTrue(persisted["surface_summary"]["public_subset_of_release"])
-            self.assertEqual(persisted["surface_summary"]["public_only_file_count"], 2)
-            self.assertEqual(persisted["surface_summary"]["release_excluded_public_file_count"], 2)
+            self.assertEqual(persisted["surface_summary"]["public_only_file_count"], 1)
+            self.assertEqual(persisted["surface_summary"]["release_excluded_public_file_count"], 1)
             self.assertEqual(persisted["surface_summary"]["blocking_public_only_file_count"], 0)
             self.assertTrue(persisted["sbom_readiness"]["release_dependency_inputs_complete"])
             self.assertTrue(persisted["sbom_readiness"]["public_dependency_inputs_complete"])
@@ -83,7 +83,7 @@ class SbomExportMappingTests(unittest.TestCase):
             }
             self.assertEqual(
                 public_exclusions,
-                {"ops/operator/operator-release-summary.json", "ops/script-output-surfaces.json"},
+                {"ops/script-output-surfaces.json"},
             )
             self.assertEqual(persisted["gaps"], [])
 
