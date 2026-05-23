@@ -2367,6 +2367,91 @@ class MutationProposalTest(unittest.TestCase):
                 },
             )
 
+    def test_queue_unblock_mutation_failure_with_repair_target_stays_open(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            primary_target = "ops/scripts/mechanism/example_runtime.py"
+            (vault / primary_target).parent.mkdir(parents=True, exist_ok=True)
+            (vault / primary_target).write_text("VALUE = 1\n", encoding="utf-8")
+            (vault / "tests" / "test_example_runtime.py").write_text(
+                "def test_example_runtime():\n    assert True\n",
+                encoding="utf-8",
+            )
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            source_run_id = "auto-session-a-run-01-example-runtime"
+            run_dir = vault / "runs" / source_run_id
+            run_dir.mkdir(parents=True, exist_ok=True)
+            (run_dir / "mutation-command.stderr.txt").write_text(
+                (
+                    "worker reported pass without modifying any declared primary target; "
+                    f"primary_targets=[{primary_target}]\n"
+                ),
+                encoding="utf-8",
+            )
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:queue-unblock",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": source_run_id,
+                            "proposal_id": "recent_log_overlap_queue_blocked__example-runtime",
+                            "source_candidate_id": "recent_log_overlap_queue_unblock__example-runtime",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__example-runtime__mutation-failed"
+                            ),
+                            "proposal_family": "queue_unblock",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "mutation_failed",
+                            "blocking_role": "worker",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "queue unblock failure should become next-run repair work",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [primary_target],
+                            "supporting_targets": ["ops/script-output-surfaces.json"],
+                            "must_change_tests": ["tests/test_example_runtime.py"],
+                            "evidence_paths": [
+                                f"runs/{source_run_id}/run-telemetry.json",
+                                f"runs/{source_run_id}/worker-executor-report.json",
+                            ],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            repair_proposals = [
+                proposal
+                for proposal in proposal_report["proposals"]
+                if proposal["failure_mode"] == "next_run_failure_repair"
+            ]
+
+            self.assertEqual(len(repair_proposals), 1)
+            self.assertEqual(
+                repair_proposals[0]["proposal_id"],
+                "next_run_failure_repair__example-runtime__mutation-failed",
+            )
+            self.assertEqual(
+                proposal_report["diagnostics"]["next_run_decision_queue"][
+                    "open_carry_forward_decisions"
+                ],
+                1,
+            )
+            self.assertEqual(
+                proposal_report["diagnostics"]["next_run_decision_queue"][
+                    "selected_target_proposal_ids"
+                ],
+                ["next_run_failure_repair__example-runtime__mutation-failed"],
+            )
+
     def test_noop_repair_mutation_failure_does_not_emit_followup_repair(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

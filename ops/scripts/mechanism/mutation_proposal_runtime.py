@@ -324,13 +324,17 @@ def _load_consumed_next_run_decision_ids(
     return sorted(consumed)
 
 
-def _repair_decision_ended_as_noop_mutation_failure(vault: Path, decision: dict) -> bool:
+def _is_next_run_failure_repair_source(decision: dict) -> bool:
     if str(decision.get("proposal_family", "")).strip() != NEXT_RUN_FAILURE_REPAIR_FAMILY:
         return False
-    if str(decision.get("failure_taxonomy", "")).strip() != "mutation_failed":
-        return False
     source_proposal_id = str(decision.get("proposal_id", "")).strip()
-    if not source_proposal_id.startswith(f"{NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE}__"):
+    return source_proposal_id.startswith(f"{NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE}__")
+
+
+def _repair_decision_ended_as_noop_mutation_failure(vault: Path, decision: dict) -> bool:
+    if not _is_next_run_failure_repair_source(decision):
+        return False
+    if str(decision.get("failure_taxonomy", "")).strip() != "mutation_failed":
         return False
     source_run_id = str(decision.get("source_run_id", "")).strip()
     if not source_run_id:
