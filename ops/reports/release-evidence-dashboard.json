@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/release-evidence-dashboard.schema.json",
   "artifact_kind": "release_evidence_dashboard",
-  "generated_at": "2026-05-23T05:22:44Z",
+  "generated_at": "2026-05-23T05:54:29Z",
   "producer": "ops.scripts.release_evidence_dashboard",
   "source_command": "python -m ops.scripts.release_evidence_dashboard --vault . --out ops/reports/release-evidence-dashboard.json",
   "source_revision": "unknown",
@@ -11,12 +11,12 @@
     "schema": "3d201c44c8525de4f9e7af11e9bcba6a5572a46b2f246bc43324bf377c45ab56",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "62c75a1737d4a2f63f26ac5fd0477b2b3d1f4f830478fc59c9ddc764382f410c",
-    "artifact_freshness": "c04fdd8740918f1f070307d324bcc5cd0d8e9cd651ee83cb00133bb350807eee",
-    "learning_delta_scoreboard": "d1ea3620ae62b90fda627a388518bb7234378eee58f7c231dee67f028bf919b4",
-    "learning_readiness_signoff_revalidation": "bb5142dc02e47fefa8985fbfa1de846c7068eb0b7062ac40379b0b55fff9ed43",
-    "release_closeout_fixed_point": "82b093d0321dd31a790eeda6f1f42d25136e910f1040cc2d21983cd590f2945e",
+    "artifact_freshness": "83eadc5c51b831780469c461d4622019fc25d2110caf4c4636efe330c00884fc",
+    "learning_delta_scoreboard": "8ed71768858ade156d3bbefd3e4de594210b6be967d24247385a64a5065d5041",
+    "learning_readiness_signoff_revalidation": "9aea8412831ef9ebf30182c74ee39b0074e065a41d23720f53c4bc5a9989d024",
+    "release_closeout_fixed_point": "711661676ba37b0aeffc2130e43cb7f4cb396701fcb5d9bc69b0cf03138ad13b",
     "release_closeout_fixed_point_cost_trend": "4ad9945123b2cb8856267681013cf7200acf64fef40079a738488071907344ef",
-    "release_closeout_summary": "59ce43c631b4bfb790bd1a02bd2a883e0d03597b12eaf49564b47a795672298f",
+    "release_closeout_summary": "d0aa53ce960e953549ea450e4bc48617923453f5a3323ed7c85449cac4ff1d39",
     "current_source_tree_fingerprint": "1e82d41b4d0d859ed4f7322d2b4dd98d5517cdc622d8ed5ea173ad2aee0ae00d"
   },
   "schema_version": 1,
@@ -25,7 +25,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-23T05:22:44Z"
+    "checked_at": "2026-05-23T05:54:29Z"
   },
   "vault": ".",
   "policy": {
@@ -39,24 +39,22 @@
       "path": "ops/reports/release-closeout-summary.json",
       "load_status": "ok",
       "status": "pass",
-      "release_readiness_state": "conditional_pass",
-      "release_authority_status": "conditional_pass",
-      "semantic_release_status": "conditional_pass",
+      "release_readiness_state": "clean_pass",
+      "release_authority_status": "clean_pass",
+      "semantic_release_status": "clean_pass",
       "sealed_release_status": "unsealed_distribution_not_provided",
       "status_v2_blocker_reason_ids": [
-        "release_authority_not_clean_pass",
-        "machine_release_not_allowed",
         "sealed_release_not_clean_pass",
         "distribution_package_not_materialized"
       ],
       "status_v2_used_legacy_fallback_fields": [],
-      "machine_release_allowed": false,
+      "machine_release_allowed": true,
       "operator_release_allowed": true,
-      "requires_accepted_risk_review": true,
+      "requires_accepted_risk_review": false,
       "live_make_check_status": "pass",
       "live_make_check_ready": true,
       "live_make_check_blocking": false,
-      "summary": "release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided; machine_release_allowed=False; operator_release_allowed=True; requires_accepted_risk_review=True; live_make_check_status=pass"
+      "summary": "release_authority_status=clean_pass; sealed_release_status=unsealed_distribution_not_provided; machine_release_allowed=True; operator_release_allowed=True; requires_accepted_risk_review=False; live_make_check_status=pass"
     },
     "release_closeout_fixed_point": {
       "path": "ops/reports/release-closeout-fixed-point.json",
@@ -397,16 +395,16 @@
       "converged": true,
       "iteration_count": 5,
       "command_run_count": 56,
-      "total_duration_ms": 45832,
+      "total_duration_ms": 45339,
       "writer_costs": [
         {
           "name": "goal-worktree-guard",
           "target": "auto-improve-readiness-worktree-guard",
           "run_count": 1,
           "selected_iteration_count": 1,
-          "total_duration_ms": 394,
-          "average_duration_ms": 394,
-          "max_duration_ms": 394,
+          "total_duration_ms": 393,
+          "average_duration_ms": 393,
+          "max_duration_ms": 393,
           "skipped_after_first_iteration_count": 4
         },
         {
@@ -414,9 +412,9 @@
           "target": "generated-artifact-index-body",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2483,
-          "average_duration_ms": 497,
-          "max_duration_ms": 511,
+          "total_duration_ms": 2468,
+          "average_duration_ms": 494,
+          "max_duration_ms": 501,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -424,9 +422,9 @@
           "target": "artifact-freshness",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 19292,
-          "average_duration_ms": 3858,
-          "max_duration_ms": 3884,
+          "total_duration_ms": 19112,
+          "average_duration_ms": 3822,
+          "max_duration_ms": 3863,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -434,9 +432,9 @@
           "target": "auto-improve-readiness-report-body",
           "run_count": 3,
           "selected_iteration_count": 3,
-          "total_duration_ms": 1555,
-          "average_duration_ms": 518,
-          "max_duration_ms": 526,
+          "total_duration_ms": 1552,
+          "average_duration_ms": 517,
+          "max_duration_ms": 524,
           "skipped_after_first_iteration_count": 2
         },
         {
@@ -444,9 +442,9 @@
           "target": "release-closeout-summary-report",
           "run_count": 4,
           "selected_iteration_count": 4,
-          "total_duration_ms": 2383,
-          "average_duration_ms": 596,
-          "max_duration_ms": 603,
+          "total_duration_ms": 2288,
+          "average_duration_ms": 572,
+          "max_duration_ms": 579,
           "skipped_after_first_iteration_count": 1
         },
         {
@@ -454,9 +452,9 @@
           "target": "learning-readiness-signoff-revalidation",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 1923,
-          "average_duration_ms": 385,
-          "max_duration_ms": 393,
+          "total_duration_ms": 1918,
+          "average_duration_ms": 384,
+          "max_duration_ms": 390,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -464,9 +462,9 @@
           "target": "release-evidence-cohort",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2589,
-          "average_duration_ms": 518,
-          "max_duration_ms": 531,
+          "total_duration_ms": 2488,
+          "average_duration_ms": 498,
+          "max_duration_ms": 503,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -474,9 +472,9 @@
           "target": "release-evidence-dashboard-report",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2784,
-          "average_duration_ms": 557,
-          "max_duration_ms": 563,
+          "total_duration_ms": 2745,
+          "average_duration_ms": 549,
+          "max_duration_ms": 562,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -484,9 +482,9 @@
           "target": "release-lane-summary",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2289,
-          "average_duration_ms": 458,
-          "max_duration_ms": 470,
+          "total_duration_ms": 2267,
+          "average_duration_ms": 453,
+          "max_duration_ms": 462,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -494,9 +492,9 @@
           "target": "release-clean-blocker-ledger",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2413,
-          "average_duration_ms": 483,
-          "max_duration_ms": 491,
+          "total_duration_ms": 2395,
+          "average_duration_ms": 479,
+          "max_duration_ms": 499,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -504,9 +502,9 @@
           "target": "release-closeout-batch-manifest-promote",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 4587,
+          "total_duration_ms": 4583,
           "average_duration_ms": 917,
-          "max_duration_ms": 924,
+          "max_duration_ms": 921,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -514,9 +512,9 @@
           "target": "release-evidence-closeout-self-check",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 1799,
-          "average_duration_ms": 360,
-          "max_duration_ms": 365,
+          "total_duration_ms": 1795,
+          "average_duration_ms": 359,
+          "max_duration_ms": 364,
           "skipped_after_first_iteration_count": 0
         }
       ],
@@ -532,7 +530,7 @@
         "post_first_iteration_selected_count": 0,
         "post_first_iteration_run_count": 0,
         "skipped_post_first_iteration_selection_count": 12,
-        "total_duration_ms": 1341,
+        "total_duration_ms": 1335,
         "skip_policy_effective": true,
         "summary": "expensive prerequisites were selected only in iteration 1"
       },
@@ -544,9 +542,9 @@
       },
       "evidence_basis": {
         "fixed_point_report_path": "ops/reports/release-closeout-fixed-point.json",
-        "fixed_point_report_digest": "82b093d0321dd31a790eeda6f1f42d25136e910f1040cc2d21983cd590f2945e",
-        "current_fixed_point_report_digest": "82b093d0321dd31a790eeda6f1f42d25136e910f1040cc2d21983cd590f2945e",
-        "fixed_point_generated_at": "2026-05-23T05:21:30Z",
+        "fixed_point_report_digest": "711661676ba37b0aeffc2130e43cb7f4cb396701fcb5d9bc69b0cf03138ad13b",
+        "current_fixed_point_report_digest": "711661676ba37b0aeffc2130e43cb7f4cb396701fcb5d9bc69b0cf03138ad13b",
+        "fixed_point_generated_at": "2026-05-23T05:52:07Z",
         "cost_trend_path": "ops/reports/release-closeout-fixed-point-cost-trend.json",
         "cost_trend_load_status": "ok",
         "cost_trend_digest": "4ad9945123b2cb8856267681013cf7200acf64fef40079a738488071907344ef",
@@ -555,7 +553,7 @@
         "sampled_fixed_point_report_digest": "4b9a7cd57062b69f1eaedd9002bdf6d487a3c73d11c103bd7bf9b7c5d8a61b00",
         "basis_relation_to_current_fixed_point": "sampled_different_fixed_point"
       },
-      "summary": "12 writers ran 56 commands across 5 iterations; total_duration_ms=45832; expensive_prerequisite_skip_effective=True"
+      "summary": "12 writers ran 56 commands across 5 iterations; total_duration_ms=45339; expensive_prerequisite_skip_effective=True"
     }
   },
   "confirmed_evidence_summary": {
@@ -686,25 +684,23 @@
   },
   "accepted_risk_delta": {
     "status": "unchanged",
-    "previous_report_generated_at": "2026-05-23T05:22:44Z",
+    "previous_report_generated_at": "2026-05-23T05:54:29Z",
     "added_count": 0,
     "removed_count": 0,
-    "unchanged_count": 1,
+    "unchanged_count": 0,
     "added": [],
     "removed": [],
-    "unchanged": [
-      "source_tree_coherence::source_tree_coherence_attention"
-    ],
-    "summary": "accepted_risk_delta status=unchanged; added=0; removed=0; unchanged=1"
+    "unchanged": [],
+    "summary": "accepted_risk_delta status=unchanged; added=0; removed=0; unchanged=0"
   },
   "summary": {
     "gate_count": 15,
-    "authoritative_gate_count": 8,
+    "authoritative_gate_count": 13,
     "checked_in_fail_count": 0,
     "live_rerun_fail_count": 0,
-    "live_rerun_not_run_count": 4,
-    "accepted_risk_count": 1,
-    "gate_attention_count": 3,
+    "live_rerun_not_run_count": 0,
+    "accepted_risk_count": 0,
+    "gate_attention_count": 2,
     "required_input_fail_count": 0,
     "learning_claim_guard_status": "pass",
     "learning_claim_allowed": false,
@@ -930,29 +926,27 @@
     {
       "gate_id": "release_closeout_decision",
       "source_path": "ops/reports/release-closeout-summary.json",
-      "checked_in_state": "attention",
+      "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "attention",
-        "reason": "release closeout requires accepted-risk operator review before release"
+        "status": "pass",
+        "reason": "release closeout machine gate allows release"
       },
-      "authoritative_for_release": false,
+      "authoritative_for_release": true,
       "accepted_risk": {
         "count": 0,
         "codes": []
       },
       "owner": "runtime-maintainer",
       "expiry": "",
-      "next_action": "Review accepted_risks before operator release signoff.",
-      "required_evidence": [
-        "Review accepted_risks before operator release signoff."
-      ],
+      "next_action": "none",
+      "required_evidence": [],
       "claims": [
         {
-          "claim": "release closeout authoritative decision is release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided",
+          "claim": "release closeout authoritative decision is release_authority_status=clean_pass; sealed_release_status=unsealed_distribution_not_provided",
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "release closeout machine/operator decision is machine_release_allowed=False, operator_release_allowed=True, requires_accepted_risk_review=True",
+          "claim": "release closeout machine/operator decision is machine_release_allowed=True, operator_release_allowed=True, requires_accepted_risk_review=False",
           "provenance_label": "checked_in_json_confirmed"
         }
       ]
@@ -962,10 +956,10 @@
       "source_path": "ops/reports/bootstrap-preflight-report.json",
       "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "not_run",
-        "reason": "component fingerprint differs from current source tree"
+        "status": "pass",
+        "reason": "checked-in component matches current source tree"
       },
-      "authoritative_for_release": false,
+      "authoritative_for_release": true,
       "accepted_risk": {
         "count": 0,
         "codes": []
@@ -980,8 +974,8 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "bootstrap_preflight fingerprint/currentness diagnostic state is not_run",
-          "provenance_label": "diagnostic_workspace_only"
+          "claim": "bootstrap_preflight fingerprint/currentness diagnostic state is pass",
+          "provenance_label": "fingerprint_equivalent_to_checked_in"
         }
       ]
     },
@@ -1018,10 +1012,10 @@
       "source_path": "ops/reports/source-package-clean-extract.json",
       "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "not_run",
-        "reason": "component fingerprint differs from current source tree"
+        "status": "pass",
+        "reason": "checked-in component matches current source tree"
       },
-      "authoritative_for_release": false,
+      "authoritative_for_release": true,
       "accepted_risk": {
         "count": 0,
         "codes": []
@@ -1036,8 +1030,8 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "source_package_clean_extract fingerprint/currentness diagnostic state is not_run",
-          "provenance_label": "diagnostic_workspace_only"
+          "claim": "source_package_clean_extract fingerprint/currentness diagnostic state is pass",
+          "provenance_label": "fingerprint_equivalent_to_checked_in"
         }
       ]
     },
@@ -1046,10 +1040,10 @@
       "source_path": "external-reports/report-reference-manifest.json",
       "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "not_run",
-        "reason": "component fingerprint differs from current source tree"
+        "status": "pass",
+        "reason": "checked-in component matches current source tree"
       },
-      "authoritative_for_release": false,
+      "authoritative_for_release": true,
       "accepted_risk": {
         "count": 0,
         "codes": []
@@ -1064,8 +1058,8 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "external_report_reference_manifest fingerprint/currentness diagnostic state is not_run",
-          "provenance_label": "diagnostic_workspace_only"
+          "claim": "external_report_reference_manifest fingerprint/currentness diagnostic state is pass",
+          "provenance_label": "fingerprint_equivalent_to_checked_in"
         }
       ]
     },
@@ -1102,10 +1096,10 @@
       "source_path": "ops/reports/test-execution-summary-full.json",
       "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "not_run",
-        "reason": "component fingerprint differs from current source tree"
+        "status": "pass",
+        "reason": "checked-in component matches current source tree"
       },
-      "authoritative_for_release": false,
+      "authoritative_for_release": true,
       "accepted_risk": {
         "count": 0,
         "codes": []
@@ -1120,8 +1114,8 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "live_make_check fingerprint/currentness diagnostic state is not_run",
-          "provenance_label": "diagnostic_workspace_only"
+          "claim": "live_make_check fingerprint/currentness diagnostic state is pass",
+          "provenance_label": "fingerprint_equivalent_to_checked_in"
         }
       ]
     },
@@ -1224,17 +1218,14 @@
       },
       "owner": "runtime-maintainer",
       "expiry": "",
-      "next_action": "Run make release-closeout-summary and confirm machine_release_allowed=true.",
+      "next_action": "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
       "required_evidence": [
-        "Run make release-closeout-summary and confirm machine_release_allowed=true.",
-        "can_promote_result must stay false until this release gate is pass.",
-        "Run make release-closeout-batch-manifest-promote with a bound distribution ZIP.",
-        "can_promote_result must stay false until this release gate is pass.",
-        "Run make release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint and confirm strict_same_fingerprint=true.",
-        "can_promote_result must stay false until this release gate is pass.",
         "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
         "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
-        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal."
+        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal.",
+        "Run make remediation-backlog and confirm open_promotion_count=0.",
+        "Close or explicitly defer blocks_promotion backlog items before promotion.",
+        "can_promote_result must stay false while remediation backlog items are open."
       ],
       "claims": [
         {

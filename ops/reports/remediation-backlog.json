@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-23T05:22:44Z",
+  "generated_at": "2026-05-23T05:54:29Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
@@ -12,11 +12,11 @@
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "91558bdc7e64885feb4b64e35ef3775efe61cd479f085ae62f445457137c12ba",
     "goal_runtime_certificate": "0a9ce67b950063e73514218402aa025e2454aefccde2d5a1680f1e2d31676241",
-    "goal_worktree_guard": "319cda955fa4bd2b73a23e36f9261d75075740f05c53606b09b480d4c5759ef4",
-    "learning_claim_activation": "481715bdce5b4bed6ed36789d21a42e9e042a14dfe56ee1ef0d6f44b6ad0f081",
+    "goal_worktree_guard": "967455ae384333d05004211847432b121720a9e49a1dc00dc71d93fecd7f6157",
+    "learning_claim_activation": "af40c5b7c4b3ff18a475fadd88356a8a3270e7391e8090badbc2e3d4250f3619",
     "learning_readiness_signoff": "1ec9a280330bf4c9f5cc6a77f7ea7590acaf29d0718a80299d25d8f466576e9d",
-    "self_improvement_negative_lessons": "b2251b12d01af0125ed0e82ac5a6bb37fb2d81450a4369b476d2b61002202794",
-    "session_synopsis": "6af25ae342f244eac017657a191a40913301785340da703628c12a391d7f106b",
+    "self_improvement_negative_lessons": "1a3a81b565c08ee1539692bea1aa2db6c0b0cbf5edbb51c3040fcdf708560cce",
+    "session_synopsis": "61e7643b32501499a838df1358ed6a5b3dbbad5ba103aef2725dada278fa716a",
     "status_overrides": "361f8e43390f28745ec7bdfedd002b9ccc38b12931894a6ea399ab58198ad4b1",
     "auto_improve_sessions": "045839dd6979b19e7b1e2cf2c9ed4675b6db02844a8f4ea94a33326f904f690f"
   },
@@ -26,23 +26,23 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-23T05:22:44Z"
+    "checked_at": "2026-05-23T05:54:29Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "status": "pass",
+  "status": "attention",
   "summary": {
-    "backlog_item_count": 9,
+    "backlog_item_count": 7,
     "repeated_blocker_count": 3,
-    "active_blocker_count": 6,
-    "open_total_count": 0,
-    "open_promotion_count": 0,
+    "active_blocker_count": 4,
+    "open_total_count": 1,
+    "open_promotion_count": 1,
     "open_repeat_count": 0,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
-    "next_action": "No remediation backlog items detected."
+    "next_action": "Close or explicitly defer promotion-blocking remediation backlog items before promotion."
   },
   "items": [
     {
@@ -60,6 +60,20 @@
       ],
       "repair_target": "Refresh goal run status and close the active blocker before resuming.",
       "next_action": "Deferred as a duplicate goal-status backlog item: ops/reports/goal-worktree-guard.json is the authoritative live gate and continues to block promotion until the worktree is clean."
+    },
+    {
+      "item_id": "active_blocker_goal_status_promotion_blocked_by_release_batch_manifest_failure",
+      "blocker_id": "goal_status_promotion_blocked_by_release_batch_manifest_failure",
+      "source": "goal_run_status.blockers",
+      "item_type": "active_blocker",
+      "status": "open",
+      "severity": "blocks_promotion",
+      "occurrence_count": 1,
+      "evidence_paths": [
+        "ops/reports/session-synopsis.json"
+      ],
+      "repair_target": "Refresh goal run status and close the active blocker before resuming.",
+      "next_action": "Refresh goal run status and close the active blocker before resuming."
     },
     {
       "item_id": "active_blocker_goal_status_self_improvement_loop_certificate_incomplete",
@@ -91,54 +105,6 @@
       ],
       "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness.",
       "next_action": "Deferred as a duplicate promotion-backlog item: ops/reports/goal-worktree-guard.json remains the authoritative live gate and still blocks promotion while the worktree is dirty."
-    },
-    {
-      "item_id": "active_blocker_promotion_blocked_by_release_batch_manifest_failure",
-      "blocker_id": "promotion_blocked_by_release_batch_manifest_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "deferred",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/auto-improve-readiness.json",
-        "ops/reports/release-closeout-batch-manifest.json",
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Seal the release batch manifest, then rerun make auto-improve-readiness.",
-      "next_action": "Deferred as a duplicate promotion-backlog item: release-closeout-batch-manifest remains the authoritative sealed-distribution gate and still blocks promotion until a bound distribution ZIP is provided."
-    },
-    {
-      "item_id": "active_blocker_promotion_blocked_by_release_closeout_summary_failure",
-      "blocker_id": "promotion_blocked_by_release_closeout_summary_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "deferred",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/auto-improve-readiness.json",
-        "ops/reports/release-closeout-summary.json",
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Refresh release closeout summary, then rerun make auto-improve-readiness.",
-      "next_action": "Deferred as a source-ready versus sealed-release authority item: release-closeout-summary is already pass/conditional for source release checks, while machine release remains blocked until sealed distribution evidence is provided."
-    },
-    {
-      "item_id": "active_blocker_promotion_blocked_by_release_lineage_mismatch",
-      "blocker_id": "promotion_blocked_by_release_lineage_mismatch",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "item_type": "active_blocker",
-      "status": "deferred",
-      "severity": "blocks_promotion",
-      "occurrence_count": 1,
-      "evidence_paths": [
-        "ops/reports/auto-improve-readiness.json",
-        "ops/reports/release-evidence-cohort.json",
-        "ops/reports/session-synopsis.json"
-      ],
-      "repair_target": "Refresh release evidence cohort until the release lineage is a single strict fingerprint, then rerun make auto-improve-readiness.",
-      "next_action": "Deferred as an explicit clean-release authority item: release-evidence-cohort lineage strictness remains enforced by the release gate, but the source-ready path is allowed to carry documented divergence until a sealed release package is materialized."
     },
     {
       "item_id": "auto_session_repeated_blocker_active_report_self_improve_certificate_rerun4_review_blocked",

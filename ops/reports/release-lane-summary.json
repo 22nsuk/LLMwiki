@@ -1,7 +1,7 @@
 {
   "$schema": "ops/schemas/release-lane-summary.schema.json",
   "artifact_kind": "release_lane_summary",
-  "generated_at": "2026-05-23T05:22:44Z",
+  "generated_at": "2026-05-23T05:54:29Z",
   "producer": "ops.scripts.release_lane_summary",
   "source_command": "python -m ops.scripts.release_lane_summary --vault . --out ops/reports/release-lane-summary.json",
   "source_revision": "unknown",
@@ -11,10 +11,10 @@
     "schema": "0d52985f1a335ba2c86dcfcd891717a3c35fc67c6a4f95df49e73822041aa523",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "e61b0bc0bda4784ff61850ac5b3d8f5a63b95209cdd9f1e84e6e4142763be1a0",
-    "learning_delta_scoreboard": "d1ea3620ae62b90fda627a388518bb7234378eee58f7c231dee67f028bf919b4",
-    "release_closeout_summary": "59ce43c631b4bfb790bd1a02bd2a883e0d03597b12eaf49564b47a795672298f",
-    "release_evidence_cohort": "d07938313f336bb02c076b810839e9e516396b7cb14ed58def29cdbac35be447",
-    "release_evidence_dashboard": "8989879d40d5c9203c7c726ab26d8bc6b927dddd828747a55dc082309736582b",
+    "learning_delta_scoreboard": "8ed71768858ade156d3bbefd3e4de594210b6be967d24247385a64a5065d5041",
+    "release_closeout_summary": "d0aa53ce960e953549ea450e4bc48617923453f5a3323ed7c85449cac4ff1d39",
+    "release_evidence_cohort": "6bdc14b5cdc0c7387480a0988ab740ab95be70e050a02afb577e3d06015678d8",
+    "release_evidence_dashboard": "13bc3a87308bbf24201b2c423f379b39970b3237baecb438352b6d21911d3373",
     "current_source_tree_fingerprint": "1e82d41b4d0d859ed4f7322d2b4dd98d5517cdc622d8ed5ea173ad2aee0ae00d"
   },
   "schema_version": 1,
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-23T05:22:44Z"
+    "checked_at": "2026-05-23T05:54:29Z"
   },
   "vault": ".",
   "policy": {
@@ -32,24 +32,24 @@
   },
   "status": "attention",
   "lane_summary": {
-    "cohort_status": "attention",
-    "clean_lane_status": "fail",
+    "cohort_status": "pass",
+    "clean_lane_status": "pass",
     "conditional_lane_status": "pass",
     "auto_improve_lane_status": "blocked",
     "learning_lane_status": "blocked",
-    "machine_release_status": "blocked",
+    "machine_release_status": "allowed",
     "operator_release_status": "allowed",
-    "release_authority_status": "conditional_pass",
+    "release_authority_status": "clean_pass",
     "sealed_release_status": "unsealed_distribution_not_provided",
     "learning_claim_guard_status": "pass",
     "learning_claim_allowed": false,
     "claims_learning_improved": false,
-    "accepted_risk_family_count": 1,
-    "accepted_risk_instance_count": 1,
-    "accepted_risk_count": 1,
-    "gate_attention_count": 3,
-    "clean_lane_blocking_family_count": 1,
-    "learning_claim_blocking_family_count": 4,
+    "accepted_risk_family_count": 0,
+    "accepted_risk_instance_count": 0,
+    "accepted_risk_count": 0,
+    "gate_attention_count": 2,
+    "clean_lane_blocking_family_count": 0,
+    "learning_claim_blocking_family_count": 2,
     "advisory_lifecycle_family_count": 0
   },
   "provenance": {
