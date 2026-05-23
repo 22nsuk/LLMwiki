@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -38,6 +39,22 @@ IMPROVEMENT_OBSERVATIONS_PATH = (
 )
 PUBLIC_EXPORT_MANIFEST_PATH = REPO_ROOT / "PUBLIC-EXPORT-MANIFEST.json"
 
+
+def _is_git_tracked(path: Path) -> bool:
+    relative_path = path.relative_to(REPO_ROOT).as_posix()
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", relative_path],
+            cwd=REPO_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except OSError:
+        return False
+    return result.returncode == 0
+
+
 pytestmark = [pytest.mark.report_contract]
 if PUBLIC_EXPORT_MANIFEST_PATH.exists() and not ARTIFACT_FRESHNESS_REPORT_PATH.exists():
     pytestmark.append(
@@ -45,6 +62,15 @@ if PUBLIC_EXPORT_MANIFEST_PATH.exists() and not ARTIFACT_FRESHNESS_REPORT_PATH.e
             reason=(
                 "local report contracts are full-vault canonical "
                 "artifact checks; public exports intentionally omit full ops/reports"
+            )
+        )
+    )
+elif not _is_git_tracked(ARTIFACT_FRESHNESS_REPORT_PATH):
+    pytestmark.append(
+        pytest.mark.skip(
+            reason=(
+                "ops/reports is local-only generated evidence in this checkout; "
+                "checked-in report contracts only apply when the canonical report is tracked"
             )
         )
     )
