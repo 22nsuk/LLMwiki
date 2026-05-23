@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope, embed_artifact_envelope_metadata
     from ops.scripts.cyclonedx_sbom import _build_components, _build_dependencies, _build_metadata, _extract_project_identity, _locked_dependency_edge_count
     from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report

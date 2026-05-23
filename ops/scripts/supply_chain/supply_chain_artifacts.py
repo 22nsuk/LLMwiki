@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.cyclonedx_sbom import DEFAULT_OUT as CYCLONEDX_DEFAULT_OUT, build_bom, write_bom
     from ops.scripts.in_toto_statement import DEFAULT_OUT as IN_TOTO_DEFAULT_OUT, build_in_toto_statement, write_in_toto_statement
     from ops.scripts.openvex_draft import DEFAULT_OUT as OPENVEX_DEFAULT_OUT, build_openvex_draft, write_openvex_draft

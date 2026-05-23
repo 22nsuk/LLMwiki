@@ -21,7 +21,7 @@ SURFACES_REGISTRY = Path("ops/script-output-surfaces.json")
 PYPROJECT = Path("pyproject.toml")
 MAKE_FILES = [Path("Makefile"), *sorted(Path("mk").glob("*.mk"))]
 DIRECT_SCRIPT_BRANCH = 'if __package__ in (None, ""):  # pragma: no cover - direct script fallback'
-REPO_ROOT_BOOTSTRAP = 'sys.path.insert(0, str(Path(__file__).resolve().parents[2]))'
+REPO_ROOT_BOOTSTRAP = 'sys.path.insert(0, str(Path(__file__).resolve().parents[3]))'
 FLAT_SCRIPT_MODULE_RE = re.compile(r"-m\s+ops\.scripts\.([A-Za-z0-9_]+)\b")
 DEPENDENCY_IMPORT_FAILURE_ALLOWLIST = {
     "ops/scripts/core/schema_runtime.py",

@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.planning_gate_validate_runtime import (
         ARTIFACT_SCHEMAS,
         ArtifactLoadError,

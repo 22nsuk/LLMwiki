@@ -11,7 +11,7 @@ from typing import Any
 from urllib.parse import quote
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
     from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
     from ops.scripts.output_runtime import display_path

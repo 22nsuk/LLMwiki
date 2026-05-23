@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.filesystem_runtime import atomic_write_json
     from ops.scripts.public.export_public_repo import DEFAULT_PUBLIC_OUT, export_public_repo
 else:

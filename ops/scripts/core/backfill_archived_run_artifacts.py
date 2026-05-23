@@ -12,7 +12,7 @@ from typing import Any, Callable
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     import sys
 
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.artifact_freshness_runtime import (  # noqa: PLC0415
         EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY,
         ENVELOPE_REQUIRED_FIELDS,

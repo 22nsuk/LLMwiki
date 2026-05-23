@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.command_runtime import run_with_timeout
     from ops.scripts.output_runtime import display_path, sanitize_report_text
     from ops.scripts.release.release_run_manifest import (

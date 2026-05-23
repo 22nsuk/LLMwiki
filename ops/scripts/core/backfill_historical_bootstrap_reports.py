@@ -10,7 +10,7 @@ from typing import Any, Callable
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     import sys
 
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
     from ops.scripts.artifact_io_runtime import read_json_object, write_schema_validated_json
     from ops.scripts.output_runtime import display_path

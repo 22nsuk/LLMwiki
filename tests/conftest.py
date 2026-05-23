@@ -5,13 +5,6 @@ from pathlib import Path
 
 import pytest
 
-from ops.scripts.test_lane_registry_runtime import (
-    allowed_marker_combinations,
-    authoritative_markers,
-    forbidden_marker_combinations,
-    load_registry,
-)
-
 
 BARE_PYTEST_GUIDANCE = (
     "plain `pytest` is not a supported entrypoint for this repository. "
@@ -32,6 +25,13 @@ def pytest_configure(config: pytest.Config) -> None:
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     del config
+    from ops.scripts.test_lane_registry_runtime import (
+        allowed_marker_combinations,
+        authoritative_markers,
+        forbidden_marker_combinations,
+        load_registry,
+    )
+
     registry = load_registry(Path("."))
     markers = authoritative_markers(registry)
     allowed = allowed_marker_combinations(registry)
