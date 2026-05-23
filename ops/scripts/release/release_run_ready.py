@@ -82,7 +82,6 @@ def _synthetic_preflight(vault: Path, expected_fingerprint: str) -> dict[str, An
         "pass"
         if fingerprint == expected_fingerprint
         and clean
-        and remote["status"] == "pass"
         and ignored_count == 0
         else "fail"
     )

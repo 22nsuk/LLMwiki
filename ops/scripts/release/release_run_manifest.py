@@ -162,8 +162,6 @@ def build_manifest(
         failures.append("source_tree_fingerprint_drift")
     if not clean:
         failures.append("git_worktree_dirty")
-    if remote["status"] != "pass":
-        failures.append("remote_not_in_sync")
     if ignored_count != 0:
         failures.append("ignored_tracked_files_present")
     if not zip_identity["exists"]:

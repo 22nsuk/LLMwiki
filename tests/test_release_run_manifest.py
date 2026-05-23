@@ -162,6 +162,32 @@ class ReleaseRunManifestTests(unittest.TestCase):
         self.assertEqual(manifest["status"], "fail")
         self.assertIn("source_tree_fingerprint_drift", manifest["failures"])
 
+    def test_remote_ahead_is_diagnostic_not_run_ready_blocker(self) -> None:
+        self._write_run_inputs()
+
+        with patch.multiple(
+            "ops.scripts.release.release_run_manifest",
+            release_source_tree_fingerprint=lambda _vault: "fp-current",
+            git_commit=lambda _vault: "abc123",
+            git_clean=lambda _vault: True,
+            remote_sync=lambda _vault: {
+                "status": "fail",
+                "upstream": "origin/main",
+                "ahead": 1,
+                "behind": 0,
+            },
+            ignored_tracked_file_count=lambda _vault: 0,
+        ):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(manifest["status"], "pass")
+        self.assertEqual(manifest["remote_sync"]["ahead"], 1)
+        self.assertNotIn("remote_not_in_sync", manifest["failures"])
+
 
 if __name__ == "__main__":
     unittest.main()

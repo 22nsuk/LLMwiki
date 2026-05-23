@@ -71,7 +71,9 @@ read-only probes.
 
 - `build/release/release-run-manifest.json` is runnable-only authority. It binds
   the current HEAD, source fingerprint, source ZIP, source-package smoke report,
-  and executed steps.
+  and executed steps. Remote branch sync is recorded as diagnostic context, but
+  it is not a run-ready blocker because this stage answers whether the current
+  local commit is runnable.
 - `build/release/release-sealed-run-manifest.json` is sealed package authority.
   It binds the run manifest, source ZIP digest, post-seal attestation, and
   sealed rehearsal check. Batch/external sidecar legacy statuses are not treated
