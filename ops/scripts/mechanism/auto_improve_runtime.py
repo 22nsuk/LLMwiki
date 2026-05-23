@@ -568,7 +568,8 @@ def _write_session_report(vault: Path, session: dict, *, context: RuntimeContext
     _ensure_session_loop_state(session, context=context)
     session["rollups"] = build_session_rollups(vault, session)
     policy, resolved_policy_path = load_policy(vault)
-    generated_at = str(session.get("generated_at", "")).strip() or context.isoformat_z()
+    generated_at = context.isoformat_z()
+    session["generated_at"] = generated_at
     envelope = build_canonical_report_envelope(
         vault,
         generated_at=generated_at,
@@ -605,6 +606,28 @@ def _write_session_report(vault: Path, session: dict, *, context: RuntimeContext
 def _load_session_report(vault: Path, session_id: str) -> dict:
     path = vault / "ops" / "reports" / "auto-improve-sessions" / f"{session_id}.json"
     return read_json_object(path)
+
+
+def refresh_auto_improve_session_report(
+    vault: Path,
+    *,
+    session_id: str,
+    policy_path: str | None = None,
+    executor_name: str = "codex_exec",
+    context: RuntimeContext | None = None,
+) -> dict[str, Any]:
+    policy, _resolved_policy_path = load_policy(vault, policy_path)
+    refresh_context = context or RuntimeContext.from_policy(policy, executor_id=executor_name)
+    session = _load_session_report(vault, session_id)
+    destination = _write_session_report(vault, session, context=refresh_context)
+    refreshed = read_json_object(destination)
+    return {
+        "session_id": session_id,
+        "session_report": report_path(vault, destination),
+        "generated_at": str(refreshed.get("generated_at", "")).strip(),
+        "status": str(refreshed.get("status", "")).strip(),
+        "stop_reason": str(refreshed.get("stop_reason", "")).strip(),
+    }
 
 
 def _new_session_id(context: RuntimeContext) -> str:

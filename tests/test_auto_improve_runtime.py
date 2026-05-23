@@ -16,6 +16,7 @@ from ops.scripts.auto_improve_execute_runtime import (
 from ops.scripts.auto_improve_runtime import (
     AutoImproveLearningReviewRequiredError,
     AutoImproveUsageError,
+    refresh_auto_improve_session_report,
     run_auto_improve_session,
 )
 from ops.scripts.run_mechanism_experiment_runtime import (
@@ -27,6 +28,24 @@ from ops.scripts.runtime_context import RuntimeContext
 from tests.minimal_vault_runtime import seed_subagent_profiles
 from tests.run_mechanism_experiment_test_utils import mutation_proposal_report, seed_wrapper_vault
 from tests.test_codex_goal_contract import sample_goal_contract
+
+
+def _incrementing_runtime_context(start: dt.datetime | None = None) -> RuntimeContext:
+    current = {
+        "value": start or dt.datetime(2026, 4, 15, 0, 0, tzinfo=dt.timezone.utc)
+    }
+
+    def clock() -> dt.datetime:
+        value = current["value"]
+        current["value"] = value + dt.timedelta(seconds=1)
+        return value
+
+    return RuntimeContext(
+        display_timezone=dt.timezone.utc,
+        clock=clock,
+        session_id="auto-incrementing",
+        executor_id="codex_exec",
+    )
 
 
 def _expected_timeout_summary(
@@ -1249,15 +1268,30 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                     max_consecutive_failures=2,
                     executor_name="codex_exec",
                     allow_learning_uncertain=True,
+                    context=_incrementing_runtime_context(),
                 )
 
             session = json.loads((vault / result["session_report"]).read_text(encoding="utf-8"))
             run_id = session["run_ids"][0]
             telemetry = json.loads((vault / "runs" / run_id / "run-telemetry.json").read_text(encoding="utf-8"))
+            decision_observed_at = session["next_run_decisions"][0]["observed_at"]
+            embedded_envelope = json.loads(
+                next(
+                    item["value"]
+                    for item in session["metadata"]["properties"]
+                    if item["name"] == "urn:openai:artifact-envelope"
+                )
+            )
             self.assertEqual(session["iterations"][0]["outcome"], "validation_blocked")
             self.assertEqual(session["quarantined_proposal_ids"], [proposal["proposal_id"]])
             self.assertEqual(session["rollups"]["executor"]["blocking_role_counts"], {"validator": 1})
             self.assertEqual(session["rollups"]["telemetry"]["failure_taxonomy_counts"], {"validation_blocked": 1})
+            self.assertGreaterEqual(session["generated_at"], decision_observed_at)
+            self.assertEqual(embedded_envelope["generated_at"], session["generated_at"])
+            self.assertEqual(
+                embedded_envelope["currentness"]["checked_at"],
+                session["generated_at"],
+            )
             self.assertEqual(
                 telemetry["command_timeouts"],
                 {
@@ -1272,6 +1306,28 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 telemetry["timeout_failure_artifacts"],
                 [f"runs/{run_id}/validator-executor-timeout-failure.json"],
             )
+            stale_session = dict(session)
+            stale_session["generated_at"] = "2026-04-14T00:00:00Z"
+            (vault / result["session_report"]).write_text(
+                json.dumps(stale_session, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            refresh_result = refresh_auto_improve_session_report(
+                vault,
+                session_id="auto-session-fail",
+                policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                context=_incrementing_runtime_context(
+                    dt.datetime(2026, 4, 16, 0, 0, tzinfo=dt.timezone.utc)
+                ),
+            )
+            refreshed = json.loads((vault / refresh_result["session_report"]).read_text(encoding="utf-8"))
+
+            self.assertEqual(refresh_result["status"], session["status"])
+            self.assertEqual(refresh_result["stop_reason"], session["stop_reason"])
+            self.assertGreaterEqual(refreshed["generated_at"], decision_observed_at)
+            self.assertGreaterEqual(refreshed["generated_at"], "2026-04-16T00:00:00Z")
+            self.assertEqual(refresh_result["generated_at"], refreshed["generated_at"])
 
     def test_run_auto_improve_session_quarantines_scope_blocked_without_full_execution(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

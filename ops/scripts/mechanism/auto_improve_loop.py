@@ -10,11 +10,15 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.auto_improve_runtime import (
         AutoImproveError,
+        AutoImproveUsageError,
+        refresh_auto_improve_session_report,
         run_auto_improve_session,
     )
 else:
     from .auto_improve_runtime import (
         AutoImproveError,
+        AutoImproveUsageError,
+        refresh_auto_improve_session_report,
         run_auto_improve_session,
     )
 
@@ -34,27 +38,41 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--allow-learning-uncertain", action="store_true")
     ap.add_argument("--maintain-until-budget", action="store_true")
     ap.add_argument("--maintenance-interval-seconds", type=int)
+    ap.add_argument("--refresh-session-report", action="store_true")
     return ap.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> None:
     try:
         args = parse_args(argv)
-        result = run_auto_improve_session(
-            Path(args.vault),
-            policy_path=args.policy,
-            session_id=args.session_id,
-            resume_session=args.resume_session,
-            goal_contract_path=args.goal_contract,
-            max_proposals=args.max_proposals,
-            max_minutes=args.max_minutes,
-            max_consecutive_failures=args.max_consecutive_failures,
-            executor_name=args.executor,
-            artifact_class=args.artifact_class,
-            allow_learning_uncertain=args.allow_learning_uncertain,
-            maintain_until_budget=args.maintain_until_budget,
-            maintenance_interval_seconds=args.maintenance_interval_seconds,
-        )
+        if args.refresh_session_report:
+            session_id = args.resume_session or args.session_id
+            if not session_id:
+                raise AutoImproveUsageError(
+                    "--refresh-session-report requires --resume-session or --session-id"
+                )
+            result = refresh_auto_improve_session_report(
+                Path(args.vault),
+                policy_path=args.policy,
+                session_id=session_id,
+                executor_name=args.executor,
+            )
+        else:
+            result = run_auto_improve_session(
+                Path(args.vault),
+                policy_path=args.policy,
+                session_id=args.session_id,
+                resume_session=args.resume_session,
+                goal_contract_path=args.goal_contract,
+                max_proposals=args.max_proposals,
+                max_minutes=args.max_minutes,
+                max_consecutive_failures=args.max_consecutive_failures,
+                executor_name=args.executor,
+                artifact_class=args.artifact_class,
+                allow_learning_uncertain=args.allow_learning_uncertain,
+                maintain_until_budget=args.maintain_until_budget,
+                maintenance_interval_seconds=args.maintenance_interval_seconds,
+            )
     except AutoImproveError as exc:
         print(str(exc), file=sys.stderr)
         raise SystemExit(exc.exit_code)
