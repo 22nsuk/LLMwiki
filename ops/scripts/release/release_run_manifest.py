@@ -119,9 +119,38 @@ def _file_identity(vault: Path, path_value: str | Path) -> dict[str, Any]:
 
 
 def _status_label(value: object) -> str:
+    if value is None:
+        return ""
     if isinstance(value, dict):
         return str(value.get("result", "")).strip()
     return str(value).strip()
+
+
+def _status_axis(payload: dict[str, Any], name: str) -> str:
+    value = payload.get(name)
+    if value is not None:
+        return str(value).strip()
+    status_v2 = payload.get("status_v2")
+    if isinstance(status_v2, dict):
+        axes = status_v2.get("status_axes")
+        if isinstance(axes, dict):
+            return str(axes.get(name, "")).strip()
+    return ""
+
+
+def _release_run_status(
+    *,
+    exists: bool,
+    payload_status: str,
+    release_run_requirement: str,
+) -> str:
+    if release_run_requirement == "reference_only":
+        return "reference_only"
+    if not exists:
+        return "fail"
+    if release_run_requirement == "payload_status_pass" and payload_status != "pass":
+        return "fail"
+    return "pass"
 
 
 def _report_identity(
@@ -129,28 +158,43 @@ def _report_identity(
     path_value: str | Path,
     *,
     authority_role: str,
+    release_run_requirement: str,
 ) -> dict[str, Any]:
     identity = _file_identity(vault, path_value)
     payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, path_value))
     if diagnostics.get("status") != "ok":
         payload = {}
+    payload_status = _status_label(payload.get("status"))
     identity.update(
         {
             "artifact_kind": str(payload.get("artifact_kind", "")),
-            "status": _status_label(payload.get("status")),
+            "payload_status": payload_status,
+            "release_authority_status": _status_axis(payload, "release_authority_status"),
+            "sealed_release_status": _status_axis(payload, "sealed_release_status"),
             "source_tree_fingerprint": str(payload.get("source_tree_fingerprint", "")),
             "authority_role": authority_role,
+            "release_run_requirement": release_run_requirement,
+            "release_run_status": _release_run_status(
+                exists=bool(identity["exists"]),
+                payload_status=payload_status,
+                release_run_requirement=release_run_requirement,
+            ),
         }
     )
     return identity
 
 
 def _source_package_smoke(vault: Path, path_value: str) -> dict[str, Any]:
-    identity = _report_identity(vault, path_value, authority_role="release_sidecar_authority")
+    identity = _report_identity(
+        vault,
+        path_value,
+        authority_role="release_sidecar_authority",
+        release_run_requirement="payload_status_pass",
+    )
     return {
         "path": identity["path"],
         "exists": identity["exists"],
-        "status": identity["status"],
+        "status": identity["payload_status"],
         "sha256": identity["sha256"],
     }
 
@@ -169,49 +213,49 @@ def _sealed_identity_set(
             vault,
             batch_manifest,
             authority_role="release_sidecar_authority",
+            release_run_requirement="exists_only",
         ),
         "external_manifest": _report_identity(
             vault,
             external_manifest,
             authority_role="release_sidecar_authority",
+            release_run_requirement="exists_only",
         ),
         "operator_summary": _report_identity(
             vault,
             operator_summary,
             authority_role="release_sidecar_authority",
+            release_run_requirement="exists_only",
         ),
         "post_seal_attestation": _report_identity(
             vault,
             post_seal_attestation,
             authority_role="release_sidecar_authority",
+            release_run_requirement="payload_status_pass",
         ),
         "sealed_rehearsal_check": _report_identity(
             vault,
             sealed_rehearsal_check,
             authority_role="release_sidecar_authority",
+            release_run_requirement="payload_status_pass",
         ),
     }
-    required_statuses = {
-        "post_seal_attestation": {"pass"},
-        "sealed_rehearsal_check": {"pass"},
-    }
-    required_existing = set(sealed)
     failures = [
         key
-        for key in sorted(required_existing)
-        if not sealed[key]["exists"]
+        for key, identity in sorted(sealed.items())
+        if identity["release_run_status"] == "fail"
     ]
-    failures.extend(
-        key
-        for key, accepted in required_statuses.items()
-        if sealed[key]["status"] not in accepted
-    )
     return {"status": "pass" if not failures else "fail", **sealed}
 
 
 def _ops_report_references(vault: Path) -> list[dict[str, Any]]:
     return [
-        _report_identity(vault, rel_path, authority_role="diagnostic_only")
+        _report_identity(
+            vault,
+            rel_path,
+            authority_role="diagnostic_only",
+            release_run_requirement="reference_only",
+        )
         for rel_path in OPS_REPORT_REFERENCES
     ]
 
@@ -292,7 +336,7 @@ def build_manifest(
             "source_package_smoke": smoke["sha256"],
             "sealed_rehearsal_check": sealed["sealed_rehearsal_check"]["sha256"],
         },
-        "schema_version": 1,
+        "schema_version": 2,
         "artifact_status": "current",
         "retention_policy": "release_sidecar_authority",
         "encoding": "utf-8",

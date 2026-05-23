@@ -48,6 +48,11 @@ once in this graph.
 - `build/release/release-run-manifest.json` is the final authority for a
   run-ready release. It binds the current HEAD, source fingerprint, source ZIP,
   source-package smoke report, and sealed sidecars.
+- Within the manifest, nested sidecars distinguish `payload_status` from
+  `release_run_status`. Legacy reports may still carry diagnostic
+  `payload_status` values such as `fail` or `attention`; those values are not
+  final release verdicts unless the sidecar's `release_run_requirement` says the
+  payload status is required to pass.
 - `ops/reports/release-smoke-report.json` is local diagnostic evidence and is
   not a final release authority.
 - `ops/reports/test-execution-summary.json` and

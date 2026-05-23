@@ -119,13 +119,59 @@ class ReleaseRunManifestTests(unittest.TestCase):
         self.assertEqual(manifest["git_commit"], "abc123")
         self.assertEqual(manifest["source_tree_fingerprint"], "fp-current")
         self.assertEqual(manifest["failures"], [])
+        self.assertEqual(manifest["sealed"]["batch_manifest"]["release_run_requirement"], "exists_only")
+        self.assertEqual(manifest["sealed"]["batch_manifest"]["release_run_status"], "pass")
+        self.assertEqual(manifest["sealed"]["post_seal_attestation"]["release_run_requirement"], "payload_status_pass")
+        self.assertEqual(manifest["sealed"]["post_seal_attestation"]["release_run_status"], "pass")
         smoke_ref = next(
             item for item in manifest["ops_reports_reference"] if item["path"] == "ops/reports/release-smoke-report.json"
         )
-        self.assertEqual(smoke_ref["status"], "fail")
+        self.assertEqual(smoke_ref["payload_status"], "fail")
         self.assertEqual(smoke_ref["authority_role"], "diagnostic_only")
+        self.assertEqual(smoke_ref["release_run_requirement"], "reference_only")
+        self.assertEqual(smoke_ref["release_run_status"], "reference_only")
         self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
         self.assertTrue(write_manifest(self.vault, manifest, "build/release/release-run-manifest.json").exists())
+
+    def test_legacy_sidecar_payload_status_is_not_release_run_verdict(self) -> None:
+        self._write_pass_sidecars()
+        self._write_json(
+            "build/release/release-closeout-batch-manifest.json",
+            {
+                "artifact_kind": "release_closeout_batch_manifest",
+                "status": "fail",
+                "release_authority_status": "conditional_pass",
+                "sealed_release_status": "sealed_conditional_pass",
+            },
+        )
+        self._write_json(
+            "build/release/operator-release-summary.json",
+            {
+                "artifact_kind": "operator_release_summary",
+                "status": "attention",
+                "sealed_release_status": "sealed_conditional_pass",
+            },
+        )
+
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(manifest["status"], "pass")
+        self.assertEqual(manifest["sealed"]["status"], "pass")
+        self.assertEqual(manifest["sealed"]["batch_manifest"]["payload_status"], "fail")
+        self.assertNotIn("status", manifest["sealed"]["batch_manifest"])
+        self.assertEqual(manifest["sealed"]["batch_manifest"]["release_run_status"], "pass")
+        self.assertEqual(
+            manifest["sealed"]["batch_manifest"]["release_authority_status"],
+            "conditional_pass",
+        )
+        self.assertEqual(manifest["sealed"]["operator_summary"]["payload_status"], "attention")
+        self.assertEqual(manifest["sealed"]["operator_summary"]["release_run_status"], "pass")
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
 
     def test_manifest_fails_on_source_fingerprint_drift(self) -> None:
         self._write_pass_sidecars()
