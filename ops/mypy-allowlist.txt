@@ -175,6 +175,9 @@ ops/scripts/release/release_evidence_dashboard.py
 ops/scripts/release/release_lane_summary.py
 ops/scripts/release/release_live_artifact_attestation.py
 ops/scripts/release/release_post_seal_attestation.py
+ops/scripts/release/release_auto_promotion_ready.py
+ops/scripts/release/release_sealed_post_seal_attestation.py
+ops/scripts/release/release_sealed_run_manifest.py
 ops/scripts/release/release_source_ready_commit.py
 ops/scripts/release/release_source_ready_status.py
 ops/scripts/release/release_risk_taxonomy_matrix.py

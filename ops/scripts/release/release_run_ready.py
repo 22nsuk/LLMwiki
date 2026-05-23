@@ -108,7 +108,6 @@ def _release_steps(make_bin: str) -> list[tuple[str, list[str]]]:
         ("release-public-current", [make_bin, "release-public-current"]),
         ("release-package-current", [make_bin, "release-package-current"]),
         ("release-source-package-smoke", [make_bin, "release-source-package-smoke"]),
-        ("release-seal-current", [make_bin, "release-seal-current"]),
     ]
 
 

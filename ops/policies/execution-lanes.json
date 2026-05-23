@@ -95,7 +95,61 @@
     },
     "release-run-ready": {
       "required_lane": "full_vault",
-      "reason": "release-run-ready verifies the current committed tree and writes build/release sidecar authority evidence.",
+      "reason": "release-run-ready verifies the current committed tree is runnable through tests, public checks, package build, and source package smoke.",
+      "alternatives": [
+        "make static",
+        "make release-source-package-smoke",
+        "make release-source-package-check"
+      ]
+    },
+    "release-run-ready-ensure": {
+      "required_lane": "full_vault",
+      "reason": "release-run-ready-ensure reuses current runnable release evidence when possible and falls back to release-run-ready when evidence is missing or stale.",
+      "alternatives": [
+        "make static",
+        "make release-source-package-smoke",
+        "make release-source-package-check"
+      ]
+    },
+    "release-sealed-run-ready": {
+      "required_lane": "full_vault",
+      "reason": "release-sealed-run-ready binds the current run manifest, source ZIP digest, and sealed sidecars into build/release authority evidence.",
+      "alternatives": [
+        "make static",
+        "make release-source-package-smoke",
+        "make release-source-package-check"
+      ]
+    },
+    "release-sealed-run-ready-check": {
+      "required_lane": "full_vault",
+      "reason": "release-sealed-run-ready-check revalidates existing sealed run evidence without rebuilding the runnable release package.",
+      "alternatives": [
+        "make static",
+        "make release-source-package-smoke",
+        "make release-source-package-check"
+      ]
+    },
+    "release-sealed-run-ready-ensure": {
+      "required_lane": "full_vault",
+      "reason": "release-sealed-run-ready-ensure reuses current sealed release evidence when possible and falls back to release-sealed-run-ready when evidence is missing or stale.",
+      "alternatives": [
+        "make static",
+        "make release-source-package-smoke",
+        "make release-source-package-check"
+      ]
+    },
+    "release-auto-promotion-ready": {
+      "required_lane": "full_vault",
+      "reason": "release-auto-promotion-ready cheaply ensures sealed evidence, refreshes diagnostic inputs, and decides unattended promotion eligibility.",
+      "alternatives": [
+        "make static",
+        "make release-source-package-smoke",
+        "make release-source-package-check"
+      ]
+    },
+    "release-auto-promotion-ready-check": {
+      "required_lane": "full_vault",
+      "reason": "release-auto-promotion-ready-check revalidates the existing unattended promotion manifest without recomputing expensive release evidence.",
       "alternatives": [
         "make static",
         "make release-source-package-smoke",

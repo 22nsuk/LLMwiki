@@ -1,0 +1,267 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/release-auto-promotion-ready-manifest.schema.json",
+  "title": "Release auto-promotion-ready manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "status",
+    "auto_promotion_status",
+    "unattended_promotion_allowed",
+    "inputs",
+    "diagnostics",
+    "checks",
+    "blockers",
+    "failures"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "const": "ops/schemas/release-auto-promotion-ready-manifest.schema.json" },
+    "artifact_kind": { "type": "string", "const": "release_auto_promotion_ready_manifest" },
+    "generated_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" },
+    "producer": { "type": "string", "const": "ops.scripts.release_auto_promotion_ready" },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string" },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "schema_version": { "type": "integer", "const": 1 },
+    "artifact_status": { "type": "string", "const": "current" },
+    "retention_policy": { "type": "string", "const": "release_sidecar_authority" },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": { "$ref": "#/$defs/currentness" },
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "auto_promotion_status": { "type": "string", "enum": ["allowed", "blocked"] },
+    "unattended_promotion_allowed": { "type": "boolean" },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_manifest",
+        "sealed_run_manifest",
+        "operator_summary",
+        "auto_improve_readiness"
+      ],
+      "properties": {
+        "run_manifest": { "$ref": "#/$defs/report_identity" },
+        "sealed_run_manifest": { "$ref": "#/$defs/report_identity" },
+        "operator_summary": { "$ref": "#/$defs/report_identity" },
+        "auto_improve_readiness": { "$ref": "#/$defs/report_identity" }
+      }
+    },
+    "diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operator", "auto_improve"],
+      "properties": {
+        "operator": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "source_zip_policy_status",
+            "tmp_json_policy_status",
+            "artifact_digest_policy_status",
+            "batch_verify_status",
+            "full_suite_status",
+            "learning_revalidation_status",
+            "accepted_risk"
+          ],
+          "properties": {
+            "status": { "type": "string" },
+            "source_zip_policy_status": { "type": "string" },
+            "tmp_json_policy_status": { "type": "string" },
+            "artifact_digest_policy_status": { "type": "string" },
+            "batch_verify_status": { "type": "string" },
+            "full_suite_status": { "type": "string" },
+            "learning_revalidation_status": { "type": "string" },
+            "accepted_risk": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "accepted_risk_count",
+                "release_accepted_risk_count",
+                "accepted_learning_risk_count",
+                "clean_lane_blocking_accepted_risk_family_count",
+                "gate_attention_count",
+                "learning_claim_blocking_family_count"
+              ],
+              "properties": {
+                "accepted_risk_count": { "type": "integer", "minimum": 0 },
+                "release_accepted_risk_count": { "type": "integer", "minimum": 0 },
+                "accepted_learning_risk_count": { "type": "integer", "minimum": 0 },
+                "clean_lane_blocking_accepted_risk_family_count": { "type": "integer", "minimum": 0 },
+                "gate_attention_count": { "type": "integer", "minimum": 0 },
+                "learning_claim_blocking_family_count": { "type": "integer", "minimum": 0 }
+              }
+            }
+          }
+        },
+        "auto_improve": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source_tree_fingerprint",
+            "currentness_status",
+            "can_execute_trial",
+            "can_promote_result",
+            "learning_claim_blocker_count",
+            "promotion_blocker_count",
+            "clean_release_blocker_count"
+          ],
+          "properties": {
+            "source_tree_fingerprint": { "type": "string" },
+            "currentness_status": { "type": "string", "enum": ["current", "stale"] },
+            "can_execute_trial": { "type": "boolean" },
+            "can_promote_result": { "type": "boolean" },
+            "learning_claim_blocker_count": { "type": "integer", "minimum": 0 },
+            "promotion_blocker_count": { "type": "integer", "minimum": 0 },
+            "clean_release_blocker_count": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_manifest_pass",
+        "run_manifest_load_ok",
+        "run_manifest_artifact_kind_ok",
+        "run_manifest_current",
+        "sealed_run_manifest_pass",
+        "sealed_run_manifest_load_ok",
+        "sealed_run_manifest_artifact_kind_ok",
+        "sealed_run_manifest_current",
+        "operator_summary_load_ok",
+        "operator_summary_artifact_kind_ok",
+        "operator_summary_current",
+        "operator_summary_pass",
+        "source_zip_policy_match",
+        "tmp_json_clean",
+        "artifact_digest_policy_match",
+        "batch_verify_pass",
+        "full_suite_pass",
+        "learning_revalidation_current",
+        "accepted_risk_clean",
+        "auto_improve_readiness_load_ok",
+        "auto_improve_readiness_artifact_kind_ok",
+        "auto_improve_current",
+        "auto_improve_can_execute_trial",
+        "auto_improve_can_promote_result",
+        "auto_improve_blockers_clear"
+      ],
+      "properties": {
+        "run_manifest_pass": { "type": "boolean" },
+        "run_manifest_load_ok": { "type": "boolean" },
+        "run_manifest_artifact_kind_ok": { "type": "boolean" },
+        "run_manifest_current": { "type": "boolean" },
+        "sealed_run_manifest_pass": { "type": "boolean" },
+        "sealed_run_manifest_load_ok": { "type": "boolean" },
+        "sealed_run_manifest_artifact_kind_ok": { "type": "boolean" },
+        "sealed_run_manifest_current": { "type": "boolean" },
+        "operator_summary_load_ok": { "type": "boolean" },
+        "operator_summary_artifact_kind_ok": { "type": "boolean" },
+        "operator_summary_current": { "type": "boolean" },
+        "operator_summary_pass": { "type": "boolean" },
+        "source_zip_policy_match": { "type": "boolean" },
+        "tmp_json_clean": { "type": "boolean" },
+        "artifact_digest_policy_match": { "type": "boolean" },
+        "batch_verify_pass": { "type": "boolean" },
+        "full_suite_pass": { "type": "boolean" },
+        "learning_revalidation_current": { "type": "boolean" },
+        "accepted_risk_clean": { "type": "boolean" },
+        "auto_improve_readiness_load_ok": { "type": "boolean" },
+        "auto_improve_readiness_artifact_kind_ok": { "type": "boolean" },
+        "auto_improve_current": { "type": "boolean" },
+        "auto_improve_can_execute_trial": { "type": "boolean" },
+        "auto_improve_can_promote_result": { "type": "boolean" },
+        "auto_improve_blockers_clear": { "type": "boolean" }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/blocker" }
+    },
+    "failures": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "const": "current" },
+        "checked_at": { "type": "string", "minLength": 1 }
+      }
+    },
+    "report_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "exists",
+        "size_bytes",
+        "sha256",
+        "load_status",
+        "artifact_kind",
+        "producer",
+        "generated_at",
+        "status",
+        "source_tree_fingerprint"
+      ],
+      "properties": {
+        "path": { "type": "string" },
+        "exists": { "type": "boolean" },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "sha256": { "type": "string" },
+        "load_status": { "type": "string" },
+        "artifact_kind": { "type": "string" },
+        "producer": { "type": "string" },
+        "generated_at": { "type": "string" },
+        "status": { "type": "string" },
+        "source_tree_fingerprint": { "type": "string" }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "source",
+        "field_path",
+        "observed",
+        "expected",
+        "summary",
+        "recommended_next_step"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "field_path": { "type": "string", "minLength": 1 },
+        "observed": { "type": "string" },
+        "expected": { "type": "string" },
+        "summary": { "type": "string", "minLength": 1 },
+        "recommended_next_step": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

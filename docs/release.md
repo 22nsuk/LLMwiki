@@ -2,19 +2,39 @@
 
 Release work is evidence-driven. Converge targets update local-only reports;
 check targets verify that already-generated evidence is current.
-The run-ready release authority is `build/release/release-run-manifest.json`.
-`ops/reports/` remains diagnostic/local evidence and does not decide final
-sealed/run-ready status.
+Release authority is staged so each manifest answers one question:
+`build/release/release-run-manifest.json` says whether the current commit is
+runnable, `build/release/release-sealed-run-manifest.json` says whether the
+source ZIP and sidecars are sealed evidence, and
+`build/release/release-auto-promotion-ready-manifest.json` says whether the
+result can be promoted without operator intervention.
 
 ## Common Targets
 
 - `make release-check`: check-only release gate for the current tree.
 - `make release-check-all-surfaces`: release check plus public policy and public export checks.
 - `make release-run-ready`: one command to verify the current committed tree,
-  run the current test/public/package/smoke/seal sequence, and write the
-  authoritative release-run manifest.
+  run full pytest, public check, package build, and source-package smoke, then
+  write the runnable release-run manifest.
 - `make release-run-ready-check`: revalidate the existing manifest against the
-  current HEAD, source fingerprint, source ZIP, smoke report, and sidecars.
+  current HEAD, source fingerprint, source ZIP, and source-package smoke report.
+- `make release-run-ready-ensure`: try `release-run-ready-check` first, then run
+  `release-run-ready` only when runnable evidence is missing, stale, or failing.
+- `make release-sealed-run-ready`: build sealed sidecars, write the operator-free
+  sealed post-seal attestation, run the sealed rehearsal check, and write the
+  sealed-run manifest. It uses `release-run-ready-ensure` so already-current
+  runnable evidence is reused.
+- `make release-sealed-run-ready-check`: revalidate existing sealed evidence
+  without rerunning tests or rebuilding the package.
+- `make release-sealed-run-ready-ensure`: try `release-sealed-run-ready-check`
+  first, then run `release-sealed-run-ready` only when sealed evidence is
+  missing, stale, or failing.
+- `make release-auto-promotion-ready`: low-cost promotion check that reads the
+  sealed manifest, refreshes cheap learning/auto-improve diagnostics, reads the
+  operator summary, and decides unattended promotion. It uses
+  `release-sealed-run-ready-ensure` so the top stage can be run as one command.
+- `make release-auto-promotion-ready-check`: revalidate the existing
+  auto-promotion manifest inputs without recomputing expensive evidence.
 - `make release-converge`: mutating evidence convergence for release reports.
 - `make release-converge-all-surfaces`: convergence plus public policy/export refresh.
 - `make release-source-ready`: source-ready commit flow. Mutating convergence happens
@@ -34,25 +54,31 @@ sealed/run-ready status.
 1. Commit the source tree you want to verify. Release tooling no longer commits
    or pushes automatically.
 2. Run `make release-run-ready`.
-3. Run `make release-run-ready-check` if you need a readback verification of the
-   manifest after another process inspects or transfers the build directory.
+3. Run `make release-sealed-run-ready` when you need source ZIP and sidecar
+   evidence sealed for release review. It will reuse a current run-ready
+   manifest when one already exists.
+4. Run `make release-auto-promotion-ready` when unattended promotion must be
+   evaluated. It will ensure sealed evidence first, then refresh only the cheap
+   diagnostic inputs needed for the auto-promotion verdict.
 
-The command fixes the sequence to preflight, current tests, public check,
-source package build, clean-extract smoke, sealed sidecars, and manifest check.
-Each step records the starting source fingerprint and must finish with the same
-fingerprint. Full pytest, public check, and package build are each run at most
-once in this graph.
+`release-auto-promotion-ready` intentionally avoids rerunning full pytest or
+rebuilding the package when current lower-stage evidence already passes. Check
+targets may still rewrite their `build/release/` diagnostic manifests while
+they re-evaluate currentness; they are check-first reuse paths, not immutable
+read-only probes.
 
 ## Evidence Boundaries
 
-- `build/release/release-run-manifest.json` is the final authority for a
-  run-ready release. It binds the current HEAD, source fingerprint, source ZIP,
-  source-package smoke report, and sealed sidecars.
-- Within the manifest, nested sidecars distinguish `payload_status` from
-  `release_run_status`. Legacy reports may still carry diagnostic
-  `payload_status` values such as `fail` or `attention`; those values are not
-  final release verdicts unless the sidecar's `release_run_requirement` says the
-  payload status is required to pass.
+- `build/release/release-run-manifest.json` is runnable-only authority. It binds
+  the current HEAD, source fingerprint, source ZIP, source-package smoke report,
+  and executed steps.
+- `build/release/release-sealed-run-manifest.json` is sealed package authority.
+  It binds the run manifest, source ZIP digest, post-seal attestation, and
+  sealed rehearsal check. Batch/external sidecar legacy statuses are not treated
+  as auto-promotion verdicts.
+- `build/release/release-auto-promotion-ready-manifest.json` is unattended
+  promotion authority. Operator summary and learning diagnostics are read here,
+  not exposed as `payload_status` inside the run manifest.
 - `ops/reports/release-smoke-report.json` is local diagnostic evidence and is
   not a final release authority.
 - `ops/reports/test-execution-summary.json` and
@@ -64,7 +90,8 @@ once in this graph.
   `public-check-all-check` reuses this report only when the same
   `source_tree_fingerprint` still matches.
 - `ops/reports/release-closeout-finality-attestation.json` is diagnostic only;
-  final release authority is the release-run manifest plus the source ZIP digest.
+  release authority is the staged `release-run`, `release-sealed-run`, and
+  `release-auto-promotion-ready` manifests under `build/release/`.
 - `ops/reports/` and `ops/operator/` are preserved locally and ignored by Git.
   If older branches still track entries under those paths, remove them from the
   index with `git rm --cached` while leaving the local files on disk.

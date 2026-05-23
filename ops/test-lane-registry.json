@@ -123,7 +123,9 @@
       "ci_entrypoint": "test-release-sealing-all",
       "ci_steps": [
         "make test-release-sealing-all",
-        "make -n release-run-ready"
+        "make -n release-run-ready",
+        "make -n release-sealed-run-ready",
+        "make -n release-auto-promotion-ready"
       ],
       "make_target": "test-release-sealing-all",
       "allowed_markers": [
@@ -484,10 +486,11 @@
       "pack_id": "release_run_ready",
       "authority": "derived",
       "status": "derived_from_registry",
-      "semantics": "Single release-run manifest authority for the current committed tree.",
+      "semantics": "Runnable current-commit release manifest authority.",
       "backing_targets": [
         "release-run-ready",
-        "release-run-ready-check"
+        "release-run-ready-check",
+        "release-run-ready-ensure"
       ],
       "selection": {
         "mode": "explicit_selectors",
@@ -501,7 +504,58 @@
       ],
       "documented_entrypoints": [
         "make release-run-ready",
-        "make release-run-ready-check"
+        "make release-run-ready-check",
+        "make release-run-ready-ensure"
+      ]
+    },
+    {
+      "pack_id": "release_sealed_run_ready",
+      "authority": "derived",
+      "status": "derived_from_registry",
+      "semantics": "Sealed package authority binding the run manifest, source ZIP digest, and sealed sidecars.",
+      "backing_targets": [
+        "release-sealed-run-ready",
+        "release-sealed-run-ready-check",
+        "release-sealed-run-ready-ensure"
+      ],
+      "selection": {
+        "mode": "explicit_selectors",
+        "selectors": [
+          "release-sealed-run-ready"
+        ]
+      },
+      "ci_entrypoint": "release-sealed-run-ready-check",
+      "ci_steps": [
+        "make -n release-sealed-run-ready"
+      ],
+      "documented_entrypoints": [
+        "make release-sealed-run-ready",
+        "make release-sealed-run-ready-check",
+        "make release-sealed-run-ready-ensure"
+      ]
+    },
+    {
+      "pack_id": "release_auto_promotion_ready",
+      "authority": "derived",
+      "status": "derived_from_registry",
+      "semantics": "Low-cost unattended promotion authority from sealed evidence, operator diagnostics, and auto-improve readiness.",
+      "backing_targets": [
+        "release-auto-promotion-ready",
+        "release-auto-promotion-ready-check"
+      ],
+      "selection": {
+        "mode": "explicit_selectors",
+        "selectors": [
+          "release-auto-promotion-ready"
+        ]
+      },
+      "ci_entrypoint": "release-auto-promotion-ready-check",
+      "ci_steps": [
+        "make -n release-auto-promotion-ready"
+      ],
+      "documented_entrypoints": [
+        "make release-auto-promotion-ready",
+        "make release-auto-promotion-ready-check"
       ]
     }
   ],
@@ -877,6 +931,36 @@
       "maps_to": "release_run_ready"
     },
     {
+      "kind": "make_target",
+      "name": "release-run-ready-ensure",
+      "maps_to": "release_run_ready"
+    },
+    {
+      "kind": "make_target",
+      "name": "release-sealed-run-ready",
+      "maps_to": "release_sealed_run_ready"
+    },
+    {
+      "kind": "make_target",
+      "name": "release-sealed-run-ready-check",
+      "maps_to": "release_sealed_run_ready"
+    },
+    {
+      "kind": "make_target",
+      "name": "release-sealed-run-ready-ensure",
+      "maps_to": "release_sealed_run_ready"
+    },
+    {
+      "kind": "make_target",
+      "name": "release-auto-promotion-ready",
+      "maps_to": "release_auto_promotion_ready"
+    },
+    {
+      "kind": "make_target",
+      "name": "release-auto-promotion-ready-check",
+      "maps_to": "release_auto_promotion_ready"
+    },
+    {
       "kind": "documented_entrypoint",
       "name": "make release-source-package-smoke",
       "maps_to": "source_package"
@@ -890,6 +974,36 @@
       "kind": "documented_entrypoint",
       "name": "make release-run-ready-check",
       "maps_to": "release_run_ready"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-run-ready-ensure",
+      "maps_to": "release_run_ready"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-sealed-run-ready",
+      "maps_to": "release_sealed_run_ready"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-sealed-run-ready-check",
+      "maps_to": "release_sealed_run_ready"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-sealed-run-ready-ensure",
+      "maps_to": "release_sealed_run_ready"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-auto-promotion-ready",
+      "maps_to": "release_auto_promotion_ready"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-auto-promotion-ready-check",
+      "maps_to": "release_auto_promotion_ready"
     }
   ],
   "documentation_boundary": {

@@ -257,7 +257,9 @@ def _assert_sealed_release_closeout_targets(case: unittest.TestCase, text: str) 
     for target in (
         "release-distribution-zip",
         "release-evidence-closeout-sealed",
+        "release-evidence-closeout-sealed-core-sidecars",
         "release-evidence-closeout-sealed-sidecars",
+        "release-sealed-post-seal-attestation",
         "release-evidence-closeout-sealed-check",
         "release-evidence-closeout-sealed-dry-run",
         "release-evidence-closeout-sealed-dry-run-check",
@@ -275,6 +277,7 @@ def _assert_sealed_release_closeout_targets(case: unittest.TestCase, text: str) 
         "RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT ?= build/release/release-closeout-batch-manifest.json",
         "RELEASE_CLOSEOUT_SEALED_SELF_CHECK_OUT ?= build/release/release-evidence-closeout-self-check.json",
         "RELEASE_CLOSEOUT_SEALED_OPERATOR_SUMMARY_OUT ?= build/release/operator-release-summary.json",
+        "RELEASE_SEALED_POST_SEAL_ATTESTATION_OUT ?= build/release/release-sealed-post-seal-attestation.json",
         "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_BATCH_MANIFEST ?= build/release/release-closeout-batch-manifest.json",
         "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_EXTERNAL_MANIFEST ?= build/release/external-report-reference-manifest.json",
     ):
@@ -292,7 +295,7 @@ def _assert_sealed_release_closeout_targets(case: unittest.TestCase, text: str) 
         case.assertIn(needle, sealed_block)
     case.assertNotIn("$(MAKE) release-evidence-converge", sealed_block)
     case.assertNotIn("release-sealed-verify", sealed_block)
-    sealed_sidecars_block = _target_block(text, "release-evidence-closeout-sealed-sidecars")
+    sealed_core_sidecars_block = _target_block(text, "release-evidence-closeout-sealed-core-sidecars")
     for needle in (
         '--out "$(RELEASE_CLOSEOUT_SEALED_EXTERNAL_MANIFEST_OUT)"',
         "--mode strict_review_release",
@@ -302,11 +305,20 @@ def _assert_sealed_release_closeout_targets(case: unittest.TestCase, text: str) 
         "ops.scripts.release_evidence_closeout_self_check",
         '--out "$(RELEASE_CLOSEOUT_SEALED_SELF_CHECK_OUT)"',
         "$(MAKE) tmp-json-clean",
+    ):
+        case.assertIn(needle, sealed_core_sidecars_block)
+    sealed_sidecars_block = _target_block(text, "release-evidence-closeout-sealed-sidecars")
+    for needle in (
+        "$(MAKE) release-evidence-closeout-sealed-core-sidecars",
         "ops.scripts.operator_release_summary",
         '--out "$(RELEASE_CLOSEOUT_SEALED_OPERATOR_SUMMARY_OUT)"',
         '--batch-manifest "$(RELEASE_CLOSEOUT_SEALED_BATCH_MANIFEST_OUT)"',
     ):
         case.assertIn(needle, sealed_sidecars_block)
+    sealed_attestation_block = _target_block(text, "release-sealed-post-seal-attestation")
+    case.assertIn("ops.scripts.release_sealed_post_seal_attestation", sealed_attestation_block)
+    case.assertIn('--out "$(RELEASE_SEALED_POST_SEAL_ATTESTATION_OUT)"', sealed_attestation_block)
+    case.assertIn('--run-manifest "$(RELEASE_RUN_MANIFEST_OUT)"', sealed_attestation_block)
     sealed_verify_block = _target_block(text, "release-sealed-verify")
     case.assertIn("$(MAKE) release-verify-current", sealed_verify_block)
     case.assertIn("$(MAKE) release-evidence-closeout-sealed-check", sealed_verify_block)
@@ -1162,6 +1174,12 @@ class MakefileStaticGateTests(unittest.TestCase):
             "release-source-package-check",
             "release-run-ready",
             "release-run-ready-check",
+            "release-run-ready-ensure",
+            "release-sealed-run-ready",
+            "release-sealed-run-ready-check",
+            "release-sealed-run-ready-ensure",
+            "release-auto-promotion-ready",
+            "release-auto-promotion-ready-check",
             "release-builder-full",
         ):
             with self.subTest(target=target):
@@ -1453,6 +1471,8 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("release-source-ready", _target_block(text, ".PHONY"))
         self.assertIn("release-run-ready", _target_block(text, ".PHONY"))
         self.assertIn("release-run-ready-check", _target_block(text, ".PHONY"))
+        self.assertIn("release-run-ready-ensure", _target_block(text, ".PHONY"))
+        self.assertIn("release-sealed-run-ready-ensure", _target_block(text, ".PHONY"))
         self.assertNotIn("release-converge-artifact-commit", _target_block(text, ".PHONY"))
         self.assertIn("release-check-preflight-converge", _target_block(text, ".PHONY"))
         self.assertIn("release-check-core", _target_block(text, ".PHONY"))
@@ -1539,6 +1559,23 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn("ops.scripts.release_run_ready", _target_block(text, "release-run-ready"))
         self.assertIn("ops.scripts.release_run_manifest", _target_block(text, "release-run-ready-check"))
+        self.assertEqual(
+            _recipe_lines(text, "release-run-ready-ensure"),
+            ["$(MAKE) release-run-ready-check || $(MAKE) release-run-ready"],
+        )
+        self.assertIn("$(MAKE) release-run-ready-ensure", _target_block(text, "release-sealed-run-ready"))
+        self.assertIn("ops.scripts.release_sealed_run_manifest", _target_block(text, "release-sealed-run-ready"))
+        self.assertEqual(
+            _recipe_lines(text, "release-sealed-run-ready-ensure"),
+            ["$(MAKE) release-sealed-run-ready-check || $(MAKE) release-sealed-run-ready"],
+        )
+        self.assertIn("ops.scripts.release_auto_promotion_ready", _target_block(text, "release-auto-promotion-ready"))
+        auto_promotion_block = _target_block(text, "release-auto-promotion-ready")
+        self.assertIn("$(MAKE) release-sealed-run-ready-ensure", auto_promotion_block)
+        self.assertIn("$(MAKE) learning-readiness-signoff-revalidation", auto_promotion_block)
+        self.assertIn("$(MAKE) auto-improve-readiness-report-body", auto_promotion_block)
+        self.assertIn('--self-check "$(RELEASE_CLOSEOUT_SEALED_SELF_CHECK_OUT)"', auto_promotion_block)
+        self.assertNotIn("$(MAKE) release-sealed-run-ready-check", auto_promotion_block)
         self.assertIn("$(MAKE) release-worktree-clean-check", core_block)
         self.assertIn("$(MAKE) test-execution-summary-current-check", core_block)
         self.assertIn("$(MAKE) test-execution-summary-full-current-check", core_block)

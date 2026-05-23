@@ -354,7 +354,7 @@ def _archive_self_description(vault: Path, manifest: dict, *, profile: str, arch
         "evidence_linkage": {
             "embedded_evidence_policy": "digest_link_only",
             "linkage_phase": "pre_seal_package_build_snapshot",
-            "post_seal_authority": "build/release/release-run-manifest.json",
+            "post_seal_authority": "build/release/release-sealed-run-manifest.json",
             "source_package_embeds_report_payloads": False,
             "linked_artifacts": _evidence_linkage(vault, manifest),
         },

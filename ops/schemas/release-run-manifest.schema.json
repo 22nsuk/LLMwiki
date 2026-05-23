@@ -28,8 +28,6 @@
     "steps",
     "distribution_zip",
     "source_package_smoke",
-    "sealed",
-    "ops_reports_reference",
     "failures"
   ],
   "properties": {
@@ -44,7 +42,7 @@
       "type": "object",
       "additionalProperties": { "type": "string" }
     },
-    "schema_version": { "type": "integer", "const": 2 },
+    "schema_version": { "type": "integer", "const": 3 },
     "artifact_status": { "type": "string", "const": "current" },
     "retention_policy": { "type": "string", "const": "release_sidecar_authority" },
     "encoding": { "type": "string", "const": "utf-8" },
@@ -90,30 +88,6 @@
         "sha256": { "type": "string" }
       }
     },
-    "sealed": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "status",
-        "batch_manifest",
-        "external_manifest",
-        "operator_summary",
-        "post_seal_attestation",
-        "sealed_rehearsal_check"
-      ],
-      "properties": {
-        "status": { "type": "string", "enum": ["pass", "fail"] },
-        "batch_manifest": { "$ref": "#/$defs/report_identity" },
-        "external_manifest": { "$ref": "#/$defs/report_identity" },
-        "operator_summary": { "$ref": "#/$defs/report_identity" },
-        "post_seal_attestation": { "$ref": "#/$defs/report_identity" },
-        "sealed_rehearsal_check": { "$ref": "#/$defs/report_identity" }
-      }
-    },
-    "ops_reports_reference": {
-      "type": "array",
-      "items": { "$ref": "#/$defs/report_identity" }
-    },
     "failures": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 },
@@ -130,44 +104,6 @@
         "exists": { "type": "boolean" },
         "size_bytes": { "type": "integer", "minimum": 0 },
         "sha256": { "type": "string" }
-      }
-    },
-    "report_identity": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "path",
-        "exists",
-        "size_bytes",
-        "sha256",
-        "artifact_kind",
-        "payload_status",
-        "release_authority_status",
-        "sealed_release_status",
-        "source_tree_fingerprint",
-        "authority_role",
-        "release_run_requirement",
-        "release_run_status"
-      ],
-      "properties": {
-        "path": { "type": "string" },
-        "exists": { "type": "boolean" },
-        "size_bytes": { "type": "integer", "minimum": 0 },
-        "sha256": { "type": "string" },
-        "artifact_kind": { "type": "string" },
-        "payload_status": { "type": "string" },
-        "release_authority_status": { "type": "string" },
-        "sealed_release_status": { "type": "string" },
-        "source_tree_fingerprint": { "type": "string" },
-        "authority_role": { "type": "string", "enum": ["release_sidecar_authority", "diagnostic_only"] },
-        "release_run_requirement": {
-          "type": "string",
-          "enum": ["exists_only", "payload_status_pass", "reference_only"]
-        },
-        "release_run_status": {
-          "type": "string",
-          "enum": ["pass", "fail", "reference_only"]
-        }
       }
     },
     "step": {

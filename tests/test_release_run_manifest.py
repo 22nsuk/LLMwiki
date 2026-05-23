@@ -55,25 +55,11 @@ class ReleaseRunManifestTests(unittest.TestCase):
         with zipfile.ZipFile(path, "w") as archive:
             archive.writestr("LLMwiki/README.md", "hello\n")
 
-    def _write_pass_sidecars(self) -> None:
+    def _write_run_inputs(self) -> None:
         self._write_zip()
         self._write_json(
             "build/source-package-smoke/source-package-smoke.json",
             {"artifact_kind": "source_package_smoke", "status": "pass"},
-        )
-        for rel_path in (
-            "build/release/release-closeout-batch-manifest.json",
-            "build/release/external-report-reference-manifest.json",
-            "build/release/operator-release-summary.json",
-        ):
-            self._write_json(rel_path, {"artifact_kind": Path(rel_path).stem})
-        self._write_json(
-            "build/release/release-post-seal-attestation.json",
-            {"artifact_kind": "release_post_seal_attestation", "status": "pass"},
-        )
-        self._write_json(
-            "build/release/release-closeout-sealed-rehearsal-check.json",
-            {"artifact_kind": "release_closeout_sealed_rehearsal_check", "status": "pass"},
         )
 
     def _patch_clean_repo(self, fingerprint: str):
@@ -86,8 +72,8 @@ class ReleaseRunManifestTests(unittest.TestCase):
             ignored_tracked_file_count=lambda _vault: 0,
         )
 
-    def test_manifest_passes_from_build_release_sidecars_and_diagnostic_ops_reports(self) -> None:
-        self._write_pass_sidecars()
+    def test_manifest_passes_from_run_inputs_and_ignores_diagnostic_reports(self) -> None:
+        self._write_run_inputs()
         self._write_json(
             "ops/reports/release-smoke-report.json",
             {
@@ -95,6 +81,14 @@ class ReleaseRunManifestTests(unittest.TestCase):
                 "status": "fail",
                 "source_tree_fingerprint": "stale",
             },
+        )
+        self._write_json(
+            "build/release/release-closeout-batch-manifest.json",
+            {"artifact_kind": "release_closeout_batch_manifest", "status": "fail"},
+        )
+        self._write_json(
+            "build/release/operator-release-summary.json",
+            {"artifact_kind": "operator_release_summary", "status": "attention"},
         )
 
         with self._patch_clean_repo("fp-current"):
@@ -119,62 +113,44 @@ class ReleaseRunManifestTests(unittest.TestCase):
         self.assertEqual(manifest["git_commit"], "abc123")
         self.assertEqual(manifest["source_tree_fingerprint"], "fp-current")
         self.assertEqual(manifest["failures"], [])
-        self.assertEqual(manifest["sealed"]["batch_manifest"]["release_run_requirement"], "exists_only")
-        self.assertEqual(manifest["sealed"]["batch_manifest"]["release_run_status"], "pass")
-        self.assertEqual(manifest["sealed"]["post_seal_attestation"]["release_run_requirement"], "payload_status_pass")
-        self.assertEqual(manifest["sealed"]["post_seal_attestation"]["release_run_status"], "pass")
-        smoke_ref = next(
-            item for item in manifest["ops_reports_reference"] if item["path"] == "ops/reports/release-smoke-report.json"
+        self.assertEqual(manifest["schema_version"], 3)
+        self.assertNotIn("sealed", manifest)
+        self.assertNotIn("ops_reports_reference", manifest)
+        self.assertNotIn("payload_status", json.dumps(manifest, ensure_ascii=False))
+        self.assertEqual(
+            sorted(manifest["input_fingerprints"]),
+            ["distribution_zip", "source_package_smoke"],
         )
-        self.assertEqual(smoke_ref["payload_status"], "fail")
-        self.assertEqual(smoke_ref["authority_role"], "diagnostic_only")
-        self.assertEqual(smoke_ref["release_run_requirement"], "reference_only")
-        self.assertEqual(smoke_ref["release_run_status"], "reference_only")
         self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
         self.assertTrue(write_manifest(self.vault, manifest, "build/release/release-run-manifest.json").exists())
 
-    def test_legacy_sidecar_payload_status_is_not_release_run_verdict(self) -> None:
-        self._write_pass_sidecars()
-        self._write_json(
-            "build/release/release-closeout-batch-manifest.json",
-            {
-                "artifact_kind": "release_closeout_batch_manifest",
-                "status": "fail",
-                "release_authority_status": "conditional_pass",
-                "sealed_release_status": "sealed_conditional_pass",
-            },
-        )
-        self._write_json(
-            "build/release/operator-release-summary.json",
-            {
-                "artifact_kind": "operator_release_summary",
-                "status": "attention",
-                "sealed_release_status": "sealed_conditional_pass",
-            },
-        )
+    def test_step_failure_is_release_run_verdict(self) -> None:
+        self._write_run_inputs()
 
         with self._patch_clean_repo("fp-current"):
             manifest = build_manifest(
                 self.vault,
                 expected_source_tree_fingerprint="fp-current",
+                steps=[
+                    {
+                        "name": "release-public-current",
+                        "status": "fail",
+                        "command": ["make", "release-public-current"],
+                        "returncode": 1,
+                        "duration_ms": 1,
+                        "source_tree_fingerprint_before": "fp-current",
+                        "source_tree_fingerprint_after": "fp-current",
+                    }
+                ],
                 context=fixed_context(),
             )
 
-        self.assertEqual(manifest["status"], "pass")
-        self.assertEqual(manifest["sealed"]["status"], "pass")
-        self.assertEqual(manifest["sealed"]["batch_manifest"]["payload_status"], "fail")
-        self.assertNotIn("status", manifest["sealed"]["batch_manifest"])
-        self.assertEqual(manifest["sealed"]["batch_manifest"]["release_run_status"], "pass")
-        self.assertEqual(
-            manifest["sealed"]["batch_manifest"]["release_authority_status"],
-            "conditional_pass",
-        )
-        self.assertEqual(manifest["sealed"]["operator_summary"]["payload_status"], "attention")
-        self.assertEqual(manifest["sealed"]["operator_summary"]["release_run_status"], "pass")
+        self.assertEqual(manifest["status"], "fail")
+        self.assertIn("step_failed:release-public-current", manifest["failures"])
         self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
 
     def test_manifest_fails_on_source_fingerprint_drift(self) -> None:
-        self._write_pass_sidecars()
+        self._write_run_inputs()
 
         with self._patch_clean_repo("fp-current"):
             manifest = build_manifest(

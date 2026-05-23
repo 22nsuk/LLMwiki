@@ -76,6 +76,9 @@ RELEASE_SEALING_CORE_TESTS ?= \
 	tests/test_release_closeout_batch_manifest.py \
 	tests/test_release_evidence_closeout_self_check.py \
 	tests/test_release_run_manifest.py \
+	tests/test_release_sealed_post_seal_attestation.py \
+	tests/test_release_sealed_run_manifest.py \
+	tests/test_release_auto_promotion_ready.py \
 	tests/test_source_package_smoke.py \
 	tests/test_release_sealing_lane.py
 RELEASE_SEALING_TESTS ?= $(RELEASE_SEALING_CORE_TESTS)

@@ -128,6 +128,8 @@ jobs:
         run: |
           make test-release-sealing-all
           make -n release-run-ready
+          make -n release-sealed-run-ready
+          make -n release-auto-promotion-ready
 
       - name: Run subprocess tier
         if: matrix.tier == 'subprocess'

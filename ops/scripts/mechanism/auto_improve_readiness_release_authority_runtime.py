@@ -660,8 +660,8 @@ def _release_gate_promotion_blockers(
             "promotion_blocked_by_artifact_finalization_failure",
             "artifact_finalization",
             "artifact_finalization_status_not_pass",
-            "Run make release-run-ready and make release-closeout-post-check-finalizer-dry-run.",
-            "Refresh release-run authority evidence, then rerun make auto-improve-readiness.",
+            "Run make release-run-ready, make release-sealed-run-ready, and make release-closeout-post-check-finalizer-dry-run.",
+            "Refresh staged release authority evidence, then rerun make auto-improve-readiness.",
         ),
     ]
     for summary, blocker_id, scope, signal_id, required_evidence, next_step in gate_definitions:

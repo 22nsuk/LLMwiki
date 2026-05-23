@@ -305,7 +305,7 @@ class ReleaseSmokeTest(unittest.TestCase):
             )
             self.assertEqual(
                 self_description["evidence_linkage"]["post_seal_authority"],
-                "build/release/release-run-manifest.json",
+                "build/release/release-sealed-run-manifest.json",
             )
             linked_paths = {
                 item["path"]

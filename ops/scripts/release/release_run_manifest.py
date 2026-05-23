@@ -41,17 +41,6 @@ PRODUCER = "ops.scripts.release_run_manifest"
 SOURCE_COMMAND = "python -m ops.scripts.release_run_manifest --vault ."
 DEFAULT_DISTRIBUTION_ZIP = "build/release/LLMwiki-source.zip"
 DEFAULT_SOURCE_PACKAGE_SMOKE = "build/source-package-smoke/source-package-smoke.json"
-DEFAULT_BATCH_MANIFEST = "build/release/release-closeout-batch-manifest.json"
-DEFAULT_EXTERNAL_MANIFEST = "build/release/external-report-reference-manifest.json"
-DEFAULT_OPERATOR_SUMMARY = "build/release/operator-release-summary.json"
-DEFAULT_POST_SEAL_ATTESTATION = "build/release/release-post-seal-attestation.json"
-DEFAULT_SEALED_REHEARSAL_CHECK = "build/release/release-closeout-sealed-rehearsal-check.json"
-OPS_REPORT_REFERENCES = (
-    "ops/reports/release-smoke-report.json",
-    "ops/reports/test-execution-summary-full.json",
-    "ops/reports/public-check-summary.json",
-    "ops/reports/release-closeout-summary.json",
-)
 
 
 def _run_git(vault: Path, *args: str) -> str:
@@ -126,138 +115,17 @@ def _status_label(value: object) -> str:
     return str(value).strip()
 
 
-def _status_axis(payload: dict[str, Any], name: str) -> str:
-    value = payload.get(name)
-    if value is not None:
-        return str(value).strip()
-    status_v2 = payload.get("status_v2")
-    if isinstance(status_v2, dict):
-        axes = status_v2.get("status_axes")
-        if isinstance(axes, dict):
-            return str(axes.get(name, "")).strip()
-    return ""
-
-
-def _release_run_status(
-    *,
-    exists: bool,
-    payload_status: str,
-    release_run_requirement: str,
-) -> str:
-    if release_run_requirement == "reference_only":
-        return "reference_only"
-    if not exists:
-        return "fail"
-    if release_run_requirement == "payload_status_pass" and payload_status != "pass":
-        return "fail"
-    return "pass"
-
-
-def _report_identity(
-    vault: Path,
-    path_value: str | Path,
-    *,
-    authority_role: str,
-    release_run_requirement: str,
-) -> dict[str, Any]:
+def _source_package_smoke(vault: Path, path_value: str) -> dict[str, Any]:
     identity = _file_identity(vault, path_value)
     payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, path_value))
     if diagnostics.get("status") != "ok":
         payload = {}
-    payload_status = _status_label(payload.get("status"))
-    identity.update(
-        {
-            "artifact_kind": str(payload.get("artifact_kind", "")),
-            "payload_status": payload_status,
-            "release_authority_status": _status_axis(payload, "release_authority_status"),
-            "sealed_release_status": _status_axis(payload, "sealed_release_status"),
-            "source_tree_fingerprint": str(payload.get("source_tree_fingerprint", "")),
-            "authority_role": authority_role,
-            "release_run_requirement": release_run_requirement,
-            "release_run_status": _release_run_status(
-                exists=bool(identity["exists"]),
-                payload_status=payload_status,
-                release_run_requirement=release_run_requirement,
-            ),
-        }
-    )
-    return identity
-
-
-def _source_package_smoke(vault: Path, path_value: str) -> dict[str, Any]:
-    identity = _report_identity(
-        vault,
-        path_value,
-        authority_role="release_sidecar_authority",
-        release_run_requirement="payload_status_pass",
-    )
     return {
         "path": identity["path"],
         "exists": identity["exists"],
-        "status": identity["payload_status"],
+        "status": _status_label(payload.get("status")),
         "sha256": identity["sha256"],
     }
-
-
-def _sealed_identity_set(
-    vault: Path,
-    *,
-    batch_manifest: str,
-    external_manifest: str,
-    operator_summary: str,
-    post_seal_attestation: str,
-    sealed_rehearsal_check: str,
-) -> dict[str, Any]:
-    sealed = {
-        "batch_manifest": _report_identity(
-            vault,
-            batch_manifest,
-            authority_role="release_sidecar_authority",
-            release_run_requirement="exists_only",
-        ),
-        "external_manifest": _report_identity(
-            vault,
-            external_manifest,
-            authority_role="release_sidecar_authority",
-            release_run_requirement="exists_only",
-        ),
-        "operator_summary": _report_identity(
-            vault,
-            operator_summary,
-            authority_role="release_sidecar_authority",
-            release_run_requirement="exists_only",
-        ),
-        "post_seal_attestation": _report_identity(
-            vault,
-            post_seal_attestation,
-            authority_role="release_sidecar_authority",
-            release_run_requirement="payload_status_pass",
-        ),
-        "sealed_rehearsal_check": _report_identity(
-            vault,
-            sealed_rehearsal_check,
-            authority_role="release_sidecar_authority",
-            release_run_requirement="payload_status_pass",
-        ),
-    }
-    failures = [
-        key
-        for key, identity in sorted(sealed.items())
-        if identity["release_run_status"] == "fail"
-    ]
-    return {"status": "pass" if not failures else "fail", **sealed}
-
-
-def _ops_report_references(vault: Path) -> list[dict[str, Any]]:
-    return [
-        _report_identity(
-            vault,
-            rel_path,
-            authority_role="diagnostic_only",
-            release_run_requirement="reference_only",
-        )
-        for rel_path in OPS_REPORT_REFERENCES
-    ]
 
 
 def _unique_failures(failures: list[str]) -> list[str]:
@@ -277,11 +145,6 @@ def build_manifest(
     steps: list[dict[str, Any]] | None = None,
     distribution_zip: str = DEFAULT_DISTRIBUTION_ZIP,
     source_package_smoke: str = DEFAULT_SOURCE_PACKAGE_SMOKE,
-    batch_manifest: str = DEFAULT_BATCH_MANIFEST,
-    external_manifest: str = DEFAULT_EXTERNAL_MANIFEST,
-    operator_summary: str = DEFAULT_OPERATOR_SUMMARY,
-    post_seal_attestation: str = DEFAULT_POST_SEAL_ATTESTATION,
-    sealed_rehearsal_check: str = DEFAULT_SEALED_REHEARSAL_CHECK,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
     runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
@@ -294,14 +157,6 @@ def build_manifest(
     step_rows = list(steps or [])
     zip_identity = _file_identity(vault, distribution_zip)
     smoke = _source_package_smoke(vault, source_package_smoke)
-    sealed = _sealed_identity_set(
-        vault,
-        batch_manifest=batch_manifest,
-        external_manifest=external_manifest,
-        operator_summary=operator_summary,
-        post_seal_attestation=post_seal_attestation,
-        sealed_rehearsal_check=sealed_rehearsal_check,
-    )
     failures: list[str] = []
     if expected_source_tree_fingerprint != final_fingerprint:
         failures.append("source_tree_fingerprint_drift")
@@ -315,8 +170,6 @@ def build_manifest(
         failures.append("distribution_zip_missing")
     if not smoke["exists"] or smoke["status"] != "pass":
         failures.append("source_package_smoke_not_pass")
-    if sealed["status"] != "pass":
-        failures.append("sealed_sidecars_not_pass")
     failures.extend(
         f"step_failed:{step.get('name', 'unknown')}"
         for step in step_rows
@@ -334,9 +187,8 @@ def build_manifest(
         "input_fingerprints": {
             "distribution_zip": zip_identity["sha256"],
             "source_package_smoke": smoke["sha256"],
-            "sealed_rehearsal_check": sealed["sealed_rehearsal_check"]["sha256"],
         },
-        "schema_version": 2,
+        "schema_version": 3,
         "artifact_status": "current",
         "retention_policy": "release_sidecar_authority",
         "encoding": "utf-8",
@@ -351,8 +203,6 @@ def build_manifest(
         "steps": step_rows,
         "distribution_zip": zip_identity,
         "source_package_smoke": smoke,
-        "sealed": sealed,
-        "ops_reports_reference": _ops_report_references(vault),
         "failures": _unique_failures(failures),
     }
 
@@ -388,11 +238,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--distribution-zip", default=DEFAULT_DISTRIBUTION_ZIP)
     parser.add_argument("--source-package-smoke", default=DEFAULT_SOURCE_PACKAGE_SMOKE)
-    parser.add_argument("--batch-manifest", default=DEFAULT_BATCH_MANIFEST)
-    parser.add_argument("--external-manifest", default=DEFAULT_EXTERNAL_MANIFEST)
-    parser.add_argument("--operator-summary", default=DEFAULT_OPERATOR_SUMMARY)
-    parser.add_argument("--post-seal-attestation", default=DEFAULT_POST_SEAL_ATTESTATION)
-    parser.add_argument("--sealed-rehearsal-check", default=DEFAULT_SEALED_REHEARSAL_CHECK)
     return parser.parse_args(argv)
 
 
@@ -415,11 +260,6 @@ def main(argv: list[str] | None = None) -> int:
         steps=steps,
         distribution_zip=args.distribution_zip,
         source_package_smoke=args.source_package_smoke,
-        batch_manifest=args.batch_manifest,
-        external_manifest=args.external_manifest,
-        operator_summary=args.operator_summary,
-        post_seal_attestation=args.post_seal_attestation,
-        sealed_rehearsal_check=args.sealed_rehearsal_check,
     )
     path = write_manifest(vault, manifest, args.out)
     print(display_path(vault, path))

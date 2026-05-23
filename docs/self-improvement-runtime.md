@@ -41,7 +41,8 @@ make goal-runtime-closeout
 
 This order keeps schema samples, reusable release smoke, and goal closeout from
 drifting apart. Release promotion still requires the separate
-`make release-run-ready` manifest authority for the committed tree.
+`make release-run-ready`, `make release-sealed-run-ready`, and
+`make release-auto-promotion-ready` manifest authorities for the committed tree.
 
 ## Promotion Principles
 

@@ -110,7 +110,7 @@ Generated artifact convergence:
 - First run `make generated-artifact-converge`; it fixes the order as script-output-surfaces -> external-report-action-matrix -> generated-artifact-index -> artifact-freshness.
 - Run `make release-smoke-full-reuse` when release source-tree evidence may have changed.
 - Treat full-suite evidence as max-once per unchanged source fingerprint; reuse it after a pass instead of rerunning for report-only drift.
-- Use `make release-run-ready` as the committed-tree release authority instead of a local report finalization lane.
+- Use `make release-run-ready`, `make release-sealed-run-ready`, and `make release-auto-promotion-ready` as staged release authorities instead of a local report finalization lane.
 """,
         )
 
@@ -166,6 +166,8 @@ Generated artifact convergence:
             "make goal-runtime-closeout",
             "make release-smoke-full-reuse",
             "make release-run-ready",
+            "make release-sealed-run-ready",
+            "make release-auto-promotion-ready",
         )
         surfaces = {
             "prompt": build_prompt_text(sample_goal_contract()),

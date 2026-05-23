@@ -403,7 +403,7 @@
         },
         "post_seal_authority": {
           "type": "string",
-          "const": "build/release/release-run-manifest.json"
+          "const": "build/release/release-sealed-run-manifest.json"
         },
         "evidence_linked_artifact_count": {
           "type": "integer",
