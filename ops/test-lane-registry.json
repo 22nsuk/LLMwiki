@@ -489,8 +489,7 @@
       "semantics": "Runnable current-commit release manifest authority.",
       "backing_targets": [
         "release-run-ready",
-        "release-run-ready-check",
-        "release-run-ready-ensure"
+        "release-run-ready-check"
       ],
       "selection": {
         "mode": "explicit_selectors",
@@ -504,8 +503,7 @@
       ],
       "documented_entrypoints": [
         "make release-run-ready",
-        "make release-run-ready-check",
-        "make release-run-ready-ensure"
+        "make release-run-ready-check"
       ]
     },
     {
@@ -514,9 +512,9 @@
       "status": "derived_from_registry",
       "semantics": "Sealed package authority binding the run manifest, source ZIP digest, and sealed sidecars.",
       "backing_targets": [
+        "release-sealed-run-ready-plan",
         "release-sealed-run-ready",
-        "release-sealed-run-ready-check",
-        "release-sealed-run-ready-ensure"
+        "release-sealed-run-ready-check"
       ],
       "selection": {
         "mode": "explicit_selectors",
@@ -529,9 +527,9 @@
         "make -n release-sealed-run-ready"
       ],
       "documented_entrypoints": [
+        "make release-sealed-run-ready-plan",
         "make release-sealed-run-ready",
-        "make release-sealed-run-ready-check",
-        "make release-sealed-run-ready-ensure"
+        "make release-sealed-run-ready-check"
       ]
     },
     {
@@ -540,6 +538,8 @@
       "status": "derived_from_registry",
       "semantics": "Low-cost unattended promotion authority from sealed evidence, operator diagnostics, and auto-improve readiness.",
       "backing_targets": [
+        "release-auto-promotion-ready-plan",
+        "release-auto-promotion-operator-summary",
         "release-auto-promotion-ready",
         "release-auto-promotion-ready-check"
       ],
@@ -554,6 +554,8 @@
         "make -n release-auto-promotion-ready"
       ],
       "documented_entrypoints": [
+        "make release-auto-promotion-ready-plan",
+        "make release-auto-promotion-operator-summary",
         "make release-auto-promotion-ready",
         "make release-auto-promotion-ready-check"
       ]
@@ -932,8 +934,8 @@
     },
     {
       "kind": "make_target",
-      "name": "release-run-ready-ensure",
-      "maps_to": "release_run_ready"
+      "name": "release-sealed-run-ready-plan",
+      "maps_to": "release_sealed_run_ready"
     },
     {
       "kind": "make_target",
@@ -947,8 +949,13 @@
     },
     {
       "kind": "make_target",
-      "name": "release-sealed-run-ready-ensure",
-      "maps_to": "release_sealed_run_ready"
+      "name": "release-auto-promotion-ready-plan",
+      "maps_to": "release_auto_promotion_ready"
+    },
+    {
+      "kind": "make_target",
+      "name": "release-auto-promotion-operator-summary",
+      "maps_to": "release_auto_promotion_ready"
     },
     {
       "kind": "make_target",
@@ -977,8 +984,8 @@
     },
     {
       "kind": "documented_entrypoint",
-      "name": "make release-run-ready-ensure",
-      "maps_to": "release_run_ready"
+      "name": "make release-sealed-run-ready-plan",
+      "maps_to": "release_sealed_run_ready"
     },
     {
       "kind": "documented_entrypoint",
@@ -992,8 +999,13 @@
     },
     {
       "kind": "documented_entrypoint",
-      "name": "make release-sealed-run-ready-ensure",
-      "maps_to": "release_sealed_run_ready"
+      "name": "make release-auto-promotion-ready-plan",
+      "maps_to": "release_auto_promotion_ready"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-auto-promotion-operator-summary",
+      "maps_to": "release_auto_promotion_ready"
     },
     {
       "kind": "documented_entrypoint",

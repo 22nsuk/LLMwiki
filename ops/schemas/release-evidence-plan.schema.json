@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/release-evidence-plan.schema.json",
+  "title": "Release evidence plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "stage",
+    "plan_status",
+    "execution_mode",
+    "nodes",
+    "planned_actions",
+    "blockers",
+    "failures"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "const": "ops/schemas/release-evidence-plan.schema.json" },
+    "artifact_kind": { "type": "string", "const": "release_evidence_plan" },
+    "generated_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" },
+    "producer": { "type": "string", "const": "ops.scripts.release_evidence_planner" },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string" },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "schema_version": { "type": "integer", "const": 1 },
+    "artifact_status": { "type": "string", "const": "current" },
+    "retention_policy": { "type": "string", "const": "release_sidecar_authority" },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": { "$ref": "#/$defs/currentness" },
+    "stage": { "type": "string", "enum": ["sealed-run-ready", "auto-promotion-ready"] },
+    "plan_status": { "type": "string", "enum": ["ready", "blocked"] },
+    "execution_mode": { "type": "string", "const": "cost_aware_minimal" },
+    "nodes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_manifest",
+        "sealed_run_manifest",
+        "operator_summary",
+        "auto_improve_readiness"
+      ],
+      "properties": {
+        "run_manifest": { "$ref": "#/$defs/node" },
+        "sealed_run_manifest": { "$ref": "#/$defs/node" },
+        "operator_summary": { "$ref": "#/$defs/node" },
+        "auto_improve_readiness": { "$ref": "#/$defs/node" }
+      }
+    },
+    "planned_actions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/planned_action" }
+    },
+    "blockers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/blocker" }
+    },
+    "failures": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "const": "current" },
+        "checked_at": { "type": "string", "minLength": 1 }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "path",
+        "authority_stage",
+        "cost_class",
+        "check_target",
+        "refresh_target",
+        "expected_artifact_kind",
+        "load_status",
+        "artifact_kind",
+        "status",
+        "source_tree_fingerprint",
+        "input_fingerprint",
+        "dependency_fingerprint",
+        "currentness_status",
+        "can_reuse",
+        "issues"
+      ],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "path": { "type": "string" },
+        "authority_stage": { "type": "string", "minLength": 1 },
+        "cost_class": { "type": "string", "enum": ["cheap", "medium", "expensive"] },
+        "check_target": { "type": "string", "minLength": 1 },
+        "refresh_target": { "type": "string", "minLength": 1 },
+        "expected_artifact_kind": { "type": "string", "minLength": 1 },
+        "load_status": { "type": "string" },
+        "artifact_kind": { "type": "string" },
+        "status": { "type": "string" },
+        "source_tree_fingerprint": { "type": "string" },
+        "input_fingerprint": { "type": "string" },
+        "dependency_fingerprint": { "type": "string" },
+        "currentness_status": { "type": "string", "enum": ["current", "stale"] },
+        "can_reuse": { "type": "boolean" },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["not_loadable", "artifact_kind_mismatch", "stale", "not_pass"]
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "planned_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "action_type", "cost_class", "reason"],
+      "properties": {
+        "target": { "type": "string", "minLength": 1 },
+        "action_type": { "type": "string", "minLength": 1 },
+        "cost_class": { "type": "string", "enum": ["cheap", "medium", "expensive"] },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "node", "observed", "expected", "summary", "recommended_next_step"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "node": { "type": "string", "minLength": 1 },
+        "observed": { "type": "string" },
+        "expected": { "type": "string" },
+        "summary": { "type": "string", "minLength": 1 },
+        "recommended_next_step": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

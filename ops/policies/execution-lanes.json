@@ -102,9 +102,9 @@
         "make release-source-package-check"
       ]
     },
-    "release-run-ready-ensure": {
+    "release-sealed-run-ready-plan": {
       "required_lane": "full_vault",
-      "reason": "release-run-ready-ensure reuses current runnable release evidence when possible and falls back to release-run-ready when evidence is missing or stale.",
+      "reason": "release-sealed-run-ready-plan inspects current runnable release authority evidence and writes the minimal sealing action plan without rerunning stage 1.",
       "alternatives": [
         "make static",
         "make release-source-package-smoke",
@@ -129,9 +129,18 @@
         "make release-source-package-check"
       ]
     },
-    "release-sealed-run-ready-ensure": {
+    "release-auto-promotion-ready-plan": {
       "required_lane": "full_vault",
-      "reason": "release-sealed-run-ready-ensure reuses current sealed release evidence when possible and falls back to release-sealed-run-ready when evidence is missing or stale.",
+      "reason": "release-auto-promotion-ready-plan inspects current run, sealed, operator, and auto-improve evidence and writes the minimal promotion action plan without cascading lower stages.",
+      "alternatives": [
+        "make static",
+        "make release-source-package-smoke",
+        "make release-source-package-check"
+      ]
+    },
+    "release-auto-promotion-operator-summary": {
+      "required_lane": "full_vault",
+      "reason": "release-auto-promotion-operator-summary refreshes only build-local operator diagnostics from sealed release evidence for the auto-promotion verdict.",
       "alternatives": [
         "make static",
         "make release-source-package-smoke",
@@ -140,7 +149,7 @@
     },
     "release-auto-promotion-ready": {
       "required_lane": "full_vault",
-      "reason": "release-auto-promotion-ready cheaply ensures sealed evidence, refreshes diagnostic inputs, and decides unattended promotion eligibility.",
+      "reason": "release-auto-promotion-ready reuses current run and sealed authority evidence, refreshes only build-local operator diagnostics, and decides unattended promotion eligibility without cascading lower stages.",
       "alternatives": [
         "make static",
         "make release-source-package-smoke",

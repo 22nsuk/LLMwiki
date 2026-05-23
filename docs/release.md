@@ -18,21 +18,23 @@ result can be promoted without operator intervention.
   write the runnable release-run manifest.
 - `make release-run-ready-check`: revalidate the existing manifest against the
   current HEAD, source fingerprint, source ZIP, and source-package smoke report.
-- `make release-run-ready-ensure`: try `release-run-ready-check` first, then run
-  `release-run-ready` only when runnable evidence is missing, stale, or failing.
+- `make release-sealed-run-ready-plan`: inspect runnable authority evidence and
+  write the cost-aware action plan for sealing without rerunning stage 1.
 - `make release-sealed-run-ready`: build sealed sidecars, write the operator-free
   sealed post-seal attestation, run the sealed rehearsal check, and write the
-  sealed-run manifest. It uses `release-run-ready-ensure` so already-current
-  runnable evidence is reused.
+  sealed-run manifest. It requires current passing runnable evidence and does
+  not rerun the runnable stage.
 - `make release-sealed-run-ready-check`: revalidate existing sealed evidence
   without rerunning tests or rebuilding the package.
-- `make release-sealed-run-ready-ensure`: try `release-sealed-run-ready-check`
-  first, then run `release-sealed-run-ready` only when sealed evidence is
-  missing, stale, or failing.
+- `make release-auto-promotion-ready-plan`: inspect runnable, sealed, operator,
+  and auto-improve evidence and write the cost-aware action plan for the
+  promotion verdict.
+- `make release-auto-promotion-operator-summary`: refresh only the cheap
+  build-local operator diagnostics used by the promotion verdict.
 - `make release-auto-promotion-ready`: low-cost promotion check that reads the
-  sealed manifest, refreshes cheap learning/auto-improve diagnostics, reads the
-  operator summary, and decides unattended promotion. It uses
-  `release-sealed-run-ready-ensure` so the top stage can be run as one command.
+  current runnable and sealed manifests, refreshes only the build-local operator
+  summary, and decides unattended promotion. It never cascades into the lower
+  runnable or sealing stages.
 - `make release-auto-promotion-ready-check`: revalidate the existing
   auto-promotion manifest inputs without recomputing expensive evidence.
 - `make release-converge`: mutating evidence convergence for release reports.
@@ -55,17 +57,21 @@ result can be promoted without operator intervention.
    or pushes automatically.
 2. Run `make release-run-ready`.
 3. Run `make release-sealed-run-ready` when you need source ZIP and sidecar
-   evidence sealed for release review. It will reuse a current run-ready
-   manifest when one already exists.
+   evidence sealed for release review. Its planner requires a current passing
+   run-ready manifest and reports the minimal next action if that evidence is
+   missing, stale, or failing.
 4. Run `make release-auto-promotion-ready` when unattended promotion must be
-   evaluated. It will ensure sealed evidence first, then refresh only the cheap
-   diagnostic inputs needed for the auto-promotion verdict.
+   evaluated. Its planner reuses current passing run/sealed authority evidence,
+   reports minimal next actions for missing or stale lower evidence, and then
+   refreshes only the cheap build-local operator summary before writing the
+   auto-promotion authority manifest.
 
-`release-auto-promotion-ready` intentionally avoids rerunning full pytest or
-rebuilding the package when current lower-stage evidence already passes. Check
-targets may still rewrite their `build/release/` diagnostic manifests while
-they re-evaluate currentness; they are check-first reuse paths, not immutable
-read-only probes.
+`release-auto-promotion-ready` intentionally avoids rerunning full pytest,
+rebuilding the package, or resealing evidence when current lower-stage evidence
+already passes. Learning and auto-improve reports under `ops/reports/` are
+diagnostic inputs for the final manifest; if they are stale, the planner records
+the pre-seal refresh target rather than mutating canonical lower-stage evidence
+during stage 3 readback.
 
 ## Evidence Boundaries
 
@@ -81,6 +87,10 @@ read-only probes.
 - `build/release/release-auto-promotion-ready-manifest.json` is unattended
   promotion authority. Operator summary and learning diagnostics are read here,
   not exposed as `payload_status` inside the run manifest.
+- `build/release/release-*-plan.json` files are execution plans, not release
+  authority. They decide which evidence can be reused and which minimal Make
+  target should run next; the authority verdict still belongs to the staged
+  manifests.
 - `ops/reports/release-smoke-report.json` is local diagnostic evidence and is
   not a final release authority.
 - `ops/reports/test-execution-summary.json` and

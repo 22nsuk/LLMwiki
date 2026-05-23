@@ -1174,11 +1174,12 @@ class MakefileStaticGateTests(unittest.TestCase):
             "release-source-package-check",
             "release-run-ready",
             "release-run-ready-check",
-            "release-run-ready-ensure",
             "release-sealed-run-ready",
+            "release-sealed-run-ready-plan",
             "release-sealed-run-ready-check",
-            "release-sealed-run-ready-ensure",
             "release-auto-promotion-ready",
+            "release-auto-promotion-ready-plan",
+            "release-auto-promotion-operator-summary",
             "release-auto-promotion-ready-check",
             "release-builder-full",
         ):
@@ -1471,8 +1472,11 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("release-source-ready", _target_block(text, ".PHONY"))
         self.assertIn("release-run-ready", _target_block(text, ".PHONY"))
         self.assertIn("release-run-ready-check", _target_block(text, ".PHONY"))
-        self.assertIn("release-run-ready-ensure", _target_block(text, ".PHONY"))
-        self.assertIn("release-sealed-run-ready-ensure", _target_block(text, ".PHONY"))
+        self.assertNotIn("release-run-ready-ensure", phony_targets)
+        self.assertIn("release-sealed-run-ready-plan", _target_block(text, ".PHONY"))
+        self.assertNotIn("release-sealed-run-ready-ensure", phony_targets)
+        self.assertIn("release-auto-promotion-ready-plan", _target_block(text, ".PHONY"))
+        self.assertIn("release-auto-promotion-operator-summary", _target_block(text, ".PHONY"))
         self.assertNotIn("release-converge-artifact-commit", _target_block(text, ".PHONY"))
         self.assertIn("release-check-preflight-converge", _target_block(text, ".PHONY"))
         self.assertIn("release-check-core", _target_block(text, ".PHONY"))
@@ -1559,23 +1563,22 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn("ops.scripts.release_run_ready", _target_block(text, "release-run-ready"))
         self.assertIn("ops.scripts.release_run_manifest", _target_block(text, "release-run-ready-check"))
-        self.assertEqual(
-            _recipe_lines(text, "release-run-ready-ensure"),
-            ["$(MAKE) release-run-ready-check || $(MAKE) release-run-ready"],
-        )
-        self.assertIn("$(MAKE) release-run-ready-ensure", _target_block(text, "release-sealed-run-ready"))
+        self.assertIn("ops.scripts.release_evidence_planner", _target_block(text, "release-sealed-run-ready-plan"))
+        self.assertIn("--stage sealed-run-ready", _target_block(text, "release-sealed-run-ready-plan"))
+        self.assertIn("$(MAKE) release-sealed-run-ready-plan", _target_block(text, "release-sealed-run-ready"))
+        self.assertNotIn("release-run-ready-ensure", _target_block(text, "release-sealed-run-ready"))
         self.assertIn("ops.scripts.release_sealed_run_manifest", _target_block(text, "release-sealed-run-ready"))
-        self.assertEqual(
-            _recipe_lines(text, "release-sealed-run-ready-ensure"),
-            ["$(MAKE) release-sealed-run-ready-check || $(MAKE) release-sealed-run-ready"],
-        )
         self.assertIn("ops.scripts.release_auto_promotion_ready", _target_block(text, "release-auto-promotion-ready"))
         auto_promotion_block = _target_block(text, "release-auto-promotion-ready")
-        self.assertIn("$(MAKE) release-sealed-run-ready-ensure", auto_promotion_block)
-        self.assertIn("$(MAKE) learning-readiness-signoff-revalidation", auto_promotion_block)
-        self.assertIn("$(MAKE) auto-improve-readiness-report-body", auto_promotion_block)
-        self.assertIn('--self-check "$(RELEASE_CLOSEOUT_SEALED_SELF_CHECK_OUT)"', auto_promotion_block)
+        self.assertIn("$(MAKE) release-auto-promotion-ready-plan", auto_promotion_block)
+        self.assertIn("$(MAKE) release-auto-promotion-operator-summary", auto_promotion_block)
+        self.assertNotIn("release-sealed-run-ready-ensure", auto_promotion_block)
+        self.assertNotIn("learning-readiness-signoff-revalidation", auto_promotion_block)
+        self.assertNotIn("auto-improve-readiness-report-body", auto_promotion_block)
         self.assertNotIn("$(MAKE) release-sealed-run-ready-check", auto_promotion_block)
+        self.assertIn("ops.scripts.release_evidence_planner", _target_block(text, "release-auto-promotion-ready-plan"))
+        self.assertIn("--stage auto-promotion-ready", _target_block(text, "release-auto-promotion-ready-plan"))
+        self.assertIn('--self-check "$(RELEASE_CLOSEOUT_SEALED_SELF_CHECK_OUT)"', _target_block(text, "release-auto-promotion-operator-summary"))
         self.assertIn("$(MAKE) release-worktree-clean-check", core_block)
         self.assertIn("$(MAKE) test-execution-summary-current-check", core_block)
         self.assertIn("$(MAKE) test-execution-summary-full-current-check", core_block)

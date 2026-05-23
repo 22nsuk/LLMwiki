@@ -53,10 +53,11 @@ The registry-documented entrypoints are:
 - `make release-source-package-check`
 - `make release-run-ready`
 - `make release-run-ready-check`
-- `make release-run-ready-ensure`
+- `make release-sealed-run-ready-plan`
 - `make release-sealed-run-ready`
 - `make release-sealed-run-ready-check`
-- `make release-sealed-run-ready-ensure`
+- `make release-auto-promotion-ready-plan`
+- `make release-auto-promotion-operator-summary`
 - `make release-auto-promotion-ready`
 - `make release-auto-promotion-ready-check`
 - `make release-closeout-regression-dry-run`
@@ -81,8 +82,8 @@ expressions.
 | Schema/report contract | `make report-contracts-core` | regenerate artifacts, then rerun the focused schema/report tests |
 | Public export policy | `make sync-public-policy` | `make public-check` |
 | Release evidence | `make release-run-ready-check` | `make release-run-ready` from the committed tree before release |
-| Sealed release evidence | `make release-sealed-run-ready-check` | `make release-sealed-run-ready`; it first tries `make release-run-ready-ensure` |
-| Auto-promotion evidence | `make release-auto-promotion-ready-check` | `make release-auto-promotion-ready`; it first tries `make release-sealed-run-ready-ensure` |
+| Sealed release evidence | `make release-sealed-run-ready-check` | `make release-sealed-run-ready`; its planner requires current passing run-ready evidence and reports the minimal next action |
+| Auto-promotion evidence | `make release-auto-promotion-ready-check` | `make release-auto-promotion-ready`; its planner reuses current run/sealed evidence and refreshes only build-local operator diagnostics |
 | Supply chain | `make supply-chain-check` | `make sbom-readiness-check` for SBOM readiness |
 
 ## Editing Discipline
