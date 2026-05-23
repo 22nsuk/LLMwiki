@@ -9,10 +9,10 @@ import yaml
 PINNED_CHECKOUT_ACTION = "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"
 PINNED_SETUP_PYTHON_ACTION = "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405"
 PINNED_SETUP_UV_ACTION = "astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b"
-PINNED_UPLOAD_ARTIFACT_ACTION = "actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4"
-PINNED_DOWNLOAD_ARTIFACT_ACTION = "actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0"
+PINNED_UPLOAD_ARTIFACT_ACTION = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+PINNED_DOWNLOAD_ARTIFACT_ACTION = "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"
 PINNED_ATTEST_BUILD_PROVENANCE_ACTION = (
-    "actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f"
+    "actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32"
 )
 PINNED_PYPI_PUBLISH_ACTION = (
     "pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b"

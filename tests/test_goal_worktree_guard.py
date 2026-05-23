@@ -68,7 +68,7 @@ class GoalWorktreeGuardTests(unittest.TestCase):
         destination.write_text((REPO_ROOT / rel_path).read_text(encoding="utf-8"), encoding="utf-8")
 
     def _write_public_layout(self) -> None:
-        for rel_path in ("ops", "tests", "mk"):
+        for rel_path in ("ops", "tests", "mk", "docs"):
             (self.vault / rel_path).mkdir(exist_ok=True)
         for rel_path in ("README.md", "Makefile"):
             (self.vault / rel_path).write_text("placeholder\n", encoding="utf-8")
@@ -220,6 +220,55 @@ class GoalWorktreeGuardTests(unittest.TestCase):
         self.assertEqual(report["git"]["durable_private_ignored_entry_count"], 1)
         self.assertEqual(report["git"]["durable_private_ignored_status_codes"], {"!!": 1})
         self.assertNotIn("private-new-review.md", serialized)
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_ignored_external_report_archive_is_local_only_retained_evidence(self) -> None:
+        fake_git = FakeGit(
+            {
+                ("--version",): GitCommandResult(0, "git version 2.0", ""),
+                ("rev-parse", "--is-inside-work-tree"): GitCommandResult(0, "true", ""),
+                ("rev-parse", "--show-toplevel"): GitCommandResult(0, str(self.vault), ""),
+                ("rev-parse", "--verify", "HEAD"): GitCommandResult(0, "f" * 40, ""),
+                ("branch", "--show-current"): GitCommandResult(0, "main", ""),
+                ("status", "--porcelain=v1", "--untracked-files=normal"): GitCommandResult(
+                    0,
+                    "",
+                    "",
+                ),
+                (
+                    "status",
+                    "--porcelain=v1",
+                    "--ignored=matching",
+                    "--untracked-files=all",
+                    "--",
+                    "external-reports",
+                ): GitCommandResult(
+                    0,
+                    "\n".join(
+                        [
+                            "!! external-reports/archive/closed-review.md",
+                            "!! external-reports/report-reference-manifest.json",
+                        ]
+                    ),
+                    "",
+                ),
+            }
+        )
+
+        report = build_report(
+            GoalWorktreeGuardRequest(
+                vault=self.vault,
+                requested_mode="git",
+                git_runner=fake_git,
+                context=fixed_context(),
+            )
+        )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["decisions"]["can_promote_result"], True)
+        self.assertEqual(report["git"]["durable_private_ignored_entry_count"], 0)
+        self.assertEqual(report["git"]["durable_private_ignored_status_codes"], {})
+        self.assertEqual(report["blockers"], [])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_zip_extract_mode_is_distinct_and_non_promotable(self) -> None:

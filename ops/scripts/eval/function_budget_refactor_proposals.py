@@ -117,7 +117,16 @@ def _has_direct_test(vault: Path, page: str) -> bool:
 
 
 def _has_doc_reference(vault: Path, page: str) -> bool:
-    for rel_path in ("README.md", "ops/README.md"):
+    doc_paths = [
+        "README.md",
+        "ops/README.md",
+        *(
+            path.relative_to(vault).as_posix()
+            for path in sorted((vault / "docs").glob("*.md"))
+            if path.is_file()
+        ),
+    ]
+    for rel_path in doc_paths:
         path = vault / rel_path
         if path.is_file() and page in path.read_text(encoding="utf-8"):
             return True

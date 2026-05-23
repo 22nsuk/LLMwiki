@@ -1,22 +1,22 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-22T19:41:15Z",
+  "generated_at": "2026-05-23T05:22:44Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "344c2730bfc80b6e4ac3c735c491cab4a4746e58dea4702d9fd6d15edbb33f18",
+  "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "a3518b983af5151b2388090f2addc8f0f528d38be74c4bb4e90f53aac939c23e",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "91558bdc7e64885feb4b64e35ef3775efe61cd479f085ae62f445457137c12ba",
     "goal_runtime_certificate": "0a9ce67b950063e73514218402aa025e2454aefccde2d5a1680f1e2d31676241",
-    "goal_worktree_guard": "2b38a2eaa77a6b2446ef7239850ec2c821deca382b1fb5008910e94eca81e5f6",
-    "learning_claim_activation": "9d5f1ea0b91fd4b2dd447bcc0b50280f2ebfb8e05e82f2c0c23f37bd6e710d61",
+    "goal_worktree_guard": "319cda955fa4bd2b73a23e36f9261d75075740f05c53606b09b480d4c5759ef4",
+    "learning_claim_activation": "481715bdce5b4bed6ed36789d21a42e9e042a14dfe56ee1ef0d6f44b6ad0f081",
     "learning_readiness_signoff": "1ec9a280330bf4c9f5cc6a77f7ea7590acaf29d0718a80299d25d8f466576e9d",
-    "self_improvement_negative_lessons": "f192bda66934e7987b07aff7205e2fe7dfed4f91edc17f755c783783188352d9",
-    "session_synopsis": "98ae752528e8d26bd80859cf4057512c604dd4e3c917f1fc82a6efae8fad9d4a",
+    "self_improvement_negative_lessons": "b2251b12d01af0125ed0e82ac5a6bb37fb2d81450a4369b476d2b61002202794",
+    "session_synopsis": "6af25ae342f244eac017657a191a40913301785340da703628c12a391d7f106b",
     "status_overrides": "361f8e43390f28745ec7bdfedd002b9ccc38b12931894a6ea399ab58198ad4b1",
     "auto_improve_sessions": "045839dd6979b19e7b1e2cf2c9ed4675b6db02844a8f4ea94a33326f904f690f"
   },
@@ -26,7 +26,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T19:41:15Z"
+    "checked_at": "2026-05-23T05:22:44Z"
   },
   "vault": ".",
   "policy": {

@@ -27,6 +27,7 @@ CLASSIFICATION_VALUES = (
 )
 USER_EXPORT_OUTPUT_OPTION_OVERRIDES = frozenset(
     {
+        "ops/scripts/public/cbm_public_export.py",
         "ops/scripts/public/export_public_repo.py",
     }
 )

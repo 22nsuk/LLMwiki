@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/public-check-summary.schema.json",
   "artifact_kind": "public_check_summary",
-  "generated_at": "2026-05-22T19:39:50Z",
+  "generated_at": "2026-05-23T05:21:19Z",
   "producer": "ops.scripts.public_check_summary",
   "source_command": "python -m ops.scripts.public_check_summary --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "344c2730bfc80b6e4ac3c735c491cab4a4746e58dea4702d9fd6d15edbb33f18",
+  "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "5b4a530c2ee9f550170db75a836c272dddd286fc1693f36718f1ee883aa956c5",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "c06547440ec0590662bcc3fa1744cfcb0e23d473f4835c66bec2442f00bfdd81",
-    "public_check_summary_inputs": "a2f3836bf35e7110f812f23c3231c10d91f54a6443dbd689476248bab5a8d514"
+    "source_paths": "35ed988acec0576aa8419c386d990498bf5764ec8211e0fd841d68491d3b4cc0",
+    "public_check_summary_inputs": "07e4f54c19eb45de9bb4bd88a33aaf8bdda2bcd39e5ce259eee1295aece5db95"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T19:39:50Z"
+    "checked_at": "2026-05-23T05:21:19Z"
   },
   "vault": ".",
   "policy": {
@@ -30,17 +30,17 @@
   "summary": {
     "public_export_status": "pass",
     "public_check_status": "pass",
-    "export_file_count": 697,
-    "export_source_file_count": 696,
-    "export_root_fingerprint": "071322c597c0d952ed319a7e6aaeb545c54fc81d59b75c8c75a22627b49e7900",
-    "public_export_manifest_sha256": "c61dcc8574b66fef9e51c9193394c1c77a1cf8dd07e8d0977138d163ff6791d4",
-    "public_surface_policy_sha256": "b0c8b179e37deb2388a79c1ecb9377943c7a74957736345a09a534d5d0cb3643",
+    "export_file_count": 706,
+    "export_source_file_count": 705,
+    "export_root_fingerprint": "844e3b4c53cd463bee30b13e6df566411c824eaba4b8874aa82bd17520b32a98",
+    "public_export_manifest_sha256": "40107a474a5e2ced58f2accea21fc1d0fb26de6e632862e86c98e97a7d86eaa4",
+    "public_surface_policy_sha256": "665a8bfe310bfab3ff804daaa1b93064a01c2275b7ac17d112d63b36f92fe407",
     "command_count": 3,
     "command_fail_count": 0,
     "negative_assertion_fail_count": 0,
     "physical_repo_split_status": "pass",
     "private_surface_history_absence_status": "pass",
-    "pytest_passed": 1439,
+    "pytest_passed": 1447,
     "pytest_failed": 0,
     "pytest_errors": 0,
     "pytest_skipped": 43
@@ -48,10 +48,10 @@
   "public_export": {
     "output_dir": "<tmp>/llm-wiki-public-repo",
     "manifest_file": "PUBLIC-EXPORT-MANIFEST.json",
-    "file_count": 697,
-    "source_file_count": 696,
-    "export_root_fingerprint": "071322c597c0d952ed319a7e6aaeb545c54fc81d59b75c8c75a22627b49e7900",
-    "manifest_sha256": "c61dcc8574b66fef9e51c9193394c1c77a1cf8dd07e8d0977138d163ff6791d4"
+    "file_count": 706,
+    "source_file_count": 705,
+    "export_root_fingerprint": "844e3b4c53cd463bee30b13e6df566411c824eaba4b8874aa82bd17520b32a98",
+    "manifest_sha256": "40107a474a5e2ced58f2accea21fc1d0fb26de6e632862e86c98e97a7d86eaa4"
   },
   "public_export_negative_assertions": {
     "excluded_prefix_absence": {
@@ -94,8 +94,8 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 3260,
-      "stdout_tail": "Success: no issues found in 251 source files\n",
+      "duration_ms": 3409,
+      "stdout_tail": "Success: no issues found in 252 source files\n",
       "stderr_tail": "",
       "pytest_counts": {}
     },
@@ -108,11 +108,11 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 84309,
-      "stdout_tail": "bringing up nodes...\nbringing up nodes...\n\n.ssss.ssssssssssssssssssssssssssss.....s................................ [  4%]\n.......s................................................................ [  9%]\n........................................................................ [ 14%]\n........................................................................ [ 19%]\n........................................................................ [ 24%]\n........................................................................ [ 29%]\n........................................................................ [ 34%]\n........................................................................ [ 38%]\n........................................................................ [ 43%]\n........s.....................................ss........................ [ 48%]\n........................................................................ [ 53%]\nssss.................................................................... [ 58%]\n........................................................................ [ 63%]\n........................................................................ [ 68%]\n........................................................................ [ 72%]\n........................................................................ [ 77%]\n........................................................................ [ 82%]\n.......................ss............................................... [ 87%]\n........................................................................ [ 92%]\n........................................................................ [ 97%]\n..........................................                               [100%]\n1439 passed, 43 skipped in 84.09s (0:01:24)\n",
+      "duration_ms": 86032,
+      "stdout_tail": "bringing up nodes...\nbringing up nodes...\n\n.sssssssssssssssss.ssssssss.sss.ss...sss..............s................. [  4%]\n........................................................................ [  9%]\n........................................................................ [ 14%]\n........................................................................ [ 19%]\n........................................................................ [ 24%]\n........................................................................ [ 28%]\n........................................................................ [ 33%]\n........................................................................ [ 38%]\n........................................................................ [ 43%]\n.....................................s...............ss................. [ 48%]\n....................................................ssss................ [ 53%]\n........................................................................ [ 57%]\n........................................................................ [ 62%]\n........................................................................ [ 67%]\n........................................................................ [ 72%]\n........................................................................ [ 77%]\n........................................................................ [ 82%]\n...........................................................ss........... [ 86%]\n........................................................................ [ 91%]\n........................................................................ [ 96%]\n..................................................                       [100%]\n1447 passed, 43 skipped in 85.78s (0:01:25)\n",
       "stderr_tail": "",
       "pytest_counts": {
-        "passed": 1439,
+        "passed": 1447,
         "failed": 0,
         "errors": 0,
         "skipped": 43,

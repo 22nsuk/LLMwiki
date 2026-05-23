@@ -402,6 +402,7 @@ def build_auto_improve_goal_contract(
             {"path": "ops/", "purpose": "runtime, schemas, policies, reports, and scripts"},
             {"path": "tests/", "purpose": "deterministic regression coverage"},
             {"path": "mk/", "purpose": "Make target orchestration"},
+            {"path": "docs/", "purpose": "public-safe workflow and runtime documentation"},
             {"path": ".github/", "purpose": "CI workflow contract"},
             {"path": ".codex/agents/", "purpose": "shared subagent profile surface"},
             {"path": "README.md", "purpose": "operator-facing runtime contract"},

@@ -4,7 +4,7 @@
 `code/ops` mirror다.
 
 중요:
-- public mirror에서는 `ops/`, `tests/`, `tools/`, `mk/`, `.codex/agents/`, `.github/`, 루트 문서를 기본 작업 surface로 본다.
+- public mirror에서는 `docs/`, `ops/`, `tests/`, `tools/`, `mk/`, `.codex/agents/`, `.github/`, 루트 문서를 기본 작업 surface로 본다.
 - 같은 루트에 `AGENTS.local.md`가 있으면, full local vault 세션은 이 문서와 `AGENTS.local.md`를 함께 읽는다.
 - public mirror에서는 `raw/`, `wiki/`, `system/`, `runs/`, `external-reports/`가 없거나 비공개일 수 있음을 기본 가정으로 둔다.
 
@@ -18,6 +18,7 @@ public mirror 기준 기본 작업 범위:
 - `tests/`
 - `tools/`
 - `mk/`
+- `docs/`
 - `.codex/agents/`
 - `.github/`
 - 루트 문서/설정 파일
@@ -80,10 +81,11 @@ public mirror에서 당신의 기본 역할은 **runtime maintainer** 또는 **m
 - 역할: policy, eval, schema, template, helper script를 담는 control layer
 - public mirror의 핵심 작업 surface다.
 
-### Layer D — Operating rules
+### Layer D — Documentation and operating rules
 - 위치: `AGENTS.md`
 - 역할: public-safe operating contract
 - full local vault가 있으면 `AGENTS.local.md`가 이를 확장한다.
+- `docs/`는 public-safe workflow와 runtime orientation을 담는 첫 진입점이다.
 
 구조 설명의 public-safe canonical surface는 `ARCHITECTURE.md`다.
 
@@ -116,7 +118,23 @@ full local vault가 있을 때만 추가로:
 
 - `.codex/agents/`는 public mirror에 포함된다.
 - repo-shared ladder와 role intent는 유지해야 한다.
-- 실제 rung 선택은 `ops/scripts/select_subagent_rung.py`가 맡고, `.toml`은 fallback instruction surface다.
+- 실제 rung 선택은 `ops/scripts/core/select_subagent_rung.py`가 맡고, `.toml`은 fallback instruction surface다.
+
+### D. Optional codebase-memory-mcp sidecar
+
+`codebase-memory-mcp`가 operator-local binary 또는 MCP server로 제공되는 세션에서는
+이를 **읽기 우선 code/ops 구조 색인 hint**로 사용할 수 있다.
+
+운영 규칙:
+- 표준 index source는 full-vault root가 아니라 `make cbm-index-public`이 만드는 public-safe export다.
+- repo 수정 후 graph를 신뢰하기 전에는 `make cbm-index-public`로 재색인한다. CBM은 working tree를 자동 감시하지 않는다.
+- snippet/search 결과가 `CBM_PUBLIC_OUT` cache 경로를 반환하면 같은 relative path의 repo 원본 파일로 매핑해 수정한다.
+- 구조/영향 범위 질문에서는 broad grep/read 전에 `cbm-schema-public`, `cbm-architecture-public`, graph/search/trace/detect-change 계열 query를 먼저 볼 수 있다.
+- graph 결과와 `CALLS`/`WRITES`/`CONFIGURES` 같은 edge는 candidate link, not proof이며, live file read와 Make/Pytest gate로 확인한다.
+- `raw/`, `wiki/`, `system/`, `runs/`, `external-reports/`, `ops/reports/`는 index/query 대상이 아니다.
+- `codebase-memory-mcp install`의 자동 agent config/hook 설정이나 blocking hook으로 Read/Grep/Edit workflow를 막지 않는다.
+- 이 sidecar는 dependency, CI/release gate, promotion authority, canonical evidence, 또는 assistant-specific workflow requirement가 아니다.
+- 자세한 사용법은 `docs/codebase-memory-mcp.md`를 본다.
 
 ---
 
@@ -127,7 +145,7 @@ full local vault가 있을 때만 추가로:
 3. generated private artifact를 source of truth처럼 다루지 않는다.
 4. deterministic test와 schema-backed contract를 우선한다.
    - `generated_at`를 쓰거나 날짜 기반 policy logic을 가진 runtime/report generator는 `RuntimeContext`를 받아 injected clock으로 재현 가능해야 한다.
-5. contract가 바뀌면 관련 README / test / schema / policy를 같이 갱신한다.
+5. contract가 바뀌면 관련 docs / tests / schema / policy를 같이 갱신한다.
 6. `.codex/agents/` 수정 시 role intent, ladder, routing contract를 함께 본다.
 7. 절대경로, temp workspace path, local state leak를 public surface에 남기지 않는다.
 8. 새 public 파일이나 공개 경계를 바꾸는 변경은 `make sync-public-policy`까지 포함해 마무리한다.

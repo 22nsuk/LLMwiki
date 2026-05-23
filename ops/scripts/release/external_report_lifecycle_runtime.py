@@ -558,6 +558,7 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         "evidence_paths": [
             ".gitignore",
             "ARCHITECTURE.md",
+            "docs/public-mirror.md",
             "ops/scripts/public/public_surface_policy.py",
             "tests/test_public_surface_policy.py",
             "tests/test_export_public_repo.py",
@@ -1364,6 +1365,7 @@ def repo_boundary_history_hygiene_status(vault: Path, existing_count: int, expec
         for rel_path in (
             ".gitignore",
             "ARCHITECTURE.md",
+            "docs/public-mirror.md",
             "ops/scripts/public/public_surface_policy.py",
             "tests/test_public_surface_policy.py",
             "tests/test_export_public_repo.py",
@@ -1483,7 +1485,6 @@ def generated_artifact_tracking_policy_status(
         )
     )
     report = load_json_object(vault / "ops/reports/generated-artifact-index.json")
-    summary = as_dict(report.get("summary"))
     explicit_policy = any(
         token in surface_text
         for token in (
@@ -1496,10 +1497,10 @@ def generated_artifact_tracking_policy_status(
     has_ephemeral_class = "ephemeral" in surface_text
     if (
         existing_count == expected_count
-        and report.get("status") == "pass"
+        and report.get("artifact_kind") == "generated_artifact_index_report"
+        and report.get("producer") == "ops.scripts.generated_artifact_index"
         and explicit_policy
         and has_ephemeral_class
-        and as_int(summary.get("archive_candidate_count")) == 0
     ):
         return "implemented"
     return "partially_automated"

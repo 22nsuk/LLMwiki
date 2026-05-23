@@ -21,6 +21,7 @@ PUBLIC_INCLUDE_FILES = (
 PUBLIC_INCLUDE_PREFIXES = (
     ".codex/agents/",
     ".github/",
+    "docs/",
     "mk/",
     "ops/",
     "tests/",
@@ -52,6 +53,7 @@ PUBLIC_EXCLUDED_PREFIXES = (
 )
 
 PUBLIC_EXCLUDED_SEGMENTS = (
+    ".codebase-memory",
     ".cache",
     ".git",
     ".idea",
@@ -79,6 +81,8 @@ def render_public_gitignore_block() -> str:
         "!/.codex/agents/**",
         "!/.github/",
         "!/.github/**",
+        "!/docs/",
+        "!/docs/**",
         "!/mk/",
         "!/mk/**",
         "!/AGENTS.md",

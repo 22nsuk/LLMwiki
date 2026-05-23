@@ -40,7 +40,7 @@ def documentation_markdown_surfaces(vault: Path) -> list[tuple[str, Path]]:
 
     for path in sorted(vault.glob("*.md")):
         add(path)
-    for root_name in ("ops", "runs"):
+    for root_name in ("docs", "ops", "runs"):
         root = vault / root_name
         if not root.exists():
             continue

@@ -44,6 +44,9 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertEqual(classify_path(".gitignore"), "generated_canonical")
         self.assertEqual(classify_path(".github/workflows/ci.yml"), "public_source")
         self.assertEqual(classify_path("./.github/CODEOWNERS"), "public_source")
+        self.assertEqual(classify_path("AGENTS.local.md"), "local_source_contract")
+        self.assertEqual(classify_path("docs"), "public_source")
+        self.assertEqual(classify_path("docs/development.md"), "public_source")
         self.assertEqual(classify_path("github/workflows/ci.yml"), "unexpected")
 
     def test_commits_public_source_and_generated_evidence_together(self) -> None:
@@ -235,6 +238,47 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
             ["external-reports/"],
         )
 
+    def test_allows_ignored_external_report_archive_as_local_only_evidence(self) -> None:
+        (self.vault / ".gitignore").write_text("tmp/\nexternal-reports/\n", encoding="utf-8")
+        _git(self.vault, "add", ".gitignore")
+        _git(self.vault, "commit", "-m", "ignore external reports")
+        (self.vault / "external-reports" / "archive").mkdir(parents=True)
+        (self.vault / "external-reports" / "report-reference-manifest.json").write_text(
+            '{"references": []}\n',
+            encoding="utf-8",
+        )
+        (self.vault / "external-reports" / "archive" / "closed-review.md").write_text(
+            "# Closed Review\n",
+            encoding="utf-8",
+        )
+
+        rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-source-ready-commit.json",
+                "--message",
+                "release: ready",
+            ]
+        )
+
+        self.assertEqual(rc, 0)
+        report = json.loads(
+            (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(report["status"], "no_changes")
+        self.assertEqual(report["entries"], [])
+        self.assertEqual(
+            report["local_only_retained_private_ignored_status_paths"],
+            ["external-reports/report-reference-manifest.json"],
+        )
+        self.assertEqual(
+            report["local_only_retained_private_ignored_status_prefixes"],
+            ["external-reports/archive/"],
+        )
+        self.assertIn("!! external-reports/", _git(self.vault, "status", "--short", "--ignored"))
+
     def test_rejects_preexisting_staged_changes_by_default(self) -> None:
         (self.vault / "README.md").write_text("# Test\n\nStaged.\n", encoding="utf-8")
         _git(self.vault, "add", "README.md")
@@ -257,6 +301,41 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertEqual(report["status"], "blocked")
         self.assertEqual(report["reason"], "preexisting_staged_changes")
         self.assertEqual(report["staged_paths"], ["README.md"])
+
+    def test_allows_staged_external_reports_deindex_when_local_file_remains(self) -> None:
+        (self.vault / ".gitignore").write_text("tmp/\nexternal-reports/\n", encoding="utf-8")
+        (self.vault / "external-reports" / "archive").mkdir(parents=True)
+        archived_report = self.vault / "external-reports" / "archive" / "closed-review.md"
+        archived_report.write_text("# Closed Review\n", encoding="utf-8")
+        _git(self.vault, "add", "-f", ".gitignore", "external-reports/archive/closed-review.md")
+        _git(self.vault, "commit", "-m", "track archived external report")
+        _git(self.vault, "rm", "--cached", "external-reports/archive/closed-review.md")
+
+        rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-source-ready-commit.json",
+                "--message",
+                "release: ready",
+            ]
+        )
+
+        self.assertEqual(rc, 0)
+        self.assertTrue(archived_report.exists())
+        self.assertEqual(_git(self.vault, "status", "--short"), "")
+        changed_paths = _git(self.vault, "show", "--name-only", "--format=", "HEAD").splitlines()
+        self.assertIn("external-reports/archive/closed-review.md", changed_paths)
+        report = json.loads(
+            (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(report["status"], "committed")
+        categories = {entry["path"]: entry["category"] for entry in report["entries"]}
+        self.assertEqual(
+            categories["external-reports/archive/closed-review.md"],
+            "local_only_private_deindex",
+        )
 
     def test_commit_rejects_intervening_head_change_after_snapshot(self) -> None:
         snapshot_rc = main(

@@ -1,22 +1,22 @@
 {
   "$schema": "ops/schemas/release-clean-blocker-ledger.schema.json",
   "artifact_kind": "release_clean_blocker_ledger",
-  "generated_at": "2026-05-22T19:41:16Z",
+  "generated_at": "2026-05-23T05:22:44Z",
   "producer": "ops.scripts.release_clean_blocker_ledger",
   "source_command": "python -m ops.scripts.release_clean_blocker_ledger --vault . --out ops/reports/release-clean-blocker-ledger.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "344c2730bfc80b6e4ac3c735c491cab4a4746e58dea4702d9fd6d15edbb33f18",
+  "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "f6aa73699b331c2043768aebbdd1a91ef5399c245b427d3c0bc1358b10789332",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "05d9ca92b669481899a02e5a557550b51eabdd6e3d3c4d5cb6757659f40de64c",
-    "learning_delta_scoreboard": "86eb71f76599b3a461b033f71feffd8136bccfa763766581ce5f265cc630afb2",
-    "release_closeout_summary": "87dd4a1b3311b6c89c909e3f2f175d6f927c6e85c978fb701f44f20c7d197ace",
-    "release_evidence_cohort": "59de8c0f5d7e929c524625fa072c14a9c0027a7e1def6b06154d4c0cdc87e29b",
-    "release_lane_summary": "eb9e21e3891ac7815e57e04e4f2941852486512bb39ab02c03651b7fa89fe0a0",
+    "learning_delta_scoreboard": "d1ea3620ae62b90fda627a388518bb7234378eee58f7c231dee67f028bf919b4",
+    "release_closeout_summary": "59ce43c631b4bfb790bd1a02bd2a883e0d03597b12eaf49564b47a795672298f",
+    "release_evidence_cohort": "d07938313f336bb02c076b810839e9e516396b7cb14ed58def29cdbac35be447",
+    "release_lane_summary": "691c522c03c595da9b91830963db75dd4049b396dd739af7b209beade74b3454",
     "release_risk_taxonomy": "03e1c9015389ebac078be42f611e672a1f922d96552bd16980f9900f78d6b2e6",
-    "current_source_tree_fingerprint": "2e34333c3269c6c0b1adfe91096d8c3ea49c6877d8ed3a6d03224a64bec6afa5"
+    "current_source_tree_fingerprint": "1e82d41b4d0d859ed4f7322d2b4dd98d5517cdc622d8ed5ea173ad2aee0ae00d"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T19:41:16Z"
+    "checked_at": "2026-05-23T05:22:44Z"
   },
   "vault": ".",
   "policy": {
@@ -99,7 +99,7 @@
         "Regenerate release evidence in one closeout chain or document why fingerprint divergence is acceptable."
       ],
       "risk_owner": "runtime-maintainer",
-      "expires_at": "2026-05-29T19:41:16Z",
+      "expires_at": "2026-05-30T05:22:44Z",
       "acceptance_source": "ops/scripts/release_closeout_summary.py",
       "closure_action": "Rerun release evidence in one ordered closeout chain before release signoff.",
       "rollback_trigger": "Treat source tree coherence attention as a blocker if component fingerprints are missing.",
@@ -125,7 +125,7 @@
         "Regenerate release evidence in one closeout chain or document why fingerprint divergence is acceptable."
       ],
       "risk_owner": "runtime-maintainer",
-      "expires_at": "2026-05-29T19:41:16Z",
+      "expires_at": "2026-05-30T05:22:44Z",
       "acceptance_source": "ops/scripts/release_closeout_summary.py",
       "closure_action": "Rerun release evidence in one ordered closeout chain before release signoff.",
       "rollback_trigger": "Treat source tree coherence attention as a blocker if component fingerprints are missing.",
@@ -222,7 +222,7 @@
       "conditional_lane_effect": "operator_review_required",
       "learning_lane_effect": "blocks_learning_claim",
       "advisory_lifecycle_effect": "not_applicable",
-      "message": "release_evidence_cohort release gate is not pass: release evidence cohort status=attention; strict_same_fingerprint=false; component_fingerprint_count=4; clean_lane_contract_status=fail",
+      "message": "release_evidence_cohort release gate is not pass: release evidence cohort status=attention; strict_same_fingerprint=false; component_fingerprint_count=2; clean_lane_contract_status=fail",
       "required_evidence": [
         "Run make release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint and confirm strict_same_fingerprint=true.",
         "can_promote_result must stay false until this release gate is pass."
@@ -325,7 +325,7 @@
       "conditional_lane_effect": "operator_review_required",
       "learning_lane_effect": "blocks_learning_claim",
       "advisory_lifecycle_effect": "not_applicable",
-      "message": "release_evidence_cohort release gate is not pass: release evidence cohort status=attention; strict_same_fingerprint=false; component_fingerprint_count=4; clean_lane_contract_status=fail",
+      "message": "release_evidence_cohort release gate is not pass: release evidence cohort status=attention; strict_same_fingerprint=false; component_fingerprint_count=2; clean_lane_contract_status=fail",
       "required_evidence": [
         "Run make release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint and confirm strict_same_fingerprint=true.",
         "can_promote_result must stay false until this release gate is pass."

@@ -31,9 +31,12 @@ PUBLIC_SOURCE_FILES = {
     ".pre-commit-config.yaml",
     "AGENTS.md",
     "ARCHITECTURE.md",
+    "CONTRIBUTING.md",
     "LICENSE",
     "Makefile",
     "README.md",
+    "SECURITY.md",
+    "THIRD_PARTY_NOTICES.md",
     "mypy.ini",
     "pyproject.toml",
     "pytest.ini",
@@ -41,14 +44,19 @@ PUBLIC_SOURCE_FILES = {
     "requirements.txt",
     "uv.lock",
 }
+LOCAL_SOURCE_CONTRACT_FILES = {
+    "AGENTS.local.md",
+}
 PUBLIC_SOURCE_PREFIXES = (
     ".codex/agents/",
     ".github/",
+    "docs/",
     "mk/",
     "ops/",
     "tests/",
     "tools/",
 )
+SOURCE_CONTRACT_CATEGORIES = {"public_source", "local_source_contract"}
 PRIVATE_OR_TRANSIENT_PREFIXES = (
     ".git/",
     ".venv/",
@@ -63,6 +71,12 @@ PRIVATE_OR_TRANSIENT_PREFIXES = (
     "wiki/",
 )
 DURABLE_PRIVATE_IGNORED_STATUS_PREFIXES = ("external-reports/",)
+LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_STATUS_PATHS = (
+    "external-reports/report-reference-manifest.json",
+)
+LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_STATUS_PREFIXES = ("external-reports/archive/",)
+LOCAL_ONLY_PRIVATE_DEINDEX_PREFIXES = ("external-reports/",)
+LOCAL_ONLY_PRIVATE_DEINDEX_CATEGORY = "local_only_private_deindex"
 
 
 @dataclass(frozen=True)
@@ -132,6 +146,35 @@ def parse_status_porcelain_z(raw: str) -> list[StatusEntry]:
     return entries
 
 
+def _is_local_only_retained_private_ignored_path(rel_path: str) -> bool:
+    if rel_path in LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_STATUS_PATHS:
+        return True
+    return any(
+        rel_path.startswith(prefix)
+        for prefix in LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_STATUS_PREFIXES
+    )
+
+
+def _ignored_directory_contains_only_local_retained_files(vault: Path, rel_path: str) -> bool:
+    path = vault / rel_path
+    if not path.is_dir():
+        return False
+    files = [item for item in path.rglob("*") if item.is_file()]
+    return bool(files) and all(
+        _is_local_only_retained_private_ignored_path(
+            _normalize_repo_path(item.relative_to(vault).as_posix())
+        )
+        for item in files
+    )
+
+
+def _is_local_only_retained_private_ignored_entry(vault: Path, entry: StatusEntry) -> bool:
+    path = _normalize_repo_path(entry.path)
+    if _is_local_only_retained_private_ignored_path(path):
+        return True
+    return _ignored_directory_contains_only_local_retained_files(vault, path)
+
+
 def git_status_entries(vault: Path) -> list[StatusEntry]:
     status = _run_git(vault, ["status", "--porcelain=v1", "-z", "--untracked-files=normal"])
     if status.returncode != 0:
@@ -153,7 +196,10 @@ def git_status_entries(vault: Path) -> list[StatusEntry]:
             ignored_status.stderr.strip() or "git ignored durable private status failed"
         )
     ignored_entries = [
-        entry for entry in parse_status_porcelain_z(ignored_status.stdout) if entry.xy == "!!"
+        entry
+        for entry in parse_status_porcelain_z(ignored_status.stdout)
+        if entry.xy == "!!"
+        and not _is_local_only_retained_private_ignored_entry(vault, entry)
     ]
     entries = [*parse_status_porcelain_z(status.stdout), *ignored_entries]
     deduped: dict[tuple[str, str, str], StatusEntry] = {}
@@ -176,17 +222,37 @@ def _normalize_repo_path(path: str) -> str:
     return normalized
 
 
+def _matches_prefix_or_root(path: str, prefixes: tuple[str, ...]) -> bool:
+    return any(path == prefix.rstrip("/") or path.startswith(prefix) for prefix in prefixes)
+
+
 def classify_path(path: str) -> str:
     normalized = _normalize_repo_path(path)
     if not normalized or normalized == "<outside-repo>":
         return "unexpected"
-    if normalized in GENERATED_FILES or normalized.startswith(GENERATED_PREFIXES):
+    if normalized in GENERATED_FILES or _matches_prefix_or_root(normalized, GENERATED_PREFIXES):
         return "generated_canonical"
-    if normalized.startswith(PRIVATE_OR_TRANSIENT_PREFIXES):
+    if normalized in LOCAL_SOURCE_CONTRACT_FILES:
+        return "local_source_contract"
+    if _matches_prefix_or_root(normalized, PRIVATE_OR_TRANSIENT_PREFIXES):
         return "unexpected"
-    if normalized in PUBLIC_SOURCE_FILES or normalized.startswith(PUBLIC_SOURCE_PREFIXES):
+    if normalized in PUBLIC_SOURCE_FILES or _matches_prefix_or_root(normalized, PUBLIC_SOURCE_PREFIXES):
         return "public_source"
     return "unexpected"
+
+
+def _is_local_only_private_deindex(vault: Path, entry: StatusEntry, path: str) -> bool:
+    if "D" not in entry.xy:
+        return False
+    if not any(path.startswith(prefix) for prefix in LOCAL_ONLY_PRIVATE_DEINDEX_PREFIXES):
+        return False
+    return (vault / path).exists()
+
+
+def _classify_entry(vault: Path, entry: StatusEntry, path: str) -> str:
+    if _is_local_only_private_deindex(vault, entry, path):
+        return LOCAL_ONLY_PRIVATE_DEINDEX_CATEGORY
+    return classify_path(path)
 
 
 def _load_preexisting_paths(pre_status_path: Path | None) -> set[str]:
@@ -336,13 +402,18 @@ def _release_source_ready_diagnostics(vault: Path) -> dict[str, Any]:
     }
 
 
-def _entry_payload(entry: StatusEntry, *, preexisting_paths: set[str]) -> dict[str, Any]:
+def _entry_payload(
+    vault: Path,
+    entry: StatusEntry,
+    *,
+    preexisting_paths: set[str],
+) -> dict[str, Any]:
     path = _normalize_repo_path(entry.path)
     return {
         "xy": entry.xy,
         "path": path,
         "original_path": _normalize_repo_path(entry.original_path) if entry.original_path else "",
-        "category": classify_path(path),
+        "category": _classify_entry(vault, entry, path),
         "phase": "preexisting" if path in preexisting_paths else "converge_or_post_snapshot",
         "staged": entry.staged,
     }
@@ -363,7 +434,10 @@ def _display_path(vault: Path, path: Path | None) -> str:
 
 
 def _base_report(vault: Path, entries: list[StatusEntry], preexisting_paths: set[str]) -> dict[str, Any]:
-    entry_payloads = [_entry_payload(entry, preexisting_paths=preexisting_paths) for entry in entries]
+    entry_payloads = [
+        _entry_payload(vault, entry, preexisting_paths=preexisting_paths)
+        for entry in entries
+    ]
     counts: dict[str, int] = {}
     for item in entry_payloads:
         category = str(item["category"])
@@ -379,6 +453,13 @@ def _base_report(vault: Path, entries: list[StatusEntry], preexisting_paths: set
         "durable_private_ignored_status_prefixes": list(
             DURABLE_PRIVATE_IGNORED_STATUS_PREFIXES
         ),
+        "local_only_retained_private_ignored_status_paths": list(
+            LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_STATUS_PATHS
+        ),
+        "local_only_retained_private_ignored_status_prefixes": list(
+            LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_STATUS_PREFIXES
+        ),
+        "local_only_private_deindex_prefixes": list(LOCAL_ONLY_PRIVATE_DEINDEX_PREFIXES),
     }
 
 
@@ -490,10 +571,16 @@ def run_commit(
             return 1
 
     unexpected = [item for item in report["entries"] if item["category"] == "unexpected"]
-    late_public_source = [
-        item for item in report["entries"] if amend and item["category"] == "public_source"
+    late_source_contract = [
+        item
+        for item in report["entries"]
+        if amend and item["category"] in SOURCE_CONTRACT_CATEGORIES
     ]
-    staged = [item for item in report["entries"] if item["staged"]]
+    staged = [
+        item
+        for item in report["entries"]
+        if item["staged"] and item["category"] != LOCAL_ONLY_PRIVATE_DEINDEX_CATEGORY
+    ]
     paths = [str(item["path"]) for item in report["entries"] if item["path"]]
     if unexpected:
         report["status"] = "blocked"
@@ -504,13 +591,21 @@ def run_commit(
         for item in unexpected:
             print(item["path"], file=sys.stderr)
         return 1
-    if late_public_source:
+    if late_source_contract:
         report["status"] = "blocked"
-        report["reason"] = "amend_contains_public_source_changes"
-        report["late_public_source_paths"] = [item["path"] for item in late_public_source]
+        if all(item["category"] == "public_source" for item in late_source_contract):
+            report["reason"] = "amend_contains_public_source_changes"
+            report["late_public_source_paths"] = [
+                item["path"] for item in late_source_contract
+            ]
+        else:
+            report["reason"] = "amend_contains_source_contract_changes"
+            report["late_source_contract_paths"] = [
+                item["path"] for item in late_source_contract
+            ]
         _write_report(out_path, report)
         print(
-            "release-source-ready-amend refused: public source changed after release-source-ready commit",
+            "release-source-ready-amend refused: source contract changed after release-source-ready commit",
             file=sys.stderr,
         )
         return 1

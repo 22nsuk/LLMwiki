@@ -36,6 +36,9 @@ pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
 MAKEFILE = Path("Makefile")
 README = Path("README.md")
+DOCS_DEVELOPMENT = Path("docs/development.md")
+DOCS_CBM = Path("docs/codebase-memory-mcp.md")
+DOCS_RELEASE = Path("docs/release.md")
 CONFTEST = Path("tests/conftest.py")
 MYPY_ALLOWLIST = Path("ops/mypy-allowlist.txt")
 MYPY_STRICT_PREVIEW_ALLOWLIST = Path("ops/mypy-strict-preview-allowlist.txt")
@@ -1006,23 +1009,25 @@ class MakefileStaticGateTests(unittest.TestCase):
     def test_readme_and_pytest_ini_pin_supported_pytest_entrypoints(self) -> None:
         registry = _test_lane_registry()
         readme_text = README.read_text(encoding="utf-8")
+        development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
         conftest_text = CONFTEST.read_text(encoding="utf-8")
         pytest_ini_text = PYTEST_INI.read_text(encoding="utf-8")
 
+        self.assertIn("docs/development.md", readme_text)
         self.assertIn(
             "공식 pytest 진입점은 `make test*`, `make check*`, `make public-check*` 또는 `.venv/bin/python -m pytest`다.",
-            readme_text,
+            development_text,
         )
         self.assertIn(
-            "문서, CI, 재현 절차 예시도 bare `pytest`가 아니라 `python -m pytest`",
-            readme_text,
+            "문서, CI, 재현 절차 예시도 bare `pytest`가 아니라 `python -m pytest` 또는 Make target을 사용한다.",
+            development_text,
         )
         self.assertIn("plain `pytest` is not a supported entrypoint", conftest_text)
         self.assertIn("BARE_PYTEST_GUIDANCE", conftest_text)
         self.assertNotRegex(pytest_ini_text, r"(?im)^pythonpath\s*=")
         for entrypoint in compatibility_names(registry, "documented_entrypoint"):
             with self.subTest(entrypoint=entrypoint):
-                self.assertIn(entrypoint, readme_text)
+                self.assertIn(entrypoint, development_text)
 
     def test_python_command_allows_interpreter_flags(self) -> None:
         text = _makefile_text()
@@ -1045,7 +1050,7 @@ class MakefileStaticGateTests(unittest.TestCase):
 
     def test_fast_smoke_is_curated_developer_feedback_loop(self) -> None:
         text = _makefile_text()
-        readme_text = README.read_text(encoding="utf-8")
+        development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
         block = _target_block(text, "fast-smoke")
         expected_tests = (
             "tests/test_import_fallback_contract.py",
@@ -1081,7 +1086,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("FAST_SMOKE_TESTS ?=", text)
         self.assertIn(
             "`make fast-smoke`는 Subagent/developer precheck 전용 curated pytest slice다.",
-            readme_text,
+            development_text,
         )
         for test_path in expected_tests:
             with self.subTest(test_path=test_path):
@@ -1401,22 +1406,22 @@ class MakefileStaticGateTests(unittest.TestCase):
 
     def test_readme_ci_tier_summary_matches_current_workflow_shape(self) -> None:
         registry = _test_lane_registry()
-        readme_text = README.read_text(encoding="utf-8")
+        development_text = DOCS_DEVELOPMENT.read_text(encoding="utf-8")
 
         self.assertIn(
             "`.github/workflows/ci.yml`은 test tier를 `fast`, `report-contract`, `release-closeout-regression`, `artifact-finalization`, `release-sealing`, `subprocess`, `slow`, `integration`, `integration-heavy`, `public`으로 나눠 병렬 job으로 실행하고, 별도 Windows/raw-registry/supply-chain job도 유지한다.",
-            readme_text,
+            development_text,
         )
         for entrypoint in compatibility_names(registry, "documented_entrypoint"):
             with self.subTest(entrypoint=entrypoint):
-                self.assertIn(entrypoint, readme_text)
+                self.assertIn(entrypoint, development_text)
 
     def test_registry_documents_authority_boundary_for_lane_contract(self) -> None:
         registry = _test_lane_registry()
 
         self.assertEqual(
             documentation_authority(registry),
-            ("README.md", "ops/README.md", ".github/workflows/ci.yml"),
+            ("README.md", "docs/development.md", "ops/README.md", ".github/workflows/ci.yml"),
         )
         self.assertEqual(
             documentation_out_of_scope(registry),
@@ -1427,10 +1432,11 @@ class MakefileStaticGateTests(unittest.TestCase):
         architecture_text = Path("ARCHITECTURE.md").read_text(encoding="utf-8")
 
         self.assertIn("- `.github/`", architecture_text)
+        self.assertIn("- `docs/`", architecture_text)
 
     def test_release_smoke_targets_expose_fast_and_full_profiles(self) -> None:
         text = _makefile_text()
-        readme_text = README.read_text(encoding="utf-8")
+        release_doc_text = DOCS_RELEASE.read_text(encoding="utf-8")
 
         self.assertIn("release-smoke-fast", _target_block(text, ".PHONY"))
         self.assertIn("release-smoke-full", _target_block(text, ".PHONY"))
@@ -1653,11 +1659,11 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("release-check is check-only", finalized_block)
         self.assertIn(
             "developer/package precheck이며 canonical release evidence로 쓰지 않는다",
-            readme_text,
+            release_doc_text,
         )
         self.assertIn(
             "canonical release evidence는 이 full 단일 report인 `ops/reports/release-smoke-report.json`이다",
-            readme_text,
+            release_doc_text,
         )
 
     def test_release_closeout_summary_target_aggregates_existing_release_reports(
@@ -3849,6 +3855,110 @@ class MakefileStaticGateTests(unittest.TestCase):
                     self.assertIn("public-check-summary-check", block)
                 else:
                     self.assertIn("public-check-summary", block)
+
+    def test_codebase_memory_mcp_targets_are_optional_public_export_sidecar(self) -> None:
+        text = _makefile_text()
+        phony = _target_block(text, ".PHONY")
+        for target in (
+            "cbm-require-bin",
+            "cbm-export-public",
+            "cbm-index-public",
+            "cbm-list-projects-public",
+            "cbm-schema-public",
+            "cbm-architecture-public",
+            "cbm-reset-local",
+        ):
+            with self.subTest(target=target):
+                self.assertIn(target, phony)
+
+        for assignment in (
+            "CBM_BIN ?= codebase-memory-mcp",
+            "CBM_CACHE_ROOT ?= $(if $(XDG_CACHE_HOME),$(XDG_CACHE_HOME),$(HOME)/.cache)",
+            "CBM_PUBLIC_OUT ?= $(CBM_CACHE_ROOT)/llmwiki/codebase-memory-mcp/public-surface",
+            "CBM_CACHE_DIR ?= $(CBM_CACHE_ROOT)/codebase-memory-mcp/llmwiki-public",
+            "CBM_IGNORE_TEMPLATE ?= ops/templates/codebase-memory-mcp.cbmignore",
+            "CBM_PROJECT_NAME ?= $(subst /,-,$(patsubst /%,%,$(CBM_PUBLIC_OUT)))",
+        ):
+            self.assertIn(assignment, text)
+
+        export_block = _target_block(text, "cbm-export-public")
+        for token in (
+            "ops.scripts.cbm_public_export",
+            '--vault "$(VAULT)"',
+            '--out "$(CBM_PUBLIC_OUT)"',
+            '--cbmignore-template "$(CBM_IGNORE_TEMPLATE)"',
+        ):
+            self.assertIn(token, export_block)
+
+        self.assertEqual(
+            _target_block(text, "cbm-index-public").splitlines()[0],
+            "cbm-index-public: cbm-require-bin cbm-export-public",
+        )
+        self.assertIn(
+            '\'{"project":"$(CBM_PROJECT_NAME)"}\'',
+            _target_block(text, "cbm-schema-public"),
+        )
+        self.assertIn(
+            '\'{"project":"$(CBM_PROJECT_NAME)"}\'',
+            _target_block(text, "cbm-architecture-public"),
+        )
+        for release_gate in ("check", "check-finalized", "release-check", "release-source-ready"):
+            with self.subTest(release_gate=release_gate):
+                self.assertNotIn("cbm-", _target_block(text, release_gate))
+
+    def test_codebase_memory_mcp_onboarding_is_documented_in_public_entrypoints(self) -> None:
+        agents_text = Path("AGENTS.md").read_text(encoding="utf-8")
+        readme_text = README.read_text(encoding="utf-8")
+        ops_readme_text = Path("ops/README.md").read_text(encoding="utf-8")
+        cbm_docs_text = DOCS_CBM.read_text(encoding="utf-8")
+
+        for token in (
+            "Optional codebase-memory-mcp sidecar",
+            "make cbm-index-public",
+            "cbm-schema-public",
+            "cbm-architecture-public",
+            "make cbm-index-public`로 재색인",
+            "`CBM_PUBLIC_OUT` cache 경로",
+            "candidate link, not proof",
+            "assistant-specific workflow requirement",
+        ):
+            with self.subTest(surface="AGENTS.md", token=token):
+                self.assertIn(token, agents_text)
+
+        for token in (
+            "code/ops 구조 탐색",
+            "make cbm-index-public",
+            "make cbm-schema-public",
+            "make cbm-architecture-public",
+            "graph-first/file-verified",
+            "기존 `rg` / file read workflow",
+        ):
+            with self.subTest(surface="README.md", token=token):
+                self.assertIn(token, readme_text)
+
+        for token in (
+            "Optional codebase-memory-mcp quickstart",
+            "make cbm-index-public",
+            "make cbm-schema-public",
+            "make cbm-architecture-public",
+            "graph-first/file-verified",
+        ):
+            with self.subTest(surface="ops/README.md", token=token):
+                self.assertIn(token, ops_readme_text)
+
+        for token in (
+            "CBM_BIN=/path/to/codebase-memory-mcp",
+            "not a dependency",
+            "assistant-specific",
+            "CBM-EXPORT-MANIFEST.json",
+            "ops/reports/",
+            "Re-run `make cbm-index-public` after repo edits",
+            "cache export paths",
+            "Map them back to the same relative path in the repo",
+            "candidate links, not proof",
+        ):
+            with self.subTest(surface="docs/codebase-memory-mcp.md", token=token):
+                self.assertIn(token, cbm_docs_text)
 
     def test_raw_intake_and_review_classification_targets_exist(self) -> None:
         text = _makefile_text()

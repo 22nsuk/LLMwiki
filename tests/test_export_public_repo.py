@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from ops.scripts.cbm_public_export import CBM_MANIFEST_NAME, build_cbm_public_export
 from ops.scripts.export_public_repo import DEFAULT_PUBLIC_OUT, build_parser, export_public_repo
 
 pytestmark = pytest.mark.public
@@ -31,6 +32,9 @@ class ExportPublicRepoTests(unittest.TestCase):
             (vault / "README.md").write_text("root\n", encoding="utf-8")
             (vault / "SECURITY.md").write_text("# Security\n", encoding="utf-8")
             (vault / "THIRD_PARTY_NOTICES.md").write_text("# Third-Party Notices\n", encoding="utf-8")
+            (vault / "docs").mkdir()
+            (vault / "docs" / "README.md").write_text("# Docs\n", encoding="utf-8")
+            (vault / "docs" / "development.md").write_text("# Development\n", encoding="utf-8")
             (vault / "Makefile").write_text("all:\n\t@true\n", encoding="utf-8")
             (vault / "pyproject.toml").write_text("[build-system]\nrequires = ['setuptools']\n", encoding="utf-8")
             (vault / "requirements.txt").write_text("PyYAML\n", encoding="utf-8")
@@ -83,6 +87,8 @@ class ExportPublicRepoTests(unittest.TestCase):
             self.assertIn("README.md", manifest["files"])
             self.assertIn("SECURITY.md", manifest["files"])
             self.assertIn("THIRD_PARTY_NOTICES.md", manifest["files"])
+            self.assertIn("docs/README.md", manifest["files"])
+            self.assertIn("docs/development.md", manifest["files"])
             self.assertIn("pyproject.toml", manifest["files"])
             self.assertIn("uv.lock", manifest["files"])
             self.assertIn(".github/CODEOWNERS", manifest["files"])
@@ -119,6 +125,59 @@ class ExportPublicRepoTests(unittest.TestCase):
             self.assertEqual(manifest["manifest_file"], "PUBLIC-EXPORT-MANIFEST.json")
             self.assertTrue((public_dir / "PUBLIC-EXPORT-MANIFEST.json").exists())
             self.assertTrue((public_dir / ".codex" / "agents" / "worker.toml").exists())
+
+    def test_cbm_public_export_prunes_generated_reports_and_writes_boundary_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            for rel_path, content in {
+                "AGENTS.md": "# Agents\n",
+                "ARCHITECTURE.md": "# Architecture\n",
+                "CONTRIBUTING.md": "# Contributing\n",
+                "LICENSE": "Apache License\n",
+                "README.md": "# Readme\n",
+                "SECURITY.md": "# Security\n",
+                "THIRD_PARTY_NOTICES.md": "# Notices\n",
+                "docs/README.md": "# Docs\n",
+                "docs/codebase-memory-mcp.md": "# CBM\n",
+                "Makefile": "all:\n\t@true\n",
+                "pyproject.toml": "[build-system]\nrequires = ['setuptools']\n",
+                "requirements.txt": "PyYAML\n",
+                "requirements-dev.txt": "-r requirements.txt\npytest\n",
+                "pytest.ini": "[pytest]\n",
+                "uv.lock": "version = 1\n",
+                ".gitignore": "tmp/\n",
+                ".gitattributes": "* text=auto\n",
+                "ops/scripts/example.py": "print('ok')\n",
+                "ops/templates/codebase-memory-mcp.cbmignore": "raw/\nops/reports/\n.codebase-memory/\n",
+                "ops/reports/goal-worktree-guard.json": "{}\n",
+                "ops/reports/release-workflow-order-guard.json": "{}\n",
+                "ops/reports/workflow-dependency-planner.json": "{}\n",
+                "ops/reports/extra.json": "{}\n",
+                "tests/test_example.py": "def test_ok():\n    assert True\n",
+            }.items():
+                path = vault / rel_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content, encoding="utf-8")
+
+            out_dir = Path(temp_dir) / "cbm-public"
+            template = vault / "ops" / "templates" / "codebase-memory-mcp.cbmignore"
+            manifest = build_cbm_public_export(vault, out_dir, cbmignore_template=template)
+
+            self.assertEqual(manifest["manifest_file"], CBM_MANIFEST_NAME)
+            self.assertEqual(manifest["index_policy"], "codebase_memory_mcp_public_export")
+            self.assertTrue((out_dir / ".cbmignore").exists())
+            self.assertTrue((out_dir / CBM_MANIFEST_NAME).exists())
+            self.assertFalse((out_dir / "PUBLIC-EXPORT-MANIFEST.json").exists())
+            self.assertFalse((out_dir / "ops" / "reports").exists())
+            self.assertIn(".cbmignore", manifest["files"])
+            self.assertIn("docs/codebase-memory-mcp.md", manifest["files"])
+            self.assertIn("ops/templates/codebase-memory-mcp.cbmignore", manifest["files"])
+            self.assertNotIn("ops/reports/goal-worktree-guard.json", manifest["files"])
+            self.assertNotIn("ops/reports/release-workflow-order-guard.json", manifest["files"])
+            self.assertNotIn("ops/reports/workflow-dependency-planner.json", manifest["files"])
+            exported_file_count = len([path for path in out_dir.rglob("*") if path.is_file()])
+            self.assertEqual(manifest["file_count"], exported_file_count)
 
     def test_export_public_repo_can_reuse_same_output_dir(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

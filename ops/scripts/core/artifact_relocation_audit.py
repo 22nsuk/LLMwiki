@@ -32,12 +32,15 @@ SOURCE_COMMAND = (
     "python -m ops.scripts.artifact_relocation_audit "
     "--vault . --out ops/operator/artifact-relocation-audit.json"
 )
-DEPENDENCY_ROOTS = ("ops", "tests", "mk", ".github")
+DEPENDENCY_ROOTS = ("ops", "tests", "mk", "docs", ".github")
 ROOT_DEPENDENCY_FILES = (
     "Makefile",
     "README.md",
     "ARCHITECTURE.md",
+    "CONTRIBUTING.md",
     "AGENTS.md",
+    "SECURITY.md",
+    "THIRD_PARTY_NOTICES.md",
     "pyproject.toml",
 )
 EXCLUDED_SCAN_PREFIXES = (

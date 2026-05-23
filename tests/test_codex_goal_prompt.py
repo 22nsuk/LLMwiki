@@ -169,8 +169,9 @@ Generated artifact convergence:
         )
         surfaces = {
             "prompt": build_prompt_text(sample_goal_contract()),
-            "README.md": (REPO_ROOT / "README.md").read_text(encoding="utf-8"),
-            "ops/README.md": (REPO_ROOT / "ops" / "README.md").read_text(encoding="utf-8"),
+            "docs/self-improvement-runtime.md": (
+                REPO_ROOT / "docs" / "self-improvement-runtime.md"
+            ).read_text(encoding="utf-8"),
         }
         for name, text in surfaces.items():
             for phrase in required_phrases:

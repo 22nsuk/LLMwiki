@@ -18,10 +18,10 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "build>=1.3,<2",
-  "pytest>=8.3,<9",
+  "pytest>=8.3,<10",
   "pytest-xdist>=3.6,<4",
   "ruff>=0.15,<1",
-  "mypy>=1.20,<2",
+  "mypy>=1.20,<3",
   "types-PyYAML>=6.0,<7",
 ]
 
@@ -33,6 +33,7 @@ llm-wiki-artifact-relocation-audit = "ops.scripts.core.artifact_relocation_audit
 llm-wiki-backfill-archived-run-artifacts = "ops.scripts.core.backfill_archived_run_artifacts:main"
 llm-wiki-backfill-historical-bootstrap-reports = "ops.scripts.core.backfill_historical_bootstrap_reports:main"
 llm-wiki-bootstrap-preflight = "ops.scripts.core.bootstrap_preflight:main"
+llm-wiki-cbm-public-export = "ops.scripts.public.cbm_public_export:main"
 llm-wiki-cyclonedx-sbom = "ops.scripts.supply_chain.cyclonedx_sbom:main"
 llm-wiki-executor = "ops.scripts.core.executor:main"
 llm-wiki-export-public-repo = "ops.scripts.public.export_public_repo:main"

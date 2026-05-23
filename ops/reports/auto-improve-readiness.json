@@ -1,31 +1,31 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-22T19:41:16Z",
+  "generated_at": "2026-05-23T05:22:44Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "344c2730bfc80b6e4ac3c735c491cab4a4746e58dea4702d9fd6d15edbb33f18",
+  "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "e7dcab551802a0458f7e3e296cbad2994d5e0a3300909106981558366a4b0433",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "39826a2b5b3e40d769fd93a8b5cafedf081fcb235a3b2507df92694e250654e6",
-    "artifact_freshness_report": "95074abfd5df012cdb4b74412d758796f206cbd62b91051ba14ebd58ba3b5c66",
-    "goal_worktree_guard_report": "96aa8fb357909e16b16919e305d3ed032f0edab53f916b2600f2b2f5f6b00d7c",
+    "artifact_freshness_report": "c04fdd8740918f1f070307d324bcc5cd0d8e9cd651ee83cb00133bb350807eee",
+    "goal_worktree_guard_report": "8220a790cc7aa7ecfb94fc675b83d50ac5c2d8b4c27ebbea17a96141a297c787",
     "learning_readiness_signoff_report": "1ec9a280330bf4c9f5cc6a77f7ea7590acaf29d0718a80299d25d8f466576e9d",
-    "mechanism_review_report": "3fe2ca95d55f40f33af5a9bb2fe7c860db095d172c5649106a480ff4e807e443",
-    "mutation_proposal_report": "68d404ecbfb755bd66e3da6d952a0fc80b7b578c8dc704ce28259565b1306cb4",
-    "outcome_metrics_report": "6ca94e2e9b459b93e45af70cc67ec490f714de2de5bc8adc5642c3da364d7220",
+    "mechanism_review_report": "31f20eca13c307d9c7fb37cfb7bfd0085bb8a7053acfb2a2eda82a24ffdc0772",
+    "mutation_proposal_report": "1c0c2d1b99b411cb0dab68fcb5fdd82afa523c40a12399ad30c7eefb4666ab87",
+    "outcome_metrics_report": "a80cebf96c5cd3aab77483494cec9b8cd16513022eb5bc3209dad48db9556931",
     "release_authority_preflight_report": "6ee319c834d512fcf6dfcac4d510bca2d8e7046671d5e4576639cc5ad8d28f33",
-    "release_closeout_batch_manifest_report": "0d5f14d0887968c7e90fdb85538623ee92622adf9cca8001a57dcdc30d6e99fc",
-    "release_closeout_finality_attestation_report": "b97efce315e4f7beec79568d97b11c14c24e3d7c0d95b6b3e9a9a2ed072adcda",
-    "release_closeout_post_check_finalizer_report": "a4ca90fbc4bbf29d9f99ba88bcc08e0c1d7e97d0b0c75d1f6861f48f5a425614",
-    "release_closeout_summary_report": "370f47dde0e952c967a79dd0eb07f61ab7ebf3228bb19ee1a4fddeb90201f10a",
-    "release_evidence_cohort_report": "d308f71c0cd464aff61b7064512419f563ca8a8da20ac37d0143d8635b3fb89c",
-    "remediation_backlog_report": "41e059f6d6c5d25b97df411f530298581087c5321a9dd20798c06c985c97fea6",
-    "selected_contract_summary_report": "056a61afbf7976d6f5e9df406044e16e4b1f68524aa7b280c417b3f48706a8f6",
-    "source_package_clean_extract_report": "8b5dffc848ba3173505eca01eb8923558b137666513241562b1c9acb2b7677af",
+    "release_closeout_batch_manifest_report": "c76b16c449c762ab07386269158521082e15b9ceaaa3292da9b320398a14a9d3",
+    "release_closeout_finality_attestation_report": "8182c6135116f74a20af88cca52731cba56e4cdd43d3975910e50c5bd7b7a72e",
+    "release_closeout_post_check_finalizer_report": "b31d35d0b2115c3f1386381f8aaacd0a04c105bd0426c254a4318f09bcbc9720",
+    "release_closeout_summary_report": "3f884e229432a91007857d7390b18746fb3101a782f56e6e3d87855321d3767f",
+    "release_evidence_cohort_report": "6f5e03f3c72d2b2a85cd366bdc59eb3f571706db4ab8bb648ea68946392dfe73",
+    "remediation_backlog_report": "af33a97473f8c076a2348a1b96cb6638ed1bdcbcf551b594d3cbde927c5cb3b2",
+    "selected_contract_summary_report": "b7b23d681eada1f2a9bb0b255db74acd136a1ac5cd4fb718f98a085f2ccff53f",
+    "source_package_clean_extract_report": "e4a90f7211b1f1bd14daad579c559189219ae982a09132e5e7ed753b5d530e79",
     "release_authority_preflight_report_candidates": "9ac8422dcf015ef91025ace98b43bf0fdff1938d99d41b2299701fcf25c8958c"
   },
   "schema_version": 1,
@@ -34,7 +34,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T19:41:16Z"
+    "checked_at": "2026-05-23T05:22:44Z"
   },
   "vault": ".",
   "policy": {
@@ -180,7 +180,7 @@
       "accepted_risk": false,
       "gate_effect": "active",
       "source_status": "fail",
-      "reason": "release_evidence_cohort release gate is not pass: release evidence cohort status=attention; strict_same_fingerprint=false; component_fingerprint_count=4; clean_lane_contract_status=fail",
+      "reason": "release_evidence_cohort release gate is not pass: release evidence cohort status=attention; strict_same_fingerprint=false; component_fingerprint_count=2; clean_lane_contract_status=fail",
       "signal_ids": [
         "release_lineage_not_strict_same_fingerprint",
         "release_evidence_clean_lane_contract_not_pass"
@@ -235,7 +235,7 @@
       "status": "available",
       "gate_effect": "none",
       "source_report": "ops/reports/routing-provenance-aggregates/active-report-self-improve-certificate-rerun7.json",
-      "source_generated_at": "2026-05-22T19:36:17Z",
+      "source_generated_at": "2026-05-23T05:17:44Z",
       "session_id": "active-report-self-improve-certificate-rerun7",
       "summary": "attempts=2, finalized=1, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=1.00 | alerts: unfinalized runs present, recent HOLD trend",
       "health_flags": [
@@ -358,7 +358,7 @@
       "status": "fail",
       "source_status": "attention",
       "release_blocking": true,
-      "summary": "release evidence cohort status=attention; strict_same_fingerprint=false; component_fingerprint_count=4; clean_lane_contract_status=fail",
+      "summary": "release evidence cohort status=attention; strict_same_fingerprint=false; component_fingerprint_count=2; clean_lane_contract_status=fail",
       "signal_ids": [
         "release_lineage_not_strict_same_fingerprint",
         "release_evidence_clean_lane_contract_not_pass"

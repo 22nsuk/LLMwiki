@@ -941,6 +941,7 @@
   "documentation_boundary": {
     "authoritative_documents": [
       "README.md",
+      "docs/development.md",
       "ops/README.md",
       ".github/workflows/ci.yml"
     ],

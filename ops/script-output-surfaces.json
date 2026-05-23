@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/script-output-surfaces.schema.json",
   "artifact_kind": "script_output_surfaces",
-  "generated_at": "2026-05-22T19:41:06Z",
+  "generated_at": "2026-05-23T05:22:36Z",
   "producer": "ops.scripts.script_output_surfaces",
   "source_command": "python -m ops.scripts.script_output_surfaces --vault . --out ops/script-output-surfaces.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "344c2730bfc80b6e4ac3c735c491cab4a4746e58dea4702d9fd6d15edbb33f18",
+  "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "02cee320f449f8666c341a0a389855f3ef5ac34bddcdf4c2767b5d4b384a9722",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "e900c33d02f3ad2e070458f03812edda50bfd1172100ba43707ef8dfdb11cc1c",
-    "ops_scripts": "45d81537b4e2b8597e20e85925f51c1f7317a20e1aa94f63d7054926f52e8480",
+    "source_paths": "62c5358cc97c1a41ddc8e0af71afae29a2dbcd1744aa82c4d870f5be8d95b7ac",
+    "ops_scripts": "7aa1b5ba1e7fcd64f84fd543b15d472d2b2da13b083488b293ffc1b36f4321df",
     "classification_values": "0ba4b7fd8868f9c9d070bea6d90c2cee76e2b9c8089223c413c8e898794923f4"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T19:41:06Z"
+    "checked_at": "2026-05-23T05:22:36Z"
   },
   "version": 1,
   "description": "Generated inventory for ops/scripts output path surfaces. Tests compare this registry with the live AST-derived inventory.",
@@ -1813,6 +1813,17 @@
       "references_resolve_repo_output_path": false,
       "direct_fallback_eligible": true,
       "reason": "no configurable output path surface detected"
+    },
+    {
+      "path": "ops/scripts/public/cbm_public_export.py",
+      "classification": "user_export",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option is an intentional user export surface"
     },
     {
       "path": "ops/scripts/public/clean_fixture_regeneration_guard.py",

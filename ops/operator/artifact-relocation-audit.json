@@ -1,19 +1,19 @@
 {
   "$schema": "ops/schemas/artifact-relocation-audit.schema.json",
   "artifact_kind": "artifact_relocation_audit",
-  "generated_at": "2026-05-22T19:41:07Z",
+  "generated_at": "2026-05-23T05:22:37Z",
   "producer": "ops.scripts.artifact_relocation_audit",
   "source_command": "python -m ops.scripts.artifact_relocation_audit --vault . --out ops/operator/artifact-relocation-audit.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "344c2730bfc80b6e4ac3c735c491cab4a4746e58dea4702d9fd6d15edbb33f18",
+  "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "2bca24a2fb1f0a7c49b35b6df2aac4e0676e137502b48691d033ad62e3769173",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "1ffc3cd808f7848d5e07c33875f5b587f2c166346a1e07e6617ac6b127df422c",
+    "source_paths": "55a3ac2209a2d7c16477ccfe35d6b05774d3d84f5696669e2d309173303d853b",
     "candidate_spec": "b1200b347913aa0fd79d57373d7874415448511a26db8629fc55c649d860c9c2",
-    "dependency_paths": "cabb3bd8a1e47cffe64d016252a93035cafbf56ccb26496441c691870a10edf1",
-    "dependency_roots": "be545ec75d1f4e02ad9ba08e5ac7019a5c4bf7d0baa3aa348395f93db732be97",
+    "dependency_paths": "e44cb5c3ecf10b21596dfb2599eacb125374c788fb9983cc458554a34276f042",
+    "dependency_roots": "b4e2a639008c959df7876ff56d9f55411b9a3acf55a9a78af78c60a006a0d189",
     "excluded_scan_paths": "fd1a01cc9a3c77d51ba8bec1c7117e110d4c742ac36077133fbb3b0b3d4b90bd",
     "excluded_scan_prefixes": "e957c42e176e00f268bb61a907a17e555ae0d84924fcabe7c04d0ab207727581"
   },
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T19:41:07Z"
+    "checked_at": "2026-05-23T05:22:37Z"
   },
   "vault": ".",
   "policy": {
@@ -49,11 +49,15 @@
       "Makefile",
       "README.md",
       "ARCHITECTURE.md",
+      "CONTRIBUTING.md",
       "AGENTS.md",
+      "SECURITY.md",
+      "THIRD_PARTY_NOTICES.md",
       "pyproject.toml",
       "ops",
       "tests",
       "mk",
+      "docs",
       ".github"
     ],
     "excluded_prefixes": [
@@ -67,7 +71,7 @@
       "system/",
       "external-reports/"
     ],
-    "file_count": 665,
+    "file_count": 676,
     "files": [
       ".github/CODEOWNERS",
       ".github/dependabot.yml",
@@ -78,8 +82,18 @@
       ".github/workflows/release.yml",
       "AGENTS.md",
       "ARCHITECTURE.md",
+      "CONTRIBUTING.md",
       "Makefile",
       "README.md",
+      "SECURITY.md",
+      "THIRD_PARTY_NOTICES.md",
+      "docs/README.md",
+      "docs/codebase-memory-mcp.md",
+      "docs/development.md",
+      "docs/ops-runtime.md",
+      "docs/public-mirror.md",
+      "docs/release.md",
+      "docs/self-improvement-runtime.md",
       "mk/artifact.mk",
       "mk/core.mk",
       "mk/eval.mk",
@@ -441,6 +455,7 @@
       "ops/scripts/mechanism/run_mechanism_experiment_runtime.py",
       "ops/scripts/mechanism/set_mechanism_run_history.py",
       "ops/scripts/public/__init__.py",
+      "ops/scripts/public/cbm_public_export.py",
       "ops/scripts/public/clean_fixture_regeneration_guard.py",
       "ops/scripts/public/export_public_repo.py",
       "ops/scripts/public/public_check_summary.py",
@@ -742,8 +757,8 @@
     "move_ready_count": 0,
     "blocking_candidate_count": 0,
     "old_reference_count": 0,
-    "new_reference_count": 29,
-    "dependency_file_count": 665
+    "new_reference_count": 28,
+    "dependency_file_count": 676
   },
   "candidates": [
     {
@@ -758,7 +773,7 @@
       "old_path_exists": false,
       "new_path_exists": true,
       "old_reference_count": 0,
-      "new_reference_count": 29,
+      "new_reference_count": 28,
       "blocking_references": [],
       "new_path_references": [
         {
@@ -768,16 +783,6 @@
             {
               "line": 112,
               "excerpt": "ops/operator/operator-release-summary.json"
-            }
-          ]
-        },
-        {
-          "path": "README.md",
-          "match_count": 1,
-          "matches": [
-            {
-              "line": 108,
-              "excerpt": "- `make operator-release-summary`는 closeout, batch manifest, self-check, test summary, learning revalidation, learning delta scoreboard를 한 장짜리 JSON으로 모아 `semantic_release_status`, `sealed_release_status`, `source_zip_policy_status`, full-su"
             }
           ]
         },

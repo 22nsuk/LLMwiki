@@ -18,6 +18,9 @@ starter bundle:
   - `open-questions.md`
 - `improvement-observations.json`
   - standalone repo maintenance task follow-up sample
+- `codebase-memory-mcp.cbmignore`
+  - optional `codebase-memory-mcp` public-export index boundary template
+  - copied to the generated export root by `make cbm-export-public`; it is not live state or canonical evidence
 - `mechanism-run/`
   - `system_mechanism` experiment starter
   - `seed.yaml`
@@ -37,16 +40,16 @@ starter bundle:
    - planning / handoff면 `ops/templates/`
    - mechanism experiment면 `ops/templates/mechanism-run/`
    - run과 무관한 standalone maintenance task follow-up만 필요하면 `ops/templates/improvement-observations.json`
-   - mechanism experiment를 scaffold부터 promotion/finalization 직전까지 한 번에 묶고 싶다면 `.venv/bin/python -m ops.scripts.run_mechanism_experiment ...` wrapper를 쓸 수 있다.
-   - generated proposal을 실제 starter로 얼리고 싶다면 `.venv/bin/python -m ops.scripts.run_mechanism_experiment --vault . --run-id <run-id> --proposal-id <proposal-id> --scaffold-only`로 `proposal-snapshot.json`과 `improvement-observations.json`을 포함한 run-local starter를 먼저 만들 수 있다.
-   - standalone observation artifact를 빠르게 만들고 싶다면 `.venv/bin/python -m ops.scripts.improvement_observations --vault . --task-id <task-id>`를 사용한다.
+   - mechanism experiment를 scaffold부터 promotion/finalization 직전까지 한 번에 묶고 싶다면 `llm-wiki-run-mechanism-experiment ...` 또는 `python -m ops.scripts.mechanism.run_mechanism_experiment ...` wrapper를 쓸 수 있다.
+   - generated proposal을 실제 starter로 얼리고 싶다면 `llm-wiki-run-mechanism-experiment --vault . --run-id <run-id> --proposal-id <proposal-id> --scaffold-only`로 `proposal-snapshot.json`과 `improvement-observations.json`을 포함한 run-local starter를 먼저 만들 수 있다.
+   - standalone observation artifact를 빠르게 만들고 싶다면 `llm-wiki-improvement-observations --vault . --task-id <task-id>`를 사용한다.
 4. run 진행에 따라 내용을 채우고 갱신한다.
 5. 사람용 chronology는 `system/system-log.md`, 기계용 상태 전이는 `runs/<run-id>/run-ledger.json`에 남긴다.
-6. 구조 점검은 `.venv/bin/python -m ops.scripts.planning_gate_validate --vault . --artifact-dir runs/<run-id>`로 한다.
+6. 구조 점검은 `llm-wiki-planning-gate-validate --vault . --artifact-dir runs/<run-id>`로 한다.
 7. mechanism experiment는 baseline/candidate eval·lnt·mechanism assessment artifact와 changed-files/behavior-delta artifact를 같은 run 디렉터리에 함께 둔다.
 8. promotion event는 `runs/<run-id>/promotion-report.json`으로 별도 기록하고, behavior-delta가 있으면 `inputs.behavior_delta`로 연결한다.
 9. mechanism experiment에서 reusable automation이나 repo hygiene follow-up이 보이면 `runs/<run-id>/improvement-observations.json`에 먼저 남긴다.
-10. mechanism experiment finalization은 `.venv/bin/python -m ops.scripts.finalize_run --vault . --run-id <run-id>`로 닫는 편이 좋다.
+10. mechanism experiment finalization은 `llm-wiki-finalize-run --vault . --run-id <run-id>`로 닫는 편이 좋다.
 
 메모:
 - root starter의 `promotion-report.json`은 generic page / planning 예시로 남긴다.

@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/generated-artifact-index.schema.json",
   "artifact_kind": "generated_artifact_index_report",
-  "generated_at": "2026-05-22T19:41:16Z",
+  "generated_at": "2026-05-23T05:22:44Z",
   "producer": "ops.scripts.generated_artifact_index",
   "source_command": "python -m ops.scripts.generated_artifact_index --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "344c2730bfc80b6e4ac3c735c491cab4a4746e58dea4702d9fd6d15edbb33f18",
+  "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "1cb96fa3f869674feca57aaa444ff0bb92d38f3f0ac15a2fa29c72cb5ea61b01",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "ff213cc263cfe17e506e036d73290a29c929bfb0af15b09c5d83ad2290b11eca",
+    "source_paths": "0c42a477702dd34fc225bfe53f8b201251263e5eac4a7525809f599f178cd7bf",
     "run_promotion_reports": "11ad86c5412aebbb3dd6e2817a81f103b9ff21d42d213265c1647504f06bcb59",
-    "external_report_inventory": "52f2841be7931aafca988168a8f7e781da90dffa1bf966de43b2e378f4e0326c",
+    "external_report_inventory": "ee758d6ed1013dff0372a65c131d2e2c45161334c1dea9cdc1c04e5253a08d0d",
     "operator_report_inventory": "0479590a186415fa72ba934ab4431828124b8ca576b06322a6eae193e9627721",
     "ops_report_inventory": "8e97ba0b72fdef2c0c7d9092a35ea11482dc38d842cb3a361a70f8c43a947798",
     "task_improvement_observation_inventory": "fa118ed9f7a32fadc97847b84e78227a1fb37447244efedd9ac0ea134d13691d"
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T19:41:16Z"
+    "checked_at": "2026-05-23T05:22:44Z"
   },
   "vault": ".",
   "policy": {
@@ -86,7 +86,7 @@
     "task_improvement_observation_count": 65,
     "operator_reports_root_file_count": 2,
     "external_reports_root_file_count": 1,
-    "external_reports_archive_file_count": 74,
+    "external_reports_archive_file_count": 75,
     "run_directory_count": 51,
     "run_archive_directory_count": 5,
     "canonical_report_count": 123,

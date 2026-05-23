@@ -20,9 +20,13 @@ DEFAULT_OUT = "ops/reports/goal-worktree-guard.json"
 PRODUCER = "ops.scripts.goal_worktree_guard"
 SCHEMA_PATH = "ops/schemas/goal-worktree-guard.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.goal_worktree_guard --vault ."
-PUBLIC_SOURCE_LAYOUT_PATHS = ("ops", "tests", "mk", "README.md", "Makefile")
+PUBLIC_SOURCE_LAYOUT_PATHS = ("ops", "tests", "mk", "docs", "README.md", "Makefile")
 REQUESTED_MODES = ("auto", "git", "zip")
 DURABLE_PRIVATE_IGNORED_PREFIXES = ("external-reports/",)
+LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_PATHS = (
+    "external-reports/report-reference-manifest.json",
+)
+LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_PREFIXES = ("external-reports/archive/",)
 
 
 @dataclass(frozen=True)
@@ -164,8 +168,41 @@ def _split_self_output_status(
     return "\n".join(kept), "\n".join(self_output)
 
 
-def _ignored_porcelain_lines(porcelain: str) -> str:
-    return "\n".join(line for line in porcelain.splitlines() if line.startswith("!! "))
+def _is_local_only_retained_private_ignored_path(rel_path: str) -> bool:
+    if rel_path in LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_PATHS:
+        return True
+    return any(
+        rel_path.startswith(prefix)
+        for prefix in LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_PREFIXES
+    )
+
+
+def _ignored_directory_contains_only_local_retained_files(vault: Path, rel_path: str) -> bool:
+    path = vault / rel_path
+    if not path.is_dir():
+        return False
+    files = [item for item in path.rglob("*") if item.is_file()]
+    return bool(files) and all(
+        _is_local_only_retained_private_ignored_path(_normalize_repo_path(report_path(vault, item)))
+        for item in files
+    )
+
+
+def _is_local_only_retained_private_ignored_entry(vault: Path, rel_path: str) -> bool:
+    if _is_local_only_retained_private_ignored_path(rel_path):
+        return True
+    return _ignored_directory_contains_only_local_retained_files(vault, rel_path)
+
+
+def _durable_private_ignored_porcelain_lines(vault: Path, porcelain: str) -> str:
+    lines: list[str] = []
+    for line in porcelain.splitlines():
+        if not line.startswith("!! "):
+            continue
+        if _is_local_only_retained_private_ignored_entry(vault, _porcelain_line_path(line)):
+            continue
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def inspect_git_worktree(
@@ -237,7 +274,7 @@ def inspect_git_worktree(
         ]
     )
     ignored_porcelain = (
-        _ignored_porcelain_lines(ignored_status.stdout)
+        _durable_private_ignored_porcelain_lines(vault, ignored_status.stdout)
         if ignored_status.returncode == 0
         else ""
     )
@@ -451,6 +488,12 @@ def build_report(
                 "public_source_layout_paths": json.dumps(PUBLIC_SOURCE_LAYOUT_PATHS),
                 "durable_private_ignored_prefixes": json.dumps(
                     DURABLE_PRIVATE_IGNORED_PREFIXES
+                ),
+                "local_only_retained_private_ignored_paths": json.dumps(
+                    LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_PATHS
+                ),
+                "local_only_retained_private_ignored_prefixes": json.dumps(
+                    LOCAL_ONLY_RETAINED_PRIVATE_IGNORED_PREFIXES
                 ),
             },
             source_tree_excluded_files=(request.out_path or DEFAULT_OUT,),

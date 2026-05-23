@@ -11,6 +11,8 @@
 !/.codex/agents/**
 !/.github/
 !/.github/**
+!/docs/
+!/docs/**
 !/mk/
 !/mk/**
 !/AGENTS.md
@@ -78,6 +80,7 @@ Thumbs.db
 .mypy_cache/
 .ruff_cache/
 .cache/
+.codebase-memory/
 .coverage
 .coverage.*
 build/

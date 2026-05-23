@@ -273,7 +273,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "requested_mode": "git",
             "detected_mode": detected_mode,
             "public_source_layout": {
-                "required_paths": ["ops", "tests", "mk", "README.md", "Makefile"],
+                "required_paths": ["ops", "tests", "mk", "docs", "README.md", "Makefile"],
                 "present": True,
                 "missing_paths": [],
             },

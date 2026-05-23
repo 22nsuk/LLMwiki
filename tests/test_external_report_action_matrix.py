@@ -152,6 +152,37 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         )
         self._write_json("ops/reports/release-closeout-batch-manifest.json", {"status": "fail"})
 
+    def test_generated_artifact_policy_status_is_not_self_blocked_by_archive_candidates(self) -> None:
+        for rel_path, text in {
+            "ops/scripts/core/generated_artifact_index.py": (
+                "def tracking_policy():\n"
+                "    return {'commit_policy': 'decision-grade', 'retention_classes': ['ephemeral']}\n"
+            ),
+            "ops/schemas/generated-artifact-index.schema.json": (
+                '{"properties":{"tracking_policy":{},"retention_classes":{"enum":["ephemeral"]}}}\n'
+            ),
+            "tests/test_generated_artifact_index.py": (
+                "def test_tracking_policy_mentions_decision_grade(): pass\n"
+            ),
+        }.items():
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        self._write_json(
+            "ops/reports/generated-artifact-index.json",
+            {
+                "artifact_kind": "generated_artifact_index_report",
+                "producer": "ops.scripts.generated_artifact_index",
+                "status": "attention",
+                "summary": {"archive_candidate_count": 1},
+            },
+        )
+
+        self.assertEqual(
+            action_statuses(self.vault)["generated_artifact_tracking_policy"],
+            "implemented",
+        )
+
     def test_matrix_covers_non_archived_reports_and_validates_schema(self) -> None:
         (self.external / "release.md").write_text(
             "# Release Review\n\nP0: script-output-surfaces, workflow_dependency_planner, "

@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-22T19:41:07Z",
+  "generated_at": "2026-05-23T05:22:37Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "344c2730bfc80b6e4ac3c735c491cab4a4746e58dea4702d9fd6d15edbb33f18",
+  "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "77c0390682a9cc03a2ba69dff3a27aeb7ba8c9cbf4e3550d9a24ac811aefe3e6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "38887c6148c9f876dc0074d136f181f675e72033cbf7fb6e61ab233ac965af36",
+    "source_paths": "3954c03c8518ef9f7d3f4dabd86d338b3c05e58e761c9d721786c47631de86c0",
     "active_external_reports": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "action_catalog": "e65b33c8cd120c9c8085f28f4766d2aeb7adcde67f23d5d30cdb2a0c08a6b217"
+    "action_catalog": "73afe7e494d174803f9e0ced2f6f24de5ac15ab3848fd3edc7853172a97e64c8"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T19:41:07Z"
+    "checked_at": "2026-05-23T05:22:37Z"
   },
   "vault": ".",
   "status": "pass",
@@ -30,7 +30,7 @@
   },
   "summary": {
     "active_report_count": 0,
-    "archived_report_count": 74,
+    "archived_report_count": 75,
     "action_item_count": 36,
     "implemented_count": 36,
     "partially_automated_count": 0,
@@ -1016,6 +1016,12 @@
         },
         {
           "path": "ARCHITECTURE.md",
+          "exists": true,
+          "status": "",
+          "producer": ""
+        },
+        {
+          "path": "docs/public-mirror.md",
           "exists": true,
           "status": "",
           "producer": ""

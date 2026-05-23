@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-22T19:41:15Z",
+  "generated_at": "2026-05-23T05:22:43Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "344c2730bfc80b6e4ac3c735c491cab4a4746e58dea4702d9fd6d15edbb33f18",
+  "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "f7dd295621a34a54cb5018604760de77e8685c6f0e0dc086056a7362e25a7519",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ea66bebc6dcb1e56d35893c8f4a0557a3dd3ad55888a83b5b2678e5b822c5ba7",
-    "auto_improve_readiness": "833c1ca17be6f06a0d725177809a1c577340586cdf0bf487b51fc116d7b43cef",
+    "auto_improve_readiness": "f1eadd59f2d41562e8a02dfe54bf9ee4eb722faf0b078b422e13ef3b83d45074",
     "goal_run_status": "ab2237d0fa8d3524b5d007656d6cf6811b66b732fcc9d8c40363b2bfee065602",
-    "learning_claim_activation": "9d5f1ea0b91fd4b2dd447bcc0b50280f2ebfb8e05e82f2c0c23f37bd6e710d61",
-    "learning_delta_scoreboard": "86eb71f76599b3a461b033f71feffd8136bccfa763766581ce5f265cc630afb2",
-    "source_package_clean_extract": "8b5dffc848ba3173505eca01eb8923558b137666513241562b1c9acb2b7677af",
+    "learning_claim_activation": "481715bdce5b4bed6ed36789d21a42e9e042a14dfe56ee1ef0d6f44b6ad0f081",
+    "learning_delta_scoreboard": "d1ea3620ae62b90fda627a388518bb7234378eee58f7c231dee67f028bf919b4",
+    "source_package_clean_extract": "e4a90f7211b1f1bd14daad579c559189219ae982a09132e5e7ed753b5d530e79",
     "task_observations": "5ee6fc130d9ca93cc1189b0816c3aca7b2fe351a203f126ba6f09522decfd6ea"
   },
   "schema_version": 1,
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T19:41:15Z"
+    "checked_at": "2026-05-23T05:22:43Z"
   },
   "vault": ".",
   "policy": {
@@ -80,14 +80,14 @@
       "id": "promotion_blocked_by_release_lineage_mismatch",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
-      "reason": "release_evidence_cohort release gate is not pass: release evidence cohort status=attention; strict_same_fingerprint=false; component_fingerprint_count=4; clean_lane_contract_status=fail",
+      "reason": "release_evidence_cohort release gate is not pass: release evidence cohort status=attention; strict_same_fingerprint=false; component_fingerprint_count=2; clean_lane_contract_status=fail",
       "repair_target": "Refresh release evidence cohort until the release lineage is a single strict fingerprint, then rerun make auto-improve-readiness."
     },
     {
       "id": "promotion_blocked_by_goal_worktree_guard_failure",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=42",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=161",
       "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     }
   ],

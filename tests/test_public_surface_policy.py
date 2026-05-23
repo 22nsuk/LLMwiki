@@ -7,8 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from ops.scripts.export_public_repo import export_public_repo
+from ops.scripts.export_public_repo import export_public_repo, should_export_public
 from ops.scripts.public_surface_policy import (
+    PUBLIC_EXCLUDED_SEGMENTS,
     PUBLIC_GITIGNORE_END,
     PUBLIC_GITIGNORE_START,
     PUBLIC_INCLUDED_REPORT_FILES,
@@ -40,6 +41,8 @@ class PublicSurfacePolicyTests(unittest.TestCase):
                 "README.md": "# Readme\n",
                 "SECURITY.md": "# Security\n",
                 "THIRD_PARTY_NOTICES.md": "# Notices\n",
+                "docs/README.md": "# Docs\n",
+                "docs/development.md": "# Development\n",
                 "Makefile": "all:\n\t@true\n",
                 "pyproject.toml": "[build-system]\nrequires = ['setuptools']\n",
                 "requirements.txt": "PyYAML\n",
@@ -55,6 +58,8 @@ class PublicSurfacePolicyTests(unittest.TestCase):
                 ".codex/agents/worker.toml": "name = 'worker'\n",
                 "mk/core.mk": "all:\n\t@true\n",
                 "ops/scripts/example.py": "print('ok')\n",
+                "ops/templates/codebase-memory-mcp.cbmignore": "raw/\n",
+                "ops/.codebase-memory/graph.db.zst": "binary\n",
                 "ops/README.md": "# ops\n",
                 "ops/manifest.json": "{}\n",
                 "ops/raw-registry.json": "{}\n",
@@ -98,7 +103,18 @@ class PublicSurfacePolicyTests(unittest.TestCase):
 
             self.assertEqual(tracked, exported)
             self.assertTrue(set(PUBLIC_INCLUDED_REPORT_FILES).issubset(exported))
+            self.assertIn("docs/README.md", exported)
+            self.assertIn("docs/development.md", tracked)
+            self.assertIn("ops/templates/codebase-memory-mcp.cbmignore", exported)
             self.assertNotIn("ops/reports/example.json", exported)
+            self.assertNotIn("ops/.codebase-memory/graph.db.zst", exported)
+            self.assertNotIn("ops/.codebase-memory/graph.db.zst", tracked)
+
+    def test_codebase_memory_graph_artifacts_are_not_public_surface(self) -> None:
+        self.assertIn(".codebase-memory", PUBLIC_EXCLUDED_SEGMENTS)
+        self.assertFalse(should_export_public(".codebase-memory/graph.db.zst"))
+        self.assertFalse(should_export_public("ops/.codebase-memory/graph.db.zst"))
+        self.assertTrue(should_export_public("ops/templates/codebase-memory-mcp.cbmignore"))
 
     def test_generated_report_contracts_skip_full_vault_checks_in_public_export(self) -> None:
         text = Path("tests/test_generated_report_contracts.py").read_text(encoding="utf-8")

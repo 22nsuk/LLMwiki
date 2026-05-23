@@ -1,96 +1,88 @@
-# LLM Wiki vNext Architecture
+# LLMwiki Architecture
 
-이 문서는 이 저장소의 **public-safe architecture overview**다.
-실제 private corpus 내용, raw inventory, live run artifact, generated report는 포함하지 않는다.
+This is the public-safe architecture overview for the current code/ops runtime.
+It describes boundaries and control flow without exposing private corpus
+contents, raw inventory, live run artifacts, or external review material.
 
 ## Purpose
 
-LLM Wiki vNext는 두 가지를 함께 다룬다.
+LLMwiki combines two loops:
 
-- raw source를 지속형 wiki corpus로 정리하는 maintainer runtime
-- 그 maintainer runtime 자체를 eval과 실험으로 개선하는 meta-maintainer loop
+- a maintainer loop that turns curated raw sources into persistent wiki/system
+  knowledge;
+- a meta-maintainer loop that improves the maintainer runtime with policy,
+  tests, schema-backed reports, and bounded experiments.
 
-즉, 이 저장소는 content corpus와 운영 메커니즘을 한 workspace 안에서 함께 다루는 구조다.
-
-## Roles
-
-- human: raw source를 큐레이션하고 signoff 또는 운영 판단을 한다
-- maintainer agent: raw를 읽고 `wiki/`와 `system/` corpus를 갱신한다
-- ops layer: policy, eval, schema, script를 제공한다
-- meta-maintainer agent: wiki 내용뿐 아니라 유지 메커니즘 자체를 개선한다
+The public mirror shares the runtime and its tests. The private vault keeps the
+actual corpus and operator evidence.
 
 ## Layers
 
-### Layer A — Raw
+| Layer | Surface | Public mirror status | Role |
+| --- | --- | --- | --- |
+| Raw | `raw/` | excluded | canonical source snapshots |
+| Knowledge corpus | `wiki/`, `system/` | excluded | maintained content and system knowledge |
+| Run artifacts | `runs/` | excluded | planning, promotion, and goal-run evidence |
+| Ops control layer | `ops/`, `mk/`, `tests/`, `tools/` | included | policy, schema, scripts, Make, and tests |
+| Docs and agents | `docs/`, root docs, `.codex/agents/` | included | public operating contract and role surface |
+| CI/export | `.github/`, root config | included | reproducible public validation |
 
-- 위치: `raw/`
-- 성격: immutable source of truth
-- 역할: PDF, web snapshot, 기타 원문 source를 보관한다
+## Runtime Loops
 
-### Layer B — Knowledge Corpora
+### Public Development
 
-- 위치: `wiki/`, `system/`
-- 역할:
-  - `wiki/`: 사용자/도메인/content corpus
-  - `system/`: maintainer/runtime/meta corpus
+`make dev-install`, `make static`, `make test-public`, and `make public-check`
+prove that the public code/ops mirror is usable without private corpus state.
 
-### Layer C — Ops
+### Corpus Maintenance
 
-- 위치: `ops/`
-- 역할: policy, eval, schema, template, helper script를 담는 control layer
+Full-vault sessions may read or mutate `raw/`, `wiki/`, `system/`, and `runs/`.
+Those rules are local-only and live in `AGENTS.local.md`.
 
-### Layer D — Operating Rules
+### Self-Improvement
 
-- 위치: `AGENTS.md`
-- 역할: public-safe operating contract
-- full local vault에서는 `AGENTS.local.md`가 이를 보강한다
+Mechanism review, mutation proposal, goal runtime, promotion gate, and release
+evidence form the bounded meta-maintainer loop. See
+[docs/self-improvement-runtime.md](./docs/self-improvement-runtime.md).
 
-## Core Loops
+### Release And Export
 
-### Ingest
+Release evidence is generated under policy-approved paths and checked by Make
+targets. Public export is generated from the source policy rather than
+hand-maintained file lists. See [docs/public-mirror.md](./docs/public-mirror.md)
+and [docs/release.md](./docs/release.md).
 
-- raw source를 읽고 corpus를 결정한다
-- 관련 source/concept/synthesis/router/log surface를 함께 갱신한다
+## Source Of Truth Map
 
-### Query
-
-- 질문 유형에 따라 corpus router를 먼저 읽는다
-- 필요한 page만 선택적으로 읽고, 부족할 때만 raw로 내려간다
-
-### Improve
-
-- lint/eval/trace로 실패 패턴을 수집한다
-- 한 번에 하나의 mechanism만 바꾼다
-- binary eval과 deterministic gate로 keep/discard를 결정한다
-
-## Runtime Surfaces
-
-- `README.md`: 루트 사용 설명과 public/private 경계
-- `ops/README.md`: runtime command와 contract 설명
-- `system/system-index.md`: private system corpus router
-- `system/system-raw-registry.md`: private raw inventory summary router
-- `system/system-log.md`: append-only 운영 chronology
+| Question | Authority |
+| --- | --- |
+| What is public? | `ops/scripts/public/public_surface_policy.py` |
+| How do I run checks? | `Makefile`, `mk/*.mk`, `docs/development.md` |
+| What do test lanes mean? | `ops/test-lane-registry.json` |
+| What does a report contain? | `ops/schemas/*.json` |
+| How are scripts organized? | `docs/ops-runtime.md` |
+| What may agents do? | `AGENTS.md` and `AGENTS.local.md` |
+| How is CBM used? | `docs/codebase-memory-mcp.md` |
 
 ## Public vs Private
 
-이 저장소는 canonical private vault와 public code/ops mirror를 분리할 수 있다.
+Included in the public mirror:
 
-public mirror에 포함하기 좋은 것:
-
-- `ops/`
-- `tests/`
-- `tools/`
+- `docs/`
+- `ops/`, `tests/`, `tools/`, `mk/`
 - `.codex/agents/`
 - `.github/`
-- 루트 개발 문서와 설정 파일
+- root public documents and development configuration
 
-public mirror에서 제외하는 것:
+Excluded from the public mirror:
 
 - `raw/`
 - `wiki/`
 - `system/`
 - `runs/`
 - `external-reports/`
-- generated inventory/report artifact
+- private inventory and most generated report artifacts
 
-즉, public mirror는 runtime과 testability를 공유하고, private vault는 실제 corpus와 운영 상태를 유지한다.
+Generated report exceptions are explicit and policy-backed. If a new durable
+public report is needed, update policy, `.gitignore`, export tests, and docs in
+the same change.

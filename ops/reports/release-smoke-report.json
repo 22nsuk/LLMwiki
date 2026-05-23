@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/release-smoke-report.schema.json",
   "artifact_kind": "release_smoke_report",
-  "generated_at": "2026-05-22T19:37:29Z",
+  "generated_at": "2026-05-23T05:18:57Z",
   "producer": "ops.scripts.release_smoke",
   "source_command": "python -m ops.scripts.release.release_smoke --vault . --profile full",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "344c2730bfc80b6e4ac3c735c491cab4a4746e58dea4702d9fd6d15edbb33f18",
+  "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "6f14f899e0f4dce979d6152079ccd87ca44a19716266452a0f497b5fb3275d93",
@@ -18,7 +18,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-22T19:37:29Z"
+    "checked_at": "2026-05-23T05:18:57Z"
   },
   "vault": ".",
   "policy": {
@@ -31,8 +31,8 @@
   "archive_file": {
     "path": "<tmp>/LLMwiki-release-smoke.zip",
     "exists": true,
-    "size_bytes": 190687272,
-    "sha256": "00a9fc3284050bed876791541bf7643e29b946aa086fa0d305c7d41be8ddfdf3"
+    "size_bytes": 190635436,
+    "sha256": "b05cd35d220f1d8fdb15a4b0d5195ddd7abf3798a05153f1e255768b3477e3b5"
   },
   "archive_class": {
     "name": "release_smoke_zip",
@@ -245,11 +245,11 @@
   "archive_reproducibility": {
     "status": "pass",
     "run_count": 2,
-    "first_archive_sha256": "00a9fc3284050bed876791541bf7643e29b946aa086fa0d305c7d41be8ddfdf3",
-    "second_archive_sha256": "00a9fc3284050bed876791541bf7643e29b946aa086fa0d305c7d41be8ddfdf3",
+    "first_archive_sha256": "b05cd35d220f1d8fdb15a4b0d5195ddd7abf3798a05153f1e255768b3477e3b5",
+    "second_archive_sha256": "b05cd35d220f1d8fdb15a4b0d5195ddd7abf3798a05153f1e255768b3477e3b5",
     "same_archive_sha256": true,
-    "first_source_manifest_digest": "9f5abeab784195929b93069702410d3dab688716769491bfa2fed02b67754a0f",
-    "second_source_manifest_digest": "9f5abeab784195929b93069702410d3dab688716769491bfa2fed02b67754a0f",
+    "first_source_manifest_digest": "5834757d0c571de0b6ca819d1d2ed16cb4e27b46b9cf56d0ddc5294d6bcc19ec",
+    "second_source_manifest_digest": "5834757d0c571de0b6ca819d1d2ed16cb4e27b46b9cf56d0ddc5294d6bcc19ec",
     "same_source_manifest_digest": true,
     "summary": "archive_reproducibility=pass; same_archive_sha256=true; same_source_manifest_digest=true"
   },
@@ -257,11 +257,11 @@
     "path": "release-archive-self-description.json",
     "archive_root_name": "LLMwiki",
     "archive_member_path": "LLMwiki/release-archive-self-description.json",
-    "sha256": "b5ce40efb21f7a4cc047a06e63d4b9e7fb1c0019c91938a0ce3a0d71c9714747",
-    "size_bytes": 4096,
+    "sha256": "78e79b552546ec5dfbaa7d0179638c0ad2bf831d93cf122099e683afeb54da44",
+    "size_bytes": 4110,
     "profile": "full",
-    "source_manifest_digest": "ca77675a6a57e4a0dc3bcc4a08cd77ef392888d521c427ddc8e4027de44911bf",
-    "source_manifest_file_count": 1632,
+    "source_manifest_digest": "7ecbb3fa3d94785aceb47e11b5661056f932c25608353f6f9d77ca3f81b9596c",
+    "source_manifest_file_count": 1641,
     "tmp_included": false,
     "external_reports_included": false,
     "evidence_linkage_phase": "pre_seal_package_build_snapshot",
@@ -269,11 +269,11 @@
     "evidence_linked_artifact_count": 8
   },
   "extracted_vault": "<tmp>/unpacked/LLMwiki",
-  "packed_file_count": 1633,
+  "packed_file_count": 1642,
   "manifest_comparison": {
     "pass": true,
-    "expected_file_count": 1633,
-    "extracted_file_count": 1633,
+    "expected_file_count": 1642,
+    "extracted_file_count": 1642,
     "missing_paths": [],
     "unexpected_paths": [],
     "sha_mismatches": [],
@@ -288,7 +288,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 1289,
+      "duration_ms": 1316,
       "stdout_tail": "      \"path_list_separator\": \":\",\n      \"path_separator\": \"/\",\n      \"platform_system\": \"Linux\",\n      \"posix_escape_expanded_component_byte_limit\": \"255\",\n      \"preferred_encoding\": \"UTF-8\"\n    }\n  },\n  \"metric_semantics\": {\n    \"entry_count\": {\n      \"scope\": \"registry_entries\",\n      \"description\": \"Parsed raw registry entries after inventory enrichment.\"\n    },\n    \"error_count\": {\n      \"scope\": \"diagnostics\",\n      \"description\": \"Number of preflight diagnostics emitted with fail severity.\"\n    },\n    \"warning_count\": {\n      \"scope\": \"diagnostics\",\n      \"description\": \"Number of preflight diagnostics emitted with warn severity.\"\n    },\n    \"path_alias_match_count\": {\n      \"scope\": \"entries_with_missing_canonical_storage_path\",\n      \"description\": \"Entries whose canonical storage_path was absent but a manual, exported, or deterministic environment alias existed on disk.\"\n    },\n    \"content_hash_fallback_count\": {\n      \"scope\": \"entries_with_missing_canonical_storage_path_and_aliases\",\n      \"description\": \"Entries whose path locators were absent but exactly one raw inventory file matched the entry content_sha256.\"\n    }\n  },\n  \"unsupported_environment\": false,\n  \"errors\": [],\n  \"warnings\": [],\n  \"stats\": {\n    \"entry_count\": 446,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"path_alias_match_count\": 0,\n    \"content_hash_fallback_count\": 0\n  }\n}",
       "stderr_tail": ""
     },
@@ -300,7 +300,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 2651,
+      "duration_ms": 2718,
       "stdout_tail": "        \"function_lines\": 185,\n        \"parameter_count\": 3,\n        \"branch_node_count\": 3\n      },\n      \"threshold\": {\n        \"function_lines\": 180,\n        \"parameter_count\": 12,\n        \"branch_node_count\": 12\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    },\n    {\n      \"type\": \"python_function_budget_candidate\",\n      \"page\": \"tests/test_run_mechanism_experiment.py\",\n      \"symbol\": \"RunMechanismExperimentTests.test_wrapper_ignores_ephemeral_workspace_noise_in_changed_manifest\",\n      \"line\": 950,\n      \"profile\": \"tests\",\n      \"triggered_budgets\": [\n        \"function_lines\"\n      ],\n      \"value\": {\n        \"function_lines\": 192,\n        \"parameter_count\": 0,\n        \"branch_node_count\": 2\n      },\n      \"threshold\": {\n        \"function_lines\": 180,\n        \"parameter_count\": 12,\n        \"branch_node_count\": 12\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    }\n  ],\n  \"stats\": {\n    \"page_count\": 487,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"review_candidate_count\": 36\n  }\n}",
       "stderr_tail": ""
     },
@@ -312,7 +312,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 1045,
+      "duration_ms": 1070,
       "stdout_tail": "        {\n          \"eval\": \"frontmatter_contract\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"required_sections_present\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"source_trace_present\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"source_trace_targets_exist\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"link_integration\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"high_severity_open_questions_within_budget\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"medium_severity_open_questions_within_budget\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"broken_link_free\",\n          \"pass\": true\n        },\n        {\n          \"eval\": \"placeholder_discipline\",\n          \"pass\": true\n        }\n      ]\n    }\n  ]\n}",
       "stderr_tail": ""
     },
@@ -324,7 +324,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 546,
+      "duration_ms": 561,
       "stdout_tail": "        {\n          \"eval\": \"declared_source_count_matches_evidence\",\n          \"pass\": true,\n          \"detail\": {\n            \"declared_source_count\": 7,\n            \"evidence_source_count\": 7,\n            \"evidence_source_links\": [\n              \"source--ai-memory-boom-and-supply-constraints-2026-04-13\",\n              \"source--asml-ai-chip-demand-and-semiconductor-capex-resilience-2026-04-16\",\n              \"source--memory-product-mix-upside-for-samsung-and-sk-hynix-2026-04-21\",\n              \"source--samsung-labor-bonus-dispute-and-semiconductor-workforce-risk-2026-04-17\",\n              \"source--samsung-process-blueprint-trade-secret-case-2026-04-21\",\n              \"source--samsung-strategic-output-increase-and-preorders-2026-04-21\",\n              \"source--sk-hynix-socamm2-ai-memory-scaleup-2026-04-21\"\n            ]\n          }\n        }\n      ]\n    },\n    {\n      \"page\": \"system/synthesis--stage1-planning-harness-bridge.md\",\n      \"score\": 1,\n      \"max_score\": 1,\n      \"results\": [\n        {\n          \"eval\": \"declared_source_count_matches_evidence\",\n          \"pass\": true,\n          \"detail\": {\n            \"declared_source_count\": 2,\n            \"evidence_source_count\": 2,\n            \"evidence_source_links\": [\n              \"source--ouroboros-repo\",\n              \"source--stage1-planning-harness-mvp\"\n            ]\n          }\n        }\n      ]\n    }\n  ]\n}",
       "stderr_tail": ""
     },
@@ -336,7 +336,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 243,
+      "duration_ms": 253,
       "stdout_tail": "    },\n    {\n      \"artifact\": \"planning-validation.json\",\n      \"schema\": \"ops/schemas/planning-validation.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"run-ledger.json\",\n      \"schema\": \"ops/schemas/run-ledger.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"promotion-report.json\",\n      \"schema\": \"ops/schemas/promotion-report.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"improvement-observations.json\",\n      \"schema\": \"ops/schemas/improvement-observations.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    }\n  ],\n  \"cross_checks\": [\n    {\n      \"check\": \"run_id_alignment\",\n      \"pass\": true,\n      \"detail\": {\n        \"seed.yaml\": \"run-YYYYMMDD-slug\",\n        \"planning-validation.json\": \"run-YYYYMMDD-slug\",\n        \"run-ledger.json\": \"run-YYYYMMDD-slug\",\n        \"promotion-report.json\": \"run-YYYYMMDD-slug\"\n      }\n    }\n  ],\n  \"phase_checks\": []\n}",
       "stderr_tail": ""
     }

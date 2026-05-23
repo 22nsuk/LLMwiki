@@ -4,8 +4,14 @@ PUBLIC_CHECK_SUMMARY_CHECK_OUT ?= tmp/public-check-summary-check.json
 PUBLIC_CHECK_TIMEOUT_SECONDS ?= 5400
 PUBLIC_OUT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)/llm-wiki-public-repo
 PUBLIC_PYTHON ?= $(if $(wildcard $(firstword $(PYTHON))),$(abspath $(firstword $(PYTHON))),$(shell command -v $(firstword $(PYTHON))))
+CBM_BIN ?= codebase-memory-mcp
+CBM_CACHE_ROOT ?= $(if $(XDG_CACHE_HOME),$(XDG_CACHE_HOME),$(HOME)/.cache)
+CBM_PUBLIC_OUT ?= $(CBM_CACHE_ROOT)/llmwiki/codebase-memory-mcp/public-surface
+CBM_CACHE_DIR ?= $(CBM_CACHE_ROOT)/codebase-memory-mcp/llmwiki-public
+CBM_IGNORE_TEMPLATE ?= ops/templates/codebase-memory-mcp.cbmignore
+CBM_PROJECT_NAME ?= $(subst /,-,$(patsubst /%,%,$(CBM_PUBLIC_OUT)))
 
-.PHONY: sync-public-policy sync-public-policy-check public-export public-check-summary public-check-summary-check public-check public-check-serial public-check-parallel public-check-all public-check-all-check public-check-all-serial public-check-all-parallel 
+.PHONY: sync-public-policy sync-public-policy-check public-export public-check-summary public-check-summary-check public-check public-check-serial public-check-parallel public-check-all public-check-all-check public-check-all-serial public-check-all-parallel cbm-require-bin cbm-export-public cbm-index-public cbm-list-projects-public cbm-schema-public cbm-architecture-public cbm-reset-local
 
 sync-public-policy:
 	$(PYTHON) -m ops.scripts.sync_public_surface_gitignore --gitignore ".gitignore"
@@ -15,6 +21,29 @@ sync-public-policy-check:
 
 public-export:
 	$(PYTHON) -m ops.scripts.export_public_repo --vault "$(VAULT)" --out "$(PUBLIC_OUT)"
+
+cbm-require-bin:
+	@command -v "$(CBM_BIN)" >/dev/null 2>&1 || { printf '%s\n' "codebase-memory-mcp binary not found; install a verified operator-local binary or set CBM_BIN=/path/to/codebase-memory-mcp"; exit 127; }
+
+cbm-export-public:
+	$(PYTHON) -m ops.scripts.cbm_public_export --vault "$(VAULT)" --out "$(CBM_PUBLIC_OUT)" --cbmignore-template "$(CBM_IGNORE_TEMPLATE)"
+
+cbm-index-public: cbm-require-bin cbm-export-public
+	CBM_CACHE_DIR="$(CBM_CACHE_DIR)" "$(CBM_BIN)" cli index_repository '{"repo_path":"$(CBM_PUBLIC_OUT)"}'
+
+cbm-list-projects-public: cbm-require-bin
+	CBM_CACHE_DIR="$(CBM_CACHE_DIR)" "$(CBM_BIN)" cli list_projects
+
+cbm-schema-public: cbm-require-bin
+	CBM_CACHE_DIR="$(CBM_CACHE_DIR)" "$(CBM_BIN)" cli get_graph_schema '{"project":"$(CBM_PROJECT_NAME)"}'
+
+cbm-architecture-public: cbm-require-bin
+	CBM_CACHE_DIR="$(CBM_CACHE_DIR)" "$(CBM_BIN)" cli get_architecture '{"project":"$(CBM_PROJECT_NAME)"}'
+
+cbm-reset-local:
+	@test -n "$(CBM_CACHE_DIR)" && test "$(CBM_CACHE_DIR)" != "/" || { printf '%s\n' "refusing to reset unsafe CBM_CACHE_DIR=$(CBM_CACHE_DIR)"; exit 2; }
+	@test -n "$(CBM_PUBLIC_OUT)" && test "$(CBM_PUBLIC_OUT)" != "/" || { printf '%s\n' "refusing to reset unsafe CBM_PUBLIC_OUT=$(CBM_PUBLIC_OUT)"; exit 2; }
+	rm -rf "$(CBM_CACHE_DIR)" "$(CBM_PUBLIC_OUT)"
 
 public-check-summary: script-output-surfaces
 	$(PYTHON) -m ops.scripts.public_check_summary --vault "$(VAULT)" --out "$(PUBLIC_CHECK_SUMMARY_CANDIDATE_OUT)" --public-out "$(PUBLIC_OUT)" --public-python "$(PUBLIC_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --pytest-mark-expr "$(PYTEST_PUBLIC_MARK_EXPR)" --pytest-flags "$(PYTEST_FLAGS)" --timeout-seconds "$(PUBLIC_CHECK_TIMEOUT_SECONDS)"
