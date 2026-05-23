@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/artifact-relocation-audit.schema.json",
   "artifact_kind": "artifact_relocation_audit",
-  "generated_at": "2026-05-23T07:46:02Z",
+  "generated_at": "2026-05-23T08:30:02Z",
   "producer": "ops.scripts.artifact_relocation_audit",
   "source_command": "python -m ops.scripts.artifact_relocation_audit --vault . --out ops/operator/artifact-relocation-audit.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "4c5e79d21101f1f353c8346826e718c0a3cfbd547f56afb4bd951b10bc38b81b",
+  "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "2bca24a2fb1f0a7c49b35b6df2aac4e0676e137502b48691d033ad62e3769173",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-23T07:46:02Z"
+    "checked_at": "2026-05-23T08:30:02Z"
   },
   "vault": ".",
   "policy": {
@@ -791,7 +791,7 @@
           "match_count": 1,
           "matches": [
             {
-              "line": 93,
+              "line": 100,
               "excerpt": "OPERATOR_RELEASE_SUMMARY_OUT ?= ops/operator/operator-release-summary.json"
             }
           ]
@@ -939,7 +939,7 @@
               "excerpt": "exit_code = main([\"--vault\", self.vault.as_posix(), \"--out\", \"ops/operator/operator-release-summary.json\"])"
             },
             {
-              "line": 551,
+              "line": 591,
               "excerpt": "\"ops/operator/operator-release-summary.json\","
             }
           ]

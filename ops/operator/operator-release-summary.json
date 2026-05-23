@@ -1,23 +1,23 @@
 {
   "$schema": "ops/schemas/operator-release-summary.schema.json",
   "artifact_kind": "operator_release_summary",
-  "generated_at": "2026-05-23T05:50:03Z",
+  "generated_at": "2026-05-23T08:29:25Z",
   "producer": "ops.scripts.operator_release_summary",
-  "source_command": "python -m ops.scripts.operator_release_summary --vault . --out ops/operator/operator-release-summary.json",
+  "source_command": "python -m ops.scripts.operator_release_summary --vault . --out ops/operator/operator-release-summary.json --closeout ops/reports/release-closeout-summary.json --batch-manifest ops/reports/release-closeout-batch-manifest.json --self-check ops/reports/release-evidence-closeout-self-check.json --test-summary ops/reports/test-execution-summary.json --full-test-summary ops/reports/test-execution-summary-full.json --learning-revalidation ops/reports/learning-readiness-signoff-revalidation.json --learning-delta-scoreboard ops/reports/learning-delta-scoreboard.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+  "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "1162baa2c95574cfa3e9f1f29ed14e34f2df775a2bd8acd3b6e0301827537805",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "6d79652d2ad35694dd11eaaa9c85cd5ededf5b750c2c9975712d69f72efa2471",
-    "batch_manifest": "f0cc3494f39b24f21f4f3de03fd270fe6d0b3af4f5ee30d94d50a96a2fb54ec5",
-    "closeout": "2acfbaef94aff28944928458a12f1521d7072c31b2bbd5f0e3dfe92c1066fb6f",
-    "full_test_summary": "526938f1c7f44af43b0e7dde8e4278a2d9830a67069628ceb11024ea05ee25a8",
-    "learning_delta_scoreboard": "17c53c460fce02e6b6863771411b79d7aaf13d4860df95785b0b0a5dcf9107d4",
-    "learning_revalidation": "7d4d3ab018b80530ff6c41f2d127367fba3350e7efd67f7330d06c9a116547c7",
-    "self_check": "588bb30abdd55c898cfab17272f1cb487efcea9a4c1798d69e2edc4bde226b1a",
-    "test_summary": "6cf030eb8a5a4bdb20a6546b87a641d44b8ff53d98098e9512b182ca78645e0d"
+    "source_paths": "c72559a7b94cfb00ab0965d3fc73b0c43548649bd657468dd8867ed5ce517fec",
+    "batch_manifest": "a400f96afa22378f3180313ed603063a48279ab75508fc5f8bb7541722787c49",
+    "closeout": "a913ab9cf9ab98c9116b065e8908cfcc6bd7db84dab619f91f6e82818d7e2060",
+    "full_test_summary": "a227fcf279730e452d5bd6ea8980456509c894a73184619d915c4507ec646a43",
+    "learning_delta_scoreboard": "4abeff37b324cbe5110aeaa44d8305b0f41884b14db4d47ebabd52b8023a896e",
+    "learning_revalidation": "75b7a03ad0f657b0512de18a42cfd10f37c4aa11d84f3e0604137a64425de81b",
+    "self_check": "f90799ad1e0f5f3b4588318880924c629153c518b0b5c0953261791d3437f541",
+    "test_summary": "b1270b0dbbd2131d6c42826dcf79af0c78deb247fa6fafbcfe6a7edbec5c41e1"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -25,34 +25,34 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-23T05:50:03Z"
+    "checked_at": "2026-05-23T08:29:25Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "status": "pass",
-  "semantic_release_status": "clean_pass",
-  "sealed_release_status": "sealed_clean_pass",
-  "release_package_mode": "source_content_package",
-  "source_zip_policy_status": "match",
+  "status": "attention",
+  "semantic_release_status": "conditional_pass",
+  "sealed_release_status": "blocked_tmp_json",
+  "release_package_mode": "local_workspace",
+  "source_zip_policy_status": "not_provided",
   "source_zip": {
-    "status": "match",
-    "distribution_status": "materialized",
-    "archive_profile": "source_content_package",
-    "path": "build/release/LLMwiki-source.zip",
-    "sha256": "c173d4ab31603030ee6c6bcbe6bbaf40a8a2c1909981827b60d874e357d9fbbe",
-    "actual_sha256": "c173d4ab31603030ee6c6bcbe6bbaf40a8a2c1909981827b60d874e357d9fbbe",
-    "file_exists": true,
-    "file_digest_matches_batch": true,
-    "entry_count": 1642,
-    "path_set_matches_release_manifest": true,
-    "content_digest_matches_release_manifest": true,
-    "summary": "source_zip=match; distribution_status=materialized; path_matches=True; content_matches=True; file_digest_matches_batch=True"
+    "status": "not_provided",
+    "distribution_status": "not_provided",
+    "archive_profile": "local_workspace",
+    "path": "",
+    "sha256": "",
+    "actual_sha256": "",
+    "file_exists": false,
+    "file_digest_matches_batch": false,
+    "entry_count": 0,
+    "path_set_matches_release_manifest": false,
+    "content_digest_matches_release_manifest": false,
+    "summary": "source_zip=not_provided; distribution_status=not_provided; path_matches=False; content_matches=False; file_digest_matches_batch=False"
   },
-  "tmp_json_policy_status": "clean",
-  "tmp_json_count": 0,
+  "tmp_json_policy_status": "dirty",
+  "tmp_json_count": 37,
   "artifact_digest_policy_status": "match",
   "artifact_digest_mismatch_count": 0,
   "artifact_digest_missing_count": 0,
@@ -67,22 +67,60 @@
     "learning_delta_scoreboard": "ok"
   },
   "batch_verify": {
-    "status": "pass",
+    "status": "fail",
     "manifest_load_status": "ok",
     "artifact_count": 14,
     "mismatch_count": 0,
     "missing_artifact_count": 0,
-    "tmp_json_count": 0,
-    "tmp_json_paths": [],
+    "tmp_json_count": 37,
+    "tmp_json_paths": [
+      "tmp/artifact-freshness-report-check.json",
+      "tmp/artifact-freshness-report.candidate.json",
+      "tmp/artifact-relocation-audit.candidate.json",
+      "tmp/auto-improve-readiness.candidate.json",
+      "tmp/clean-fixture-regeneration-guard.json",
+      "tmp/generated-artifact-converge-summary.before.json",
+      "tmp/generated-artifact-converge-summary.json",
+      "tmp/generated-artifact-index.candidate.json",
+      "tmp/goal-runtime-local-evidence-refresh.json",
+      "tmp/goal-runtime-python-preflight.json",
+      "tmp/learning-claim-activation-report.candidate.json",
+      "tmp/learning-delta-scoreboard.candidate.json",
+      "tmp/public-check-summary.candidate.json",
+      "tmp/raw-registry-cross-environment-matrix-check.json",
+      "tmp/raw-registry-preflight-report-check.json",
+      "tmp/raw-registry-preflight-reproducibility-check.json",
+      "tmp/release-clean-blocker-ledger.candidate.json",
+      "tmp/release-closeout-batch-manifest.candidate.json",
+      "tmp/release-closeout-finality-attestation.candidate.json",
+      "tmp/release-closeout-fixed-point.candidate.json",
+      "tmp/release-closeout-post-check-finalizer.json",
+      "tmp/release-closeout-summary.candidate.json",
+      "tmp/release-evidence-cohort.candidate.json",
+      "tmp/release-evidence-dashboard.candidate.json",
+      "tmp/release-lane-summary.candidate.json",
+      "tmp/release-risk-taxonomy-matrix.candidate.json",
+      "tmp/release-source-ready-commit.json",
+      "tmp/release-source-ready-pre-status.json",
+      "tmp/release-workflow-order-guard.candidate.json",
+      "tmp/release-worktree-clean-check.json",
+      "tmp/remediation-backlog.candidate.json",
+      "tmp/script-output-surfaces.candidate.json",
+      "tmp/self-improvement-negative-lessons.candidate.json",
+      "tmp/session-synopsis.candidate.json",
+      "tmp/test-execution-summary-check.json",
+      "tmp/test-execution-summary-full.candidate.json",
+      "tmp/test-execution-summary.candidate.json"
+    ],
     "mismatches": [],
-    "summary": "batch verify status=pass; artifact_count=14; mismatch_count=0; tmp_json_count=0"
+    "summary": "batch verify status=fail; artifact_count=14; mismatch_count=0; tmp_json_count=37"
   },
   "test_evidence": {
     "primary_suite": "report-contract-summary",
     "primary_suite_scope": "report_contract_summary",
     "primary_represents_full_suite": false,
     "primary_status": "pass",
-    "primary_passed_count": 199,
+    "primary_passed_count": 201,
     "full_suite_status": "pass",
     "full_suite_summary_load_status": "ok",
     "full_suite_reason": "this execution has no pytest selectors and is treated as full-suite evidence"
@@ -93,8 +131,8 @@
     "revalidation_status": "due",
     "accepted_learning_risk": false,
     "release_effect": {
-      "clean_release_effect": "clean_allowed",
-      "operator_summary": "learning revalidation=due; release_authority_status=clean_pass; release_readiness_state=clean_pass; machine_release_allowed=True; operator_release_allowed=True"
+      "clean_release_effect": "conditional_operator_accepted",
+      "operator_summary": "learning revalidation=due; release_authority_status=conditional_pass; release_readiness_state=conditional_pass; machine_release_allowed=False; operator_release_allowed=True"
     }
   },
   "learning_claim": {
@@ -298,13 +336,13 @@
     "summary": "claim_level=none; bounded=False; confirmed_learning=auto_confirmed; valid_runs=3/3; eligible_families=1; rejected_runs=2; legacy_reconstruction=pass; legacy_reconstructed_runs=1/1; confirmed_blockers=rollback_revalidation_clean,learning_claim_blocker_absence"
   },
   "accepted_risk": {
-    "operator_accepted_risk_family_count": 0,
-    "clean_lane_blocking_accepted_risk_family_count": 0,
-    "accepted_risk_count": 0,
-    "release_accepted_risk_count": 0,
+    "operator_accepted_risk_family_count": 1,
+    "clean_lane_blocking_accepted_risk_family_count": 1,
+    "accepted_risk_count": 1,
+    "release_accepted_risk_count": 1,
     "accepted_learning_risk_count": 0,
-    "gate_attention_count": 2,
-    "learning_claim_blocking_family_count": 2,
+    "gate_attention_count": 3,
+    "learning_claim_blocking_family_count": 5,
     "advisory_lifecycle_family_count": 0,
     "count_sources": {
       "operator_accepted_risk_family_count": {
@@ -408,5 +446,5 @@
       }
     }
   },
-  "operator_summary": "semantic=clean_pass; sealed=sealed_clean_pass; source_zip=match; artifact_digest=match; artifact_mismatches=0; tmp_json=0; full_suite=pass; auto_improve_lane=blocked; learning_revalidation=due; confirmed_learning=auto_confirmed; valid_runs=3/3; eligible_families=1; rejected_runs=2; legacy_reconstruction=pass; legacy_reconstructed_runs=1/1; confirmed_blockers=rollback_revalidation_clean,learning_claim_blocker_absence; release_risk_acceptances=0; learning_risk_acceptances=0; gate_attention=2; learning_claim_blocking=2; advisory_lifecycle=0"
+  "operator_summary": "semantic=conditional_pass; sealed=blocked_tmp_json; source_zip=not_provided; artifact_digest=match; artifact_mismatches=0; tmp_json=37; full_suite=pass; auto_improve_lane=blocked; learning_revalidation=due; confirmed_learning=auto_confirmed; valid_runs=3/3; eligible_families=1; rejected_runs=2; legacy_reconstruction=pass; legacy_reconstructed_runs=1/1; confirmed_blockers=rollback_revalidation_clean,learning_claim_blocker_absence; release_risk_acceptances=1; learning_risk_acceptances=0; gate_attention=3; learning_claim_blocking=5; advisory_lifecycle=0"
 }

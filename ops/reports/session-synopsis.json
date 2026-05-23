@@ -1,20 +1,20 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-23T05:54:28Z",
+  "generated_at": "2026-05-23T08:28:40Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+  "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "f7dd295621a34a54cb5018604760de77e8685c6f0e0dc086056a7362e25a7519",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ea66bebc6dcb1e56d35893c8f4a0557a3dd3ad55888a83b5b2678e5b822c5ba7",
-    "auto_improve_readiness": "a6cdc47485538ca406e08d5014275a9763845091329e4bd641005349ee45e8e5",
+    "auto_improve_readiness": "3e31ae84dcb09b6344c91a3476688d978303ad846d8fab6de206a5638ff7ce4a",
     "goal_run_status": "ab2237d0fa8d3524b5d007656d6cf6811b66b732fcc9d8c40363b2bfee065602",
-    "learning_claim_activation": "af40c5b7c4b3ff18a475fadd88356a8a3270e7391e8090badbc2e3d4250f3619",
-    "learning_delta_scoreboard": "8ed71768858ade156d3bbefd3e4de594210b6be967d24247385a64a5065d5041",
+    "learning_claim_activation": "51139ebbfb4aa43a2f4ae22690c072ff5d0a6fbe64facbf689f5cc29ab235cf1",
+    "learning_delta_scoreboard": "4abeff37b324cbe5110aeaa44d8305b0f41884b14db4d47ebabd52b8023a896e",
     "source_package_clean_extract": "6f85a5e2744e029f467dc33a948db57dfcfbcb3bda372f33c787aa6f742bca37",
     "task_observations": "5ee6fc130d9ca93cc1189b0816c3aca7b2fe351a203f126ba6f09522decfd6ea"
   },
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-23T05:54:28Z"
+    "checked_at": "2026-05-23T08:28:40Z"
   },
   "vault": ".",
   "policy": {
@@ -56,6 +56,13 @@
       "repair_target": "Refresh goal run status and close the active blocker before resuming."
     },
     {
+      "id": "goal_status_promotion_blocked_by_goal_worktree_guard_failure",
+      "source": "goal_run_status.blockers",
+      "status": "open",
+      "reason": "promotion_blocked_by_goal_worktree_guard_failure",
+      "repair_target": "Refresh goal run status and close the active blocker before resuming."
+    },
+    {
       "id": "goal_status_git_worktree_dirty",
       "source": "goal_run_status.blockers",
       "status": "open",
@@ -68,13 +75,6 @@
       "status": "open",
       "reason": "self-improvement loop certificate incomplete",
       "repair_target": "Run the bounded self-improvement loop and full gates, then refresh goal-runtime-certificate."
-    },
-    {
-      "id": "promotion_blocked_by_goal_worktree_guard_failure",
-      "source": "auto_improve_readiness.promotion_blockers",
-      "status": "open",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=46",
-      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
     }
   ],
   "last_success_patterns": [

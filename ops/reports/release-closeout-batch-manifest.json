@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/release-closeout-batch-manifest.schema.json",
   "artifact_kind": "release_closeout_batch_manifest",
-  "generated_at": "2026-05-23T05:54:29Z",
+  "generated_at": "2026-05-23T08:30:32Z",
   "producer": "ops.scripts.release_closeout_batch_manifest",
   "source_command": "python -m ops.scripts.release_closeout_batch_manifest --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+  "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "a8af2e9389fc2d8fb095ba6ab26135e49a7c76344e5f070cb2a081c871e54a1d",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ef52351cbe2da5823614848423959fa15dd5be5c0f049eff5b4f16c595c49ee3",
     "artifact_count": "8527a891e224136950ff32ca212b45bc93f69fbb801c3b1ebedac52775f99e61",
-    "batch_id": "941a766e22b30dd804be579fca2292b878e4cd2be66534a27591606dd1cbb392",
+    "batch_id": "f6ed595a330c0f2dcf9f102d9a7db392de6f7a8424da205dd868cb4c820cae86",
     "distribution_zip_path": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "distribution_zip_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "evidence_set_digest": "775dc1457f488da10f0ffea5b32d4650ee96b9f9a5ccd8152aed5bc42b4e88f5",
+    "evidence_set_digest": "405e863bfc73d48bc5a5b628c2800b67405ded4deeda9fcd793d4e78b3a2ab8b",
     "external_source_zip_bound_status": "69de44406b857c1fbba5bf8864a1a93eff32e00c136270bafe7714edc939c1fa",
     "finality_attestation_path": "ff3639ee92e4c85a03bb8d26e058a3d7dc2b28876a43bd543ae689e13eebddb4",
     "finality_required": "3cbc87c7681f34db4617feaa2c8801931bc5e42d8d0f560e756dd4cd92885f18",
@@ -29,9 +29,9 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-23T05:54:29Z"
+    "checked_at": "2026-05-23T08:30:32Z"
   },
-  "batch_id": "batch-2026-05-23T05-54-29",
+  "batch_id": "batch-2026-05-23T08-30-32",
   "distribution_package": {
     "status": "not_provided",
     "archive_profile": "local_workspace",
@@ -47,7 +47,7 @@
     "timestamp_min": "",
     "timestamp_max": "",
     "source_manifest_file_count": 1641,
-    "source_manifest_digest": "7ecbb3fa3d94785aceb47e11b5661056f932c25608353f6f9d77ca3f81b9596c",
+    "source_manifest_digest": "c0de4bb5b7729c66bed9bc9673f222190c33cf8e18b35ab970d6613330e5e037",
     "archive_manifest_digest": "",
     "path_set_matches_release_manifest": false,
     "content_digest_matches_release_manifest": false,
@@ -66,9 +66,9 @@
     "sha256": "",
     "path_set_matches_release_manifest": false,
     "content_digest_matches_release_manifest": false,
-    "release_authority_status": "clean_pass",
+    "release_authority_status": "conditional_pass",
     "sealed_release_status": "unsealed_distribution_not_provided",
-    "summary": "external_source_zip_bound status=not_bound; distribution_package.status=not_provided; release_authority_status=clean_pass; sealed_release_status=unsealed_distribution_not_provided"
+    "summary": "external_source_zip_bound status=not_bound; distribution_package.status=not_provided; release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided"
   },
   "audit_materialization": {
     "mode": "referenced_checked_in_artifacts",
@@ -76,7 +76,7 @@
     "optional_bundle_target": "release-audit-pack",
     "bundle_source_of_truth": "release-closeout-batch-manifest.json",
     "artifact_count": 14,
-    "evidence_set_digest": "a8ea57e82bc65566a4498ed0136c84c69836355a3f08337bba225f9ac888d467",
+    "evidence_set_digest": "1a0dc80f9098f0e4d0f8066e65a1ab63d51715daced67a3f8d23d8aef2f0c233",
     "optional_payload_policy": {
       "status": "available",
       "include_by_default": false,
@@ -94,7 +94,7 @@
       {
         "kind": "execution_log",
         "path": "build/release-payloads/test-execution-summary-full.log",
-        "sha256": "505f40a14c86bf0da0faca111778d74414e26991f4210dfbb511f12007841501",
+        "sha256": "1847a52fafd46065b74be74a0405387dbb26f6e36b736d2df200a17a71c18482",
         "size_bytes": 1852,
         "required": false,
         "include_in_default_pack": false,
@@ -104,8 +104,8 @@
       {
         "kind": "junit_xml",
         "path": "build/release-payloads/test-execution-summary-full.junit.xml",
-        "sha256": "2c5773b0336f9237dee0e3213ad1ba710c79b470eecbadb8718d8f007fe12f7e",
-        "size_bytes": 253172,
+        "sha256": "59f6ba10210c3facf8356192ff132d10fa1db3fed4ddf92911f5e557f789fc89",
+        "size_bytes": 254005,
         "required": false,
         "include_in_default_pack": false,
         "source": "ops/reports/test-execution-summary-full.json.evidence_artifacts",
@@ -128,10 +128,10 @@
     {
       "path": "ops/reports/release-smoke-report.json",
       "artifact_kind": "release_smoke_report",
-      "digest": "b24ff039741f0fee3f5c1c1b332e20f9c8484e9f3b0cb69096e32041713011dc",
-      "generated_at": "2026-05-23T05:30:56Z",
+      "digest": "17cac1238de1dcdba0e63141138c414c5e3671c311150ceb8761fe9ddc00db47",
+      "generated_at": "2026-05-23T08:28:31Z",
       "producer": "ops.scripts.release_smoke",
-      "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+      "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
       "currentness_status": "current",
       "role": "primary_evidence",
       "required": true
@@ -150,10 +150,10 @@
     {
       "path": "external-reports/report-reference-manifest.json",
       "artifact_kind": "external_report_reference_manifest",
-      "digest": "769da04d73af065b4e505ee013b37bb9b4ef3648c826de8418c4298a4560e0ab",
-      "generated_at": "2026-05-23T05:30:40Z",
+      "digest": "82bec478305fa9781ebbaee3392f86e3f4454394eaaa1f2dc862d5f1c8ac3c09",
+      "generated_at": "2026-05-23T08:20:53Z",
       "producer": "ops.scripts.external_report_reference_manifest",
-      "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+      "source_tree_fingerprint": "4c5e79d21101f1f353c8346826e718c0a3cfbd547f56afb4bd951b10bc38b81b",
       "currentness_status": "current",
       "role": "external_review_provenance",
       "required": true
@@ -161,10 +161,10 @@
     {
       "path": "ops/reports/generated-artifact-index.json",
       "artifact_kind": "generated_artifact_index_report",
-      "digest": "22392539841a9bf289d16975c154f2d6c4db00cbfefaeca4fc03b402973efebd",
-      "generated_at": "2026-05-23T05:54:29Z",
+      "digest": "20b30a0d069eb1e0b355e28fe8750cdc6c52e2286255dd84168acd30ff317eb6",
+      "generated_at": "2026-05-23T08:30:32Z",
       "producer": "ops.scripts.generated_artifact_index",
-      "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+      "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
       "currentness_status": "current",
       "role": "index",
       "required": true
@@ -172,10 +172,10 @@
     {
       "path": "ops/reports/artifact-freshness-report.json",
       "artifact_kind": "artifact_freshness_report",
-      "digest": "83eadc5c51b831780469c461d4622019fc25d2110caf4c4636efe330c00884fc",
-      "generated_at": "2026-05-23T05:54:29Z",
+      "digest": "93ff954250963d66648f2de6966e0c8ce8c3404c74e6526048066ee9f39a6cb3",
+      "generated_at": "2026-05-23T08:30:32Z",
       "producer": "ops.scripts.artifact_freshness_runtime",
-      "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+      "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
       "currentness_status": "current",
       "role": "primary_evidence",
       "required": true
@@ -183,10 +183,10 @@
     {
       "path": "ops/reports/test-execution-summary.json",
       "artifact_kind": "test_execution_summary",
-      "digest": "60a28ec32ed31b5e7d87c9cf12e81d34b928b196872f5447085b4c0ff83faea0",
-      "generated_at": "2026-05-23T05:51:47Z",
+      "digest": "b1270b0dbbd2131d6c42826dcf79af0c78deb247fa6fafbcfe6a7edbec5c41e1",
+      "generated_at": "2026-05-23T08:28:04Z",
       "producer": "ops.scripts.test_execution_summary",
-      "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+      "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
       "currentness_status": "current",
       "role": "report_contract_evidence",
       "required": true
@@ -194,10 +194,10 @@
     {
       "path": "ops/reports/test-execution-summary-full.json",
       "artifact_kind": "test_execution_summary",
-      "digest": "526938f1c7f44af43b0e7dde8e4278a2d9830a67069628ceb11024ea05ee25a8",
-      "generated_at": "2026-05-23T05:47:04Z",
+      "digest": "a227fcf279730e452d5bd6ea8980456509c894a73184619d915c4507ec646a43",
+      "generated_at": "2026-05-23T07:38:57Z",
       "producer": "ops.scripts.test_execution_summary",
-      "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+      "source_tree_fingerprint": "4c5e79d21101f1f353c8346826e718c0a3cfbd547f56afb4bd951b10bc38b81b",
       "currentness_status": "current",
       "role": "full_suite_evidence",
       "required": true
@@ -205,10 +205,10 @@
     {
       "path": "ops/reports/release-closeout-summary.json",
       "artifact_kind": "release_closeout_summary",
-      "digest": "d0aa53ce960e953549ea450e4bc48617923453f5a3323ed7c85449cac4ff1d39",
-      "generated_at": "2026-05-23T05:54:29Z",
+      "digest": "5b685edae54e1cba968b52ac21eff269cf933729390767ed96431114c8862899",
+      "generated_at": "2026-05-23T08:30:32Z",
       "producer": "ops.scripts.release_closeout_summary",
-      "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+      "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
       "currentness_status": "current",
       "role": "decision",
       "required": true
@@ -216,10 +216,10 @@
     {
       "path": "ops/reports/learning-readiness-signoff-revalidation.json",
       "artifact_kind": "learning_readiness_signoff_revalidation",
-      "digest": "9aea8412831ef9ebf30182c74ee39b0074e065a41d23720f53c4bc5a9989d024",
-      "generated_at": "2026-05-23T05:54:29Z",
+      "digest": "a71c22669d263893c22da3cdfb323bf3dedb88ab9c65e789ed47cf48a082e401",
+      "generated_at": "2026-05-23T08:30:32Z",
       "producer": "ops.scripts.learning_readiness_signoff_revalidation",
-      "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+      "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
       "currentness_status": "current",
       "role": "signoff",
       "required": true
@@ -227,10 +227,10 @@
     {
       "path": "ops/reports/learning-delta-scoreboard.json",
       "artifact_kind": "learning_delta_scoreboard",
-      "digest": "8ed71768858ade156d3bbefd3e4de594210b6be967d24247385a64a5065d5041",
-      "generated_at": "2026-05-23T05:54:27Z",
+      "digest": "4abeff37b324cbe5110aeaa44d8305b0f41884b14db4d47ebabd52b8023a896e",
+      "generated_at": "2026-05-23T08:28:39Z",
       "producer": "ops.scripts.learning_delta_scoreboard",
-      "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+      "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
       "currentness_status": "current",
       "role": "learning_claim_guard",
       "required": true
@@ -238,10 +238,10 @@
     {
       "path": "ops/reports/release-evidence-cohort.json",
       "artifact_kind": "release_evidence_cohort",
-      "digest": "6bdc14b5cdc0c7387480a0988ab740ab95be70e050a02afb577e3d06015678d8",
-      "generated_at": "2026-05-23T05:54:29Z",
+      "digest": "dae23d6e3046d8d9db98b039fb1f1aa3f265ff678f33315d05569ca7d70f5631",
+      "generated_at": "2026-05-23T08:30:32Z",
       "producer": "ops.scripts.release_evidence_cohort",
-      "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+      "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
       "currentness_status": "current",
       "role": "cohort",
       "required": true
@@ -249,10 +249,10 @@
     {
       "path": "ops/reports/release-evidence-dashboard.json",
       "artifact_kind": "release_evidence_dashboard",
-      "digest": "13bc3a87308bbf24201b2c423f379b39970b3237baecb438352b6d21911d3373",
-      "generated_at": "2026-05-23T05:54:29Z",
+      "digest": "7af3fa8b89e6b292d7d57a5f896bee2c2f640a429185a624f05b3b6f55622667",
+      "generated_at": "2026-05-23T08:30:32Z",
       "producer": "ops.scripts.release_evidence_dashboard",
-      "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+      "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
       "currentness_status": "current",
       "role": "dashboard",
       "required": true
@@ -260,10 +260,10 @@
     {
       "path": "ops/reports/release-lane-summary.json",
       "artifact_kind": "release_lane_summary",
-      "digest": "87a5c4bd67ca5f0a1c73a5bc0d5a6ed234c728e54f4c2932ad8523b9c368d5ad",
-      "generated_at": "2026-05-23T05:54:29Z",
+      "digest": "727d2f6fba1372caf48da0672c2e97c6609fa53206b632d1f595ba454412d806",
+      "generated_at": "2026-05-23T08:30:32Z",
       "producer": "ops.scripts.release_lane_summary",
-      "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+      "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
       "currentness_status": "current",
       "role": "lane_summary",
       "required": true
@@ -271,10 +271,10 @@
     {
       "path": "ops/reports/release-clean-blocker-ledger.json",
       "artifact_kind": "release_clean_blocker_ledger",
-      "digest": "4cedeba362111731310a1a00d8c9e4e293143951c4b55ca85dfc0d6386a0fd3b",
-      "generated_at": "2026-05-23T05:54:29Z",
+      "digest": "a14ae5be9608126219d0946ac1e75860ff94ccfd5fc946f3f6e725a9dbd9c5ee",
+      "generated_at": "2026-05-23T08:30:32Z",
       "producer": "ops.scripts.release_clean_blocker_ledger",
-      "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+      "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
       "currentness_status": "current",
       "role": "clean_blocker_ledger",
       "required": true
@@ -312,24 +312,29 @@
     "compatibility_status_deprecated": true,
     "compatibility_alias_retention": "one_to_two_releases",
     "status_axes": {
-      "release_authority_status": "clean_pass",
-      "semantic_release_status": "clean_pass",
+      "release_authority_status": "conditional_pass",
+      "semantic_release_status": "conditional_pass",
       "sealed_release_status": "unsealed_distribution_not_provided"
     },
     "release_authority_status_field": "release_authority_status",
-    "release_authority_status_value": "clean_pass",
+    "release_authority_status_value": "conditional_pass",
     "semantic_release_status_field": "semantic_release_status",
-    "semantic_release_status_value": "clean_pass",
+    "semantic_release_status_value": "conditional_pass",
     "sealed_status_field": "sealed_release_status",
     "sealed_status_value": "unsealed_distribution_not_provided",
     "proposed_top_level_status_replacement": "sealed_release_status",
-    "status_classification": "semantic_clean_unsealed",
-    "authority_reason_ids": [],
+    "status_classification": "conditional_release",
+    "authority_reason_ids": [
+      "release_authority_not_clean_pass",
+      "machine_release_not_allowed"
+    ],
     "sealed_reason_ids": [
       "sealed_release_not_clean_pass",
       "distribution_package_not_materialized"
     ],
     "blocker_reason_ids": [
+      "release_authority_not_clean_pass",
+      "machine_release_not_allowed",
       "sealed_release_not_clean_pass",
       "distribution_package_not_materialized"
     ],
@@ -338,7 +343,7 @@
       "sealed_release_status",
       "release_authority_vocabulary.blocker_reason_ids"
     ],
-    "summary": "status_v2=semantic_clean_unsealed; legacy status=fail; release_authority_status=clean_pass; sealed_release_status=unsealed_distribution_not_provided; blocker_reason_count=2"
+    "summary": "status_v2=conditional_release; legacy status=fail; release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided; blocker_reason_count=4"
   },
   "status_v2_preview": {
     "schema_version": 2,
@@ -348,24 +353,29 @@
     "compatibility_status_deprecated": true,
     "compatibility_alias_retention": "one_to_two_releases",
     "status_axes": {
-      "release_authority_status": "clean_pass",
-      "semantic_release_status": "clean_pass",
+      "release_authority_status": "conditional_pass",
+      "semantic_release_status": "conditional_pass",
       "sealed_release_status": "unsealed_distribution_not_provided"
     },
     "release_authority_status_field": "release_authority_status",
-    "release_authority_status_value": "clean_pass",
+    "release_authority_status_value": "conditional_pass",
     "semantic_release_status_field": "semantic_release_status",
-    "semantic_release_status_value": "clean_pass",
+    "semantic_release_status_value": "conditional_pass",
     "sealed_status_field": "sealed_release_status",
     "sealed_status_value": "unsealed_distribution_not_provided",
     "proposed_top_level_status_replacement": "sealed_release_status",
-    "status_classification": "semantic_clean_unsealed",
-    "authority_reason_ids": [],
+    "status_classification": "conditional_release",
+    "authority_reason_ids": [
+      "release_authority_not_clean_pass",
+      "machine_release_not_allowed"
+    ],
     "sealed_reason_ids": [
       "sealed_release_not_clean_pass",
       "distribution_package_not_materialized"
     ],
     "blocker_reason_ids": [
+      "release_authority_not_clean_pass",
+      "machine_release_not_allowed",
       "sealed_release_not_clean_pass",
       "distribution_package_not_materialized"
     ],
@@ -374,7 +384,7 @@
       "sealed_release_status",
       "release_authority_vocabulary.blocker_reason_ids"
     ],
-    "summary": "status_v2=semantic_clean_unsealed; legacy status=fail; release_authority_status=clean_pass; sealed_release_status=unsealed_distribution_not_provided; blocker_reason_count=2"
+    "summary": "status_v2=conditional_release; legacy status=fail; release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided; blocker_reason_count=4"
   },
   "summary": {
     "artifact_count": 14,
@@ -385,63 +395,78 @@
     "required_current_count": 14
   },
   "batch_integrity_status": "pass",
-  "release_authority_status": "clean_pass",
-  "semantic_release_status": "clean_pass",
+  "release_authority_status": "conditional_pass",
+  "semantic_release_status": "conditional_pass",
   "sealed_release_status": "unsealed_distribution_not_provided",
   "release_authority_vocabulary": {
     "schema_version": 1,
-    "release_authority_status": "clean_pass",
-    "semantic_release_status": "clean_pass",
+    "release_authority_status": "conditional_pass",
+    "semantic_release_status": "conditional_pass",
     "sealed_release_status": "unsealed_distribution_not_provided",
-    "machine_release_allowed": true,
-    "clean_release_ready": true,
+    "machine_release_allowed": false,
+    "clean_release_ready": false,
     "batch_integrity_status": "pass",
     "distribution_package_status": "not_provided",
-    "authority_reason_ids": [],
+    "authority_reason_ids": [
+      "release_authority_not_clean_pass",
+      "machine_release_not_allowed"
+    ],
     "sealed_reason_ids": [
       "sealed_release_not_clean_pass",
       "distribution_package_not_materialized"
     ],
     "blocker_reason_ids": [
+      "release_authority_not_clean_pass",
+      "machine_release_not_allowed",
       "sealed_release_not_clean_pass",
       "distribution_package_not_materialized"
     ],
-    "operator_summary": "release_authority_status=clean_pass; semantic_release_status=clean_pass; sealed_release_status=unsealed_distribution_not_provided; machine_release_allowed=true; clean_release_ready=true; batch_integrity_status=pass; distribution_package_status=not_provided; authority_reason_ids=none; sealed_reason_ids=sealed_release_not_clean_pass,distribution_package_not_materialized; blocker_reason_ids=sealed_release_not_clean_pass,distribution_package_not_materialized",
+    "operator_summary": "release_authority_status=conditional_pass; semantic_release_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided; machine_release_allowed=false; clean_release_ready=false; batch_integrity_status=pass; distribution_package_status=not_provided; authority_reason_ids=release_authority_not_clean_pass,machine_release_not_allowed; sealed_reason_ids=sealed_release_not_clean_pass,distribution_package_not_materialized; blocker_reason_ids=release_authority_not_clean_pass,machine_release_not_allowed,sealed_release_not_clean_pass,distribution_package_not_materialized",
     "operator_summary_round_trip": {
       "status": "pass",
       "parser": "release_authority_operator_summary_v1",
       "expected": {
-        "release_authority_status": "clean_pass",
-        "semantic_release_status": "clean_pass",
+        "release_authority_status": "conditional_pass",
+        "semantic_release_status": "conditional_pass",
         "sealed_release_status": "unsealed_distribution_not_provided",
-        "machine_release_allowed": true,
-        "clean_release_ready": true,
+        "machine_release_allowed": false,
+        "clean_release_ready": false,
         "batch_integrity_status": "pass",
         "distribution_package_status": "not_provided",
-        "authority_reason_ids": [],
+        "authority_reason_ids": [
+          "release_authority_not_clean_pass",
+          "machine_release_not_allowed"
+        ],
         "sealed_reason_ids": [
           "sealed_release_not_clean_pass",
           "distribution_package_not_materialized"
         ],
         "blocker_reason_ids": [
+          "release_authority_not_clean_pass",
+          "machine_release_not_allowed",
           "sealed_release_not_clean_pass",
           "distribution_package_not_materialized"
         ]
       },
       "parsed": {
-        "release_authority_status": "clean_pass",
-        "semantic_release_status": "clean_pass",
+        "release_authority_status": "conditional_pass",
+        "semantic_release_status": "conditional_pass",
         "sealed_release_status": "unsealed_distribution_not_provided",
-        "machine_release_allowed": true,
-        "clean_release_ready": true,
+        "machine_release_allowed": false,
+        "clean_release_ready": false,
         "batch_integrity_status": "pass",
         "distribution_package_status": "not_provided",
-        "authority_reason_ids": [],
+        "authority_reason_ids": [
+          "release_authority_not_clean_pass",
+          "machine_release_not_allowed"
+        ],
         "sealed_reason_ids": [
           "sealed_release_not_clean_pass",
           "distribution_package_not_materialized"
         ],
         "blocker_reason_ids": [
+          "release_authority_not_clean_pass",
+          "machine_release_not_allowed",
           "sealed_release_not_clean_pass",
           "distribution_package_not_materialized"
         ]
@@ -449,15 +474,15 @@
       "mismatch_count": 0,
       "mismatches": []
     },
-    "summary": "release authority and sealed distribution use shared reason ids; blocker_reason_count=2"
+    "summary": "release authority and sealed distribution use shared reason ids; blocker_reason_count=4"
   },
   "artifact_generation_status": "pass",
   "artifact_digest_sealing_status": "pass",
-  "source_tree_rebuild_status": "pass",
-  "clean_lane_status": "pass",
+  "source_tree_rebuild_status": "attention",
+  "clean_lane_status": "fail",
   "auto_improve_lane_status": "blocked",
   "learning_lane_status": "blocked",
-  "machine_release_status": "allowed",
+  "machine_release_status": "blocked",
   "operator_release_status": "allowed",
   "finality": {
     "finality_required": true,
@@ -473,8 +498,8 @@
   "integrity_layers": {
     "artifact_inventory_integrity": "pass",
     "artifact_content_integrity": "pass",
-    "source_tree_coherence_integrity": "pass",
-    "source_tree_coherence_status": "pass"
+    "source_tree_coherence_integrity": "fail",
+    "source_tree_coherence_status": "attention"
   },
   "downstream_input_digest_mismatch": {
     "status": "match",
@@ -489,12 +514,12 @@
     "timestamp_semantics": "filesystem_timestamp",
     "source_freshness_temporal_authority": "filesystem_mtime",
     "source_freshness_content_authority": "source_tree_fingerprint",
-    "generated_at": "2026-05-23T05:54:29Z",
+    "generated_at": "2026-05-23T08:30:32Z",
     "zip_metadata_path": "",
     "archive_timestamp_has_timezone": true,
     "timestamp_timezone_assumption": "UTC",
     "source_file_count": 1641,
-    "latest_source_mtime": "2026-05-23T05:50:39Z",
+    "latest_source_mtime": "2026-05-23T08:26:59Z",
     "latest_source_path": "tests/fixtures/report_schema_samples.json",
     "changed_after_generated_at_count": 0,
     "changed_after_generated_at_path_limit": 50,
@@ -505,13 +530,15 @@
     "summary": "source_evidence_freshness status=pass; basis=filesystem_mtime; changed_after_generated_at_count=0; missing_zip_member_count=0; source_file_count=1641"
   },
   "release_decision_snapshot": {
-    "clean_release_ready": true,
-    "machine_release_allowed": true,
-    "release_readiness_state": "clean_pass",
-    "release_authority_status": "clean_pass",
-    "semantic_release_status": "clean_pass",
+    "clean_release_ready": false,
+    "machine_release_allowed": false,
+    "release_readiness_state": "conditional_pass",
+    "release_authority_status": "conditional_pass",
+    "semantic_release_status": "conditional_pass",
     "closeout_sealed_release_status": "unsealed_distribution_not_provided",
     "status_v2_blocker_reason_ids": [
+      "release_authority_not_clean_pass",
+      "machine_release_not_allowed",
       "sealed_release_not_clean_pass",
       "distribution_package_not_materialized"
     ],
@@ -523,11 +550,37 @@
     "learning_claim_guard_status": "pass",
     "learning_claim_allowed": false,
     "claims_learning_improved": false,
-    "learning_claim_blocking_family_count": 2,
+    "learning_claim_blocking_family_count": 6,
     "advisory_lifecycle_family_count": 0,
-    "accepted_risk_count": 0,
-    "gate_attention_count": 2,
-    "accepted_risk_family_count": 0,
-    "accepted_risks": []
+    "accepted_risk_count": 1,
+    "gate_attention_count": 3,
+    "accepted_risk_family_count": 1,
+    "accepted_risks": [
+      {
+        "source": "source_tree_coherence",
+        "source_path": "ops/reports/release-closeout-summary.json",
+        "code": "source_tree_coherence_attention",
+        "severity": "warn",
+        "gate_effect": "accepted_risk",
+        "message": "release closeout component evidence does not form a single strict source-tree cohort.",
+        "required_evidence": [
+          "Regenerate release evidence in one closeout chain or document why fingerprint divergence is acceptable."
+        ],
+        "risk_acceptance": {
+          "accepted_by": "release_closeout_policy",
+          "accepted_at": "2026-05-23T08:30:32Z",
+          "expires_at": "2026-05-30T08:30:32Z",
+          "risk_owner": "runtime-maintainer",
+          "revalidation_condition": "Rerun release evidence in one ordered closeout chain before release signoff.",
+          "rollback_trigger": "Treat source tree coherence attention as a blocker if component fingerprints are missing.",
+          "acceptance_source": "ops/scripts/release_closeout_summary.py",
+          "linked_blocker_id": ""
+        },
+        "clean_lane_effect": "blocks_clean_lane",
+        "conditional_lane_effect": "operator_review_required",
+        "learning_lane_effect": "not_applicable",
+        "advisory_lifecycle_effect": "not_applicable"
+      }
+    ]
   }
 }

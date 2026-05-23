@@ -1,16 +1,16 @@
 {
   "$schema": "ops/schemas/goal-worktree-guard.schema.json",
   "artifact_kind": "goal_worktree_guard",
-  "generated_at": "2026-05-23T05:55:15Z",
+  "generated_at": "2026-05-23T08:30:32Z",
   "producer": "ops.scripts.goal_worktree_guard",
   "source_command": "python -m ops.scripts.goal_worktree_guard --vault .",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "2ff56a8d94dacbae5abacdc152b5658285be63a00631b29e39eb82149caaa31b",
+  "source_tree_fingerprint": "4b028aa1f0bb46b1adae084e47b697d1b077ff9b8395f970c647f9475ed94c70",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "7c4c765de09ab71cbad92c21ed479008b7bce4a0f8e572e440273ca52f3ab7f6",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "f5d9bd2c64af0fdcb13525dfd111f2fafe626855fa00b15ee9ae4ee6757a3ae1",
+    "source_paths": "d2a0b9269e318fc9b3829b837aabfde5d5b041e8334c66023478f2090925d770",
     "durable_private_ignored_prefixes": "24cfeecb98ba02a35055f64d5eff12e267c234a35c0d8af0d470155b26b2eddd",
     "local_only_retained_private_ignored_paths": "ce208ae68fd4527f3497f4b7e2cf7536362a408896a3a9e3063effa2e7d5548d",
     "local_only_retained_private_ignored_prefixes": "4fbbfcc562cc9d595ed7b4ebe95528dc8d9d6c1587cc8ba1f38ae16e9f33be14",
@@ -22,7 +22,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-23T05:55:15Z"
+    "checked_at": "2026-05-23T08:30:32Z"
   },
   "vault": ".",
   "requested_mode": "git",
@@ -43,13 +43,15 @@
     "available": true,
     "inside_worktree": true,
     "worktree_root": ".",
-    "head_sha": "4d5f78f24d60266fc201d30720b62dee35671c9b",
+    "head_sha": "c499ae51d4d7eba9f792319068e1d22151f5873b",
     "branch": "feature/codebase-memory-mcp-adoption",
-    "dirty_entry_count": 0,
-    "status_porcelain_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "status_codes": {},
+    "dirty_entry_count": 36,
+    "status_porcelain_sha256": "052482b8dc718395da6d162efd7f07d3c2c0258c4b877f43b4afa0d251e38979",
+    "status_codes": {
+      "M": 36
+    },
     "self_output_dirty_entry_count": 1,
-    "self_output_dirty_status_porcelain_sha256": "5c75aa33a38ceb7756d1d9fa7a317cdb9da04626327445b228f24486a4939d85",
+    "self_output_dirty_status_porcelain_sha256": "81dcf7516e77e66da14b0a2397b3591b7e7caa1d4c3c7068cfd73319e7a42640",
     "self_output_dirty_status_codes": {
       "M": 1
     },
@@ -61,12 +63,21 @@
   },
   "decisions": {
     "can_execute_goal_runtime": true,
-    "can_promote_result": true,
+    "can_promote_result": false,
     "zip_mode_replay_only": false,
     "dirty_worktree_allowed": false,
     "fatal_blockers": [],
-    "promotion_blockers": []
+    "promotion_blockers": [
+      "git_worktree_dirty"
+    ]
   },
-  "blockers": [],
-  "status": "pass"
+  "blockers": [
+    {
+      "blocker_id": "git_worktree_dirty",
+      "severity": "blocking",
+      "summary": "Git worktree has 36 dirty status entries",
+      "next_action": "Commit, stash, or explicitly allow dirty mode before treating goal output as promotable."
+    }
+  ],
+  "status": "attention"
 }
