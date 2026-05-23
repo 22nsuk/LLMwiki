@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import json
+import shutil
 import tempfile
 import unittest
 import zipfile
@@ -220,6 +221,27 @@ Body
 
             self.assertEqual(report["status"], "fail")
             self.assertEqual(report["errors"][0]["type"], "missing_raw_registry_shard_page")
+
+    def test_release_archive_profile_skips_absent_corpus_registry_surfaces(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            for surface in ("raw", "wiki", "system"):
+                shutil.rmtree(vault / surface)
+
+            strict_report = preflight(vault, context=fixed_context())
+            release_report = preflight(
+                vault,
+                context=fixed_context(),
+                release_archive_profile=True,
+            )
+
+            self.assertEqual(strict_report["status"], "fail")
+            self.assertEqual(release_report["status"], "pass")
+            self.assertEqual(release_report["entry_pages"], [])
+            self.assertEqual(release_report["stats"]["entry_count"], 0)
+            self.assertIn("--release-archive-profile", release_report["source_command"])
 
     def test_preflight_accepts_existing_alias_when_canonical_storage_path_is_missing(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

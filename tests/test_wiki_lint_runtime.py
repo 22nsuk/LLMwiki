@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -41,6 +42,60 @@ class WikiLintRuntimeTest(unittest.TestCase):
             self.assertEqual(report["generated_at"], "2026-04-15T03:45:00Z")
             self.assertEqual(report["stats"]["error_count"], 0)
             self.assertEqual(report["stats"]["warning_count"], 0)
+
+    def test_release_archive_profile_accepts_public_source_package_without_corpus(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            for surface in ("raw", "wiki", "system"):
+                shutil.rmtree(vault / surface)
+
+            strict_report = lint(vault, context=_fixed_context())
+            release_report = lint(
+                vault,
+                context=_fixed_context(),
+                release_archive_profile=True,
+            )
+
+            self.assertEqual(strict_report["status"], "fail")
+            self.assertEqual(release_report["status"], "pass")
+            self.assertEqual(release_report["stats"]["page_count"], 0)
+            self.assertEqual(release_report["stats"]["review_candidate_count"], 0)
+
+    def test_release_archive_profile_still_reports_public_function_budget_candidates(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            for surface in ("raw", "wiki", "system"):
+                shutil.rmtree(vault / surface)
+            long_function = vault / "ops" / "scripts" / "budget_sample.py"
+            long_function.parent.mkdir(parents=True, exist_ok=True)
+            long_function.write_text(
+                "def release_archive_smoke_only():\n" + ("    value = 1\n" * 220),
+                encoding="utf-8",
+            )
+            set_policy_value(
+                vault,
+                ("system_refactor_policy", "python_function_review", "profiles", "runtime", "lines"),
+                3,
+            )
+
+            release_report = lint(
+                vault,
+                context=_fixed_context(),
+                release_archive_profile=True,
+            )
+            candidates = [
+                item
+                for item in release_report["review_candidates"]
+                if item["type"] == "python_function_budget_candidate"
+            ]
+
+            self.assertEqual(release_report["status"], "pass")
+            self.assertEqual(len(candidates), 1)
+            self.assertEqual(candidates[0]["page"], "ops/scripts/budget_sample.py")
 
     def test_lint_reports_duplicate_page_stems_as_errors(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

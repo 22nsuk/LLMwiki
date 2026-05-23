@@ -576,6 +576,7 @@ class ReleaseSmokeTest(unittest.TestCase):
                 "ops.scripts.registry.raw_registry_preflight",
                 "--vault",
                 ".",
+                "--release-archive-profile",
             ],
         )
         self.assertEqual(
@@ -713,7 +714,10 @@ class ReleaseSmokeTest(unittest.TestCase):
 
         self.assertEqual([item["name"] for item in results], list(outputs))
         self.assertEqual(progress_lengths, [1, 2, 3, 4, 5])
-        self.assertEqual(results[0]["command"], "python -m ops.scripts.registry.raw_registry_preflight --vault .")
+        self.assertEqual(
+            results[0]["command"],
+            "python -m ops.scripts.registry.raw_registry_preflight --vault . --release-archive-profile",
+        )
         self.assertEqual(
             results[1]["command"],
             "python -m ops.scripts.eval.wiki_lint --vault . --release-archive-profile",

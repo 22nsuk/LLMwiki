@@ -103,7 +103,7 @@ SMOKE_COMMAND_SPECS = (
     (
         "raw_registry_preflight",
         ("-m", "ops.scripts.registry.raw_registry_preflight"),
-        (),
+        ("--release-archive-profile",),
     ),
     (
         "wiki_lint",

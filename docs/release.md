@@ -20,20 +20,30 @@ result can be promoted without operator intervention.
   current HEAD, source fingerprint, source ZIP, and source-package smoke report.
 - `make release-sealed-run-ready-plan`: inspect runnable authority evidence and
   write the cost-aware action plan for sealing without rerunning stage 1.
-- `make release-sealed-run-ready`: build sealed sidecars, write the operator-free
-  sealed post-seal attestation, run the sealed rehearsal check, and write the
-  sealed-run manifest. It requires current passing runnable evidence and does
-  not rerun the runnable stage.
+- `make release-sealed-run-ready`: build sealed sidecars, including the sealed
+  operator summary diagnostic, write the operator-free sealed post-seal
+  attestation, run the sealed rehearsal check, and write the sealed-run
+  manifest. It requires current passing runnable evidence and does not rerun the
+  runnable stage. The operator summary is generated for Stage 3 reuse, but it is
+  not part of the sealed-run authority sidecar set.
 - `make release-sealed-run-ready-check`: revalidate existing sealed evidence
   without rerunning tests or rebuilding the package.
-- `make release-auto-promotion-ready-plan`: inspect runnable, sealed, operator,
-  and auto-improve evidence and write the cost-aware action plan for the
-  promotion verdict.
-- `make release-auto-promotion-operator-summary`: refresh only the cheap
-  build-local operator diagnostics used by the promotion verdict.
+- `make release-auto-promotion-ready-plan`: inspect preflight, runnable,
+  preseal, sealed, operator, and auto-improve evidence and write the cost-aware
+  action plan for the promotion verdict.
+- `make release-auto-promotion-preflight`: refresh cheap unattended-promotion
+  blockers before spending full run-ready cycles. It checks remediation,
+  learning revalidation, and auto-improve readiness without building or sealing
+  release artifacts.
+- `make release-auto-promotion-preseal`: refresh clean closeout, strict
+  same-fingerprint cohort, remediation, learning, and auto-improve diagnostics
+  after run-ready and before sealing.
+- `make release-auto-promotion-operator-summary`: manual fallback to refresh the
+  cheap build-local operator diagnostics used by the promotion verdict when
+  sealed sidecars are already current.
 - `make release-auto-promotion-ready`: low-cost promotion check that reads the
-  current runnable and sealed manifests, refreshes only the build-local operator
-  summary, and decides unattended promotion. It never cascades into the lower
+  current runnable and sealed manifests, reuses the sealed operator summary
+  diagnostic, and decides unattended promotion. It never cascades into the lower
   runnable or sealing stages.
 - `make release-auto-promotion-ready-check`: revalidate the existing
   auto-promotion manifest inputs without recomputing expensive evidence.
@@ -50,28 +60,45 @@ result can be promoted without operator intervention.
   zip-bound sealed evidence is written as sidecars under `build/release/`.
 - `make release-smoke-fast`: developer/package precheck이며 canonical release evidence로 쓰지 않는다.
 - `make release-smoke`: canonical release evidence는 이 full 단일 report인 `ops/reports/release-smoke-report.json`이다.
+  Source-package smoke runs registry and wiki lint checks in release-archive
+  profile because public source ZIPs intentionally omit `raw/`, `wiki/`, and
+  `system/`; missing private corpus surfaces must not become release-smoke
+  blockers. Public-code review candidates, including Python function-budget
+  candidates, remain visible in the smoke diagnostics.
 
 ## Recommended Order
 
 1. Commit the source tree you want to verify. Release tooling no longer commits
    or pushes automatically.
-2. Run `make release-run-ready`.
-3. Run `make release-sealed-run-ready` when you need source ZIP and sidecar
+2. If unattended promotion is the intended outcome, run
+   `make release-auto-promotion-preflight` before the expensive runnable stage.
+3. Run `make release-run-ready`.
+4. If unattended promotion is the intended outcome, run
+   `make release-auto-promotion-preseal` before sealing.
+5. Run `make release-sealed-run-ready` when you need source ZIP and sidecar
    evidence sealed for release review. Its planner requires a current passing
    run-ready manifest and reports the minimal next action if that evidence is
    missing, stale, or failing.
-4. Run `make release-auto-promotion-ready` when unattended promotion must be
-   evaluated. Its planner reuses current passing run/sealed authority evidence,
-   reports minimal next actions for missing or stale lower evidence, and then
-   refreshes only the cheap build-local operator summary before writing the
-   auto-promotion authority manifest.
+6. Run `make release-auto-promotion-ready` when unattended promotion must be
+   evaluated. Its planner reuses current passing preflight, run, preseal, and
+   sealed authority evidence, reports minimal next actions for missing or stale
+   lower evidence, and then reuses the sealed operator summary diagnostic before
+   writing the auto-promotion authority manifest.
 
 `release-auto-promotion-ready` intentionally avoids rerunning full pytest,
 rebuilding the package, or resealing evidence when current lower-stage evidence
 already passes. Learning and auto-improve reports under `ops/reports/` are
 diagnostic inputs for the final manifest; if they are stale, the planner records
-the pre-seal refresh target rather than mutating canonical lower-stage evidence
-during stage 3 readback.
+the preflight or preseal refresh target rather than mutating canonical
+lower-stage evidence during stage 3 readback.
+Auto-improve `release_gate` promotion blockers remain visible as diagnostics at
+stage 3, but lower release authority is decided by current run/sealed manifests;
+independent learning, remediation, worktree, and clean-release blockers still
+block unattended promotion.
+Operator diagnostics at stage 3 keep `accepted_risk`, `gate_attention`, and
+`learning_claim` counts separate. All three groups are strict-zero checks for
+unattended promotion, but gate attention and learning-claim blockers are not
+reported as accepted risk.
 
 ## Evidence Boundaries
 
@@ -84,9 +111,20 @@ during stage 3 readback.
   It binds the run manifest, source ZIP digest, post-seal attestation, and
   sealed rehearsal check. Batch/external sidecar legacy statuses are not treated
   as auto-promotion verdicts.
+- `build/release/operator-release-summary.json` is generated during sealed-run
+  readiness for Stage 3 reuse. It remains diagnostic input and is not included in
+  `release-sealed-run-manifest.json` as sealed package authority.
 - `build/release/release-auto-promotion-ready-manifest.json` is unattended
   promotion authority. Operator summary and learning diagnostics are read here,
   not exposed as `payload_status` inside the run manifest.
+- `build/release/release-auto-promotion-preflight.json` and
+  `build/release/release-auto-promotion-preseal.json` are diagnostic bridges for
+  auto-promotion intent. They keep Stage 3-only blockers visible before the
+  expensive run-ready and sealing stages, but they are not standalone release
+  authority. Preflight catches learning, remediation, and auto-improve blockers
+  before run-ready; preseal additionally requires clean closeout, accepted-risk
+  clean, gate-attention clean, source-tree-coherence pass, and a strict
+  same-fingerprint evidence cohort before sealing.
 - `build/release/release-*-plan.json` files are execution plans, not release
   authority. They decide which evidence can be reused and which minimal Make
   target should run next; the authority verdict still belongs to the staged

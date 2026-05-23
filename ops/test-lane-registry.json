@@ -407,6 +407,13 @@
         "selectors": [
           "tests/test_release_closeout_batch_manifest.py",
           "tests/test_release_evidence_closeout_self_check.py",
+          "tests/test_release_run_manifest.py",
+          "tests/test_release_sealed_post_seal_attestation.py",
+          "tests/test_release_sealed_run_manifest.py",
+          "tests/test_release_auto_promotion_preflight.py",
+          "tests/test_release_auto_promotion_ready.py",
+          "tests/test_release_evidence_planner.py",
+          "tests/test_source_package_smoke.py",
           "tests/test_release_sealing_lane.py"
         ]
       },
@@ -536,9 +543,13 @@
       "pack_id": "release_auto_promotion_ready",
       "authority": "derived",
       "status": "derived_from_registry",
-      "semantics": "Low-cost unattended promotion authority from sealed evidence, operator diagnostics, and auto-improve readiness.",
+      "semantics": "Low-cost unattended promotion authority from preflight, sealed evidence, sealed operator diagnostics, preseal, and auto-improve readiness.",
       "backing_targets": [
         "release-auto-promotion-ready-plan",
+        "release-auto-promotion-preflight",
+        "release-auto-promotion-preflight-check",
+        "release-auto-promotion-preseal",
+        "release-auto-promotion-preseal-check",
         "release-auto-promotion-operator-summary",
         "release-auto-promotion-ready",
         "release-auto-promotion-ready-check"
@@ -555,6 +566,10 @@
       ],
       "documented_entrypoints": [
         "make release-auto-promotion-ready-plan",
+        "make release-auto-promotion-preflight",
+        "make release-auto-promotion-preflight-check",
+        "make release-auto-promotion-preseal",
+        "make release-auto-promotion-preseal-check",
         "make release-auto-promotion-operator-summary",
         "make release-auto-promotion-ready",
         "make release-auto-promotion-ready-check"
@@ -954,6 +969,26 @@
     },
     {
       "kind": "make_target",
+      "name": "release-auto-promotion-preflight",
+      "maps_to": "release_auto_promotion_ready"
+    },
+    {
+      "kind": "make_target",
+      "name": "release-auto-promotion-preflight-check",
+      "maps_to": "release_auto_promotion_ready"
+    },
+    {
+      "kind": "make_target",
+      "name": "release-auto-promotion-preseal",
+      "maps_to": "release_auto_promotion_ready"
+    },
+    {
+      "kind": "make_target",
+      "name": "release-auto-promotion-preseal-check",
+      "maps_to": "release_auto_promotion_ready"
+    },
+    {
+      "kind": "make_target",
       "name": "release-auto-promotion-operator-summary",
       "maps_to": "release_auto_promotion_ready"
     },
@@ -1000,6 +1035,26 @@
     {
       "kind": "documented_entrypoint",
       "name": "make release-auto-promotion-ready-plan",
+      "maps_to": "release_auto_promotion_ready"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-auto-promotion-preflight",
+      "maps_to": "release_auto_promotion_ready"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-auto-promotion-preflight-check",
+      "maps_to": "release_auto_promotion_ready"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-auto-promotion-preseal",
+      "maps_to": "release_auto_promotion_ready"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-auto-promotion-preseal-check",
       "maps_to": "release_auto_promotion_ready"
     },
     {

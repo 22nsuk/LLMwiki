@@ -131,7 +131,43 @@
     },
     "release-auto-promotion-ready-plan": {
       "required_lane": "full_vault",
-      "reason": "release-auto-promotion-ready-plan inspects current run, sealed, operator, and auto-improve evidence and writes the minimal promotion action plan without cascading lower stages.",
+      "reason": "release-auto-promotion-ready-plan inspects current run, sealed, operator, auto-improve, preflight, and preseal evidence and writes the minimal promotion action plan without cascading lower stages.",
+      "alternatives": [
+        "make static",
+        "make release-source-package-smoke",
+        "make release-source-package-check"
+      ]
+    },
+    "release-auto-promotion-preflight": {
+      "required_lane": "full_vault",
+      "reason": "release-auto-promotion-preflight refreshes cheap unattended-promotion diagnostics before spending run-ready cycles.",
+      "alternatives": [
+        "make static",
+        "make release-source-package-smoke",
+        "make release-source-package-check"
+      ]
+    },
+    "release-auto-promotion-preflight-check": {
+      "required_lane": "full_vault",
+      "reason": "release-auto-promotion-preflight-check revalidates existing preflight diagnostics without recomputing lower release authority.",
+      "alternatives": [
+        "make static",
+        "make release-source-package-smoke",
+        "make release-source-package-check"
+      ]
+    },
+    "release-auto-promotion-preseal": {
+      "required_lane": "full_vault",
+      "reason": "release-auto-promotion-preseal refreshes clean closeout, strict cohort, remediation, learning, and auto-improve diagnostics after run-ready and before sealing.",
+      "alternatives": [
+        "make static",
+        "make release-source-package-smoke",
+        "make release-source-package-check"
+      ]
+    },
+    "release-auto-promotion-preseal-check": {
+      "required_lane": "full_vault",
+      "reason": "release-auto-promotion-preseal-check revalidates existing preseal diagnostics without recomputing lower release authority.",
       "alternatives": [
         "make static",
         "make release-source-package-smoke",
@@ -140,7 +176,7 @@
     },
     "release-auto-promotion-operator-summary": {
       "required_lane": "full_vault",
-      "reason": "release-auto-promotion-operator-summary refreshes only build-local operator diagnostics from sealed release evidence for the auto-promotion verdict.",
+      "reason": "release-auto-promotion-operator-summary is a manual fallback that refreshes build-local operator diagnostics from current sealed release sidecars for the auto-promotion verdict.",
       "alternatives": [
         "make static",
         "make release-source-package-smoke",
@@ -149,7 +185,7 @@
     },
     "release-auto-promotion-ready": {
       "required_lane": "full_vault",
-      "reason": "release-auto-promotion-ready reuses current run and sealed authority evidence, refreshes only build-local operator diagnostics, and decides unattended promotion eligibility without cascading lower stages.",
+      "reason": "release-auto-promotion-ready reuses current preflight, run, preseal, sealed authority evidence, and sealed operator diagnostics, then decides unattended promotion eligibility without cascading lower stages.",
       "alternatives": [
         "make static",
         "make release-source-package-smoke",

@@ -81,6 +81,9 @@ DEFAULT_OUT = "ops/reports/raw-registry-preflight-report.json"
 REPRODUCIBILITY_DEFAULT_OUT = "ops/reports/raw-registry-preflight-reproducibility.json"
 PRODUCER = "ops.scripts.raw_registry_preflight"
 SOURCE_COMMAND = "python -m ops.scripts.raw_registry_preflight --vault ."
+RELEASE_ARCHIVE_SOURCE_COMMAND = (
+    "python -m ops.scripts.raw_registry_preflight --vault . --release-archive-profile"
+)
 REPRODUCIBILITY_SOURCE_COMMAND = (
     "python -m ops.scripts.raw_registry_preflight "
     "--vault . "
@@ -225,6 +228,18 @@ def _raw_path_posix_portability_pass(vault: Path, emitter: RegistryDiagnosticEmi
             )
 
 
+def _release_archive_omits_corpus_surfaces(vault: Path) -> bool:
+    return not any((vault / surface).exists() for surface in ("raw", "wiki", "system"))
+
+
+def _empty_resolution_stats() -> dict[str, bool | int]:
+    return {
+        "path_alias_match_count": 0,
+        "content_hash_fallback_count": 0,
+        "unsupported_environment": False,
+    }
+
+
 def _run_inventory_diagnostics(
     vault: Path,
     paths: Any,
@@ -332,10 +347,22 @@ def preflight(
     policy_path: str | None = None,
     *,
     context: RuntimeContext | None = None,
+    release_archive_profile: bool = False,
 ) -> dict:
     policy, resolved_policy_path = load_policy(vault, policy_path)
     runtime_context = context or RuntimeContext.from_policy(policy)
-    paths, emitter, entries, resolution_stats = _run_preflight_diagnostics(vault, policy)
+    registry_contract = policy["registry_contract"]
+    paths = registry_diagnostic_paths(vault, registry_contract)
+    if release_archive_profile and _release_archive_omits_corpus_surfaces(vault):
+        emitter = RegistryDiagnosticEmitter(lint_thresholds=policy["lint_thresholds"])
+        entries: list[dict[str, Any]] = []
+        resolution_stats = _empty_resolution_stats()
+        raw_registry_entry_pages = []
+    else:
+        paths, emitter, entries, resolution_stats = _run_preflight_diagnostics(vault, policy)
+        raw_registry_entry_pages = [
+            report_path(vault, page) for page in paths.raw_registry_entry_pages
+        ]
     status = "fail" if emitter.errors else "warn" if emitter.warnings else "pass"
     generated_at = runtime_context.isoformat_z()
     env_fingerprint = environment_fingerprint()
@@ -345,7 +372,9 @@ def preflight(
             generated_at=generated_at,
             artifact_kind="raw_registry_preflight_report",
             producer=PRODUCER,
-            source_command=SOURCE_COMMAND,
+            source_command=RELEASE_ARCHIVE_SOURCE_COMMAND
+            if release_archive_profile
+            else SOURCE_COMMAND,
             resolved_policy_path=resolved_policy_path,
             schema_path=RAW_REGISTRY_PREFLIGHT_REPORT_SCHEMA_PATH,
             source_paths=[
@@ -354,9 +383,7 @@ def preflight(
                 "ops/scripts/registry_diagnostics_runtime.py",
             ],
             path_group_inputs={
-                "raw_registry_entry_pages": [
-                    report_path(vault, page) for page in paths.raw_registry_entry_pages
-                ],
+                "raw_registry_entry_pages": raw_registry_entry_pages,
                 "raw_inventory": [
                     path.relative_to(vault).as_posix()
                     for path in sorted((vault / "raw").rglob("*"))
@@ -379,7 +406,7 @@ def preflight(
         },
         "generated_at": generated_at,
         "summary_page": report_path(vault, paths.raw_registry_path),
-        "entry_pages": [report_path(vault, page) for page in paths.raw_registry_entry_pages],
+        "entry_pages": raw_registry_entry_pages,
         "status": status,
         "extraction_tool": EXTRACTION_TOOL,
         "locale": _runtime_locale(),
@@ -580,6 +607,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--out")
     ap.add_argument("--stored-report")
     ap.add_argument("--reproducibility-out")
+    ap.add_argument("--release-archive-profile", action="store_true")
     return ap.parse_args(argv)
 
 
@@ -587,7 +615,7 @@ def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
 
     vault = Path(args.vault)
-    report = preflight(vault, args.policy)
+    report = preflight(vault, args.policy, release_archive_profile=args.release_archive_profile)
     text = json.dumps(report, ensure_ascii=False, indent=2)
     if args.out:
         write_report(vault, report, args.out)

@@ -42,6 +42,13 @@ GOAL_CERTIFICATE_INCOMPLETE_ITEM_ID = (
 GOAL_WORKTREE_GUARD_FAILURE_ITEM_ID = (
     "active_blocker_promotion_blocked_by_goal_worktree_guard_failure"
 )
+GOAL_STATUS_WORKTREE_GUARD_FAILURE_ITEM_ID = (
+    "active_blocker_goal_status_promotion_blocked_by_goal_worktree_guard_failure"
+)
+GOAL_WORKTREE_GUARD_FAILURE_ITEM_IDS = (
+    GOAL_WORKTREE_GUARD_FAILURE_ITEM_ID,
+    GOAL_STATUS_WORKTREE_GUARD_FAILURE_ITEM_ID,
+)
 LEARNING_REVIEW_REQUIRED_ITEM_ID = f"active_blocker_{SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID}"
 GOAL_STATUS_LEARNING_REVIEW_REQUIRED_ITEM_ID = (
     f"active_blocker_goal_status_{SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID}"
@@ -181,14 +188,15 @@ def _evidence_status_overrides(vault: Path, *, generated_at: str) -> dict[str, d
             "evidence_paths": [GOAL_RUNTIME_CERTIFICATE_PATH],
         }
     if _goal_worktree_guard_currently_clean(vault):
-        overrides[GOAL_WORKTREE_GUARD_FAILURE_ITEM_ID] = {
-            "status": "closed",
-            "reason": (
-                "Current goal-worktree-guard evidence is pass/clean; the historical "
-                "dirty-worktree promotion blocker has been reconciled."
-            ),
-            "evidence_paths": [GOAL_WORKTREE_GUARD_PATH],
-        }
+        for item_id in GOAL_WORKTREE_GUARD_FAILURE_ITEM_IDS:
+            overrides[item_id] = {
+                "status": "closed",
+                "reason": (
+                    "Current goal-worktree-guard evidence is pass/clean; the historical "
+                    "dirty-worktree promotion blocker has been reconciled."
+                ),
+                "evidence_paths": [GOAL_WORKTREE_GUARD_PATH],
+            }
     return overrides
 
 

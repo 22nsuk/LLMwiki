@@ -154,6 +154,10 @@ def _source_command(release_archive_profile: bool) -> str:
     return SOURCE_COMMAND
 
 
+def _release_archive_omits_corpus_surfaces(vault: Path) -> bool:
+    return not any((vault / surface).exists() for surface in ("raw", "wiki", "system"))
+
+
 def _lint_policy_config(policy: dict) -> _LintPolicyConfig:
     system_refactor_policy = policy["system_refactor_policy"]
     registry_contract = policy["registry_contract"]
@@ -421,13 +425,20 @@ def _run_registry_and_review_passes(
             config.refactor_triggers,
         )
     )
+    return registry_result
+
+
+def _run_python_function_budget_pass(
+    runtime_context: _LintRuntimeContext,
+    config: _LintPolicyConfig,
+    acc: _LintAccumulator,
+) -> None:
     acc.review_candidates.extend(
         python_function_budget_candidates(
-            vault,
+            runtime_context.vault,
             config.python_function_review,
         )
     )
-    return registry_result
 
 
 def _run_documentation_and_raw_passes(
@@ -555,14 +566,16 @@ def lint(
         acc,
         release_archive_profile=release_archive_profile,
     )
-    registry_result = _run_registry_and_review_passes(
-        runtime_context,
-        policy,
-        config,
-        acc,
-        context=clock_context,
-    )
-    _run_documentation_and_raw_passes(runtime_context, config, registry_result, acc)
+    if not (release_archive_profile and _release_archive_omits_corpus_surfaces(vault)):
+        registry_result = _run_registry_and_review_passes(
+            runtime_context,
+            policy,
+            config,
+            acc,
+            context=clock_context,
+        )
+        _run_documentation_and_raw_passes(runtime_context, config, registry_result, acc)
+    _run_python_function_budget_pass(runtime_context, config, acc)
     return _build_lint_report(
         runtime_context,
         acc,

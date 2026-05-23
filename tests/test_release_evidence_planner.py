@@ -83,6 +83,30 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
             },
         )
         self._write_json(
+            "build/release/release-auto-promotion-preflight.json",
+            {
+                "artifact_kind": "release_auto_promotion_preflight",
+                "producer": "tests.preflight",
+                "generated_at": "2026-05-23T12:00:00Z",
+                "source_tree_fingerprint": "fp-current",
+                "input_fingerprints": {"auto_improve": "pre"},
+                "phase": "preflight",
+                "status": "pass",
+            },
+        )
+        self._write_json(
+            "build/release/release-auto-promotion-preseal.json",
+            {
+                "artifact_kind": "release_auto_promotion_preflight",
+                "producer": "tests.preseal",
+                "generated_at": "2026-05-23T12:00:00Z",
+                "source_tree_fingerprint": "fp-current",
+                "input_fingerprints": {"closeout": "seal"},
+                "phase": "preseal",
+                "status": "pass",
+            },
+        )
+        self._write_json(
             "ops/reports/auto-improve-readiness.json",
             {
                 "artifact_kind": "auto_improve_readiness_report",
@@ -110,10 +134,12 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self.assertEqual(plan["plan_status"], "ready")
         self.assertEqual(plan["blockers"], [])
         self.assertTrue(plan["nodes"]["run_manifest"]["can_reuse"])
+        self.assertTrue(plan["nodes"]["auto_promotion_preflight"]["can_reuse"])
+        self.assertTrue(plan["nodes"]["auto_promotion_preseal"]["can_reuse"])
         self.assertTrue(plan["nodes"]["sealed_run_manifest"]["can_reuse"])
         self.assertTrue(plan["nodes"]["run_manifest"]["dependency_fingerprint"])
         planned_targets = {action["target"] for action in plan["planned_actions"]}
-        self.assertEqual(planned_targets, {"release-auto-promotion-operator-summary"})
+        self.assertEqual(planned_targets, set())
         self.assertNotIn("release-run-ready", planned_targets)
         self.assertNotIn("release-sealed-run-ready", planned_targets)
         self.assertEqual(validate_with_schema(plan, load_schema(SCHEMA_PATH)), [])
@@ -133,6 +159,58 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self.assertEqual(plan["planned_actions"], [])
         self.assertIn("make release-sealed-run-ready", plan["blockers"][0]["recommended_next_step"])
 
+    def test_auto_promotion_plan_requires_preflight_before_run_ready(self) -> None:
+        self._write_authorities()
+        preflight = json.loads(
+            (self.vault / "build/release/release-auto-promotion-preflight.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        preflight["source_tree_fingerprint"] = "fp-old"
+        self._write_json("build/release/release-auto-promotion-preflight.json", preflight)
+
+        with self._patch_current_repo():
+            plan = build_plan(self.vault, stage="auto-promotion-ready", context=fixed_context())
+
+        self.assertEqual(plan["plan_status"], "blocked")
+        self.assertIn("auto_promotion_preflight_not_reusable", plan["failures"])
+        self.assertIn("before release-run-ready", plan["blockers"][0]["recommended_next_step"])
+
+    def test_auto_promotion_plan_requires_preseal_before_sealed_ready(self) -> None:
+        self._write_authorities()
+        preseal = json.loads(
+            (self.vault / "build/release/release-auto-promotion-preseal.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        preseal["phase"] = "preflight"
+        self._write_json("build/release/release-auto-promotion-preseal.json", preseal)
+
+        with self._patch_current_repo():
+            plan = build_plan(self.vault, stage="auto-promotion-ready", context=fixed_context())
+
+        self.assertEqual(plan["plan_status"], "blocked")
+        self.assertIn("auto_promotion_preseal_not_reusable", plan["failures"])
+        self.assertIn("before release-sealed-run-ready", plan["blockers"][0]["recommended_next_step"])
+        self.assertIn("phase_mismatch", plan["nodes"]["auto_promotion_preseal"]["issues"])
+
+    def test_auto_promotion_plan_requires_sealed_operator_summary_reuse(self) -> None:
+        self._write_authorities()
+        operator = json.loads(
+            (self.vault / "build/release/operator-release-summary.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        operator["source_tree_fingerprint"] = "fp-old"
+        self._write_json("build/release/operator-release-summary.json", operator)
+
+        with self._patch_current_repo():
+            plan = build_plan(self.vault, stage="auto-promotion-ready", context=fixed_context())
+
+        self.assertEqual(plan["plan_status"], "blocked")
+        self.assertIn("operator_summary_not_reusable", plan["failures"])
+        self.assertIn("make release-sealed-run-ready", plan["blockers"][0]["recommended_next_step"])
+
     def test_auto_promotion_plan_reports_pre_seal_diagnostic_refresh_without_cascade(self) -> None:
         self._write_authorities()
         auto = json.loads((self.vault / "ops/reports/auto-improve-readiness.json").read_text())
@@ -146,7 +224,7 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         planned_actions = {action["target"]: action for action in plan["planned_actions"]}
         self.assertEqual(
             set(planned_actions),
-            {"release-auto-promotion-operator-summary", "auto-improve-readiness-report-body"},
+            {"auto-improve-readiness-report-body"},
         )
         self.assertEqual(
             planned_actions["auto-improve-readiness-report-body"]["action_type"],
@@ -167,6 +245,17 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self.assertEqual(plan["plan_status"], "blocked")
         self.assertIn("run_manifest_not_reusable", plan["failures"])
         self.assertEqual(plan["planned_actions"], [])
+
+    def test_sealed_plan_refreshes_operator_diagnostic_with_sealed_sidecars(self) -> None:
+        self._write_authorities()
+
+        with self._patch_current_repo():
+            plan = build_plan(self.vault, stage="sealed-run-ready", context=fixed_context())
+
+        planned_actions = {action["target"]: action for action in plan["planned_actions"]}
+        self.assertIn("release-evidence-closeout-sealed-sidecars", planned_actions)
+        self.assertNotIn("release-evidence-closeout-sealed-core-sidecars", planned_actions)
+        self.assertIn("operator diagnostic", planned_actions["release-evidence-closeout-sealed-sidecars"]["reason"])
 
 
 if __name__ == "__main__":

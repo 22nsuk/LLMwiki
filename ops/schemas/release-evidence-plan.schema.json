@@ -51,12 +51,16 @@
       "additionalProperties": false,
       "required": [
         "run_manifest",
+        "auto_promotion_preflight",
+        "auto_promotion_preseal",
         "sealed_run_manifest",
         "operator_summary",
         "auto_improve_readiness"
       ],
       "properties": {
         "run_manifest": { "$ref": "#/$defs/node" },
+        "auto_promotion_preflight": { "$ref": "#/$defs/node" },
+        "auto_promotion_preseal": { "$ref": "#/$defs/node" },
         "sealed_run_manifest": { "$ref": "#/$defs/node" },
         "operator_summary": { "$ref": "#/$defs/node" },
         "auto_improve_readiness": { "$ref": "#/$defs/node" }
@@ -97,8 +101,10 @@
         "check_target",
         "refresh_target",
         "expected_artifact_kind",
+        "expected_phase",
         "load_status",
         "artifact_kind",
+        "phase",
         "status",
         "source_tree_fingerprint",
         "input_fingerprint",
@@ -115,8 +121,10 @@
         "check_target": { "type": "string", "minLength": 1 },
         "refresh_target": { "type": "string", "minLength": 1 },
         "expected_artifact_kind": { "type": "string", "minLength": 1 },
+        "expected_phase": { "type": "string" },
         "load_status": { "type": "string" },
         "artifact_kind": { "type": "string" },
+        "phase": { "type": "string" },
         "status": { "type": "string" },
         "source_tree_fingerprint": { "type": "string" },
         "input_fingerprint": { "type": "string" },
@@ -127,7 +135,13 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["not_loadable", "artifact_kind_mismatch", "stale", "not_pass"]
+            "enum": [
+              "not_loadable",
+              "artifact_kind_mismatch",
+              "stale",
+              "not_pass",
+              "phase_mismatch"
+            ]
           },
           "uniqueItems": true
         }

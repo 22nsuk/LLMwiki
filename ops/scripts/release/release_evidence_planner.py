@@ -36,6 +36,8 @@ PRODUCER = "ops.scripts.release_evidence_planner"
 SOURCE_COMMAND = "python -m ops.scripts.release_evidence_planner --vault ."
 DEFAULT_OPERATOR_SUMMARY = "build/release/operator-release-summary.json"
 DEFAULT_AUTO_IMPROVE_READINESS = "ops/reports/auto-improve-readiness.json"
+DEFAULT_AUTO_PROMOTION_PREFLIGHT = "build/release/release-auto-promotion-preflight.json"
+DEFAULT_AUTO_PROMOTION_PRESEAL = "build/release/release-auto-promotion-preseal.json"
 
 STAGES = {"sealed-run-ready", "auto-promotion-ready"}
 
@@ -52,6 +54,7 @@ def _node(
     refresh_target: str,
     current_fingerprint: str,
     require_pass: bool,
+    expected_phase: str = "",
 ) -> dict[str, Any]:
     identity = _json_identity(vault, path)
     payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, path))
@@ -66,6 +69,9 @@ def _node(
         issues.append("stale")
     if require_pass and identity["status"] != "pass":
         issues.append("not_pass")
+    phase = str(payload.get("phase", "")).strip()
+    if expected_phase and phase != expected_phase:
+        issues.append("phase_mismatch")
     return {
         "name": name,
         "path": identity["path"],
@@ -74,8 +80,10 @@ def _node(
         "check_target": check_target,
         "refresh_target": refresh_target,
         "expected_artifact_kind": expected_artifact_kind,
+        "expected_phase": expected_phase,
         "load_status": identity["load_status"],
         "artifact_kind": identity["artifact_kind"],
+        "phase": phase,
         "status": identity["status"],
         "source_tree_fingerprint": identity["source_tree_fingerprint"],
         "input_fingerprint": identity["sha256"],
@@ -100,7 +108,8 @@ def _blocker(
         "node": str(node["name"]),
         "observed": (
             f"load_status={node['load_status']}; artifact_kind={node['artifact_kind']}; "
-            f"status={node['status']}; currentness={node['currentness_status']}; "
+            f"phase={node['phase']}; status={node['status']}; "
+            f"currentness={node['currentness_status']}; "
             f"issues={','.join(node['issues']) or 'none'}"
         ),
         "expected": (
@@ -135,6 +144,8 @@ def build_plan(
     sealed_run_manifest: str = DEFAULT_SEALED_RUN_MANIFEST,
     operator_summary: str = DEFAULT_OPERATOR_SUMMARY,
     auto_improve_readiness: str = DEFAULT_AUTO_IMPROVE_READINESS,
+    auto_promotion_preflight: str = DEFAULT_AUTO_PROMOTION_PREFLIGHT,
+    auto_promotion_preseal: str = DEFAULT_AUTO_PROMOTION_PRESEAL,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
     if stage not in STAGES:
@@ -154,6 +165,32 @@ def build_plan(
             refresh_target="release-run-ready",
             current_fingerprint=fingerprint,
             require_pass=True,
+        ),
+        "auto_promotion_preflight": _node(
+            vault,
+            name="auto_promotion_preflight",
+            path=auto_promotion_preflight,
+            expected_artifact_kind="release_auto_promotion_preflight",
+            authority_stage="release-auto-promotion-preflight",
+            cost_class="cheap",
+            check_target="release-auto-promotion-preflight-check",
+            refresh_target="release-auto-promotion-preflight",
+            current_fingerprint=fingerprint,
+            require_pass=True,
+            expected_phase="preflight",
+        ),
+        "auto_promotion_preseal": _node(
+            vault,
+            name="auto_promotion_preseal",
+            path=auto_promotion_preseal,
+            expected_artifact_kind="release_auto_promotion_preflight",
+            authority_stage="release-auto-promotion-preseal",
+            cost_class="cheap",
+            check_target="release-auto-promotion-preseal-check",
+            refresh_target="release-auto-promotion-preseal",
+            current_fingerprint=fingerprint,
+            require_pass=True,
+            expected_phase="preseal",
         ),
         "sealed_run_manifest": _node(
             vault,
@@ -195,25 +232,28 @@ def build_plan(
 
     blockers: list[dict[str, Any]] = []
     planned_actions: list[dict[str, str]] = []
-    if not nodes["run_manifest"]["can_reuse"]:
-        blockers.append(
-            _blocker(
-                blocker_id="run_manifest_not_reusable",
-                node=nodes["run_manifest"],
-                summary="Runnable release authority is missing, stale, invalid, or not passing.",
-                recommended_next_step="Run make release-run-ready, then rerun the planner.",
-            )
-        )
 
     if stage == "sealed-run-ready":
+        if not nodes["run_manifest"]["can_reuse"]:
+            blockers.append(
+                _blocker(
+                    blocker_id="run_manifest_not_reusable",
+                    node=nodes["run_manifest"],
+                    summary="Runnable release authority is missing, stale, invalid, or not passing.",
+                    recommended_next_step="Run make release-run-ready, then rerun the planner.",
+                )
+            )
         if not blockers:
             planned_actions.extend(
                 [
                     _action(
-                        target="release-evidence-closeout-sealed-core-sidecars",
+                        target="release-evidence-closeout-sealed-sidecars",
                         action_type="refresh_sealed_sidecars",
                         cost_class="medium",
-                        reason="run-ready authority is reusable; sealed sidecars may be refreshed.",
+                        reason=(
+                            "run-ready authority is reusable; sealed sidecars and the sealed "
+                            "operator diagnostic may be refreshed."
+                        ),
                     ),
                     _action(
                         target="release-sealed-post-seal-attestation",
@@ -230,6 +270,41 @@ def build_plan(
                 ]
             )
     elif stage == "auto-promotion-ready":
+        if not nodes["auto_promotion_preflight"]["can_reuse"]:
+            blockers.append(
+                _blocker(
+                    blocker_id="auto_promotion_preflight_not_reusable",
+                    node=nodes["auto_promotion_preflight"],
+                    summary=(
+                        "Auto-promotion preflight is missing, stale, invalid, or not passing."
+                    ),
+                    recommended_next_step=(
+                        "Run make release-auto-promotion-preflight before release-run-ready, "
+                        "then rerun the planner."
+                    ),
+                )
+            )
+        if not nodes["run_manifest"]["can_reuse"]:
+            blockers.append(
+                _blocker(
+                    blocker_id="run_manifest_not_reusable",
+                    node=nodes["run_manifest"],
+                    summary="Runnable release authority is missing, stale, invalid, or not passing.",
+                    recommended_next_step="Run make release-run-ready, then rerun the planner.",
+                )
+            )
+        if not nodes["auto_promotion_preseal"]["can_reuse"]:
+            blockers.append(
+                _blocker(
+                    blocker_id="auto_promotion_preseal_not_reusable",
+                    node=nodes["auto_promotion_preseal"],
+                    summary="Auto-promotion preseal is missing, stale, invalid, or not passing.",
+                    recommended_next_step=(
+                        "Run make release-auto-promotion-preseal before release-sealed-run-ready, "
+                        "then rerun the planner."
+                    ),
+                )
+            )
         if not nodes["sealed_run_manifest"]["can_reuse"]:
             blockers.append(
                 _blocker(
@@ -239,18 +314,22 @@ def build_plan(
                     recommended_next_step="Run make release-sealed-run-ready, then rerun the planner.",
                 )
             )
-        if not blockers:
-            planned_actions.append(
-                _action(
-                    target="release-auto-promotion-operator-summary",
-                    action_type="refresh_operator_diagnostics",
-                    cost_class="cheap",
-                    reason=(
-                        "run-ready and sealed-run authority are reusable; auto-promotion may "
-                        "refresh only build/release operator diagnostics before the verdict."
+        if not nodes["operator_summary"]["can_reuse"]:
+            blockers.append(
+                _blocker(
+                    blocker_id="operator_summary_not_reusable",
+                    node=nodes["operator_summary"],
+                    summary=(
+                        "Sealed operator diagnostics are missing, stale, invalid, or not reusable."
+                    ),
+                    recommended_next_step=(
+                        "Run make release-sealed-run-ready to refresh sealed operator diagnostics, "
+                        "or make release-auto-promotion-operator-summary if sealed sidecars are "
+                        "already current."
                     ),
                 )
             )
+        if not blockers:
             if not nodes["auto_improve_readiness"]["can_reuse"]:
                 planned_actions.append(
                     _action(
@@ -312,6 +391,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--sealed-run-manifest", default=DEFAULT_SEALED_RUN_MANIFEST)
     parser.add_argument("--operator-summary", default=DEFAULT_OPERATOR_SUMMARY)
     parser.add_argument("--auto-improve-readiness", default=DEFAULT_AUTO_IMPROVE_READINESS)
+    parser.add_argument("--auto-promotion-preflight", default=DEFAULT_AUTO_PROMOTION_PREFLIGHT)
+    parser.add_argument("--auto-promotion-preseal", default=DEFAULT_AUTO_PROMOTION_PRESEAL)
     return parser.parse_args(argv)
 
 
@@ -325,6 +406,8 @@ def main(argv: list[str] | None = None) -> int:
         sealed_run_manifest=args.sealed_run_manifest,
         operator_summary=args.operator_summary,
         auto_improve_readiness=args.auto_improve_readiness,
+        auto_promotion_preflight=args.auto_promotion_preflight,
+        auto_promotion_preseal=args.auto_promotion_preseal,
     )
     path = write_plan(vault, plan, args.out)
     print(display_path(vault, path))

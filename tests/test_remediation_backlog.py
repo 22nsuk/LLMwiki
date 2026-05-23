@@ -298,6 +298,13 @@ class RemediationBacklogTests(unittest.TestCase):
                             "repair_target": "Refresh goal worktree guard evidence.",
                         },
                         {
+                            "id": "goal_status_promotion_blocked_by_goal_worktree_guard_failure",
+                            "source": "goal_run_status.blockers",
+                            "status": "open",
+                            "reason": "goal status echoes historical dirty worktree blocker",
+                            "repair_target": "Refresh goal worktree guard evidence.",
+                        },
+                        {
                             "id": "promotion_blocked_by_release_batch_manifest_failure",
                             "source": "auto_improve_readiness.promotion_blockers",
                             "status": "open",
@@ -330,6 +337,12 @@ class RemediationBacklogTests(unittest.TestCase):
                 items["active_blocker_promotion_blocked_by_goal_worktree_guard_failure"][
                     "status"
                 ],
+                "closed",
+            )
+            self.assertEqual(
+                items[
+                    "active_blocker_goal_status_promotion_blocked_by_goal_worktree_guard_failure"
+                ]["status"],
                 "closed",
             )
             self.assertEqual(

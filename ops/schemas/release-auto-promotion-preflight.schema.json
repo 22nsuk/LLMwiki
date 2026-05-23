@@ -1,0 +1,298 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/release-auto-promotion-preflight.schema.json",
+  "title": "Release auto-promotion preflight",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "phase",
+    "status",
+    "inputs",
+    "diagnostics",
+    "checks",
+    "blockers",
+    "failures"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "const": "ops/schemas/release-auto-promotion-preflight.schema.json" },
+    "artifact_kind": { "type": "string", "const": "release_auto_promotion_preflight" },
+    "generated_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" },
+    "producer": { "type": "string", "const": "ops.scripts.release_auto_promotion_preflight" },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string" },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "schema_version": { "type": "integer", "const": 1 },
+    "artifact_status": { "type": "string", "const": "current" },
+    "retention_policy": { "type": "string", "const": "release_sidecar_diagnostic" },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": { "$ref": "#/$defs/currentness" },
+    "phase": { "type": "string", "enum": ["preflight", "preseal"] },
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "auto_improve_readiness",
+        "remediation_backlog",
+        "learning_revalidation",
+        "closeout_summary",
+        "evidence_cohort"
+      ],
+      "properties": {
+        "auto_improve_readiness": { "$ref": "#/$defs/report_identity" },
+        "remediation_backlog": { "$ref": "#/$defs/report_identity" },
+        "learning_revalidation": { "$ref": "#/$defs/report_identity" },
+        "closeout_summary": { "$ref": "#/$defs/report_identity" },
+        "evidence_cohort": { "$ref": "#/$defs/report_identity" }
+      }
+    },
+    "diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "auto_improve",
+        "remediation_backlog",
+        "learning_revalidation",
+        "closeout_summary",
+        "evidence_cohort"
+      ],
+      "properties": {
+        "auto_improve": { "$ref": "#/$defs/auto_improve_diagnostics" },
+        "remediation_backlog": { "$ref": "#/$defs/remediation_diagnostics" },
+        "learning_revalidation": { "$ref": "#/$defs/learning_diagnostics" },
+        "closeout_summary": { "$ref": "#/$defs/closeout_diagnostics" },
+        "evidence_cohort": { "$ref": "#/$defs/cohort_diagnostics" }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "auto_improve_readiness_load_ok",
+        "auto_improve_readiness_artifact_kind_ok",
+        "auto_improve_readiness_current",
+        "auto_improve_can_execute_trial",
+        "auto_improve_stage3_promotion_blockers_clear",
+        "auto_improve_learning_claim_blockers_clear",
+        "auto_improve_clean_release_blockers_clear",
+        "remediation_backlog_load_ok",
+        "remediation_backlog_artifact_kind_ok",
+        "remediation_backlog_current",
+        "remediation_backlog_promotion_clear",
+        "learning_revalidation_load_ok",
+        "learning_revalidation_artifact_kind_ok",
+        "learning_revalidation_current_source",
+        "learning_revalidation_current",
+        "closeout_summary_load_ok",
+        "closeout_summary_artifact_kind_ok",
+        "closeout_summary_current",
+        "closeout_summary_clean",
+        "closeout_accepted_risk_clean",
+        "closeout_gate_attention_clean",
+        "closeout_source_tree_coherence_clean",
+        "evidence_cohort_load_ok",
+        "evidence_cohort_artifact_kind_ok",
+        "evidence_cohort_current",
+        "evidence_cohort_strict"
+      ],
+      "properties": {
+        "auto_improve_readiness_load_ok": { "type": "boolean" },
+        "auto_improve_readiness_artifact_kind_ok": { "type": "boolean" },
+        "auto_improve_readiness_current": { "type": "boolean" },
+        "auto_improve_can_execute_trial": { "type": "boolean" },
+        "auto_improve_stage3_promotion_blockers_clear": { "type": "boolean" },
+        "auto_improve_learning_claim_blockers_clear": { "type": "boolean" },
+        "auto_improve_clean_release_blockers_clear": { "type": "boolean" },
+        "remediation_backlog_load_ok": { "type": "boolean" },
+        "remediation_backlog_artifact_kind_ok": { "type": "boolean" },
+        "remediation_backlog_current": { "type": "boolean" },
+        "remediation_backlog_promotion_clear": { "type": "boolean" },
+        "learning_revalidation_load_ok": { "type": "boolean" },
+        "learning_revalidation_artifact_kind_ok": { "type": "boolean" },
+        "learning_revalidation_current_source": { "type": "boolean" },
+        "learning_revalidation_current": { "type": "boolean" },
+        "closeout_summary_load_ok": { "type": "boolean" },
+        "closeout_summary_artifact_kind_ok": { "type": "boolean" },
+        "closeout_summary_current": { "type": "boolean" },
+        "closeout_summary_clean": { "type": "boolean" },
+        "closeout_accepted_risk_clean": { "type": "boolean" },
+        "closeout_gate_attention_clean": { "type": "boolean" },
+        "closeout_source_tree_coherence_clean": { "type": "boolean" },
+        "evidence_cohort_load_ok": { "type": "boolean" },
+        "evidence_cohort_artifact_kind_ok": { "type": "boolean" },
+        "evidence_cohort_current": { "type": "boolean" },
+        "evidence_cohort_strict": { "type": "boolean" }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/blocker" }
+    },
+    "failures": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "const": "current" },
+        "checked_at": { "type": "string", "minLength": 1 }
+      }
+    },
+    "report_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "exists",
+        "size_bytes",
+        "sha256",
+        "load_status",
+        "artifact_kind",
+        "producer",
+        "generated_at",
+        "status",
+        "source_tree_fingerprint"
+      ],
+      "properties": {
+        "path": { "type": "string" },
+        "exists": { "type": "boolean" },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "sha256": { "type": "string" },
+        "load_status": { "type": "string" },
+        "artifact_kind": { "type": "string" },
+        "producer": { "type": "string" },
+        "generated_at": { "type": "string" },
+        "status": { "type": "string" },
+        "source_tree_fingerprint": { "type": "string" }
+      }
+    },
+    "auto_improve_diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "can_execute_trial",
+        "raw_can_promote_result",
+        "stage3_can_promote_result",
+        "learning_claim_blocker_count",
+        "stage3_blocking_promotion_blocker_count",
+        "release_gate_diagnostic_promotion_blocker_count",
+        "clean_release_blocker_count"
+      ],
+      "properties": {
+        "can_execute_trial": { "type": "boolean" },
+        "raw_can_promote_result": { "type": "boolean" },
+        "stage3_can_promote_result": { "type": "boolean" },
+        "learning_claim_blocker_count": { "type": "integer", "minimum": 0 },
+        "stage3_blocking_promotion_blocker_count": { "type": "integer", "minimum": 0 },
+        "release_gate_diagnostic_promotion_blocker_count": { "type": "integer", "minimum": 0 },
+        "clean_release_blocker_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "remediation_diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "open_total_count", "open_promotion_count", "open_repeat_count"],
+      "properties": {
+        "status": { "type": "string" },
+        "open_total_count": { "type": "integer", "minimum": 0 },
+        "open_promotion_count": { "type": "integer", "minimum": 0 },
+        "open_repeat_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "learning_diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "revalidation_status", "clean_closeout_required"],
+      "properties": {
+        "status": { "type": "string" },
+        "revalidation_status": { "type": "string" },
+        "clean_closeout_required": { "type": "boolean" }
+      }
+    },
+    "closeout_diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "release_authority_status",
+        "machine_release_allowed",
+        "clean_release_ready",
+        "accepted_risk_instance_count",
+        "release_blocking_risk_family_count",
+        "gate_attention_count",
+        "source_tree_coherence_status"
+      ],
+      "properties": {
+        "status": { "type": "string" },
+        "release_authority_status": { "type": "string" },
+        "machine_release_allowed": { "type": "boolean" },
+        "clean_release_ready": { "type": "boolean" },
+        "accepted_risk_instance_count": { "type": "integer", "minimum": 0 },
+        "release_blocking_risk_family_count": { "type": "integer", "minimum": 0 },
+        "gate_attention_count": { "type": "integer", "minimum": 0 },
+        "source_tree_coherence_status": { "type": "string" }
+      }
+    },
+    "cohort_diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "strict_same_fingerprint",
+        "component_fingerprint_count",
+        "clean_lane_contract_status"
+      ],
+      "properties": {
+        "status": { "type": "string" },
+        "strict_same_fingerprint": { "type": "boolean" },
+        "component_fingerprint_count": { "type": "integer", "minimum": 0 },
+        "clean_lane_contract_status": { "type": "string" }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "source",
+        "field_path",
+        "observed",
+        "expected",
+        "summary",
+        "recommended_next_step"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "field_path": { "type": "string", "minLength": 1 },
+        "observed": { "type": "string" },
+        "expected": { "type": "string" },
+        "summary": { "type": "string", "minLength": 1 },
+        "recommended_next_step": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

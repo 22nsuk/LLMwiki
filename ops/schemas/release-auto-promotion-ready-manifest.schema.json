@@ -54,20 +54,26 @@
         "run_manifest",
         "sealed_run_manifest",
         "operator_summary",
-        "auto_improve_readiness"
+        "auto_improve_readiness",
+        "auto_promotion_preflight",
+        "auto_promotion_preseal"
       ],
       "properties": {
         "run_manifest": { "$ref": "#/$defs/report_identity" },
         "sealed_run_manifest": { "$ref": "#/$defs/report_identity" },
         "operator_summary": { "$ref": "#/$defs/report_identity" },
-        "auto_improve_readiness": { "$ref": "#/$defs/report_identity" }
+        "auto_improve_readiness": { "$ref": "#/$defs/report_identity" },
+        "auto_promotion_preflight": { "$ref": "#/$defs/report_identity" },
+        "auto_promotion_preseal": { "$ref": "#/$defs/report_identity" }
       }
     },
     "diagnostics": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["operator", "auto_improve"],
+      "required": ["preflight", "preseal", "operator", "auto_improve"],
       "properties": {
+        "preflight": { "$ref": "#/$defs/auto_promotion_phase_diagnostic" },
+        "preseal": { "$ref": "#/$defs/auto_promotion_phase_diagnostic" },
         "operator": {
           "type": "object",
           "additionalProperties": false,
@@ -79,7 +85,9 @@
             "batch_verify_status",
             "full_suite_status",
             "learning_revalidation_status",
-            "accepted_risk"
+            "accepted_risk",
+            "gate_attention",
+            "learning_claim"
           ],
           "properties": {
             "status": { "type": "string" },
@@ -96,16 +104,28 @@
                 "accepted_risk_count",
                 "release_accepted_risk_count",
                 "accepted_learning_risk_count",
-                "clean_lane_blocking_accepted_risk_family_count",
-                "gate_attention_count",
-                "learning_claim_blocking_family_count"
+                "clean_lane_blocking_accepted_risk_family_count"
               ],
               "properties": {
                 "accepted_risk_count": { "type": "integer", "minimum": 0 },
                 "release_accepted_risk_count": { "type": "integer", "minimum": 0 },
                 "accepted_learning_risk_count": { "type": "integer", "minimum": 0 },
-                "clean_lane_blocking_accepted_risk_family_count": { "type": "integer", "minimum": 0 },
-                "gate_attention_count": { "type": "integer", "minimum": 0 },
+                "clean_lane_blocking_accepted_risk_family_count": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "gate_attention": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["gate_attention_count"],
+              "properties": {
+                "gate_attention_count": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "learning_claim": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["learning_claim_blocking_family_count"],
+              "properties": {
                 "learning_claim_blocking_family_count": { "type": "integer", "minimum": 0 }
               }
             }
@@ -119,8 +139,11 @@
             "currentness_status",
             "can_execute_trial",
             "can_promote_result",
+            "stage3_can_promote_result",
             "learning_claim_blocker_count",
             "promotion_blocker_count",
+            "stage3_blocking_promotion_blocker_count",
+            "release_gate_diagnostic_promotion_blocker_count",
             "clean_release_blocker_count"
           ],
           "properties": {
@@ -128,8 +151,11 @@
             "currentness_status": { "type": "string", "enum": ["current", "stale"] },
             "can_execute_trial": { "type": "boolean" },
             "can_promote_result": { "type": "boolean" },
+            "stage3_can_promote_result": { "type": "boolean" },
             "learning_claim_blocker_count": { "type": "integer", "minimum": 0 },
             "promotion_blocker_count": { "type": "integer", "minimum": 0 },
+            "stage3_blocking_promotion_blocker_count": { "type": "integer", "minimum": 0 },
+            "release_gate_diagnostic_promotion_blocker_count": { "type": "integer", "minimum": 0 },
             "clean_release_blocker_count": { "type": "integer", "minimum": 0 }
           }
         }
@@ -139,6 +165,16 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "auto_promotion_preflight_load_ok",
+        "auto_promotion_preflight_artifact_kind_ok",
+        "auto_promotion_preflight_current",
+        "auto_promotion_preflight_phase_ok",
+        "auto_promotion_preflight_pass",
+        "auto_promotion_preseal_load_ok",
+        "auto_promotion_preseal_artifact_kind_ok",
+        "auto_promotion_preseal_current",
+        "auto_promotion_preseal_phase_ok",
+        "auto_promotion_preseal_pass",
         "run_manifest_pass",
         "run_manifest_load_ok",
         "run_manifest_artifact_kind_ok",
@@ -158,6 +194,8 @@
         "full_suite_pass",
         "learning_revalidation_current",
         "accepted_risk_clean",
+        "gate_attention_clean",
+        "learning_claim_clean",
         "auto_improve_readiness_load_ok",
         "auto_improve_readiness_artifact_kind_ok",
         "auto_improve_current",
@@ -166,6 +204,16 @@
         "auto_improve_blockers_clear"
       ],
       "properties": {
+        "auto_promotion_preflight_load_ok": { "type": "boolean" },
+        "auto_promotion_preflight_artifact_kind_ok": { "type": "boolean" },
+        "auto_promotion_preflight_current": { "type": "boolean" },
+        "auto_promotion_preflight_phase_ok": { "type": "boolean" },
+        "auto_promotion_preflight_pass": { "type": "boolean" },
+        "auto_promotion_preseal_load_ok": { "type": "boolean" },
+        "auto_promotion_preseal_artifact_kind_ok": { "type": "boolean" },
+        "auto_promotion_preseal_current": { "type": "boolean" },
+        "auto_promotion_preseal_phase_ok": { "type": "boolean" },
+        "auto_promotion_preseal_pass": { "type": "boolean" },
         "run_manifest_pass": { "type": "boolean" },
         "run_manifest_load_ok": { "type": "boolean" },
         "run_manifest_artifact_kind_ok": { "type": "boolean" },
@@ -185,6 +233,8 @@
         "full_suite_pass": { "type": "boolean" },
         "learning_revalidation_current": { "type": "boolean" },
         "accepted_risk_clean": { "type": "boolean" },
+        "gate_attention_clean": { "type": "boolean" },
+        "learning_claim_clean": { "type": "boolean" },
         "auto_improve_readiness_load_ok": { "type": "boolean" },
         "auto_improve_readiness_artifact_kind_ok": { "type": "boolean" },
         "auto_improve_current": { "type": "boolean" },
@@ -211,6 +261,16 @@
       "properties": {
         "status": { "type": "string", "const": "current" },
         "checked_at": { "type": "string", "minLength": 1 }
+      }
+    },
+    "auto_promotion_phase_diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase", "status", "blocker_count"],
+      "properties": {
+        "phase": { "type": "string" },
+        "status": { "type": "string" },
+        "blocker_count": { "type": "integer", "minimum": 0 }
       }
     },
     "report_identity": {

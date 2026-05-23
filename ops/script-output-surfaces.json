@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/script-output-surfaces.schema.json",
   "artifact_kind": "script_output_surfaces",
-  "generated_at": "2026-05-23T15:35:36Z",
+  "generated_at": "2026-05-23T17:43:56Z",
   "producer": "ops.scripts.script_output_surfaces",
   "source_command": "python -m ops.scripts.script_output_surfaces --vault . --out ops/script-output-surfaces.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "7f7eede5f78dc2275b8f20fbb3ad710633198de1d1c7c4fc504bdc1245f646ca",
+  "source_tree_fingerprint": "2c1f0a31e9fad570f66451a43ed2c70eeb8466f8413af4e2dbb16c69828e3743",
   "input_fingerprints": {
     "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
     "schema": "02cee320f449f8666c341a0a389855f3ef5ac34bddcdf4c2767b5d4b384a9722",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "62c5358cc97c1a41ddc8e0af71afae29a2dbcd1744aa82c4d870f5be8d95b7ac",
-    "ops_scripts": "311f722bcc5b9896bc9d379afbfa3a7e7cab1903a101c76e58560fe686bd1161",
+    "ops_scripts": "327001b50b9beaff1cb1fbe7df731d4bdeea31fe9eeca6b16091fe83e0a851dc",
     "classification_values": "0ba4b7fd8868f9c9d070bea6d90c2cee76e2b9c8089223c413c8e898794923f4"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-23T15:35:36Z"
+    "checked_at": "2026-05-23T17:43:56Z"
   },
   "version": 1,
   "description": "Generated inventory for ops/scripts output path surfaces. Tests compare this registry with the live AST-derived inventory.",
@@ -2110,6 +2110,17 @@
       "references_resolve_repo_output_path": false,
       "direct_fallback_eligible": false,
       "reason": "no configurable output path surface detected"
+    },
+    {
+      "path": "ops/scripts/release/release_auto_promotion_preflight.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
       "path": "ops/scripts/release/release_auto_promotion_ready.py",
