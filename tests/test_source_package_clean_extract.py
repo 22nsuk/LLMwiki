@@ -154,7 +154,7 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
                 deselection_policy="ops/policies/report-contract-deselections.json",
                 pytest_mark_expr="not release_sealing",
                 tests="tests",
-                deselects="--deselect=tests/test_external_report_lifecycle_static.py",
+                deselects="",
                 pytest_flags="-q",
                 zip_smoke_report="tmp/release-distribution-zip-smoke.json",
                 heartbeat_interval_seconds=30,
