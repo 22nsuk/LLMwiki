@@ -8,6 +8,7 @@ from ops.scripts.mechanism_run_validation_runtime import (
     build_changed_files_scope_gate_check,
     build_event_sequence_phase_checks,
     build_report_consistency_checks,
+    display_report_vault,
     normalize_mechanism_artifact_bundle,
 )
 from ops.scripts.policy_runtime import load_policy
@@ -238,6 +239,18 @@ class MechanismRunValidationRuntimeTests(unittest.TestCase):
             self.assertIn("baseline_eval=.", vault_check["detail"])
             self.assertNotIn(str(vault.resolve()), vault_check["detail"])
 
+    def test_display_report_vault_hides_absolute_paths_that_escape_after_resolution(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            raw_outside_vault = vault / ".." / "outside-vault"
+
+            self.assertEqual(
+                display_report_vault(vault, raw_outside_vault.as_posix()),
+                "<outside-vault>",
+            )
+            self.assertNotIn(temp_dir, display_report_vault(vault, raw_outside_vault.as_posix()))
+
     def test_event_sequence_checks_flag_invalid_order(self) -> None:
         ledger = evaluated_run_ledger("ops/scripts/example.py")
         events = ledger["events"]
@@ -442,6 +455,59 @@ class MechanismRunValidationRuntimeTests(unittest.TestCase):
 
         self.assertEqual(check["status"], "FAIL")
         self.assertIn("../outside.py", check["detail"])
+
+    def test_changed_files_scope_normalizes_declared_targets_before_matching(self) -> None:
+        bundle = normalize_mechanism_artifact_bundle(
+            {
+                "baseline_eval_report": {},
+                "candidate_eval_report": {},
+                "baseline_lint_report": {},
+                "candidate_lint_report": {},
+                "baseline_mechanism_report": {},
+                "candidate_mechanism_report": {},
+                "changed_files_manifest_report": changed_files_manifest(
+                    "ops/scripts/example.py/../other.py",
+                    changed_files=[
+                        {
+                            "path": "ops/scripts/other.py",
+                            "change_type": "modified",
+                        }
+                    ],
+                ),
+                "run_ledger_report": run_ledger("ops/scripts/example.py"),
+            }
+        )
+
+        check = build_changed_files_scope_gate_check(bundle)
+
+        self.assertEqual(check["status"], "PASS")
+
+    def test_changed_files_scope_rejects_invalid_self_declared_manifest_paths(self) -> None:
+        bundle = normalize_mechanism_artifact_bundle(
+            {
+                "baseline_eval_report": {},
+                "candidate_eval_report": {},
+                "baseline_lint_report": {},
+                "candidate_lint_report": {},
+                "baseline_mechanism_report": {},
+                "candidate_mechanism_report": {},
+                "changed_files_manifest_report": changed_files_manifest(
+                    "../outside.py",
+                    changed_files=[
+                        {
+                            "path": "../outside.py",
+                            "change_type": "modified",
+                        }
+                    ],
+                ),
+                "run_ledger_report": run_ledger("ops/scripts/example.py"),
+            }
+        )
+
+        check = build_changed_files_scope_gate_check(bundle)
+
+        self.assertEqual(check["status"], "FAIL")
+        self.assertIn("!invalid-repo-path:../outside.py", check["detail"])
 
     def test_rule_registry_decision_flow_keeps_discard_before_hold(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

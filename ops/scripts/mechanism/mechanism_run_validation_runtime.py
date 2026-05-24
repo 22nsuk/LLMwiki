@@ -117,7 +117,11 @@ def normalize_mechanism_artifact_bundle(raw: Mapping[str, dict] | object) -> Mec
 
 def declared_target_matches(path: str, target: str) -> bool:
     normalized_target = target.rstrip("/")
-    return path == normalized_target or path.startswith(f"{normalized_target}/")
+    return (
+        not path.startswith("!invalid-repo-path:")
+        and not normalized_target.startswith("!invalid-repo-path:")
+        and (path == normalized_target or path.startswith(f"{normalized_target}/"))
+    )
 
 
 def path_in_declared_scope(path: str, declared_targets: list[str]) -> bool:
@@ -126,9 +130,12 @@ def path_in_declared_scope(path: str, declared_targets: list[str]) -> bool:
 
 def normalize_changed_file_path(path: str) -> str:
     normalized = normalize_repo_path_text(path)
-    if normalized is None:
-        return path
-    return normalized
+    normalized_path = path if normalized is None else normalized
+    return (
+        f"!invalid-repo-path:{normalized_path}"
+        if normalized_path == ".." or normalized_path.startswith(("../", "/"))
+        else normalized_path
+    )
 
 
 def display_report_vault(vault: Path, raw_vault: str | None) -> str:
@@ -136,7 +143,7 @@ def display_report_vault(vault: Path, raw_vault: str | None) -> str:
     if normalized is None:
         return "<missing>"
     vault_root = vault.resolve()
-    normalized_path = Path(normalized)
+    normalized_path = Path(normalized).resolve()
     if normalized_path == vault_root:
         return "."
     try:
@@ -320,16 +327,17 @@ def changed_files_scope_state(
     declared_scope: list[str] | None = None,
 ) -> ChangedFilesScopeState:
     manifest_targets = manifest_declared_targets(bundle)
-    normalized_scope = sorted(
-        set(
-            declared_scope
-            if declared_scope is not None
-            else (
-                manifest_targets.primary_targets
-                + manifest_targets.supporting_targets
-                + manifest_targets.test_files
-            )
+    raw_declared_scope = (
+        declared_scope
+        if declared_scope is not None
+        else (
+            manifest_targets.primary_targets
+            + manifest_targets.supporting_targets
+            + manifest_targets.test_files
         )
+    )
+    normalized_scope = sorted(
+        set(normalize_changed_file_path(path) for path in raw_declared_scope)
     )
     changed_paths = changed_file_paths(bundle)
     return ChangedFilesScopeState(
