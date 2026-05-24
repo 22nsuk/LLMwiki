@@ -228,16 +228,16 @@ class CiWorkflowStaticTests(unittest.TestCase):
         )
         strict_preview_run = _run_text(_step_by_name(job, "Run Windows strict preview smoke"))
         self.assertIn(
-            "python .\\tools\\ruff_strict_preview.py --vault . --allowlist ops/ruff-strict-preview-allowlist.txt --select B,SIM,UP,I",
+            'python .\\tools\\strict_preview_audit.py --vault . --out tmp\\strict-preview-audit-windows.json --targets "ops/scripts tests tools" --ruff-select B,SIM,UP,I',
             strict_preview_run,
         )
         self.assertIn(
-            "python -m mypy --config-file pyproject.toml --check-untyped-defs --disallow-untyped-defs --disallow-incomplete-defs @ops/mypy-strict-preview-allowlist.txt",
+            '--mypy-flags "--check-untyped-defs --disallow-untyped-defs --disallow-incomplete-defs" --python python',
             strict_preview_run,
         )
         self.assertIn(
             "python -m pytest -q tests/test_ci_workflow_static.py tests/test_makefile_static_gates.py tests/test_report_schema_sample_regeneration.py tests/test_report_schemas.py tests/test_ruff_strict_preview.py",
-            _run_text(_step_by_name(job, "Run Windows schema and allowlist smoke tests")),
+            _run_text(_step_by_name(job, "Run Windows schema and strict-preview smoke tests")),
         )
         upload = _step_by_name(job, "Upload Windows smoke artifact")
         self.assertEqual(upload.get("uses"), PINNED_UPLOAD_ARTIFACT_ACTION)

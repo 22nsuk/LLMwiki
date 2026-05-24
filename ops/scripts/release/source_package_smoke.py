@@ -237,7 +237,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--extract-parent", default=DEFAULT_EXTRACT_PARENT)
     parser.add_argument("--source-python", default="python3")
     parser.add_argument("--ruff-targets", default="ops/scripts tests tools")
-    parser.add_argument("--mypy-targets", default="@ops/mypy-allowlist.txt")
+    parser.add_argument("--mypy-targets", default="ops/scripts")
     parser.add_argument("--timeout-seconds", type=int, default=5400)
     parser.add_argument("--out", default=DEFAULT_OUT)
     return parser.parse_args(argv)

@@ -154,6 +154,7 @@ full local vault가 있을 때만 추가로:
    - mechanism run이면 `runs/<run-id>/improvement-observations.json`
    - run과 무관한 standalone maintenance task면 `ops/reports/task-improvement-observations/<task-id>/improvement-observations.json`
    - 이미 기록된 follow-up을 해결했다면 새 observation을 중복 생성하기보다 기존 항목의 `status`와 `suggested_followup`를 갱신해 closeout 상태를 남긴다.
+10. 작업 과정에서 불필요해진 내용은 최대한 삭제하고, 보존이 불가피한 경우에만 명확한 이유가 있는 상태로 남긴다.
 
 ---
 

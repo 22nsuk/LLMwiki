@@ -1002,11 +1002,11 @@ class MakefileStaticGateTests(unittest.TestCase):
             _target_block(text, "warning-budget"),
         )
 
-    def test_static_gate_runs_ruff_and_mypy_allowlist(self) -> None:
+    def test_static_gate_runs_ruff_and_full_ops_mypy_target(self) -> None:
         text = _makefile_text()
 
         self.assertIn("RUFF_TARGETS ?= ops/scripts tests tools", text)
-        self.assertIn("MYPY_TARGETS ?= @ops/mypy-allowlist.txt", text)
+        self.assertIn("MYPY_TARGETS ?= ops/scripts", text)
         self.assertIn("static: ruff typecheck", text)
         self.assertIn(
             "$(PYTHON) -m ruff check $(RUFF_TARGETS)", _target_block(text, "ruff")
@@ -4057,33 +4057,16 @@ class MakefileStaticGateTests(unittest.TestCase):
             block,
         )
 
-    def test_ruff_strict_preview_target_is_opt_in_and_scoped(self) -> None:
+    def test_ruff_strict_preview_target_uses_full_scope_targets(self) -> None:
         text = _makefile_text()
 
         self.assertIn("RUFF_STRICT_PREVIEW_RULES ?= B,SIM,UP,I", text)
+        self.assertIn("RUFF_STRICT_PREVIEW_TARGETS ?= $(STRICT_PREVIEW_AUDIT_TARGETS)", text)
         self.assertIn(
-            "RUFF_STRICT_PREVIEW_ALLOWLIST ?= ops/ruff-strict-preview-allowlist.txt",
-            text,
-        )
-        self.assertEqual(
-            _allowlist_lines(RUFF_STRICT_PREVIEW_ALLOWLIST),
-            {
-                "ops/scripts/mechanism/auto_improve_execute_runtime.py",
-                "ops/scripts/mechanism/auto_improve_execution_runtime.py",
-                "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
-                "ops/scripts/mechanism/mechanism_review_session_calibration_runtime.py",
-                "ops/scripts/mechanism/mechanism_review_outcome_metrics_calibration_runtime.py",
-                "ops/scripts/mechanism/promotion_gate_mechanism_finalize_runtime.py",
-                "ops/scripts/mechanism/promotion_gate_mechanism_rule_registry_runtime.py",
-                "ops/scripts/mechanism/promotion_gate_mechanism_state_runtime.py",
-                "ops/scripts/mechanism/promotion_gate_mechanism_report_runtime.py",
-                "ops/scripts/eval/structural_complexity_budget_runtime.py",
-            },
-        )
-        self.assertIn(
-            '$(PYTHON) tools/ruff_strict_preview.py --vault "$(VAULT)" --allowlist "$(RUFF_STRICT_PREVIEW_ALLOWLIST)" --select "$(RUFF_STRICT_PREVIEW_RULES)"',
+            '$(PYTHON) tools/ruff_strict_preview.py --vault "$(VAULT)" --targets "$(RUFF_STRICT_PREVIEW_TARGETS)" --select "$(RUFF_STRICT_PREVIEW_RULES)"',
             _target_block(text, "ruff-strict-preview"),
         )
+        self.assertNotIn("RUFF_STRICT_PREVIEW_ALLOWLIST", text)
 
     def test_strict_preview_audit_target_expands_all_public_runtime_targets(self) -> None:
         text = _makefile_text()
@@ -4097,7 +4080,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn('--mypy-flags "$(MYPY_STRICT_PREVIEW_FLAGS)"', block)
         self.assertNotIn("--fail-on-attention", block)
 
-    def test_mypy_allowlist_tracks_ops_scripts_surface(self) -> None:
+    def test_legacy_mypy_target_list_still_tracks_ops_scripts_surface(self) -> None:
         allowlist = {
             line.strip()
             for line in MYPY_ALLOWLIST.read_text(encoding="utf-8").splitlines()
@@ -4111,7 +4094,7 @@ class MakefileStaticGateTests(unittest.TestCase):
 
         self.assertEqual(script_files, allowlist)
 
-    def test_mypy_strict_preview_target_is_opt_in_and_scoped(self) -> None:
+    def test_mypy_strict_preview_target_uses_full_scope_targets(self) -> None:
         text = _makefile_text()
 
         self.assertIn(
@@ -4119,23 +4102,8 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "MYPY_STRICT_PREVIEW_TARGETS ?= @ops/mypy-strict-preview-allowlist.txt",
+            "MYPY_STRICT_PREVIEW_TARGETS ?= $(STRICT_PREVIEW_AUDIT_TARGETS)",
             text,
-        )
-        self.assertEqual(
-            _allowlist_lines(MYPY_STRICT_PREVIEW_ALLOWLIST),
-            {
-                "ops/scripts/mechanism/auto_improve_execute_runtime.py",
-                "ops/scripts/mechanism/auto_improve_execution_runtime.py",
-                "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
-                "ops/scripts/mechanism/mechanism_review_session_calibration_runtime.py",
-                "ops/scripts/mechanism/mechanism_review_outcome_metrics_calibration_runtime.py",
-                "ops/scripts/mechanism/promotion_gate_mechanism_finalize_runtime.py",
-                "ops/scripts/mechanism/promotion_gate_mechanism_rule_registry_runtime.py",
-                "ops/scripts/mechanism/promotion_gate_mechanism_state_runtime.py",
-                "ops/scripts/mechanism/promotion_gate_mechanism_report_runtime.py",
-                "ops/scripts/eval/structural_complexity_budget_runtime.py",
-            },
         )
         self.assertIn(
             "$(PYTHON) -m mypy --config-file pyproject.toml $(MYPY_STRICT_PREVIEW_FLAGS) $(MYPY_STRICT_PREVIEW_TARGETS)",

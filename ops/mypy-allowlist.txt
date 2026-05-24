@@ -49,6 +49,7 @@ ops/scripts/mechanism/finalize_run_log_runtime.py
 ops/scripts/mechanism/finalize_run_runtime.py
 ops/scripts/mechanism/finalize_run_state_runtime.py
 ops/scripts/eval/function_budget_refactor_proposals.py
+ops/scripts/eval/lint_uplift_plan.py
 ops/scripts/mechanism/finalize_run_write_runtime.py
 ops/scripts/mechanism/goal_runtime_backoff.py
 ops/scripts/mechanism/goal_runtime_clean_transient.py
@@ -124,6 +125,7 @@ ops/scripts/mechanism/planning_gate_report_runtime.py
 ops/scripts/mechanism/planning_gate_validate.py
 ops/scripts/mechanism/planning_gate_validate_runtime.py
 ops/scripts/core/policy_runtime.py
+ops/scripts/core/public_mirror_boundary_runtime.py
 ops/scripts/core/policy_validation_runtime.py
 ops/scripts/core/promotion_decision_registry_runtime.py
 ops/scripts/mechanism/promotion_gate.py
@@ -232,6 +234,7 @@ ops/scripts/test/test_execution_summary.py
 ops/scripts/core/validation_check_types_runtime.py
 ops/scripts/eval/warning_budget.py
 ops/scripts/eval/warning_budget_runtime.py
+ops/scripts/eval/type_uplift_plan.py
 ops/scripts/core/workflow_dependency_planner.py
 ops/scripts/eval/wiki_doc_audit_runtime.py
 ops/scripts/eval/wiki_eval.py

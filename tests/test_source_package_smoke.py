@@ -81,7 +81,7 @@ class SourcePackageSmokeTests(unittest.TestCase):
                 extract_parent="build/source-package-smoke/extract",
                 source_python="/usr/bin/python3",
                 ruff_targets="ops/scripts tests",
-                mypy_targets="@ops/mypy-allowlist.txt",
+                mypy_targets="ops/scripts",
                 timeout_seconds=60,
                 context=fixed_context(),
             )

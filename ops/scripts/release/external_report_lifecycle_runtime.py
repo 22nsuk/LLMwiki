@@ -24,6 +24,21 @@ RELEASE_VERIFIED_ACTION_IDS = {
     "full_suite_evidence_currentness",
     "promotion_truth_ladder",
 }
+ROADMAP_SOURCE_ONLY_ACTION_IDS = {
+    "public_mirror_boundary_helper",
+    "lint_uplift_plan_full_scope",
+    "type_uplift_plan_full_scope",
+    "mechanism_navigation_index",
+    "cli_surface_inventory",
+    "tools_migration_plan",
+    "release_authority_inventory",
+    "observation_closeout_lint",
+    "subagent_profile_schema",
+    "ci_tier_lane_bridge",
+    "compatibility_alias_deprecation",
+    "public_surface_snapshot",
+    "doc_graph_integrity_lint",
+}
 
 ACTION_CATALOG: list[dict[str, Any]] = [
     {
@@ -187,6 +202,182 @@ ACTION_CATALOG: list[dict[str, Any]] = [
             "tests/test_strict_preview_audit.py",
         ],
         "recommended_target": "strict-preview-audit",
+    },
+    {
+        "action_id": "public_mirror_boundary_helper",
+        "priority": "P1",
+        "theme": "public mirror boundary helper",
+        "patterns": [
+            r"public_mirror_boundary_runtime",
+            r"boundary helper",
+            r"assert_within_public_mirror",
+            r"경계",
+        ],
+        "evidence_paths": [
+            "ops/scripts/core/public_mirror_boundary_runtime.py",
+            "tests/test_public_mirror_boundary_runtime.py",
+        ],
+        "recommended_target": "test-public",
+    },
+    {
+        "action_id": "lint_uplift_plan_full_scope",
+        "priority": "P1",
+        "theme": "full-scope lint uplift plan",
+        "patterns": [
+            r"Lint uplift plan",
+            r"strict-lint-inventory",
+            r"lint_uplift_plan",
+            r"strict-preview family",
+        ],
+        "evidence_paths": [
+            "ops/schemas/strict-lint-inventory.schema.json",
+            "ops/scripts/eval/lint_uplift_plan.py",
+            "tests/test_lint_uplift_plan.py",
+            "mk/eval.mk",
+        ],
+        "recommended_target": "lint-uplift-plan",
+    },
+    {
+        "action_id": "type_uplift_plan_full_scope",
+        "priority": "P1",
+        "theme": "full-scope type uplift plan",
+        "patterns": [
+            r"Type uplift plan",
+            r"strict-type-inventory",
+            r"type_uplift_plan",
+            r"allowlist.*meaning",
+            r"mypy target",
+        ],
+        "evidence_paths": [
+            "ops/schemas/strict-type-inventory.schema.json",
+            "ops/scripts/eval/type_uplift_plan.py",
+            "tests/test_type_uplift_plan.py",
+            "mk/eval.mk",
+        ],
+        "recommended_target": "type-uplift-plan",
+    },
+    {
+        "action_id": "mechanism_navigation_index",
+        "priority": "P1",
+        "theme": "mechanism navigation index",
+        "patterns": [r"Mechanism navigation index", r"mechanism_navigation_index"],
+        "evidence_paths": [
+            "ops/schemas/mechanism-navigation-index.schema.json",
+            "ops/scripts/mechanism/mechanism_navigation_index.py",
+            "tests/test_mechanism_navigation_index.py",
+        ],
+        "recommended_target": "mechanism-navigation-index",
+    },
+    {
+        "action_id": "cli_surface_inventory",
+        "priority": "P1",
+        "theme": "CLI surface inventory",
+        "patterns": [r"CLI surface inventory", r"cli_surface_inventory", r"alias debt"],
+        "evidence_paths": [
+            "ops/schemas/cli-surface-inventory.schema.json",
+            "ops/scripts/core/cli_surface_inventory.py",
+            "tests/test_cli_surface_inventory.py",
+        ],
+        "recommended_target": "cli-surface-inventory",
+    },
+    {
+        "action_id": "tools_migration_plan",
+        "priority": "P1",
+        "theme": "tools migration plan",
+        "patterns": [r"Tools migration plan", r"tools_migration_plan", r"migration debt"],
+        "evidence_paths": [
+            "ops/schemas/tools-migration-plan.schema.json",
+            "ops/scripts/core/tools_migration_plan.py",
+            "tests/test_tools_migration_plan.py",
+        ],
+        "recommended_target": "tools-migration-plan",
+    },
+    {
+        "action_id": "release_authority_inventory",
+        "priority": "P1",
+        "theme": "release authority inventory",
+        "patterns": [r"Release authority inventory", r"release_authority_inventory"],
+        "evidence_paths": [
+            "ops/schemas/release-authority-inventory.schema.json",
+            "ops/scripts/release/release_authority_inventory.py",
+            "tests/test_release_authority_inventory.py",
+        ],
+        "recommended_target": "release-authority-inventory",
+    },
+    {
+        "action_id": "observation_closeout_lint",
+        "priority": "P1",
+        "theme": "observation closeout lint",
+        "patterns": [r"Observation closeout lint", r"observation_closeout_lint"],
+        "evidence_paths": [
+            "ops/schemas/observation-closeout-registry.schema.json",
+            "ops/observation-closeout-registry.json",
+            "ops/scripts/mechanism/observation_closeout_lint.py",
+            "tests/test_observation_closeout_lint.py",
+        ],
+        "recommended_target": "observation-closeout-lint",
+    },
+    {
+        "action_id": "subagent_profile_schema",
+        "priority": "P1",
+        "theme": "subagent profile schema and rung ladder",
+        "patterns": [r"Subagent profile schema", r"subagent_profile_schema", r"rung ladder"],
+        "evidence_paths": [
+            "ops/schemas/subagent-profile.schema.json",
+            "ops/scripts/core/subagent_profile_schema.py",
+            "tests/test_subagent_profile_schema.py",
+            "tests/test_select_subagent_rung_ladder.py",
+        ],
+        "recommended_target": "subagent-profile-schema",
+    },
+    {
+        "action_id": "ci_tier_lane_bridge",
+        "priority": "P1",
+        "theme": "CI tier lane bridge",
+        "patterns": [r"CI tier lane bridge", r"ci_tier_lane_bridge", r"lane_ci_steps", r"pack_ci_steps"],
+        "evidence_paths": [
+            "ops/schemas/ci-tier-lane-bridge.schema.json",
+            "ops/scripts/test/ci_tier_lane_bridge.py",
+            "tests/test_ci_tier_lane_bridge.py",
+        ],
+        "recommended_target": "ci-tier-lane-bridge",
+    },
+    {
+        "action_id": "compatibility_alias_deprecation",
+        "priority": "P1",
+        "theme": "compatibility alias deprecation inventory",
+        "patterns": [r"Compatibility alias deprecation", r"compatibility_alias_deprecation", r"flat alias"],
+        "evidence_paths": [
+            "ops/schemas/compatibility-alias-deprecation.schema.json",
+            "ops/scripts/core/compatibility_alias_deprecation.py",
+            "tests/test_compatibility_alias_deprecation.py",
+        ],
+        "recommended_target": "compatibility-alias-deprecation",
+    },
+    {
+        "action_id": "public_surface_snapshot",
+        "priority": "P1",
+        "theme": "public surface snapshot",
+        "patterns": [r"Public surface snapshot", r"public_surface_snapshot", r"iter_public_files"],
+        "evidence_paths": [
+            "ops/schemas/public-surface-snapshot.schema.json",
+            "ops/scripts/public/public_surface_snapshot.py",
+            "tests/test_public_surface_snapshot.py",
+        ],
+        "recommended_target": "public-surface-snapshot",
+    },
+    {
+        "action_id": "doc_graph_integrity_lint",
+        "priority": "P1",
+        "theme": "doc graph integrity lint",
+        "patterns": [r"Doc graph integrity", r"doc_graph_integrity", r"doc-graph-orphan"],
+        "evidence_paths": [
+            "ops/schemas/doc-graph-integrity.schema.json",
+            "ops/doc-graph-orphan-allowlist.json",
+            "ops/scripts/eval/doc_graph_integrity.py",
+            "tests/test_doc_graph_integrity.py",
+        ],
+        "recommended_target": "doc-graph-integrity",
     },
     {
         "action_id": "release_lane_mutability_split",
@@ -1095,11 +1286,22 @@ def ruff_strict_preview_import_order_status(
     )
     if (
         "from .set_mechanism_run_history import (\n" in surface_text
-        and "RUFF_STRICT_PREVIEW_ALLOWLIST" in surface_text
+        and (
+            "RUFF_STRICT_PREVIEW_TARGETS" in surface_text
+            or "RUFF_STRICT_PREVIEW_ALLOWLIST" in surface_text
+        )
         and "tools/ruff_strict_preview.py" in surface_text
     ):
         return "implemented"
     return "requires_release_run_verification"
+
+
+def roadmap_source_only_status(existing_count: int, expected_count: int) -> str:
+    if existing_count == expected_count:
+        return "implemented"
+    if existing_count:
+        return "partially_automated"
+    return "planned"
 
 
 def release_source_ready_deindex_hardening_status(
@@ -1924,6 +2126,8 @@ def status_from_evidence(vault: Path, action: dict[str, Any]) -> tuple[str, list
             existing_count,
             len(action["evidence_paths"]),
         )
+    elif action_id in ROADMAP_SOURCE_ONLY_ACTION_IDS:
+        status = roadmap_source_only_status(existing_count, len(action["evidence_paths"]))
     elif action_id in {
         "script_output_surfaces_currentness",
         "function_budget_proposal_adapter",

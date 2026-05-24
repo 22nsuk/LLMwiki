@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Strict Type Inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "status",
+    "target_roots",
+    "full_scope",
+    "default_mypy",
+    "strict_preview",
+    "migration"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "const": "ops/schemas/strict-type-inventory.schema.json" },
+    "artifact_kind": { "type": "string", "const": "strict_type_inventory" },
+    "generated_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" },
+    "producer": { "type": "string", "const": "ops.scripts.type_uplift_plan" },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "artifact_status": { "type": "string", "enum": ["current", "archived", "stale", "unknown"] },
+    "retention_policy": { "type": "string", "const": "canonical_report" },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": { "$ref": "#/$defs/currentness" },
+    "vault": { "type": "string" },
+    "policy": { "$ref": "#/$defs/policy_identity" },
+    "status": { "type": "string", "enum": ["pass", "attention"] },
+    "target_roots": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "full_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["python_file_count", "sample_paths"],
+      "properties": {
+        "python_file_count": { "type": "integer", "minimum": 0 },
+        "sample_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "default_mypy": { "$ref": "#/$defs/target_state" },
+    "strict_preview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targets",
+        "target_mode",
+        "uses_legacy_target_list",
+        "audit_path",
+        "audit_status",
+        "audit_total_error_count",
+        "audit_mypy_error_count"
+      ],
+      "properties": {
+        "targets": { "type": "string" },
+        "target_mode": { "type": "string", "enum": ["full_scope_targets", "legacy_target_list", "unknown"] },
+        "uses_legacy_target_list": { "type": "boolean" },
+        "audit_path": { "type": "string", "minLength": 1 },
+        "audit_status": { "type": "string", "minLength": 1 },
+        "audit_total_error_count": { "type": "integer", "minimum": 0 },
+        "audit_mypy_error_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "strategy",
+        "allowlist_removed_from_default_target",
+        "allowlist_removed_from_strict_preview_target",
+        "promotion_gate_impact"
+      ],
+      "properties": {
+        "strategy": { "type": "string", "minLength": 1 },
+        "allowlist_removed_from_default_target": { "type": "boolean" },
+        "allowlist_removed_from_strict_preview_target": { "type": "boolean" },
+        "promotion_gate_impact": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "enum": ["current", "stale", "unknown", "invalid"] },
+        "checked_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" }
+      }
+    },
+    "policy_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "version": { "type": ["integer", "string", "null"] }
+      }
+    },
+    "target_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["targets", "target_mode", "uses_legacy_target_list"],
+      "properties": {
+        "targets": { "type": "string" },
+        "target_mode": { "type": "string", "enum": ["full_scope_targets", "legacy_target_list", "unknown"] },
+        "uses_legacy_target_list": { "type": "boolean" }
+      }
+    }
+  }
+}

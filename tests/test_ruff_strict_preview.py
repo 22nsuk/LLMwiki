@@ -16,6 +16,16 @@ MODULE_SPEC.loader.exec_module(RUFF_STRICT_PREVIEW)
 
 
 class RuffStrictPreviewTests(unittest.TestCase):
+    def test_parse_targets_uses_shell_style_words(self) -> None:
+        self.assertEqual(
+            RUFF_STRICT_PREVIEW.parse_targets("ops/scripts tests 'tools'"),
+            ["ops/scripts", "tests", "tools"],
+        )
+
+    def test_parse_targets_rejects_empty_surface(self) -> None:
+        with self.assertRaises(ValueError):
+            RUFF_STRICT_PREVIEW.parse_targets("   ")
+
     def test_load_allowlist_targets_ignores_comments_and_blank_lines(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

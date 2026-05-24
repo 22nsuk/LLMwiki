@@ -65,7 +65,7 @@ class PublicCheckRequest:
     public_out: str = DEFAULT_PUBLIC_OUT
     public_python: str = sys.executable
     ruff_targets: str = "ops/scripts tests tools"
-    mypy_targets: str = "@ops/mypy-allowlist.txt"
+    mypy_targets: str = "ops/scripts"
     pytest_mark_expr: str = "public"
     pytest_flags: str = ""
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS
@@ -473,7 +473,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--public-out", default=DEFAULT_PUBLIC_OUT)
     parser.add_argument("--public-python", default=sys.executable)
     parser.add_argument("--ruff-targets", default="ops/scripts tests tools")
-    parser.add_argument("--mypy-targets", default="@ops/mypy-allowlist.txt")
+    parser.add_argument("--mypy-targets", default="ops/scripts")
     parser.add_argument("--pytest-mark-expr", default="public")
     parser.add_argument("--pytest-flags", default="")
     parser.add_argument("--timeout-seconds", type=int, default=DEFAULT_TIMEOUT_SECONDS)

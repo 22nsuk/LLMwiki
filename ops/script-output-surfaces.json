@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/script-output-surfaces.schema.json",
   "artifact_kind": "script_output_surfaces",
-  "generated_at": "2026-05-24T12:55:18Z",
+  "generated_at": "2026-05-24T14:07:29Z",
   "producer": "ops.scripts.script_output_surfaces",
   "source_command": "python -m ops.scripts.script_output_surfaces --vault . --out ops/script-output-surfaces.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "2c1a291da8d04b933ab5060ab660fb11c485981d17200c207ce9dcfaca59a9a4",
+  "source_tree_fingerprint": "0bb830648e5e9ea31e27bef574206ba4646b392904c3f0cc8d2a8c84e729b91d",
   "input_fingerprints": {
     "policy": "02269a331e13c6e556b0482ef1cf242e68047df29679f0181a82f6ed5e9a50e9",
     "schema": "02cee320f449f8666c341a0a389855f3ef5ac34bddcdf4c2767b5d4b384a9722",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "62c5358cc97c1a41ddc8e0af71afae29a2dbcd1744aa82c4d870f5be8d95b7ac",
-    "ops_scripts": "4943aa031796149292223613c86f2c41f2e7eb61fc78e53d4610f195660a4f47",
+    "ops_scripts": "f478830f263af22f3c14f7c07ed9739824c209647f238aea33cbf1c0bffdf23f",
     "classification_values": "0ba4b7fd8868f9c9d070bea6d90c2cee76e2b9c8089223c413c8e898794923f4"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-24T12:55:18Z"
+    "checked_at": "2026-05-24T14:07:29Z"
   },
   "version": 1,
   "description": "Generated inventory for ops/scripts output path surfaces. Tests compare this registry with the live AST-derived inventory.",
@@ -387,6 +387,15 @@
       "reason": "no configurable output path surface detected"
     },
     {
+      "path": "ops/scripts/core/public_mirror_boundary_runtime.py",
+      "classification": "no_output",
+      "output_options": [],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": false,
+      "reason": "no configurable output path surface detected"
+    },
+    {
       "path": "ops/scripts/core/python_function_budget_runtime.py",
       "classification": "no_output",
       "output_options": [],
@@ -634,6 +643,17 @@
       "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
+      "path": "ops/scripts/eval/lint_uplift_plan.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
       "path": "ops/scripts/eval/report_contract_closeout_runtime.py",
       "classification": "no_output",
       "output_options": [],
@@ -661,6 +681,17 @@
       "references_resolve_repo_output_path": false,
       "direct_fallback_eligible": false,
       "reason": "no configurable output path surface detected"
+    },
+    {
+      "path": "ops/scripts/eval/type_uplift_plan.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
       "path": "ops/scripts/eval/warning_budget.py",

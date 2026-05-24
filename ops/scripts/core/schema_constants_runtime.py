@@ -3,6 +3,8 @@ from __future__ import annotations
 POLICY_SCHEMA_PATH = "ops/schemas/wiki-maintainer-policy.schema.json"
 EXTERNAL_REPORT_REFERENCE_MANIFEST_SCHEMA_PATH = "ops/schemas/external-report-reference-manifest.schema.json"
 EXTERNAL_REPORT_ACTION_MATRIX_SCHEMA_PATH = "ops/schemas/external-report-action-matrix.schema.json"
+STRICT_LINT_INVENTORY_SCHEMA_PATH = "ops/schemas/strict-lint-inventory.schema.json"
+STRICT_TYPE_INVENTORY_SCHEMA_PATH = "ops/schemas/strict-type-inventory.schema.json"
 SEED_SCHEMA_PATH = "ops/schemas/seed.schema.json"
 PLANNING_VALIDATION_SCHEMA_PATH = "ops/schemas/planning-validation.schema.json"
 PLANNING_GATE_VALIDATION_REPORT_SCHEMA_PATH = (

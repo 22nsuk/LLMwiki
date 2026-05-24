@@ -308,10 +308,10 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
                 "\t@printf '%s\\n' 'release public mechanism report-contract'\n"
             ),
             "mk/static.mk": (
-                "RUFF_STRICT_PREVIEW_ALLOWLIST ?= ops/ruff-strict-preview-allowlist.txt\n"
+                "RUFF_STRICT_PREVIEW_TARGETS ?= ops/scripts tests tools\n"
                 "STRICT_PREVIEW_AUDIT_TARGETS ?= ops/scripts tests tools\n"
                 "ruff-strict-preview:\n"
-                "\tpython tools/ruff_strict_preview.py\n"
+                "\tpython tools/ruff_strict_preview.py --targets \"$(RUFF_STRICT_PREVIEW_TARGETS)\"\n"
                 "strict-preview-audit:\n"
                 "\tpython tools/strict_preview_audit.py --targets \"$(STRICT_PREVIEW_AUDIT_TARGETS)\"\n"
             ),
@@ -357,6 +357,70 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
                 "external-reports/reassessment.md",
                 actions[action_id]["source_report_paths"],
             )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_roadmap_surfaces_are_cataloged_individually(self) -> None:
+        for rel_path in (
+            "ops/scripts/core/public_mirror_boundary_runtime.py",
+            "tests/test_public_mirror_boundary_runtime.py",
+            "ops/schemas/strict-lint-inventory.schema.json",
+            "ops/scripts/eval/lint_uplift_plan.py",
+            "tests/test_lint_uplift_plan.py",
+            "ops/schemas/strict-type-inventory.schema.json",
+            "ops/scripts/eval/type_uplift_plan.py",
+            "tests/test_type_uplift_plan.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+        (self.vault / "mk" / "eval.mk").parent.mkdir(parents=True, exist_ok=True)
+        (self.vault / "mk" / "eval.mk").write_text(
+            "lint-uplift-plan:\n\tpython -m ops.scripts.lint_uplift_plan\n"
+            "type-uplift-plan:\n\tpython -m ops.scripts.type_uplift_plan\n",
+            encoding="utf-8",
+        )
+        (self.external / "roadmap.md").write_text(
+            "# Roadmap\n\n"
+            "public_mirror_boundary_runtime, Lint uplift plan, Type uplift plan, "
+            "Mechanism navigation index, CLI surface inventory, Tools migration plan, "
+            "Release authority inventory, Observation closeout lint, Subagent profile schema, "
+            "CI tier lane bridge, Compatibility alias deprecation, Public surface snapshot, "
+            "Doc graph integrity.\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            "external-reports/report-reference-manifest.json",
+            {
+                "references": [{"path": "external-reports/roadmap.md"}],
+                "summary": {"active_reference_set_status": "current"},
+            },
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        coverage = {item["path"]: item for item in report["active_report_coverage"]}
+        matched = set(coverage["external-reports/roadmap.md"]["matched_action_ids"])
+        expected = {
+            "public_mirror_boundary_helper",
+            "lint_uplift_plan_full_scope",
+            "type_uplift_plan_full_scope",
+            "mechanism_navigation_index",
+            "cli_surface_inventory",
+            "tools_migration_plan",
+            "release_authority_inventory",
+            "observation_closeout_lint",
+            "subagent_profile_schema",
+            "ci_tier_lane_bridge",
+            "compatibility_alias_deprecation",
+            "public_surface_snapshot",
+            "doc_graph_integrity_lint",
+        }
+        self.assertTrue(expected <= matched)
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        self.assertEqual(actions["public_mirror_boundary_helper"]["current_status"], "implemented")
+        self.assertEqual(actions["lint_uplift_plan_full_scope"]["current_status"], "implemented")
+        self.assertEqual(actions["type_uplift_plan_full_scope"]["current_status"], "implemented")
+        self.assertEqual(actions["mechanism_navigation_index"]["current_status"], "planned")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_self_improvement_strategy_actions_remain_open_until_canonical_evidence(self) -> None:

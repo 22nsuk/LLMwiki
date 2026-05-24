@@ -196,10 +196,9 @@ jobs:
 
       - name: Run Windows strict preview smoke
         run: |
-          python .\tools\ruff_strict_preview.py --vault . --allowlist ops/ruff-strict-preview-allowlist.txt --select B,SIM,UP,I
-          python -m mypy --config-file pyproject.toml --check-untyped-defs --disallow-untyped-defs --disallow-incomplete-defs @ops/mypy-strict-preview-allowlist.txt
+          python .\tools\strict_preview_audit.py --vault . --out tmp\strict-preview-audit-windows.json --targets "ops/scripts tests tools" --ruff-select B,SIM,UP,I --mypy-flags "--check-untyped-defs --disallow-untyped-defs --disallow-incomplete-defs" --python python
 
-      - name: Run Windows schema and allowlist smoke tests
+      - name: Run Windows schema and strict-preview smoke tests
         run: |
           python -m pytest -q tests/test_ci_workflow_static.py tests/test_makefile_static_gates.py tests/test_report_schema_sample_regeneration.py tests/test_report_schemas.py tests/test_ruff_strict_preview.py
 
