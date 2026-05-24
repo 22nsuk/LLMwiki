@@ -268,6 +268,7 @@ release-auto-promotion-preseal:
 	$(MAKE) release-smoke-full
 	$(MAKE) generated-artifact-index
 	$(MAKE) artifact-freshness
+	$(MAKE) external-report-reference-manifest-release-check
 	$(MAKE) release-closeout-summary-report
 	$(MAKE) learning-readiness-signoff-revalidation
 	$(MAKE) release-evidence-cohort-preseal-refresh

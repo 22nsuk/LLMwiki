@@ -1646,7 +1646,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             auto_promotion_preflight_block,
         )
         self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preseal")[:10],
+            _recipe_lines(text, "release-auto-promotion-preseal")[:11],
             [
                 "$(MAKE) release-run-ready-check",
                 "$(MAKE) bootstrap-preflight",
@@ -1654,6 +1654,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-smoke-full",
                 "$(MAKE) generated-artifact-index",
                 "$(MAKE) artifact-freshness",
+                "$(MAKE) external-report-reference-manifest-release-check",
                 "$(MAKE) release-closeout-summary-report",
                 "$(MAKE) learning-readiness-signoff-revalidation",
                 "$(MAKE) release-evidence-cohort-preseal-refresh",

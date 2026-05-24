@@ -39,8 +39,9 @@ result can be promoted without operator intervention.
 - `make release-auto-promotion-preseal`: refresh clean closeout, strict
   same-fingerprint cohort, remediation, learning, and auto-improve diagnostics
   after run-ready and before sealing. It refreshes cheap cohort inputs such as
-  bootstrap, registry, release smoke, generated index, and artifact freshness,
-  but reuses run-ready's canonical full-suite evidence instead of rerunning it.
+  bootstrap, registry, release smoke, generated index, artifact freshness, and
+  external report references, but reuses run-ready's canonical full-suite
+  evidence instead of rerunning it.
 - `make release-auto-promotion-operator-summary`: manual fallback to refresh the
   cheap build-local operator diagnostics used by the promotion verdict when
   sealed sidecars are already current.
