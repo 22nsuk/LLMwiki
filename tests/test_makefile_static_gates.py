@@ -1349,6 +1349,19 @@ class MakefileStaticGateTests(unittest.TestCase):
             "SOURCE_PACKAGE_SMOKE_PYTHON",
             "$(PUBLIC_PYTHON)",
         )
+        _assert_assignment_exists(
+            self,
+            text,
+            "SOURCE_PACKAGE_CLEAN_EXTRACT_OUT",
+            "ops/reports/source-package-clean-extract.json",
+        )
+        _assert_assignment_exists(
+            self,
+            text,
+            "SOURCE_PACKAGE_CLEAN_EXTRACT_ROOT",
+            "tmp/source-package-clean-extract",
+        )
+        self.assertIn("release-source-package-clean-extract", _target_block(text, ".PHONY"))
         _assert_recipe_contains_tokens(
             self,
             text,
@@ -1361,6 +1374,20 @@ class MakefileStaticGateTests(unittest.TestCase):
                 '--out "$(SOURCE_PACKAGE_SMOKE_OUT)"',
             ),
         )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "release-source-package-clean-extract",
+            (
+                "ops.scripts.source_package_clean_extract",
+                '--source-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
+                '--extract-parent "$(SOURCE_PACKAGE_CLEAN_EXTRACT_EXTRACT_PARENT)"',
+                '--source-python "$(SOURCE_PACKAGE_SMOKE_PYTHON)"',
+                '--test-summary-out "$(SOURCE_PACKAGE_CLEAN_EXTRACT_TEST_SUMMARY_OUT)"',
+                '--zip-smoke-report "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)"',
+                '--out "$(SOURCE_PACKAGE_CLEAN_EXTRACT_OUT)"',
+            ),
+        )
         self.assertEqual(pack_selectors(registry, "source_package"), ("release-source-package-smoke",))
         self.assertEqual(
             pack_summary_suite(registry, "source_package")["summary_target"],
@@ -1368,6 +1395,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn("$(MAKE) release-package-current", _target_block(text, "release-source-package-check"))
         self.assertIn("$(MAKE) release-source-package-smoke", _target_block(text, "release-source-package-check"))
+        self.assertIn(
+            "$(MAKE) release-source-package-clean-extract",
+            _target_block(text, "release-source-package-check"),
+        )
 
     def test_ci_matrix_runs_named_lane_targets(self) -> None:
         registry = _test_lane_registry()
