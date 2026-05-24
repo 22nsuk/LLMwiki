@@ -184,6 +184,59 @@ class MechanismRunValidationRuntimeTests(unittest.TestCase):
             vault_check = checks[-1]
             self.assertEqual(vault_check["status"], "FAIL")
             self.assertIn("candidate_eval=", vault_check["detail"])
+            self.assertNotIn(str(vault.resolve()), vault_check["detail"])
+            self.assertNotIn(str((vault / "other").resolve()), vault_check["detail"])
+
+    def test_report_consistency_check_detail_uses_public_safe_vault_labels(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_promotion_vault(vault)
+            bundle = normalize_mechanism_artifact_bundle(
+                {
+                    "baseline_eval_report": eval_report(vault, 10),
+                    "candidate_eval_report": eval_report(vault, 10),
+                    "baseline_lint_report": lint_report(vault),
+                    "candidate_lint_report": lint_report(vault),
+                    "baseline_mechanism_report": mechanism_report(
+                        vault,
+                        primary_targets=["ops/scripts/example.py"],
+                        nonempty=10,
+                        functions=2,
+                        branches=1,
+                        headings=0,
+                        test_file_count=1,
+                        test_case_count=1,
+                        complexity_score=15,
+                    ),
+                    "candidate_mechanism_report": mechanism_report(
+                        vault,
+                        primary_targets=["ops/scripts/example.py"],
+                        nonempty=10,
+                        functions=2,
+                        branches=1,
+                        headings=0,
+                        test_file_count=1,
+                        test_case_count=1,
+                        complexity_score=15,
+                    ),
+                    "changed_files_manifest_report": changed_files_manifest("ops/scripts/example.py"),
+                    "run_ledger_report": run_ledger("ops/scripts/example.py"),
+                }
+            )
+
+            checks = build_report_consistency_checks(
+                vault,
+                bundle,
+                run_id="run-equal-score",
+                expected_policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                expected_policy_version=LIVE_POLICY_VERSION,
+            )
+
+            vault_check = checks[-1]
+            self.assertEqual(vault_check["status"], "PASS")
+            self.assertIn("expected=.", vault_check["detail"])
+            self.assertIn("baseline_eval=.", vault_check["detail"])
+            self.assertNotIn(str(vault.resolve()), vault_check["detail"])
 
     def test_event_sequence_checks_flag_invalid_order(self) -> None:
         ledger = evaluated_run_ledger("ops/scripts/example.py")

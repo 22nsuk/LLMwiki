@@ -131,6 +131,20 @@ def normalize_changed_file_path(path: str) -> str:
     return normalized
 
 
+def display_report_vault(vault: Path, raw_vault: str | None) -> str:
+    normalized = normalize_report_vault(vault, raw_vault)
+    if normalized is None:
+        return "<missing>"
+    vault_root = vault.resolve()
+    normalized_path = Path(normalized)
+    if normalized_path == vault_root:
+        return "."
+    try:
+        return normalized_path.relative_to(vault_root).as_posix()
+    except ValueError:
+        return "<outside-vault>"
+
+
 def manifest_declared_targets(bundle: MechanismArtifactBundle) -> DeclaredTargetSet:
     declared_targets = bundle.changed_files_manifest_report.get("declared_targets", {})
     return DeclaredTargetSet(
@@ -350,6 +364,10 @@ def build_report_consistency_checks(
         name: normalize_report_vault(vault, getattr(bundle, field_name).get("vault"))
         for name, field_name in _POLICY_AND_VAULT_REPORTS
     }
+    displayed_report_vaults = {
+        name: display_report_vault(vault, getattr(bundle, field_name).get("vault"))
+        for name, field_name in _POLICY_AND_VAULT_REPORTS
+    }
     vault_consistent = all(raw_vault == expected_vault for raw_vault in report_vaults.values())
     return [
         mechanism_gate_check(
@@ -383,8 +401,8 @@ def build_report_consistency_checks(
             "report_vault_consistency",
             "PASS" if vault_consistent else "FAIL",
             (
-                f"expected={expected_vault}, "
-                + ", ".join(f"{name}={value}" for name, value in report_vaults.items())
+                "expected=., "
+                + ", ".join(f"{name}={value}" for name, value in displayed_report_vaults.items())
             ),
         ),
     ]
