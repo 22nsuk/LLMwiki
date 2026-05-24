@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -378,6 +379,119 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertIn("-p no:cacheprovider", prompt)
             self.assertIn("Executor roles run before repo-health capture", prompt)
             self.assertIn("candidate-mechanism-assessment.json", prompt)
+
+    def test_codex_exec_prefers_workspace_virtualenv_on_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["validator"])
+            venv_bin = vault / ".venv" / "bin"
+            venv_bin.mkdir(parents=True)
+            (venv_bin / "python").write_text("#!/bin/sh\nprintf 'workspace-python\\n'\n", encoding="utf-8")
+            (venv_bin / "python").chmod(0o755)
+            (venv_bin / "codex").write_text("#!/bin/sh\n", encoding="utf-8")
+            (venv_bin / "codex").chmod(0o755)
+            _write_routing_report(
+                vault,
+                "validator",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+            outer_codex = Path(temp_dir) / "outer-bin" / "codex"
+            outer_codex.parent.mkdir()
+            outer_codex.write_text("#!/bin/sh\n", encoding="utf-8")
+            outer_codex.chmod(0o755)
+            captured_env: dict[str, str] = {}
+
+            def fake_run(argv: list[str], **kwargs: object) -> object:
+                self.assertEqual(argv[0], str(outer_codex))
+                out_index = argv.index("-o") + 1
+                env = kwargs.get("env")
+                self.assertIsInstance(env, dict)
+                captured_env.update(env)
+                Path(argv[out_index]).write_text(
+                    json.dumps(
+                        {"status": "pass", "diagnostics": {"notes": ["validated"]}},
+                        ensure_ascii=False,
+                    ),
+                    encoding="utf-8",
+                )
+                return mock.Mock(returncode=0, stdout="ok\n", stderr="")
+
+            with mock.patch.dict(
+                os.environ,
+                {"PATH": f"{venv_bin}{os.pathsep}{outer_codex.parent}"},
+            ), mock.patch(
+                "ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run
+            ):
+                report = execute_codex_exec_role(
+                    artifact_root=vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    role="validator",
+                    routing_report_rel="runs/run-executor/subagent-routing.validator.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
+
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["command"]["argv"][0], "codex")
+            self.assertEqual(captured_env["VIRTUAL_ENV"], str(vault / ".venv"))
+            self.assertEqual(captured_env["PATH"].split(os.pathsep)[0], str(venv_bin))
+            python_check = subprocess.run(
+                ["python"],
+                cwd=vault,
+                env=captured_env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(python_check.stdout, "workspace-python\n")
+            prompt = (vault / "runs" / "run-executor" / "validator-prompt.md").read_text(
+                encoding="utf-8"
+            )
+            self.assertNotIn(str(outer_codex), prompt)
+
+    def test_codex_exec_blocks_workspace_virtualenv_codex_when_no_outer_codex_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            seed_subagent_profiles(vault, ["validator"])
+            venv_bin = vault / ".venv" / "bin"
+            venv_bin.mkdir(parents=True)
+            (venv_bin / "python").write_text("#!/bin/sh\n", encoding="utf-8")
+            (venv_bin / "python").chmod(0o755)
+            (venv_bin / "codex").write_text("#!/bin/sh\n", encoding="utf-8")
+            (venv_bin / "codex").chmod(0o755)
+            _write_routing_report(
+                vault,
+                "validator",
+                sandbox_mode="workspace-write",
+                model="gpt-5.5",
+                reasoning_effort="xhigh",
+                selected_rung=3,
+            )
+
+            with mock.patch.dict(os.environ, {"PATH": str(venv_bin)}):
+                with self.assertRaisesRegex(
+                    ExecutorContractError,
+                    "refusing to launch workspace .venv/bin/codex",
+                ):
+                    execute_codex_exec_role(
+                        artifact_root=vault,
+                        workspace_root=vault,
+                        run_id="run-executor",
+                        role="validator",
+                        routing_report_rel="runs/run-executor/subagent-routing.validator.json",
+                        scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                        proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                        context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                    )
 
     def test_reviewer_role_uses_workspace_write_sandbox_with_read_only_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

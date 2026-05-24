@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
 import time
 import tomllib
 import hashlib
@@ -322,6 +324,15 @@ def _sanitize_argv(argv: list[str], *, roots: list[Path]) -> list[str]:
     return [_sanitize_path_text(item, roots=roots) for item in argv]
 
 
+def _display_command_argv(argv: list[str]) -> list[str]:
+    if not argv:
+        return []
+    executable_name = Path(argv[0]).name.lower()
+    if executable_name in {"codex", "codex.exe", "codex.cmd", "codex.ps1", "codex.js"}:
+        return ["codex", *argv[1:]]
+    return list(argv)
+
+
 def _is_non_worker_integrity_ignored(rel_path: str, *, run_id: str) -> bool:
     normalized = rel_path.replace("\\", "/")
     if normalized == f"runs/{run_id}" or normalized.startswith(f"runs/{run_id}/"):
@@ -406,7 +417,10 @@ def _materialize_prompt(request: PromptMaterializationRequest) -> Path:
     prompt_path = request.artifact_root / request.artifacts.prompt_rel
     sandbox_mode = request.routing_report["routing_decision"]["sandbox_mode"]
     sanitize_roots = [request.artifact_root, request.workspace_root]
-    sanitized_command_argv = _sanitize_argv(request.command_argv, roots=sanitize_roots)
+    sanitized_command_argv = _sanitize_argv(
+        _display_command_argv(request.command_argv),
+        roots=sanitize_roots,
+    )
     template = {
         "$schema": EXECUTOR_REPORT_SCHEMA,
         "run_id": request.run_id,
@@ -549,7 +563,7 @@ def _codex_exec_argv(
 ) -> list[str]:
     sandbox_mode = routing_report["routing_decision"]["sandbox_mode"]
     argv = [
-        "codex",
+        _codex_executable(workspace_root),
         "exec",
         "--cd",
         str(workspace_root),
@@ -850,7 +864,10 @@ def build_execution_request(
         routing_report=routing_report,
         output_last_message_rel=artifacts.output_last_message_rel,
     )
-    sanitized_argv = _sanitize_argv(argv, roots=[artifact_root, workspace_root])
+    sanitized_argv = _sanitize_argv(
+        _display_command_argv(argv),
+        roots=[artifact_root, workspace_root],
+    )
     prompt_path = _materialize_prompt(
         PromptMaterializationRequest(
             artifact_root=artifact_root,
@@ -888,12 +905,73 @@ def build_execution_request(
     )
 
 
+def _workspace_virtualenv_bin(workspace_root: Path) -> Path | None:
+    venv_root = workspace_root / ".venv"
+    for rel_path in ("bin/python", "Scripts/python.exe", "Scripts/python"):
+        python_path = venv_root / rel_path
+        if python_path.exists():
+            return python_path.parent
+    return None
+
+
+def _same_path(left: Path, right: Path) -> bool:
+    try:
+        return left.resolve() == right.resolve()
+    except OSError:
+        return left.absolute() == right.absolute()
+
+
+def _path_without_workspace_virtualenv(workspace_root: Path) -> str:
+    path_text = os.environ.get("PATH", "")
+    venv_bin = _workspace_virtualenv_bin(workspace_root)
+    if venv_bin is None or not path_text:
+        return path_text
+    entries: list[str] = []
+    for entry in path_text.split(os.pathsep):
+        if entry and _same_path(Path(entry), venv_bin):
+            continue
+        entries.append(entry)
+    return os.pathsep.join(entries)
+
+
+def _codex_executable(workspace_root: Path) -> str:
+    resolved = shutil.which("codex", path=_path_without_workspace_virtualenv(workspace_root))
+    if resolved:
+        return resolved
+    venv_bin = _workspace_virtualenv_bin(workspace_root)
+    if venv_bin is not None and any(
+        (venv_bin / name).exists()
+        for name in ("codex", "codex.exe", "codex.cmd", "codex.ps1", "codex.js")
+    ):
+        raise ExecutorContractError(
+            "unable to resolve codex outside workspace virtualenv; "
+            "refusing to launch workspace .venv/bin/codex"
+        )
+    return "codex"
+
+
+def _execution_env(workspace_root: Path) -> dict[str, str] | None:
+    venv_bin = _workspace_virtualenv_bin(workspace_root)
+    if venv_bin is None:
+        return None
+    env = dict(os.environ)
+    existing_path = env.get("PATH", "")
+    env["PATH"] = (
+        str(venv_bin)
+        if not existing_path
+        else f"{venv_bin}{os.pathsep}{existing_path}"
+    )
+    env["VIRTUAL_ENV"] = str(workspace_root / ".venv")
+    return env
+
+
 def launch_execution(request: _ExecutionRequest) -> object:
     return run_with_timeout(
         request.argv,
         cwd=request.workspace_root,
         input_text=request.prompt_path.read_text(encoding="utf-8"),
         timeout_seconds=request.timeout_seconds,
+        env=_execution_env(request.workspace_root),
     )
 
 
