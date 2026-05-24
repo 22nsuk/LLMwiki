@@ -215,12 +215,10 @@ def _learning_claim_gate_active(activation: dict[str, Any]) -> bool:
     summary = summary if isinstance(summary, dict) else {}
     gate_effect = str(summary.get("gate_effect", "")).strip()
     activation_status = str(summary.get("activation_status", "")).strip()
-    claim_level = str(summary.get("claim_level", "")).strip()
     claim_wording_allowed = bool(summary.get("claim_wording_allowed", False))
     return (
         gate_effect != "none"
         or claim_wording_allowed
-        or claim_level not in {"", "none"}
         or activation_status in {"candidate", "active", "allowed"}
     )
 
