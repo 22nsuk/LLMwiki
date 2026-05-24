@@ -501,6 +501,20 @@ def _existing_verified_certificate(report: Mapping[str, Any]) -> bool:
     )
 
 
+def _existing_verified_certificate_matches_request(
+    report: Mapping[str, Any],
+    request: GoalRuntimeCertificateRequest,
+) -> bool:
+    if not _existing_verified_certificate(report):
+        return False
+    goal = _mapping_value(report, "goal")
+    run = _mapping_value(report, "run")
+    return (
+        str(goal.get("contract_path", "")).strip() == request.goal_contract_path
+        and str(run.get("status_report_path", "")).strip() == request.status_report_path
+    )
+
+
 def _preserved_verified_report(
     *,
     existing_report: Mapping[str, Any],
@@ -993,7 +1007,7 @@ def build_report(request: GoalRuntimeCertificateRequest) -> dict[str, Any]:
         file_inputs["auto_improve_session"] = session_evidence_path
     if blockers:
         existing_report = load_optional_json_object(vault / request.existing_report_path)
-        if _existing_verified_certificate(existing_report):
+        if _existing_verified_certificate_matches_request(existing_report, request):
             return _preserved_verified_report(
                 existing_report=existing_report,
             )

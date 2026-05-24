@@ -481,6 +481,60 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         self.assertEqual(report["blockers"], [])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_existing_verified_certificate_does_not_replace_explicit_goal_scope(self) -> None:
+        self._seed_goal_contract()
+        self._seed_full_gate_reports()
+        self._write_completed_goal_status(completed_at="2026-05-17T11:30:00Z")
+        verified = build_certificate_report(
+            GoalRuntimeCertificateRequest(
+                vault=self.vault,
+                apply_update=True,
+                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.timezone.utc)),
+            )
+        )
+        existing_report = self.vault / "ops" / "reports" / "goal-runtime-certificate.json"
+        existing_report.parent.mkdir(parents=True, exist_ok=True)
+        existing_report.write_text(json.dumps(verified, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        explicit_contract_path = "runs/goal-explicit-trial/state/codex-goal-contract.json"
+        explicit_status_path = "runs/goal-explicit-trial/state/goal-run-status.json"
+        set_goal(sample_goal_contract(), vault=self.vault, contract_path=explicit_contract_path)
+        current = build_goal_run_status_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                goal_contract_path=explicit_contract_path,
+                status_report_path=explicit_status_path,
+                run_id="explicit-trial",
+                status="blocked",
+                started_at="2026-05-17T12:10:00Z",
+                last_heartbeat_at="2026-05-17T12:15:00Z",
+                last_checkpoint_at="2026-05-17T12:15:00Z",
+                context=context_at(dt.datetime(2026, 5, 17, 12, 15, tzinfo=dt.timezone.utc)),
+            )
+        )
+        write_goal_run_status_report(self.vault, current, explicit_status_path)
+        write_run_artifacts(self.vault, current, writer="ops.scripts.goal_run_status")
+
+        report = build_certificate_report(
+            GoalRuntimeCertificateRequest(
+                vault=self.vault,
+                goal_contract_path=explicit_contract_path,
+                status_report_path=explicit_status_path,
+                context=context_at(dt.datetime(2026, 5, 17, 12, 30, tzinfo=dt.timezone.utc)),
+            )
+        )
+
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["certificate"]["verification_status"], "blocked")
+        self.assertEqual(report["run"]["run_id"], "explicit-trial")
+        self.assertEqual(report["run"]["status_report_path"], explicit_status_path)
+        self.assertEqual(report["goal"]["contract_path"], explicit_contract_path)
+        self.assertEqual(
+            report["diagnosis"]["current_scope"]["status_report_path"],
+            explicit_status_path,
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_runtime_duration_is_a_maximum_budget_not_a_minimum(self) -> None:
         self._seed_goal_contract()
         self._seed_full_gate_reports()
