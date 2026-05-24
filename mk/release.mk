@@ -253,6 +253,7 @@ release-sealed-run-ready-check:
 
 release-auto-promotion-preflight:
 	$(MAKE) release-smoke-fast-refresh-check
+	$(MAKE) goal-runtime-local-evidence-converge
 	$(MAKE) artifact-freshness-refresh-check
 	$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1
 	$(MAKE) learning-readiness-signoff-revalidation
@@ -270,6 +271,7 @@ release-auto-promotion-preseal:
 	$(MAKE) registry-preflight
 	$(MAKE) release-smoke-full-current-check
 	$(MAKE) release-smoke-fast-refresh-check
+	$(MAKE) goal-runtime-local-evidence-converge
 	$(MAKE) generated-artifact-index
 	$(MAKE) artifact-freshness-refresh-check
 	$(MAKE) external-report-reference-manifest-release-check

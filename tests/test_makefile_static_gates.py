@@ -1671,13 +1671,14 @@ class MakefileStaticGateTests(unittest.TestCase):
             auto_promotion_preflight_block,
         )
         self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preseal")[:12],
+            _recipe_lines(text, "release-auto-promotion-preseal")[:13],
             [
                 "$(MAKE) release-run-ready-check",
                 "$(MAKE) bootstrap-preflight",
                 "$(MAKE) registry-preflight",
                 "$(MAKE) release-smoke-full-current-check",
                 "$(MAKE) release-smoke-fast-refresh-check",
+                "$(MAKE) goal-runtime-local-evidence-converge",
                 "$(MAKE) generated-artifact-index",
                 "$(MAKE) artifact-freshness-refresh-check",
                 "$(MAKE) external-report-reference-manifest-release-check",
@@ -1695,9 +1696,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         ):
             self.assertNotIn(expensive_writer, auto_promotion_preseal_block)
         self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preflight")[:6],
+            _recipe_lines(text, "release-auto-promotion-preflight")[:7],
             [
                 "$(MAKE) release-smoke-fast-refresh-check",
+                "$(MAKE) goal-runtime-local-evidence-converge",
                 "$(MAKE) artifact-freshness-refresh-check",
                 "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
                 "$(MAKE) learning-readiness-signoff-revalidation",
@@ -3536,6 +3538,15 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) goal-runtime-local-evidence-converge",
             ),
         )
+        for admission_target in (
+            "goal-runtime-run-admission-converge",
+            "goal-runtime-run-admission-local-refresh",
+        ):
+            admission_recipe = _recipe_lines(text, admission_target)
+            self.assertLess(
+                admission_recipe.index("$(MAKE) goal-runtime-local-evidence-converge"),
+                admission_recipe.index("$(MAKE) artifact-freshness-refresh-check"),
+            )
         _assert_recipe_contains_tokens(
             self,
             text,
