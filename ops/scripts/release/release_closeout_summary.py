@@ -93,6 +93,11 @@ POLICY_ACCEPTED_RISK_METADATA = {
         "revalidation_condition": "Rerun artifact-freshness before the next release closeout.",
         "rollback_trigger": "Treat artifact freshness attention as a blocker if it becomes fail-level debt.",
     },
+    "artifact_freshness_stable_contract_debt_advisory": {
+        "risk_owner": "runtime-maintainer",
+        "revalidation_condition": "Rerun artifact-freshness before the next release closeout.",
+        "rollback_trigger": "Treat stable artifact contract debt as a blocker if it becomes operational or fail-level debt.",
+    },
     "generated_index_archive_advisory": {
         "risk_owner": "runtime-maintainer",
         "revalidation_condition": "Rerun generated-artifact-index before the next release closeout.",
@@ -1169,6 +1174,8 @@ def _evaluate_simple_source(
     spec: SourceSpec,
     payload: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str] | None:
+    if spec.name == "artifact_freshness":
+        return _evaluate_artifact_freshness_source(spec, payload)
     specs = {
         "bootstrap_preflight": ({"pass"}, set(), "bootstrap_preflight_failed", "", ""),
         "source_package_clean_extract": (
@@ -1184,13 +1191,6 @@ def _evaluate_simple_source(
             "raw_registry_preflight_failed",
             "raw_registry_preflight_warnings",
             "raw registry preflight emitted warnings; this is accepted as release advisory risk.",
-        ),
-        "artifact_freshness": (
-            {"pass"},
-            {"attention"},
-            "artifact_freshness_failed",
-            "artifact_freshness_attention",
-            "artifact freshness has attention-level debt but no fail-level freshness blocker.",
         ),
         "generated_index": (
             {"pass"},
@@ -1216,6 +1216,69 @@ def _evaluate_simple_source(
         accepted_code=accepted_code,
         accepted_message=accepted_message,
     )
+
+
+def _artifact_freshness_stable_contract_debt_only(payload: dict[str, Any]) -> bool:
+    summary = payload.get("summary")
+    if not isinstance(summary, dict):
+        return False
+    hard_attention_fields = (
+        "schema_invalid_artifact_count",
+        "schema_unavailable_artifact_count",
+        "root_ephemeral_artifact_count",
+        "non_utf8_text_artifact_count",
+        "stale_artifact_count",
+        "mtime_sensitive_attention_artifact_count",
+        "mtime_sensitive_attention_issue_count",
+        "operational_attention_artifact_count",
+        "operational_attention_issue_count",
+    )
+    if any(int(summary.get(field, 0) or 0) > 0 for field in hard_attention_fields):
+        return False
+    return int(summary.get("stable_contract_debt_issue_count", 0) or 0) > 0
+
+
+def _evaluate_artifact_freshness_source(
+    spec: SourceSpec,
+    payload: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
+    status = _status(payload)
+    if status == "pass":
+        return [], [], f"{spec.name} status={status}"
+    if status == "attention":
+        if _artifact_freshness_stable_contract_debt_only(payload):
+            return [], [
+                _issue(
+                    source=spec.name,
+                    source_path=spec.path,
+                    code="artifact_freshness_stable_contract_debt_advisory",
+                    severity="warn",
+                    gate_effect="accepted_risk",
+                    message=(
+                        "artifact freshness has stable contract debt only; current release evidence "
+                        "has no operational freshness blocker."
+                    ),
+                )
+            ], f"{spec.name} status={status}"
+        return [], [
+            _issue(
+                source=spec.name,
+                source_path=spec.path,
+                code="artifact_freshness_attention",
+                severity="warn",
+                gate_effect="accepted_risk",
+                message="artifact freshness has attention-level debt but no fail-level freshness blocker.",
+            )
+        ], f"{spec.name} status={status}"
+    return [
+        _issue(
+            source=spec.name,
+            source_path=spec.path,
+            code="artifact_freshness_failed",
+            message=f"{spec.name} status={status}; expected one of ['pass'].",
+            required_evidence=[f"Regenerate {spec.path} with a passing status."],
+        )
+    ], [], f"{spec.name} status={status}"
 
 
 def _evaluate_source(

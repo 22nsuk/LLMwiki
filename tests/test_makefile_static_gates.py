@@ -1646,7 +1646,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             auto_promotion_preflight_block,
         )
         self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preseal")[:7],
+            _recipe_lines(text, "release-auto-promotion-preseal")[:10],
             [
                 "$(MAKE) release-run-ready-check",
                 "$(MAKE) bootstrap-preflight",
@@ -1654,6 +1654,9 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-smoke-full",
                 "$(MAKE) generated-artifact-index",
                 "$(MAKE) artifact-freshness",
+                "$(MAKE) release-closeout-summary-report",
+                "$(MAKE) learning-readiness-signoff-revalidation",
+                "$(MAKE) release-evidence-cohort-preseal-refresh",
                 "$(MAKE) release-closeout-summary-report",
             ],
         )
@@ -1690,11 +1693,19 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("--phase preseal", auto_promotion_preseal_block)
         self.assertIn("$(MAKE) release-run-ready-check", auto_promotion_preseal_block)
         self.assertIn("$(MAKE) release-closeout-summary-report", auto_promotion_preseal_block)
+        self.assertIn("$(MAKE) release-evidence-cohort-preseal-refresh", auto_promotion_preseal_block)
         self.assertIn(
             "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
             auto_promotion_preseal_block,
         )
         preseal_recipe = _recipe_lines(text, "release-auto-promotion-preseal")
+        self.assertEqual(preseal_recipe.count("$(MAKE) release-closeout-summary-report"), 2)
+        self.assertLess(
+            preseal_recipe.index("$(MAKE) release-evidence-cohort-preseal-refresh"),
+            preseal_recipe.index(
+                "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint"
+            ),
+        )
         self.assertLess(
             preseal_recipe.index("$(MAKE) release-clean-blocker-ledger"),
             preseal_recipe.index("$(MAKE) remediation-backlog"),
@@ -2636,6 +2647,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         text = _makefile_text()
 
         self.assertIn("release-evidence-cohort", _target_block(text, ".PHONY"))
+        self.assertIn("release-evidence-cohort-preseal-refresh", _target_block(text, ".PHONY"))
         self.assertIn("release-evidence-dashboard", _target_block(text, ".PHONY"))
         self.assertIn(
             "release-evidence-dashboard-report", _target_block(text, ".PHONY")
@@ -2742,6 +2754,17 @@ class MakefileStaticGateTests(unittest.TestCase):
             "ops.scripts.canonical_artifact_promote",
             _target_block(text, "release-evidence-cohort"),
         )
+        preseal_refresh_block = _target_block(text, "release-evidence-cohort-preseal-refresh")
+        self.assertIn(
+            '--cohort-policy strict_same_fingerprint',
+            preseal_refresh_block,
+        )
+        self.assertIn(
+            "ops.scripts.canonical_artifact_promote",
+            preseal_refresh_block,
+        )
+        self.assertNotIn("--require-clean-lane", preseal_refresh_block)
+        self.assertNotIn("--fail-on-attention", preseal_refresh_block)
         self.assertNotIn("cp ", _target_block(text, "release-evidence-cohort"))
         self.assertIn(
             '$(PYTHON) -m ops.scripts.release_evidence_cohort --vault "$(VAULT)" --out "$(RELEASE_EVIDENCE_COHORT_DIAGNOSTIC_OUT)" --profile "$(RELEASE_CLOSEOUT_PROFILE)" --cohort-policy strict_same_fingerprint --provenance-mode "$(RELEASE_EVIDENCE_COHORT_PROVENANCE_MODE)"',

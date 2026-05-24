@@ -85,6 +85,14 @@ class ReleaseRiskTaxonomyPolicyTests(unittest.TestCase):
         self.assertEqual(effects["advisory_lifecycle_effect"], "review_backlog")
         self.assertEqual(effects["learning_lane_effect"], "not_applicable")
 
+    def test_stable_artifact_contract_debt_is_review_backlog_not_clean_lane_blocker(self) -> None:
+        payload = json.loads(RELEASE_RISK_TAXONOMY_POLICY_PATH.read_text(encoding="utf-8"))
+        effects = payload["risks"]["artifact_freshness_stable_contract_debt_advisory"]["effects"]
+
+        self.assertEqual(effects["clean_lane_effect"], "does_not_block_clean_lane")
+        self.assertEqual(effects["advisory_lifecycle_effect"], "review_backlog")
+        self.assertEqual(effects["learning_lane_effect"], "not_applicable")
+
     def test_closeout_static_release_risk_codes_are_registered(self) -> None:
         tree = ast.parse(RELEASE_CLOSEOUT_SUMMARY_SCRIPT_PATH.read_text(encoding="utf-8"))
         emitted_codes = {LEARNING_REVIEW_BLOCKER_ID, TAXONOMY_COVERAGE_BLOCKER_ID}

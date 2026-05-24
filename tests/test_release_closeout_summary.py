@@ -842,6 +842,51 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
         self.assertEqual(generated_index_acceptance["risk_owner"], "runtime-maintainer")
         self.assertEqual(generated_index_acceptance["expires_at"], "2026-05-06T09:00:00Z")
 
+    def test_stable_contract_debt_artifact_freshness_attention_is_advisory(self) -> None:
+        self._write_happy_sources()
+        self._write_source_report(
+            "artifact_freshness",
+            {
+                "status": "attention",
+                "summary": {
+                    "schema_invalid_artifact_count": 0,
+                    "schema_unavailable_artifact_count": 0,
+                    "root_ephemeral_artifact_count": 0,
+                    "non_utf8_text_artifact_count": 0,
+                    "stale_artifact_count": 0,
+                    "mtime_sensitive_attention_artifact_count": 0,
+                    "mtime_sensitive_attention_issue_count": 0,
+                    "operational_attention_artifact_count": 0,
+                    "operational_attention_issue_count": 0,
+                    "stable_contract_debt_issue_count": 7,
+                },
+            },
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertTrue(report["clean_release_ready"])
+        self._assert_release_decision(
+            report,
+            state="clean_pass",
+            machine_release_allowed=True,
+            operator_release_allowed=True,
+            requires_accepted_risk_review=False,
+        )
+        self.assertEqual(report["accepted_risk_count_by_scope"]["total"], 1)
+        self.assertEqual(report["accepted_risk_count_by_scope"]["clean_lane_blocking_family_count"], 0)
+        self.assertEqual(report["accepted_risk_count_by_scope"]["advisory_lifecycle_family_count"], 1)
+        accepted = {item["code"]: item for item in report["accepted_risks"]}
+        self.assertEqual(set(accepted), {"artifact_freshness_stable_contract_debt_advisory"})
+        self.assertEqual(
+            accepted["artifact_freshness_stable_contract_debt_advisory"]["clean_lane_effect"],
+            "does_not_block_clean_lane",
+        )
+        self.assertEqual(
+            accepted["artifact_freshness_stable_contract_debt_advisory"]["advisory_lifecycle_effect"],
+            "review_backlog",
+        )
+
     def test_structured_test_deselections_are_accepted_risks_until_expiry(self) -> None:
         self._write_happy_sources()
         self._write_source_report(

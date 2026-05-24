@@ -249,6 +249,16 @@
         "advisory_lifecycle_effect": "not_applicable"
       }
     },
+    "artifact_freshness_stable_contract_debt_advisory": {
+      "description": "Artifact freshness has stable historical contract debt only, with no current operational freshness blocker.",
+      "surface": "artifact freshness stable contract debt",
+      "effects": {
+        "clean_lane_effect": "does_not_block_clean_lane",
+        "conditional_lane_effect": "not_applicable",
+        "learning_lane_effect": "not_applicable",
+        "advisory_lifecycle_effect": "review_backlog"
+      }
+    },
     "generated_index_unknown_status": {
       "description": "Generated artifact index did not reach a pass or accepted attention status.",
       "surface": "generated artifact index",
