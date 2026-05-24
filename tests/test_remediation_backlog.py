@@ -11,6 +11,7 @@ import pytest
 from ops.scripts.remediation_backlog import build_report, write_report
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 
@@ -206,6 +207,142 @@ class RemediationBacklogTests(unittest.TestCase):
             self.assertEqual(report["summary"]["open_total_count"], 2)
             self.assertEqual(report["summary"]["open_promotion_count"], 1)
             self.assertEqual(report["summary"]["open_repeat_count"], 1)
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_current_mutation_queue_unblock_closes_recent_log_overlap_repeat_items(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_backlog_inputs(vault)
+            write_json(
+                vault,
+                "ops/reports/auto-improve-sessions/stage3-auto-promotion-20260524.json",
+                {
+                    "session_id": "stage3-auto-promotion-20260524",
+                    "stop_reason": "repeated_blocker_backlog_required",
+                    "attempted_proposal_ids": [],
+                    "run_ids": [],
+                    "iterations": [],
+                    "loop_state": {
+                        "blocking_reason_counts": {"blocked_queue_recent_log_overlap": 2},
+                        "repeated_blocker_stop": True,
+                        "repeated_blocker_reason": "blocked_queue_recent_log_overlap",
+                    },
+                },
+            )
+            write_json(
+                vault,
+                "ops/reports/mutation-proposals.json",
+                {
+                    "status": "pass",
+                    "source_tree_fingerprint": release_source_tree_fingerprint(vault),
+                    "proposals": [
+                        {
+                            "proposal_id": (
+                                "recent_log_overlap_queue_blocked__mechanism-run-validation-runtime"
+                            ),
+                            "failure_mode": "recent_log_overlap_queue_blocked",
+                            "blocked_by": [],
+                        }
+                    ],
+                },
+            )
+
+            report = build_report(vault, context=fixed_context())
+            items = {item["item_id"]: item for item in report["items"]}
+
+            self.assertEqual(
+                items["negative_lesson_blocked_queue_recent_log_overlap"]["status"],
+                "closed",
+            )
+            self.assertEqual(
+                items[
+                    "auto_session_repeated_blocker_stage3_auto_promotion_20260524_"
+                    "blocked_queue_recent_log_overlap"
+                ]["status"],
+                "closed",
+            )
+            self.assertIn(
+                "ops/reports/mutation-proposals.json",
+                items["negative_lesson_blocked_queue_recent_log_overlap"]["evidence_paths"],
+            )
+            self.assertEqual(
+                items[
+                    "auto_session_repeated_blocker_auto_session_repeat_validation_blocked"
+                ]["status"],
+                "open",
+            )
+            self.assertEqual(report["summary"]["open_repeat_count"], 1)
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_clean_auto_promotion_manifest_closes_legacy_promotion_report_lesson(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            write_json(
+                vault,
+                "ops/reports/self-improvement-negative-lessons.json",
+                {
+                    "status": "attention",
+                    "lessons": [
+                        {
+                            "lesson_id": "hold_legacy_promotion_report",
+                            "source": "learning_claim_activation.negative_learning_ledger",
+                            "decisions": ["HOLD"],
+                            "run_ids": ["run-one", "run-two"],
+                            "occurrence_count": 2,
+                            "forbidden_repeat": "Do not repeat this run shape.",
+                            "repair_target": (
+                                "Change the mechanism or evidence predicate before rerunning "
+                                "another HOLD attempt with same_eval_reason_code="
+                                "legacy_promotion_report."
+                            ),
+                            "evidence_digests": [],
+                            "repeat_policy": "do_not_repeat_until_repaired",
+                            "backlog_candidate": True,
+                        }
+                    ],
+                },
+            )
+            write_json(vault, "ops/reports/session-synopsis.json", {"recent_blockers": []})
+            write_json(vault, "ops/reports/learning_claim_activation_report.json", {"status": "pass"})
+            write_json(
+                vault,
+                "ops/policies/remediation-backlog-status-overrides.json",
+                {
+                    "$schema": "ops/schemas/remediation-backlog-status-overrides.schema.json",
+                    "overrides": [],
+                },
+            )
+            write_json(
+                vault,
+                "build/release/release-auto-promotion-ready-manifest.json",
+                {
+                    "artifact_kind": "release_auto_promotion_ready_manifest",
+                    "status": "pass",
+                    "source_tree_fingerprint": release_source_tree_fingerprint(vault),
+                    "auto_promotion_status": "allowed",
+                    "unattended_promotion_allowed": True,
+                    "blockers": [],
+                    "failures": [],
+                },
+            )
+
+            report = build_report(vault, context=fixed_context())
+            items = {item["item_id"]: item for item in report["items"]}
+
+            self.assertEqual(
+                items["negative_lesson_hold_legacy_promotion_report"]["status"],
+                "closed",
+            )
+            self.assertIn(
+                "build/release/release-auto-promotion-ready-manifest.json",
+                items["negative_lesson_hold_legacy_promotion_report"]["evidence_paths"],
+            )
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["summary"]["open_total_count"], 0)
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_active_learning_signoff_defers_learning_review_backlog_item(self) -> None:

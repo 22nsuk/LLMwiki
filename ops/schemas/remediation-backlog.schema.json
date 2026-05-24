@@ -95,6 +95,8 @@
         "auto_improve_sessions",
         "goal_runtime_certificate",
         "goal_worktree_guard",
+        "mutation_proposals",
+        "release_auto_promotion_ready_manifest",
         "learning_readiness_signoff",
         "status_overrides"
       ],
@@ -105,6 +107,8 @@
         "auto_improve_sessions": { "type": "string", "minLength": 1 },
         "goal_runtime_certificate": { "type": "string", "minLength": 1 },
         "goal_worktree_guard": { "type": "string", "minLength": 1 },
+        "mutation_proposals": { "type": "string", "minLength": 1 },
+        "release_auto_promotion_ready_manifest": { "type": "string", "minLength": 1 },
         "learning_readiness_signoff": { "type": "string", "minLength": 1 },
         "status_overrides": { "type": "string", "minLength": 1 }
       }

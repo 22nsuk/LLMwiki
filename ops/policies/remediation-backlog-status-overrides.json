@@ -82,6 +82,17 @@
         "tests/test_external_report_action_matrix.py",
         "ops/reports/external-report-action-matrix.json"
       ]
+    },
+    {
+      "item_id": "negative_lesson_hold_legacy_promotion_report",
+      "status": "closed",
+      "reason": "Closed by replacing the legacy promotion-report HOLD shape with staged release-auto-promotion authority predicates; final unattended promotion still requires the current release-auto-promotion-ready manifest to pass.",
+      "evidence_paths": [
+        "ops/scripts/release/release_auto_promotion_ready.py",
+        "ops/schemas/release-auto-promotion-ready-manifest.schema.json",
+        "tests/test_release_auto_promotion_ready.py",
+        "docs/release.md"
+      ]
     }
   ]
 }

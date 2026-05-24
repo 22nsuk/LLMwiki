@@ -16,6 +16,7 @@ from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_or_raise
+from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 from .learning_readiness_signoff_state import (
     SIGNOFF_REPORT_REL_PATH,
@@ -36,6 +37,10 @@ AUTO_IMPROVE_SESSIONS_DIR = "ops/reports/auto-improve-sessions"
 STATUS_OVERRIDES_PATH = "ops/policies/remediation-backlog-status-overrides.json"
 GOAL_RUNTIME_CERTIFICATE_PATH = "ops/reports/goal-runtime-certificate.json"
 GOAL_WORKTREE_GUARD_PATH = "ops/reports/goal-worktree-guard.json"
+MUTATION_PROPOSALS_PATH = "ops/reports/mutation-proposals.json"
+RELEASE_AUTO_PROMOTION_READY_MANIFEST_PATH = (
+    "build/release/release-auto-promotion-ready-manifest.json"
+)
 GOAL_CERTIFICATE_INCOMPLETE_ITEM_ID = (
     "active_blocker_goal_status_self_improvement_loop_certificate_incomplete"
 )
@@ -73,6 +78,8 @@ DERIVED_REMEDIATION_BACKLOG_BLOCKER_IDS = {
     "goal_status_promotion_blocked_by_remediation_backlog_open",
     "promotion_blocked_by_remediation_backlog_open",
 }
+RECENT_LOG_OVERLAP_BLOCKER_ID = "blocked_queue_recent_log_overlap"
+LEGACY_PROMOTION_REPORT_BLOCKER_ID = "hold_legacy_promotion_report"
 
 
 def _safe_id(value: str) -> str:
@@ -199,6 +206,57 @@ def _goal_worktree_guard_currently_clean(vault: Path) -> bool:
     )
 
 
+def _report_matches_current_source_tree(vault: Path, report: dict[str, Any]) -> bool:
+    fingerprint = str(report.get("source_tree_fingerprint", "")).strip()
+    return bool(fingerprint) and fingerprint == release_source_tree_fingerprint(vault)
+
+
+def _recent_log_overlap_queue_unblocked(vault: Path) -> bool:
+    report = load_optional_json_object(vault / MUTATION_PROPOSALS_PATH)
+    if report.get("status") != "pass" or not _report_matches_current_source_tree(vault, report):
+        return False
+    for proposal in _dict_list(report.get("proposals")):
+        proposal_id = str(proposal.get("proposal_id", "")).strip()
+        failure_mode = str(proposal.get("failure_mode", "")).strip()
+        if (
+            failure_mode == "recent_log_overlap_queue_blocked"
+            or proposal_id.startswith("recent_log_overlap_queue_blocked__")
+        ) and not _string_list(proposal.get("blocked_by")):
+            return True
+    return False
+
+
+def _auto_promotion_authority_currently_clean(vault: Path) -> bool:
+    report = load_optional_json_object(vault / RELEASE_AUTO_PROMOTION_READY_MANIFEST_PATH)
+    return (
+        report.get("artifact_kind") == "release_auto_promotion_ready_manifest"
+        and report.get("status") == "pass"
+        and _report_matches_current_source_tree(vault, report)
+        and report.get("auto_promotion_status") == "allowed"
+        and report.get("unattended_promotion_allowed") is True
+        and not _string_list(report.get("blockers"))
+        and not _string_list(report.get("failures"))
+    )
+
+
+def _repeated_auto_session_item_ids_for_blocker(vault: Path, blocker_id: str) -> list[str]:
+    sessions_dir = vault / AUTO_IMPROVE_SESSIONS_DIR
+    if not sessions_dir.is_dir():
+        return []
+    item_ids: list[str] = []
+    for path in sorted(sessions_dir.glob("*.json")):
+        session = load_optional_json_object(path)
+        loop_state = session.get("loop_state")
+        if not isinstance(loop_state, dict):
+            continue
+        reason = _safe_id(str(loop_state.get("repeated_blocker_reason", "")).strip())
+        if reason != blocker_id or not bool(loop_state.get("repeated_blocker_stop", False)):
+            continue
+        session_id = str(session.get("session_id", "")).strip() or path.stem
+        item_ids.append(f"auto_session_repeated_blocker_{_safe_id(session_id)}_{blocker_id}")
+    return item_ids
+
+
 def _evidence_status_overrides(vault: Path, *, generated_at: str) -> dict[str, dict[str, Any]]:
     overrides: dict[str, dict[str, Any]] = {}
     learning_signoff = load_learning_readiness_signoff_summary(vault, generated_at=generated_at)
@@ -238,6 +296,33 @@ def _evidence_status_overrides(vault: Path, *, generated_at: str) -> dict[str, d
                 ),
                 "evidence_paths": [GOAL_WORKTREE_GUARD_PATH],
             }
+    if _recent_log_overlap_queue_unblocked(vault):
+        reason = (
+            "Closed by current mutation-proposal evidence: a runnable "
+            "recent_log_overlap queue-unblock proposal is available, so the next run "
+            "can rotate to a non-overlapping repair lane instead of repeating the "
+            "blocked shape."
+        )
+        item_ids = [
+            f"negative_lesson_{RECENT_LOG_OVERLAP_BLOCKER_ID}",
+            *_repeated_auto_session_item_ids_for_blocker(vault, RECENT_LOG_OVERLAP_BLOCKER_ID),
+        ]
+        for item_id in item_ids:
+            overrides[item_id] = {
+                "status": "closed",
+                "reason": reason,
+                "evidence_paths": [MUTATION_PROPOSALS_PATH],
+            }
+    if _auto_promotion_authority_currently_clean(vault):
+        overrides[f"negative_lesson_{LEGACY_PROMOTION_REPORT_BLOCKER_ID}"] = {
+            "status": "closed",
+            "reason": (
+                "Closed by current release-auto-promotion authority evidence: the "
+                "legacy promotion-report HOLD shape is superseded by the staged "
+                "auto-promotion manifest, which is pass/allowed with no blockers."
+            ),
+            "evidence_paths": [RELEASE_AUTO_PROMOTION_READY_MANIFEST_PATH],
+        }
     return overrides
 
 
@@ -482,6 +567,8 @@ def build_report(
                 "learning_claim_activation": activation_report_path,
                 "goal_runtime_certificate": GOAL_RUNTIME_CERTIFICATE_PATH,
                 "goal_worktree_guard": GOAL_WORKTREE_GUARD_PATH,
+                "mutation_proposals": MUTATION_PROPOSALS_PATH,
+                "release_auto_promotion_ready_manifest": RELEASE_AUTO_PROMOTION_READY_MANIFEST_PATH,
                 "learning_readiness_signoff": SIGNOFF_REPORT_REL_PATH,
                 "status_overrides": STATUS_OVERRIDES_PATH,
             },
@@ -505,6 +592,8 @@ def build_report(
             "auto_improve_sessions": AUTO_IMPROVE_SESSIONS_DIR,
             "goal_runtime_certificate": GOAL_RUNTIME_CERTIFICATE_PATH,
             "goal_worktree_guard": GOAL_WORKTREE_GUARD_PATH,
+            "mutation_proposals": MUTATION_PROPOSALS_PATH,
+            "release_auto_promotion_ready_manifest": RELEASE_AUTO_PROMOTION_READY_MANIFEST_PATH,
             "learning_readiness_signoff": SIGNOFF_REPORT_REL_PATH,
             "status_overrides": STATUS_OVERRIDES_PATH,
         },
