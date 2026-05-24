@@ -210,6 +210,8 @@ goal-runtime-fixed-point-check:
 goal-runtime-run-admission-converge: goal-runtime-lock-check goal-runtime-python-preflight
 	$(MAKE) goal-runtime-clean-transient
 	$(MAKE) refresh-generated-core
+	$(MAKE) release-smoke-fast-refresh-check
+	$(MAKE) artifact-freshness-refresh-check
 	$(MAKE) goal-runtime-quarantine-preflight
 	$(MAKE) goal-runtime-local-evidence-converge
 	$(MAKE) goal-runtime-publish-local-evidence
@@ -217,6 +219,8 @@ goal-runtime-run-admission-converge: goal-runtime-lock-check goal-runtime-python
 
 goal-runtime-run-admission-local-refresh: goal-runtime-lock-check goal-runtime-python-preflight
 	$(MAKE) goal-runtime-clean-transient
+	$(MAKE) release-smoke-fast-refresh-check
+	$(MAKE) artifact-freshness-refresh-check
 	$(MAKE) goal-runtime-quarantine-preflight
 	$(MAKE) goal-runtime-local-evidence-converge
 

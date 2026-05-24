@@ -2274,6 +2274,23 @@ class MutationProposalTest(unittest.TestCase):
             self.assertEqual(repair["blocked_by"], [])
             self.assertEqual(proposal_report["summary"]["next_run_repair_proposals"], 1)
             self.assertEqual(
+                [proposal["failure_mode"] for proposal in proposal_report["proposals"]],
+                ["next_run_failure_repair"],
+            )
+            self.assertEqual(proposal_report["summary"]["proposals_emitted"], 1)
+            self.assertGreater(
+                proposal_report["diagnostics"]["queue_selection"][
+                    "available_proposal_count"
+                ],
+                1,
+            )
+            self.assertEqual(
+                proposal_report["diagnostics"]["queue_selection"][
+                    "selected_proposal_count"
+                ],
+                1,
+            )
+            self.assertEqual(
                 proposal_report["diagnostics"]["next_run_decision_queue"],
                 {
                     "session_reports_scanned": 1,

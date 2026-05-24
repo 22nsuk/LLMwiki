@@ -33,15 +33,16 @@ result can be promoted without operator intervention.
   preseal, sealed, operator, and auto-improve evidence and write the cost-aware
   action plan for the promotion verdict.
 - `make release-auto-promotion-preflight`: refresh cheap unattended-promotion
-  blockers before spending full run-ready cycles. It checks remediation,
-  learning revalidation, and auto-improve readiness without building or sealing
-  release artifacts.
+  blockers before spending full run-ready cycles. It refresh-checks fast smoke
+  and artifact freshness only as cheap currentness inputs, then checks
+  remediation, learning revalidation, and auto-improve readiness without
+  building or sealing release artifacts.
 - `make release-auto-promotion-preseal`: refresh clean closeout, strict
   same-fingerprint cohort, remediation, learning, and auto-improve diagnostics
   after run-ready and before sealing. It refreshes cheap cohort inputs such as
-  bootstrap, registry, generated index, artifact freshness, and external report
-  references, but it only checks run-ready's release-smoke and full-suite
-  evidence for currentness instead of rerunning them.
+  bootstrap, registry, fast smoke, generated index, artifact freshness, and
+  external report references, but it only checks run-ready's full release-smoke
+  and full-suite evidence for currentness instead of rerunning them.
 - `make release-auto-promotion-operator-summary`: manual fallback to refresh the
   cheap build-local operator diagnostics used by the promotion verdict when
   sealed sidecars are already current.
@@ -63,6 +64,9 @@ result can be promoted without operator intervention.
   already source-ready tree. It must not run mutating source/evidence convergence;
   zip-bound sealed evidence is written as sidecars under `build/release/`.
 - `make release-smoke-fast`: developer/package precheck이며 canonical release evidence로 쓰지 않는다.
+  Preflight, preseal, and goal-run admission may refresh it to keep archive
+  schema/currentness diagnostics cheap before expensive release evidence is
+  attempted.
 - `make release-smoke`: canonical release evidence는 이 full 단일 report인 `ops/reports/release-smoke-report.json`이다.
   Source-package smoke runs registry and wiki lint checks in release-archive
   profile because public source ZIPs intentionally omit `raw/`, `wiki/`, and

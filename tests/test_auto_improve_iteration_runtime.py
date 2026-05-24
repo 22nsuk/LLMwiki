@@ -30,6 +30,10 @@ from ops.scripts.auto_improve_iteration_runtime import (
     run_auto_improve_iteration,
 )
 from ops.scripts.auto_improve_outcome_runtime import ExecutionOutcome
+from ops.scripts.mechanism_run_scaffold_templates_runtime import (
+    initial_run_ledger,
+    placeholder_promotion_report,
+)
 from ops.scripts.promotion_decision_registry_runtime import reduce_decision_proposals
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema
@@ -127,6 +131,36 @@ def _write_iteration_executor_report(
         encoding="utf-8",
     )
     return report_rel
+
+
+def _write_placeholder_history_run(vault: Path, run_id: str) -> None:
+    run_dir = vault / "runs" / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "promotion-report.json").write_text(
+        json.dumps(
+            placeholder_promotion_report(
+                run_id,
+                ["ops/scripts/mechanism/example_runtime.py"],
+                ["ops/schemas/run-telemetry.schema.json"],
+                "placeholder promotion evidence",
+            ),
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    (run_dir / "run-ledger.json").write_text(
+        json.dumps(
+            initial_run_ledger(
+                run_id,
+                include_proposal_snapshot=False,
+                context=_context(),
+            ),
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
 
 
 class AutoImproveIterationRuntimeTests(unittest.TestCase):
@@ -546,6 +580,173 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             self.assertNotIn(
                 f"runs/{run_id}/reviewer-executor-report.json",
                 decision["evidence_paths"],
+            )
+
+    def test_persist_iteration_phase_auto_quarantines_pre_promotion_placeholder_history(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-pre-promotion-failure"
+            _write_placeholder_history_run(vault, run_id)
+            _write_iteration_executor_report(vault, run_id, role="worker", status="fail")
+            (vault / "runs" / run_id / "subagent-routing.worker.json").write_text(
+                "{}",
+                encoding="utf-8",
+            )
+            session = {"iterations": [], "next_run_decisions": [], "loop_state": {}}
+            proposal = {
+                "proposal_id": "proposal-1",
+                "source_candidate_id": "candidate-1",
+                "family": "contract_regression_signals",
+                "tier": "primary",
+                "primary_targets": ["ops/scripts/mechanism/example_runtime.py"],
+                "supporting_targets": ["ops/schemas/run-telemetry.schema.json"],
+                "must_change_tests": ["tests/test_example_runtime.py"],
+            }
+            route_scaffold = SimpleNamespace(
+                run_id=run_id,
+                phase_durations={"routing": 0.1},
+                scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                routing_report_rels=[f"runs/{run_id}/subagent-routing.worker.json"],
+                roles=["worker"],
+            )
+            execution = ExecuteEvaluatePhaseResult(
+                outcome=ExecutionOutcome(
+                    outcome="validation_blocked",
+                    next_consecutive_failures=1,
+                    quarantine_proposal=True,
+                ),
+                phase_durations={"experiment": 0.2},
+            )
+            context = RuntimeContext(
+                display_timezone=dt.timezone.utc,
+                clock=lambda: dt.datetime(2026, 5, 24, 1, 2, 3, tzinfo=dt.timezone.utc),
+            )
+
+            persist_iteration_phase(
+                vault,
+                session,
+                session_id="auto-session",
+                iteration=1,
+                proposal=proposal,
+                route_scaffold=route_scaffold,
+                execution=execution,
+                quarantined=set(),
+                context=context,
+                dependencies=PersistIterationDependencies(
+                    apply_execution_outcome=lambda *_args, **_kwargs: 1,
+                    write_iteration_telemetry=write_iteration_telemetry,
+                    write_run_artifact_fingerprint=lambda *_args, **_kwargs: "",
+                    write_session_report=lambda *_args, **_kwargs: Path(
+                        "ops/reports/session.json"
+                    ),
+                ),
+            )
+
+            promotion_report = json.loads(
+                (vault / "runs" / run_id / "promotion-report.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            run_ledger = json.loads(
+                (vault / "runs" / run_id / "run-ledger.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(promotion_report["history"]["status"], "quarantined")
+            self.assertEqual(promotion_report["history"]["by"], "auto-improve")
+            self.assertEqual(promotion_report["history"]["ts"], "2026-05-24T01:02:03Z")
+            self.assertIn(
+                "validation_blocked before promotion gate evidence was recorded",
+                promotion_report["history"]["reason"],
+            )
+            self.assertEqual(run_ledger["events"][-1]["type"], "history_status_updated")
+            self.assertEqual(run_ledger["events"][-1]["decision"], "quarantined")
+
+    def test_persist_iteration_phase_does_not_quarantine_report_with_gate_decision(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-gate-decision-present"
+            _write_placeholder_history_run(vault, run_id)
+            contract = reduce_decision_proposals(
+                [],
+                subject_id=run_id,
+                subject_kind="system_mechanism",
+                policy_version=1,
+                source_pass="system_mechanism",
+                signoff={"required": False, "status": "not_required"},
+            )
+            promotion_path = vault / "runs" / run_id / "promotion-report.json"
+            promotion_report = json.loads(promotion_path.read_text(encoding="utf-8"))
+            promotion_report["decision"] = contract["decision"]
+            promotion_report["decision_record"] = contract["decision_record"]
+            promotion_path.write_text(
+                json.dumps(promotion_report, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            _write_iteration_executor_report(vault, run_id, role="worker", status="fail")
+            (vault / "runs" / run_id / "subagent-routing.worker.json").write_text(
+                "{}",
+                encoding="utf-8",
+            )
+            session = {"iterations": [], "next_run_decisions": [], "loop_state": {}}
+            proposal = {
+                "proposal_id": "proposal-1",
+                "source_candidate_id": "candidate-1",
+                "family": "contract_regression_signals",
+                "tier": "primary",
+                "primary_targets": ["ops/scripts/mechanism/example_runtime.py"],
+                "supporting_targets": ["ops/schemas/run-telemetry.schema.json"],
+                "must_change_tests": ["tests/test_example_runtime.py"],
+            }
+            route_scaffold = SimpleNamespace(
+                run_id=run_id,
+                phase_durations={"routing": 0.1},
+                scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                routing_report_rels=[f"runs/{run_id}/subagent-routing.worker.json"],
+                roles=["worker"],
+            )
+
+            persist_iteration_phase(
+                vault,
+                session,
+                session_id="auto-session",
+                iteration=1,
+                proposal=proposal,
+                route_scaffold=route_scaffold,
+                execution=ExecuteEvaluatePhaseResult(
+                    outcome=ExecutionOutcome(
+                        outcome="validation_blocked",
+                        next_consecutive_failures=1,
+                        quarantine_proposal=True,
+                    ),
+                    phase_durations={"experiment": 0.2},
+                ),
+                quarantined=set(),
+                context=_context(),
+                dependencies=PersistIterationDependencies(
+                    apply_execution_outcome=lambda *_args, **_kwargs: 1,
+                    write_iteration_telemetry=write_iteration_telemetry,
+                    write_run_artifact_fingerprint=lambda *_args, **_kwargs: "",
+                    write_session_report=lambda *_args, **_kwargs: Path(
+                        "ops/reports/session.json"
+                    ),
+                ),
+            )
+
+            promotion_report = json.loads(promotion_path.read_text(encoding="utf-8"))
+            run_ledger = json.loads(
+                (vault / "runs" / run_id / "run-ledger.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(promotion_report["history"]["status"], "active")
+            self.assertNotIn(
+                "history_status_updated",
+                [event["type"] for event in run_ledger["events"]],
             )
 
     def test_persist_iteration_phase_carries_specific_discard_failure_taxonomy(self) -> None:

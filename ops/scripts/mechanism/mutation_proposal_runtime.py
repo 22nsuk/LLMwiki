@@ -2026,7 +2026,13 @@ def _select_report_proposals(
 ) -> list[MutationProposal]:
     if max_proposals <= 0:
         return []
-    return sorted(proposals, key=_report_selection_sort_key)[:max_proposals]
+    repair_proposals = [
+        proposal
+        for proposal in proposals
+        if proposal.failure_mode == NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE
+    ]
+    selectable = repair_proposals or proposals
+    return sorted(selectable, key=_report_selection_sort_key)[:max_proposals]
 
 
 def _blocked_reason_counts(proposals: list[dict]) -> list[dict]:

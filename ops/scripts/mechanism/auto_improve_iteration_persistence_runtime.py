@@ -23,6 +23,7 @@ from .auto_improve_next_run_decision_runtime import build_next_run_decision
 from .auto_improve_outcome_runtime import role_report_path
 from .auto_improve_route_scaffold_runtime import RouteScaffoldPhaseResult
 from .auto_improve_session_runtime import load_optional_json
+from .set_mechanism_run_history import SetMechanismRunHistoryError, set_mechanism_run_history
 
 ITERATION_TELEMETRY_WRITTEN_FIELDS = frozenset(
     {
@@ -91,6 +92,15 @@ PROMOTION_CHECK_STATUS_VALUES = frozenset({"PASS", "WARN", "FAIL"})
 GENERIC_PROMOTION_FAILURE_TAXONOMIES = frozenset({"discarded"})
 LEGACY_PROMOTION_REASON_CODES = frozenset(
     {"", "legacy_promotion_report", "unknown", "none"}
+)
+PRE_PROMOTION_HISTORY_QUARANTINE_OUTCOMES = frozenset(
+    {
+        "mutation_failed",
+        "review_blocked",
+        "validation_blocked",
+        "repo_health_blocked",
+        "scope_blocked",
+    }
 )
 
 
@@ -283,6 +293,86 @@ def _iteration_executor_report_rels(vault: Path, run_id: str, roles: list[str]) 
         if _load_repo_relative_json(vault, rel_path) is not None:
             report_rels.append(rel_path)
     return report_rels
+
+
+def _promotion_report_has_gate_decision(promotion_report: dict[str, Any]) -> bool:
+    if isinstance(promotion_report.get("decision_record"), dict):
+        return True
+    decision_reduction = promotion_report.get("decision_reduction")
+    return isinstance(decision_reduction, dict) and bool(decision_reduction.get("proposals"))
+
+
+def _run_ledger_has_promotion_gate_event(vault: Path, run_id: str) -> bool:
+    ledger = _load_repo_relative_json(vault, run_rel(run_id, "run-ledger.json"))
+    if ledger is None:
+        return False
+    events = ledger.get("events", [])
+    if not isinstance(events, list):
+        return False
+    return any(
+        isinstance(event, dict)
+        and str(event.get("type", "")).strip() in {"promotion_evaluated", "finalized"}
+        for event in events
+    )
+
+
+def _active_placeholder_promotion_report(
+    vault: Path,
+    run_id: str,
+) -> LoadedPromotionReport | None:
+    promotion_report = _load_promotion_report_from_rel(
+        vault,
+        run_rel(run_id, "promotion-report.json"),
+        run_id=run_id,
+        source_kind="default_path",
+    )
+    if promotion_report is None:
+        return None
+    history = promotion_report.payload.get("history", {})
+    history_status = history.get("status", "active") if isinstance(history, dict) else "active"
+    if history_status != "active":
+        return None
+    if _promotion_report_has_gate_decision(promotion_report.payload):
+        return None
+    if _run_ledger_has_promotion_gate_event(vault, run_id):
+        return None
+    return promotion_report
+
+
+def _auto_quarantine_pre_promotion_history(
+    vault: Path,
+    *,
+    run_id: str,
+    outcome: object,
+    context: RuntimeContext,
+) -> None:
+    if not bool(getattr(outcome, "quarantine_proposal", False)):
+        return
+    outcome_text = str(getattr(outcome, "outcome", "")).strip()
+    if outcome_text not in PRE_PROMOTION_HISTORY_QUARANTINE_OUTCOMES:
+        return
+    result = getattr(outcome, "result", None)
+    if isinstance(result, dict) and bool(result.get("finalized", False)):
+        return
+    promotion_report = _active_placeholder_promotion_report(vault, run_id)
+    if promotion_report is None:
+        return
+    try:
+        set_mechanism_run_history(
+            vault,
+            run_id,
+            status="quarantined",
+            reason=(
+                f"auto-quarantined {outcome_text} before promotion gate evidence was "
+                "recorded; keep as session failure evidence, not active mechanism "
+                "promotion history"
+            ),
+            by="auto-improve",
+            ts=context.isoformat_z(),
+            context=context,
+        )
+    except SetMechanismRunHistoryError:
+        return
 
 
 def _role_from_executor_report_rel(rel_path: str) -> str:
@@ -771,6 +861,12 @@ def persist_iteration_phase(
             result=execution.outcome.result,
             context=context,
         ),
+    )
+    _auto_quarantine_pre_promotion_history(
+        vault,
+        run_id=run_id,
+        outcome=execution.outcome,
+        context=context,
     )
     dependencies.write_run_artifact_fingerprint(vault, run_id, context=context)
     session["iterations"].append(

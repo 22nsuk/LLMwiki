@@ -468,6 +468,7 @@ def _assert_supply_chain_target_names(case: unittest.TestCase, text: str) -> Non
         "complexity-budget-touched-check:",
         "artifact-freshness:",
         "artifact-freshness-check:",
+        "artifact-freshness-refresh-check:",
         "artifact-relocation-audit:",
         "generated-artifact-converge:",
         "generated-artifact-index:",
@@ -595,6 +596,12 @@ def _assert_artifact_index_and_freshness_recipes(case: unittest.TestCase, text: 
         freshness,
     )
     case.assertIn("ops.scripts.canonical_artifact_promote", freshness)
+    freshness_refresh_check = _target_block(text, "artifact-freshness-refresh-check")
+    case.assertIn('--out "$(ARTIFACT_FRESHNESS_CANDIDATE_OUT)"', freshness_refresh_check)
+    case.assertIn("--fail-on-fail", freshness_refresh_check)
+    case.assertIn("ops.scripts.canonical_artifact_promote", freshness_refresh_check)
+    case.assertIn("|| status=$$?; exit $$status", freshness_refresh_check)
+    case.assertIn("exit $$status", freshness_refresh_check)
     relocation_audit = _target_block(text, "artifact-relocation-audit")
     case.assertIn(
         '$(PYTHON) -m ops.scripts.artifact_relocation_audit --vault "$(VAULT)" --out "$(ARTIFACT_RELOCATION_AUDIT_CANDIDATE_OUT)" --fail-on-fail',
@@ -1461,11 +1468,17 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("release-smoke-full", _target_block(text, ".PHONY"))
         self.assertIn("release-smoke-full-reuse", _target_block(text, ".PHONY"))
         self.assertIn("release-smoke-full-current-check", _target_block(text, ".PHONY"))
+        self.assertIn("release-smoke-fast-current-check", _target_block(text, ".PHONY"))
+        self.assertIn("release-smoke-fast-refresh-check", _target_block(text, ".PHONY"))
         self.assertIn(
             "RELEASE_SMOKE_OUT ?= ops/reports/release-smoke-report.json", text
         )
         self.assertIn(
             "RELEASE_SMOKE_FAST_OUT ?= ops/reports/release-smoke-report-fast.json", text
+        )
+        self.assertIn(
+            "RELEASE_SMOKE_FAST_CURRENT_CHECK_OUT ?= tmp/release-smoke-report-fast-current-check.json",
+            text,
         )
         self.assertIn("RELEASE_SMOKE_REUSE_FROM ?= $(RELEASE_SMOKE_OUT)", text)
         self.assertIn(
@@ -1483,6 +1496,18 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn(
             '$(PYTHON) -m ops.scripts.release_smoke --vault "$(VAULT)" --profile fast --out "$(RELEASE_SMOKE_FAST_OUT)"',
             _target_block(text, "release-smoke-fast"),
+        )
+        fast_current_check_block = _target_block(text, "release-smoke-fast-current-check")
+        self.assertIn("--reuse-if-current", fast_current_check_block)
+        self.assertIn("--reuse-only", fast_current_check_block)
+        self.assertIn('--reuse-from "$(RELEASE_SMOKE_FAST_OUT)"', fast_current_check_block)
+        self.assertIn('--out "$(RELEASE_SMOKE_FAST_CURRENT_CHECK_OUT)"', fast_current_check_block)
+        self.assertEqual(
+            _recipe_lines(text, "release-smoke-fast-refresh-check"),
+            [
+                "$(MAKE) release-smoke-fast",
+                "$(MAKE) release-smoke-fast-current-check",
+            ],
         )
         converge_block = _target_block(text, "release-converge")
         converge_all_block = _target_block(text, "release-converge-all-surfaces")
@@ -1646,14 +1671,15 @@ class MakefileStaticGateTests(unittest.TestCase):
             auto_promotion_preflight_block,
         )
         self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preseal")[:11],
+            _recipe_lines(text, "release-auto-promotion-preseal")[:12],
             [
                 "$(MAKE) release-run-ready-check",
                 "$(MAKE) bootstrap-preflight",
                 "$(MAKE) registry-preflight",
                 "$(MAKE) release-smoke-full-current-check",
+                "$(MAKE) release-smoke-fast-refresh-check",
                 "$(MAKE) generated-artifact-index",
-                "$(MAKE) artifact-freshness",
+                "$(MAKE) artifact-freshness-refresh-check",
                 "$(MAKE) external-report-reference-manifest-release-check",
                 "$(MAKE) release-closeout-summary-report",
                 "$(MAKE) learning-readiness-signoff-revalidation",
@@ -1669,8 +1695,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         ):
             self.assertNotIn(expensive_writer, auto_promotion_preseal_block)
         self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preflight")[:4],
+            _recipe_lines(text, "release-auto-promotion-preflight")[:6],
             [
+                "$(MAKE) release-smoke-fast-refresh-check",
+                "$(MAKE) artifact-freshness-refresh-check",
                 "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
                 "$(MAKE) learning-readiness-signoff-revalidation",
                 "$(MAKE) remediation-backlog",
@@ -3488,6 +3516,8 @@ class MakefileStaticGateTests(unittest.TestCase):
             (
                 "$(MAKE) goal-runtime-clean-transient",
                 "$(MAKE) refresh-generated-core",
+                "$(MAKE) release-smoke-fast-refresh-check",
+                "$(MAKE) artifact-freshness-refresh-check",
                 "$(MAKE) goal-runtime-quarantine-preflight",
                 "$(MAKE) goal-runtime-local-evidence-converge",
                 "$(MAKE) goal-runtime-publish-local-evidence",
@@ -3500,6 +3530,8 @@ class MakefileStaticGateTests(unittest.TestCase):
             "goal-runtime-run-admission-local-refresh",
             (
                 "$(MAKE) goal-runtime-clean-transient",
+                "$(MAKE) release-smoke-fast-refresh-check",
+                "$(MAKE) artifact-freshness-refresh-check",
                 "$(MAKE) goal-runtime-quarantine-preflight",
                 "$(MAKE) goal-runtime-local-evidence-converge",
             ),
