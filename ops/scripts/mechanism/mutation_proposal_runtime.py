@@ -66,25 +66,19 @@ RECENT_LOG_OVERLAP_UNBLOCK_SOURCE_CANDIDATE_TYPE = (
 )
 RECENT_LOG_OVERLAP_UNBLOCK_FAMILY = "queue_unblock"
 NOOP_MUTATION_FAILURE_MARKER = "reported pass without modifying any declared primary target"
-RECENT_LOG_OVERLAP_UNBLOCK_PRIMARY_TARGETS = [
-    "ops/scripts/mechanism/mutation_proposal_runtime.py"
+RECENT_LOG_OVERLAP_UNBLOCK_PREFERRED_TARGETS = [
+    "ops/scripts/mechanism/mutation_proposal_runtime.py",
+    "ops/scripts/mechanism/mechanism_run_validation_runtime.py",
 ]
-RECENT_LOG_OVERLAP_UNBLOCK_TEST_FILES = [
-    "tests/test_mutation_proposal.py",
-    "tests/test_report_generation_smoke.py",
-]
-RECENT_LOG_OVERLAP_UNBLOCK_TARGET_OPTIONS = [
-    {
-        "primary_targets": RECENT_LOG_OVERLAP_UNBLOCK_PRIMARY_TARGETS,
-        "test_files": RECENT_LOG_OVERLAP_UNBLOCK_TEST_FILES,
-    },
-    {
-        "primary_targets": [
-            "ops/scripts/mechanism/mechanism_run_validation_runtime.py"
-        ],
-        "test_files": ["tests/test_mechanism_run_validation_runtime.py"],
-    },
-]
+RECENT_LOG_OVERLAP_UNBLOCK_TEST_FALLBACKS = {
+    "ops/scripts/mechanism/mutation_proposal_runtime.py": [
+        "tests/test_mutation_proposal.py",
+        "tests/test_report_generation_smoke.py",
+    ],
+    "ops/scripts/mechanism/mechanism_run_validation_runtime.py": [
+        "tests/test_mechanism_run_validation_runtime.py",
+    ],
+}
 RECENT_LOG_OVERLAP_UNBLOCK_RUN_ID = "recent-log-overlap-queue-blocked"
 RECENT_OUTCOME_REWORK_BLOCKER = "recent_outcome_rework"
 RECENT_OUTCOME_REWORK_MIN_ATTEMPTS = 2
@@ -1563,6 +1557,38 @@ def _fallback_test_files(vault: Path, test_files: list[str]) -> list[str]:
     return existing or list(test_files)
 
 
+def _recent_log_overlap_unblock_primary_target_options(vault: Path) -> list[str]:
+    ordered: list[str] = []
+    for target in RECENT_LOG_OVERLAP_UNBLOCK_PREFERRED_TARGETS:
+        ordered.append(target)
+
+    mechanism_dir = vault / "ops" / "scripts" / "mechanism"
+    if mechanism_dir.is_dir():
+        for path in sorted(
+            mechanism_dir.glob("*.py"),
+            key=lambda item: _recent_log_overlap_unblock_discovery_sort_key(
+                item.relative_to(vault).as_posix()
+            ),
+        ):
+            if path.name == "__init__.py":
+                continue
+            ordered.append(path.relative_to(vault).as_posix())
+    return dedupe_preserve_order(ordered)
+
+
+def _recent_log_overlap_unblock_discovery_sort_key(target: str) -> tuple[int, str]:
+    stem = Path(target).stem
+    if "queue" in stem:
+        rank = 0
+    elif "proposal" in stem:
+        rank = 1
+    elif "readiness" in stem:
+        rank = 2
+    else:
+        rank = 3
+    return rank, target
+
+
 def _recent_log_overlap_unblock_target_option(
     vault: Path,
     policy: dict,
@@ -1573,10 +1599,10 @@ def _recent_log_overlap_unblock_target_option(
     options: list[
         tuple[list[str], list[str], list[str], list[RecentLogOverlapMatch], str, list[str]]
     ] = []
-    for index, option in enumerate(RECENT_LOG_OVERLAP_UNBLOCK_TARGET_OPTIONS):
+    for primary_target in _recent_log_overlap_unblock_primary_target_options(vault):
         primary_targets = current_repo_target_paths(
             vault,
-            [str(target).strip() for target in option["primary_targets"] if str(target).strip()],
+            [primary_target],
         )
         if not primary_targets:
             continue
@@ -1592,10 +1618,16 @@ def _recent_log_overlap_unblock_target_option(
             supporting_targets=supporting_targets,
         )
         if not must_change_tests:
+            fallback_tests = RECENT_LOG_OVERLAP_UNBLOCK_TEST_FALLBACKS.get(
+                primary_targets[0],
+                [],
+            )
             must_change_tests = _fallback_test_files(
                 vault,
-                [str(path).strip() for path in option["test_files"] if str(path).strip()],
+                [str(path).strip() for path in fallback_tests if str(path).strip()],
             )
+        if not must_change_tests:
+            continue
         candidate_id = f"recent_log_overlap_queue_unblock__{_target_slug(primary_targets)}"
         pseudo_candidate = {
             "candidate_id": candidate_id,
