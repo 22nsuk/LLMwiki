@@ -3287,6 +3287,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "goal-runtime-run-admission-converge",
             "goal-runtime-run-admission-local-refresh",
             "goal-runtime-run-admission",
+            "goal-runtime-run-admission-resume",
             "goal-runtime-lock-check",
             "goal-runtime-lock-status",
             "goal-runtime-lock-stop",
@@ -3332,7 +3333,8 @@ class MakefileStaticGateTests(unittest.TestCase):
         _assert_target_depends_on(self, text, "auto-improve-goal-run", "goal-runtime-run-admission")
         _assert_target_depends_on(self, text, "auto-improve-goal-run", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "auto-improve-goal-status", "auto-improve-goal-contract")
-        _assert_target_depends_on(self, text, "auto-improve-goal-resume", "goal-runtime-run-admission")
+        _assert_target_depends_on(self, text, "goal-runtime-run-admission-resume", "goal-runtime-run-admission")
+        _assert_target_depends_on(self, text, "auto-improve-goal-resume", "goal-runtime-run-admission-resume")
         _assert_target_depends_on(self, text, "auto-improve-goal-resume", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "auto-improve-goal-finalize", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "auto-improve-goal-run-artifacts", "auto-improve-goal-status")

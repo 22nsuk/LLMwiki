@@ -47,6 +47,7 @@ class GoalRuntimeRunAdmissionRequest:
     goal_contract_path: str = DEFAULT_GOAL_CONTRACT_REPORT
     goal_run_status_path: str = DEFAULT_GOAL_RUN_STATUS_REPORT
     runtime_certificate_report_path: str = DEFAULT_RUNTIME_CERTIFICATE_REPORT
+    resume_session_id: str = ""
     context: RuntimeContext | None = None
 
 
@@ -103,6 +104,55 @@ def _blocker_ids(value: object, key: str = "id") -> list[str]:
         elif str(item).strip():
             ids.append(str(item).strip())
     return list(dict.fromkeys(ids))
+
+
+def _successful_iteration(iteration: Any) -> bool:
+    if not isinstance(iteration, dict):
+        return False
+    return (
+        str(iteration.get("decision", "")).strip() == "PROMOTE"
+        or str(iteration.get("outcome", "")).strip() == "promoted"
+        or str(iteration.get("status", "")).strip() == "promoted"
+    )
+
+
+def _resume_session_report_path(session_id: str) -> str:
+    if not session_id:
+        return ""
+    return f"ops/reports/auto-improve-sessions/{session_id}.json"
+
+
+def _resume_completion_context(vault: Path, session_id: str) -> dict[str, Any]:
+    path = _resume_session_report_path(session_id)
+    if not path:
+        return {"active": False, "session_report": ""}
+    session = _load_json_object(vault, path)
+    iterations = _list_field(session, "iterations")
+    budget = _dict_field(session, "budget")
+    max_proposals = _as_int(budget.get("max_proposals"))
+    successful_count = sum(1 for iteration in iterations if _successful_iteration(iteration))
+    budget_exhausted = max_proposals > 0 and len(iterations) >= max_proposals
+    session_status = str(session.get("status", "")).strip()
+    stop_reason = str(session.get("stop_reason", "")).strip()
+    maintenance = _dict_field(session, "maintenance")
+    maintenance_status = str(maintenance.get("status", "")).strip()
+    active = (
+        bool(session)
+        and session_status != "complete"
+        and successful_count > 0
+        and budget_exhausted
+    )
+    return {
+        "active": active,
+        "session_report": path,
+        "session_status": session_status,
+        "stop_reason": stop_reason,
+        "iteration_count": len(iterations),
+        "successful_iteration_count": successful_count,
+        "max_proposals": max_proposals,
+        "proposal_budget_exhausted": budget_exhausted,
+        "maintenance_status": maintenance_status,
+    }
 
 
 def _check(
@@ -307,7 +357,12 @@ def _worktree_check(guard: dict[str, Any], path: str) -> dict[str, Any]:
     )
 
 
-def _mutation_queue_check(mutation_proposals: dict[str, Any], path: str) -> dict[str, Any]:
+def _mutation_queue_check(
+    mutation_proposals: dict[str, Any],
+    path: str,
+    *,
+    resume_completion: dict[str, Any],
+) -> dict[str, Any]:
     kind_status = _artifact_kind_check(mutation_proposals, "mutation_proposals_report")
     diagnostics = _dict_field(mutation_proposals, "diagnostics")
     queue_selection = _dict_field(diagnostics, "queue_selection")
@@ -316,7 +371,8 @@ def _mutation_queue_check(mutation_proposals: dict[str, Any], path: str) -> dict
     selected_runnable_count = _as_int(queue_selection.get("selected_runnable_count"))
     blocked_available_count = _as_int(queue_selection.get("blocked_available_count"))
     blocked_reason_counts = _list_field(queue_selection, "blocked_reason_counts")
-    passed = (
+    resume_active = _as_bool(resume_completion.get("active"))
+    passed = resume_active or (
         kind_status == "present"
         and runnable_available_count > 0
         and selected_runnable_count > 0
@@ -325,7 +381,11 @@ def _mutation_queue_check(mutation_proposals: dict[str, Any], path: str) -> dict
         check_id="start_runnable_proposal_queue",
         status="pass" if passed else "fail",
         severity=START_BLOCKER_SEVERITY,
-        expected={"runnable_available_count": ">0", "selected_runnable_count": ">0"},
+        expected=(
+            {"resume_completion_session": "already promoted and proposal-budget exhausted"}
+            if resume_active
+            else {"runnable_available_count": ">0", "selected_runnable_count": ">0"}
+        ),
         observed={
             "artifact_status": kind_status,
             "proposal_count": len(proposals),
@@ -333,50 +393,70 @@ def _mutation_queue_check(mutation_proposals: dict[str, Any], path: str) -> dict
             "selected_runnable_count": selected_runnable_count,
             "blocked_available_count": blocked_available_count,
             "blocked_reason_counts": blocked_reason_counts,
+            "resume_completion": resume_completion,
         },
         reason=(
-            "mutation proposal queue contains a selected runnable proposal"
+            "resume is completing maintenance for an already-promoted proposal-budget-exhausted session"
+            if resume_active
+            else "mutation proposal queue contains a selected runnable proposal"
             if passed
             else "new runs must not start when every proposal is blocked or the queue has not selected a runnable item"
         ),
         next_action=(
-            "Proceed with run admission."
+            "Proceed with resume; no new proposal selection is required."
+            if resume_active
+            else "Proceed with run admission."
             if passed
             else "Refresh `make refresh-generated-core`; if only recent_log_overlap remains, wait, rotate target, or emit a non-overlapping repair proposal before running."
         ),
-        evidence_paths=[path],
+        evidence_paths=[path, str(resume_completion.get("session_report", "")).strip()],
     )
 
 
-def _readiness_execution_check(readiness: dict[str, Any], path: str) -> dict[str, Any]:
+def _readiness_execution_check(
+    readiness: dict[str, Any],
+    path: str,
+    *,
+    resume_completion: dict[str, Any],
+) -> dict[str, Any]:
     kind_status = _artifact_kind_check(readiness, "auto_improve_readiness_report")
     execution = _dict_field(readiness, "execution_readiness")
     can_run = _as_bool(execution.get("can_run"))
     runnable_count = _as_int(execution.get("runnable_proposal_count"))
     reasons = _list_strings(execution.get("reasons"))
-    passed = kind_status == "present" and can_run and runnable_count > 0
+    resume_active = _as_bool(resume_completion.get("active"))
+    passed = resume_active or (kind_status == "present" and can_run and runnable_count > 0)
     return _check(
         check_id="start_execution_readiness",
         status="pass" if passed else "fail",
         severity=START_BLOCKER_SEVERITY,
-        expected={"execution_readiness.can_run": True, "runnable_proposal_count": ">0"},
+        expected=(
+            {"resume_completion_session": "already promoted and proposal-budget exhausted"}
+            if resume_active
+            else {"execution_readiness.can_run": True, "runnable_proposal_count": ">0"}
+        ),
         observed={
             "artifact_status": kind_status,
             "execution_readiness.can_run": can_run,
             "runnable_proposal_count": runnable_count,
             "reasons": reasons,
+            "resume_completion": resume_completion,
         },
         reason=(
-            "auto-improve readiness permits execution"
+            "resume may complete maintenance for an already-promoted session without a new runnable proposal"
+            if resume_active
+            else "auto-improve readiness permits execution"
             if passed
             else "readiness still says execution is not runnable after pre-run convergence"
         ),
         next_action=(
-            "Proceed with run admission."
+            "Proceed with resume; complete session maintenance evidence."
+            if resume_active
+            else "Proceed with run admission."
             if passed
             else "Resolve readiness execution blockers before starting `make auto-improve-goal-run`."
         ),
-        evidence_paths=[path],
+        evidence_paths=[path, str(resume_completion.get("session_report", "")).strip()],
     )
 
 
@@ -625,6 +705,7 @@ def build_report(
     remediation_backlog = _load_json_object(vault, active_request.remediation_backlog_report_path)
     goal_contract = _load_json_object(vault, active_request.goal_contract_path)
     goal_run_status = _load_json_object(vault, active_request.goal_run_status_path)
+    resume_completion = _resume_completion_context(vault, active_request.resume_session_id)
     runtime_certificate = _load_json_object(
         vault,
         active_request.runtime_certificate_report_path,
@@ -637,8 +718,16 @@ def build_report(
         ),
         _fixed_point_check(fixed_point, active_request.fixed_point_report_path),
         _worktree_check(guard, active_request.goal_worktree_guard_report_path),
-        _mutation_queue_check(mutation_proposals, active_request.mutation_proposals_report_path),
-        _readiness_execution_check(readiness, active_request.readiness_report_path),
+        _mutation_queue_check(
+            mutation_proposals,
+            active_request.mutation_proposals_report_path,
+            resume_completion=resume_completion,
+        ),
+        _readiness_execution_check(
+            readiness,
+            active_request.readiness_report_path,
+            resume_completion=resume_completion,
+        ),
         _readiness_promotion_check(readiness, active_request.readiness_report_path),
         _remediation_backlog_check(remediation_backlog, active_request.remediation_backlog_report_path),
         _durable_goal_authority_check(
@@ -658,6 +747,23 @@ def build_report(
         and summary["promotion_blocker_count"] == 0,
         "should_pause_before_run": summary["start_blocker_count"] > 0,
     }
+    file_inputs = {
+        "cleanup_report": active_request.cleanup_report_path,
+        "quarantine_preflight_report": active_request.quarantine_preflight_report_path,
+        "fixed_point_report": active_request.fixed_point_report_path,
+        "goal_worktree_guard_report": active_request.goal_worktree_guard_report_path,
+        "mutation_proposals_report": active_request.mutation_proposals_report_path,
+        "readiness_report": active_request.readiness_report_path,
+        "remediation_backlog_report": active_request.remediation_backlog_report_path,
+        "goal_contract": active_request.goal_contract_path,
+        "goal_run_status": active_request.goal_run_status_path,
+        "runtime_certificate_report": active_request.runtime_certificate_report_path,
+    }
+    inputs = dict(file_inputs)
+    resume_session_report = str(resume_completion.get("session_report", "")).strip()
+    if resume_session_report:
+        file_inputs["resume_session_report"] = resume_session_report
+        inputs["resume_session_report"] = resume_session_report
     return {
         **build_canonical_report_envelope(
             vault,
@@ -673,18 +779,7 @@ def build_report(
                 "ops/schemas/goal-runtime-run-admission.schema.json",
                 "mk/mechanism.mk",
             ],
-            file_inputs={
-                "cleanup_report": active_request.cleanup_report_path,
-                "quarantine_preflight_report": active_request.quarantine_preflight_report_path,
-                "fixed_point_report": active_request.fixed_point_report_path,
-                "goal_worktree_guard_report": active_request.goal_worktree_guard_report_path,
-                "mutation_proposals_report": active_request.mutation_proposals_report_path,
-                "readiness_report": active_request.readiness_report_path,
-                "remediation_backlog_report": active_request.remediation_backlog_report_path,
-                "goal_contract": active_request.goal_contract_path,
-                "goal_run_status": active_request.goal_run_status_path,
-                "runtime_certificate_report": active_request.runtime_certificate_report_path,
-            },
+            file_inputs=file_inputs,
             source_tree_excluded_files=(active_request.out_path or DEFAULT_OUT,),
         ),
         "vault": report_path(vault, vault),
@@ -692,18 +787,7 @@ def build_report(
         "decisions": decisions,
         "summary": summary,
         "recommended_next_action": _recommended_next_action(checks, decisions),
-        "inputs": {
-            "cleanup_report": active_request.cleanup_report_path,
-            "quarantine_preflight_report": active_request.quarantine_preflight_report_path,
-            "fixed_point_report": active_request.fixed_point_report_path,
-            "goal_worktree_guard_report": active_request.goal_worktree_guard_report_path,
-            "mutation_proposals_report": active_request.mutation_proposals_report_path,
-            "readiness_report": active_request.readiness_report_path,
-            "remediation_backlog_report": active_request.remediation_backlog_report_path,
-            "goal_contract": active_request.goal_contract_path,
-            "goal_run_status": active_request.goal_run_status_path,
-            "runtime_certificate_report": active_request.runtime_certificate_report_path,
-        },
+        "inputs": inputs,
         "checks": checks,
     }
 
@@ -736,6 +820,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--goal-contract", default=DEFAULT_GOAL_CONTRACT_REPORT)
     parser.add_argument("--goal-run-status", default=DEFAULT_GOAL_RUN_STATUS_REPORT)
     parser.add_argument("--runtime-certificate-report", default=DEFAULT_RUNTIME_CERTIFICATE_REPORT)
+    parser.add_argument("--resume-session", default="")
     parser.add_argument("--policy-path", default=None)
     parser.add_argument(
         "--strict",
@@ -763,6 +848,7 @@ def main(argv: list[str] | None = None) -> int:
             goal_contract_path=args.goal_contract,
             goal_run_status_path=args.goal_run_status,
             runtime_certificate_report_path=args.runtime_certificate_report,
+            resume_session_id=args.resume_session,
         )
     )
     destination = write_report(vault, report, args.out)

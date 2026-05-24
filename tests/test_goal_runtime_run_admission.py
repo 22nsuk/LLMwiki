@@ -188,10 +188,11 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
             },
         )
 
-    def _build_report(self) -> dict:
+    def _build_report(self, *, resume_session_id: str = "") -> dict:
         return build_report(
             GoalRuntimeRunAdmissionRequest(
                 vault=self.vault,
+                resume_session_id=resume_session_id,
                 context=fixed_context(),
             )
         )
@@ -305,6 +306,65 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         queue_check = next(check for check in report["checks"] if check["id"] == "start_runnable_proposal_queue")
         self.assertEqual(queue_check["status"], "fail")
         self.assertIn("recent_log_overlap", json.dumps(queue_check["observed"]))
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_build_report_allows_resume_completion_without_new_runnable_proposal(self) -> None:
+        self._write_json(
+            "ops/reports/mutation-proposals.json",
+            {
+                "artifact_kind": "mutation_proposals_report",
+                "proposals": [{"proposal_id": "blocked-runtime", "blocked_by": ["recent_log_overlap"]}],
+                "diagnostics": {
+                    "queue_selection": {
+                        "runnable_available_count": 0,
+                        "selected_runnable_count": 0,
+                        "blocked_available_count": 1,
+                        "blocked_reason_counts": [{"reason": "recent_log_overlap", "count": 1}],
+                    }
+                },
+            },
+        )
+        self._write_json(
+            "ops/reports/auto-improve-readiness.json",
+            {
+                "artifact_kind": "auto_improve_readiness_report",
+                "execution_readiness": {
+                    "can_run": False,
+                    "runnable_proposal_count": 0,
+                    "reasons": ["no runnable proposal is available"],
+                },
+                "can_promote_result": False,
+                "promotion_blockers": [{"id": "execution_blocked_by_no_runnable_proposal"}],
+            },
+        )
+        self._write_json(
+            "ops/reports/auto-improve-sessions/auto-session-resume.json",
+            {
+                "artifact_kind": "auto_improve_session",
+                "session_id": "auto-session-resume",
+                "status": "running",
+                "stop_reason": "running",
+                "budget": {"max_proposals": 1, "max_minutes": 30, "max_consecutive_failures": 1},
+                "iterations": [{"status": "complete", "decision": "PROMOTE", "outcome": "promoted"}],
+                "maintenance": {"status": "running"},
+            },
+        )
+
+        report = self._build_report(resume_session_id="auto-session-resume")
+
+        self.assertEqual(report["status"], "attention")
+        self.assertTrue(report["decisions"]["can_start_goal_runtime"])
+        self.assertFalse(report["decisions"]["should_pause_before_run"])
+        self.assertEqual(report["summary"]["start_blocker_count"], 0)
+        self.assertEqual(
+            report["inputs"]["resume_session_report"],
+            "ops/reports/auto-improve-sessions/auto-session-resume.json",
+        )
+        queue_check = next(check for check in report["checks"] if check["id"] == "start_runnable_proposal_queue")
+        execution_check = next(check for check in report["checks"] if check["id"] == "start_execution_readiness")
+        self.assertEqual(queue_check["status"], "pass")
+        self.assertEqual(execution_check["status"], "pass")
+        self.assertTrue(queue_check["observed"]["resume_completion"]["active"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_build_report_blocks_start_from_dirty_worktree_guard(self) -> None:
