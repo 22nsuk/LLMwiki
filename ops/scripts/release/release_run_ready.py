@@ -105,8 +105,7 @@ def _release_steps(make_bin: str) -> list[tuple[str, list[str]]]:
     return [
         ("release-test-current", [make_bin, "release-test-current"]),
         ("release-public-current", [make_bin, "release-public-current"]),
-        ("release-package-current", [make_bin, "release-package-current"]),
-        ("release-source-package-smoke", [make_bin, "release-source-package-smoke"]),
+        ("release-source-package-check", [make_bin, "release-source-package-check"]),
     ]
 
 
