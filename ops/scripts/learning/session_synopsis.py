@@ -39,6 +39,7 @@ INPUT_PATH_ARG_NAMES = {
     "task_observations": "--task-observations",
 }
 DERIVED_REMEDIATION_BACKLOG_BLOCKER_IDS = {
+    "goal_status_promotion_blocked_by_release_batch_manifest_failure",
     "goal_status_promotion_blocked_by_remediation_backlog_open",
     "promotion_blocked_by_remediation_backlog_open",
 }

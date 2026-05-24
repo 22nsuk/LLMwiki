@@ -141,6 +141,7 @@ def seed_synopsis_inputs(vault: Path) -> None:
             "blockers": [
                 "self-improvement loop certificate incomplete",
                 "sealed authority clean pass not verified",
+                "promotion_blocked_by_release_batch_manifest_failure",
                 "promotion_blocked_by_remediation_backlog_open",
             ],
             "runtime_certificate": {
@@ -188,6 +189,10 @@ class SessionSynopsisTests(unittest.TestCase):
             )
             self.assertNotIn(
                 "goal_status_promotion_blocked_by_remediation_backlog_open",
+                {blocker["id"] for blocker in report["recent_blockers"]},
+            )
+            self.assertNotIn(
+                "goal_status_promotion_blocked_by_release_batch_manifest_failure",
                 {blocker["id"] for blocker in report["recent_blockers"]},
             )
             self.assertEqual(report["summary"]["forbidden_repeat_pattern_count"], 1)
