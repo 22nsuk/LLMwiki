@@ -160,6 +160,22 @@ def _artifact_operational_attention_items(payload: dict[str, Any]) -> list[dict[
     return items
 
 
+def _artifact_mtime_attention_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for record in payload.get("artifact_records", []):
+        if not isinstance(record, dict):
+            continue
+        issues = [
+            str(issue).strip()
+            for issue in record.get("issues", [])
+            if str(issue).strip() == "generated_at_older_than_file_mtime"
+        ]
+        path = str(record.get("path", "")).strip()
+        if path and issues:
+            items.append({"path": path, "issues": issues})
+    return items
+
+
 def _release_gate_summary(
     payload: dict[str, Any],
     *,
@@ -786,9 +802,7 @@ def _artifact_contract_promotion_blockers(
     root_ephemeral_count = _int_value(report_summary.get("root_ephemeral_artifact_count"))
     non_utf8_count = _int_value(report_summary.get("non_utf8_text_artifact_count"))
     hard_failure_count = root_ephemeral_count + non_utf8_count
-    mtime_attention_count = _int_value(
-        report_summary.get("mtime_sensitive_attention_issue_count")
-    )
+    mtime_attention_items = _artifact_mtime_attention_items(artifact_freshness_report)
     operational_attention_items = [
         item
         for item in _artifact_operational_attention_items(artifact_freshness_report)
@@ -799,7 +813,7 @@ def _artifact_contract_promotion_blockers(
         status_allows_contract_debt
         and schema_invalid_count == 0
         and hard_failure_count == 0
-        and mtime_attention_count == 0
+        and not mtime_attention_items
         and not operational_attention_items
     ):
         return []
@@ -851,10 +865,11 @@ def _artifact_contract_promotion_blockers(
             "Resolve hard artifact freshness failures, then rerun make artifact-freshness and "
             "make auto-improve-readiness."
         )
-    elif mtime_attention_count:
+    elif mtime_attention_items:
+        paths = ", ".join(item["path"] for item in mtime_attention_items[:6])
         reason = (
             "artifact freshness found mtime-sensitive artifact drift: "
-            f"mtime_sensitive_attention_issue_count={mtime_attention_count}"
+            f"{paths}"
         )
         signal_ids = ["artifact_freshness_mtime_attention"]
         required_evidence = [

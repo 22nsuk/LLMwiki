@@ -1628,11 +1628,14 @@ class MakefileStaticGateTests(unittest.TestCase):
             "$(MAKE) learning-readiness-signoff-revalidation",
             auto_promotion_preflight_block,
         )
-        self.assertIn("$(MAKE) auto-improve-readiness-report-body", auto_promotion_preflight_block)
+        self.assertIn(
+            "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
+            auto_promotion_preflight_block,
+        )
         self.assertEqual(
             _recipe_lines(text, "release-auto-promotion-preflight")[:4],
             [
-                "$(MAKE) auto-improve-readiness-report-body",
+                "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
                 "$(MAKE) learning-readiness-signoff-revalidation",
                 "$(MAKE) remediation-backlog",
                 "$(MAKE) auto-improve-readiness-report-body",
@@ -1665,7 +1668,9 @@ class MakefileStaticGateTests(unittest.TestCase):
             preseal_recipe.index("$(MAKE) remediation-backlog"),
         )
         self.assertLess(
-            preseal_recipe.index("$(MAKE) auto-improve-readiness-report-body"),
+            preseal_recipe.index(
+                "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1"
+            ),
             preseal_recipe.index("$(MAKE) remediation-backlog"),
         )
         self.assertIn('--remediation-backlog "$(REMEDIATION_BACKLOG_OUT)"', auto_promotion_preseal_block)

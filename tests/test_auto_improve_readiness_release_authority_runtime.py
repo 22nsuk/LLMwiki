@@ -206,6 +206,69 @@ class AutoImproveReadinessReleaseAuthorityRuntimeTests(unittest.TestCase):
         self.assertEqual(blocker["signal_ids"], ["artifact_freshness_hard_failure"])
         self.assertIn("root_ephemeral_artifact_count=1", blocker["reason"])
 
+    def test_artifact_contract_advisory_only_mtime_attention_is_not_blocker(self) -> None:
+        reports = _pass_release_reports()
+        reports["artifact_freshness"] = {
+            "status": "attention",
+            "summary": {
+                "schema_invalid_artifact_count": 0,
+                "stable_contract_debt_issue_count": 0,
+                "root_ephemeral_artifact_count": 0,
+                "non_utf8_text_artifact_count": 0,
+                "mtime_sensitive_attention_issue_count": 1,
+            },
+            "artifact_records": [
+                {
+                    "path": "ops/reports/generated-artifact-index.json",
+                    "issues": [],
+                    "mtime_sensitive_issues": ["generated_at_older_than_file_mtime"],
+                    "schema_validation_status": "pass",
+                    "contract_issue_class": "mtime_sensitive_attention",
+                }
+            ],
+        }
+
+        summaries = _release_gate_summaries(reports)
+        artifact_contract_blockers = _artifact_contract_promotion_blockers(
+            summaries["artifact_freshness"],
+            reports["artifact_freshness"],
+        )
+
+        self.assertEqual(artifact_contract_blockers, [])
+
+    def test_artifact_contract_non_advisory_mtime_attention_blocks_promotion(self) -> None:
+        reports = _pass_release_reports()
+        reports["artifact_freshness"] = {
+            "status": "attention",
+            "summary": {
+                "schema_invalid_artifact_count": 0,
+                "stable_contract_debt_issue_count": 0,
+                "root_ephemeral_artifact_count": 0,
+                "non_utf8_text_artifact_count": 0,
+                "mtime_sensitive_attention_issue_count": 1,
+            },
+            "artifact_records": [
+                {
+                    "path": "ops/reports/test-execution-summary.json",
+                    "issues": ["generated_at_older_than_file_mtime"],
+                    "mtime_sensitive_issues": ["generated_at_older_than_file_mtime"],
+                    "schema_validation_status": "pass",
+                    "contract_issue_class": "mtime_sensitive_attention",
+                }
+            ],
+        }
+
+        summaries = _release_gate_summaries(reports)
+        artifact_contract_blockers = _artifact_contract_promotion_blockers(
+            summaries["artifact_freshness"],
+            reports["artifact_freshness"],
+        )
+
+        self.assertEqual(len(artifact_contract_blockers), 1)
+        blocker = artifact_contract_blockers[0]
+        self.assertEqual(blocker["signal_ids"], ["artifact_freshness_mtime_attention"])
+        self.assertIn("ops/reports/test-execution-summary.json", blocker["reason"])
+
     def test_release_closeout_gate_prefers_status_v2_axes_over_legacy_machine_booleans(
         self,
     ) -> None:

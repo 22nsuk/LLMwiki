@@ -251,7 +251,7 @@ release-sealed-run-ready-check:
 	$(PYTHON) -m ops.scripts.release_sealed_run_manifest --vault "$(VAULT)" --out "$(RELEASE_SEALED_RUN_MANIFEST_OUT)" --post-seal-attestation "$(RELEASE_SEALED_POST_SEAL_ATTESTATION_OUT)" --check
 
 release-auto-promotion-preflight:
-	$(MAKE) auto-improve-readiness-report-body
+	$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1
 	$(MAKE) learning-readiness-signoff-revalidation
 	$(MAKE) remediation-backlog
 	$(MAKE) auto-improve-readiness-report-body
@@ -269,7 +269,7 @@ release-auto-promotion-preseal:
 	$(MAKE) release-evidence-dashboard-report
 	$(MAKE) release-lane-summary
 	$(MAKE) release-clean-blocker-ledger
-	$(MAKE) auto-improve-readiness-report-body
+	$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1
 	$(MAKE) remediation-backlog
 	$(MAKE) auto-improve-readiness-report-body
 	$(MAKE) tmp-json-clean

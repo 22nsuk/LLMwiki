@@ -904,6 +904,42 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(artifact_blocker["scope"], "artifact_contract")
         self.assertIn("ops/reports/example.json", artifact_blocker["reason"])
 
+    def test_stable_artifact_contract_debt_is_diagnostic_not_promotion_blocker(self) -> None:
+        self._write_ready_queue_reports()
+        self._write_report(
+            "ops/reports/artifact-freshness-report.json",
+            {
+                "status": "attention",
+                "summary": {
+                    "schema_invalid_artifact_count": 0,
+                    "stable_contract_debt_issue_count": 2,
+                    "root_ephemeral_artifact_count": 0,
+                    "non_utf8_text_artifact_count": 0,
+                    "mtime_sensitive_attention_issue_count": 0,
+                },
+                "artifact_records": [
+                    {
+                        "path": "runs/legacy-run/run-ledger.json",
+                        "issues": ["missing_artifact_envelope", "unknown_currentness"],
+                        "stable_contract_issues": ["missing_artifact_envelope", "unknown_currentness"],
+                        "schema_validation_status": "pass",
+                        "contract_issue_class": "stable_contract_debt",
+                    }
+                ],
+            },
+        )
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        self.assertTrue(report["can_execute_trial"])
+        self.assertTrue(report["can_promote_result"])
+        self.assertEqual(
+            report["diagnostics"]["artifact_freshness_summary"]["stable_contract_debt_issue_count"],
+            2,
+        )
+        blocker_ids = {item["id"] for item in report["promotion_blockers"]}
+        self.assertNotIn("promotion_blocked_by_artifact_contract_failure", blocker_ids)
+
     def test_selected_contract_operational_attention_blocks_promotion(self) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
