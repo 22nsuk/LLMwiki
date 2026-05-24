@@ -15,8 +15,8 @@ result can be promoted without operator intervention.
 - `make release-check-all-surfaces`: release check plus public policy and public export checks.
 - `make release-run-ready`: one command to verify the current committed tree,
   emit canonical report-contract and full-suite test summaries, run public check,
-  package build, and source-package smoke, then write the runnable release-run
-  manifest.
+  refresh/reuse current full release-smoke evidence, run package build and
+  source-package smoke, then write the runnable release-run manifest.
 - `make release-run-ready-check`: revalidate the existing manifest against the
   current HEAD, source fingerprint, source ZIP, and source-package smoke report.
 - `make release-sealed-run-ready-plan`: inspect runnable authority evidence and
@@ -39,9 +39,9 @@ result can be promoted without operator intervention.
 - `make release-auto-promotion-preseal`: refresh clean closeout, strict
   same-fingerprint cohort, remediation, learning, and auto-improve diagnostics
   after run-ready and before sealing. It refreshes cheap cohort inputs such as
-  bootstrap, registry, release smoke, generated index, artifact freshness, and
-  external report references, but reuses run-ready's canonical full-suite
-  evidence instead of rerunning it.
+  bootstrap, registry, generated index, artifact freshness, and external report
+  references, but it only checks run-ready's release-smoke and full-suite
+  evidence for currentness instead of rerunning them.
 - `make release-auto-promotion-operator-summary`: manual fallback to refresh the
   cheap build-local operator diagnostics used by the promotion verdict when
   sealed sidecars are already current.
@@ -138,7 +138,9 @@ they must be cleared before unattended promotion is allowed.
   target should run next; the authority verdict still belongs to the staged
   manifests.
 - `ops/reports/release-smoke-report.json` is local diagnostic evidence and is
-  not a final release authority.
+  not a final release authority. `release-run-ready` refreshes or reuses the
+  current full smoke report; preseal uses the current-check lane and fails fast
+  if that evidence is missing or stale.
 - `ops/reports/test-execution-summary.json` and
   `ops/reports/test-execution-summary-full.json` are reused by check lanes only
   when their `source_tree_fingerprint` still matches the current tree. Stale

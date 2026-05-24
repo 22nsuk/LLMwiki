@@ -11,6 +11,6 @@ def test_release_run_ready_uses_source_package_check_for_stage2_evidence() -> No
     assert _release_steps("make") == [
         ("release-test-current", ["make", "release-test-current"]),
         ("release-public-current", ["make", "release-public-current"]),
+        ("release-smoke-full-reuse", ["make", "release-smoke-full-reuse"]),
         ("release-source-package-check", ["make", "release-source-package-check"]),
     ]
-

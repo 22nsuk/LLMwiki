@@ -265,7 +265,7 @@ release-auto-promotion-preseal:
 	$(MAKE) release-run-ready-check
 	$(MAKE) bootstrap-preflight
 	$(MAKE) registry-preflight
-	$(MAKE) release-smoke-full-reuse
+	$(MAKE) release-smoke-full-current-check
 	$(MAKE) generated-artifact-index
 	$(MAKE) artifact-freshness
 	$(MAKE) external-report-reference-manifest-release-check
