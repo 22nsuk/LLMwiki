@@ -8,9 +8,15 @@ def build_proposal_queue(
     quarantined: set[str],
 ) -> list[dict]:
     runnable = [
-        proposal
+        {**proposal, "blocked_by": normalized_blockers}
         for proposal in proposals_report["proposals"]
-        if not proposal["blocked_by"]
+        if not (
+            normalized_blockers := [
+                str(blocker).strip()
+                for blocker in proposal.get("blocked_by", []) or []
+                if str(blocker).strip()
+            ]
+        )
         and proposal["proposal_id"] not in attempted
         and proposal["proposal_id"] not in quarantined
     ]
