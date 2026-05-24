@@ -1087,6 +1087,74 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertEqual(resumed["iterations"], 1)
             self.assertEqual(resumed_session["goal_contract"]["contract_sha256"], contract_digest)
 
+    def test_proposal_budget_resume_accepts_compatible_goal_contract_refresh(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            seed_subagent_profiles(vault, ["worker", "validator"])
+            contract = sample_goal_contract()
+            set_goal(contract, vault=vault)
+            proposal = mutation_proposal_report("ops/scripts/example.py")["proposals"][0]
+
+            def fake_refresh_reports(*_: object, **__: object) -> tuple[dict, dict]:
+                return {}, {"proposals": [proposal]}
+
+            with (
+                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    side_effect=_fake_successful_mechanism_experiment,
+                ),
+            ):
+                first = run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    session_id="auto-session-compatible-contract-refresh",
+                    goal_contract_path="ops/reports/codex-goal-contract.json",
+                    max_proposals=1,
+                    max_minutes=30,
+                    max_consecutive_failures=1,
+                    executor_name="codex_exec",
+                    allow_learning_uncertain=True,
+                )
+
+            first_session = json.loads((vault / first["session_report"]).read_text(encoding="utf-8"))
+            first_digest = first_session["goal_contract"]["contract_sha256"]
+            refreshed_contract = dict(contract)
+            refreshed_contract["promotion_guard"] = {
+                **dict(contract["promotion_guard"]),
+                "promotion_blockers": [
+                    *contract["promotion_guard"]["promotion_blockers"],
+                    "execution_blocked_by_no_runnable_proposal",
+                ],
+            }
+            set_goal(refreshed_contract, vault=vault)
+
+            with mock.patch(
+                "ops.scripts.auto_improve_runtime._refresh_reports",
+                side_effect=AssertionError("proposal-budget resume should not refresh proposals"),
+            ):
+                resumed = run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    resume_session="auto-session-compatible-contract-refresh",
+                    goal_contract_path="ops/reports/codex-goal-contract.json",
+                    max_proposals=1,
+                    max_minutes=30,
+                    max_consecutive_failures=1,
+                    executor_name="codex_exec",
+                    allow_learning_uncertain=True,
+                )
+
+            resumed_session = json.loads((vault / resumed["session_report"]).read_text(encoding="utf-8"))
+            self.assertEqual(resumed["stop_reason"], "proposal_budget_exhausted")
+            self.assertNotEqual(resumed_session["goal_contract"]["contract_sha256"], first_digest)
+            self.assertEqual(
+                resumed_session["goal_contract"]["promotion_blockers"],
+                refreshed_contract["promotion_guard"]["promotion_blockers"],
+            )
+
     def test_resume_budget_override_bounds_maintenance_completion(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

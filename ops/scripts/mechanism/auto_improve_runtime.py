@@ -471,6 +471,34 @@ def _session_goal_contract_path(session: Mapping[str, Any]) -> str:
     return str(goal_contract.get("requested_path") or goal_contract.get("path") or "").strip()
 
 
+def _compatible_goal_contract_refresh(
+    existing: Mapping[str, Any],
+    snapshot: Mapping[str, Any],
+) -> bool:
+    checks = (
+        ("contract_id", "contract_id"),
+        ("runtime_mode", "runtime_mode"),
+        ("path", "path"),
+    )
+    for existing_key, snapshot_key in checks:
+        existing_value = str(existing.get(existing_key, "")).strip()
+        snapshot_value = str(snapshot.get(snapshot_key, "")).strip()
+        if existing_value and snapshot_value and existing_value != snapshot_value:
+            return False
+    budget_fields = (
+        "max_wall_clock_seconds",
+        "max_unattended_seconds",
+        "max_proposals",
+        "max_consecutive_failures",
+    )
+    for field in budget_fields:
+        existing_budget = _int_value(existing.get(field))
+        snapshot_budget = _int_value(snapshot.get(field))
+        if existing_budget > 0 and snapshot_budget > existing_budget:
+            return False
+    return True
+
+
 def _attach_goal_contract_snapshot(
     vault: Path,
     session: dict,
@@ -481,7 +509,11 @@ def _attach_goal_contract_snapshot(
     _validate_goal_contract_budget(session, snapshot)
     existing = _mapping_value(session, "goal_contract")
     existing_digest = str(existing.get("contract_sha256", "")).strip()
-    if existing_digest and existing_digest != snapshot["contract_sha256"]:
+    if (
+        existing_digest
+        and existing_digest != snapshot["contract_sha256"]
+        and not _compatible_goal_contract_refresh(existing, snapshot)
+    ):
         raise AutoImproveUsageError(
             "resume goal contract digest mismatch: "
             f"{existing_digest} != {snapshot['contract_sha256']}"
