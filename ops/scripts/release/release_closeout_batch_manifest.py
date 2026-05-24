@@ -53,6 +53,7 @@ SEALED_RELEASE_STATUSES = {"sealed_clean_pass", "sealed_conditional_pass"}
 TEST_EXECUTION_SUMMARY_FULL_PATH = "ops/reports/test-execution-summary-full.json"
 ARCHIVE_SELF_DESCRIPTION_PATH = "release-archive-self-description.json"
 ALLOWED_DISTRIBUTION_VIRTUAL_PATHS = {ARCHIVE_SELF_DESCRIPTION_PATH}
+SEALED_DISTRIBUTION_RETIRED_RISK_CODES = {"external_report_strict_unavailable"}
 
 
 @dataclass(frozen=True)
@@ -855,6 +856,88 @@ def _status_text(payload: dict[str, Any], key: str, default: str = "unknown") ->
     return str(payload.get(key, default)).strip() or default
 
 
+def _risk_code(risk: object) -> str:
+    return str(risk.get("code", "")).strip() if isinstance(risk, dict) else ""
+
+
+def _materialized_distribution_package(distribution_package: dict[str, Any]) -> bool:
+    return (
+        str(distribution_package.get("status", "")).strip() == "materialized"
+        and bool(str(distribution_package.get("path", "")).strip())
+        and bool(str(distribution_package.get("sha256", "")).strip())
+        and bool(distribution_package.get("path_set_matches_release_manifest"))
+        and bool(distribution_package.get("content_digest_matches_release_manifest"))
+    )
+
+
+def _distribution_retired_risk_codes(distribution_package: dict[str, Any]) -> set[str]:
+    if not _materialized_distribution_package(distribution_package):
+        return set()
+    return set(SEALED_DISTRIBUTION_RETIRED_RISK_CODES)
+
+
+def _active_release_risks(
+    accepted_risks: object,
+    *,
+    retired_codes: set[str],
+) -> list[Any]:
+    risks = accepted_risks if isinstance(accepted_risks, list) else []
+    if not retired_codes:
+        return risks
+    return [risk for risk in risks if _risk_code(risk) not in retired_codes]
+
+
+def _retired_risk_adjusted_count(
+    raw_count: int,
+    accepted_risks: object,
+    active_risks: list[Any],
+) -> int:
+    risks = accepted_risks if isinstance(accepted_risks, list) else []
+    retired_count = max(0, len(risks) - len(active_risks))
+    if not retired_count:
+        return max(0, raw_count)
+    if raw_count == len(risks):
+        return len(active_risks)
+    return max(0, raw_count - retired_count)
+
+
+def _gate_attention_codes(gate: object) -> list[str]:
+    if not isinstance(gate, dict):
+        return []
+    accepted_risk = gate.get("accepted_risk")
+    accepted_risk = accepted_risk if isinstance(accepted_risk, dict) else {}
+    codes = accepted_risk.get("codes", [])
+    return [str(code).strip() for code in codes if str(code).strip()] if isinstance(codes, list) else []
+
+
+def _gate_is_attention(gate: object) -> bool:
+    if not isinstance(gate, dict):
+        return False
+    live = gate.get("live_rerun_state")
+    live = live if isinstance(live, dict) else {}
+    return (
+        str(gate.get("checked_in_state", "")).strip() == "attention"
+        or str(live.get("status", "")).strip() == "attention"
+    )
+
+
+def _retired_gate_attention_count(
+    gates: object,
+    *,
+    retired_codes: set[str],
+) -> int:
+    if not retired_codes or not isinstance(gates, list):
+        return 0
+    count = 0
+    for gate in gates:
+        if not _gate_is_attention(gate):
+            continue
+        codes = set(_gate_attention_codes(gate))
+        if codes and codes <= retired_codes:
+            count += 1
+    return count
+
+
 def _artifact_record(
     vault: Path, spec: dict[str, Any]
 ) -> tuple[dict[str, Any], bool, bool, bool]:
@@ -931,11 +1014,19 @@ def _all_required_current(inventory: BatchArtifactInventory) -> bool:
 
 
 def _dashboard_decision_inputs(
-    vault: Path, closeout: dict[str, Any]
+    vault: Path,
+    closeout: dict[str, Any],
+    distribution_package: dict[str, Any],
 ) -> DashboardDecisionInputs:
     dashboard = _load_json(vault / "ops/reports/release-evidence-dashboard.json")
     dashboard_summary = _dict_child(dashboard, "summary")
     closeout_summary = _dict_child(closeout, "summary")
+    retired_codes = _distribution_retired_risk_codes(distribution_package)
+    accepted_risks = closeout.get("accepted_risks", [])
+    active_risks = _active_release_risks(
+        accepted_risks,
+        retired_codes=retired_codes,
+    )
     accepted_risk_count = int(
         dashboard_summary.get(
             "accepted_risk_count",
@@ -943,7 +1034,20 @@ def _dashboard_decision_inputs(
         )
         or 0
     )
+    accepted_risk_count = _retired_risk_adjusted_count(
+        accepted_risk_count,
+        accepted_risks,
+        active_risks,
+    )
     gate_attention_count = int(dashboard_summary.get("gate_attention_count", 0) or 0)
+    gate_attention_count = max(
+        0,
+        gate_attention_count
+        - _retired_gate_attention_count(
+            dashboard.get("gates", []),
+            retired_codes=retired_codes,
+        ),
+    )
     return DashboardDecisionInputs(
         accepted_risk_count=accepted_risk_count,
         gate_attention_count=gate_attention_count,
@@ -977,13 +1081,20 @@ def _learning_lane_decision_inputs(vault: Path) -> LearningLaneDecisionInputs:
 
 
 def _release_decision_inputs(
-    vault: Path, closeout: dict[str, Any]
+    vault: Path,
+    closeout: dict[str, Any],
+    distribution_package: dict[str, Any],
 ) -> ReleaseDecisionInputs:
     artifact_freshness_gate = _dict_child(closeout, "artifact_freshness_gate")
     closeout_summary = _dict_child(closeout, "summary")
-    dashboard = _dashboard_decision_inputs(vault, closeout)
+    dashboard = _dashboard_decision_inputs(vault, closeout, distribution_package)
     lane = _learning_lane_decision_inputs(vault)
     accepted_risks = closeout.get("accepted_risks", [])
+    retired_codes = _distribution_retired_risk_codes(distribution_package)
+    active_risks = _active_release_risks(
+        accepted_risks,
+        retired_codes=retired_codes,
+    )
     closeout_status_view = release_status_v2_view_with_readiness_fallback(closeout)
     release_authority_status = str(closeout_status_view["release_authority_status"])
     semantic_release_status = str(closeout_status_view["semantic_release_status"])
@@ -1022,8 +1133,10 @@ def _release_decision_inputs(
         artifact_freshness_schema_invalid_count=int(
             artifact_freshness_gate.get("schema_invalid_artifact_count", 0) or 0
         ),
-        accepted_risk_family_count=int(
-            closeout_summary.get("accepted_risk_family_count", 0) or 0
+        accepted_risk_family_count=_retired_risk_adjusted_count(
+            int(closeout_summary.get("accepted_risk_family_count", 0) or 0),
+            accepted_risks,
+            active_risks,
         ),
         accepted_risk_count=dashboard.accepted_risk_count,
         gate_attention_count=dashboard.gate_attention_count,
@@ -1033,8 +1146,12 @@ def _release_decision_inputs(
         learning_claim_allowed=lane.learning_claim_allowed,
         claims_learning_improved=lane.claims_learning_improved,
         learning_claim_blocking_family_count=lane.learning_claim_blocking_family_count,
-        advisory_lifecycle_family_count=lane.advisory_lifecycle_family_count,
-        accepted_risks=accepted_risks if isinstance(accepted_risks, list) else [],
+        advisory_lifecycle_family_count=_retired_risk_adjusted_count(
+            lane.advisory_lifecycle_family_count,
+            accepted_risks,
+            active_risks,
+        ),
+        accepted_risks=active_risks,
         source_tree_coherence_status=_status_text(
             _dict_child(closeout, "source_tree_coherence"), "status"
         ),
@@ -1330,7 +1447,11 @@ def _prepare_batch_manifest_state(
         if isinstance(spec, dict)
     ]
     inventory = _build_artifact_inventory(vault, artifact_specs)
-    release = _release_decision_inputs(vault, loaded.closeout)
+    release = _release_decision_inputs(
+        vault,
+        loaded.closeout,
+        loaded.distribution_package,
+    )
     decision = _batch_status_decision(inventory, release, loaded.distribution_package)
     return BatchManifestPreparedState(
         generated_at=generated_at,

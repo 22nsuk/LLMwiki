@@ -359,6 +359,191 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         self.assertEqual(report["summary"]["present_count"], 14)
         self.assertEqual(report["summary"]["current_count"], 14)
 
+    def test_distribution_zip_retires_nonsealed_external_report_attention(
+        self,
+    ) -> None:
+        self._write_required_artifacts(currentness_status="current")
+        risk = {
+            "source": "external_report_reference_manifest",
+            "source_path": "external-reports/report-reference-manifest.json",
+            "code": "external_report_strict_unavailable",
+            "gate_effect": "accepted_risk",
+            "advisory_lifecycle_effect": "review_backlog",
+        }
+        self._write_closeout_summary(
+            summary={
+                "accepted_risk_instance_count": 1,
+                "accepted_risk_family_count": 1,
+            },
+            accepted_risks=[risk],
+        )
+        self._write_artifact(
+            "ops/reports/release-evidence-dashboard.json",
+            {
+                "artifact_kind": "test_report",
+                "generated_at": "2026-05-02T08:00:00Z",
+                "producer": "test",
+                "source_tree_fingerprint": "abc",
+                "currentness": {"status": "current"},
+                "summary": {
+                    "accepted_risk_count": 1,
+                    "gate_attention_count": 1,
+                },
+                "gates": [
+                    {
+                        "gate_id": "advisory_lifecycle_review",
+                        "checked_in_state": "attention",
+                        "live_rerun_state": {"status": "attention"},
+                        "accepted_risk": {
+                            "count": 1,
+                            "codes": ["external_report_strict_unavailable"],
+                        },
+                    }
+                ],
+            },
+        )
+        self._write_artifact(
+            "ops/reports/release-lane-summary.json",
+            {
+                "artifact_kind": "test_report",
+                "generated_at": "2026-05-02T08:00:00Z",
+                "producer": "test",
+                "source_tree_fingerprint": "abc",
+                "currentness": {"status": "current"},
+                "lane_summary": {
+                    "auto_improve_lane_status": "pass",
+                    "learning_lane_status": "pass",
+                    "learning_claim_guard_status": "pass",
+                    "learning_claim_allowed": False,
+                    "claims_learning_improved": False,
+                    "learning_claim_blocking_family_count": 0,
+                    "advisory_lifecycle_family_count": 1,
+                },
+            },
+        )
+
+        unsealed = build_batch_manifest(self.vault, context=fixed_context())
+
+        self.assertEqual(unsealed["release_decision_snapshot"]["accepted_risk_count"], 1)
+        self.assertEqual(unsealed["release_decision_snapshot"]["gate_attention_count"], 1)
+        self.assertEqual(
+            unsealed["release_decision_snapshot"]["advisory_lifecycle_family_count"],
+            1,
+        )
+        self.assertEqual(
+            unsealed["release_decision_snapshot"]["accepted_risks"],
+            [risk],
+        )
+
+        archive_path = self._write_release_source_zip()
+        sealed = build_batch_manifest(
+            self.vault,
+            context=fixed_context(),
+            distribution_zip_path=archive_path.relative_to(self.vault),
+        )
+
+        snapshot = sealed["release_decision_snapshot"]
+        self.assertEqual(snapshot["accepted_risk_count"], 0)
+        self.assertEqual(snapshot["gate_attention_count"], 0)
+        self.assertEqual(snapshot["accepted_risk_family_count"], 0)
+        self.assertEqual(snapshot["advisory_lifecycle_family_count"], 0)
+        self.assertEqual(snapshot["accepted_risks"], [])
+        self.assertEqual(validate_with_schema(sealed, load_schema(BATCH_MANIFEST_SCHEMA_PATH)), [])
+
+    def test_distribution_zip_keeps_unrelated_accepted_risk_attention(
+        self,
+    ) -> None:
+        self._write_required_artifacts(currentness_status="current")
+        retired_risk = {
+            "source": "external_report_reference_manifest",
+            "source_path": "external-reports/report-reference-manifest.json",
+            "code": "external_report_strict_unavailable",
+            "gate_effect": "accepted_risk",
+            "advisory_lifecycle_effect": "review_backlog",
+        }
+        active_risk = {
+            "source": "artifact_freshness",
+            "source_path": "ops/reports/artifact-freshness-report.json",
+            "code": "artifact_freshness_attention",
+            "gate_effect": "accepted_risk",
+            "advisory_lifecycle_effect": "review_backlog",
+        }
+        self._write_closeout_summary(
+            summary={
+                "accepted_risk_instance_count": 2,
+                "accepted_risk_family_count": 2,
+            },
+            accepted_risks=[retired_risk, active_risk],
+        )
+        self._write_artifact(
+            "ops/reports/release-evidence-dashboard.json",
+            {
+                "artifact_kind": "test_report",
+                "generated_at": "2026-05-02T08:00:00Z",
+                "producer": "test",
+                "source_tree_fingerprint": "abc",
+                "currentness": {"status": "current"},
+                "summary": {
+                    "accepted_risk_count": 2,
+                    "gate_attention_count": 2,
+                },
+                "gates": [
+                    {
+                        "gate_id": "external_report_reference_manifest",
+                        "checked_in_state": "attention",
+                        "live_rerun_state": {"status": "attention"},
+                        "accepted_risk": {
+                            "count": 1,
+                            "codes": ["external_report_strict_unavailable"],
+                        },
+                    },
+                    {
+                        "gate_id": "artifact_freshness",
+                        "checked_in_state": "attention",
+                        "live_rerun_state": {"status": "attention"},
+                        "accepted_risk": {
+                            "count": 1,
+                            "codes": ["artifact_freshness_attention"],
+                        },
+                    },
+                ],
+            },
+        )
+        self._write_artifact(
+            "ops/reports/release-lane-summary.json",
+            {
+                "artifact_kind": "test_report",
+                "generated_at": "2026-05-02T08:00:00Z",
+                "producer": "test",
+                "source_tree_fingerprint": "abc",
+                "currentness": {"status": "current"},
+                "lane_summary": {
+                    "auto_improve_lane_status": "pass",
+                    "learning_lane_status": "pass",
+                    "learning_claim_guard_status": "pass",
+                    "learning_claim_allowed": False,
+                    "claims_learning_improved": False,
+                    "learning_claim_blocking_family_count": 0,
+                    "advisory_lifecycle_family_count": 2,
+                },
+            },
+        )
+        archive_path = self._write_release_source_zip()
+
+        sealed = build_batch_manifest(
+            self.vault,
+            context=fixed_context(),
+            distribution_zip_path=archive_path.relative_to(self.vault),
+        )
+
+        snapshot = sealed["release_decision_snapshot"]
+        self.assertEqual(snapshot["accepted_risk_count"], 1)
+        self.assertEqual(snapshot["gate_attention_count"], 1)
+        self.assertEqual(snapshot["accepted_risk_family_count"], 1)
+        self.assertEqual(snapshot["advisory_lifecycle_family_count"], 1)
+        self.assertEqual(snapshot["accepted_risks"], [active_risk])
+        self.assertEqual(validate_with_schema(sealed, load_schema(BATCH_MANIFEST_SCHEMA_PATH)), [])
+
     def test_batch_manifest_prefers_closeout_status_v2_over_legacy_booleans(
         self,
     ) -> None:

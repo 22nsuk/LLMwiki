@@ -110,7 +110,10 @@ Operator diagnostics at stage 3 keep `accepted_risk`, `gate_attention`, and
 unattended promotion, but gate attention and learning-claim blockers are not
 reported as accepted risk. Advisory lifecycle accepted risks that are allowed to
 remain visible at preseal still count as accepted-risk diagnostics at Stage 3;
-they must be cleared before unattended promotion is allowed.
+they must be cleared before unattended promotion is allowed. The non-sealed
+`external_report_strict_unavailable` advisory is cleared only by the sealed
+batch path that binds a materialized current distribution ZIP; post-seal
+attestation and sealed rehearsal still provide the strict provenance proof.
 
 ## Evidence Boundaries
 
