@@ -1696,10 +1696,11 @@ class MakefileStaticGateTests(unittest.TestCase):
         ):
             self.assertNotIn(expensive_writer, auto_promotion_preseal_block)
         self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preflight")[:7],
+            _recipe_lines(text, "release-auto-promotion-preflight")[:8],
             [
                 "$(MAKE) release-smoke-fast-refresh-check",
                 "$(MAKE) goal-runtime-local-evidence-converge",
+                "$(MAKE) test-execution-summary-report-contract",
                 "$(MAKE) artifact-freshness-refresh-check",
                 "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
                 "$(MAKE) learning-readiness-signoff-revalidation",

@@ -34,10 +34,10 @@ result can be promoted without operator intervention.
   action plan for the promotion verdict.
 - `make release-auto-promotion-preflight`: refresh cheap unattended-promotion
   blockers before spending full run-ready cycles. It refresh-checks fast smoke
-  and run-local goal evidence before artifact freshness so stale local
-  remediation artifacts fail early, then checks remediation, learning
-  revalidation, and auto-improve readiness without building or sealing release
-  artifacts.
+  and run-local goal evidence, refreshes the selected report-contract summary
+  for changed test fingerprints, then runs artifact freshness and checks
+  remediation, learning revalidation, and auto-improve readiness without
+  building or sealing release artifacts.
 - `make release-auto-promotion-preseal`: refresh clean closeout, strict
   same-fingerprint cohort, remediation, learning, and auto-improve diagnostics
   after run-ready and before sealing. It refreshes cheap cohort inputs such as

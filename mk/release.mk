@@ -254,6 +254,7 @@ release-sealed-run-ready-check:
 release-auto-promotion-preflight:
 	$(MAKE) release-smoke-fast-refresh-check
 	$(MAKE) goal-runtime-local-evidence-converge
+	$(MAKE) test-execution-summary-report-contract
 	$(MAKE) artifact-freshness-refresh-check
 	$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1
 	$(MAKE) learning-readiness-signoff-revalidation
