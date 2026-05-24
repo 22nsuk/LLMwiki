@@ -263,6 +263,11 @@ release-auto-promotion-preflight-check:
 
 release-auto-promotion-preseal:
 	$(MAKE) release-run-ready-check
+	$(MAKE) bootstrap-preflight
+	$(MAKE) registry-preflight
+	$(MAKE) release-smoke-full
+	$(MAKE) generated-artifact-index
+	$(MAKE) artifact-freshness
 	$(MAKE) release-closeout-summary-report
 	$(MAKE) learning-readiness-signoff-revalidation
 	$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint
