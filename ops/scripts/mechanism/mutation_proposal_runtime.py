@@ -65,6 +65,7 @@ RECENT_LOG_OVERLAP_UNBLOCK_SOURCE_CANDIDATE_TYPE = (
     "mechanism_recent_log_overlap_queue_unblock_candidate"
 )
 RECENT_LOG_OVERLAP_UNBLOCK_FAMILY = "queue_unblock"
+NOOP_MUTATION_FAILURE_MARKER = "reported pass without modifying any declared primary target"
 RECENT_LOG_OVERLAP_UNBLOCK_PRIMARY_TARGETS = [
     "ops/scripts/mechanism/mutation_proposal_runtime.py"
 ]
@@ -404,12 +405,16 @@ def _repair_decision_ended_as_noop_mutation_failure(vault: Path, decision: dict)
     source_run_id = str(decision.get("source_run_id", "")).strip()
     if not source_run_id:
         return False
+    return _run_has_noop_mutation_failure(vault, source_run_id)
+
+
+def _run_has_noop_mutation_failure(vault: Path, source_run_id: str) -> bool:
     stderr_path = vault / "runs" / source_run_id / "mutation-command.stderr.txt"
     try:
         stderr_text = stderr_path.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return False
-    return "reported pass without modifying any declared primary target" in stderr_text
+    return NOOP_MUTATION_FAILURE_MARKER in stderr_text
 
 
 def _artifact_validates_against_declared_schema(vault: Path, rel_path: str) -> bool:
@@ -1471,6 +1476,14 @@ def _promotion_report_history_resolved(
     if not isinstance(history, dict):
         return False
     history_status = str(history.get("status", "active")).strip().lower()
+    proposal_id = str(attempt.get("proposal_id", "")).strip()
+    source_run_id = attempt_run_id or report_run_id or report_path_run_id
+    if (
+        history_status in RESOLVED_PROMOTION_HISTORY_STATUSES
+        and proposal_id.startswith(f"{RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE}__")
+        and _run_has_noop_mutation_failure(vault, source_run_id)
+    ):
+        return False
     return history_status in RESOLVED_PROMOTION_HISTORY_STATUSES
 
 
