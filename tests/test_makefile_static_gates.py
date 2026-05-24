@@ -907,6 +907,32 @@ class MakefileStaticGateTests(unittest.TestCase):
                 self.assertLess(root_text.index(f"include {mk_file}"), root_text.index(".PHONY: check"))
         self.assertLess(root_text.index("include mk/test.mk"), root_text.index("export PYTEST_DISABLE_PLUGIN_AUTOLOAD"))
 
+    def test_help_target_indexes_operator_entrypoints(self) -> None:
+        text = _makefile_text()
+        block = _target_block(text, "help")
+
+        self.assertIn("help", _target_block(text, ".PHONY"))
+        for heading in (
+            "Setup:",
+            "Source checks:",
+            "Report contracts:",
+            "Public mirror:",
+            "Mechanism:",
+            "Release:",
+        ):
+            self.assertIn(heading, block)
+        for target in (
+            "make dev-install",
+            "make static",
+            "make strict-preview-audit",
+            "make report-contracts-core",
+            "make external-report-lifecycle-refresh",
+            "make sync-public-policy",
+            "make goal-runtime-run-admission",
+            "make release-auto-promotion-ready",
+        ):
+            self.assertIn(target, block)
+
     def test_check_targets_include_static_gate(self) -> None:
         text = _makefile_text()
 
@@ -1051,6 +1077,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         pytest_ini_text = PYTEST_INI.read_text(encoding="utf-8")
 
         self.assertIn("docs/development.md", readme_text)
+        self.assertIn("make help", readme_text)
+        self.assertIn("make help", development_text)
+        self.assertIn("uv lock --check", development_text)
+        self.assertIn("uv.lock", development_text)
         self.assertIn(
             "공식 pytest 진입점은 `make test*`, `make check*`, `make public-check*` 또는 `.venv/bin/python -m pytest`다.",
             development_text,
@@ -4054,6 +4084,18 @@ class MakefileStaticGateTests(unittest.TestCase):
             '$(PYTHON) tools/ruff_strict_preview.py --vault "$(VAULT)" --allowlist "$(RUFF_STRICT_PREVIEW_ALLOWLIST)" --select "$(RUFF_STRICT_PREVIEW_RULES)"',
             _target_block(text, "ruff-strict-preview"),
         )
+
+    def test_strict_preview_audit_target_expands_all_public_runtime_targets(self) -> None:
+        text = _makefile_text()
+
+        self.assertIn("STRICT_PREVIEW_AUDIT_TARGETS ?= ops/scripts tests tools", text)
+        self.assertIn("STRICT_PREVIEW_AUDIT_OUT ?= tmp/strict-preview-audit.json", text)
+        block = _target_block(text, "strict-preview-audit")
+        self.assertIn("tools/strict_preview_audit.py", block)
+        self.assertIn('--targets "$(STRICT_PREVIEW_AUDIT_TARGETS)"', block)
+        self.assertIn('--ruff-select "$(RUFF_STRICT_PREVIEW_RULES)"', block)
+        self.assertIn('--mypy-flags "$(MYPY_STRICT_PREVIEW_FLAGS)"', block)
+        self.assertNotIn("--fail-on-attention", block)
 
     def test_mypy_allowlist_tracks_ops_scripts_surface(self) -> None:
         allowlist = {

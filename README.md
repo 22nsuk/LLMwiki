@@ -15,6 +15,7 @@ from the public mirror unless a document says otherwise.
 3. Run the public-safe developer loop:
 
 ```bash
+make help
 make dev-install
 make static
 make test-public
@@ -69,6 +70,10 @@ Use `make public-export` to materialize the mirror and `make public-check` to
 verify the exported tree.
 
 ## Common Workflows
+
+Use `make help` for the compact operator index of setup, source checks,
+report-contract, public mirror, mechanism, and release entrypoints. Detailed
+selection guidance remains in [docs/development.md](./docs/development.md).
 
 | Work type | First check | Closeout check |
 | --- | --- | --- |

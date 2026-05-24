@@ -23,7 +23,10 @@ from .auto_improve_next_run_decision_runtime import build_next_run_decision
 from .auto_improve_outcome_runtime import role_report_path
 from .auto_improve_route_scaffold_runtime import RouteScaffoldPhaseResult
 from .auto_improve_session_runtime import load_optional_json
-from .set_mechanism_run_history import SetMechanismRunHistoryError, set_mechanism_run_history
+from .set_mechanism_run_history import (
+    SetMechanismRunHistoryError,
+    set_mechanism_run_history,
+)
 
 ITERATION_TELEMETRY_WRITTEN_FIELDS = frozenset(
     {

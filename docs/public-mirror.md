@@ -56,15 +56,18 @@ allowlist exception back into the public mirror.
 ## Commands
 
 ```bash
+make help
 make sync-public-policy
 make public-export
 make public-check
 ```
 
-Use `make sync-public-policy-check` in check-only contexts. These targets sync
-or check `ops/templates/public-mirror.gitignore`, not the full-vault root
+Use `make help` for the compact operator index and
+`make sync-public-policy-check` in check-only contexts. These targets sync or
+check `ops/templates/public-mirror.gitignore`, not the full-vault root
 `.gitignore`. Use `make public-check-all` when the exported tree should run all
-tests rather than only the public marker tier.
+tests rather than only the public marker tier. General lane-selection guidance
+lives in [development.md](development.md).
 
 ## CBM Export
 

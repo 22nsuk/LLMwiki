@@ -102,6 +102,93 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         "recommended_target": "external-report-reference-manifest-settle",
     },
     {
+        "action_id": "ruff_strict_preview_import_order",
+        "priority": "P0",
+        "theme": "Ruff strict preview import-order currentness",
+        "patterns": [
+            r"Ruff strict",
+            r"\bI001\b",
+            r"import order",
+            r"ruff-strict-preview",
+        ],
+        "evidence_paths": [
+            "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
+            "tools/ruff_strict_preview.py",
+            "ops/ruff-strict-preview-allowlist.txt",
+            "mk/static.mk",
+        ],
+        "recommended_target": "ruff-strict-preview",
+    },
+    {
+        "action_id": "release_source_ready_deindex_hardening",
+        "priority": "P0",
+        "theme": "release source-ready local-only deindex hardening",
+        "patterns": [
+            r"release_source_ready_commit",
+            r"release-source-ready",
+            r"deindex",
+            r"local-only private",
+            r"git add -u",
+        ],
+        "evidence_paths": [
+            "ops/scripts/release/release_source_ready_commit.py",
+            "tests/test_release_source_ready_commit.py",
+        ],
+        "recommended_target": "release-source-ready-commit",
+    },
+    {
+        "action_id": "uv_lock_canonical_policy",
+        "priority": "P1",
+        "theme": "uv lock canonical dependency policy",
+        "patterns": [
+            r"uv lock --check",
+            r"uv\.lock",
+            r"lockfile",
+            r"canonical dependency",
+        ],
+        "evidence_paths": [
+            "pyproject.toml",
+            "uv.lock",
+            "docs/development.md",
+        ],
+        "recommended_target": "uv-lock-check",
+    },
+    {
+        "action_id": "operator_entrypoint_index",
+        "priority": "P1",
+        "theme": "operator Make entrypoint index",
+        "patterns": [
+            r"operator entrypoint",
+            r"operator index",
+            r"make help",
+            r"release/public/mechanism/report-contract",
+        ],
+        "evidence_paths": [
+            "Makefile",
+            "mk/core.mk",
+            "docs/development.md",
+        ],
+        "recommended_target": "help",
+    },
+    {
+        "action_id": "strict_preview_all_target_audit",
+        "priority": "P1",
+        "theme": "strict-preview all-target audit before allowlist removal",
+        "patterns": [
+            r"strict-preview",
+            r"allowlist",
+            r"all-target",
+            r"all target",
+            r"ops/scripts tests tools",
+        ],
+        "evidence_paths": [
+            "tools/strict_preview_audit.py",
+            "mk/static.mk",
+            "tests/test_strict_preview_audit.py",
+        ],
+        "recommended_target": "strict-preview-audit",
+    },
+    {
         "action_id": "release_lane_mutability_split",
         "priority": "P0",
         "theme": "release lane mutability split",
@@ -992,6 +1079,110 @@ def selector_marker_scope_parity_status(vault: Path) -> str:
     return "planned"
 
 
+def ruff_strict_preview_import_order_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    status = _all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    surface_text = "\n".join(
+        _read_text_or_empty(vault / rel_path)
+        for rel_path in (
+            "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
+            "tools/ruff_strict_preview.py",
+            "mk/static.mk",
+        )
+    )
+    if (
+        "from .set_mechanism_run_history import (\n" in surface_text
+        and "RUFF_STRICT_PREVIEW_ALLOWLIST" in surface_text
+        and "tools/ruff_strict_preview.py" in surface_text
+    ):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
+def release_source_ready_deindex_hardening_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    status = _all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    surface_text = "\n".join(
+        _read_text_or_empty(vault / rel_path)
+        for rel_path in (
+            "ops/scripts/release/release_source_ready_commit.py",
+            "tests/test_release_source_ready_commit.py",
+        )
+    )
+    if all(
+        token in surface_text
+        for token in (
+            "local_only_deindex_paths",
+            "LOCAL_ONLY_PRIVATE_DEINDEX_CATEGORY",
+            "--ignore-unmatch",
+            "test_commits_deindex_with_public_and_generated_updates",
+        )
+    ):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
+def uv_lock_canonical_policy_status(vault: Path, existing_count: int, expected_count: int) -> str:
+    status = _all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    docs_text = _read_text_or_empty(vault / "docs/development.md")
+    if "uv lock --check" in docs_text and "uv.lock" in docs_text:
+        return "implemented"
+    return "requires_release_run_verification"
+
+
+def operator_entrypoint_index_status(vault: Path, existing_count: int, expected_count: int) -> str:
+    status = _all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    make_surface = "\n".join(
+        _read_text_or_empty(vault / rel_path)
+        for rel_path in ("Makefile", "mk/core.mk")
+    )
+    docs_text = _read_text_or_empty(vault / "docs/development.md")
+    if (
+        re.search(r"(?m)^help:", make_surface)
+        and "make help" in docs_text
+        and all(token in make_surface for token in ("release", "public", "mechanism", "report-contract"))
+    ):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
+def strict_preview_all_target_audit_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    status = _all_evidence_status(existing_count, expected_count)
+    if status:
+        return status
+    surface_text = "\n".join(
+        _read_text_or_empty(vault / rel_path)
+        for rel_path in (
+            "tools/strict_preview_audit.py",
+            "mk/static.mk",
+            "tests/test_strict_preview_audit.py",
+        )
+    )
+    if all(
+        token in surface_text
+        for token in (
+            "strict-preview-audit:",
+            "artifact_kind",
+            "strict_preview_audit",
+            "ops/scripts tests tools",
+        )
+    ):
+        return "implemented"
+    return "requires_release_run_verification"
+
+
 def _goal_contract_is_bounded(contract: dict[str, Any]) -> bool:
     budgets = as_dict(contract.get("budgets"))
     runtime = as_dict(contract.get("runtime"))
@@ -1703,6 +1894,36 @@ def status_from_evidence(vault: Path, action: dict[str, Any]) -> tuple[str, list
         status = sealed_summary_vocabulary_demotion_status(vault)
     elif action_id == "selector_marker_scope_parity":
         status = selector_marker_scope_parity_status(vault)
+    elif action_id == "ruff_strict_preview_import_order":
+        status = ruff_strict_preview_import_order_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "release_source_ready_deindex_hardening":
+        status = release_source_ready_deindex_hardening_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "uv_lock_canonical_policy":
+        status = uv_lock_canonical_policy_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "operator_entrypoint_index":
+        status = operator_entrypoint_index_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
+    elif action_id == "strict_preview_all_target_audit":
+        status = strict_preview_all_target_audit_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
     elif action_id in {
         "script_output_surfaces_currentness",
         "function_budget_proposal_adapter",

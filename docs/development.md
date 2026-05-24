@@ -5,14 +5,21 @@ This page is the public developer path for the code/ops mirror.
 ## Setup
 
 ```bash
+make help
 make dev-install
 make bootstrap-preflight
 ```
 
+`make help` prints the compact operator index for setup, source checks,
+report-contract, public mirror, mechanism, and release entrypoints.
 `make dev-install` creates `.venv`, installs development requirements, and
 installs the package in editable mode. `make bootstrap-preflight` records a
 schema-backed environment report when dependency or interpreter drift needs to
 be diagnosed.
+
+`uv.lock` is the canonical dependency lockfile. When dependency inputs change,
+refresh the lock intentionally; in review or check-only contexts, use
+`uv lock --check` to verify the lockfile is current without rewriting it.
 
 ## Supported Test Entrypoints
 
@@ -83,6 +90,7 @@ expressions.
 | Docs only | `make test-public` | `make sync-public-policy-check` if public boundaries changed |
 | Python runtime | `make static` | focused `.venv/bin/python -m pytest ...` or `make test` |
 | Make or CI lane | `make static` | `make report-contracts-core` |
+| Dependency input | `uv lock --check` | `make static` after any intentional lock refresh |
 | Schema/report contract | `make report-contracts-core` | regenerate artifacts, then rerun the focused schema/report tests |
 | Public export policy | `make sync-public-policy` | `make public-check` |
 | Release evidence | `make release-run-ready-check` | `make release-run-ready` from the committed tree before release |

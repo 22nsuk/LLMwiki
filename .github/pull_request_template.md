@@ -2,6 +2,7 @@
 - 
 
 ## Validation
+- Operator index: `make help`; lane-selection details: `docs/development.md`
 - [ ] `make static`
 - [ ] `python -m pytest`
 - [ ] `make sync-public-policy` when public surface rules or new public files change

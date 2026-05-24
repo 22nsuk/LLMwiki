@@ -1,11 +1,13 @@
 RUFF_TARGETS ?= ops/scripts tests tools
 RUFF_STRICT_PREVIEW_RULES ?= B,SIM,UP,I
 RUFF_STRICT_PREVIEW_ALLOWLIST ?= ops/ruff-strict-preview-allowlist.txt
+STRICT_PREVIEW_AUDIT_TARGETS ?= ops/scripts tests tools
+STRICT_PREVIEW_AUDIT_OUT ?= tmp/strict-preview-audit.json
 MYPY_TARGETS ?= @ops/mypy-allowlist.txt
 MYPY_STRICT_PREVIEW_FLAGS ?= --check-untyped-defs --disallow-untyped-defs --disallow-incomplete-defs
 MYPY_STRICT_PREVIEW_TARGETS ?= @ops/mypy-strict-preview-allowlist.txt
 
-.PHONY: static ruff ruff-strict-preview typecheck mypy-strict-preview 
+.PHONY: static ruff ruff-strict-preview strict-preview-audit typecheck mypy-strict-preview
 
 static: ruff typecheck
 
@@ -14,6 +16,9 @@ ruff:
 
 ruff-strict-preview:
 	$(PYTHON) tools/ruff_strict_preview.py --vault "$(VAULT)" --allowlist "$(RUFF_STRICT_PREVIEW_ALLOWLIST)" --select "$(RUFF_STRICT_PREVIEW_RULES)"
+
+strict-preview-audit:
+	$(PYTHON) tools/strict_preview_audit.py --vault "$(VAULT)" --out "$(STRICT_PREVIEW_AUDIT_OUT)" --targets "$(STRICT_PREVIEW_AUDIT_TARGETS)" --ruff-select "$(RUFF_STRICT_PREVIEW_RULES)" --mypy-flags "$(MYPY_STRICT_PREVIEW_FLAGS)" --python "$(firstword $(PYTHON))"
 
 typecheck:
 	$(PYTHON) -m mypy $(MYPY_TARGETS)

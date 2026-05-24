@@ -275,6 +275,90 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertEqual(self_evidence["producer"], "ops.scripts.external_report_action_matrix")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_reassessment_actions_are_classified_from_current_source_contracts(self) -> None:
+        for rel_path, text in {
+            "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py": (
+                "from .set_mechanism_run_history import (\n"
+                "    MechanismRunRecord,\n"
+                ")\n"
+            ),
+            "tools/ruff_strict_preview.py": "def main(): pass\n",
+            "ops/ruff-strict-preview-allowlist.txt": (
+                "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py\n"
+            ),
+            "ops/scripts/release/release_source_ready_commit.py": (
+                "LOCAL_ONLY_PRIVATE_DEINDEX_CATEGORY = 'local_only_private_deindex'\n"
+                "local_only_deindex_paths = []\n"
+                "def stage():\n"
+                "    return ['rm', '--cached', '--ignore-unmatch']\n"
+            ),
+            "tests/test_release_source_ready_commit.py": (
+                "def test_commits_deindex_with_public_and_generated_updates(): pass\n"
+            ),
+            "pyproject.toml": "[project]\nname = 'llmwiki-test'\n",
+            "uv.lock": "# lock\n",
+            "docs/development.md": (
+                "Run make help for operator entrypoints. "
+                "Use uv lock --check to verify uv.lock.\n"
+            ),
+            "Makefile": "include mk/core.mk\ninclude mk/static.mk\n",
+            "mk/core.mk": (
+                ".PHONY: help\n"
+                "help:\n"
+                "\t@printf '%s\\n' 'release public mechanism report-contract'\n"
+            ),
+            "mk/static.mk": (
+                "RUFF_STRICT_PREVIEW_ALLOWLIST ?= ops/ruff-strict-preview-allowlist.txt\n"
+                "STRICT_PREVIEW_AUDIT_TARGETS ?= ops/scripts tests tools\n"
+                "ruff-strict-preview:\n"
+                "\tpython tools/ruff_strict_preview.py\n"
+                "strict-preview-audit:\n"
+                "\tpython tools/strict_preview_audit.py --targets \"$(STRICT_PREVIEW_AUDIT_TARGETS)\"\n"
+            ),
+            "tools/strict_preview_audit.py": (
+                "def build_report():\n"
+                "    return {'artifact_kind': 'strict_preview_audit'}\n"
+            ),
+            "tests/test_strict_preview_audit.py": (
+                "def test_targets():\n"
+                "    assert 'ops/scripts tests tools'\n"
+            ),
+        }.items():
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        (self.external / "reassessment.md").write_text(
+            "# Reassessment\n\n"
+            "Ruff strict I001 import order, release_source_ready_commit deindex, "
+            "uv lock --check canonical dependency policy, make help operator entrypoint index, "
+            "strict-preview allowlist all-target ops/scripts tests tools audit.\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            "external-reports/report-reference-manifest.json",
+            {
+                "references": [{"path": "external-reports/reassessment.md"}],
+                "summary": {"active_reference_set_status": "current"},
+            },
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        for action_id in (
+            "ruff_strict_preview_import_order",
+            "release_source_ready_deindex_hardening",
+            "uv_lock_canonical_policy",
+            "operator_entrypoint_index",
+            "strict_preview_all_target_audit",
+        ):
+            self.assertEqual(actions[action_id]["current_status"], "implemented", action_id)
+            self.assertIn(
+                "external-reports/reassessment.md",
+                actions[action_id]["source_report_paths"],
+            )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_self_improvement_strategy_actions_remain_open_until_canonical_evidence(self) -> None:
         for rel_path, text in {
             "ops/scripts/core/artifact_freshness_runtime.py": "def build_report(): pass\n",

@@ -30,6 +30,7 @@ See [../docs/ops-runtime.md](../docs/ops-runtime.md) for the full runtime map.
 ## Primary Make Families
 
 ```bash
+make help
 make dev-install
 make static
 make test-public
@@ -40,7 +41,7 @@ make release-check
 make auto-improve-readiness
 ```
 
-Detailed usage lives in:
+`make help` is the compact operator index. Detailed usage lives in:
 
 - [../docs/development.md](../docs/development.md)
 - [../docs/public-mirror.md](../docs/public-mirror.md)

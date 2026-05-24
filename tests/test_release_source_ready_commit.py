@@ -401,6 +401,49 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
             "local_only_private_deindex",
         )
 
+    def test_commits_deindex_with_public_and_generated_updates(self) -> None:
+        (self.vault / ".gitignore").write_text(LOCAL_GITIGNORE_TEXT, encoding="utf-8")
+        (self.vault / "external-reports" / "archive").mkdir(parents=True)
+        archived_report = self.vault / "external-reports" / "archive" / "closed-review.md"
+        archived_report.write_text("# Closed Review\n", encoding="utf-8")
+        _git(self.vault, "add", "-f", ".gitignore", "external-reports/archive/closed-review.md")
+        _git(self.vault, "commit", "-m", "track archived external report")
+        _git(self.vault, "rm", "--cached", "external-reports/archive/closed-review.md")
+        (self.vault / "README.md").write_text("# Test\n\nReady.\n", encoding="utf-8")
+        (self.vault / "ops" / "script-output-surfaces.json").write_text(
+            '{"status": "pass"}\n',
+            encoding="utf-8",
+        )
+
+        rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-source-ready-commit.json",
+                "--message",
+                "release: ready",
+            ]
+        )
+
+        self.assertEqual(rc, 0)
+        self.assertTrue(archived_report.exists())
+        self.assertEqual(_git(self.vault, "status", "--short"), "")
+        changed_paths = _git(self.vault, "show", "--name-only", "--format=", "HEAD").splitlines()
+        self.assertIn("README.md", changed_paths)
+        self.assertIn("ops/script-output-surfaces.json", changed_paths)
+        self.assertIn("external-reports/archive/closed-review.md", changed_paths)
+        report = json.loads(
+            (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
+        )
+        categories = {entry["path"]: entry["category"] for entry in report["entries"]}
+        self.assertEqual(categories["README.md"], "public_source")
+        self.assertEqual(categories["ops/script-output-surfaces.json"], "generated_canonical")
+        self.assertEqual(
+            categories["external-reports/archive/closed-review.md"],
+            "local_only_private_deindex",
+        )
+
     def test_commit_rejects_intervening_head_change_after_snapshot(self) -> None:
         snapshot_rc = main(
             [

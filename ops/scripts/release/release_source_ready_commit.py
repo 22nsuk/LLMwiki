@@ -502,16 +502,34 @@ def _base_report(vault: Path, entries: list[StatusEntry], preexisting_paths: set
 
 
 def _stage_entries(vault: Path, entries: list[dict[str, Any]]) -> GitResult:
+    local_only_deindex_paths = [
+        str(item["path"])
+        for item in entries
+        if item.get("path")
+        and item.get("category") == LOCAL_ONLY_PRIVATE_DEINDEX_CATEGORY
+        and not item.get("staged")
+    ]
     tracked_paths = [
         str(item["path"])
         for item in entries
-        if item.get("path") and item.get("xy") != "??"
+        if item.get("path")
+        and item.get("xy") != "??"
+        and item.get("category") != LOCAL_ONLY_PRIVATE_DEINDEX_CATEGORY
     ]
     untracked_paths = [
         str(item["path"])
         for item in entries
-        if item.get("path") and item.get("xy") == "??"
+        if item.get("path")
+        and item.get("xy") == "??"
+        and item.get("category") != LOCAL_ONLY_PRIVATE_DEINDEX_CATEGORY
     ]
+    if local_only_deindex_paths:
+        deindex_result = _run_git(
+            vault,
+            ["rm", "--cached", "--ignore-unmatch", "--", *local_only_deindex_paths],
+        )
+        if deindex_result.returncode != 0:
+            return deindex_result
     if tracked_paths:
         tracked_result = _run_git(vault, ["add", "-u", "--", *tracked_paths])
         if tracked_result.returncode != 0:
