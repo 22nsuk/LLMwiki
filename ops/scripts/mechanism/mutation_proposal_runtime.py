@@ -398,7 +398,11 @@ def _is_next_run_failure_repair_source(decision: dict) -> bool:
 
 
 def _repair_decision_ended_as_noop_mutation_failure(vault: Path, decision: dict) -> bool:
-    if not _is_next_run_failure_repair_source(decision):
+    proposal_family = str(decision.get("proposal_family", "")).strip()
+    if not (
+        _is_next_run_failure_repair_source(decision)
+        or proposal_family == RECENT_LOG_OVERLAP_UNBLOCK_FAMILY
+    ):
         return False
     if str(decision.get("failure_taxonomy", "")).strip() != "mutation_failed":
         return False

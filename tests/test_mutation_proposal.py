@@ -2692,7 +2692,7 @@ class MutationProposalTest(unittest.TestCase):
                 },
             )
 
-    def test_queue_unblock_mutation_failure_with_repair_target_stays_open(self) -> None:
+    def test_noop_queue_unblock_mutation_failure_does_not_emit_repair(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
             seed_vault(vault)
@@ -2736,7 +2736,7 @@ class MutationProposalTest(unittest.TestCase):
                             "decision": "carry_forward",
                             "next_run_action": "repair_failure",
                             "status": "open",
-                            "reason": "queue unblock failure should become next-run repair work",
+                            "reason": "queue unblock no-op should not cycle as next-run repair work",
                             "quarantined_source_proposal": True,
                             "primary_targets": [primary_target],
                             "supporting_targets": ["ops/script-output-surfaces.json"],
@@ -2759,22 +2759,18 @@ class MutationProposalTest(unittest.TestCase):
                 if proposal["failure_mode"] == "next_run_failure_repair"
             ]
 
-            self.assertEqual(len(repair_proposals), 1)
-            self.assertEqual(
-                repair_proposals[0]["proposal_id"],
-                "next_run_failure_repair__example-runtime__mutation-failed",
-            )
+            self.assertEqual(len(repair_proposals), 0)
             self.assertEqual(
                 proposal_report["diagnostics"]["next_run_decision_queue"][
                     "open_carry_forward_decisions"
                 ],
-                1,
+                0,
             )
             self.assertEqual(
                 proposal_report["diagnostics"]["next_run_decision_queue"][
                     "selected_target_proposal_ids"
                 ],
-                ["next_run_failure_repair__example-runtime__mutation-failed"],
+                [],
             )
 
     def test_resolved_repo_health_schema_debt_does_not_emit_repair_proposal(self) -> None:
