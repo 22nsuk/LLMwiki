@@ -1821,7 +1821,7 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                     allow_learning_uncertain=True,
                 )
 
-            preflight.assert_not_called()
+            preflight.assert_called_once()
             iteration.assert_not_called()
             session = json.loads((vault / result["session_report"]).read_text(encoding="utf-8"))
             self.assertEqual(result["stop_reason"], "repeated_blocker_backlog_required")
@@ -1835,6 +1835,86 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertEqual(
                 session["loop_state"]["blocking_reason_counts"],
                 {"discard_decision_discard": 2},
+            )
+
+    def test_run_auto_improve_session_allows_next_run_repair_when_repeat_backlog_is_open(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            seed_subagent_profiles(vault, ["worker", "validator"])
+            backlog_path = vault / "ops" / "reports" / "remediation-backlog.json"
+            backlog_path.parent.mkdir(parents=True, exist_ok=True)
+            backlog_path.write_text(
+                json.dumps(
+                    {
+                        "status": "attention",
+                        "items": [
+                            {
+                                "item_id": "negative_lesson_blocked_queue_recent_log_overlap",
+                                "blocker_id": "blocked_queue_recent_log_overlap",
+                                "source": "self_improvement_negative_lessons.lessons",
+                                "item_type": "repeated_negative_lesson",
+                                "status": "open",
+                                "severity": "blocks_repeat",
+                                "occurrence_count": 2,
+                                "evidence_paths": [
+                                    "ops/reports/self-improvement-negative-lessons.json"
+                                ],
+                                "repair_target": "Resolve queue blocked reason recent_log_overlap.",
+                                "next_action": "Close the repair target before retrying this blocker.",
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            proposal = {
+                **mutation_proposal_report("ops/scripts/example.py")["proposals"][0],
+                "proposal_id": (
+                    "next_run_failure_repair__example-runtime__equal-score-secondary-eligibility"
+                ),
+                "family": "next_run_failure_repair",
+                "failure_mode": "next_run_failure_repair",
+                "priority": 100,
+                "blocked_by": [],
+            }
+
+            def fake_refresh_reports(*_: object, **__: object) -> tuple[dict, dict]:
+                return {}, {"status": "pass", "proposals": [proposal]}
+
+            with (
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime._refresh_reports",
+                    side_effect=fake_refresh_reports,
+                ),
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    side_effect=_fake_successful_mechanism_experiment,
+                ),
+            ):
+                result = run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    session_id="auto-session-next-run-repair",
+                    max_proposals=1,
+                    max_minutes=90,
+                    max_consecutive_failures=1,
+                    executor_name="codex_exec",
+                    allow_learning_uncertain=True,
+                )
+
+            session = json.loads((vault / result["session_report"]).read_text(encoding="utf-8"))
+            self.assertEqual(result["stop_reason"], "proposal_budget_exhausted")
+            self.assertEqual(len(session["iterations"]), 1)
+            self.assertEqual(session["iterations"][0]["decision"], "PROMOTE")
+            self.assertFalse(session["loop_state"]["repeated_blocker_stop"])
+            self.assertTrue(
+                session["metadata"]["pre_run_selected_proposal"]["repeat_backlog_repair"]
             )
 
     def test_run_auto_improve_session_uses_injected_context_for_generated_timestamps(self) -> None:

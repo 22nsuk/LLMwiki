@@ -276,6 +276,45 @@ class RemediationBacklogTests(unittest.TestCase):
             self.assertEqual(report["summary"]["open_repeat_count"], 1)
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_current_runnable_repair_closes_recent_log_overlap_repeat_items(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_backlog_inputs(vault)
+            write_json(
+                vault,
+                "ops/reports/mutation-proposals.json",
+                {
+                    "status": "pass",
+                    "source_tree_fingerprint": release_source_tree_fingerprint(vault),
+                    "proposals": [
+                        {
+                            "proposal_id": (
+                                "next_run_failure_repair__mechanism-run-validation-runtime__"
+                                "equal-score-secondary-eligibility"
+                            ),
+                            "family": "next_run_failure_repair",
+                            "failure_mode": "next_run_failure_repair",
+                            "blocked_by": [],
+                        }
+                    ],
+                },
+            )
+
+            report = build_report(vault, context=fixed_context())
+            items = {item["item_id"]: item for item in report["items"]}
+
+            self.assertEqual(
+                items["negative_lesson_blocked_queue_recent_log_overlap"]["status"],
+                "closed",
+            )
+            self.assertIn(
+                "ops/reports/mutation-proposals.json",
+                items["negative_lesson_blocked_queue_recent_log_overlap"]["evidence_paths"],
+            )
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_clean_auto_promotion_manifest_closes_legacy_promotion_report_lesson(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

@@ -216,12 +216,7 @@ def _recent_log_overlap_queue_unblocked(vault: Path) -> bool:
     if report.get("status") != "pass" or not _report_matches_current_source_tree(vault, report):
         return False
     for proposal in _dict_list(report.get("proposals")):
-        proposal_id = str(proposal.get("proposal_id", "")).strip()
-        failure_mode = str(proposal.get("failure_mode", "")).strip()
-        if (
-            failure_mode == "recent_log_overlap_queue_blocked"
-            or proposal_id.startswith("recent_log_overlap_queue_blocked__")
-        ) and not _string_list(proposal.get("blocked_by")):
+        if not _string_list(proposal.get("blocked_by")):
             return True
     return False
 
@@ -298,10 +293,9 @@ def _evidence_status_overrides(vault: Path, *, generated_at: str) -> dict[str, d
             }
     if _recent_log_overlap_queue_unblocked(vault):
         reason = (
-            "Closed by current mutation-proposal evidence: a runnable "
-            "recent_log_overlap queue-unblock proposal is available, so the next run "
-            "can rotate to a non-overlapping repair lane instead of repeating the "
-            "blocked shape."
+            "Closed by current mutation-proposal evidence: the proposal queue has a "
+            "runnable item, so the previous recent_log_overlap queue-wide stop is no "
+            "longer current."
         )
         item_ids = [
             f"negative_lesson_{RECENT_LOG_OVERLAP_BLOCKER_ID}",

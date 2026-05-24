@@ -239,6 +239,7 @@ class AutoImproveLoopState:
     stop_reason: str
     start_monotonic: float
     pre_promotion_failure_outcomes: set[str]
+    repeat_backlog_repair_active: bool = False
 
 
 TERMINAL_SUCCESS_OUTCOMES = frozenset({"promoted"})
@@ -364,6 +365,42 @@ def _open_repeat_backlog_blocker_reason(vault: Path) -> str:
             if reason:
                 return reason
     return ""
+
+
+def _proposal_repairs_repeat_backlog(proposal: Mapping[str, Any] | None) -> bool:
+    if not isinstance(proposal, Mapping):
+        return False
+    if _list_text(proposal.get("blocked_by")):
+        return False
+    proposal_id = str(proposal.get("proposal_id", "")).strip()
+    family = str(proposal.get("family", "")).strip()
+    failure_mode = str(proposal.get("failure_mode", "")).strip()
+    return (
+        family == "next_run_failure_repair"
+        or failure_mode == "next_run_failure_repair"
+        or proposal_id.startswith("next_run_failure_repair__")
+    )
+
+
+def _record_pre_run_selected_proposal_metadata(
+    session: dict,
+    proposals_report: Mapping[str, Any],
+) -> bool:
+    proposal, _queue_snapshot = _select_next_proposal(
+        dict(proposals_report),
+        attempted=set(_list_text(session.get("attempted_proposal_ids"))),
+        quarantined=set(_list_text(session.get("quarantined_proposal_ids"))),
+    )
+    metadata = dict(_mapping_value(session, "metadata"))
+    metadata["pre_run_selected_proposal"] = {
+        "proposal_id": str(proposal.get("proposal_id", "")).strip() if proposal else "",
+        "family": str(proposal.get("family", "")).strip() if proposal else "",
+        "failure_mode": str(proposal.get("failure_mode", "")).strip() if proposal else "",
+        "blocked_by": _list_text(proposal.get("blocked_by")) if proposal else [],
+        "repeat_backlog_repair": _proposal_repairs_repeat_backlog(proposal),
+    }
+    session["metadata"] = metadata
+    return bool(metadata["pre_run_selected_proposal"]["repeat_backlog_repair"])
 
 
 def _positive_contract_int(payload: Mapping[str, Any], key: str, *, context: str) -> int:
@@ -913,7 +950,7 @@ def _preflight_learning_gate(
     start: AutoImproveSessionStart,
     *,
     allow_learning_uncertain: bool,
-) -> None:
+) -> bool:
     mechanism_review, proposals = _refresh_reports(
         vault,
         start.policy,
@@ -929,6 +966,10 @@ def _preflight_learning_gate(
     )
     readiness_destination = write_readiness_report(vault, readiness_report)
     runnable_proposal_ids = _readiness_queue_snapshot(readiness_report)
+    repeat_backlog_repair_active = _record_pre_run_selected_proposal_metadata(
+        start.session,
+        proposals,
+    )
     review_required = learning_review_required(readiness_report)
     start.session["status"] = "running"
     start.session["stop_reason"] = "running"
@@ -966,6 +1007,7 @@ def _preflight_learning_gate(
         )
         raise AutoImproveLearningReviewRequiredError(message)
     _write_session_report(vault, start.session, context=start.context)
+    return repeat_backlog_repair_active
 
 
 def _refresh_reports(
@@ -1125,12 +1167,17 @@ def _stop_reason_before_iteration(
     state: AutoImproveLoopState,
     *,
     context: RuntimeContext,
+    check_open_repeat_backlog: bool = True,
 ) -> str | None:
     repeated_blocker_reason = _repeated_blocker_reason(session)
     if repeated_blocker_reason:
         _mark_repeated_blocker_stop(session, repeated_blocker_reason, context=context)
         return "repeated_blocker_backlog_required"
-    open_backlog_reason = _open_repeat_backlog_blocker_reason(vault)
+    open_backlog_reason = (
+        _open_repeat_backlog_blocker_reason(vault)
+        if check_open_repeat_backlog and not state.repeat_backlog_repair_active
+        else ""
+    )
     if open_backlog_reason:
         _mark_repeated_blocker_stop(session, open_backlog_reason, context=context)
         return "repeated_blocker_backlog_required"
@@ -1154,7 +1201,11 @@ def _stop_reason_after_loop(
     if repeated_blocker_reason:
         _mark_repeated_blocker_stop(session, repeated_blocker_reason, context=context)
         return "repeated_blocker_backlog_required"
-    open_backlog_reason = _open_repeat_backlog_blocker_reason(vault)
+    open_backlog_reason = (
+        ""
+        if state.repeat_backlog_repair_active
+        else _open_repeat_backlog_blocker_reason(vault)
+    )
     if open_backlog_reason:
         _mark_repeated_blocker_stop(session, open_backlog_reason, context=context)
         return "repeated_blocker_backlog_required"
@@ -1460,12 +1511,16 @@ def run_auto_improve_session(
         start.session,
         loop_state,
         context=start.context,
+        check_open_repeat_backlog=False,
     )
     if initial_stop_reason is None:
-        _preflight_learning_gate(
-            request.vault,
-            start,
-            allow_learning_uncertain=request.allow_learning_uncertain,
+        loop_state.repeat_backlog_repair_active = (
+            _preflight_learning_gate(
+                request.vault,
+                start,
+                allow_learning_uncertain=request.allow_learning_uncertain,
+            )
+            is True
         )
     else:
         loop_state.stop_reason = initial_stop_reason
