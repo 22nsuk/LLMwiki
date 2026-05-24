@@ -115,6 +115,55 @@ they must be cleared before unattended promotion is allowed. The non-sealed
 batch path that binds a materialized current distribution ZIP; post-seal
 attestation and sealed rehearsal still provide the strict provenance proof.
 
+## Auto-Promotion Closeout Runbook
+
+Use this runbook when the goal is to prove unattended release promotion for the
+current committed tree. The runbook is a repository operating contract, not a
+Codex skill: the Make targets, schemas, and manifests are the authority.
+
+Before starting:
+
+- Confirm the intended source tree is committed. Do not let release tooling
+  commit or push implicitly.
+- Do not run `make auto-improve-goal-run` as part of release closeout unless the
+  operator explicitly requests a runtime trial. Release authority normally reads
+  existing goal/runtime diagnostics; it does not create new mechanism runs.
+- Treat `ops/reports/`, `ops/operator/`, `build/release/`, `runs/`, and `tmp/`
+  as generated evidence surfaces. Refresh them through Make/script targets, not
+  by hand editing JSON.
+
+Recommended closeout sequence:
+
+1. Run `make release-auto-promotion-preflight` for cheap blockers. Stop here if
+   learning revalidation, remediation backlog, worktree, auto-improve
+   readiness, or fast smoke currentness fails.
+2. Run `make release-run-ready` only after preflight passes. This is the
+   expensive runnable authority stage and is the owner of full-suite test
+   evidence for the current fingerprint.
+3. Run `make release-auto-promotion-preseal`. Stop here if the clean cohort,
+   accepted-risk family, gate attention, source-tree coherence, or
+   same-fingerprint evidence cohort fails. Do not move failure diagnosis into
+   Stage 3.
+4. Run `make release-sealed-run-ready` only after preseal passes. This creates
+   the sealed package evidence and the sealed operator summary diagnostic for
+   Stage 3 reuse.
+5. Run `make release-auto-promotion-ready` as the final readback authority. It
+   should reuse the current lower-stage evidence rather than rerunning tests,
+   rebuilding the package, or resealing.
+
+Completion is proven only by
+`build/release/release-auto-promotion-ready-manifest.json` with:
+
+- `status=pass`
+- `auto_promotion_status=allowed`
+- `unattended_promotion_allowed=true`
+- empty `blockers`
+- source revision and source tree fingerprint matching the intended commit
+
+If a lower stage fails, fix the owning lower-stage evidence first. Stage 3 should
+not compensate for stale run-ready evidence, stale sealed evidence, mixed
+fingerprints, accepted risk, gate attention, or learning blockers.
+
 ## Evidence Boundaries
 
 - `build/release/release-run-manifest.json` is runnable-only authority. It binds

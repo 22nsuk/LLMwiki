@@ -267,6 +267,48 @@ class SubagentRoutingTest(unittest.TestCase):
             self.assertEqual(report["routing_decision"]["reasoning_effort"], "high")
             self.assertEqual(report["routing_decision"]["sandbox_mode"], "read-only")
 
+    def test_release_authority_auditor_stays_on_fixed_xhigh_rung(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_subagent_profiles(vault, ["release-authority-auditor"])
+
+            report = self.run_selector(vault, "--role", "release-authority-auditor")
+
+            self.assertEqual(report["routing_decision"]["allowed_rungs"], [3])
+            self.assertEqual(report["routing_decision"]["selected_rung"], 3)
+            self.assertEqual(report["routing_decision"]["reasoning_effort"], "xhigh")
+            self.assertEqual(report["routing_decision"]["sandbox_mode"], "read-only")
+
+    def test_goal_runtime_triage_auditor_stays_on_fixed_xhigh_rung(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_subagent_profiles(vault, ["goal-runtime-triage-auditor"])
+
+            report = self.run_selector(vault, "--role", "goal-runtime-triage-auditor")
+
+            self.assertEqual(report["routing_decision"]["allowed_rungs"], [3])
+            self.assertEqual(report["routing_decision"]["selected_rung"], 3)
+            self.assertEqual(report["routing_decision"]["reasoning_effort"], "xhigh")
+            self.assertEqual(report["routing_decision"]["sandbox_mode"], "read-only")
+
+    def test_external_report_action_auditor_defaults_to_read_only_high_rung(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_subagent_profiles(vault, ["external-report-action-auditor"])
+
+            report = self.run_selector(vault, "--role", "external-report-action-auditor")
+
+            self.assertEqual(report["routing_decision"]["allowed_rungs"], [2, 3])
+            self.assertEqual(report["routing_decision"]["selected_rung"], 2)
+            self.assertEqual(report["routing_decision"]["reasoning_effort"], "high")
+            self.assertEqual(report["routing_decision"]["sandbox_mode"], "read-only")
+
 
 if __name__ == "__main__":
     unittest.main()

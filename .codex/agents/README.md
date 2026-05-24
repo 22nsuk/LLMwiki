@@ -8,6 +8,7 @@
 - `worker.toml`은 기본 구현자다.
 - `reviewer.toml`과 `validator.toml`은 실행 sandbox가 temp workspace에서 `workspace-write`일 수 있지만 source/control file contract는 read-only다.
 - specialized add-on은 부모 acceptance, generic review, generic validation을 대체하지 않는다.
+- 모든 subagent prompt에는 `vowline` 사용 요구, read/write boundary, 그리고 의미 있는 결론 전 종료 금지 조건을 명시한다.
 
 ## Curated upstream seeds
 
@@ -85,6 +86,24 @@ repo-shared defaults는 아래 rung만 사용한다.
 | `owner-boundary-mapper.toml` | `gpt-5.5` + `medium` | `wiki/`, `system/`, `ops/`, `tests/`, `runs/` 사이의 canonical owner boundary를 잡을 때 |
 | `scope-gate-reviewer.toml` | `gpt-5.5` + `high` | 작업이 public/private/generated/release/runtime 경계를 넘는지 구현 전에 차단하거나 좁힐 때 |
 | `valuation-policy-auditor.toml` | `gpt-5.5` + `xhigh` | same-eval promotion, policy exception, decision-weight 과대평가 여부를 감사할 때 |
+| `release-authority-auditor.toml` | `gpt-5.5` + `xhigh` | release-run/sealed/auto-promotion authority blocker와 stale evidence 원인을 분리할 때 |
+| `goal-runtime-triage-auditor.toml` | `gpt-5.5` + `xhigh` | goal runtime trial admission, quarantine, next-run repair, readiness blockers를 분류할 때 |
+| `external-report-action-auditor.toml` | `gpt-5.5` + `high` | external report prose, action matrix, remediation backlog, improvement observations의 구현/보류 상태를 대조할 때 |
+
+### Role boundaries
+
+- `reviewer`는 변경 diff의 correctness와 missing tests를 본다. Release
+  manifest authority나 goal-runtime admission 전체를 대신 판정하지 않는다.
+- `validator`는 실행 가능한 bounded check를 고른다. Generated evidence의
+  의미 해석이나 archive 가능성 판단은 specialized auditor가 보조한다.
+- `release-authority-auditor`는 release authority readback만 다룬다. Runtime
+  trial을 시작하지 않고, policy weakening이나 manifest 수동 수정을 권하지 않는다.
+- `goal-runtime-triage-auditor`는 run admission과 failed-run classification을
+  다룬다. Release auto-promotion pass 여부는 `release-authority-auditor`나
+  parent release closeout이 판단한다.
+- `external-report-action-auditor`는 보고서 권고와 repo evidence의 대응관계를
+  분류한다. 실제 archive, matrix refresh, backlog mutation은 parent가 명시한
+  Make/script lane으로만 진행한다.
 
 ## Routing guidance for this repo
 
@@ -107,6 +126,12 @@ repo-shared defaults는 아래 rung만 사용한다.
 - eval or promotion evidence questions:
   - `benchmark-evidence-analyst`
   - `valuation-policy-auditor`
+- release authority questions:
+  - `release-authority-auditor`
+- goal runtime admission or failed-run triage:
+  - `goal-runtime-triage-auditor`
+- external report action reconciliation:
+  - `external-report-action-auditor`
 
 간단한 규칙:
 - 경계가 불명확하면 먼저 `explorer`나 `owner-boundary-mapper`로 좁힌다.

@@ -56,6 +56,7 @@ Thumbs.db
 .ruff_cache/
 .cache/
 .codebase-memory/
+.kiro/
 .ouroboros/
 .ouroboros_eval_artifact.md
 .serena/

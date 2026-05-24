@@ -1013,6 +1013,43 @@ subagent_routing_policy:
         high: 3
         extreme: 3
       pressure_overrides: {}
+    release-authority-auditor:
+      sandbox_mode: read-only
+      default_rung: 3
+      allowed_rungs:
+        - 3
+      score_band_rungs:
+        low: 3
+        moderate: 3
+        high: 3
+        extreme: 3
+      pressure_overrides: {}
+    goal-runtime-triage-auditor:
+      sandbox_mode: read-only
+      default_rung: 3
+      allowed_rungs:
+        - 3
+      score_band_rungs:
+        low: 3
+        moderate: 3
+        high: 3
+        extreme: 3
+      pressure_overrides: {}
+    external-report-action-auditor:
+      sandbox_mode: read-only
+      default_rung: 2
+      allowed_rungs:
+        - 2
+        - 3
+      score_band_rungs:
+        low: 2
+        moderate: 2
+        high: 3
+        extreme: 3
+      pressure_overrides:
+        artifact_heterogeneity:
+          threshold: 3
+          min_rung: 3
 
 auto_improve_policy:
   enabled: true

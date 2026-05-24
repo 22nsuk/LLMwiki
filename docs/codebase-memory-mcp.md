@@ -44,6 +44,48 @@ files describe the sidecar index boundary, not release evidence.
 - Keep `rg`, direct file reads, and ordinary editor workflows available even
   when CBM is installed.
 
+## Better Default Use
+
+Use CBM before broad grep when the question is about structure, ownership, or
+impact. It is most useful at the beginning of these tasks:
+
+- mapping the owner of a release, runtime, schema, or public-export behavior
+- finding adjacent tests and docs before changing an `ops/scripts` contract
+- checking whether a proposed change crosses public/private/generated
+  boundaries
+- identifying likely callers, writers, or config consumers before editing
+- comparing a changed source file against nearby policy/schema/test surfaces
+
+Practical parent workflow:
+
+1. Run `make cbm-index-public` after source edits or before a fresh structural
+   investigation if the index might be stale.
+2. Start with `make cbm-schema-public` or `make cbm-architecture-public` for a
+   repository-level map.
+3. Use CBM graph/search/trace output to choose the first files to inspect.
+4. Read those repo files directly and verify every claim with `rg`, source
+   reads, schema checks, tests, or Make targets.
+5. When CBM points to `CBM_PUBLIC_OUT`, translate the path back to the same
+   relative path in the live repo before editing.
+
+Good task recipes:
+
+- Release blocker triage: use CBM to map release scripts, manifest writers,
+  Make targets, and tests; then validate with staged release manifests.
+- Goal runtime triage: use CBM to find admission, readiness, certificate, and
+  mutation-proposal owners; then inspect current run evidence directly.
+- External report reconciliation: use CBM to locate action-matrix and backlog
+  producers; then compare generated reports and current source evidence.
+- Subagent role work: use CBM to map `.codex/agents`, routing policy, selector
+  runtime, and tests before adding or renaming roles.
+
+Do not use CBM as:
+
+- release or promotion authority
+- a replacement for `rg` when the exact token is already known
+- proof that generated artifacts are current
+- a reason to skip direct file reads, tests, or public-check gates
+
 ## Operational Rules
 
 - Re-run `make cbm-index-public` after repo edits before trusting graph output;
