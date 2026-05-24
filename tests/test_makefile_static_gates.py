@@ -1384,6 +1384,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 '--extract-parent "$(SOURCE_PACKAGE_CLEAN_EXTRACT_EXTRACT_PARENT)"',
                 '--source-python "$(SOURCE_PACKAGE_SMOKE_PYTHON)"',
                 '--test-summary-out "$(SOURCE_PACKAGE_CLEAN_EXTRACT_TEST_SUMMARY_OUT)"',
+                '--pytest-flags="$(SOURCE_PACKAGE_CLEAN_EXTRACT_PYTEST_FLAGS)"',
                 '--zip-smoke-report "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)"',
                 '--out "$(SOURCE_PACKAGE_CLEAN_EXTRACT_OUT)"',
             ),
