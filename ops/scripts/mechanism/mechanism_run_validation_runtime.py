@@ -558,13 +558,12 @@ def event_sequence_state(run_ledger_report: dict, *, phase: str) -> EventSequenc
         if phase == "mechanism_finalized"
         else MECHANISM_EVALUATED_EVENT_SEQUENCE
     )
-    observed_event_types: list[str] = []
-    for event in run_ledger_report.get("events", []):
-        if not isinstance(event, dict):
-            continue
-        event_type = event.get("type")
-        if isinstance(event_type, str):
-            observed_event_types.append(event_type)
+    observed_event_types = [
+        event_type
+        for event in run_ledger_report.get("events", [])
+        if isinstance(event, dict)
+        if isinstance(event_type := event.get("type"), str)
+    ]
     missing_event_types = [
         event_type for event_type in expected_sequence if event_type not in observed_event_types
     ]

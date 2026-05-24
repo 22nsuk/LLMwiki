@@ -1087,6 +1087,71 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertEqual(resumed["iterations"], 1)
             self.assertEqual(resumed_session["goal_contract"]["contract_sha256"], contract_digest)
 
+    def test_resume_budget_override_bounds_maintenance_completion(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            seed_subagent_profiles(vault, ["worker", "validator"])
+            proposal = mutation_proposal_report("ops/scripts/example.py")["proposals"][0]
+
+            def fake_refresh_reports(*_: object, **__: object) -> tuple[dict, dict]:
+                return {}, {"proposals": [proposal]}
+
+            with (
+                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    side_effect=_fake_successful_mechanism_experiment,
+                ),
+            ):
+                first = run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    session_id="auto-session-resume-maintenance",
+                    max_proposals=1,
+                    max_minutes=30,
+                    max_consecutive_failures=1,
+                    executor_name="codex_exec",
+                    allow_learning_uncertain=True,
+                )
+
+            self.assertEqual(first["stop_reason"], "proposal_budget_exhausted")
+            monotonic = {"now": 0.0}
+
+            def fake_monotonic() -> float:
+                return monotonic["now"]
+
+            def fake_sleep(seconds: float) -> None:
+                monotonic["now"] += seconds
+
+            with (
+                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch("ops.scripts.auto_improve_runtime.time.monotonic", side_effect=fake_monotonic),
+                mock.patch("ops.scripts.auto_improve_runtime.time.sleep", side_effect=fake_sleep),
+            ):
+                resumed = run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    resume_session="auto-session-resume-maintenance",
+                    max_proposals=1,
+                    max_minutes=1,
+                    max_consecutive_failures=1,
+                    executor_name="codex_exec",
+                    allow_learning_uncertain=True,
+                    maintain_until_budget=True,
+                    maintenance_interval_seconds=300,
+                )
+
+            resumed_session = json.loads((vault / resumed["session_report"]).read_text(encoding="utf-8"))
+            maintenance = resumed_session["maintenance"]
+            self.assertEqual(resumed["stop_reason"], "time_budget_exhausted")
+            self.assertEqual(resumed_session["budget"]["max_minutes"], 1)
+            self.assertEqual(maintenance["status"], "complete")
+            self.assertEqual(maintenance["target_elapsed_seconds"], 60)
+            self.assertEqual(maintenance["cycle_count"], 2)
+            self.assertEqual(maintenance["meaningful_cycle_count"], 2)
+
     def test_resume_restores_failure_streak_before_selecting_next_proposal(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

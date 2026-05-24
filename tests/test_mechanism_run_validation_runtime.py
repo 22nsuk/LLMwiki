@@ -208,6 +208,33 @@ class MechanismRunValidationRuntimeTests(unittest.TestCase):
         self.assertFalse(order_check["pass"])
         self.assertIn("baseline_captured", order_check["detail"])
 
+    def test_event_sequence_checks_ignore_malformed_ledger_events(self) -> None:
+        ledger = evaluated_run_ledger("ops/scripts/example.py")
+        ledger["events"][2:2] = [
+            "not an event",
+            {"summary": "missing type"},
+            {"type": 42, "summary": "non-string type"},
+        ]
+        bundle = normalize_mechanism_artifact_bundle(
+            {
+                "baseline_eval_report": {},
+                "candidate_eval_report": {},
+                "baseline_lint_report": {},
+                "candidate_lint_report": {},
+                "baseline_mechanism_report": {},
+                "candidate_mechanism_report": {},
+                "changed_files_manifest_report": {},
+                "run_ledger_report": ledger,
+            }
+        )
+
+        checks = build_event_sequence_phase_checks(bundle, phase="mechanism_evaluated")
+
+        by_check = {check["check"]: check for check in checks}
+        self.assertTrue(by_check["mechanism_run_required_events_present"]["pass"])
+        self.assertTrue(by_check["mechanism_run_event_order"]["pass"])
+        self.assertTrue(by_check["mechanism_run_terminal_event"]["pass"])
+
     def test_event_sequence_checks_allow_history_update_after_finalized(self) -> None:
         ledger = evaluated_run_ledger("ops/scripts/example.py")
         ledger["events"].append(

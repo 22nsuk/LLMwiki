@@ -279,6 +279,37 @@ def _resolve_maintenance_interval(value: int | None) -> int:
     return resolved
 
 
+def _apply_resume_budget_overrides(
+    session: dict[str, Any],
+    auto_policy: Mapping[str, Any],
+    *,
+    max_proposals: int | None,
+    max_minutes: int | None,
+    max_consecutive_failures: int | None,
+) -> None:
+    budget = _mapping_value(session, "budget")
+    defaults = _mapping_value(auto_policy, "defaults")
+    session["budget"] = {
+        "max_proposals": _resolve_budget_value(
+            "max_proposals",
+            max_proposals,
+            _int_value(budget.get("max_proposals"))
+            or _int_value(defaults.get("max_proposals")),
+        ),
+        "max_minutes": _resolve_budget_value(
+            "max_minutes",
+            max_minutes,
+            _int_value(budget.get("max_minutes")) or _int_value(defaults.get("max_minutes")),
+        ),
+        "max_consecutive_failures": _resolve_budget_value(
+            "max_consecutive_failures",
+            max_consecutive_failures,
+            _int_value(budget.get("max_consecutive_failures"))
+            or _int_value(defaults.get("max_consecutive_failures")),
+        ),
+    }
+
+
 def _canonical_json_digest(payload: Mapping[str, Any]) -> str:
     data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
@@ -755,6 +786,13 @@ def _start_auto_improve_session(request: AutoImproveSessionRequest) -> AutoImpro
     goal_contract_path: str | None
     if request.resume_session:
         session = _load_session_report(request.vault, request.resume_session)
+        _apply_resume_budget_overrides(
+            session,
+            auto_policy,
+            max_proposals=request.max_proposals,
+            max_minutes=request.max_minutes,
+            max_consecutive_failures=request.max_consecutive_failures,
+        )
         _ensure_session_loop_state(session, context=base_context)
         current_session_id = request.resume_session
         _validate_resume_executor(
