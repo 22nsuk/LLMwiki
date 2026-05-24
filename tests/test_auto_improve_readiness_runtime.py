@@ -2267,6 +2267,125 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(report["diagnostics"]["same_eval_telemetry_summary"]["status"], "pass")
         self.assertEqual(report["learning_readiness"]["signals"], [])
 
+    def test_build_readiness_report_ignores_blocked_same_eval_proposals_for_typed_signal(
+        self,
+    ) -> None:
+        self._write_ready_queue_reports()
+        mutation = json.loads(
+            (self.vault / "ops/reports/mutation-proposals.json").read_text(encoding="utf-8")
+        )
+        mutation["summary"]["proposals_emitted"] = 2
+        mutation["summary"]["blocked_proposals"] = 1
+        mutation["diagnostics"] = {
+            "queue_selection": {
+                "available_proposal_count": 2,
+                "selected_proposal_count": 2,
+                "runnable_available_count": 1,
+                "blocked_available_count": 1,
+                "selected_runnable_count": 1,
+                "selected_blocked_count": 1,
+                "blocked_reason_counts": [{"reason": "recent_log_overlap", "count": 1}],
+            }
+        }
+        mutation["proposals"] = [
+            {
+                "proposal_id": "proposal-ready",
+                "blocked_by": [],
+                "priority": 55,
+            },
+            {
+                "proposal_id": "blocked-same-eval",
+                "failure_mode": "repeated_same_eval_or_discard",
+                "run_ids": ["run-same-eval-missing-typed-fields"],
+                "blocked_by": ["recent_log_overlap"],
+                "priority": 54,
+            },
+        ]
+        self._write_report("ops/reports/mutation-proposals.json", mutation)
+        run_dir = self.vault / "runs" / "run-same-eval-missing-typed-fields"
+        run_dir.mkdir(parents=True)
+        (run_dir / "run-telemetry.json").write_text(
+            json.dumps(
+                {
+                    "$schema": "ops/schemas/run-telemetry.schema.json",
+                    "run_id": "run-same-eval-missing-typed-fields",
+                    "generated_at": "2026-04-22T03:00:00Z",
+                    "proposal_snapshot": "",
+                    "scope_freeze": "",
+                    "routing_reports": [],
+                    "executor_reports": [],
+                    "decision": "PROMOTE",
+                    "finalized": True,
+                    "finalize_result": {},
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        self.assertTrue(report["learning_readiness"]["likely_to_learn"])
+        self.assertEqual(
+            report["diagnostics"]["same_eval_telemetry_summary"]["status"],
+            "not_applicable",
+        )
+        self.assertEqual(report["diagnostics"]["same_eval_telemetry_summary"]["run_count"], 0)
+        self.assertEqual(report["learning_readiness"]["signals"], [])
+
+    def test_build_readiness_report_uses_clean_current_loop_health_for_quality_shadow(
+        self,
+    ) -> None:
+        self._write_ready_queue_reports()
+        self._write_report(
+            "ops/reports/outcome-metrics.json",
+            {
+                "summary": {
+                    "attempts_considered": 12,
+                    "recent_window": 20,
+                    "recent_attempt_count": 12,
+                    "session_reports_considered": 2,
+                },
+                "metrics": {
+                    "rework_count": 5,
+                    "moving_averages": {"hold": 0.5, "discard": 0.0},
+                    "defect_escape_proxy": {"count": 3},
+                },
+            },
+        )
+        self._write_report(
+            "ops/reports/routing-provenance-aggregates/current-clean-goal-run.json",
+            {
+                "session_id": "current-clean-goal-run",
+                "generated_at": "2026-04-22T03:30:00Z",
+                "audit_rollup": {
+                    "loop_health": {
+                        "attempt_count": 1,
+                        "rework_count": 0,
+                        "rollback_signal_count": 0,
+                        "defect_escape_count": 0,
+                        "finalized_run_count": 1,
+                        "executor_failure_count": 0,
+                        "routing_report_parse_gap_count": 0,
+                        "executor_report_parse_gap_count": 0,
+                        "coverage_ratios": {"telemetry": 1.0},
+                        "health_flags": [],
+                    }
+                },
+            },
+            enveloped=False,
+        )
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        self.assertTrue(report["learning_readiness"]["likely_to_learn"])
+        self.assertEqual(report["learning_readiness"]["signals"], [])
+        self.assertEqual(
+            report["diagnostics"]["loop_health_summary"]["source_report"],
+            "ops/reports/routing-provenance-aggregates/current-clean-goal-run.json",
+        )
+
     def test_build_readiness_report_recommends_seed_run_when_queue_is_empty(self) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",

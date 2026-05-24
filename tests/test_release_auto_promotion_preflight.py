@@ -153,6 +153,22 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
             ).exists()
         )
 
+    def test_preflight_accepts_metrics_close_candidate_revalidation(self) -> None:
+        self._write_common_inputs()
+        learning = json.loads(
+            (
+                self.vault / "ops/reports/learning-readiness-signoff-revalidation.json"
+            ).read_text(encoding="utf-8")
+        )
+        learning["revalidation"]["status"] = "metrics_close_candidate"
+        self._write_json("ops/reports/learning-readiness-signoff-revalidation.json", learning)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, phase="preflight", context=fixed_context())
+
+        self.assertEqual(manifest["status"], "pass")
+        self.assertTrue(manifest["checks"]["learning_revalidation_current"])
+
     def test_preflight_treats_release_gate_blockers_as_diagnostics(self) -> None:
         self._write_common_inputs(
             promotion_blockers=[

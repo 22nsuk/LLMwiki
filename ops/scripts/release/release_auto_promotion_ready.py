@@ -35,7 +35,13 @@ DEFAULT_OPERATOR_SUMMARY = "build/release/operator-release-summary.json"
 DEFAULT_AUTO_IMPROVE_READINESS = "ops/reports/auto-improve-readiness.json"
 DEFAULT_AUTO_PROMOTION_PREFLIGHT = "build/release/release-auto-promotion-preflight.json"
 DEFAULT_AUTO_PROMOTION_PRESEAL = "build/release/release-auto-promotion-preseal.json"
-ALLOWED_LEARNING_REVALIDATION_STATUSES = {"current", "fresh", "not_required", "pass"}
+ALLOWED_LEARNING_REVALIDATION_STATUSES = {
+    "current",
+    "fresh",
+    "metrics_close_candidate",
+    "not_required",
+    "pass",
+}
 STRICT_ZERO_ACCEPTED_RISK_FIELDS = (
     "accepted_risk_count",
     "release_accepted_risk_count",
@@ -608,7 +614,7 @@ def build_manifest(
         source="operator_release_summary",
         field_path="$.learning_readiness.revalidation_status",
         observed=learning_revalidation_status,
-        expected="one of current, fresh, not_required, pass",
+        expected="one of current, fresh, metrics_close_candidate, not_required, pass",
         summary="Learning revalidation is not current enough for unattended promotion.",
         recommended_next_step="Run learning-readiness-signoff-revalidation and refresh operator summary.",
     )

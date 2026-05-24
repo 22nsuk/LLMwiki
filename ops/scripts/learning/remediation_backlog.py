@@ -49,6 +49,11 @@ GOAL_WORKTREE_GUARD_FAILURE_ITEM_IDS = (
     GOAL_WORKTREE_GUARD_FAILURE_ITEM_ID,
     GOAL_STATUS_WORKTREE_GUARD_FAILURE_ITEM_ID,
 )
+GOAL_CERTIFICATE_RELEASE_AUTHORITY_BLOCKERS = {
+    "can_promote_result is not clean for runtime certificate",
+    "sealed authority clean pass is not verified for runtime certificate",
+    "promotion guard still has blockers",
+}
 LEARNING_REVIEW_REQUIRED_ITEM_ID = f"active_blocker_{SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID}"
 GOAL_STATUS_LEARNING_REVIEW_REQUIRED_ITEM_ID = (
     f"active_blocker_goal_status_{SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID}"
@@ -152,6 +157,32 @@ def _valid_verified_goal_runtime_certificate(vault: Path) -> bool:
     return True
 
 
+def _goal_runtime_certificate_waiting_for_release_authority(vault: Path) -> bool:
+    report = load_optional_json_object(vault / GOAL_RUNTIME_CERTIFICATE_PATH)
+    certificate = report.get("certificate")
+    run = report.get("run")
+    session_evidence = report.get("session_evidence")
+    run_artifacts = report.get("run_artifacts")
+    if (
+        report.get("artifact_kind") != "goal_runtime_certificate"
+        or report.get("status") != "attention"
+        or not isinstance(certificate, dict)
+        or not isinstance(run, dict)
+        or not isinstance(session_evidence, dict)
+        or not isinstance(run_artifacts, dict)
+    ):
+        return False
+    blockers = set(_string_list(report.get("blockers")))
+    return (
+        bool(blockers)
+        and blockers.issubset(GOAL_CERTIFICATE_RELEASE_AUTHORITY_BLOCKERS)
+        and str(certificate.get("verification_status", "")).strip() == "blocked"
+        and str(run.get("run_status", "")).strip() == "completed"
+        and str(session_evidence.get("status", "")).strip() == "clean"
+        and str(run_artifacts.get("status", "")).strip() == "clean"
+    )
+
+
 def _goal_worktree_guard_currently_clean(vault: Path) -> bool:
     report = load_optional_json_object(vault / GOAL_WORKTREE_GUARD_PATH)
     decisions = report.get("decisions")
@@ -185,6 +216,16 @@ def _evidence_status_overrides(vault: Path, *, generated_at: str) -> dict[str, d
         overrides[GOAL_CERTIFICATE_INCOMPLETE_ITEM_ID] = {
             "status": "closed",
             "reason": "Verified goal-runtime-certificate evidence is present.",
+            "evidence_paths": [GOAL_RUNTIME_CERTIFICATE_PATH],
+        }
+    elif _goal_runtime_certificate_waiting_for_release_authority(vault):
+        overrides[GOAL_CERTIFICATE_INCOMPLETE_ITEM_ID] = {
+            "status": "deferred",
+            "reason": (
+                "Deferred as a post-seal runtime-certificate gate: the goal run, "
+                "session evidence, and run artifacts are clean, and the remaining "
+                "certificate blockers depend on release authority/sealed evidence."
+            ),
             "evidence_paths": [GOAL_RUNTIME_CERTIFICATE_PATH],
         }
     if _goal_worktree_guard_currently_clean(vault):

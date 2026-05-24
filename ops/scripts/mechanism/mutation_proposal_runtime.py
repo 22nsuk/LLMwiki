@@ -1501,22 +1501,44 @@ def _recent_unresolved_outcome_attempt_count(
     if not isinstance(recent_attempts, list):
         return 0
 
+    repaired_source_run_ids: set[str] = set()
     unresolved_count = 0
     for attempt in recent_attempts:
         if not isinstance(attempt, dict):
-            continue
-        if str(attempt.get("proposal_id", "")).strip() != proposal_id:
             continue
 
         outcome = str(attempt.get("outcome", "")).strip().lower()
         decision = str(attempt.get("decision", "")).strip().upper()
         if outcome == "promoted" or decision == "PROMOTE":
+            repaired_source_run_id = _next_run_decision_source_run_id(
+                str(attempt.get("source_candidate_id", "")).strip()
+            )
+            if repaired_source_run_id:
+                repaired_source_run_ids.add(repaired_source_run_id)
+
+        if str(attempt.get("proposal_id", "")).strip() != proposal_id:
+            continue
+
+        if outcome == "promoted" or decision == "PROMOTE":
             break
+        if str(attempt.get("run_id", "")).strip() in repaired_source_run_ids:
+            continue
         if _promotion_report_history_resolved(vault, attempt):
             continue
         if outcome or decision:
             unresolved_count += 1
     return unresolved_count
+
+
+def _next_run_decision_source_run_id(source_candidate_id: str) -> str:
+    prefix = "next-run-decision:"
+    if not source_candidate_id.startswith(prefix):
+        return ""
+    remainder = source_candidate_id[len(prefix):]
+    source_run_id, separator, _decision_suffix = remainder.rpartition(":")
+    if not separator:
+        return ""
+    return source_run_id.strip()
 
 
 def _recent_outcome_rework_blockers(

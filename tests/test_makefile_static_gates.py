@@ -1598,6 +1598,15 @@ class MakefileStaticGateTests(unittest.TestCase):
             auto_promotion_preflight_block,
         )
         self.assertIn("$(MAKE) auto-improve-readiness-report-body", auto_promotion_preflight_block)
+        self.assertEqual(
+            _recipe_lines(text, "release-auto-promotion-preflight")[:4],
+            [
+                "$(MAKE) auto-improve-readiness-report-body",
+                "$(MAKE) learning-readiness-signoff-revalidation",
+                "$(MAKE) remediation-backlog",
+                "$(MAKE) auto-improve-readiness-report-body",
+            ],
+        )
         self.assertIn('--remediation-backlog "$(REMEDIATION_BACKLOG_OUT)"', auto_promotion_preflight_block)
         self.assertIn(
             '--learning-revalidation "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT)"',
@@ -1618,6 +1627,15 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn(
             "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
             auto_promotion_preseal_block,
+        )
+        preseal_recipe = _recipe_lines(text, "release-auto-promotion-preseal")
+        self.assertLess(
+            preseal_recipe.index("$(MAKE) release-clean-blocker-ledger"),
+            preseal_recipe.index("$(MAKE) remediation-backlog"),
+        )
+        self.assertLess(
+            preseal_recipe.index("$(MAKE) auto-improve-readiness-report-body"),
+            preseal_recipe.index("$(MAKE) remediation-backlog"),
         )
         self.assertIn('--remediation-backlog "$(REMEDIATION_BACKLOG_OUT)"', auto_promotion_preseal_block)
         self.assertIn(
@@ -1962,6 +1980,10 @@ class MakefileStaticGateTests(unittest.TestCase):
             "ops/schemas/learning-claim-evidence-bundle.schema.json", bundle_block
         )
         cohort_block = _target_block(text, "learning-confirmed-evidence-cohort")
+        self.assertEqual(
+            cohort_block.splitlines()[0],
+            "learning-confirmed-evidence-cohort: learning-claim-evidence-bundle",
+        )
         self.assertIn("ops.scripts.learning_confirmed_evidence_cohort", cohort_block)
         self.assertIn(
             "ops/schemas/learning-confirmed-evidence-cohort.schema.json", cohort_block
@@ -1980,6 +2002,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn("ops.scripts.canonical_artifact_promote", public_check_block)
         unlock_block = _target_block(text, "learning-claim-unlock-review")
+        self.assertEqual(
+            unlock_block.splitlines()[0],
+            "learning-claim-unlock-review: learning-confirmed-evidence-cohort",
+        )
         self.assertIn(
             '--evidence-bundle "$(LEARNING_CLAIM_EVIDENCE_BUNDLE_OUT)"', unlock_block
         )
@@ -2010,6 +2036,10 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
         )
         block = _target_block(text, "learning-delta-scoreboard")
+        self.assertEqual(
+            block.splitlines()[0],
+            "learning-delta-scoreboard: learning-claim-unlock-review",
+        )
         self.assertIn("ops.scripts.learning_delta_scoreboard", block)
         self.assertIn("ops/schemas/learning-delta-scoreboard.schema.json", block)
         activation_block = _target_block(text, "learning-claim-activation-report")

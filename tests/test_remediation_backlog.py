@@ -414,6 +414,64 @@ class RemediationBacklogTests(unittest.TestCase):
             self.assertEqual(report["status"], "pass")
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_clean_goal_run_defers_certificate_item_until_release_authority_is_sealed(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            write_json(vault, "ops/reports/self-improvement-negative-lessons.json", {"lessons": []})
+            write_json(
+                vault,
+                "ops/reports/session-synopsis.json",
+                {
+                    "recent_blockers": [
+                        {
+                            "id": "goal_status_self_improvement_loop_certificate_incomplete",
+                            "source": "goal_run_status.blockers",
+                            "status": "open",
+                            "reason": "self-improvement loop certificate incomplete",
+                            "repair_target": "Refresh goal runtime certificate.",
+                        }
+                    ]
+                },
+            )
+            write_json(vault, "ops/reports/learning_claim_activation_report.json", {"status": "pass"})
+            write_json(
+                vault,
+                "ops/reports/goal-runtime-certificate.json",
+                {
+                    "artifact_kind": "goal_runtime_certificate",
+                    "producer": "ops.scripts.goal_runtime_certificate_report",
+                    "status": "attention",
+                    "goal": {"contract_path": "runs/goal-live/state/codex-goal-contract.json"},
+                    "run": {
+                        "status_report_path": "runs/goal-live/state/goal-run-status.json",
+                        "run_id": "goal-live",
+                        "run_status": "completed",
+                    },
+                    "certificate": {"verification_status": "blocked", "eligible": False},
+                    "contract_update": {"runtime_certificate_verified_after": False},
+                    "session_evidence": {"status": "clean"},
+                    "run_artifacts": {"status": "clean"},
+                    "blockers": [
+                        "can_promote_result is not clean for runtime certificate",
+                        "sealed authority clean pass is not verified for runtime certificate",
+                        "promotion guard still has blockers",
+                    ],
+                },
+            )
+
+            report = build_report(vault, context=fixed_context())
+            item = report["items"][0]
+
+            self.assertEqual(item["status"], "deferred")
+            self.assertIn("post-seal runtime-certificate gate", item["next_action"])
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["summary"]["open_promotion_count"], 0)
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_build_report_can_read_run_local_session_and_negative_lessons(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

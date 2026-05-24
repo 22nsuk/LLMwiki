@@ -616,6 +616,30 @@ def _outcome_quality_shadow_signals(
     return signals
 
 
+def _loop_health_confirms_current_outcome_quality(loop_health_summary: dict[str, Any]) -> bool:
+    if str(loop_health_summary.get("status", "")).strip() != "available":
+        return False
+    if _int_value(loop_health_summary.get("attempt_count")) <= 0:
+        return False
+    if _int_value(loop_health_summary.get("finalized_run_count")) <= 0:
+        return False
+    if _float_value(loop_health_summary.get("telemetry_coverage_ratio")) < 1.0:
+        return False
+    if _string_list(loop_health_summary.get("health_flags")):
+        return False
+    for field in (
+        "rework_count",
+        "rollback_signal_count",
+        "defect_escape_count",
+        "executor_failure_count",
+        "routing_report_parse_gap_count",
+        "executor_report_parse_gap_count",
+    ):
+        if _int_value(loop_health_summary.get(field)) > 0:
+            return False
+    return True
+
+
 def _learnability_shadow_signals(
     *,
     reports_present: bool,
@@ -626,6 +650,7 @@ def _learnability_shadow_signals(
     same_eval_telemetry_summary: dict[str, Any],
     thresholds: dict[str, Any],
 ) -> list[dict[str, Any]]:
+    current_loop_quality_clean = _loop_health_confirms_current_outcome_quality(loop_health_summary)
     return [
         *_outcome_history_shadow_signals(
             reports_present=reports_present,
@@ -635,7 +660,11 @@ def _learnability_shadow_signals(
         *_mechanism_session_shadow_signals(mechanism_review_report),
         *_loop_health_shadow_signals(loop_health_summary),
         *_same_eval_shadow_signals(same_eval_telemetry_summary),
-        *_outcome_quality_shadow_signals(outcome_metrics, thresholds),
+        *(
+            []
+            if current_loop_quality_clean
+            else _outcome_quality_shadow_signals(outcome_metrics, thresholds)
+        ),
     ]
 
 

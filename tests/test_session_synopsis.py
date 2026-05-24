@@ -466,6 +466,52 @@ class SessionSynopsisTests(unittest.TestCase):
             self.assertNotIn("context_efficiency", gap_ids)
             self.assertIn("promotion_blocked_by_artifact_contract_failure", blocker_ids)
 
+    def test_blocked_none_claim_does_not_surface_claim_only_blockers(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_synopsis_inputs(vault)
+            write_json(
+                vault,
+                "ops/reports/learning_claim_activation_report.json",
+                {
+                    "status": "pass",
+                    "summary": {
+                        "activation_status": "blocked",
+                        "claim_level": "none",
+                        "claim_wording_allowed": False,
+                        "gate_effect": "none",
+                    },
+                    "blocked_predicates": [
+                        {
+                            "id": "same_eval_run_count_minimum",
+                            "status": "fail",
+                            "repair_target": "Keep claim_level=none until typed evidence is complete.",
+                        }
+                    ],
+                    "anti_slop_preview_ledger": {
+                        "axes": [
+                            {
+                                "axis": "context_efficiency",
+                                "status": "warn",
+                                "current": "not bound",
+                                "required": "active learning claim",
+                                "repair_target": "Bind before claiming learning.",
+                            }
+                        ]
+                    },
+                },
+            )
+
+            report = build_report(vault, context=fixed_context())
+            blocker_ids = {blocker["id"] for blocker in report["recent_blockers"]}
+            gap_ids = {gap["id"] for gap in report["evidence_gaps"]}
+
+            self.assertNotIn("same_eval_run_count_minimum", blocker_ids)
+            self.assertNotIn("same_eval_run_count_minimum", gap_ids)
+            self.assertNotIn("context_efficiency", gap_ids)
+
     def test_build_report_can_read_run_local_readiness_and_goal_status(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

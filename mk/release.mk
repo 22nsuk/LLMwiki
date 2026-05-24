@@ -242,8 +242,9 @@ release-sealed-run-ready-check:
 	$(PYTHON) -m ops.scripts.release_sealed_run_manifest --vault "$(VAULT)" --out "$(RELEASE_SEALED_RUN_MANIFEST_OUT)" --post-seal-attestation "$(RELEASE_SEALED_POST_SEAL_ATTESTATION_OUT)" --check
 
 release-auto-promotion-preflight:
-	$(MAKE) remediation-backlog
+	$(MAKE) auto-improve-readiness-report-body
 	$(MAKE) learning-readiness-signoff-revalidation
+	$(MAKE) remediation-backlog
 	$(MAKE) auto-improve-readiness-report-body
 	$(MAKE) tmp-json-clean
 	$(PYTHON) -m ops.scripts.release_auto_promotion_preflight --vault "$(VAULT)" --phase preflight --out "$(RELEASE_AUTO_PROMOTION_PREFLIGHT_OUT)" --auto-improve-readiness "$(AUTO_IMPROVE_READINESS_OUT)" --remediation-backlog "$(REMEDIATION_BACKLOG_OUT)" --learning-revalidation "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT)" --closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)" --evidence-cohort "$(RELEASE_EVIDENCE_COHORT_OUT)"
@@ -259,6 +260,7 @@ release-auto-promotion-preseal:
 	$(MAKE) release-evidence-dashboard-report
 	$(MAKE) release-lane-summary
 	$(MAKE) release-clean-blocker-ledger
+	$(MAKE) auto-improve-readiness-report-body
 	$(MAKE) remediation-backlog
 	$(MAKE) auto-improve-readiness-report-body
 	$(MAKE) tmp-json-clean
@@ -455,15 +457,15 @@ learning-claim-evidence-bundle: learning-confirmed-legacy-reconstruction
 	$(PYTHON) -m ops.scripts.learning_claim_evidence_bundle --vault "$(VAULT)" --out "$(LEARNING_CLAIM_EVIDENCE_BUNDLE_CANDIDATE_OUT)"
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(LEARNING_CLAIM_EVIDENCE_BUNDLE_CANDIDATE_OUT)" --out "$(LEARNING_CLAIM_EVIDENCE_BUNDLE_OUT)" --schema ops/schemas/learning-claim-evidence-bundle.schema.json --expected-artifact-kind learning_claim_evidence_bundle --expected-producer ops.scripts.learning_claim_evidence_bundle
 
-learning-confirmed-evidence-cohort:
+learning-confirmed-evidence-cohort: learning-claim-evidence-bundle
 	$(PYTHON) -m ops.scripts.learning_confirmed_evidence_cohort --vault "$(VAULT)" --out "$(LEARNING_CONFIRMED_EVIDENCE_COHORT_CANDIDATE_OUT)" --evidence-bundle "$(LEARNING_CLAIM_EVIDENCE_BUNDLE_OUT)" --confirmed-policy "$(LEARNING_CLAIM_CONFIRMED_IMPROVEMENT_POLICY)"
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(LEARNING_CONFIRMED_EVIDENCE_COHORT_CANDIDATE_OUT)" --out "$(LEARNING_CONFIRMED_EVIDENCE_COHORT_OUT)" --schema ops/schemas/learning-confirmed-evidence-cohort.schema.json --expected-artifact-kind learning_confirmed_evidence_cohort --expected-producer ops.scripts.learning_confirmed_evidence_cohort
 
-learning-claim-unlock-review:
+learning-claim-unlock-review: learning-confirmed-evidence-cohort
 	$(PYTHON) -m ops.scripts.learning_claim_unlock_review --vault "$(VAULT)" --out "$(LEARNING_CLAIM_UNLOCK_REVIEW_CANDIDATE_OUT)" $(if $(LEARNING_CLAIM_AUTO_UNLOCK_POLICY),--auto-policy "$(LEARNING_CLAIM_AUTO_UNLOCK_POLICY)",) --evidence-bundle "$(LEARNING_CLAIM_EVIDENCE_BUNDLE_OUT)" $(if $(LEARNING_CLAIM_CONFIRMED_IMPROVEMENT_POLICY),--confirmed-policy "$(LEARNING_CLAIM_CONFIRMED_IMPROVEMENT_POLICY)",) $(if $(LEARNING_CLAIM_UNLOCK_REVIEW_APPROVED_BY),--approved-by "$(LEARNING_CLAIM_UNLOCK_REVIEW_APPROVED_BY)",) $(if $(LEARNING_CLAIM_UNLOCK_REVIEW_REVIEWED_AT),--reviewed-at "$(LEARNING_CLAIM_UNLOCK_REVIEW_REVIEWED_AT)",)
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(LEARNING_CLAIM_UNLOCK_REVIEW_CANDIDATE_OUT)" --out "$(LEARNING_CLAIM_UNLOCK_REVIEW_OUT)" --schema ops/schemas/learning-claim-unlock-review.schema.json --expected-artifact-kind learning_claim_unlock_review --expected-producer ops.scripts.learning_claim_unlock_review
 
-learning-delta-scoreboard:
+learning-delta-scoreboard: learning-claim-unlock-review
 	$(PYTHON) -m ops.scripts.learning_delta_scoreboard --vault "$(VAULT)" --out "$(LEARNING_DELTA_SCOREBOARD_CANDIDATE_OUT)"
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(LEARNING_DELTA_SCOREBOARD_CANDIDATE_OUT)" --out "$(LEARNING_DELTA_SCOREBOARD_OUT)" --schema ops/schemas/learning-delta-scoreboard.schema.json --expected-artifact-kind learning_delta_scoreboard --expected-producer ops.scripts.learning_delta_scoreboard
 

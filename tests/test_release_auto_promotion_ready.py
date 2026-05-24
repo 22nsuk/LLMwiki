@@ -183,6 +183,22 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
             ).exists()
         )
 
+    def test_manifest_accepts_metrics_close_candidate_revalidation(self) -> None:
+        self._write_inputs()
+        self._write_json(
+            "build/release/operator-release-summary.json",
+            self._operator_summary(
+                learning_readiness={"revalidation_status": "metrics_close_candidate"}
+            ),
+        )
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, context=fixed_context())
+
+        self.assertEqual(manifest["status"], "pass")
+        self.assertTrue(manifest["checks"]["learning_revalidation_current"])
+        self.assertTrue(manifest["unattended_promotion_allowed"])
+
     def test_operator_attention_blocks_auto_promotion(self) -> None:
         self._write_inputs()
         self._write_json(

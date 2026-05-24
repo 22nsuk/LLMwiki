@@ -383,6 +383,7 @@ def _same_eval_proposal_run_ids(mutation_proposal_report: dict[str, Any]) -> lis
     for proposal in proposals:
         if (
             not isinstance(proposal, dict)
+            or _string_list(proposal.get("blocked_by"))
             or str(proposal.get("failure_mode", "")).strip() not in SAME_EVAL_PROPOSAL_FAILURE_MODES
         ):
             continue

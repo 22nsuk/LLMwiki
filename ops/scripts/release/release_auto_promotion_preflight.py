@@ -28,7 +28,13 @@ DEFAULT_EVIDENCE_COHORT = "ops/reports/release-evidence-cohort.json"
 SCHEMA_PATH = "ops/schemas/release-auto-promotion-preflight.schema.json"
 PRODUCER = "ops.scripts.release_auto_promotion_preflight"
 SOURCE_COMMAND = "python -m ops.scripts.release_auto_promotion_preflight --vault ."
-ALLOWED_LEARNING_REVALIDATION_STATUSES = {"current", "fresh", "not_required", "pass"}
+ALLOWED_LEARNING_REVALIDATION_STATUSES = {
+    "current",
+    "fresh",
+    "metrics_close_candidate",
+    "not_required",
+    "pass",
+}
 PHASES = {"preflight", "preseal"}
 
 
@@ -487,7 +493,7 @@ def build_manifest(
         source="learning_revalidation",
         field_path="$.revalidation.status",
         observed=learning["revalidation_status"],
-        expected="one of current, fresh, not_required, pass",
+        expected="one of current, fresh, metrics_close_candidate, not_required, pass",
         summary="Learning revalidation is not current enough for unattended promotion.",
         recommended_next_step="Renew or resolve learning readiness before spending run/seal cycles.",
     )
