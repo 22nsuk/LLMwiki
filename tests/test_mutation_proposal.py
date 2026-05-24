@@ -64,6 +64,32 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload_to_write, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def write_json_exact(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def auto_improve_session_envelope(generated_at: str) -> dict:
+    return {
+        "$schema": "ops/schemas/auto-improve-session.schema.json",
+        "generated_at": generated_at,
+        "artifact_kind": "auto_improve_session",
+        "producer": "tests.test_mutation_proposal",
+        "source_command": "pytest",
+        "source_revision": "unknown",
+        "source_tree_fingerprint": "fixture",
+        "input_fingerprints": {"fixture": "fixture"},
+        "schema_version": 1,
+        "artifact_status": "current",
+        "retention_policy": "canonical_report",
+        "encoding": "utf-8",
+        "currentness": {
+            "status": "current",
+            "checked_at": generated_at,
+        },
+    }
+
+
 def shadow_priority_diagnostics(*, attempts_considered: int = 0) -> dict:
     return {
         "status": "disabled",
@@ -2448,6 +2474,156 @@ class MutationProposalTest(unittest.TestCase):
                     "decision_counts": {"carry_forward": 1},
                     "action_counts": {"repair_failure": 1},
                     "selected_target_proposal_ids": [],
+                },
+            )
+
+    def test_stale_session_decision_does_not_emit_next_run_repair(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            write_json_exact(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    **auto_improve_session_envelope("2026-04-14T01:00:00Z"),
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:review",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": "auto-session-a-run-01-example-runtime",
+                            "proposal_id": "original-proposal",
+                            "source_candidate_id": "original-candidate",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__example-runtime__review-blocked"
+                            ),
+                            "proposal_family": "contract_regression_signals",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "review_blocked",
+                            "blocking_role": "reviewer",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "stale decision should not become next-run repair work",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [
+                                "ops/scripts/mechanism/example_runtime.py"
+                            ],
+                            "supporting_targets": ["ops/script-output-surfaces.json"],
+                            "must_change_tests": ["tests/test_example_runtime.py"],
+                            "evidence_paths": [
+                                "runs/auto-session-a-run-01-example-runtime/run-telemetry.json"
+                            ],
+                        }
+                    ],
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+
+            self.assertEqual(proposal_report["summary"]["next_run_repair_proposals"], 0)
+            self.assertEqual(
+                proposal_report["diagnostics"]["next_run_decision_queue"]["decisions_considered"],
+                0,
+            )
+            self.assertFalse(
+                any(
+                    proposal["failure_mode"] == "next_run_failure_repair"
+                    for proposal in proposal_report["proposals"]
+                )
+            )
+
+    def test_stale_consumed_iteration_does_not_close_fresh_next_run_decision(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            decision_id = "next-run-decision:run-a:review"
+            write_json_exact(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    **auto_improve_session_envelope("2026-04-14T02:05:00Z"),
+                    "next_run_decisions": [
+                        {
+                            "decision_id": decision_id,
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": "auto-session-a-run-01-example-runtime",
+                            "proposal_id": "original-proposal",
+                            "source_candidate_id": "original-candidate",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__example-runtime__review-blocked"
+                            ),
+                            "proposal_family": "contract_regression_signals",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "review_blocked",
+                            "blocking_role": "reviewer",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "fresh decision should become next-run repair work",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [
+                                "ops/scripts/mechanism/example_runtime.py"
+                            ],
+                            "supporting_targets": ["ops/script-output-surfaces.json"],
+                            "must_change_tests": ["tests/test_example_runtime.py"],
+                            "evidence_paths": [
+                                "runs/auto-session-a-run-01-example-runtime/run-telemetry.json"
+                            ],
+                        }
+                    ],
+                },
+            )
+            write_json_exact(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-b.json",
+                {
+                    **auto_improve_session_envelope("2026-04-14T01:30:00Z"),
+                    "iterations": [
+                        {
+                            "index": 1,
+                            "proposal_id": (
+                                "next_run_failure_repair__example-runtime__review-blocked"
+                            ),
+                            "source_candidate_id": decision_id,
+                            "run_id": "auto-session-b-run-01-example-runtime",
+                            "status": "blocked",
+                            "outcome": "mutation_failed",
+                        }
+                    ],
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            repair_proposals = [
+                proposal
+                for proposal in proposal_report["proposals"]
+                if proposal["failure_mode"] == "next_run_failure_repair"
+            ]
+
+            self.assertEqual(len(repair_proposals), 1)
+            self.assertEqual(
+                repair_proposals[0]["proposal_id"],
+                "next_run_failure_repair__example-runtime__review-blocked",
+            )
+            self.assertEqual(
+                proposal_report["diagnostics"]["next_run_decision_queue"],
+                {
+                    "session_reports_scanned": 2,
+                    "decisions_considered": 1,
+                    "open_carry_forward_decisions": 1,
+                    "repair_proposals_emitted": 1,
+                    "decision_counts": {"carry_forward": 1},
+                    "action_counts": {"repair_failure": 1},
+                    "selected_target_proposal_ids": [
+                        "next_run_failure_repair__example-runtime__review-blocked"
+                    ],
                 },
             )
 

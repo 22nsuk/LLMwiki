@@ -9,6 +9,7 @@ from pathlib import Path
 
 from ops.scripts.artifact_freshness_runtime import (
     build_canonical_report_envelope,
+    canonical_artifact_payload,
     canonical_report_loading_issue,
 )
 from .auto_improve_readiness_runtime import (
@@ -279,6 +280,50 @@ def _auto_improve_session_report_paths(vault: Path) -> list[str]:
     )
 
 
+def _parse_iso_timestamp(value: object) -> dt.datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+    try:
+        parsed = dt.datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt.timezone.utc)
+    return parsed.astimezone(dt.timezone.utc)
+
+
+def _session_report_loading_issue(path: Path, session_report: dict) -> str | None:
+    issue = canonical_report_loading_issue(path, session_report)
+    if issue == "missing_artifact_envelope":
+        return None
+    return issue
+
+
+def _session_report_evidence_time(session_report: dict) -> dt.datetime | None:
+    canonical = canonical_artifact_payload(session_report)
+    times = [_parse_iso_timestamp(canonical.get("generated_at"))]
+    currentness = canonical.get("currentness")
+    if isinstance(currentness, dict):
+        times.append(_parse_iso_timestamp(currentness.get("checked_at")))
+    parsed_times = [timestamp for timestamp in times if timestamp is not None]
+    if not parsed_times:
+        return None
+    return min(parsed_times)
+
+
+def _session_report_fresh_for_observed_at(session_report: dict, observed_at: object) -> bool:
+    observed = _parse_iso_timestamp(observed_at)
+    if observed is None:
+        return True
+    evidence_time = _session_report_evidence_time(session_report)
+    if evidence_time is None:
+        return True
+    return evidence_time >= observed
+
+
 def _load_next_run_decisions(
     vault: Path,
     session_report_paths: list[str],
@@ -289,7 +334,13 @@ def _load_next_run_decisions(
             session_report = _read_json(vault / rel_path)
         except (OSError, json.JSONDecodeError):
             continue
-        decisions.extend(normalize_next_run_decisions(session_report.get("next_run_decisions")))
+        if _session_report_loading_issue(vault / rel_path, session_report):
+            continue
+        decisions.extend(
+            decision
+            for decision in normalize_next_run_decisions(session_report.get("next_run_decisions"))
+            if _session_report_fresh_for_observed_at(session_report, decision.get("observed_at"))
+        )
     return sorted(
         decisions,
         key=lambda item: (
@@ -305,12 +356,20 @@ def _load_next_run_decisions(
 def _load_consumed_next_run_decision_ids(
     vault: Path,
     session_report_paths: list[str],
+    next_run_decisions: list[dict],
 ) -> list[str]:
     consumed: set[str] = set()
+    decision_observed_at = {
+        str(decision.get("decision_id", "")).strip(): str(decision.get("observed_at", "")).strip()
+        for decision in next_run_decisions
+        if str(decision.get("decision_id", "")).strip()
+    }
     for rel_path in session_report_paths:
         try:
             session_report = _read_json(vault / rel_path)
         except (OSError, json.JSONDecodeError):
+            continue
+        if _session_report_loading_issue(vault / rel_path, session_report):
             continue
         iterations = session_report.get("iterations", [])
         if not isinstance(iterations, list):
@@ -319,7 +378,13 @@ def _load_consumed_next_run_decision_ids(
             if not isinstance(iteration, dict):
                 continue
             source_candidate_id = str(iteration.get("source_candidate_id", "")).strip()
-            if source_candidate_id.startswith("next-run-decision:"):
+            if (
+                source_candidate_id.startswith("next-run-decision:")
+                and _session_report_fresh_for_observed_at(
+                    session_report,
+                    decision_observed_at.get(source_candidate_id, ""),
+                )
+            ):
                 consumed.add(source_candidate_id)
     return sorted(consumed)
 
@@ -2522,6 +2587,7 @@ def _load_mutation_report_inputs(
     consumed_next_run_decision_ids = _load_consumed_next_run_decision_ids(
         vault,
         auto_improve_session_report_paths,
+        next_run_decisions,
     )
     system_log = (vault / (system_log_path or DEFAULT_SYSTEM_LOG)).resolve()
     recent_log_sections, recent_log_section_ordering = _read_log_sections(
