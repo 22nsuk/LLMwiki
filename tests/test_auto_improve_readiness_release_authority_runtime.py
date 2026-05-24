@@ -144,6 +144,68 @@ class AutoImproveReadinessReleaseAuthorityRuntimeTests(unittest.TestCase):
         self.assertEqual(blocker["signal_ids"], ["selected_contract_currentness_not_current"])
         self.assertIn("operational_attention=", blocker["reason"])
 
+    def test_artifact_contract_stable_debt_attention_is_diagnostic_not_blocker(self) -> None:
+        reports = _pass_release_reports()
+        reports["artifact_freshness"] = {
+            "status": "attention",
+            "summary": {
+                "schema_invalid_artifact_count": 0,
+                "stable_contract_debt_issue_count": 3,
+                "missing_artifact_envelope_count": 2,
+                "unknown_currentness_artifact_count": 1,
+                "root_ephemeral_artifact_count": 0,
+                "non_utf8_text_artifact_count": 0,
+                "mtime_sensitive_attention_issue_count": 0,
+            },
+            "artifact_records": [
+                {
+                    "path": "runs/legacy-run/run-ledger.json",
+                    "issues": ["missing_artifact_envelope", "unknown_currentness"],
+                    "stable_contract_issues": ["missing_artifact_envelope", "unknown_currentness"],
+                    "schema_validation_status": "pass",
+                    "contract_issue_class": "stable_contract_debt",
+                }
+            ],
+        }
+
+        summaries = _release_gate_summaries(reports)
+        artifact_contract_blockers = _artifact_contract_promotion_blockers(
+            summaries["artifact_freshness"],
+            reports["artifact_freshness"],
+        )
+
+        self.assertEqual(artifact_contract_blockers, [])
+        self.assertEqual(
+            summaries["artifact_freshness"]["stable_contract_debt_issue_count"],
+            3,
+        )
+
+    def test_artifact_contract_hard_freshness_failure_blocks_promotion(self) -> None:
+        reports = _pass_release_reports()
+        reports["artifact_freshness"] = {
+            "status": "fail",
+            "summary": {
+                "schema_invalid_artifact_count": 0,
+                "stable_contract_debt_issue_count": 0,
+                "root_ephemeral_artifact_count": 1,
+                "non_utf8_text_artifact_count": 0,
+                "mtime_sensitive_attention_issue_count": 0,
+            },
+            "artifact_records": [],
+        }
+
+        summaries = _release_gate_summaries(reports)
+        artifact_contract_blockers = _artifact_contract_promotion_blockers(
+            summaries["artifact_freshness"],
+            reports["artifact_freshness"],
+        )
+
+        self.assertEqual(len(artifact_contract_blockers), 1)
+        blocker = artifact_contract_blockers[0]
+        self.assertEqual(blocker["id"], "promotion_blocked_by_artifact_contract_failure")
+        self.assertEqual(blocker["signal_ids"], ["artifact_freshness_hard_failure"])
+        self.assertIn("root_ephemeral_artifact_count=1", blocker["reason"])
+
     def test_release_closeout_gate_prefers_status_v2_axes_over_legacy_machine_booleans(
         self,
     ) -> None:

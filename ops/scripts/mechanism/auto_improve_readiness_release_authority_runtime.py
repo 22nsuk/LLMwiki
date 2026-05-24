@@ -781,23 +781,40 @@ def _artifact_contract_promotion_blockers(
 ) -> list[dict[str, Any]]:
     status = str(summary.get("status", "missing")).strip() or "missing"
     schema_invalid_count = _int_value(summary.get("schema_invalid_artifact_count"))
+    report_summary = artifact_freshness_report.get("summary")
+    report_summary = report_summary if isinstance(report_summary, dict) else {}
+    root_ephemeral_count = _int_value(report_summary.get("root_ephemeral_artifact_count"))
+    non_utf8_count = _int_value(report_summary.get("non_utf8_text_artifact_count"))
+    hard_failure_count = root_ephemeral_count + non_utf8_count
+    mtime_attention_count = _int_value(
+        report_summary.get("mtime_sensitive_attention_issue_count")
+    )
     operational_attention_items = [
         item
         for item in _artifact_operational_attention_items(artifact_freshness_report)
         if item["path"] != SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH
     ]
-    if status == "pass" and schema_invalid_count == 0 and not operational_attention_items:
+    status_allows_contract_debt = status in {"pass", "attention"}
+    if (
+        status_allows_contract_debt
+        and schema_invalid_count == 0
+        and hard_failure_count == 0
+        and mtime_attention_count == 0
+        and not operational_attention_items
+    ):
         return []
     invalid_artifacts = [
         str(item.get("path", "")).strip()
         for item in summary.get("schema_invalid_artifacts", [])
         if isinstance(item, dict) and str(item.get("path", "")).strip()
     ]
-    if invalid_artifacts:
+    if schema_invalid_count:
         reason = (
             "artifact freshness schema validation failed for "
-            f"{schema_invalid_count} canonical artifact(s): {', '.join(invalid_artifacts[:6])}"
+            f"{schema_invalid_count} canonical artifact(s)"
         )
+        if invalid_artifacts:
+            reason = f"{reason}: {', '.join(invalid_artifacts[:6])}"
         signal_ids = ["artifact_freshness_schema_invalid"]
         required_evidence = [
             "Run make artifact-freshness-check and confirm status=pass.",
@@ -817,6 +834,35 @@ def _artifact_contract_promotion_blockers(
         ]
         recommended_next_step = (
             "Regenerate stale canonical artifacts, then rerun make artifact-freshness and "
+            "make auto-improve-readiness."
+        )
+    elif hard_failure_count:
+        reason = (
+            "artifact freshness found hard artifact failures: "
+            f"root_ephemeral_artifact_count={root_ephemeral_count}; "
+            f"non_utf8_text_artifact_count={non_utf8_count}"
+        )
+        signal_ids = ["artifact_freshness_hard_failure"]
+        required_evidence = [
+            "Remove root-ephemeral artifacts and repair non-UTF8 text artifacts.",
+            "Run make artifact-freshness-check and confirm hard failure counts are zero.",
+        ]
+        recommended_next_step = (
+            "Resolve hard artifact freshness failures, then rerun make artifact-freshness and "
+            "make auto-improve-readiness."
+        )
+    elif mtime_attention_count:
+        reason = (
+            "artifact freshness found mtime-sensitive artifact drift: "
+            f"mtime_sensitive_attention_issue_count={mtime_attention_count}"
+        )
+        signal_ids = ["artifact_freshness_mtime_attention"]
+        required_evidence = [
+            "Regenerate mtime-sensitive artifacts with current metadata.",
+            "Run make artifact-freshness-check and confirm mtime_sensitive_attention_issue_count=0.",
+        ]
+        recommended_next_step = (
+            "Regenerate mtime-sensitive artifacts, then rerun make artifact-freshness and "
             "make auto-improve-readiness."
         )
     else:
