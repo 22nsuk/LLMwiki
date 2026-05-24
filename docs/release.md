@@ -102,7 +102,9 @@ block unattended promotion.
 Operator diagnostics at stage 3 keep `accepted_risk`, `gate_attention`, and
 `learning_claim` counts separate. All three groups are strict-zero checks for
 unattended promotion, but gate attention and learning-claim blockers are not
-reported as accepted risk.
+reported as accepted risk. Advisory lifecycle accepted risks that are allowed to
+remain visible at preseal still count as accepted-risk diagnostics at Stage 3;
+they must be cleared before unattended promotion is allowed.
 
 ## Evidence Boundaries
 
@@ -126,9 +128,11 @@ reported as accepted risk.
   auto-promotion intent. They keep Stage 3-only blockers visible before the
   expensive run-ready and sealing stages, but they are not standalone release
   authority. Preflight catches learning, remediation, and auto-improve blockers
-  before run-ready; preseal additionally requires clean closeout, accepted-risk
-  clean, gate-attention clean, source-tree-coherence pass, and a strict
-  same-fingerprint evidence cohort before sealing.
+  before run-ready; preseal additionally requires clean closeout, no
+  clean-lane-blocking accepted-risk family, gate-attention clean,
+  source-tree-coherence pass, and a strict same-fingerprint evidence cohort
+  before sealing. Advisory lifecycle backlog can remain visible at preseal
+  without forcing another run-ready cycle.
 - `build/release/release-*-plan.json` files are execution plans, not release
   authority. They decide which evidence can be reused and which minimal Make
   target should run next; the authority verdict still belongs to the staged

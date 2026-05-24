@@ -229,6 +229,17 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
             )
         )
         closeout["summary"]["accepted_risk_instance_count"] = 1
+        closeout["summary"]["release_blocking_risk_family_count"] = 0
+        self._write_json("ops/reports/release-closeout-summary.json", closeout)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, phase="preseal", context=fixed_context())
+
+        self.assertEqual(manifest["status"], "pass")
+        self.assertTrue(manifest["checks"]["closeout_accepted_risk_clean"])
+        self.assertNotIn("closeout_accepted_risk_not_clean", manifest["failures"])
+
+        closeout["summary"]["release_blocking_risk_family_count"] = 1
         self._write_json("ops/reports/release-closeout-summary.json", closeout)
 
         with self._patch_current_repo():
@@ -239,6 +250,7 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
         self.assertIn("closeout_accepted_risk_not_clean", manifest["failures"])
 
         closeout["summary"]["accepted_risk_instance_count"] = 0
+        closeout["summary"]["release_blocking_risk_family_count"] = 0
         closeout["summary"]["gate_attention_count"] = 1
         self._write_json("ops/reports/release-closeout-summary.json", closeout)
 

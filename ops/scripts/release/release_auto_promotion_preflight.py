@@ -310,8 +310,7 @@ def build_manifest(
                     and bool(closeout["clean_release_ready"])
                 ),
                 "closeout_accepted_risk_clean": (
-                    int(closeout["accepted_risk_instance_count"]) == 0
-                    and int(closeout["release_blocking_risk_family_count"]) == 0
+                    int(closeout["release_blocking_risk_family_count"]) == 0
                 ),
                 "closeout_gate_attention_clean": (
                     int(closeout["gate_attention_count"]) == 0
@@ -557,9 +556,9 @@ def build_manifest(
                 f"accepted={closeout['accepted_risk_instance_count']};"
                 f"release_blocking={closeout['release_blocking_risk_family_count']}"
             ),
-            expected="all counts are 0",
-            summary="Closeout accepted-risk counts are not clean.",
-            recommended_next_step="Regenerate a strict same-fingerprint clean closeout before sealing.",
+            expected="release_blocking=0; advisory accepted risks may remain diagnostic",
+            summary="Closeout has accepted-risk families that still block the clean release lane.",
+            recommended_next_step="Resolve clean-lane blocking release risks before sealing.",
         )
         _require(
             blockers,
