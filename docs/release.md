@@ -14,8 +14,9 @@ result can be promoted without operator intervention.
 - `make release-check`: check-only release gate for the current tree.
 - `make release-check-all-surfaces`: release check plus public policy and public export checks.
 - `make release-run-ready`: one command to verify the current committed tree,
-  run full pytest, public check, package build, and source-package smoke, then
-  write the runnable release-run manifest.
+  emit canonical report-contract and full-suite test summaries, run public check,
+  package build, and source-package smoke, then write the runnable release-run
+  manifest.
 - `make release-run-ready-check`: revalidate the existing manifest against the
   current HEAD, source fingerprint, source ZIP, and source-package smoke report.
 - `make release-sealed-run-ready-plan`: inspect runnable authority evidence and
@@ -134,8 +135,11 @@ reported as accepted risk.
 - `ops/reports/test-execution-summary.json` and
   `ops/reports/test-execution-summary-full.json` are reused by check lanes only
   when their `source_tree_fingerprint` still matches the current tree. Stale
-  evidence fails fast; explicit refresh targets rerun tests. `release-check`
-  does not rerun the unit subset after this full-suite evidence is current.
+  evidence fails fast; explicit refresh targets rerun tests. `release-run-ready`
+  emits the canonical full-suite summary while it runs the test stage, so
+  preseal and auto-promotion checks should reuse that evidence by currentness
+  check instead of rerunning the full suite. `release-check` does not rerun the
+  unit subset after this full-suite evidence is current.
 - `ops/reports/public-check-summary.json` proves the exported public tree contract.
   `public-check-all-check` reuses this report only when the same
   `source_tree_fingerprint` still matches.

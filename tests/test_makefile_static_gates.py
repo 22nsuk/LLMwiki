@@ -1606,6 +1606,18 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn("ops.scripts.release_run_ready", _target_block(text, "release-run-ready"))
         self.assertIn("ops.scripts.release_run_manifest", _target_block(text, "release-run-ready-check"))
+        release_test_current_lines = _recipe_lines(text, "release-test-current")
+        self.assertEqual(
+            release_test_current_lines,
+            [
+                "$(MAKE) static",
+                "$(MAKE) test-execution-summary-report-contract",
+                "$(MAKE) test-execution-summary-full-refresh-no-converge",
+            ],
+        )
+        release_test_current_block = _target_block(text, "release-test-current")
+        self.assertNotIn("$(PYTHON) -m pytest $(PYTEST_SERIAL_FLAGS)", release_test_current_block)
+        self.assertNotIn("$(MAKE) generated-artifact-converge", release_test_current_block)
         self.assertIn("ops.scripts.release_evidence_planner", _target_block(text, "release-sealed-run-ready-plan"))
         self.assertIn("--stage sealed-run-ready", _target_block(text, "release-sealed-run-ready-plan"))
         sealed_run_ready_block = _target_block(text, "release-sealed-run-ready")
@@ -1633,6 +1645,20 @@ class MakefileStaticGateTests(unittest.TestCase):
             "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
             auto_promotion_preflight_block,
         )
+        self.assertEqual(
+            _recipe_lines(text, "release-auto-promotion-preseal")[:2],
+            [
+                "$(MAKE) release-run-ready-check",
+                "$(MAKE) release-closeout-summary-report",
+            ],
+        )
+        for expensive_writer in (
+            "$(MAKE) test-execution-summary-full-refresh",
+            "$(MAKE) test-execution-summary-full-body",
+            "$(PYTHON) -m pytest",
+            "$(MAKE) generated-artifact-converge",
+        ):
+            self.assertNotIn(expensive_writer, auto_promotion_preseal_block)
         self.assertEqual(
             _recipe_lines(text, "release-auto-promotion-preflight")[:4],
             [
@@ -2735,8 +2761,10 @@ class MakefileStaticGateTests(unittest.TestCase):
             "test-execution-summary-report-contract-refresh",
             "test-execution-summary-report-contract-refresh-no-smoke",
             "test-execution-summary-current-check",
+            "test-execution-summary-full-body",
             "test-execution-summary-full",
             "test-execution-summary-full-refresh",
+            "test-execution-summary-full-refresh-no-converge",
             "test-execution-summary-full-current-check",
             "test-execution-summary-reuse",
             "test-execution-summary-aggregate",
@@ -2893,14 +2921,14 @@ class MakefileStaticGateTests(unittest.TestCase):
                 '--deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)"',
             ),
         )
-        full_block = _target_block(text, "test-execution-summary-full")
-        self.assertNotIn("$(MAKE) refresh-generated-core", full_block)
-        self.assertNotIn("$(MAKE) auto-improve-readiness-report-body", full_block)
-        self.assertNotIn("$(MAKE) release-smoke-full", full_block)
+        full_body_block = _target_block(text, "test-execution-summary-full-body")
+        self.assertNotIn("$(MAKE) refresh-generated-core", full_body_block)
+        self.assertNotIn("$(MAKE) auto-improve-readiness-report-body", full_body_block)
+        self.assertNotIn("$(MAKE) release-smoke-full", full_body_block)
         _assert_recipe_contains_tokens(
             self,
             text,
-            "test-execution-summary-full",
+            "test-execution-summary-full-body",
             (
                 'rm -rf "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"',
                 'mkdir -p "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"',
@@ -2912,14 +2940,17 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "--aggregate",
                 "--aggregate-dir",
                 "ops.scripts.canonical_artifact_promote",
-                "$(MAKE) generated-artifact-converge",
             ),
         )
+        self.assertNotIn("$(MAKE) generated-artifact-converge", full_body_block)
+        self.assertNotIn("$(MAKE) test-execution-summary-report-contract-refresh", full_body_block)
+        full_block = _target_block(text, "test-execution-summary-full")
+        _assert_target_depends_on(self, text, "test-execution-summary-full", "test-execution-summary-full-body")
         self.assertEqual(full_block.count("$(MAKE) generated-artifact-converge"), 1)
-        self.assertNotIn("$(MAKE) test-execution-summary-report-contract-refresh", full_block)
+        self.assertNotIn("$(PYTHON) -m pytest", full_block)
         self.assertGreater(
             full_block.rindex("$(MAKE) generated-artifact-converge"),
-            full_block.index("ops.scripts.canonical_artifact_promote"),
+            full_block.index("test-execution-summary-full-body"),
         )
         full_refresh_block = _target_block(text, "test-execution-summary-full-refresh")
         _assert_target_depends_on(self, text, "test-execution-summary-full-refresh", "test-execution-summary-full")
@@ -2928,6 +2959,20 @@ class MakefileStaticGateTests(unittest.TestCase):
             full_refresh_block,
         )
         self.assertNotIn("node count $$actual does not match expected", full_refresh_block)
+        no_converge_full_refresh_block = _target_block(
+            text, "test-execution-summary-full-refresh-no-converge"
+        )
+        _assert_target_depends_on(
+            self,
+            text,
+            "test-execution-summary-full-refresh-no-converge",
+            "test-execution-summary-full-body",
+        )
+        self.assertNotIn("$(MAKE) generated-artifact-converge", no_converge_full_refresh_block)
+        self.assertIn(
+            "full-suite evidence refreshed without generated artifact convergence",
+            no_converge_full_refresh_block,
+        )
         _assert_recipe_contains_tokens(
             self,
             text,

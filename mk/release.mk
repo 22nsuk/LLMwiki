@@ -296,8 +296,8 @@ release-preflight-current:
 
 release-test-current:
 	$(MAKE) static
-	$(MAKE) report-contracts-core
-	$(PYTHON) -m pytest $(PYTEST_SERIAL_FLAGS)
+	$(MAKE) test-execution-summary-report-contract
+	$(MAKE) test-execution-summary-full-refresh-no-converge
 
 release-public-current:
 	$(MAKE) public-check-summary-check
