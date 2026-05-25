@@ -8,7 +8,7 @@
 - `worker.toml`은 기본 구현자다.
 - `reviewer.toml`과 `validator.toml`은 실행 sandbox가 temp workspace에서 `workspace-write`일 수 있지만 source/control file contract는 read-only다.
 - specialized add-on은 부모 acceptance, generic review, generic validation을 대체하지 않는다.
-- 모든 subagent prompt에는 `vowline` 사용 요구, read/write boundary, 그리고 의미 있는 결론 전 종료 금지 조건을 명시한다.
+- 모든 subagent prompt에는 read/write boundary와 의미 있는 결론 전 종료 금지 조건을 명시한다.
 
 ## Curated upstream seeds
 
