@@ -154,6 +154,29 @@ class LearningConfirmedLegacyReconstructionTests(unittest.TestCase):
             self.assertIn("behavior-delta artifact digest unavailable", row["reasons"])
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_legacy_reconstruction_treats_stale_behavior_delta_digest_as_repairable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            expected_digest = _seed_inputs(vault)
+            telemetry_path = vault / "runs" / "legacy-promote" / "run-telemetry.json"
+            telemetry = json.loads(telemetry_path.read_text(encoding="utf-8"))
+            telemetry["behavior_delta_digest"] = "0" * 64
+            telemetry_path.write_text(json.dumps(telemetry, sort_keys=True), encoding="utf-8")
+
+            report = build_report(vault, context=fixed_context())
+            row = report["run_reconstructions"][0]
+
+            self.assertEqual(row["reconstruction_status"], "reconstructed")
+            self.assertTrue(row["digest_reconstruction_needed"])
+            self.assertEqual(row["behavior_delta_artifact_sha256"], expected_digest)
+            self.assertIn(
+                "telemetry behavior_delta_digest mismatches behavior-delta artifact",
+                row["reasons"],
+            )
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
 
 if __name__ == "__main__":
     unittest.main()

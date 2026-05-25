@@ -203,10 +203,16 @@ def _reconstruction_row(vault: Path, run_id: str, families: list[str]) -> dict[s
     behavior_delta_sha256 = _sha256_file(behavior_delta_path) if behavior_delta_exists else ""
     telemetry_digest = str(telemetry.get("behavior_delta_digest", "")).strip()
     telemetry_digest_valid = bool(HEX_SHA256_RE.fullmatch(telemetry_digest))
+    telemetry_digest_normalized = telemetry_digest.lower() if telemetry_digest_valid else telemetry_digest
+    telemetry_digest_mismatch = bool(
+        telemetry_digest_valid
+        and behavior_delta_sha256
+        and telemetry_digest_normalized != behavior_delta_sha256
+    )
     telemetry_axes = _string_list(telemetry.get("secondary_improvement_axes"))
     telemetry_strict = bool(telemetry.get("strict_secondary_improvement_present"))
     parsed_strict, parsed_axes, parsed_axis_evidence = _promotion_secondary_improvement(promotion_report)
-    digest_reconstruction_needed = not telemetry_digest_valid
+    digest_reconstruction_needed = not telemetry_digest_valid or telemetry_digest_mismatch
     secondary_reconstruction_needed = not telemetry_strict or not telemetry_axes
     reconstruction_needed = digest_reconstruction_needed or secondary_reconstruction_needed
     selection_reason = (
@@ -218,7 +224,10 @@ def _reconstruction_row(vault: Path, run_id: str, families: list[str]) -> dict[s
     if not telemetry:
         reasons.append("run telemetry missing")
     if digest_reconstruction_needed:
-        reasons.append("telemetry behavior_delta_digest missing or invalid")
+        if telemetry_digest_mismatch:
+            reasons.append("telemetry behavior_delta_digest mismatches behavior-delta artifact")
+        else:
+            reasons.append("telemetry behavior_delta_digest missing or invalid")
     if secondary_reconstruction_needed:
         reasons.append("telemetry strict secondary improvement fields missing or incomplete")
     if digest_reconstruction_needed and not behavior_delta_sha256:
@@ -246,7 +255,7 @@ def _reconstruction_row(vault: Path, run_id: str, families: list[str]) -> dict[s
         "behavior_delta_path": behavior_delta_rel,
         "behavior_delta_artifact_exists": behavior_delta_exists,
         "behavior_delta_artifact_sha256": behavior_delta_sha256,
-        "telemetry_behavior_delta_digest": telemetry_digest.lower() if telemetry_digest_valid else telemetry_digest,
+        "telemetry_behavior_delta_digest": telemetry_digest_normalized,
         "telemetry_behavior_delta_digest_valid": telemetry_digest_valid,
         "digest_reconstruction_needed": digest_reconstruction_needed,
         "secondary_reconstruction_needed": secondary_reconstruction_needed,

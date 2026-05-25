@@ -266,6 +266,45 @@ class LearningClaimEvidenceBundleTests(unittest.TestCase):
             self.assertEqual(confirmed["legacy_reconstruction_status"], "reconstructed")
             self.assertEqual(confirmed["secondary_improvement_axes"], ["complexity"])
 
+    def test_legacy_digest_fallback_repairs_stale_telemetry_digest_without_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_bundle_inputs(vault)
+            behavior_delta_path = vault / "runs" / "run-a" / "behavior-delta.json"
+            behavior_delta = {"artifact_kind": "behavior_delta", "run_id": "run-a", "summary": {"delta_count": 1}}
+            behavior_delta_text = json.dumps(behavior_delta, sort_keys=True)
+            behavior_delta_path.write_text(behavior_delta_text, encoding="utf-8")
+            telemetry_path = vault / "runs" / "run-a" / "run-telemetry.json"
+            telemetry = json.loads(telemetry_path.read_text(encoding="utf-8"))
+            telemetry["behavior_delta"] = "runs/run-a/behavior-delta.json"
+            telemetry["behavior_delta_digest"] = "0" * 64
+            telemetry_path.write_text(json.dumps(telemetry), encoding="utf-8")
+            promotion_path = vault / "runs" / "run-a" / "promotion-report.json"
+            promotion_path.write_text(
+                json.dumps(
+                    {
+                        "decision": "PROMOTE",
+                        "run_id": "run-a",
+                        "inputs": {"behavior_delta": "runs/run-a/behavior-delta.json"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            write_legacy_reconstruction(vault, build_legacy_reconstruction(vault, context=fixed_context()))
+
+            report = build_report(vault, context=fixed_context())
+            telemetry_evidence = report["telemetry_evidence"][0]
+            confirmed = report["confirmed_telemetry_evidence"][0]
+            stored_telemetry = json.loads(telemetry_path.read_text(encoding="utf-8"))
+
+            self.assertEqual(report["summary"]["revocation_status"], "active")
+            self.assertEqual(report["behavior_delta_artifact_readback"]["status"], "pass")
+            self.assertEqual(telemetry_evidence["behavior_delta_digest_source"], "legacy_reconstruction_artifact")
+            self.assertEqual(confirmed["behavior_delta_digest_source"], "legacy_reconstruction_artifact")
+            self.assertEqual(stored_telemetry["behavior_delta_digest"], "0" * 64)
+
     def test_bundle_validation_stales_when_public_check_summary_changes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

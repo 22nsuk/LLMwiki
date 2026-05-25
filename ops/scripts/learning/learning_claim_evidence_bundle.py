@@ -274,6 +274,17 @@ def _telemetry_item(
         digest_valid = True
         digest_source = "legacy_reconstruction_artifact"
     normalized_digest = digest.lower() if digest_valid else digest
+    if (
+        digest_valid
+        and artifact_sha256
+        and normalized_digest != artifact_sha256
+        and allow_artifact_digest_fallback
+        and legacy_reconstruction_status == "reconstructed"
+        and legacy_behavior_delta_sha256 == artifact_sha256
+    ):
+        normalized_digest = legacy_behavior_delta_sha256
+        digest = legacy_behavior_delta_sha256
+        digest_source = "legacy_reconstruction_artifact"
     artifact_match = bool(digest_valid and artifact_sha256 and artifact_sha256 == normalized_digest)
     if not behavior_delta_path or not artifact_exists:
         artifact_status = "not_available"
@@ -340,11 +351,21 @@ def _evidence_item(vault: Path, item_id: str, rel_path: str, role: str) -> dict[
     }
 
 
-def _telemetry_evidence(vault: Path, run_ids: list[str]) -> list[dict[str, Any]]:
+def _telemetry_evidence(
+    vault: Path,
+    run_ids: list[str],
+    *,
+    legacy_reconstruction_by_run: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
     return [
         {
             key: value
-            for key, value in _telemetry_item(vault, run_id).items()
+            for key, value in _telemetry_item(
+                vault,
+                run_id,
+                allow_artifact_digest_fallback=True,
+                legacy_reconstruction_by_run=legacy_reconstruction_by_run,
+            ).items()
             if key != "promotion_report_path"
         }
         for run_id in run_ids
@@ -723,7 +744,11 @@ def build_report(
     run_set = _learning_claim_run_set(mutation_proposals)
     confirmed_run_families = _confirmed_run_family_map(mutation_proposals, mechanism_review)
     confirmed_run_set = _confirmed_run_set(confirmed_run_families)
-    telemetry = _telemetry_evidence(vault, run_set["run_ids"])
+    telemetry = _telemetry_evidence(
+        vault,
+        run_set["run_ids"],
+        legacy_reconstruction_by_run=legacy_reconstruction_rows,
+    )
     confirmed_telemetry = _confirmed_telemetry_evidence(
         vault,
         confirmed_run_families,
