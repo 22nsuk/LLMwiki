@@ -506,18 +506,6 @@ def _open_carry_forward_decisions(
             continue
         if str(decision.get("status", "")).strip() != OPEN_DECISION_STATUS:
             continue
-        decision_id = str(decision.get("decision_id", "")).strip()
-        if decision_id and decision_id in consumed_decision_ids:
-            continue
-        if vault is not None and _repair_decision_ended_as_noop_mutation_failure(vault, decision):
-            continue
-        if vault is not None and _repair_decision_ended_as_clean_repo_health(vault, decision):
-            continue
-        if _queue_unblock_decision_superseded_by_current_rotation(
-            decision,
-            current_proposal_ids,
-        ):
-            continue
         target_proposal_id = str(decision.get("target_proposal_id", "")).strip()
         if not target_proposal_id:
             primary_targets = [
@@ -533,8 +521,24 @@ def _open_carry_forward_decisions(
                 failure_taxonomy,
             )
         latest_by_target[target_proposal_id] = {**decision, "target_proposal_id": target_proposal_id}
+
+    open_decisions: list[dict] = []
+    for decision in latest_by_target.values():
+        decision_id = str(decision.get("decision_id", "")).strip()
+        if decision_id and decision_id in consumed_decision_ids:
+            continue
+        if vault is not None and _repair_decision_ended_as_noop_mutation_failure(vault, decision):
+            continue
+        if vault is not None and _repair_decision_ended_as_clean_repo_health(vault, decision):
+            continue
+        if _queue_unblock_decision_superseded_by_current_rotation(
+            decision,
+            current_proposal_ids,
+        ):
+            continue
+        open_decisions.append(decision)
     return sorted(
-        latest_by_target.values(),
+        open_decisions,
         key=lambda item: (
             str(item.get("observed_at", "")),
             str(item.get("target_proposal_id", "")),

@@ -2812,6 +2812,100 @@ class MutationProposalTest(unittest.TestCase):
                 },
             )
 
+    def test_consumed_newer_next_run_decision_suppresses_older_same_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            older_decision_id = "next-run-decision:run-a:review"
+            newer_decision_id = "next-run-decision:run-b:review"
+            target_proposal_id = "next_run_failure_repair__example-runtime__review-blocked"
+            decision_template = {
+                "session_id": "auto-session-a",
+                "iteration": 1,
+                "proposal_id": "original-proposal",
+                "source_candidate_id": "original-candidate",
+                "target_proposal_id": target_proposal_id,
+                "proposal_family": "contract_regression_signals",
+                "proposal_tier": "supporting",
+                "failure_taxonomy": "review_blocked",
+                "blocking_role": "reviewer",
+                "decision": "carry_forward",
+                "next_run_action": "repair_failure",
+                "status": "open",
+                "reason": "review failure should become next-run repair work",
+                "quarantined_source_proposal": True,
+                "primary_targets": ["ops/scripts/mechanism/example_runtime.py"],
+                "supporting_targets": ["ops/script-output-surfaces.json"],
+                "must_change_tests": ["tests/test_example_runtime.py"],
+                "evidence_paths": ["runs/auto-session-a-run-01-example-runtime/run-telemetry.json"],
+            }
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            **decision_template,
+                            "decision_id": older_decision_id,
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "source_run_id": "auto-session-a-run-01-example-runtime",
+                        }
+                    ]
+                },
+            )
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-b.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            **decision_template,
+                            "decision_id": newer_decision_id,
+                            "observed_at": "2026-04-14T03:00:00Z",
+                            "source_run_id": "auto-session-b-run-01-example-runtime",
+                        }
+                    ]
+                },
+            )
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-c.json",
+                {
+                    "iterations": [
+                        {
+                            "index": 1,
+                            "proposal_id": target_proposal_id,
+                            "source_candidate_id": newer_decision_id,
+                            "run_id": "auto-session-c-run-01-example-runtime",
+                            "status": "blocked",
+                            "outcome": "discarded",
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+
+            self.assertEqual(proposal_report["summary"]["next_run_repair_proposals"], 0)
+            self.assertFalse(
+                any(
+                    proposal["failure_mode"] == "next_run_failure_repair"
+                    for proposal in proposal_report["proposals"]
+                )
+            )
+            self.assertEqual(
+                proposal_report["diagnostics"]["next_run_decision_queue"],
+                {
+                    "session_reports_scanned": 3,
+                    "decisions_considered": 2,
+                    "open_carry_forward_decisions": 0,
+                    "repair_proposals_emitted": 0,
+                    "decision_counts": {"carry_forward": 2},
+                    "action_counts": {"repair_failure": 2},
+                    "selected_target_proposal_ids": [],
+                },
+            )
+
     def test_stale_session_decision_does_not_emit_next_run_repair(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
