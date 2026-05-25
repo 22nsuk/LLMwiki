@@ -580,6 +580,75 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertEqual(outcome.next_consecutive_failures, 2)
             self.assertFalse(outcome.quarantine_proposal)
 
+    def test_write_session_report_generated_at_covers_next_run_decision_observed_at(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            policy, resolved_policy_path = auto_improve_runtime.load_policy(vault)
+            context = RuntimeContext(
+                display_timezone=dt.UTC,
+                clock=lambda: dt.datetime(2026, 4, 15, 0, 0, 1, tzinfo=dt.UTC),
+            )
+            session = auto_improve_runtime._new_auto_improve_session(
+                vault,
+                policy["auto_improve_policy"],
+                policy,
+                resolved_policy_path,
+                session_id="auto-session-clock-skew",
+                max_proposals=1,
+                max_minutes=90,
+                max_consecutive_failures=1,
+                requested_executor="codex_exec",
+                context=context,
+            )
+            session["next_run_decisions"] = [
+                {
+                    "decision_id": "next-run-decision:run-a:clock-skew",
+                    "observed_at": "2026-04-15T00:00:02Z",
+                    "session_id": "auto-session-clock-skew",
+                    "iteration": 1,
+                    "source_run_id": "run-a",
+                    "proposal_id": "proposal-a",
+                    "source_candidate_id": "candidate-a",
+                    "target_proposal_id": "next_run_failure_repair__example__review-blocked",
+                    "proposal_family": "contract_regression_signals",
+                    "proposal_tier": "supporting",
+                    "failure_taxonomy": "review_blocked",
+                    "blocking_role": "reviewer",
+                    "decision": "carry_forward",
+                    "next_run_action": "repair_failure",
+                    "status": "open",
+                    "reason": "clock-skew regression fixture",
+                    "quarantined_source_proposal": True,
+                    "primary_targets": ["ops/scripts/example.py"],
+                    "supporting_targets": [],
+                    "must_change_tests": ["tests/test_example.py"],
+                    "evidence_paths": ["runs/run-a/run-telemetry.json"],
+                }
+            ]
+
+            destination = auto_improve_runtime._write_session_report(
+                vault,
+                session,
+                context=context,
+            )
+
+            persisted = json.loads(destination.read_text(encoding="utf-8"))
+            embedded_envelope = json.loads(
+                next(
+                    item["value"]
+                    for item in persisted["metadata"]["properties"]
+                    if item["name"] == "urn:openai:artifact-envelope"
+                )
+            )
+            self.assertEqual(persisted["generated_at"], "2026-04-15T00:00:02Z")
+            self.assertEqual(embedded_envelope["generated_at"], "2026-04-15T00:00:02Z")
+            self.assertEqual(
+                embedded_envelope["currentness"]["checked_at"],
+                "2026-04-15T00:00:02Z",
+            )
+
     def test_refresh_select_phase_returns_selected_proposal_and_queue_snapshot(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

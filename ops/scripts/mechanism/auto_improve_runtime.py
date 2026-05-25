@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import hashlib
 import json
 import re
@@ -730,12 +731,46 @@ def _ensure_session_loop_state(session: dict, *, context: RuntimeContext) -> dic
     return session["loop_state"]
 
 
+def _parse_utc_timestamp(value: object) -> dt.datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = dt.datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt.UTC)
+    return parsed.astimezone(dt.UTC).replace(microsecond=0)
+
+
+def _format_utc_timestamp(value: dt.datetime) -> str:
+    return value.astimezone(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _session_generated_at(session: dict, *, context: RuntimeContext) -> str:
+    generated = _parse_utc_timestamp(context.isoformat_z())
+    observed_times: list[dt.datetime] = []
+    for decision in session.get("next_run_decisions", []):
+        if not isinstance(decision, dict):
+            continue
+        observed = _parse_utc_timestamp(decision.get("observed_at"))
+        if observed is not None:
+            observed_times.append(observed)
+
+    latest_observed = max(observed_times, default=None)
+    if latest_observed is not None and (generated is None or latest_observed > generated):
+        return _format_utc_timestamp(latest_observed)
+    if generated is not None:
+        return _format_utc_timestamp(generated)
+    return context.isoformat_z()
+
+
 def _write_session_report(vault: Path, session: dict, *, context: RuntimeContext) -> Path:
     session = normalize_session_report(vault, dict(session))
     _ensure_session_loop_state(session, context=context)
     session["rollups"] = build_session_rollups(vault, session)
     policy, resolved_policy_path = load_policy(vault)
-    generated_at = context.isoformat_z()
+    generated_at = _session_generated_at(session, context=context)
     session["generated_at"] = generated_at
     envelope = build_canonical_report_envelope(
         vault,
