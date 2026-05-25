@@ -195,10 +195,20 @@ def _auto_improve_diagnostics(
 
 
 def _preflight_diagnostics(payload: dict[str, Any]) -> dict[str, Any]:
+    goal_run_identity = _dict(payload.get("goal_run_identity"))
     return {
         "phase": str(payload.get("phase", "")).strip(),
         "status": str(payload.get("status", "")).strip(),
         "blocker_count": len(_list(payload.get("blockers"))),
+        "goal_run_identity": {
+            "status": str(goal_run_identity.get("status", "")).strip(),
+            "requested_run_id": str(goal_run_identity.get("requested_run_id", "")).strip(),
+            "effective_run_id": str(goal_run_identity.get("effective_run_id", "")).strip(),
+            "inferred_run_id": str(goal_run_identity.get("inferred_run_id", "")).strip(),
+            "selection_mode": str(goal_run_identity.get("selection_mode", "")).strip(),
+            "goal_run_id_origin": str(goal_run_identity.get("goal_run_id_origin", "")).strip(),
+            "failure_count": _int_value(goal_run_identity.get("failure_count", 0)),
+        },
     }
 
 
@@ -236,6 +246,10 @@ def build_manifest(
     auto_improve = _auto_improve_diagnostics(auto_payload, current_fingerprint=fingerprint)
     preflight = _preflight_diagnostics(preflight_payload)
     preseal = _preflight_diagnostics(preseal_payload)
+    preflight_goal_identity = _dict(preflight.get("goal_run_identity"))
+    preseal_goal_identity = _dict(preseal.get("goal_run_identity"))
+    preflight_goal_run_id = str(preflight_goal_identity.get("effective_run_id", "")).strip()
+    preseal_goal_run_id = str(preseal_goal_identity.get("effective_run_id", "")).strip()
     accepted_risk_clean = all(count == 0 for count in operator["accepted_risk"].values())
     gate_attention_clean = all(count == 0 for count in operator["gate_attention"].values())
     learning_claim_clean = all(count == 0 for count in operator["learning_claim"].values())
@@ -252,6 +266,11 @@ def build_manifest(
         ),
         "auto_promotion_preflight_phase_ok": preflight["phase"] == "preflight",
         "auto_promotion_preflight_pass": preflight["status"] == "pass",
+        "auto_promotion_preflight_goal_run_identity_present": bool(preflight_goal_run_id),
+        "auto_promotion_preflight_goal_run_identity_pass": (
+            preflight_goal_identity.get("status") == "pass"
+            and _int_value(preflight_goal_identity.get("failure_count", 0)) == 0
+        ),
         "auto_promotion_preseal_load_ok": inputs["auto_promotion_preseal"]["load_status"] == "ok",
         "auto_promotion_preseal_artifact_kind_ok": (
             inputs["auto_promotion_preseal"]["artifact_kind"] == "release_auto_promotion_preflight"
@@ -261,6 +280,16 @@ def build_manifest(
         ),
         "auto_promotion_preseal_phase_ok": preseal["phase"] == "preseal",
         "auto_promotion_preseal_pass": preseal["status"] == "pass",
+        "auto_promotion_preseal_goal_run_identity_present": bool(preseal_goal_run_id),
+        "auto_promotion_preseal_goal_run_identity_pass": (
+            preseal_goal_identity.get("status") == "pass"
+            and _int_value(preseal_goal_identity.get("failure_count", 0)) == 0
+        ),
+        "auto_promotion_goal_run_identity_match": (
+            bool(preflight_goal_run_id)
+            and bool(preseal_goal_run_id)
+            and preflight_goal_run_id == preseal_goal_run_id
+        ),
         "run_manifest_load_ok": inputs["run_manifest"]["load_status"] == "ok",
         "run_manifest_artifact_kind_ok": inputs["run_manifest"]["artifact_kind"] == "release_run_manifest",
         "run_manifest_current": inputs["run_manifest"]["source_tree_fingerprint"] == fingerprint,
@@ -355,6 +384,29 @@ def build_manifest(
             "Resolve preflight blockers before spending run-ready cycles.",
         ),
         (
+            "auto_promotion_preflight_goal_run_identity_missing",
+            "auto_promotion_preflight",
+            "$.goal_run_identity.effective_run_id",
+            preflight_goal_run_id,
+            "non-empty run id",
+            checks["auto_promotion_preflight_goal_run_identity_present"],
+            "Auto-promotion preflight does not bind a selected goal run id.",
+            "Regenerate it with make release-auto-promotion-preflight and explicit GOAL_RUN_ID.",
+        ),
+        (
+            "auto_promotion_preflight_goal_run_identity_not_pass",
+            "auto_promotion_preflight",
+            "$.goal_run_identity.status|$.goal_run_identity.failure_count",
+            (
+                f"status={preflight_goal_identity.get('status', '')};"
+                f"failures={preflight_goal_identity.get('failure_count', '')}"
+            ),
+            "status=pass; failures=0",
+            checks["auto_promotion_preflight_goal_run_identity_pass"],
+            "Auto-promotion preflight goal-run identity evidence is not passing.",
+            "Regenerate it after make release-auto-promotion-goal-run-id-guard passes.",
+        ),
+        (
             "auto_promotion_preseal_not_loadable",
             "auto_promotion_preseal",
             "$.load_status",
@@ -403,6 +455,39 @@ def build_manifest(
             checks["auto_promotion_preseal_pass"],
             "Auto-promotion preseal has blockers that should be cleared before sealing.",
             "Resolve preseal blockers before spending sealed-run-ready cycles.",
+        ),
+        (
+            "auto_promotion_preseal_goal_run_identity_missing",
+            "auto_promotion_preseal",
+            "$.goal_run_identity.effective_run_id",
+            preseal_goal_run_id,
+            "non-empty run id",
+            checks["auto_promotion_preseal_goal_run_identity_present"],
+            "Auto-promotion preseal does not bind a selected goal run id.",
+            "Regenerate it with make release-auto-promotion-preseal and explicit GOAL_RUN_ID.",
+        ),
+        (
+            "auto_promotion_preseal_goal_run_identity_not_pass",
+            "auto_promotion_preseal",
+            "$.goal_run_identity.status|$.goal_run_identity.failure_count",
+            (
+                f"status={preseal_goal_identity.get('status', '')};"
+                f"failures={preseal_goal_identity.get('failure_count', '')}"
+            ),
+            "status=pass; failures=0",
+            checks["auto_promotion_preseal_goal_run_identity_pass"],
+            "Auto-promotion preseal goal-run identity evidence is not passing.",
+            "Regenerate it after make release-auto-promotion-goal-run-id-guard passes.",
+        ),
+        (
+            "auto_promotion_goal_run_identity_mismatch",
+            "auto_promotion_preflight|auto_promotion_preseal",
+            "$.goal_run_identity.effective_run_id",
+            f"preflight={preflight_goal_run_id}; preseal={preseal_goal_run_id}",
+            "matching non-empty run ids",
+            checks["auto_promotion_goal_run_identity_match"],
+            "Auto-promotion preflight and preseal were generated for different goal runs.",
+            "Regenerate preflight and preseal with the same explicit GOAL_RUN_ID.",
         ),
     )
     for (

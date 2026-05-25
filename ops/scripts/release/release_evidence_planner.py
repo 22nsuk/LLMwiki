@@ -136,6 +136,58 @@ def _action(
     }
 
 
+def _int_value(value: Any) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value.strip())
+        except ValueError:
+            return 0
+    return 0
+
+
+def _operator_attention_counts(vault: Path, path: str) -> dict[str, int]:
+    payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, path))
+    if diagnostics.get("status") != "ok" or not isinstance(payload, dict):
+        return {}
+    accepted_risk = payload.get("accepted_risk")
+    if not isinstance(accepted_risk, dict):
+        return {}
+    fields = (
+        "accepted_risk_count",
+        "release_accepted_risk_count",
+        "gate_attention_count",
+    )
+    return {field: _int_value(accepted_risk.get(field)) for field in fields}
+
+
+def _operator_attention_blocker(
+    *,
+    node: dict[str, Any],
+    counts: dict[str, int],
+) -> dict[str, str]:
+    observed = "; ".join(f"{name}={value}" for name, value in counts.items())
+    return {
+        "id": "operator_summary_release_attention_not_clean",
+        "node": str(node["name"]),
+        "observed": observed,
+        "expected": (
+            "accepted_risk_count=0; release_accepted_risk_count=0; gate_attention_count=0"
+        ),
+        "summary": (
+            "Sealed operator diagnostics still report accepted risk or gate attention, so "
+            "unattended promotion would fail at Stage 3."
+        ),
+        "recommended_next_step": (
+            "Run make release-auto-promotion-preseal to refresh source cleanup evidence, "
+            "then make release-sealed-run-ready to regenerate the sealed operator summary."
+        ),
+    }
+
+
 def build_plan(
     vault: Path,
     *,
@@ -314,6 +366,7 @@ def build_plan(
                     recommended_next_step="Run make release-sealed-run-ready, then rerun the planner.",
                 )
             )
+        operator_attention_counts: dict[str, int] = {}
         if not nodes["operator_summary"]["can_reuse"]:
             blockers.append(
                 _blocker(
@@ -327,6 +380,15 @@ def build_plan(
                         "or make release-auto-promotion-operator-summary if sealed sidecars are "
                         "already current."
                     ),
+                )
+            )
+        else:
+            operator_attention_counts = _operator_attention_counts(vault, operator_summary)
+        if any(value != 0 for value in operator_attention_counts.values()):
+            blockers.append(
+                _operator_attention_blocker(
+                    node=nodes["operator_summary"],
+                    counts=operator_attention_counts,
                 )
             )
         if not blockers:

@@ -211,6 +211,30 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self.assertIn("operator_summary_not_reusable", plan["failures"])
         self.assertIn("make release-sealed-run-ready", plan["blockers"][0]["recommended_next_step"])
 
+    def test_auto_promotion_plan_blocks_operator_attention_counts_before_stage_three(self) -> None:
+        self._write_authorities()
+        operator = json.loads(
+            (self.vault / "build/release/operator-release-summary.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        operator["status"] = "pass"
+        operator["accepted_risk"] = {
+            "accepted_risk_count": 2,
+            "release_accepted_risk_count": 2,
+            "gate_attention_count": 1,
+        }
+        self._write_json("build/release/operator-release-summary.json", operator)
+
+        with self._patch_current_repo():
+            plan = build_plan(self.vault, stage="auto-promotion-ready", context=fixed_context())
+
+        self.assertEqual(plan["plan_status"], "blocked")
+        self.assertIn("operator_summary_release_attention_not_clean", plan["failures"])
+        self.assertIn("release-auto-promotion-preseal", plan["blockers"][0]["recommended_next_step"])
+        self.assertIn("release-sealed-run-ready", plan["blockers"][0]["recommended_next_step"])
+        self.assertIn("accepted_risk_count=2", plan["blockers"][0]["observed"])
+
     def test_auto_promotion_plan_reports_pre_seal_diagnostic_refresh_without_cascade(self) -> None:
         self._write_authorities()
         auto = json.loads((self.vault / "ops/reports/auto-improve-readiness.json").read_text())

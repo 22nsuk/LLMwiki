@@ -24,8 +24,47 @@ Useful targets:
 - `make auto-improve-goal-status`
 - `make auto-improve-goal-run`
 - `make auto-improve-goal-finalize`
+- `make goal-runtime-pre-run-cleanup`
+- `make goal-runtime-between-run-settle`
 - `make goal-runtime-certificate`
 - `make goal-runtime-closeout`
+
+Default goal runs do not spend the remaining wall-clock budget after one
+promotion. `GOAL_POST_PROMOTE_MAINTENANCE_CYCLES ?= 1` keeps a single
+post-promote stabilization cycle, while `GOAL_MAINTAIN_UNTIL_BUDGET ?= 0`
+keeps long soak maintenance opt-in. Set `GOAL_MAINTAIN_UNTIL_BUDGET=1` only
+when the goal explicitly needs soak evidence across the remaining
+`GOAL_MAX_MINUTES`.
+
+Maintenance cycles are meaningful only when they establish a new post-promote
+observation or change queue/readiness state. If the same runnable queue snapshot
+repeats, the runtime stops the maintenance loop early and records a
+`queue_action` with the proposal ids and next step. For
+`recent_log_overlap_queue_blocked__...` snapshots, the next step is not only
+recorded. Run `make auto-improve-goal-maintenance-action`; it settles the
+between-run state, verifies that the queued proposal is still runnable and
+unattempted, raises the resume proposal budget by one slot, and resumes the
+session through the normal goal runner. If the selector cannot find an
+unattempted proposal, the action stops before launching another run because
+repeating maintenance refreshes alone is not progress.
+
+## Executor Environment
+
+Goal runs use two Python/tooling scopes. The outer Codex executor must resolve
+the operator-local Codex CLI outside the repository `.venv`; commands executed
+inside the Codex session may then prepend the repository `.venv/bin` for Python,
+pytest, and project entrypoints. Do not create or rely on a repository-local
+`.venv/bin/codex` shim for goal execution. If a run is blocked by `python`,
+`pytest`, `jsonschema`, or Codex resolution, diagnose it as an environment
+contract problem before classifying the mechanism proposal as failed.
+
+Useful checks:
+
+```bash
+make goal-runtime-python-preflight
+command -v codex
+.venv/bin/python -m pytest --version
+```
 
 ## Trial Triage Runbook
 
@@ -38,23 +77,39 @@ Before a new run:
 
 1. Confirm the workspace is a Git worktree and the source tree is clean enough
    for the requested runtime mode.
-2. Run the cheap admission checks before starting a trial:
+2. Run `make goal-runtime-pre-run-cleanup` or a target that includes it. This
+   applies the standard transient cleanup, tmp JSON cleanup, run-local evidence
+   convergence, and artifact freshness refresh before admission reads the state.
+3. Run the cheap admission checks before starting a trial:
    `make goal-runtime-run-admission` or the narrower preflight targets it
    reports, such as `goal-runtime-quarantine-preflight`,
-   `goal-runtime-clean-transient`, `goal-runtime-local-evidence-refresh`, and
-   `goal-runtime-fixed-point-check`.
-3. Inspect the previous failed run before starting the next one. If the previous
+   `goal-runtime-local-evidence-refresh`, and `goal-runtime-fixed-point-check`.
+4. Inspect the previous failed run before starting the next one. If the previous
    run produced no candidate artifacts or is explicitly identified as a broken
    failure-evidence run, exclude it from active mechanism history with the
    official mechanism-history status path rather than physically moving the run
    directory first.
-4. If an open `next_run_failure_repair` proposal exists, treat it as the
+5. If an open `next_run_failure_repair` proposal exists, treat it as the
    selected/emitted proposal class until resolved. Other candidates may remain
    visible in queue diagnostics, but they should not be promoted over the repair
    proposal.
-5. Verify schema/currentness inputs that can block admission, especially fast
+6. Verify schema/currentness inputs that can block admission, especially fast
    smoke report fields, goal runtime certificate inputs, readiness reports, and
    run-local remediation backlog evidence.
+
+Between runs, prefer `make goal-runtime-between-run-settle` before starting the
+next trial. It runs the same pre-run cleanup, republishes run-local evidence to
+the global report surfaces, and verifies the fixed point. It is meant for the
+gap after a run finishes and before a repair/resume run starts; release closeout
+still uses the release-specific cleanup lane described in `docs/release.md`.
+When the previous session's maintenance evidence contains a `queue_action` with
+`runner_action=resume_session_with_additional_proposal_budget`, use
+`make auto-improve-goal-maintenance-action` instead of a manual resume. The
+target computes the next `GOAL_MAX_PROPOSALS` from the session evidence and
+reuses `auto-improve-goal-resume`, so the actual unblock attempt is captured by
+runner heartbeat, checkpoint, and resume evidence. It also writes
+`tmp/goal-runtime-maintenance-action.json` before launching the resume, which
+keeps the budget-increase decision inspectable.
 
 Do not start `make auto-improve-goal-run` while any of these remain unresolved:
 

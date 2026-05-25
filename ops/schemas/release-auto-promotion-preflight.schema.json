@@ -20,6 +20,7 @@
     "currentness",
     "phase",
     "status",
+    "goal_run_identity",
     "inputs",
     "diagnostics",
     "checks",
@@ -53,20 +54,24 @@
         "remediation_backlog",
         "learning_revalidation",
         "closeout_summary",
-        "evidence_cohort"
+        "evidence_cohort",
+        "goal_run_identity"
       ],
       "properties": {
         "auto_improve_readiness": { "$ref": "#/$defs/report_identity" },
         "remediation_backlog": { "$ref": "#/$defs/report_identity" },
         "learning_revalidation": { "$ref": "#/$defs/report_identity" },
         "closeout_summary": { "$ref": "#/$defs/report_identity" },
-        "evidence_cohort": { "$ref": "#/$defs/report_identity" }
+        "evidence_cohort": { "$ref": "#/$defs/report_identity" },
+        "goal_run_identity": { "$ref": "#/$defs/report_identity" }
       }
     },
+    "goal_run_identity": { "$ref": "#/$defs/goal_run_identity_diagnostics" },
     "diagnostics": {
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "goal_run_identity",
         "auto_improve",
         "remediation_backlog",
         "learning_revalidation",
@@ -74,6 +79,7 @@
         "evidence_cohort"
       ],
       "properties": {
+        "goal_run_identity": { "$ref": "#/$defs/goal_run_identity_diagnostics" },
         "auto_improve": { "$ref": "#/$defs/auto_improve_diagnostics" },
         "remediation_backlog": { "$ref": "#/$defs/remediation_diagnostics" },
         "learning_revalidation": { "$ref": "#/$defs/learning_diagnostics" },
@@ -85,6 +91,11 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "goal_run_identity_load_ok",
+        "goal_run_identity_artifact_kind_ok",
+        "goal_run_identity_current",
+        "goal_run_identity_pass",
+        "goal_run_identity_effective_run_id_present",
         "auto_improve_readiness_load_ok",
         "auto_improve_readiness_artifact_kind_ok",
         "auto_improve_readiness_current",
@@ -113,6 +124,11 @@
         "evidence_cohort_strict"
       ],
       "properties": {
+        "goal_run_identity_load_ok": { "type": "boolean" },
+        "goal_run_identity_artifact_kind_ok": { "type": "boolean" },
+        "goal_run_identity_current": { "type": "boolean" },
+        "goal_run_identity_pass": { "type": "boolean" },
+        "goal_run_identity_effective_run_id_present": { "type": "boolean" },
         "auto_improve_readiness_load_ok": { "type": "boolean" },
         "auto_improve_readiness_artifact_kind_ok": { "type": "boolean" },
         "auto_improve_readiness_current": { "type": "boolean" },
@@ -187,6 +203,32 @@
         "generated_at": { "type": "string" },
         "status": { "type": "string" },
         "source_tree_fingerprint": { "type": "string" }
+      }
+    },
+    "goal_run_identity_diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "requested_run_id",
+        "effective_run_id",
+        "inferred_run_id",
+        "selection_mode",
+        "goal_run_id_origin",
+        "goal_run_status_run_id",
+        "goal_runtime_certificate_run_id",
+        "failure_count"
+      ],
+      "properties": {
+        "status": { "type": "string" },
+        "requested_run_id": { "type": "string" },
+        "effective_run_id": { "type": "string" },
+        "inferred_run_id": { "type": "string" },
+        "selection_mode": { "type": "string" },
+        "goal_run_id_origin": { "type": "string" },
+        "goal_run_status_run_id": { "type": "string" },
+        "goal_runtime_certificate_run_id": { "type": "string" },
+        "failure_count": { "type": "integer", "minimum": 0 }
       }
     },
     "auto_improve_diagnostics": {

@@ -25,6 +25,7 @@ DEFAULT_REMEDIATION_BACKLOG = "ops/reports/remediation-backlog.json"
 DEFAULT_LEARNING_REVALIDATION = "ops/reports/learning-readiness-signoff-revalidation.json"
 DEFAULT_CLOSEOUT_SUMMARY = "ops/reports/release-closeout-summary.json"
 DEFAULT_EVIDENCE_COHORT = "ops/reports/release-evidence-cohort.json"
+DEFAULT_GOAL_RUN_IDENTITY = "build/release/release-auto-promotion-goal-run-identity.json"
 SCHEMA_PATH = "ops/schemas/release-auto-promotion-preflight.schema.json"
 PRODUCER = "ops.scripts.release_auto_promotion_preflight"
 SOURCE_COMMAND = "python -m ops.scripts.release_auto_promotion_preflight --vault ."
@@ -161,6 +162,23 @@ def _cohort_diagnostics(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _goal_run_identity_diagnostics(payload: dict[str, Any]) -> dict[str, Any]:
+    observed = _dict(payload.get("observed"))
+    return {
+        "status": str(payload.get("status", "")).strip(),
+        "requested_run_id": str(payload.get("requested_run_id", "")).strip(),
+        "effective_run_id": str(payload.get("effective_run_id", "")).strip(),
+        "inferred_run_id": str(payload.get("inferred_run_id", "")).strip(),
+        "selection_mode": str(payload.get("selection_mode", "")).strip(),
+        "goal_run_id_origin": str(payload.get("goal_run_id_origin", "")).strip(),
+        "goal_run_status_run_id": str(observed.get("goal_run_status_run_id", "")).strip(),
+        "goal_runtime_certificate_run_id": str(
+            observed.get("goal_runtime_certificate_run_id", "")
+        ).strip(),
+        "failure_count": len(_list(payload.get("failures"))),
+    }
+
+
 def _blocker(
     *,
     blocker_id: str,
@@ -222,6 +240,7 @@ def build_manifest(
     learning_revalidation: str = DEFAULT_LEARNING_REVALIDATION,
     closeout_summary: str = DEFAULT_CLOSEOUT_SUMMARY,
     evidence_cohort: str = DEFAULT_EVIDENCE_COHORT,
+    goal_run_identity: str = DEFAULT_GOAL_RUN_IDENTITY,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
     if phase not in PHASES:
@@ -236,19 +255,29 @@ def build_manifest(
         "learning_revalidation": _json_identity(vault, learning_revalidation),
         "closeout_summary": _json_identity(vault, closeout_summary),
         "evidence_cohort": _json_identity(vault, evidence_cohort),
+        "goal_run_identity": _json_identity(vault, goal_run_identity),
     }
     auto_payload, _ = _load_report(vault, auto_improve_readiness)
     remediation_payload, _ = _load_report(vault, remediation_backlog)
     learning_payload, _ = _load_report(vault, learning_revalidation)
     closeout_payload, _ = _load_report(vault, closeout_summary)
     cohort_payload, _ = _load_report(vault, evidence_cohort)
+    goal_identity_payload, _ = _load_report(vault, goal_run_identity)
 
     auto = _auto_improve_diagnostics(auto_payload)
     remediation = _remediation_diagnostics(remediation_payload)
     learning = _learning_diagnostics(learning_payload)
     closeout = _closeout_diagnostics(closeout_payload)
     cohort = _cohort_diagnostics(cohort_payload)
+    identity = _goal_run_identity_diagnostics(goal_identity_payload)
     checks = {
+        "goal_run_identity_load_ok": inputs["goal_run_identity"]["load_status"] == "ok",
+        "goal_run_identity_artifact_kind_ok": (
+            inputs["goal_run_identity"]["artifact_kind"] == "release_goal_run_identity"
+        ),
+        "goal_run_identity_current": _identity_current(inputs["goal_run_identity"], fingerprint),
+        "goal_run_identity_pass": identity["status"] == "pass",
+        "goal_run_identity_effective_run_id_present": bool(identity["effective_run_id"]),
         "auto_improve_readiness_load_ok": inputs["auto_improve_readiness"]["load_status"] == "ok",
         "auto_improve_readiness_artifact_kind_ok": (
             inputs["auto_improve_readiness"]["artifact_kind"] == "auto_improve_readiness_report"
@@ -331,6 +360,61 @@ def build_manifest(
         )
 
     blockers: list[dict[str, Any]] = []
+    _require(
+        blockers,
+        passed=checks["goal_run_identity_load_ok"],
+        blocker_id="goal_run_identity_not_loadable",
+        source="goal_run_identity",
+        field_path="$.load_status",
+        observed=inputs["goal_run_identity"]["load_status"],
+        expected="ok",
+        summary="Release auto-promotion goal-run identity evidence is missing or invalid.",
+        recommended_next_step="Run make release-auto-promotion-goal-run-id-guard with explicit GOAL_RUN_ID.",
+    )
+    _require(
+        blockers,
+        passed=checks["goal_run_identity_artifact_kind_ok"],
+        blocker_id="goal_run_identity_artifact_kind_invalid",
+        source="goal_run_identity",
+        field_path="$.artifact_kind",
+        observed=inputs["goal_run_identity"]["artifact_kind"],
+        expected="release_goal_run_identity",
+        summary="Goal-run identity evidence has an unexpected artifact kind.",
+        recommended_next_step="Regenerate release auto-promotion goal-run identity evidence.",
+    )
+    _require(
+        blockers,
+        passed=checks["goal_run_identity_current"],
+        blocker_id="goal_run_identity_stale",
+        source="goal_run_identity",
+        field_path="$.source_tree_fingerprint",
+        observed=inputs["goal_run_identity"]["source_tree_fingerprint"],
+        expected=fingerprint,
+        summary="Goal-run identity evidence does not describe the current source tree.",
+        recommended_next_step="Rerun make release-auto-promotion-goal-run-id-guard.",
+    )
+    _require(
+        blockers,
+        passed=checks["goal_run_identity_pass"],
+        blocker_id="goal_run_identity_not_pass",
+        source="goal_run_identity",
+        field_path="$.status|$.failures",
+        observed=f"status={identity['status']}; failures={identity['failure_count']}",
+        expected="status=pass; failures=0",
+        summary="The selected GOAL_RUN_ID is not verified release auto-promotion evidence.",
+        recommended_next_step="Use an explicit GOAL_RUN_ID that matches the promoted run status and certificate.",
+    )
+    _require(
+        blockers,
+        passed=checks["goal_run_identity_effective_run_id_present"],
+        blocker_id="goal_run_identity_missing_effective_run_id",
+        source="goal_run_identity",
+        field_path="$.effective_run_id",
+        observed=identity["effective_run_id"],
+        expected="non-empty run id",
+        summary="Goal-run identity evidence does not name the selected run.",
+        recommended_next_step="Rerun with GOAL_RUN_ID=<promoted-run-id>.",
+    )
     _require(
         blockers,
         passed=checks["auto_improve_readiness_load_ok"],
@@ -647,8 +731,10 @@ def build_manifest(
         "currentness": {"status": "current", "checked_at": generated_at},
         "phase": phase,
         "status": status,
+        "goal_run_identity": identity,
         "inputs": inputs,
         "diagnostics": {
+            "goal_run_identity": identity,
             "auto_improve": auto,
             "remediation_backlog": remediation,
             "learning_revalidation": learning,
@@ -685,6 +771,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--learning-revalidation", default=DEFAULT_LEARNING_REVALIDATION)
     parser.add_argument("--closeout-summary", default=DEFAULT_CLOSEOUT_SUMMARY)
     parser.add_argument("--evidence-cohort", default=DEFAULT_EVIDENCE_COHORT)
+    parser.add_argument("--goal-run-identity", default=DEFAULT_GOAL_RUN_IDENTITY)
     return parser.parse_args(argv)
 
 
@@ -699,6 +786,7 @@ def main(argv: list[str] | None = None) -> int:
         learning_revalidation=args.learning_revalidation,
         closeout_summary=args.closeout_summary,
         evidence_cohort=args.evidence_cohort,
+        goal_run_identity=args.goal_run_identity,
     )
     path = write_manifest(vault, manifest, args.out)
     print(display_path(vault, path))

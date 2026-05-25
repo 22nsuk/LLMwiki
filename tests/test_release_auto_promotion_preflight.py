@@ -50,6 +50,30 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
 
     def _write_common_inputs(self, *, promotion_blockers: list[dict] | None = None) -> None:
         self._write_json(
+            "build/release/release-auto-promotion-goal-run-identity.json",
+            {
+                "artifact_kind": "release_goal_run_identity",
+                "producer": "tests.goal_identity",
+                "generated_at": "2026-05-23T12:00:00Z",
+                "source_tree_fingerprint": "fp-current",
+                "status": "pass",
+                "requested_run_id": "auto-improve-trial",
+                "effective_run_id": "promote-run",
+                "inferred_run_id": "promote-run",
+                "selection_mode": "inferred_from_verified_evidence",
+                "goal_run_id_origin": "file",
+                "observed": {
+                    "requested_run_id": "auto-improve-trial",
+                    "effective_run_id": "promote-run",
+                    "inferred_run_id": "promote-run",
+                    "selection_mode": "inferred_from_verified_evidence",
+                    "goal_run_status_run_id": "promote-run",
+                    "goal_runtime_certificate_run_id": "promote-run",
+                },
+                "failures": [],
+            },
+        )
+        self._write_json(
             "ops/reports/auto-improve-readiness.json",
             {
                 "artifact_kind": "auto_improve_readiness_report",
@@ -144,6 +168,8 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
         self.assertEqual(manifest["phase"], "preflight")
         self.assertEqual(manifest["blockers"], [])
         self.assertTrue(manifest["checks"]["auto_improve_stage3_promotion_blockers_clear"])
+        self.assertEqual(manifest["goal_run_identity"]["effective_run_id"], "promote-run")
+        self.assertTrue(manifest["checks"]["goal_run_identity_pass"])
         self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
         self.assertTrue(
             write_manifest(
@@ -209,6 +235,24 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
 
         self.assertEqual(manifest["status"], "fail")
         self.assertIn("auto_improve_independent_promotion_blockers_open", manifest["failures"])
+
+    def test_preflight_requires_verified_goal_run_identity(self) -> None:
+        self._write_common_inputs()
+        identity = json.loads(
+            (
+                self.vault / "build/release/release-auto-promotion-goal-run-identity.json"
+            ).read_text(encoding="utf-8")
+        )
+        identity["status"] = "fail"
+        identity["failures"] = ["goal_run_id_not_explicit"]
+        self._write_json("build/release/release-auto-promotion-goal-run-identity.json", identity)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, phase="preflight", context=fixed_context())
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertFalse(manifest["checks"]["goal_run_identity_pass"])
+        self.assertIn("goal_run_identity_not_pass", manifest["failures"])
 
     def test_preseal_requires_clean_closeout_and_strict_cohort(self) -> None:
         self._write_common_inputs()

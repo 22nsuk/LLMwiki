@@ -992,6 +992,18 @@
           "type": "integer",
           "minimum": 0
         },
+        "target_cycle_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "completion_condition": {
+          "type": "string",
+          "enum": [
+            "time_budget",
+            "post_promote_cycle_limit",
+            "stable_queue_snapshot"
+          ]
+        },
         "started_elapsed_seconds": {
           "type": "integer",
           "minimum": 0
@@ -1011,6 +1023,19 @@
         "meaningful_cycle_count": {
           "type": "integer",
           "minimum": 0
+        },
+        "stable_queue_snapshot_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stable_queue_snapshot": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "queue_action": {
+          "$ref": "#/$defs/maintenance_queue_action"
         },
         "last_cycle_elapsed_seconds": {
           "type": "integer",
@@ -1097,6 +1122,25 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "queue_snapshot_changed": {
+                "type": "boolean"
+              },
+              "stable_queue_snapshot_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "meaningful": {
+                "type": "boolean"
+              },
+              "meaningful_reasons": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "queue_action": {
+                "$ref": "#/$defs/maintenance_queue_action"
               }
             },
             "additionalProperties": false
@@ -1116,5 +1160,52 @@
       "type": "object"
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "$defs": {
+    "maintenance_queue_action": {
+      "type": "object",
+      "required": [
+        "status",
+        "reason",
+        "proposal_ids",
+        "recommended_next_step"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "none",
+            "action_required"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "proposal_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "runner_action": {
+          "type": "string",
+          "enum": [
+            "none",
+            "resume_session_with_additional_proposal_budget"
+          ]
+        },
+        "proposal_budget_increment": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "resume_target": {
+          "type": "string"
+        },
+        "recommended_next_step": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
 }

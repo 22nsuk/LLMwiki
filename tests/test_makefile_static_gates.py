@@ -1216,8 +1216,10 @@ class MakefileStaticGateTests(unittest.TestCase):
             "release-sealed-run-ready",
             "release-sealed-run-ready-plan",
             "release-sealed-run-ready-check",
+            "release-auto-promotion-goal-run-id-guard",
             "release-auto-promotion-preflight",
             "release-auto-promotion-preflight-check",
+            "release-auto-promotion-safe-cleanup",
             "release-auto-promotion-preseal",
             "release-auto-promotion-preseal-check",
             "release-auto-promotion-ready",
@@ -1569,8 +1571,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertNotIn("release-run-ready-ensure", phony_targets)
         self.assertIn("release-sealed-run-ready-plan", _target_block(text, ".PHONY"))
         self.assertNotIn("release-sealed-run-ready-ensure", phony_targets)
+        self.assertIn("release-auto-promotion-goal-run-id-guard", _target_block(text, ".PHONY"))
         self.assertIn("release-auto-promotion-preflight", _target_block(text, ".PHONY"))
         self.assertIn("release-auto-promotion-preflight-check", _target_block(text, ".PHONY"))
+        self.assertIn("release-auto-promotion-safe-cleanup", _target_block(text, ".PHONY"))
         self.assertIn("release-auto-promotion-preseal", _target_block(text, ".PHONY"))
         self.assertIn("release-auto-promotion-preseal-check", _target_block(text, ".PHONY"))
         self.assertIn("release-auto-promotion-ready-plan", _target_block(text, ".PHONY"))
@@ -1684,24 +1688,60 @@ class MakefileStaticGateTests(unittest.TestCase):
             sealed_run_ready_block,
         )
         self.assertIn("ops.scripts.release_sealed_run_manifest", sealed_run_ready_block)
+        auto_promotion_goal_identity_block = _target_block(
+            text, "release-auto-promotion-goal-run-id-guard"
+        )
         auto_promotion_preflight_block = _target_block(text, "release-auto-promotion-preflight")
+        auto_promotion_preflight_resolved_block = _target_block(
+            text, "release-auto-promotion-preflight-resolved"
+        )
         auto_promotion_preseal_block = _target_block(text, "release-auto-promotion-preseal")
+        auto_promotion_preseal_resolved_block = _target_block(
+            text, "release-auto-promotion-preseal-resolved"
+        )
         self.assertIn(
-            "ops.scripts.release_auto_promotion_preflight",
+            "ops.scripts.release_goal_run_identity_guard",
+            auto_promotion_goal_identity_block,
+        )
+        self.assertIn('--goal-run-id "$(GOAL_RUN_ID)"', auto_promotion_goal_identity_block)
+        self.assertIn('--goal-run-id-origin "$(origin GOAL_RUN_ID)"', auto_promotion_goal_identity_block)
+        self.assertIn("$(MAKE) release-auto-promotion-goal-run-id-guard", auto_promotion_preflight_block)
+        self.assertIn("$(MAKE) release-auto-promotion-goal-run-id-guard", auto_promotion_preseal_block)
+        self.assertIn("--print-effective-run-id-from-report", auto_promotion_preflight_block)
+        self.assertIn("--print-effective-run-id-from-report", auto_promotion_preseal_block)
+        self.assertIn("auto-inferred-goal-run-id", auto_promotion_preflight_block)
+        self.assertIn("auto-inferred-goal-run-id", auto_promotion_preseal_block)
+        self.assertIn(
+            '$(MAKE) release-auto-promotion-preflight-resolved GOAL_RUN_ID="$$effective_goal_run_id"',
             auto_promotion_preflight_block,
         )
-        self.assertIn("--phase preflight", auto_promotion_preflight_block)
-        self.assertIn("$(MAKE) remediation-backlog", auto_promotion_preflight_block)
+        self.assertIn(
+            '$(MAKE) release-auto-promotion-preseal-resolved GOAL_RUN_ID="$$effective_goal_run_id"',
+            auto_promotion_preseal_block,
+        )
+        self.assertIn(
+            "ops.scripts.release_auto_promotion_preflight",
+            auto_promotion_preflight_resolved_block,
+        )
+        self.assertIn("--phase preflight", auto_promotion_preflight_resolved_block)
+        self.assertIn("$(MAKE) remediation-backlog", auto_promotion_preflight_resolved_block)
         self.assertIn(
             "$(MAKE) learning-readiness-signoff-revalidation",
-            auto_promotion_preflight_block,
+            auto_promotion_preflight_resolved_block,
         )
         self.assertIn(
             "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
-            auto_promotion_preflight_block,
+            auto_promotion_preflight_resolved_block,
         )
         self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preseal")[:13],
+            _recipe_lines(text, "release-auto-promotion-preseal"),
+            [
+                "$(MAKE) release-auto-promotion-goal-run-id-guard",
+                'if [ -n "$(findstring n,$(firstword $(MAKEFLAGS)))" ]; then if [ "$(origin GOAL_RUN_ID)" = "file" ]; then effective_goal_run_id="auto-inferred-goal-run-id"; else effective_goal_run_id="$(GOAL_RUN_ID)"; fi; else effective_goal_run_id="$$( $(PYTHON) -m ops.scripts.release_goal_run_identity_guard --vault "$(VAULT)" --print-effective-run-id-from-report "$(RELEASE_AUTO_PROMOTION_GOAL_RUN_IDENTITY_OUT)" )"; fi && $(MAKE) release-auto-promotion-preseal-resolved GOAL_RUN_ID="$$effective_goal_run_id"',
+            ],
+        )
+        self.assertEqual(
+            _recipe_lines(text, "release-auto-promotion-preseal-resolved")[:10],
             [
                 "$(MAKE) release-run-ready-check",
                 "$(MAKE) bootstrap-preflight",
@@ -1709,14 +1749,25 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-smoke-full-current-check",
                 "$(MAKE) release-smoke-fast-refresh-check",
                 "$(MAKE) goal-runtime-local-evidence-converge",
-                "$(MAKE) generated-artifact-index",
-                "$(MAKE) artifact-freshness-refresh-check",
-                "$(MAKE) external-report-reference-manifest-release-check",
-                "$(MAKE) release-closeout-summary-report",
+                "$(MAKE) release-auto-promotion-safe-cleanup",
                 "$(MAKE) learning-readiness-signoff-revalidation",
                 "$(MAKE) release-evidence-cohort-preseal-refresh",
                 "$(MAKE) release-closeout-summary-report",
             ],
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "release-auto-promotion-safe-cleanup",
+            (
+                "$(MAKE) goal-runtime-clean-transient",
+                "$(MAKE) tmp-json-clean",
+                "ops.scripts.backfill_archived_run_artifacts",
+                "$(MAKE) generated-artifact-index",
+                "$(MAKE) artifact-freshness-refresh-check",
+                "$(MAKE) external-report-reference-manifest-release-check",
+                "$(MAKE) release-closeout-summary-report",
+            ),
         )
         for expensive_writer in (
             "$(MAKE) test-execution-summary-full-refresh",
@@ -1724,9 +1775,16 @@ class MakefileStaticGateTests(unittest.TestCase):
             "$(PYTHON) -m pytest",
             "$(MAKE) generated-artifact-converge",
         ):
-            self.assertNotIn(expensive_writer, auto_promotion_preseal_block)
+            self.assertNotIn(expensive_writer, auto_promotion_preseal_resolved_block)
         self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preflight")[:8],
+            _recipe_lines(text, "release-auto-promotion-preflight"),
+            [
+                "$(MAKE) release-auto-promotion-goal-run-id-guard",
+                'if [ -n "$(findstring n,$(firstword $(MAKEFLAGS)))" ]; then if [ "$(origin GOAL_RUN_ID)" = "file" ]; then effective_goal_run_id="auto-inferred-goal-run-id"; else effective_goal_run_id="$(GOAL_RUN_ID)"; fi; else effective_goal_run_id="$$( $(PYTHON) -m ops.scripts.release_goal_run_identity_guard --vault "$(VAULT)" --print-effective-run-id-from-report "$(RELEASE_AUTO_PROMOTION_GOAL_RUN_IDENTITY_OUT)" )"; fi && $(MAKE) release-auto-promotion-preflight-resolved GOAL_RUN_ID="$$effective_goal_run_id"',
+            ],
+        )
+        self.assertEqual(
+            _recipe_lines(text, "release-auto-promotion-preflight-resolved")[:8],
             [
                 "$(MAKE) release-smoke-fast-refresh-check",
                 "$(MAKE) goal-runtime-local-evidence-converge",
@@ -1738,30 +1796,36 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) auto-improve-readiness-report-body",
             ],
         )
-        self.assertIn('--remediation-backlog "$(REMEDIATION_BACKLOG_OUT)"', auto_promotion_preflight_block)
+        self.assertIn(
+            '--remediation-backlog "$(REMEDIATION_BACKLOG_OUT)"',
+            auto_promotion_preflight_resolved_block,
+        )
         self.assertIn(
             '--learning-revalidation "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT)"',
-            auto_promotion_preflight_block,
+            auto_promotion_preflight_resolved_block,
         )
         self.assertIn(
             '--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"',
-            auto_promotion_preflight_block,
+            auto_promotion_preflight_resolved_block,
         )
         self.assertIn(
             '--evidence-cohort "$(RELEASE_EVIDENCE_COHORT_OUT)"',
-            auto_promotion_preflight_block,
+            auto_promotion_preflight_resolved_block,
         )
-        self.assertIn("ops.scripts.release_auto_promotion_preflight", auto_promotion_preseal_block)
-        self.assertIn("--phase preseal", auto_promotion_preseal_block)
-        self.assertIn("$(MAKE) release-run-ready-check", auto_promotion_preseal_block)
-        self.assertIn("$(MAKE) release-closeout-summary-report", auto_promotion_preseal_block)
-        self.assertIn("$(MAKE) release-evidence-cohort-preseal-refresh", auto_promotion_preseal_block)
+        self.assertIn("ops.scripts.release_auto_promotion_preflight", auto_promotion_preseal_resolved_block)
+        self.assertIn("--phase preseal", auto_promotion_preseal_resolved_block)
+        self.assertIn("$(MAKE) release-run-ready-check", auto_promotion_preseal_resolved_block)
+        self.assertIn("$(MAKE) release-closeout-summary-report", auto_promotion_preseal_resolved_block)
+        self.assertIn(
+            "$(MAKE) release-evidence-cohort-preseal-refresh",
+            auto_promotion_preseal_resolved_block,
+        )
         self.assertIn(
             "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
-            auto_promotion_preseal_block,
+            auto_promotion_preseal_resolved_block,
         )
-        preseal_recipe = _recipe_lines(text, "release-auto-promotion-preseal")
-        self.assertEqual(preseal_recipe.count("$(MAKE) release-closeout-summary-report"), 2)
+        preseal_recipe = _recipe_lines(text, "release-auto-promotion-preseal-resolved")
+        self.assertEqual(preseal_recipe.count("$(MAKE) release-closeout-summary-report"), 1)
         self.assertLess(
             preseal_recipe.index("$(MAKE) release-evidence-cohort-preseal-refresh"),
             preseal_recipe.index(
@@ -1778,18 +1842,21 @@ class MakefileStaticGateTests(unittest.TestCase):
             ),
             preseal_recipe.index("$(MAKE) remediation-backlog"),
         )
-        self.assertIn('--remediation-backlog "$(REMEDIATION_BACKLOG_OUT)"', auto_promotion_preseal_block)
+        self.assertIn(
+            '--remediation-backlog "$(REMEDIATION_BACKLOG_OUT)"',
+            auto_promotion_preseal_resolved_block,
+        )
         self.assertIn(
             '--learning-revalidation "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT)"',
-            auto_promotion_preseal_block,
+            auto_promotion_preseal_resolved_block,
         )
         self.assertIn(
             '--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"',
-            auto_promotion_preseal_block,
+            auto_promotion_preseal_resolved_block,
         )
         self.assertIn(
             '--evidence-cohort "$(RELEASE_EVIDENCE_COHORT_OUT)"',
-            auto_promotion_preseal_block,
+            auto_promotion_preseal_resolved_block,
         )
         self.assertIn("ops.scripts.release_auto_promotion_ready", _target_block(text, "release-auto-promotion-ready"))
         auto_promotion_block = _target_block(text, "release-auto-promotion-ready")
@@ -1861,7 +1928,12 @@ class MakefileStaticGateTests(unittest.TestCase):
             release_converge_post_block.index("$(MAKE) operator-release-summary"),
             release_converge_post_block.index("$(MAKE) release-closeout-fixed-point"),
         )
+        self.assertGreater(
+            release_converge_post_block.rindex("$(MAKE) release-closeout-fixed-point"),
+            release_converge_post_block.rindex("$(MAKE) generated-artifact-converge"),
+        )
         self.assertGreaterEqual(release_converge_post_block.count("$(MAKE) generated-artifact-converge"), 2)
+        self.assertGreaterEqual(release_converge_post_block.count("$(MAKE) release-closeout-fixed-point"), 2)
         self.assertNotIn("$(MAKE) generated-artifact-index", _target_block(text, "release-converge-post"))
         self.assertNotIn("$(MAKE) artifact-freshness", _target_block(text, "release-converge-post"))
         self.assertIn("$(MAKE) release-worktree-clean-check", post_check_block)
@@ -3384,6 +3456,10 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "tmp/goal-runtime-run-admission.json",
             ),
             (
+                "GOAL_MAINTENANCE_ACTION_PLAN_OUT",
+                "tmp/goal-runtime-maintenance-action.json",
+            ),
+            (
                 "GOAL_RUNTIME_CLOSEOUT_PLAN_OUT",
                 "tmp/goal-runtime-closeout-plan.json",
             ),
@@ -3418,8 +3494,9 @@ class MakefileStaticGateTests(unittest.TestCase):
             ("GOAL_MAX_MINUTES", "360"),
             ("GOAL_MAX_PROPOSALS", "1"),
             ("GOAL_MAX_CONSECUTIVE_FAILURES", "1"),
-            ("GOAL_MAINTAIN_UNTIL_BUDGET", "1"),
+            ("GOAL_MAINTAIN_UNTIL_BUDGET", "0"),
             ("GOAL_MAINTENANCE_INTERVAL_SECONDS", "300"),
+            ("GOAL_POST_PROMOTE_MAINTENANCE_CYCLES", "1"),
             ("GOAL_EXECUTOR", "codex_exec"),
             ("GOAL_ARTIFACT_CLASS", "system_mechanism"),
             ("GOAL_FINAL_STATUS", "stopped"),
@@ -3443,6 +3520,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("$(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,)", run_command)
         self.assertIn("$(if $(GOAL_MAINTAIN_UNTIL_BUDGET),--maintain-until-budget,)", run_command)
         self.assertIn("--maintenance-interval-seconds \"$(GOAL_MAINTENANCE_INTERVAL_SECONDS)\"", run_command)
+        self.assertIn(
+            "--post-promote-maintenance-cycles \"$(GOAL_POST_PROMOTE_MAINTENANCE_CYCLES)\"",
+            run_command,
+        )
         resume_command = _assert_assignment_exists(self, text, "GOAL_RESUME_COMMAND")
         self.assertIn("ops.scripts.auto_improve_loop", resume_command)
         self.assertIn("--resume-session \"$(GOAL_RUN_ID)\"", resume_command)
@@ -3455,6 +3536,25 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn("$(if $(GOAL_MAINTAIN_UNTIL_BUDGET),--maintain-until-budget,)", resume_command)
         self.assertIn("--maintenance-interval-seconds \"$(GOAL_MAINTENANCE_INTERVAL_SECONDS)\"", resume_command)
+        self.assertIn(
+            "--post-promote-maintenance-cycles \"$(GOAL_POST_PROMOTE_MAINTENANCE_CYCLES)\"",
+            resume_command,
+        )
+        maintenance_action_command = _assert_assignment_exists(
+            self,
+            text,
+            "GOAL_MAINTENANCE_ACTION_NEXT_MAX_PROPOSALS",
+        )
+        self.assertIn("ops.scripts.auto_improve_loop", maintenance_action_command)
+        self.assertIn("--resume-session \"$(GOAL_RUN_ID)\"", maintenance_action_command)
+        self.assertIn(
+            "--print-maintenance-action-next-max-proposals",
+            maintenance_action_command,
+        )
+        self.assertIn(
+            "--maintenance-action-plan-out \"$(GOAL_MAINTENANCE_ACTION_PLAN_OUT)\"",
+            maintenance_action_command,
+        )
         phony = _target_block(text, ".PHONY")
         for target in (
             "codex-goal-contract",
@@ -3473,6 +3573,8 @@ class MakefileStaticGateTests(unittest.TestCase):
             "goal-runtime-local-evidence-converge",
             "goal-runtime-publish-local-evidence",
             "goal-runtime-reconcile",
+            "goal-runtime-pre-run-cleanup",
+            "goal-runtime-between-run-settle",
             "goal-runtime-closeout-plan",
             "goal-runtime-closeout-candidate-script-output-surfaces",
             "goal-runtime-closeout-candidate-generated-artifact-index",
@@ -3499,6 +3601,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "auto-improve-goal-run",
             "auto-improve-goal-status",
             "auto-improve-goal-resume",
+            "auto-improve-goal-maintenance-action",
             "auto-improve-goal-finalize",
             "auto-improve-goal-run-artifacts",
             "goal-runtime-certificate",
@@ -3538,6 +3641,12 @@ class MakefileStaticGateTests(unittest.TestCase):
         _assert_target_depends_on(self, text, "goal-runtime-run-admission-resume", "goal-runtime-run-admission")
         _assert_target_depends_on(self, text, "auto-improve-goal-resume", "goal-runtime-run-admission-resume")
         _assert_target_depends_on(self, text, "auto-improve-goal-resume", "auto-improve-goal-contract")
+        _assert_target_depends_on(
+            self,
+            text,
+            "auto-improve-goal-maintenance-action",
+            "goal-runtime-between-run-settle",
+        )
         _assert_target_depends_on(self, text, "auto-improve-goal-finalize", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "auto-improve-goal-run-artifacts", "auto-improve-goal-status")
         _assert_target_depends_on(self, text, "goal-runtime-certificate", "auto-improve-goal-contract")
@@ -3547,12 +3656,10 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-run-admission-converge",
             (
-                "$(MAKE) goal-runtime-clean-transient",
                 "$(MAKE) refresh-generated-core",
                 "$(MAKE) release-smoke-fast-refresh-check",
-                "$(MAKE) artifact-freshness-refresh-check",
                 "$(MAKE) goal-runtime-quarantine-preflight",
-                "$(MAKE) goal-runtime-local-evidence-converge",
+                "$(MAKE) goal-runtime-pre-run-cleanup",
                 "$(MAKE) goal-runtime-publish-local-evidence",
                 "$(MAKE) goal-runtime-fixed-point-check",
             ),
@@ -3562,16 +3669,34 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-run-admission-local-refresh",
             (
-                "$(MAKE) goal-runtime-clean-transient",
                 "$(MAKE) release-smoke-fast-refresh-check",
-                "$(MAKE) artifact-freshness-refresh-check",
                 "$(MAKE) goal-runtime-quarantine-preflight",
+                "$(MAKE) goal-runtime-pre-run-cleanup",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-pre-run-cleanup",
+            (
+                "$(MAKE) goal-runtime-clean-transient",
+                "$(MAKE) tmp-json-clean",
                 "$(MAKE) goal-runtime-local-evidence-converge",
+                "$(MAKE) artifact-freshness-refresh-check",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "goal-runtime-between-run-settle",
+            (
+                "$(MAKE) goal-runtime-pre-run-cleanup",
+                "$(MAKE) goal-runtime-publish-local-evidence",
+                "$(MAKE) goal-runtime-fixed-point-check",
             ),
         )
         for admission_target in (
-            "goal-runtime-run-admission-converge",
-            "goal-runtime-run-admission-local-refresh",
+            "goal-runtime-pre-run-cleanup",
         ):
             admission_recipe = _recipe_lines(text, admission_target)
             self.assertLess(
@@ -4018,6 +4143,16 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertNotIn("$(MAKE)", _target_block(text, "auto-improve-goal-run"))
         self.assertNotIn("$(MAKE)", _target_block(text, "auto-improve-goal-resume"))
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "auto-improve-goal-maintenance-action",
+            (
+                "GOAL_MAINTENANCE_ACTION_NEXT_MAX_PROPOSALS",
+                "$(MAKE) auto-improve-goal-resume",
+                "GOAL_MAX_PROPOSALS=\"$$next_max_proposals\"",
+            ),
+        )
         self.assertNotIn("> \"$(GOAL_SESSION_RESULT_OUT)\"", _target_block(text, "auto-improve-goal-run"))
         self.assertNotIn("> \"$(GOAL_SESSION_RESULT_OUT)\"", _target_block(text, "auto-improve-goal-resume"))
         _assert_recipe_contains_tokens(

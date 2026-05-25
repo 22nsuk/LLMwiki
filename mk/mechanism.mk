@@ -32,6 +32,7 @@ GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_MAX_ITERATIONS ?= 6
 GOAL_RUNTIME_LOCAL_EVIDENCE_REFRESH_TIMEOUT_SECONDS ?= 300
 GOAL_RUNTIME_RUN_ADMISSION_OUT ?= tmp/goal-runtime-run-admission.json
 GOAL_RUNTIME_RUN_ADMISSION_RESUME ?=
+GOAL_MAINTENANCE_ACTION_PLAN_OUT ?= tmp/goal-runtime-maintenance-action.json
 GOAL_RUNTIME_CLOSEOUT_PLAN_OUT ?= tmp/goal-runtime-closeout-plan.json
 GOAL_RUNTIME_CLOSEOUT_BUDGET ?= cheap
 GOAL_RUNTIME_CLOSEOUT_STATE_DIR ?= $(GOAL_ACTIVE_STATE_DIR)/closeout
@@ -62,19 +63,21 @@ GOAL_MAX_CONSECUTIVE_FAILURES ?= 1
 GOAL_HEARTBEAT_INTERVAL_SECONDS ?= 300
 GOAL_CHECKPOINT_INTERVAL_SECONDS ?= 1800
 GOAL_CHECKPOINT_COMMAND_TIMEOUT_SECONDS ?= 900
-GOAL_MAINTAIN_UNTIL_BUDGET ?= 1
+GOAL_MAINTAIN_UNTIL_BUDGET ?= 0
 GOAL_MAINTENANCE_INTERVAL_SECONDS ?= 300
+GOAL_POST_PROMOTE_MAINTENANCE_CYCLES ?= 1
 GOAL_EXECUTOR ?= codex_exec
 GOAL_ARTIFACT_CLASS ?= system_mechanism
 GOAL_ALLOW_LEARNING_UNCERTAIN ?=
-GOAL_RUN_COMMAND ?= $(PYTHON) -m ops.scripts.auto_improve_loop --vault "$(VAULT)" --session-id "$(GOAL_RUN_ID)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --max-minutes "$(GOAL_MAX_MINUTES)" --max-proposals "$(GOAL_MAX_PROPOSALS)" --max-consecutive-failures "$(GOAL_MAX_CONSECUTIVE_FAILURES)" --executor "$(GOAL_EXECUTOR)" --class "$(GOAL_ARTIFACT_CLASS)" $(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,) $(if $(GOAL_MAINTAIN_UNTIL_BUDGET),--maintain-until-budget,) --maintenance-interval-seconds "$(GOAL_MAINTENANCE_INTERVAL_SECONDS)"
-GOAL_RESUME_COMMAND ?= $(PYTHON) -m ops.scripts.auto_improve_loop --vault "$(VAULT)" --resume-session "$(GOAL_RUN_ID)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --max-minutes "$(GOAL_MAX_MINUTES)" --max-proposals "$(GOAL_MAX_PROPOSALS)" --max-consecutive-failures "$(GOAL_MAX_CONSECUTIVE_FAILURES)" --executor "$(GOAL_EXECUTOR)" --class "$(GOAL_ARTIFACT_CLASS)" $(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,) $(if $(GOAL_MAINTAIN_UNTIL_BUDGET),--maintain-until-budget,) --maintenance-interval-seconds "$(GOAL_MAINTENANCE_INTERVAL_SECONDS)"
+GOAL_RUN_COMMAND ?= $(PYTHON) -m ops.scripts.auto_improve_loop --vault "$(VAULT)" --session-id "$(GOAL_RUN_ID)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --max-minutes "$(GOAL_MAX_MINUTES)" --max-proposals "$(GOAL_MAX_PROPOSALS)" --max-consecutive-failures "$(GOAL_MAX_CONSECUTIVE_FAILURES)" --executor "$(GOAL_EXECUTOR)" --class "$(GOAL_ARTIFACT_CLASS)" $(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,) $(if $(GOAL_MAINTAIN_UNTIL_BUDGET),--maintain-until-budget,) --maintenance-interval-seconds "$(GOAL_MAINTENANCE_INTERVAL_SECONDS)" --post-promote-maintenance-cycles "$(GOAL_POST_PROMOTE_MAINTENANCE_CYCLES)"
+GOAL_RESUME_COMMAND ?= $(PYTHON) -m ops.scripts.auto_improve_loop --vault "$(VAULT)" --resume-session "$(GOAL_RUN_ID)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --max-minutes "$(GOAL_MAX_MINUTES)" --max-proposals "$(GOAL_MAX_PROPOSALS)" --max-consecutive-failures "$(GOAL_MAX_CONSECUTIVE_FAILURES)" --executor "$(GOAL_EXECUTOR)" --class "$(GOAL_ARTIFACT_CLASS)" $(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,) $(if $(GOAL_MAINTAIN_UNTIL_BUDGET),--maintain-until-budget,) --maintenance-interval-seconds "$(GOAL_MAINTENANCE_INTERVAL_SECONDS)" --post-promote-maintenance-cycles "$(GOAL_POST_PROMOTE_MAINTENANCE_CYCLES)"
+GOAL_MAINTENANCE_ACTION_NEXT_MAX_PROPOSALS ?= $(PYTHON) -m ops.scripts.auto_improve_loop --vault "$(VAULT)" --resume-session "$(GOAL_RUN_ID)" --print-maintenance-action-next-max-proposals --maintenance-action-plan-out "$(GOAL_MAINTENANCE_ACTION_PLAN_OUT)"
 GOAL_FINAL_STATUS ?= stopped
 GOAL_COMPLETED_AT ?=
 GOAL_RUN_LOG_DIR ?= build/goal-runs
 MECHANISM_RUN_ARGS ?=
 
-.PHONY: auto-improve-readiness auto-improve-readiness-report auto-improve-readiness-report-body auto-improve-readiness-worktree-guard codex-goal-contract codex-goal-prompt codex-goal-client goal-prompt auto-improve-goal-contract goal-runtime-refresh goal-runtime-publish-snapshot goal-runtime-local-readiness goal-runtime-local-session-synopsis goal-runtime-local-negative-lessons goal-runtime-local-remediation-backlog goal-runtime-local-fixed-point-check goal-runtime-local-evidence-refresh goal-runtime-local-evidence-converge goal-runtime-publish-local-evidence goal-runtime-reconcile goal-runtime-closeout-plan goal-runtime-closeout-candidate-script-output-surfaces goal-runtime-closeout-candidate-generated-artifact-index goal-runtime-closeout-candidate-artifact-freshness goal-runtime-closeout-candidate-converge goal-runtime-closeout-publish-script-output-surfaces goal-runtime-closeout-publish goal-runtime-closeout-finalize goal-runtime-closeout goal-runtime-closeout-full goal-runtime-clean-transient goal-runtime-quarantine-preflight goal-runtime-fixed-point-check goal-runtime-run-admission-converge goal-runtime-run-admission-local-refresh goal-runtime-run-admission goal-runtime-run-admission-resume goal-runtime-lock-check goal-runtime-lock-status goal-runtime-lock-stop goal-runtime-python-preflight long-run-preflight-clean auto-improve-goal-preflight auto-improve-goal-run auto-improve-goal-status auto-improve-goal-resume auto-improve-goal-finalize auto-improve-goal-run-artifacts goal-runtime-certificate goal-worktree-guard mechanism-review mutation-proposal run-mechanism-experiment-linux-tmp outcome-metrics routing-provenance-aggregate outcome-provenance-gate-policy
+.PHONY: auto-improve-readiness auto-improve-readiness-report auto-improve-readiness-report-body auto-improve-readiness-worktree-guard codex-goal-contract codex-goal-prompt codex-goal-client goal-prompt auto-improve-goal-contract goal-runtime-refresh goal-runtime-publish-snapshot goal-runtime-local-readiness goal-runtime-local-session-synopsis goal-runtime-local-negative-lessons goal-runtime-local-remediation-backlog goal-runtime-local-fixed-point-check goal-runtime-local-evidence-refresh goal-runtime-local-evidence-converge goal-runtime-publish-local-evidence goal-runtime-reconcile goal-runtime-pre-run-cleanup goal-runtime-between-run-settle goal-runtime-closeout-plan goal-runtime-closeout-candidate-script-output-surfaces goal-runtime-closeout-candidate-generated-artifact-index goal-runtime-closeout-candidate-artifact-freshness goal-runtime-closeout-candidate-converge goal-runtime-closeout-publish-script-output-surfaces goal-runtime-closeout-publish goal-runtime-closeout-finalize goal-runtime-closeout goal-runtime-closeout-full goal-runtime-clean-transient goal-runtime-quarantine-preflight goal-runtime-fixed-point-check goal-runtime-run-admission-converge goal-runtime-run-admission-local-refresh goal-runtime-run-admission goal-runtime-run-admission-resume goal-runtime-lock-check goal-runtime-lock-status goal-runtime-lock-stop goal-runtime-python-preflight long-run-preflight-clean auto-improve-goal-preflight auto-improve-goal-run auto-improve-goal-status auto-improve-goal-resume auto-improve-goal-maintenance-action auto-improve-goal-finalize auto-improve-goal-run-artifacts goal-runtime-certificate goal-worktree-guard mechanism-review mutation-proposal run-mechanism-experiment-linux-tmp outcome-metrics routing-provenance-aggregate outcome-provenance-gate-policy
 
 auto-improve-readiness: auto-improve-readiness-worktree-guard
 	@status=0; $(PYTHON) -m ops.scripts.auto_improve_readiness --vault "$(VAULT)" --out "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(AUTO_IMPROVE_READINESS_CANDIDATE_OUT)" --out "$(AUTO_IMPROVE_READINESS_OUT)" --schema ops/schemas/auto-improve-readiness-report.schema.json --expected-artifact-kind auto_improve_readiness_report --expected-producer ops.scripts.auto_improve_readiness_runtime; exit $$status
@@ -152,6 +155,17 @@ goal-runtime-reconcile:
 	$(MAKE) goal-runtime-fixed-point-check
 	$(MAKE) generated-artifact-converge
 
+goal-runtime-pre-run-cleanup:
+	$(MAKE) goal-runtime-clean-transient
+	$(MAKE) tmp-json-clean
+	$(MAKE) goal-runtime-local-evidence-converge
+	$(MAKE) artifact-freshness-refresh-check
+
+goal-runtime-between-run-settle: goal-runtime-lock-check goal-runtime-python-preflight
+	$(MAKE) goal-runtime-pre-run-cleanup
+	$(MAKE) goal-runtime-publish-local-evidence
+	$(MAKE) goal-runtime-fixed-point-check
+
 goal-runtime-closeout-plan:
 	$(PYTHON) -m ops.scripts.goal_runtime_closeout --vault "$(VAULT)" --out "$(GOAL_RUNTIME_CLOSEOUT_PLAN_OUT)" --budget "$(GOAL_RUNTIME_CLOSEOUT_BUDGET)" --candidate-root "$(GOAL_RUNTIME_CLOSEOUT_STATE_DIR)"
 
@@ -208,21 +222,17 @@ goal-runtime-fixed-point-check:
 	$(PYTHON) -m ops.scripts.goal_runtime_fixed_point_check --vault "$(VAULT)" --out "$(GOAL_RUNTIME_FIXED_POINT_CHECK_OUT)"
 
 goal-runtime-run-admission-converge: goal-runtime-lock-check goal-runtime-python-preflight
-	$(MAKE) goal-runtime-clean-transient
 	$(MAKE) refresh-generated-core
 	$(MAKE) release-smoke-fast-refresh-check
 	$(MAKE) goal-runtime-quarantine-preflight
-	$(MAKE) goal-runtime-local-evidence-converge
-	$(MAKE) artifact-freshness-refresh-check
+	$(MAKE) goal-runtime-pre-run-cleanup
 	$(MAKE) goal-runtime-publish-local-evidence
 	$(MAKE) goal-runtime-fixed-point-check
 
 goal-runtime-run-admission-local-refresh: goal-runtime-lock-check goal-runtime-python-preflight
-	$(MAKE) goal-runtime-clean-transient
 	$(MAKE) release-smoke-fast-refresh-check
 	$(MAKE) goal-runtime-quarantine-preflight
-	$(MAKE) goal-runtime-local-evidence-converge
-	$(MAKE) artifact-freshness-refresh-check
+	$(MAKE) goal-runtime-pre-run-cleanup
 
 goal-runtime-run-admission: goal-runtime-run-admission-local-refresh
 	$(PYTHON) -m ops.scripts.goal_runtime_run_admission --vault "$(VAULT)" --out "$(GOAL_RUNTIME_RUN_ADMISSION_OUT)" --cleanup-report "$(GOAL_RUNTIME_CLEAN_TRANSIENT_OUT)" --quarantine-preflight-report "$(GOAL_RUNTIME_QUARANTINE_PREFLIGHT_OUT)" --fixed-point-report "$(GOAL_RUNTIME_FIXED_POINT_CHECK_OUT)" --goal-worktree-guard-report "$(GOAL_WORKTREE_GUARD_OUT)" --mutation-proposals-report "$(MUTATION_PROPOSAL_OUT)" --readiness-report "$(GOAL_LOCAL_READINESS_OUT)" --remediation-backlog-report "$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --goal-run-status "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --runtime-certificate-report "$(GOAL_RUNTIME_CERTIFICATE_OUT)" $(if $(GOAL_RUNTIME_RUN_ADMISSION_RESUME),--resume-session "$(GOAL_RUN_ID)",) --strict
@@ -260,6 +270,9 @@ auto-improve-goal-status: auto-improve-goal-contract
 
 auto-improve-goal-resume: goal-runtime-run-admission-resume auto-improve-goal-contract
 	$(PYTHON) -m ops.scripts.goal_runtime_runner --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --run-id "$(GOAL_RUN_ID)" --runtime-mode "$(GOAL_RUNTIME_MODE)" --status-report-path "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --result-out "$(GOAL_SESSION_RESULT_OUT)" --heartbeat-interval-seconds "$(GOAL_HEARTBEAT_INTERVAL_SECONDS)" --checkpoint-interval-seconds "$(GOAL_CHECKPOINT_INTERVAL_SECONDS)" --checkpoint-command-timeout-seconds "$(GOAL_CHECKPOINT_COMMAND_TIMEOUT_SECONDS)" --timeout-seconds "$(GOAL_RUNNER_TIMEOUT_SECONDS)" --workspace-lock-path "$(GOAL_RUNTIME_LOCK_PATH)" --resume-from-checkpoint -- $(GOAL_RESUME_COMMAND)
+
+auto-improve-goal-maintenance-action: goal-runtime-between-run-settle
+	@next_max_proposals="$$( $(GOAL_MAINTENANCE_ACTION_NEXT_MAX_PROPOSALS) )"; $(MAKE) auto-improve-goal-resume GOAL_MAX_PROPOSALS="$$next_max_proposals"
 
 auto-improve-goal-finalize: auto-improve-goal-contract
 	@status=0; $(PYTHON) -m ops.scripts.goal_run_status --vault "$(VAULT)" --goal-contract "$(CODEX_GOAL_ACTIVE_CONTRACT_OUT)" --run-id "$(GOAL_RUN_ID)" --status "$(GOAL_FINAL_STATUS)" --runtime-mode "$(GOAL_RUNTIME_MODE)" --completed-at "$(GOAL_COMPLETED_AT)" --heartbeat-interval-seconds "$(GOAL_HEARTBEAT_INTERVAL_SECONDS)" --checkpoint-interval-seconds "$(GOAL_CHECKPOINT_INTERVAL_SECONDS)" --status-report-path "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --out "$(GOAL_RUN_STATUS_CANDIDATE_OUT)" --write-run-artifacts || status=$$?; $(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_RUN_STATUS_CANDIDATE_OUT)" --out "$(GOAL_ACTIVE_RUN_STATUS_OUT)" --schema ops/schemas/goal-run-status.schema.json --expected-artifact-kind goal_run_status --expected-producer ops.scripts.goal_run_status; exit $$status

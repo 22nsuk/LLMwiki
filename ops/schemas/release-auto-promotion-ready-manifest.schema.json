@@ -170,11 +170,16 @@
         "auto_promotion_preflight_current",
         "auto_promotion_preflight_phase_ok",
         "auto_promotion_preflight_pass",
+        "auto_promotion_preflight_goal_run_identity_present",
+        "auto_promotion_preflight_goal_run_identity_pass",
         "auto_promotion_preseal_load_ok",
         "auto_promotion_preseal_artifact_kind_ok",
         "auto_promotion_preseal_current",
         "auto_promotion_preseal_phase_ok",
         "auto_promotion_preseal_pass",
+        "auto_promotion_preseal_goal_run_identity_present",
+        "auto_promotion_preseal_goal_run_identity_pass",
+        "auto_promotion_goal_run_identity_match",
         "run_manifest_pass",
         "run_manifest_load_ok",
         "run_manifest_artifact_kind_ok",
@@ -209,11 +214,16 @@
         "auto_promotion_preflight_current": { "type": "boolean" },
         "auto_promotion_preflight_phase_ok": { "type": "boolean" },
         "auto_promotion_preflight_pass": { "type": "boolean" },
+        "auto_promotion_preflight_goal_run_identity_present": { "type": "boolean" },
+        "auto_promotion_preflight_goal_run_identity_pass": { "type": "boolean" },
         "auto_promotion_preseal_load_ok": { "type": "boolean" },
         "auto_promotion_preseal_artifact_kind_ok": { "type": "boolean" },
         "auto_promotion_preseal_current": { "type": "boolean" },
         "auto_promotion_preseal_phase_ok": { "type": "boolean" },
         "auto_promotion_preseal_pass": { "type": "boolean" },
+        "auto_promotion_preseal_goal_run_identity_present": { "type": "boolean" },
+        "auto_promotion_preseal_goal_run_identity_pass": { "type": "boolean" },
+        "auto_promotion_goal_run_identity_match": { "type": "boolean" },
         "run_manifest_pass": { "type": "boolean" },
         "run_manifest_load_ok": { "type": "boolean" },
         "run_manifest_artifact_kind_ok": { "type": "boolean" },
@@ -266,11 +276,34 @@
     "auto_promotion_phase_diagnostic": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["phase", "status", "blocker_count"],
+      "required": ["phase", "status", "blocker_count", "goal_run_identity"],
       "properties": {
         "phase": { "type": "string" },
         "status": { "type": "string" },
-        "blocker_count": { "type": "integer", "minimum": 0 }
+        "blocker_count": { "type": "integer", "minimum": 0 },
+        "goal_run_identity": { "$ref": "#/$defs/phase_goal_run_identity" }
+      }
+    },
+    "phase_goal_run_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "requested_run_id",
+        "effective_run_id",
+        "inferred_run_id",
+        "selection_mode",
+        "goal_run_id_origin",
+        "failure_count"
+      ],
+      "properties": {
+        "status": { "type": "string" },
+        "requested_run_id": { "type": "string" },
+        "effective_run_id": { "type": "string" },
+        "inferred_run_id": { "type": "string" },
+        "selection_mode": { "type": "string" },
+        "goal_run_id_origin": { "type": "string" },
+        "failure_count": { "type": "integer", "minimum": 0 }
       }
     },
     "report_identity": {

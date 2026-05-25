@@ -612,6 +612,7 @@ def _empty_session_evidence(*, status: str, path: str) -> dict[str, Any]:
         "meaningful_maintenance_cycle_count": 0,
         "expected_min_maintenance_cycle_count": 0,
         "maintenance_last_cycle_elapsed_seconds": 0,
+        "maintenance_stop_reason": "",
         **_session_requirement_summary(),
     }
 
@@ -629,12 +630,20 @@ def _meaningful_maintenance_summary(payload: Mapping[str, Any]) -> dict[str, Any
             "auto_improve_readiness_report",
             "auto_improve_session_report",
         }
-        meaningful_count = sum(
-            1
+        explicit_meaningful = [
+            cycle
             for cycle in cycle_items
-            if str(cycle.get("status", "")).strip() == "pass"
-            and set(_list_text(cycle.get("work_items"))) >= required_work
-        )
+            if isinstance(cycle, Mapping) and "meaningful" in cycle
+        ]
+        if explicit_meaningful:
+            meaningful_count = sum(1 for cycle in explicit_meaningful if cycle.get("meaningful"))
+        else:
+            meaningful_count = sum(
+                1
+                for cycle in cycle_items
+                if str(cycle.get("status", "")).strip() == "pass"
+                and set(_list_text(cycle.get("work_items"))) >= required_work
+            )
     expected_count = _integer_value(maintenance.get("expected_min_cycle_count"))
     target_elapsed = _integer_value(maintenance.get("target_elapsed_seconds"))
     last_elapsed = _integer_value(maintenance.get("last_cycle_elapsed_seconds"))
@@ -643,13 +652,42 @@ def _meaningful_maintenance_summary(payload: Mapping[str, Any]) -> dict[str, Any
             (_integer_value(cycle.get("elapsed_seconds")) for cycle in cycle_items),
             default=0,
         )
-    complete = (
+    raw_stop_reason = str(maintenance.get("stop_reason", "")).strip()
+    maintenance_complete = (
         str(maintenance.get("mode", "")).strip() == "proposal_budget_runtime_maintenance"
         and str(maintenance.get("status", "")).strip() == "complete"
+    )
+    legacy_time_budget_complete = (
+        maintenance_complete
+        and not raw_stop_reason
+        and expected_count > 0
         and cycle_count >= expected_count
         and meaningful_count >= expected_count
         and last_elapsed >= target_elapsed
     )
+    stop_reason = raw_stop_reason or (
+        "time_budget_reached" if legacy_time_budget_complete else ""
+    )
+    time_budget_complete = (
+        maintenance_complete
+        and stop_reason in {"time_budget_reached", "time_budget_already_reached"}
+        and cycle_count >= expected_count
+        and meaningful_count >= expected_count
+        and last_elapsed >= target_elapsed
+    )
+    cycle_limit_complete = (
+        maintenance_complete
+        and stop_reason == "post_promote_cycle_limit_reached"
+        and cycle_count >= expected_count
+        and meaningful_count >= 1
+    )
+    stable_queue_complete = (
+        maintenance_complete
+        and stop_reason == "stable_queue_snapshot"
+        and cycle_count >= 2
+        and meaningful_count >= 1
+    )
+    complete = time_budget_complete or cycle_limit_complete or stable_queue_complete
     if not maintenance:
         status = "missing"
     elif complete:
@@ -662,6 +700,7 @@ def _meaningful_maintenance_summary(payload: Mapping[str, Any]) -> dict[str, Any
         "meaningful_maintenance_cycle_count": meaningful_count,
         "expected_min_maintenance_cycle_count": expected_count,
         "maintenance_last_cycle_elapsed_seconds": last_elapsed,
+        "maintenance_stop_reason": stop_reason,
     }
 
 
@@ -751,8 +790,11 @@ def _session_evidence_blockers(session_evidence: Mapping[str, Any]) -> list[str]
     if _bool_value(session_evidence.get("requires_meaningful_maintenance")):
         if str(session_evidence.get("maintenance_status", "")).strip() != "clean":
             blockers.append("auto-improve session lacks meaningful runtime maintenance evidence")
-        elif _integer_value(session_evidence.get("maintenance_cycle_count")) < _integer_value(
-            session_evidence.get("expected_min_maintenance_cycle_count")
+        elif (
+            str(session_evidence.get("maintenance_stop_reason", "")).strip()
+            != "stable_queue_snapshot"
+            and _integer_value(session_evidence.get("maintenance_cycle_count"))
+            < _integer_value(session_evidence.get("expected_min_maintenance_cycle_count"))
         ):
             blockers.append("auto-improve session maintenance evidence is below expected cadence")
     return blockers

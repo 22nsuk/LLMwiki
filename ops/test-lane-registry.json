@@ -546,8 +546,10 @@
       "semantics": "Low-cost unattended promotion authority from preflight, sealed evidence, sealed operator diagnostics, preseal, and auto-improve readiness.",
       "backing_targets": [
         "release-auto-promotion-ready-plan",
+        "release-auto-promotion-goal-run-id-guard",
         "release-auto-promotion-preflight",
         "release-auto-promotion-preflight-check",
+        "release-auto-promotion-safe-cleanup",
         "release-auto-promotion-preseal",
         "release-auto-promotion-preseal-check",
         "release-auto-promotion-operator-summary",
@@ -566,8 +568,10 @@
       ],
       "documented_entrypoints": [
         "make release-auto-promotion-ready-plan",
+        "make release-auto-promotion-goal-run-id-guard",
         "make release-auto-promotion-preflight",
         "make release-auto-promotion-preflight-check",
+        "make release-auto-promotion-safe-cleanup",
         "make release-auto-promotion-preseal",
         "make release-auto-promotion-preseal-check",
         "make release-auto-promotion-operator-summary",
@@ -969,12 +973,22 @@
     },
     {
       "kind": "make_target",
+      "name": "release-auto-promotion-goal-run-id-guard",
+      "maps_to": "release_auto_promotion_ready"
+    },
+    {
+      "kind": "make_target",
       "name": "release-auto-promotion-preflight",
       "maps_to": "release_auto_promotion_ready"
     },
     {
       "kind": "make_target",
       "name": "release-auto-promotion-preflight-check",
+      "maps_to": "release_auto_promotion_ready"
+    },
+    {
+      "kind": "make_target",
+      "name": "release-auto-promotion-safe-cleanup",
       "maps_to": "release_auto_promotion_ready"
     },
     {
@@ -1039,12 +1053,22 @@
     },
     {
       "kind": "documented_entrypoint",
+      "name": "make release-auto-promotion-goal-run-id-guard",
+      "maps_to": "release_auto_promotion_ready"
+    },
+    {
+      "kind": "documented_entrypoint",
       "name": "make release-auto-promotion-preflight",
       "maps_to": "release_auto_promotion_ready"
     },
     {
       "kind": "documented_entrypoint",
       "name": "make release-auto-promotion-preflight-check",
+      "maps_to": "release_auto_promotion_ready"
+    },
+    {
+      "kind": "documented_entrypoint",
+      "name": "make release-auto-promotion-safe-cleanup",
       "maps_to": "release_auto_promotion_ready"
     },
     {

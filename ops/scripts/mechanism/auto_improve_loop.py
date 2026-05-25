@@ -11,15 +11,19 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.auto_improve_runtime import (
         AutoImproveError,
         AutoImproveUsageError,
+        maintenance_action_resume_plan,
         refresh_auto_improve_session_report,
         run_auto_improve_session,
+        write_maintenance_action_resume_plan,
     )
 else:
     from .auto_improve_runtime import (
         AutoImproveError,
         AutoImproveUsageError,
+        maintenance_action_resume_plan,
         refresh_auto_improve_session_report,
         run_auto_improve_session,
+        write_maintenance_action_resume_plan,
     )
 
 
@@ -38,6 +42,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--allow-learning-uncertain", action="store_true")
     ap.add_argument("--maintain-until-budget", action="store_true")
     ap.add_argument("--maintenance-interval-seconds", type=int)
+    ap.add_argument("--post-promote-maintenance-cycles", type=int)
+    ap.add_argument("--print-maintenance-action-next-max-proposals", action="store_true")
+    ap.add_argument("--maintenance-action-plan-out")
     ap.add_argument("--refresh-session-report", action="store_true")
     return ap.parse_args(argv)
 
@@ -45,6 +52,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> None:
     try:
         args = parse_args(argv)
+        if args.print_maintenance_action_next_max_proposals:
+            session_id = args.resume_session or args.session_id
+            if not session_id:
+                raise AutoImproveUsageError(
+                    "--print-maintenance-action-next-max-proposals requires "
+                    "--resume-session or --session-id"
+                )
+            plan = maintenance_action_resume_plan(
+                Path(args.vault),
+                session_id=session_id,
+            )
+            if args.maintenance_action_plan_out:
+                write_maintenance_action_resume_plan(
+                    Path(args.vault),
+                    plan,
+                    out_path=args.maintenance_action_plan_out,
+                )
+            if not plan["decisions"]["can_resume"]:
+                raise AutoImproveUsageError(str(plan["recommended_next_action"]))
+            print(plan["next_max_proposals"])
+            return
         if args.refresh_session_report:
             session_id = args.resume_session or args.session_id
             if not session_id:
@@ -72,6 +100,7 @@ def main(argv: list[str] | None = None) -> None:
                 allow_learning_uncertain=args.allow_learning_uncertain,
                 maintain_until_budget=args.maintain_until_budget,
                 maintenance_interval_seconds=args.maintenance_interval_seconds,
+                post_promote_maintenance_cycles=args.post_promote_maintenance_cycles,
             )
     except AutoImproveError as exc:
         print(str(exc), file=sys.stderr)

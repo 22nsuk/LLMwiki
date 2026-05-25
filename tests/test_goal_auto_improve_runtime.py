@@ -38,6 +38,8 @@ def test_auto_improve_loop_goal_contract_uses_canonical_session_path() -> None:
                     "--maintain-until-budget",
                     "--maintenance-interval-seconds",
                     "300",
+                    "--post-promote-maintenance-cycles",
+                    "2",
                 ]
             )
 
@@ -51,5 +53,38 @@ def test_auto_improve_loop_goal_contract_uses_canonical_session_path() -> None:
     assert kwargs["max_consecutive_failures"] == 1
     assert kwargs["maintain_until_budget"] is True
     assert kwargs["maintenance_interval_seconds"] == 300
+    assert kwargs["post_promote_maintenance_cycles"] == 2
     payload = json.loads(printed.call_args.args[0])
     assert payload["session_id"] == "goal-session"
+
+
+def test_auto_improve_loop_prints_maintenance_action_next_budget() -> None:
+    with (
+        mock.patch(
+            "ops.scripts.mechanism.auto_improve_loop.maintenance_action_resume_plan",
+            return_value={
+                "decisions": {"can_resume": True},
+                "next_max_proposals": 2,
+                "recommended_next_action": "run resume",
+            },
+        ) as action_plan,
+        mock.patch(
+            "ops.scripts.mechanism.auto_improve_loop.write_maintenance_action_resume_plan",
+        ) as write_plan,
+    ):
+        with mock.patch("builtins.print") as printed:
+            auto_improve_loop_main(
+                [
+                    "--vault",
+                    ".",
+                    "--resume-session",
+                    "goal-session",
+                    "--print-maintenance-action-next-max-proposals",
+                    "--maintenance-action-plan-out",
+                    "tmp/goal-runtime-maintenance-action.json",
+                ]
+            )
+
+    action_plan.assert_called_once_with(Path("."), session_id="goal-session")
+    write_plan.assert_called_once()
+    printed.assert_called_once_with(2)

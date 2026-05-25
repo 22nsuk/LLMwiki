@@ -142,7 +142,8 @@
         "maintenance_cycle_count",
         "meaningful_maintenance_cycle_count",
         "expected_min_maintenance_cycle_count",
-        "maintenance_last_cycle_elapsed_seconds"
+        "maintenance_last_cycle_elapsed_seconds",
+        "maintenance_stop_reason"
       ],
       "properties": {
         "status": { "type": "string", "enum": ["clean", "incomplete", "missing"] },
@@ -168,7 +169,8 @@
         "maintenance_cycle_count": { "type": "integer", "minimum": 0 },
         "meaningful_maintenance_cycle_count": { "type": "integer", "minimum": 0 },
         "expected_min_maintenance_cycle_count": { "type": "integer", "minimum": 0 },
-        "maintenance_last_cycle_elapsed_seconds": { "type": "integer", "minimum": 0 }
+        "maintenance_last_cycle_elapsed_seconds": { "type": "integer", "minimum": 0 },
+        "maintenance_stop_reason": { "type": "string" }
       }
     },
     "command_observability": {

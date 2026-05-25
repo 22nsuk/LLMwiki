@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/script-output-surfaces.schema.json",
   "artifact_kind": "script_output_surfaces",
-  "generated_at": "2026-05-24T20:57:30Z",
+  "generated_at": "2026-05-25T05:40:00Z",
   "producer": "ops.scripts.script_output_surfaces",
   "source_command": "python -m ops.scripts.script_output_surfaces --vault . --out ops/script-output-surfaces.json",
   "source_revision": "unknown",
-  "source_tree_fingerprint": "0107d077906cd5c33a34584236768535dc6557525a6837d391931596ffb72f16",
+  "source_tree_fingerprint": "1bb6289b4b0bef1976f85de4132ea6bd4ddcc0318e0070664164af1b5d9fff87",
   "input_fingerprints": {
     "policy": "02269a331e13c6e556b0482ef1cf242e68047df29679f0181a82f6ed5e9a50e9",
     "schema": "02cee320f449f8666c341a0a389855f3ef5ac34bddcdf4c2767b5d4b384a9722",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "62c5358cc97c1a41ddc8e0af71afae29a2dbcd1744aa82c4d870f5be8d95b7ac",
-    "ops_scripts": "b60825480f489b08188ea8b84a693f36ea2c81048f54ae77e4ad3466a0106e00",
+    "ops_scripts": "992fd550b9ab6d7dc19fe84aadb4c801efd5941d3e24499f4e5d3358f0e24bca",
     "classification_values": "0ba4b7fd8868f9c9d070bea6d90c2cee76e2b9c8089223c413c8e898794923f4"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-24T20:57:30Z"
+    "checked_at": "2026-05-25T05:40:00Z"
   },
   "version": 1,
   "description": "Generated inventory for ops/scripts output path surfaces. Tests compare this registry with the live AST-derived inventory.",
@@ -1091,12 +1091,14 @@
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_loop.py",
-      "classification": "no_output",
-      "output_options": [],
+      "classification": "repo_artifact",
+      "output_options": [
+        "--maintenance-action-plan-out"
+      ],
       "references_resolve_output_path": false,
       "references_resolve_repo_output_path": false,
       "direct_fallback_eligible": true,
-      "reason": "no configurable output path surface detected"
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
       "path": "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
@@ -2289,6 +2291,17 @@
     },
     {
       "path": "ops/scripts/release/release_evidence_planner.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
+      "path": "ops/scripts/release/release_goal_run_identity_guard.py",
       "classification": "repo_artifact",
       "output_options": [
         "--out"

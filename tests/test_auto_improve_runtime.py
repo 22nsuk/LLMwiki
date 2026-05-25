@@ -709,8 +709,15 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             _assert_successful_session_provenance(self, artifacts)
             _assert_successful_run_telemetry(self, artifacts)
             _assert_successful_runtime_events_and_learning(self, artifacts)
+            session = json.loads((vault / result["session_report"]).read_text(encoding="utf-8"))
+            maintenance = session["maintenance"]
+            self.assertEqual(maintenance["completion_condition"], "post_promote_cycle_limit")
+            self.assertEqual(maintenance["stop_reason"], "post_promote_cycle_limit_reached")
+            self.assertEqual(maintenance["cycle_count"], 1)
+            self.assertEqual(maintenance["meaningful_cycle_count"], 1)
+            self.assertEqual(maintenance["cycles"][0]["meaningful_reasons"], ["post_promote_observation"])
 
-    def test_run_auto_improve_session_maintains_after_proposal_budget_until_wall_clock(self) -> None:
+    def test_run_auto_improve_session_stops_long_maintenance_on_stable_queue(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -752,16 +759,32 @@ class AutoImproveRuntimeTests(unittest.TestCase):
 
             session = json.loads((vault / result["session_report"]).read_text(encoding="utf-8"))
             maintenance = session["maintenance"]
-            self.assertEqual(result["stop_reason"], "time_budget_exhausted")
-            self.assertEqual(monotonic["now"], 1800)
+            self.assertEqual(result["stop_reason"], "proposal_budget_exhausted")
+            self.assertEqual(monotonic["now"], 300)
             self.assertEqual(maintenance["status"], "complete")
             self.assertEqual(maintenance["mode"], "proposal_budget_runtime_maintenance")
             self.assertEqual(maintenance["target_elapsed_seconds"], 1800)
+            self.assertEqual(maintenance["completion_condition"], "stable_queue_snapshot")
+            self.assertEqual(maintenance["stop_reason"], "stable_queue_snapshot")
             self.assertEqual(maintenance["expected_min_cycle_count"], 7)
-            self.assertEqual(maintenance["cycle_count"], 7)
-            self.assertEqual(maintenance["meaningful_cycle_count"], 7)
-            self.assertEqual(maintenance["last_cycle_elapsed_seconds"], 1800)
+            self.assertEqual(maintenance["cycle_count"], 2)
+            self.assertEqual(maintenance["meaningful_cycle_count"], 1)
+            self.assertEqual(maintenance["stable_queue_snapshot_count"], 2)
+            self.assertEqual(maintenance["last_cycle_elapsed_seconds"], 300)
+            self.assertEqual(maintenance["queue_action"]["status"], "action_required")
+            self.assertEqual(maintenance["queue_action"]["reason"], "stable_runnable_queue")
+            self.assertEqual(
+                maintenance["queue_action"]["runner_action"],
+                "resume_session_with_additional_proposal_budget",
+            )
+            self.assertEqual(maintenance["queue_action"]["proposal_budget_increment"], 1)
+            self.assertEqual(
+                maintenance["queue_action"]["resume_target"],
+                "auto-improve-goal-maintenance-action",
+            )
             self.assertTrue(all(cycle["status"] == "pass" for cycle in maintenance["cycles"]))
+            self.assertTrue(maintenance["cycles"][0]["meaningful"])
+            self.assertFalse(maintenance["cycles"][1]["meaningful"])
             self.assertTrue(
                 all(
                     set(cycle["work_items"])
@@ -774,8 +797,206 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                     for cycle in maintenance["cycles"]
                 )
             )
-            self.assertEqual(refresh.call_count, 9)
-            self.assertEqual(sleep.call_count, 6)
+            self.assertEqual(refresh.call_count, 4)
+            self.assertEqual(sleep.call_count, 1)
+
+    def test_maintenance_action_plan_runs_unattempted_stable_queue_proposal(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            seed_subagent_profiles(vault, ["worker", "validator"])
+            contract = sample_goal_contract()
+            set_goal(contract, vault=vault)
+            proposal_a = {
+                **mutation_proposal_report("ops/scripts/example.py")["proposals"][0],
+                "proposal_id": "proposal-a",
+                "priority": 20,
+            }
+            proposal_b = {
+                **mutation_proposal_report("ops/scripts/example.py")["proposals"][0],
+                "proposal_id": "proposal-b",
+                "priority": 10,
+            }
+
+            def fake_refresh_reports(*_: object, **__: object) -> tuple[dict, dict]:
+                report = {"proposals": [proposal_a, proposal_b]}
+                report_path = vault / auto_improve_runtime.DEFAULT_MUTATION_PROPOSAL_REPORT
+                report_path.parent.mkdir(parents=True, exist_ok=True)
+                report_path.write_text(json.dumps(report), encoding="utf-8")
+                return {}, report
+
+            with (
+                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    side_effect=_fake_successful_mechanism_experiment,
+                ),
+            ):
+                first = run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    session_id="auto-session-maintenance-action",
+                    goal_contract_path="ops/reports/codex-goal-contract.json",
+                    max_proposals=1,
+                    max_minutes=30,
+                    max_consecutive_failures=1,
+                    executor_name="codex_exec",
+                    allow_learning_uncertain=True,
+                )
+
+            first_session = json.loads((vault / first["session_report"]).read_text(encoding="utf-8"))
+            self.assertEqual(first_session["attempted_proposal_ids"], ["proposal-a"])
+            plan = auto_improve_runtime.maintenance_action_resume_plan(
+                vault,
+                session_id="auto-session-maintenance-action",
+            )
+            self.assertTrue(plan["decisions"]["can_resume"])
+            self.assertEqual(plan["next_max_proposals"], 2)
+            self.assertEqual(plan["selected_proposal"]["proposal_id"], "proposal-b")
+
+            extended_contract = sample_goal_contract()
+            extended_contract["budgets"]["max_proposals"] = 2
+            set_goal(extended_contract, vault=vault)
+            with (
+                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    side_effect=_fake_successful_mechanism_experiment,
+                ),
+            ):
+                resumed = run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    resume_session="auto-session-maintenance-action",
+                    goal_contract_path="ops/reports/codex-goal-contract.json",
+                    max_proposals=plan["next_max_proposals"],
+                    max_minutes=30,
+                    max_consecutive_failures=1,
+                    executor_name="codex_exec",
+                    allow_learning_uncertain=True,
+                )
+
+            resumed_session = json.loads((vault / resumed["session_report"]).read_text(encoding="utf-8"))
+            self.assertEqual(resumed["stop_reason"], "proposal_budget_exhausted")
+            self.assertEqual(resumed_session["attempted_proposal_ids"], ["proposal-a", "proposal-b"])
+            self.assertEqual(len(resumed_session["iterations"]), 2)
+            self.assertEqual(resumed_session["iterations"][1]["proposal_id"], "proposal-b")
+
+    def test_maintenance_action_plan_blocks_when_queue_only_repeats_attempted_proposal(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            seed_subagent_profiles(vault, ["worker", "validator"])
+            set_goal(sample_goal_contract(), vault=vault)
+            proposal = {
+                **mutation_proposal_report("ops/scripts/example.py")["proposals"][0],
+                "proposal_id": "proposal-a",
+            }
+
+            def fake_refresh_reports(*_: object, **__: object) -> tuple[dict, dict]:
+                report = {"proposals": [proposal]}
+                report_path = vault / auto_improve_runtime.DEFAULT_MUTATION_PROPOSAL_REPORT
+                report_path.parent.mkdir(parents=True, exist_ok=True)
+                report_path.write_text(json.dumps(report), encoding="utf-8")
+                return {}, report
+
+            with (
+                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    side_effect=_fake_successful_mechanism_experiment,
+                ),
+            ):
+                run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    session_id="auto-session-maintenance-action-blocked",
+                    goal_contract_path="ops/reports/codex-goal-contract.json",
+                    max_proposals=1,
+                    max_minutes=30,
+                    max_consecutive_failures=1,
+                    executor_name="codex_exec",
+                    allow_learning_uncertain=True,
+                )
+
+            plan = auto_improve_runtime.maintenance_action_resume_plan(
+                vault,
+                session_id="auto-session-maintenance-action-blocked",
+            )
+            self.assertFalse(plan["decisions"]["can_resume"])
+            self.assertEqual(plan["blockers"], ["no unattempted runnable proposal is available"])
+            self.assertEqual(plan["next_max_proposals"], 1)
+
+    def test_maintenance_action_plan_blocks_stale_queue_action_and_invalid_increment(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            seed_subagent_profiles(vault, ["worker", "validator"])
+            set_goal(sample_goal_contract(), vault=vault)
+            proposal_a = {
+                **mutation_proposal_report("ops/scripts/example.py")["proposals"][0],
+                "proposal_id": "proposal-a",
+                "priority": 20,
+            }
+            proposal_b = {
+                **mutation_proposal_report("ops/scripts/example.py")["proposals"][0],
+                "proposal_id": "proposal-b",
+                "priority": 10,
+            }
+
+            def fake_refresh_reports(*_: object, **__: object) -> tuple[dict, dict]:
+                report = {"proposals": [proposal_a, proposal_b]}
+                report_path = vault / auto_improve_runtime.DEFAULT_MUTATION_PROPOSAL_REPORT
+                report_path.parent.mkdir(parents=True, exist_ok=True)
+                report_path.write_text(json.dumps(report), encoding="utf-8")
+                return {}, report
+
+            with (
+                mock.patch("ops.scripts.auto_improve_runtime._refresh_reports", side_effect=fake_refresh_reports),
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    side_effect=_fake_successful_mechanism_experiment,
+                ),
+            ):
+                result = run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    session_id="auto-session-maintenance-action-stale",
+                    goal_contract_path="ops/reports/codex-goal-contract.json",
+                    max_proposals=1,
+                    max_minutes=30,
+                    max_consecutive_failures=1,
+                    executor_name="codex_exec",
+                    allow_learning_uncertain=True,
+                )
+
+            session_path = vault / result["session_report"]
+            session = json.loads(session_path.read_text(encoding="utf-8"))
+            session["maintenance"]["queue_action"]["proposal_ids"] = ["proposal-c"]
+            session_path.write_text(json.dumps(session), encoding="utf-8")
+            stale_plan = auto_improve_runtime.maintenance_action_resume_plan(
+                vault,
+                session_id="auto-session-maintenance-action-stale",
+            )
+            self.assertEqual(
+                stale_plan["blockers"],
+                ["selected proposal is not in the maintenance action queue"],
+            )
+
+            session["maintenance"]["queue_action"]["proposal_ids"] = ["proposal-b"]
+            session["maintenance"]["queue_action"]["proposal_budget_increment"] = 0
+            session_path.write_text(json.dumps(session), encoding="utf-8")
+            invalid_increment_plan = auto_improve_runtime.maintenance_action_resume_plan(
+                vault,
+                session_id="auto-session-maintenance-action-stale",
+            )
+            self.assertEqual(
+                invalid_increment_plan["blockers"],
+                ["maintenance queue action has invalid proposal budget increment"],
+            )
 
     def test_run_auto_improve_session_stops_after_discard_without_runtime_maintenance(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1213,12 +1434,13 @@ class AutoImproveRuntimeTests(unittest.TestCase):
 
             resumed_session = json.loads((vault / resumed["session_report"]).read_text(encoding="utf-8"))
             maintenance = resumed_session["maintenance"]
-            self.assertEqual(resumed["stop_reason"], "time_budget_exhausted")
+            self.assertEqual(resumed["stop_reason"], "proposal_budget_exhausted")
             self.assertEqual(resumed_session["budget"]["max_minutes"], 1)
             self.assertEqual(maintenance["status"], "complete")
             self.assertEqual(maintenance["target_elapsed_seconds"], 60)
             self.assertEqual(maintenance["cycle_count"], 2)
-            self.assertEqual(maintenance["meaningful_cycle_count"], 2)
+            self.assertEqual(maintenance["meaningful_cycle_count"], 1)
+            self.assertEqual(maintenance["stop_reason"], "stable_queue_snapshot")
 
     def test_resume_restores_failure_streak_before_selecting_next_proposal(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

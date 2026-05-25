@@ -104,6 +104,15 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
                 "source_tree_fingerprint": "fp-current",
                 "status": "pass",
                 "phase": "preflight",
+                "goal_run_identity": {
+                    "status": "pass",
+                    "requested_run_id": "auto-improve-trial",
+                    "effective_run_id": "promote-run",
+                    "inferred_run_id": "promote-run",
+                    "selection_mode": "inferred_from_verified_evidence",
+                    "goal_run_id_origin": "file",
+                    "failure_count": 0,
+                },
                 "blockers": [],
             },
         )
@@ -116,6 +125,15 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
                 "source_tree_fingerprint": "fp-current",
                 "status": "pass",
                 "phase": "preseal",
+                "goal_run_identity": {
+                    "status": "pass",
+                    "requested_run_id": "auto-improve-trial",
+                    "effective_run_id": "promote-run",
+                    "inferred_run_id": "promote-run",
+                    "selection_mode": "inferred_from_verified_evidence",
+                    "goal_run_id_origin": "file",
+                    "failure_count": 0,
+                },
                 "blockers": [],
             },
         )
@@ -154,6 +172,11 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
         self.assertNotIn("payload_status", json.dumps(manifest, ensure_ascii=False))
         self.assertTrue(manifest["checks"]["auto_promotion_preflight_pass"])
         self.assertTrue(manifest["checks"]["auto_promotion_preseal_pass"])
+        self.assertTrue(manifest["checks"]["auto_promotion_goal_run_identity_match"])
+        self.assertEqual(
+            manifest["diagnostics"]["preflight"]["goal_run_identity"]["effective_run_id"],
+            "promote-run",
+        )
         self.assertTrue(manifest["checks"]["accepted_risk_clean"])
         self.assertTrue(manifest["checks"]["gate_attention_clean"])
         self.assertTrue(manifest["checks"]["learning_claim_clean"])
@@ -287,6 +310,23 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
         self.assertEqual(manifest["status"], "fail")
         self.assertIn("auto_promotion_preflight_stale", manifest["failures"])
         self.assertIn("auto_promotion_preseal_phase_invalid", manifest["failures"])
+
+    def test_preflight_and_preseal_goal_run_identity_must_match(self) -> None:
+        self._write_inputs()
+        preseal = json.loads(
+            (self.vault / "build/release/release-auto-promotion-preseal.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        preseal["goal_run_identity"]["effective_run_id"] = "other-run"
+        self._write_json("build/release/release-auto-promotion-preseal.json", preseal)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, context=fixed_context())
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertFalse(manifest["checks"]["auto_promotion_goal_run_identity_match"])
+        self.assertIn("auto_promotion_goal_run_identity_mismatch", manifest["failures"])
 
     def test_learning_revalidation_due_blocks_auto_promotion(self) -> None:
         self._write_inputs()
