@@ -11,6 +11,7 @@ from .auto_improve_queue_runtime import build_proposal_queue
 from .auto_improve_readiness_constants_runtime import (
     AUTO_IMPROVE_GOAL_RUN_COMMAND,
     FALLBACK_PRIMARY_TARGETS,
+    LEARNING_CONFIRMED_LEGACY_RECONSTRUCTION_REPORT_REL_PATH,
     READINESS_TARGET,
     RECENT_LOG_OVERLAP_REMEDIATION,
     RECENT_OUTCOME_REWORK_REMEDIATION,
@@ -107,7 +108,11 @@ def _runnable_proposal_ids(mutation_proposal_report: dict[str, Any]) -> list[str
         )
     except (KeyError, TypeError):
         return []
-    return [str(proposal.get("proposal_id", "")).strip() for proposal in runnable if proposal]
+    return [
+        str(proposal.get("proposal_id", "")).strip()
+        for proposal in runnable
+        if proposal
+    ]
 
 
 def _blocked_reason_counts(mutation_proposal_report: dict[str, Any]) -> dict[str, int]:
@@ -115,21 +120,27 @@ def _blocked_reason_counts(mutation_proposal_report: dict[str, Any]) -> dict[str
     counts: dict[str, int] = {}
     proposal_counts: dict[str, int] = {}
     diagnostics = mutation_proposal_report.get("diagnostics")
-    queue_selection = diagnostics.get("queue_selection") if isinstance(diagnostics, dict) else {}
+    queue_selection = (
+        diagnostics.get("queue_selection") if isinstance(diagnostics, dict) else {}
+    )
     if isinstance(queue_selection, dict):
         for item in queue_selection.get("blocked_reason_counts", []):
             if not isinstance(item, dict):
                 continue
             reason = str(item.get("reason", "")).strip()
             if reason:
-                counts[reason] = max(counts.get(reason, 0), int(item.get("count", 0) or 0))
+                counts[reason] = max(
+                    counts.get(reason, 0), int(item.get("count", 0) or 0)
+                )
     if isinstance(proposals, list):
         for proposal in proposals:
             if not isinstance(proposal, dict):
                 continue
             for reason in _string_list(proposal.get("blocked_by")):
                 proposal_counts[reason] = proposal_counts.get(reason, 0) + 1
-    empty_queue_blockers = diagnostics.get("empty_queue_blockers") if isinstance(diagnostics, dict) else []
+    empty_queue_blockers = (
+        diagnostics.get("empty_queue_blockers") if isinstance(diagnostics, dict) else []
+    )
     if isinstance(empty_queue_blockers, list):
         for blocker in empty_queue_blockers:
             if not isinstance(blocker, dict):
@@ -142,7 +153,9 @@ def _blocked_reason_counts(mutation_proposal_report: dict[str, Any]) -> dict[str
     return counts
 
 
-def _blocked_proposal_ids_by_reason(mutation_proposal_report: dict[str, Any]) -> dict[str, list[str]]:
+def _blocked_proposal_ids_by_reason(
+    mutation_proposal_report: dict[str, Any],
+) -> dict[str, list[str]]:
     proposals = mutation_proposal_report.get("proposals")
     proposal_ids_by_reason: dict[str, list[str]] = {}
     if not isinstance(proposals, list):
@@ -162,7 +175,9 @@ def _blocked_reasons(mutation_proposal_report: dict[str, Any]) -> list[str]:
     return list(_blocked_reason_counts(mutation_proposal_report))
 
 
-def _blocked_reason_count_items(blocked_reason_counts: dict[str, int]) -> list[dict[str, Any]]:
+def _blocked_reason_count_items(
+    blocked_reason_counts: dict[str, int],
+) -> list[dict[str, Any]]:
     return [
         {"reason": reason, "count": count}
         for reason, count in sorted(blocked_reason_counts.items())
@@ -202,7 +217,11 @@ def _proposal_blocker_remediation(
     elif reason == "recent_outcome_rework":
         payload = dict(RECENT_OUTCOME_REWORK_REMEDIATION)
     else:
-        blocker_source = "blocked_by for every emitted proposal" if proposal_ids else "diagnostics.empty_queue_blockers"
+        blocker_source = (
+            "blocked_by for every emitted proposal"
+            if proposal_ids
+            else "diagnostics.empty_queue_blockers"
+        )
         payload = {
             "remediation_code": "clear_mutation_proposal_blocker",
             "blocker_kind": "hard",
@@ -385,7 +404,8 @@ def _same_eval_proposal_run_ids(mutation_proposal_report: dict[str, Any]) -> lis
         if (
             not isinstance(proposal, dict)
             or _string_list(proposal.get("blocked_by"))
-            or str(proposal.get("failure_mode", "")).strip() not in SAME_EVAL_PROPOSAL_FAILURE_MODES
+            or str(proposal.get("failure_mode", "")).strip()
+            not in SAME_EVAL_PROPOSAL_FAILURE_MODES
         ):
             continue
         for run_id in proposal.get("run_ids", []):
@@ -401,25 +421,85 @@ def _coverage_ratio(numerator: int, denominator: int) -> float:
     return round(numerator / denominator, 4)
 
 
-def _same_eval_telemetry_summary(vault: Path, mutation_proposal_report: dict[str, Any]) -> dict[str, Any]:
+def _legacy_reconstruction_by_run(vault: Path) -> dict[str, dict[str, Any]]:
+    report = load_optional_json_object(
+        vault / LEARNING_CONFIRMED_LEGACY_RECONSTRUCTION_REPORT_REL_PATH
+    )
+    rows = report.get("run_reconstructions")
+    if not isinstance(rows, list):
+        return {}
+    by_run: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        run_id = str(row.get("run_id", "")).strip()
+        status = str(row.get("reconstruction_status", "")).strip()
+        if run_id and status in {"not_needed", "reconstructed"}:
+            by_run[run_id] = row
+    return by_run
+
+
+def _legacy_secondary_axes_present(row: dict[str, Any]) -> bool:
+    return bool(row.get("parsed_strict_secondary_improvement_present")) and bool(
+        _string_list(row.get("parsed_secondary_axes"))
+    )
+
+
+def _legacy_behavior_delta_digest_present(row: dict[str, Any]) -> bool:
+    digest = str(row.get("telemetry_behavior_delta_digest", "")).strip()
+    artifact_sha = str(row.get("behavior_delta_artifact_sha256", "")).strip()
+    return bool(digest or artifact_sha)
+
+
+def _legacy_decision_reason_code_present(
+    telemetry: dict[str, Any],
+    row: dict[str, Any],
+) -> bool:
+    decision = telemetry.get("decision_record")
+    if not isinstance(decision, dict):
+        return False
+    reason_code = str(decision.get("reason_code", "")).strip()
+    source_rule = str(decision.get("source_rule", "")).strip()
+    if reason_code != "equal_score_secondary_eligibility" and source_rule != (
+        "equal_score_secondary_eligibility"
+    ):
+        return False
+    return _legacy_secondary_axes_present(row)
+
+
+def _same_eval_telemetry_summary(
+    vault: Path, mutation_proposal_report: dict[str, Any]
+) -> dict[str, Any]:
     run_ids = _same_eval_proposal_run_ids(mutation_proposal_report)
+    legacy_rows = _legacy_reconstruction_by_run(vault)
     runs: list[dict[str, Any]] = []
     for run_id in run_ids:
         telemetry_path = _telemetry_path_for_run(vault, run_id)
         telemetry = load_optional_json_object(telemetry_path) if telemetry_path else {}
+        legacy_row = legacy_rows.get(run_id, {})
         reason_code = str(telemetry.get("same_eval_reason_code", "")).strip()
         axes = _string_list(telemetry.get("secondary_improvement_axes"))
+        legacy_axes_present = _legacy_secondary_axes_present(legacy_row)
         runs.append(
             {
                 "run_id": run_id,
-                "telemetry_path": report_path(vault, telemetry_path) if telemetry_path else "",
+                "telemetry_path": report_path(vault, telemetry_path)
+                if telemetry_path
+                else "",
                 "telemetry_present": bool(telemetry),
-                "same_eval_reason_code_present": bool(reason_code and reason_code != "unknown"),
+                "same_eval_reason_code_present": bool(
+                    reason_code and reason_code != "unknown"
+                )
+                or _legacy_decision_reason_code_present(telemetry, legacy_row),
                 "strict_secondary_improvement_present": bool(
                     telemetry.get("strict_secondary_improvement_present", False)
-                ),
-                "secondary_improvement_axes_present": bool(axes),
-                "behavior_delta_digest_present": bool(str(telemetry.get("behavior_delta_digest", "")).strip()),
+                )
+                or legacy_axes_present,
+                "secondary_improvement_axes_present": bool(axes) or legacy_axes_present,
+                "behavior_delta_digest_present": bool(
+                    str(telemetry.get("behavior_delta_digest", "")).strip()
+                )
+                or _legacy_behavior_delta_digest_present(legacy_row),
             }
         )
     run_count = len(runs)
@@ -427,7 +507,8 @@ def _same_eval_telemetry_summary(vault: Path, mutation_proposal_report: dict[str
     strict_secondary_count = sum(
         1
         for item in runs
-        if item["strict_secondary_improvement_present"] and item["secondary_improvement_axes_present"]
+        if item["strict_secondary_improvement_present"]
+        and item["secondary_improvement_axes_present"]
     )
     digest_count = sum(1 for item in runs if item["behavior_delta_digest_present"])
     complete_count = sum(
@@ -440,19 +521,29 @@ def _same_eval_telemetry_summary(vault: Path, mutation_proposal_report: dict[str
     )
     complete = run_count == 0 or complete_count == run_count
     return {
-        "status": "not_applicable" if run_count == 0 else ("pass" if complete else "blocked"),
+        "status": "not_applicable"
+        if run_count == 0
+        else ("pass" if complete else "blocked"),
         "proposal_family": "repeated_same_eval_or_discard",
         "proposal_failure_modes": sorted(SAME_EVAL_PROPOSAL_FAILURE_MODES),
         "run_count": run_count,
         "runs_with_complete_typed_evidence": complete_count,
-        "same_eval_reason_code_coverage_ratio": _coverage_ratio(reason_code_count, run_count),
-        "strict_secondary_improvement_coverage_ratio": _coverage_ratio(strict_secondary_count, run_count),
-        "behavior_delta_digest_coverage_ratio": _coverage_ratio(digest_count, run_count),
+        "same_eval_reason_code_coverage_ratio": _coverage_ratio(
+            reason_code_count, run_count
+        ),
+        "strict_secondary_improvement_coverage_ratio": _coverage_ratio(
+            strict_secondary_count, run_count
+        ),
+        "behavior_delta_digest_coverage_ratio": _coverage_ratio(
+            digest_count, run_count
+        ),
         "runs": runs,
     }
 
 
-def _fallback_history_requirement(mechanism_review_report: dict[str, Any]) -> tuple[int, int]:
+def _fallback_history_requirement(
+    mechanism_review_report: dict[str, Any],
+) -> tuple[int, int]:
     bootstrap = mechanism_review_report.get("diagnostics", {}).get("bootstrap", {})
     if not isinstance(bootstrap, dict):
         return 0, 0
@@ -476,7 +567,8 @@ def _fallback_history_requirement(mechanism_review_report: dict[str, Any]) -> tu
         additional_runs_needed = [
             int(entry["additional_runs_needed"])
             for entry in blocked
-            if isinstance(entry, dict) and isinstance(entry.get("additional_runs_needed"), int)
+            if isinstance(entry, dict)
+            and isinstance(entry.get("additional_runs_needed"), int)
         ]
         return (
             max(required_runs, default=0),
@@ -544,7 +636,11 @@ def _checks(
             "id": "fallback_target_history_requirement_met",
             "pass": (
                 proposals_emitted > 0
-                or (len(seed_runs) >= history_requirement if history_requirement else bool(seed_runs))
+                or (
+                    len(seed_runs) >= history_requirement
+                    if history_requirement
+                    else bool(seed_runs)
+                )
             ),
             "detail": (
                 "queue is already non-empty, so fallback history depth is not needed."
@@ -639,13 +735,19 @@ def _readiness_queue(
         runnable_proposal_ids=runnable_proposal_ids,
         blocked_proposal_count=blocked_proposal_count,
         blocked_reason_counts=_blocked_reason_count_items(blocked_reason_counts),
-        source_candidates_read=int(proposal_summary.get("source_candidates_read", 0) or 0),
+        source_candidates_read=int(
+            proposal_summary.get("source_candidates_read", 0) or 0
+        ),
         candidates_emitted=int(review_summary.get("candidates_emitted", 0) or 0),
         attempts_considered=int(outcome_summary.get("attempts_considered", 0) or 0),
-        session_reports_considered=int(outcome_summary.get("session_reports_considered", 0) or 0),
+        session_reports_considered=int(
+            outcome_summary.get("session_reports_considered", 0) or 0
+        ),
         queue_pressure_summary=str(proposal_summary.get("queue_pressure_summary", "")),
         review_bootstrap_summary=str(
-            mechanism_review_report.get("diagnostics", {}).get("bootstrap", {}).get("summary", "")
+            mechanism_review_report.get("diagnostics", {})
+            .get("bootstrap", {})
+            .get("summary", "")
         ),
         evidence_gaps=evidence_gaps,
     )

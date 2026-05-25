@@ -37,6 +37,7 @@ from .auto_improve_readiness_constants_runtime import (
     FALLBACK_SUPPORTING_TARGETS,
     FALLBACK_TEST_FILES,
     GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
+    LEARNING_CONFIRMED_LEGACY_RECONSTRUCTION_REPORT_REL_PATH,
     MECHANISM_REVIEW_REPORT_REL_PATH,
     MUTATION_PROPOSAL_REPORT_REL_PATH,
     OUTCOME_METRICS_REPORT_REL_PATH,
@@ -178,7 +179,9 @@ def readiness_exit_code(report: dict[str, Any]) -> int:
 
 def learning_review_required(report: dict[str, Any]) -> bool:
     learning = report.get("learning_readiness")
-    return bool(isinstance(learning, dict) and learning.get("gate_effect") == "review_required")
+    return bool(
+        isinstance(learning, dict) and learning.get("gate_effect") == "review_required"
+    )
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -240,7 +243,9 @@ def _upstream_attention_summaries(
     proposal_status = str(proposal_report.get("status", "")).strip()
     if proposal_status == "attention":
         proposals_emitted = int(proposal_summary.get("proposals_emitted", 0) or 0)
-        queue_pressure_summary = str(proposal_summary.get("queue_pressure_summary", "")).strip()
+        queue_pressure_summary = str(
+            proposal_summary.get("queue_pressure_summary", "")
+        ).strip()
         detail = queue_pressure_summary or "attention"
         summaries.append(
             f"mutation_proposal.status=attention ({detail}; proposals_emitted={proposals_emitted})"
@@ -277,14 +282,28 @@ def _load_readiness_report_payloads(
         "selected_contract": _load_selected_contract_json(
             vault / SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH
         ),
-        "source_package": _load_json(vault / SOURCE_PACKAGE_CLEAN_EXTRACT_REPORT_REL_PATH),
-        "release_closeout": _load_json(vault / RELEASE_CLOSEOUT_SUMMARY_REPORT_REL_PATH),
-        "release_batch_manifest": _load_json(vault / RELEASE_CLOSEOUT_BATCH_MANIFEST_REPORT_REL_PATH),
-        "release_finality": _load_json(vault / RELEASE_CLOSEOUT_FINALITY_ATTESTATION_REPORT_REL_PATH),
-        "release_evidence_cohort": _load_json(vault / RELEASE_EVIDENCE_COHORT_REPORT_REL_PATH),
-        "artifact_finalization": _load_json(vault / RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH),
+        "source_package": _load_json(
+            vault / SOURCE_PACKAGE_CLEAN_EXTRACT_REPORT_REL_PATH
+        ),
+        "release_closeout": _load_json(
+            vault / RELEASE_CLOSEOUT_SUMMARY_REPORT_REL_PATH
+        ),
+        "release_batch_manifest": _load_json(
+            vault / RELEASE_CLOSEOUT_BATCH_MANIFEST_REPORT_REL_PATH
+        ),
+        "release_finality": _load_json(
+            vault / RELEASE_CLOSEOUT_FINALITY_ATTESTATION_REPORT_REL_PATH
+        ),
+        "release_evidence_cohort": _load_json(
+            vault / RELEASE_EVIDENCE_COHORT_REPORT_REL_PATH
+        ),
+        "artifact_finalization": _load_json(
+            vault / RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH
+        ),
         "release_authority_preflight": _load_release_authority_preflight_json(vault),
-        "goal_worktree_guard": _load_optional_json(vault / GOAL_WORKTREE_GUARD_REPORT_REL_PATH),
+        "goal_worktree_guard": _load_optional_json(
+            vault / GOAL_WORKTREE_GUARD_REPORT_REL_PATH
+        ),
         "remediation_backlog": _load_json(vault / remediation_backlog_path),
         "learning_signoff": _load_optional_json(vault / SIGNOFF_REPORT_REL_PATH),
     }
@@ -383,7 +402,9 @@ def _remediation_backlog_summary(
         "active_blocker_count": open_blocks_promotion_count,
         "blocking_item_count": len(blocking_signal_ids),
         "signal_ids": signal_ids,
-        "currentness_status": str(_dict_field(payload, "currentness").get("status", "")).strip(),
+        "currentness_status": str(
+            _dict_field(payload, "currentness").get("status", "")
+        ).strip(),
         "summary": (
             "remediation backlog "
             f"status={report_status}; open_total_count={open_total_count}; "
@@ -428,10 +449,14 @@ def load_readiness_inputs(
     proposal_summary = _dict_field(reports["mutation_proposal"], "summary")
     proposal_diagnostics = _dict_field(reports["mutation_proposal"], "diagnostics")
     loop_health_summary = _build_loop_health_summary(vault)
-    same_eval_telemetry_summary = _same_eval_telemetry_summary(vault, reports["mutation_proposal"])
+    same_eval_telemetry_summary = _same_eval_telemetry_summary(
+        vault, reports["mutation_proposal"]
+    )
     proposals_emitted = int(proposal_summary.get("proposals_emitted", 0) or 0)
     runnable_proposal_ids = _runnable_proposal_ids(reports["mutation_proposal"])
-    blocked_proposal_count = _blocked_proposal_count(proposal_summary, proposal_diagnostics)
+    blocked_proposal_count = _blocked_proposal_count(
+        proposal_summary, proposal_diagnostics
+    )
     blocked_reason_counts = _blocked_reason_counts(reports["mutation_proposal"])
     blocked_proposal_ids = _blocked_proposal_ids_by_reason(reports["mutation_proposal"])
     blocked_reasons = list(blocked_reason_counts)
@@ -447,7 +472,9 @@ def load_readiness_inputs(
         blocked_reasons=blocked_reasons,
     )
     seed_runs = _matching_fallback_seed_runs(vault)
-    history_requirement, additional_runs_needed = _fallback_history_requirement(reports["mechanism_review"])
+    history_requirement, additional_runs_needed = _fallback_history_requirement(
+        reports["mechanism_review"]
+    )
     return ReadinessInputs(
         policy=policy,
         resolved_policy_path=resolved_policy_path,
@@ -472,14 +499,18 @@ def load_readiness_inputs(
         selected_contract_summary=release_summaries["selected_contract"],
         source_package_clean_extract_summary=release_summaries["source_package"],
         release_closeout_summary=release_summaries["release_closeout"],
-        release_closeout_batch_manifest_summary=release_summaries["release_batch_manifest"],
+        release_closeout_batch_manifest_summary=release_summaries[
+            "release_batch_manifest"
+        ],
         release_closeout_finality_summary=release_summaries["release_finality"],
         release_evidence_cohort_summary=release_summaries["release_evidence_cohort"],
         artifact_finalization_summary=release_summaries["artifact_finalization"],
         release_authority_preflight_summary=release_summaries[
             "release_authority_preflight"
         ],
-        goal_worktree_guard_summary=_goal_worktree_guard_summary(reports["goal_worktree_guard"]),
+        goal_worktree_guard_summary=_goal_worktree_guard_summary(
+            reports["goal_worktree_guard"]
+        ),
         remediation_backlog_summary=_remediation_backlog_summary(
             reports["remediation_backlog"],
             remediation_backlog_path=remediation_backlog_path,
@@ -523,9 +554,13 @@ def assess_execution_readiness(inputs: ReadinessInputs) -> ExecutionReadinessAss
     )
     if inputs.proposals_emitted > 0 and not inputs.queue_ready:
         if inputs.blocked_reasons:
-            reasons.append(f"proposal blockers active: {', '.join(inputs.blocked_reasons)}")
+            reasons.append(
+                f"proposal blockers active: {', '.join(inputs.blocked_reasons)}"
+            )
         else:
-            reasons.append("generated proposals exist, but every emitted proposal is currently blocked")
+            reasons.append(
+                "generated proposals exist, but every emitted proposal is currently blocked"
+            )
     elif inputs.proposals_emitted == 0 and not inputs.queue_ready:
         reasons.append("mutation proposal generation emitted zero runnable proposals")
     return ExecutionReadinessAssessment(
@@ -587,7 +622,9 @@ def _top_level_next_action(
     return execution.recommended_next_step
 
 
-def _execution_blockers(execution: ExecutionReadinessAssessment) -> list[dict[str, Any]]:
+def _execution_blockers(
+    execution: ExecutionReadinessAssessment,
+) -> list[dict[str, Any]]:
     if execution.can_run:
         return []
     return [
@@ -615,7 +652,9 @@ def _remediation_backlog_promotion_blockers(
 ) -> list[dict[str, Any]]:
     if not bool(summary.get("release_blocking", False)):
         return []
-    signal_ids = _string_list(summary.get("signal_ids")) or ["remediation_backlog_not_clear"]
+    signal_ids = _string_list(summary.get("signal_ids")) or [
+        "remediation_backlog_not_clear"
+    ]
     return [
         {
             "id": "promotion_blocked_by_remediation_backlog_open",
@@ -648,13 +687,16 @@ def _readiness_promotion_blockers(
     execution: ExecutionReadinessAssessment,
     learning: LearningReadinessAssessment,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    learning_claim_blockers = [blocker.to_wire() for blocker in _learning_claim_blockers(learning)]
+    learning_claim_blockers = [
+        blocker.to_wire() for blocker in _learning_claim_blockers(learning)
+    ]
     learning_promotion_blockers = learning_claim_blockers
     if bool(inputs.learning_signoff_summary.get("active")):
         learning_promotion_blockers = [
             blocker
             for blocker in learning_claim_blockers
-            if str(blocker.get("id", "")).strip() != SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID
+            if str(blocker.get("id", "")).strip()
+            != SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID
         ]
     promotion_blockers = [
         *_execution_blockers(execution),
@@ -725,7 +767,9 @@ def _readiness_diagnostics_payload(inputs: ReadinessInputs) -> dict[str, Any]:
     }
 
 
-def _readiness_fallback_payload(inputs: ReadinessInputs, fallback_status: str) -> dict[str, Any]:
+def _readiness_fallback_payload(
+    inputs: ReadinessInputs, fallback_status: str
+) -> dict[str, Any]:
     return {
         "status": fallback_status,
         "primary_targets": FALLBACK_PRIMARY_TARGETS,
@@ -754,7 +798,9 @@ def render_readiness_report(
         runnable_proposal_count=len(inputs.runnable_proposal_ids),
         blocked_proposal_count=inputs.blocked_proposal_count,
         blocked_reason_counts=inputs.blocked_reason_counts,
-        session_reports_considered=int(inputs.outcome_summary.get("session_reports_considered", 0) or 0),
+        session_reports_considered=int(
+            inputs.outcome_summary.get("session_reports_considered", 0) or 0
+        ),
         seed_runs=inputs.seed_runs,
         history_requirement=inputs.history_requirement,
     )
@@ -817,6 +863,9 @@ def render_readiness_report(
                 "release_authority_preflight_report": RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
                 "goal_worktree_guard_report": GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
                 "remediation_backlog_report": inputs.remediation_backlog_path,
+                "learning_confirmed_legacy_reconstruction_report": (
+                    LEARNING_CONFIRMED_LEGACY_RECONSTRUCTION_REPORT_REL_PATH
+                ),
                 "learning_readiness_signoff_report": SIGNOFF_REPORT_REL_PATH,
             },
             path_group_inputs={
@@ -878,7 +927,9 @@ def build_readiness_report(
     )
 
 
-def write_readiness_report(vault: Path, report: dict[str, Any], out_path: str | None = None) -> Path:
+def write_readiness_report(
+    vault: Path, report: dict[str, Any], out_path: str | None = None
+) -> Path:
     return write_schema_backed_report(
         SchemaBackedReportWriteRequest(
             vault=vault,

@@ -210,11 +210,18 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def _canonical_report_payload(self, relative_path: str, payload: dict) -> dict:
-        policy, resolved_policy_path = load_policy(self.vault, "ops/policies/wiki-maintainer-policy.yaml")
+        policy, resolved_policy_path = load_policy(
+            self.vault, "ops/policies/wiki-maintainer-policy.yaml"
+        )
         spec = PRIMARY_REPORT_SPECS[relative_path]
-        generated_at = (dt.datetime.now(dt.UTC) + dt.timedelta(seconds=5)).replace(
-            microsecond=0,
-        ).isoformat().replace("+00:00", "Z")
+        generated_at = (
+            (dt.datetime.now(dt.UTC) + dt.timedelta(seconds=5))
+            .replace(
+                microsecond=0,
+            )
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
         return {
             **build_canonical_report_envelope(
                 self.vault,
@@ -234,12 +241,20 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             **payload,
         }
 
-    def _write_report(self, relative_path: str, payload: dict, *, enveloped: bool = True) -> None:
-        if enveloped and relative_path in PRIMARY_REPORT_SPECS and "artifact_kind" not in payload:
+    def _write_report(
+        self, relative_path: str, payload: dict, *, enveloped: bool = True
+    ) -> None:
+        if (
+            enveloped
+            and relative_path in PRIMARY_REPORT_SPECS
+            and "artifact_kind" not in payload
+        ):
             payload = self._canonical_report_payload(relative_path, payload)
         path = self.vault / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
     def _write_goal_worktree_guard(
         self,
@@ -252,10 +267,17 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         can_execute: bool = True,
         can_promote: bool = True,
     ) -> None:
-        _policy, resolved_policy_path = load_policy(self.vault, "ops/policies/wiki-maintainer-policy.yaml")
-        generated_at = (dt.datetime.now(dt.UTC) + dt.timedelta(seconds=5)).replace(
-            microsecond=0,
-        ).isoformat().replace("+00:00", "Z")
+        _policy, resolved_policy_path = load_policy(
+            self.vault, "ops/policies/wiki-maintainer-policy.yaml"
+        )
+        generated_at = (
+            (dt.datetime.now(dt.UTC) + dt.timedelta(seconds=5))
+            .replace(
+                microsecond=0,
+            )
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
         fatal_blockers = fatal_blockers or []
         promotion_blockers = promotion_blockers or []
         payload = {
@@ -273,7 +295,14 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "requested_mode": "git",
             "detected_mode": detected_mode,
             "public_source_layout": {
-                "required_paths": ["ops", "tests", "mk", "docs", "README.md", "Makefile"],
+                "required_paths": [
+                    "ops",
+                    "tests",
+                    "mk",
+                    "docs",
+                    "README.md",
+                    "Makefile",
+                ],
                 "present": True,
                 "missing_paths": [],
             },
@@ -308,7 +337,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         }
         path = self.vault / "ops" / "reports" / "goal-worktree-guard.json"
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
     def _write_ready_queue_reports(self) -> None:
         self._write_report(
@@ -326,7 +357,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/mechanism-review-candidates.json",
             {
                 "summary": {"candidates_emitted": 1},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
             },
         )
         self._write_report(
@@ -364,7 +397,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         for rel_path in READINESS_SOURCE_PATHS:
             self.assertTrue((REPO_ROOT / rel_path).is_file(), rel_path)
 
-    def test_load_readiness_inputs_rejects_missing_artifact_envelope_on_disk_reports(self) -> None:
+    def test_load_readiness_inputs_rejects_missing_artifact_envelope_on_disk_reports(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -381,7 +416,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/mechanism-review-candidates.json",
             {
                 "summary": {"candidates_emitted": 1},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
             },
         )
         self._write_report(
@@ -411,7 +448,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertTrue(inputs.active_mechanism_review)
         self.assertTrue(inputs.active_mutation_proposal)
 
-    def test_load_readiness_inputs_accepts_current_reports_when_only_mtime_is_newer(self) -> None:
+    def test_load_readiness_inputs_accepts_current_reports_when_only_mtime_is_newer(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -483,8 +522,12 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
 
         outcome_path = self.vault / "ops" / "reports" / "outcome-metrics.json"
         payload = json.loads(outcome_path.read_text(encoding="utf-8"))
-        generated_at = dt.datetime.strptime(payload["generated_at"], "%Y-%m-%dT%H:%M:%SZ")
-        newer_timestamp = (generated_at + dt.timedelta(seconds=1)).replace(tzinfo=dt.UTC).timestamp()
+        generated_at = dt.datetime.strptime(
+            payload["generated_at"], "%Y-%m-%dT%H:%M:%SZ"
+        )
+        newer_timestamp = (
+            (generated_at + dt.timedelta(seconds=1)).replace(tzinfo=dt.UTC).timestamp()
+        )
         os.utime(outcome_path, (newer_timestamp, newer_timestamp))
 
         inputs = load_readiness_inputs(self.vault, context=fixed_context())
@@ -493,7 +536,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertTrue(inputs.reports_present)
         self.assertEqual(inputs.outcome_summary["attempts_considered"], 7)
         self.assertEqual(report["queue"]["attempts_considered"], 7)
-        self.assertEqual(report["learning_readiness"]["metrics"]["attempts_considered"], 7)
+        self.assertEqual(
+            report["learning_readiness"]["metrics"]["attempts_considered"], 7
+        )
         self.assertTrue(report["checks"][0]["pass"])
 
     def test_build_readiness_report_passes_when_queue_is_nonempty(self) -> None:
@@ -512,7 +557,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/mechanism-review-candidates.json",
             {
                 "summary": {"candidates_emitted": 1},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
             },
         )
         self._write_report(
@@ -552,8 +599,12 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(persisted["queue"]["blocked_proposal_count"], 0)
         self.assertEqual(persisted["fallback"]["status"], "not_needed")
         self.assertEqual(persisted["fallback"]["seed_run_count"], 0)
-        self.assertEqual(persisted["diagnostics"]["loop_health_summary"]["status"], "missing")
-        self.assertEqual(persisted["diagnostics"]["loop_health_summary"]["gate_effect"], "none")
+        self.assertEqual(
+            persisted["diagnostics"]["loop_health_summary"]["status"], "missing"
+        )
+        self.assertEqual(
+            persisted["diagnostics"]["loop_health_summary"]["gate_effect"], "none"
+        )
         self.assertEqual(persisted["learning_readiness"]["status"], "learning_likely")
         self.assertEqual(persisted["learning_readiness"]["gate_effect"], "active")
         self.assertTrue(persisted["learning_readiness"]["can_run"])
@@ -603,7 +654,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/release-evidence-cohort.json",
         )
         self.assertEqual(persisted["remediations"], [])
-        self.assertEqual(persisted["fallback"]["auto_improve_command"], "make auto-improve-goal-run")
+        self.assertEqual(
+            persisted["fallback"]["auto_improve_command"], "make auto-improve-goal-run"
+        )
         self.assertIn("auto-improve-goal-run", persisted["next_action"])
         self.assertNotIn("auto_improve_loop", persisted["next_action"])
         self.assertNotIn("status", persisted)
@@ -669,11 +722,17 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             ["goal_status_self_improvement_loop_certificate_incomplete"],
         )
         self.assertIn("open_promotion_count=1", blocker["reason"])
-        self.assertEqual(report["diagnostics"]["remediation_backlog_summary"]["status"], "fail")
-        self.assertTrue(report["diagnostics"]["remediation_backlog_summary"]["release_blocking"])
+        self.assertEqual(
+            report["diagnostics"]["remediation_backlog_summary"]["status"], "fail"
+        )
+        self.assertTrue(
+            report["diagnostics"]["remediation_backlog_summary"]["release_blocking"]
+        )
         self.assertIn("Trial only; do not promote.", report["next_action"])
 
-    def test_run_local_remediation_backlog_override_controls_promotion_blocker(self) -> None:
+    def test_run_local_remediation_backlog_override_controls_promotion_blocker(
+        self,
+    ) -> None:
         self._write_ready_queue_reports()
         self._write_report(
             "ops/reports/remediation-backlog.json",
@@ -772,7 +831,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                         "status": "open",
                         "severity": "blocks_repeat",
                         "occurrence_count": 2,
-                        "evidence_paths": ["ops/reports/auto-improve-sessions/example.json"],
+                        "evidence_paths": [
+                            "ops/reports/auto-improve-sessions/example.json"
+                        ],
                         "repair_target": "Resolve repeated mutation failure.",
                         "next_action": "Close this repeat item before rerunning this shape.",
                     }
@@ -785,7 +846,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
 
         blocker_ids = {item["id"] for item in report["promotion_blockers"]}
         self.assertNotIn("promotion_blocked_by_remediation_backlog_open", blocker_ids)
-        self.assertEqual(report["diagnostics"]["remediation_backlog_summary"]["status"], "pass")
+        self.assertEqual(
+            report["diagnostics"]["remediation_backlog_summary"]["status"], "pass"
+        )
         self.assertFalse(
             report["diagnostics"]["remediation_backlog_summary"]["release_blocking"]
         )
@@ -832,7 +895,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             1,
         )
 
-    def test_artifact_freshness_failure_blocks_promotion_without_blocking_execution(self) -> None:
+    def test_artifact_freshness_failure_blocks_promotion_without_blocking_execution(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -848,7 +913,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/mechanism-review-candidates.json",
             {
                 "summary": {"candidates_emitted": 1},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
             },
         )
         self._write_report(
@@ -882,7 +949,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                     {
                         "path": "ops/reports/example.json",
                         "schema_validation_status": "fail",
-                        "schema_validation_errors": ["$.summary: missing required property 'status'"],
+                        "schema_validation_errors": [
+                            "$.summary: missing required property 'status'"
+                        ],
                     }
                 ],
             },
@@ -892,7 +961,12 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
 
         self.assertTrue(report["can_execute_trial"])
         self.assertFalse(report["can_promote_result"])
-        self.assertEqual(report["diagnostics"]["artifact_freshness_summary"]["schema_invalid_artifact_count"], 1)
+        self.assertEqual(
+            report["diagnostics"]["artifact_freshness_summary"][
+                "schema_invalid_artifact_count"
+            ],
+            1,
+        )
         blocker_ids = {item["id"] for item in report["promotion_blockers"]}
         self.assertIn("promotion_blocked_by_artifact_contract_failure", blocker_ids)
         artifact_blocker = next(
@@ -903,7 +977,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(artifact_blocker["scope"], "artifact_contract")
         self.assertIn("ops/reports/example.json", artifact_blocker["reason"])
 
-    def test_stable_artifact_contract_debt_is_diagnostic_not_promotion_blocker(self) -> None:
+    def test_stable_artifact_contract_debt_is_diagnostic_not_promotion_blocker(
+        self,
+    ) -> None:
         self._write_ready_queue_reports()
         self._write_report(
             "ops/reports/artifact-freshness-report.json",
@@ -920,7 +996,10 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                     {
                         "path": "runs/legacy-run/run-ledger.json",
                         "issues": ["missing_artifact_envelope", "unknown_currentness"],
-                        "stable_contract_issues": ["missing_artifact_envelope", "unknown_currentness"],
+                        "stable_contract_issues": [
+                            "missing_artifact_envelope",
+                            "unknown_currentness",
+                        ],
                         "schema_validation_status": "pass",
                         "contract_issue_class": "stable_contract_debt",
                     }
@@ -933,7 +1012,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertTrue(report["can_execute_trial"])
         self.assertTrue(report["can_promote_result"])
         self.assertEqual(
-            report["diagnostics"]["artifact_freshness_summary"]["stable_contract_debt_issue_count"],
+            report["diagnostics"]["artifact_freshness_summary"][
+                "stable_contract_debt_issue_count"
+            ],
             2,
         )
         blocker_ids = {item["id"] for item in report["promotion_blockers"]}
@@ -955,7 +1036,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/mechanism-review-candidates.json",
             {
                 "summary": {"candidates_emitted": 1},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
             },
         )
         self._write_report(
@@ -1014,10 +1097,15 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             selected_contract_blocker["signal_ids"],
             ["selected_contract_currentness_not_current"],
         )
-        self.assertIn("selected_contract release gate is not pass", selected_contract_blocker["reason"])
+        self.assertIn(
+            "selected_contract release gate is not pass",
+            selected_contract_blocker["reason"],
+        )
         self.assertIn("operational_attention=", selected_contract_blocker["reason"])
 
-    def test_selected_contract_and_source_package_failures_block_promotion(self) -> None:
+    def test_selected_contract_and_source_package_failures_block_promotion(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -1033,7 +1121,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/mechanism-review-candidates.json",
             {
                 "summary": {"candidates_emitted": 1},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
             },
         )
         self._write_report(
@@ -1055,20 +1145,35 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                 ],
             },
         )
-        self._write_report("ops/reports/test-execution-summary.json", {"status": "fail"})
-        self._write_report("ops/reports/source-package-clean-extract.json", {"status": "fail"})
+        self._write_report(
+            "ops/reports/test-execution-summary.json", {"status": "fail"}
+        )
+        self._write_report(
+            "ops/reports/source-package-clean-extract.json", {"status": "fail"}
+        )
 
         report = build_readiness_report(self.vault, context=fixed_context())
 
         self.assertTrue(report["can_execute_trial"])
         self.assertFalse(report["can_promote_result"])
-        self.assertEqual(report["diagnostics"]["selected_contract_summary"]["status"], "fail")
-        self.assertEqual(report["diagnostics"]["source_package_clean_extract_summary"]["status"], "fail")
+        self.assertEqual(
+            report["diagnostics"]["selected_contract_summary"]["status"], "fail"
+        )
+        self.assertEqual(
+            report["diagnostics"]["source_package_clean_extract_summary"]["status"],
+            "fail",
+        )
         blockers = {item["id"]: item for item in report["promotion_blockers"]}
         self.assertIn("promotion_blocked_by_selected_contract_failure", blockers)
         self.assertIn("promotion_blocked_by_source_package_failure", blockers)
-        self.assertEqual(blockers["promotion_blocked_by_selected_contract_failure"]["scope"], "release_gate")
-        self.assertEqual(blockers["promotion_blocked_by_source_package_failure"]["scope"], "release_gate")
+        self.assertEqual(
+            blockers["promotion_blocked_by_selected_contract_failure"]["scope"],
+            "release_gate",
+        )
+        self.assertEqual(
+            blockers["promotion_blocked_by_source_package_failure"]["scope"],
+            "release_gate",
+        )
         self.assertEqual(
             blockers["promotion_blocked_by_selected_contract_failure"]["signal_ids"],
             ["selected_contract_status_not_pass"],
@@ -1094,7 +1199,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/mechanism-review-candidates.json",
             {
                 "summary": {"candidates_emitted": 1},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
             },
         )
         self._write_report(
@@ -1168,7 +1275,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/release-closeout-finality-attestation.json",
             {
                 "finality_status": "fail",
-                "finality_failures": [{"path": "ops/reports/release-closeout-batch-manifest.json"}],
+                "finality_failures": [
+                    {"path": "ops/reports/release-closeout-batch-manifest.json"}
+                ],
             },
         )
         (self.vault / "tmp" / "release-closeout-post-check-finalizer.json").unlink()
@@ -1182,13 +1291,21 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertIn("promotion_blocked_by_release_batch_manifest_failure", blockers)
         self.assertIn("promotion_blocked_by_release_finality_failure", blockers)
         self.assertIn("promotion_blocked_by_artifact_finalization_failure", blockers)
-        self.assertIn("promotion_blocked_by_release_authority_preflight_failure", blockers)
+        self.assertIn(
+            "promotion_blocked_by_release_authority_preflight_failure", blockers
+        )
         self.assertEqual(
-            blockers["promotion_blocked_by_release_closeout_summary_failure"]["signal_ids"],
+            blockers["promotion_blocked_by_release_closeout_summary_failure"][
+                "signal_ids"
+            ],
             ["machine_release_not_allowed"],
         )
         self.assertEqual(
-            set(blockers["promotion_blocked_by_release_batch_manifest_failure"]["signal_ids"]),
+            set(
+                blockers["promotion_blocked_by_release_batch_manifest_failure"][
+                    "signal_ids"
+                ]
+            ),
             {"release_authority_not_clean_pass", "sealed_release_not_clean_pass"},
         )
         self.assertEqual(
@@ -1218,7 +1335,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             report["next_action"],
         )
         preflight = report["diagnostics"]["release_authority_preflight_summary"]
-        self.assertEqual(preflight["preflight_status"], "binding_pass_authority_blocked")
+        self.assertEqual(
+            preflight["preflight_status"], "binding_pass_authority_blocked"
+        )
         self.assertEqual(preflight["distribution_binding_status"], "pass")
         self.assertTrue(preflight["expected_blocked_preflight"])
         self.assertEqual(
@@ -1228,9 +1347,13 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                 "promotion_blocked_by_release_batch_manifest_failure",
             ],
         )
-        self.assertEqual(report["diagnostics"]["artifact_finalization_summary"]["status"], "not_run")
+        self.assertEqual(
+            report["diagnostics"]["artifact_finalization_summary"]["status"], "not_run"
+        )
 
-    def test_expected_blocked_preflight_self_reference_does_not_block_readiness(self) -> None:
+    def test_expected_blocked_preflight_self_reference_does_not_block_readiness(
+        self,
+    ) -> None:
         self._write_ready_queue_reports()
         self._write_report(
             "ops/reports/release-closeout-sealed-rehearsal-check.json",
@@ -1268,7 +1391,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         report = build_readiness_report(self.vault, context=fixed_context())
 
         blocker_ids = {item["id"] for item in report["promotion_blockers"]}
-        self.assertNotIn("promotion_blocked_by_release_authority_preflight_failure", blocker_ids)
+        self.assertNotIn(
+            "promotion_blocked_by_release_authority_preflight_failure", blocker_ids
+        )
         self.assertTrue(report["can_promote_result"])
         preflight = report["diagnostics"]["release_authority_preflight_summary"]
         self.assertTrue(preflight["expected_blocked_preflight"])
@@ -1303,20 +1428,23 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertFalse(report["can_promote_result"])
         blockers = {item["id"]: item for item in report["promotion_blockers"]}
         self.assertEqual(
-            blockers["promotion_blocked_by_release_closeout_summary_failure"]["signal_ids"],
+            blockers["promotion_blocked_by_release_closeout_summary_failure"][
+                "signal_ids"
+            ],
             ["machine_release_not_allowed"],
         )
         summary = report["diagnostics"]["release_closeout_summary"]["summary"]
         self.assertIn("machine_release_allowed=false", summary)
         self.assertIn("release_authority_status=conditional_pass", summary)
-        self.assertIn("sealed_release_status=unsealed_distribution_not_provided", summary)
+        self.assertIn(
+            "sealed_release_status=unsealed_distribution_not_provided", summary
+        )
 
     def test_missing_release_authority_preflight_blocks_promotion_but_not_trial(
         self,
     ) -> None:
         (
-            self.vault
-            / "ops/reports/release-closeout-sealed-rehearsal-check.json"
+            self.vault / "ops/reports/release-closeout-sealed-rehearsal-check.json"
         ).unlink()
         self._write_report(
             "ops/reports/outcome-metrics.json",
@@ -1333,7 +1461,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/mechanism-review-candidates.json",
             {
                 "summary": {"candidates_emitted": 1},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
             },
         )
         self._write_report(
@@ -1364,10 +1494,14 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         blockers = {item["id"]: item for item in report["promotion_blockers"]}
         blocker = blockers["promotion_blocked_by_release_authority_preflight_failure"]
         self.assertEqual(blocker["source_status"], "not_run")
-        self.assertEqual(blocker["signal_ids"], ["release_authority_preflight_not_clean"])
+        self.assertEqual(
+            blocker["signal_ids"], ["release_authority_preflight_not_clean"]
+        )
         self.assertIn("Trial only; do not promote.", report["next_action"])
         self.assertEqual(
-            report["diagnostics"]["release_authority_preflight_summary"]["preflight_status"],
+            report["diagnostics"]["release_authority_preflight_summary"][
+                "preflight_status"
+            ],
             "not_run",
         )
 
@@ -1387,7 +1521,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/mechanism-review-candidates.json",
             {
                 "summary": {"candidates_emitted": 1},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
             },
         )
         self._write_report(
@@ -1427,7 +1563,10 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertFalse(report["can_promote_result"])
         blockers = {item["id"]: item for item in report["promotion_blockers"]}
         self.assertIn("promotion_blocked_by_release_lineage_mismatch", blockers)
-        self.assertEqual(blockers["promotion_blocked_by_release_lineage_mismatch"]["scope"], "release_gate")
+        self.assertEqual(
+            blockers["promotion_blocked_by_release_lineage_mismatch"]["scope"],
+            "release_gate",
+        )
         self.assertEqual(
             blockers["promotion_blocked_by_release_lineage_mismatch"]["signal_ids"],
             [
@@ -1444,13 +1583,21 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             report["diagnostics"]["release_evidence_cohort_summary"]["summary"],
         )
 
-    def test_selected_contract_partial_pass_bootstrap_does_not_self_block_promotion(self) -> None:
-        self._write_report("ops/reports/test-execution-summary.json", {"status": "partial-pass"})
+    def test_selected_contract_partial_pass_bootstrap_does_not_self_block_promotion(
+        self,
+    ) -> None:
+        self._write_report(
+            "ops/reports/test-execution-summary.json", {"status": "partial-pass"}
+        )
 
         report = build_readiness_report(self.vault, context=fixed_context())
 
-        self.assertEqual(report["diagnostics"]["selected_contract_summary"]["status"], "pass")
-        self.assertFalse(report["diagnostics"]["selected_contract_summary"]["release_blocking"])
+        self.assertEqual(
+            report["diagnostics"]["selected_contract_summary"]["status"], "pass"
+        )
+        self.assertFalse(
+            report["diagnostics"]["selected_contract_summary"]["release_blocking"]
+        )
         self.assertEqual(
             report["diagnostics"]["selected_contract_summary"]["source_status"],
             "partial-pass",
@@ -1464,18 +1611,27 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         report = build_readiness_report(self.vault, context=fixed_context())
 
         blocker_ids = {item["id"] for item in report["promotion_blockers"]}
-        self.assertNotIn("promotion_blocked_by_artifact_finalization_failure", blocker_ids)
+        self.assertNotIn(
+            "promotion_blocked_by_artifact_finalization_failure", blocker_ids
+        )
         artifact_finalization = report["diagnostics"]["artifact_finalization_summary"]
         self.assertEqual(artifact_finalization["status"], "pass")
-        self.assertEqual(artifact_finalization["source_status"], "finality_attested_pass")
-        self.assertIn("release closeout finality attestation passed", artifact_finalization["summary"])
+        self.assertEqual(
+            artifact_finalization["source_status"], "finality_attested_pass"
+        )
+        self.assertIn(
+            "release closeout finality attestation passed",
+            artifact_finalization["summary"],
+        )
         closeout_summary = report["diagnostics"]["release_closeout_summary"]
         self.assertEqual(closeout_summary["status"], "pass")
         self.assertEqual(closeout_summary["source_status"], "pass")
         blocker_ids = {item["id"] for item in report["promotion_blockers"]}
         self.assertNotIn("promotion_blocked_by_selected_contract_failure", blocker_ids)
 
-    def test_clean_authority_unsealed_batch_manifest_does_not_block_promotion(self) -> None:
+    def test_clean_authority_unsealed_batch_manifest_does_not_block_promotion(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -1491,7 +1647,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/mechanism-review-candidates.json",
             {
                 "summary": {"candidates_emitted": 1},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
             },
         )
         self._write_report(
@@ -1539,10 +1697,15 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertTrue(report["can_execute_trial"])
         self.assertTrue(report["can_promote_result"])
         blocker_ids = {item["id"] for item in report["promotion_blockers"]}
-        self.assertNotIn("promotion_blocked_by_release_batch_manifest_failure", blocker_ids)
+        self.assertNotIn(
+            "promotion_blocked_by_release_batch_manifest_failure", blocker_ids
+        )
         batch_summary = report["diagnostics"]["release_closeout_batch_manifest_summary"]
         self.assertEqual(batch_summary["status"], "pass")
-        self.assertIn("sealed_release_status=unsealed_distribution_not_provided", batch_summary["summary"])
+        self.assertIn(
+            "sealed_release_status=unsealed_distribution_not_provided",
+            batch_summary["summary"],
+        )
         self.assertIn("auto_improve_lane_status=pass", batch_summary["summary"])
 
     def test_batch_manifest_gate_ignores_self_referential_auto_improve_lane_snapshot(
@@ -1565,13 +1728,17 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         report = build_readiness_report(self.vault, context=fixed_context())
 
         blocker_ids = {item["id"] for item in report["promotion_blockers"]}
-        self.assertNotIn("promotion_blocked_by_release_batch_manifest_failure", blocker_ids)
+        self.assertNotIn(
+            "promotion_blocked_by_release_batch_manifest_failure", blocker_ids
+        )
         batch_summary = report["diagnostics"]["release_closeout_batch_manifest_summary"]
         self.assertEqual(batch_summary["status"], "pass")
         self.assertFalse(batch_summary["release_blocking"])
         self.assertIn("auto_improve_lane_status=blocked", batch_summary["summary"])
 
-    def test_build_readiness_report_requires_review_when_learning_is_uncertain(self) -> None:
+    def test_build_readiness_report_requires_review_when_learning_is_uncertain(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -1635,17 +1802,29 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(readiness_exit_code(report), 0)
         self.assertTrue(report["learning_readiness"]["can_run"])
         self.assertFalse(report["learning_readiness"]["likely_to_learn"])
-        self.assertEqual(report["learning_readiness"]["metrics"]["attempts_considered"], 7)
-        self.assertEqual(report["learning_readiness"]["metrics"]["session_reports_considered"], 0)
+        self.assertEqual(
+            report["learning_readiness"]["metrics"]["attempts_considered"], 7
+        )
+        self.assertEqual(
+            report["learning_readiness"]["metrics"]["session_reports_considered"], 0
+        )
         self.assertEqual(
             report["learning_readiness"]["metrics"]["session_calibration_status"],
             "no_session_context",
         )
-        self.assertEqual(report["learning_readiness"]["metrics"]["telemetry_coverage_ratio"], 0.0)
+        self.assertEqual(
+            report["learning_readiness"]["metrics"]["telemetry_coverage_ratio"], 0.0
+        )
         self.assertEqual(report["learning_readiness"]["metrics"]["rework_count"], 5)
-        self.assertEqual(report["learning_readiness"]["metrics"]["hold_moving_average"], 0.2857)
-        self.assertEqual(report["learning_readiness"]["metrics"]["discard_moving_average"], 0.1429)
-        signal_ids = {signal["id"] for signal in report["learning_readiness"]["signals"]}
+        self.assertEqual(
+            report["learning_readiness"]["metrics"]["hold_moving_average"], 0.2857
+        )
+        self.assertEqual(
+            report["learning_readiness"]["metrics"]["discard_moving_average"], 0.1429
+        )
+        signal_ids = {
+            signal["id"] for signal in report["learning_readiness"]["signals"]
+        }
         self.assertSetEqual(
             signal_ids,
             {
@@ -1669,11 +1848,18 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             if signal["id"] == "outcome_metrics_attempt_history_below_minimum"
         )
         self.assertEqual(attempt_history_signal["minimum_sample_size"], 10)
-        self.assertIn("summary.attempts_considered", attempt_history_signal["required_evidence"][0])
+        self.assertIn(
+            "summary.attempts_considered",
+            attempt_history_signal["required_evidence"][0],
+        )
         self.assertEqual(len(report["learning_claim_blockers"]), 1)
-        self.assertEqual(report["promotion_blockers"], report["learning_claim_blockers"])
+        self.assertEqual(
+            report["promotion_blockers"], report["learning_claim_blockers"]
+        )
         learning_claim_blocker = report["learning_claim_blockers"][0]
-        self.assertEqual(learning_claim_blocker["id"], "learning_blocked_by_review_required")
+        self.assertEqual(
+            learning_claim_blocker["id"], "learning_blocked_by_review_required"
+        )
         self.assertEqual(learning_claim_blocker["scope"], "learning_readiness")
         self.assertEqual(learning_claim_blocker["status"], "open")
         self.assertEqual(learning_claim_blocker["severity"], "blocker")
@@ -1681,7 +1867,10 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(learning_claim_blocker["gate_effect"], "review_required")
         self.assertEqual(learning_claim_blocker["source_status"], "learning_uncertain")
         self.assertSetEqual(set(learning_claim_blocker["signal_ids"]), signal_ids)
-        self.assertIn("operator must record accepted risk", learning_claim_blocker["required_evidence"][1])
+        self.assertIn(
+            "operator must record accepted risk",
+            learning_claim_blocker["required_evidence"][1],
+        )
         self.assertEqual(
             report["next_action"],
             report["learning_readiness"]["recommended_next_step"],
@@ -1695,7 +1884,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             report["learning_readiness"]["recommended_next_step"],
         )
 
-    def test_active_learning_signoff_unblocks_promotion_without_claiming_learning(self) -> None:
+    def test_active_learning_signoff_unblocks_promotion_without_claiming_learning(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -1732,7 +1923,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                     "queue_pressure_summary": "ready",
                 },
                 "diagnostics": {"evidence_gaps": []},
-                "proposals": [{"proposal_id": "proposal-ready", "blocked_by": [], "priority": 55}],
+                "proposals": [
+                    {"proposal_id": "proposal-ready", "blocked_by": [], "priority": 55}
+                ],
             },
         )
         self._write_report(
@@ -1777,7 +1970,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             report["learning_readiness"]["recommended_next_step"],
         )
 
-    def test_build_readiness_report_reuses_latest_loop_health_summary_when_available(self) -> None:
+    def test_build_readiness_report_reuses_latest_loop_health_summary_when_available(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -1793,7 +1988,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/mechanism-review-candidates.json",
             {
                 "summary": {"candidates_emitted": 1},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
             },
         )
         self._write_report(
@@ -1855,7 +2052,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                         "health_flags": [
                             "rework_detected",
                             "rollback_signals_present",
-                            "executor_failures_present"
+                            "executor_failures_present",
                         ],
                     }
                 },
@@ -1898,7 +2095,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(loop_health_summary["rollback_signal_count"], 1)
         self.assertEqual(loop_health_summary["telemetry_coverage_ratio"], 0.75)
         self.assertEqual(report["learning_readiness"]["status"], "learning_likely")
-        self.assertEqual(report["learning_readiness"]["metrics"]["telemetry_coverage_ratio"], 0.75)
+        self.assertEqual(
+            report["learning_readiness"]["metrics"]["telemetry_coverage_ratio"], 0.75
+        )
         self.assertEqual(report["learning_readiness"]["signals"], [])
         self.assertEqual(report["learning_claim_blockers"], [])
         self.assertEqual(
@@ -1912,7 +2111,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertIn("attempts=4", loop_health_summary["summary"])
         self.assertIn("alerts:", loop_health_summary["summary"])
 
-    def test_build_readiness_report_prefers_telemetry_aggregate_over_empty_latest_session(self) -> None:
+    def test_build_readiness_report_prefers_telemetry_aggregate_over_empty_latest_session(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -1928,7 +2129,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/mechanism-review-candidates.json",
             {
                 "summary": {"candidates_emitted": 1},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
             },
         )
         self._write_report(
@@ -1941,7 +2144,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                     "queue_pressure_summary": "ready",
                 },
                 "diagnostics": {"evidence_gaps": []},
-                "proposals": [{"proposal_id": "proposal-ready", "blocked_by": [], "priority": 55}],
+                "proposals": [
+                    {"proposal_id": "proposal-ready", "blocked_by": [], "priority": 55}
+                ],
             },
         )
         self._write_report(
@@ -2000,7 +2205,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(report["learning_readiness"]["status"], "learning_likely")
         self.assertEqual(report["learning_readiness"]["signals"], [])
 
-    def test_build_readiness_report_requires_review_when_loop_health_telemetry_is_missing(self) -> None:
+    def test_build_readiness_report_requires_review_when_loop_health_telemetry_is_missing(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -2026,7 +2233,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/mechanism-review-candidates.json",
             {
                 "summary": {"candidates_emitted": 1},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
             },
         )
         self._write_report(
@@ -2064,9 +2273,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                         "routing_report_parse_gap_count": 0,
                         "executor_report_parse_gap_count": 0,
                         "coverage_ratios": {"telemetry": 0.0},
-                        "health_flags": [
-                            "missing_telemetry_coverage"
-                        ],
+                        "health_flags": ["missing_telemetry_coverage"],
                     }
                 },
             },
@@ -2080,8 +2287,12 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(report["learning_readiness"]["gate_effect"], "review_required")
         self.assertTrue(report["learning_readiness"]["can_run"])
         self.assertFalse(report["learning_readiness"]["likely_to_learn"])
-        self.assertEqual(report["learning_readiness"]["metrics"]["telemetry_coverage_ratio"], 0.0)
-        signal_ids = {signal["id"] for signal in report["learning_readiness"]["signals"]}
+        self.assertEqual(
+            report["learning_readiness"]["metrics"]["telemetry_coverage_ratio"], 0.0
+        )
+        signal_ids = {
+            signal["id"] for signal in report["learning_readiness"]["signals"]
+        }
         self.assertSetEqual(signal_ids, {"loop_health_telemetry_coverage_missing"})
         self.assertEqual(len(report["learning_claim_blockers"]), 1)
         self.assertEqual(
@@ -2099,7 +2310,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertIn("make auto-improve-goal-run", report["next_action"])
         self.assertNotIn("auto_improve_loop", report["next_action"])
 
-    def test_build_readiness_report_treats_partial_loop_health_telemetry_as_non_blocking(self) -> None:
+    def test_build_readiness_report_treats_partial_loop_health_telemetry_as_non_blocking(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -2177,9 +2390,13 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(report["learning_readiness"]["status"], "learning_likely")
         self.assertTrue(report["learning_readiness"]["likely_to_learn"])
         self.assertEqual(report["learning_readiness"]["signals"], [])
-        self.assertEqual(report["learning_readiness"]["metrics"]["telemetry_coverage_ratio"], 0.5)
+        self.assertEqual(
+            report["learning_readiness"]["metrics"]["telemetry_coverage_ratio"], 0.5
+        )
 
-    def test_build_readiness_report_requires_typed_same_eval_evidence_for_same_eval_family(self) -> None:
+    def test_build_readiness_report_requires_typed_same_eval_evidence_for_same_eval_family(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -2276,30 +2493,78 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         report = build_readiness_report(self.vault, context=fixed_context())
 
         self.assertFalse(report["learning_readiness"]["likely_to_learn"])
-        signal_ids = {signal["id"] for signal in report["learning_readiness"]["signals"]}
+        signal_ids = {
+            signal["id"] for signal in report["learning_readiness"]["signals"]
+        }
         self.assertIn("same_eval_typed_evidence_missing", signal_ids)
         self.assertEqual(
             report["diagnostics"]["same_eval_telemetry_summary"]["status"],
             "blocked",
         )
         self.assertEqual(
-            report["learning_readiness"]["metrics"]["same_eval_reason_code_coverage_ratio"],
+            report["learning_readiness"]["metrics"][
+                "same_eval_reason_code_coverage_ratio"
+            ],
             0.0,
         )
 
-    def test_build_readiness_report_accepts_complete_typed_same_eval_evidence(self) -> None:
+    def test_build_readiness_report_accepts_complete_typed_same_eval_evidence(
+        self,
+    ) -> None:
         self.test_build_readiness_report_requires_typed_same_eval_evidence_for_same_eval_family()
         run_path = self.vault / "runs" / "run-same-eval" / "run-telemetry.json"
         payload = json.loads(run_path.read_text(encoding="utf-8"))
         payload["same_eval_reason_code"] = "telemetry_discoverability_improved"
         payload["strict_secondary_improvement_present"] = True
         payload["secondary_improvement_axes"] = ["lint"]
-        run_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        run_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
         report = build_readiness_report(self.vault, context=fixed_context())
 
         self.assertTrue(report["learning_readiness"]["likely_to_learn"])
-        self.assertEqual(report["diagnostics"]["same_eval_telemetry_summary"]["status"], "pass")
+        self.assertEqual(
+            report["diagnostics"]["same_eval_telemetry_summary"]["status"], "pass"
+        )
+        self.assertEqual(report["learning_readiness"]["signals"], [])
+
+    def test_build_readiness_report_accepts_legacy_reconstructed_same_eval_evidence(
+        self,
+    ) -> None:
+        self.test_build_readiness_report_requires_typed_same_eval_evidence_for_same_eval_family()
+        run_path = self.vault / "runs" / "run-same-eval" / "run-telemetry.json"
+        payload = json.loads(run_path.read_text(encoding="utf-8"))
+        payload["decision_record"] = {
+            "reason_code": "equal_score_secondary_eligibility",
+            "source_rule": "equal_score_secondary_eligibility",
+        }
+        run_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        self._write_report(
+            "ops/reports/learning-confirmed-legacy-reconstruction.json",
+            {
+                "artifact_kind": "learning_confirmed_legacy_reconstruction",
+                "status": "pass",
+                "run_reconstructions": [
+                    {
+                        "run_id": "run-same-eval",
+                        "reconstruction_status": "reconstructed",
+                        "parsed_strict_secondary_improvement_present": True,
+                        "parsed_secondary_axes": ["lint"],
+                        "telemetry_behavior_delta_digest": "a" * 64,
+                    }
+                ],
+            },
+        )
+
+        report = build_readiness_report(self.vault, context=fixed_context())
+
+        self.assertTrue(report["learning_readiness"]["likely_to_learn"])
+        self.assertEqual(
+            report["diagnostics"]["same_eval_telemetry_summary"]["status"], "pass"
+        )
         self.assertEqual(report["learning_readiness"]["signals"], [])
 
     def test_build_readiness_report_ignores_blocked_same_eval_proposals_for_typed_signal(
@@ -2307,7 +2572,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
     ) -> None:
         self._write_ready_queue_reports()
         mutation = json.loads(
-            (self.vault / "ops/reports/mutation-proposals.json").read_text(encoding="utf-8")
+            (self.vault / "ops/reports/mutation-proposals.json").read_text(
+                encoding="utf-8"
+            )
         )
         mutation["summary"]["proposals_emitted"] = 2
         mutation["summary"]["blocked_proposals"] = 1
@@ -2366,7 +2633,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             report["diagnostics"]["same_eval_telemetry_summary"]["status"],
             "not_applicable",
         )
-        self.assertEqual(report["diagnostics"]["same_eval_telemetry_summary"]["run_count"], 0)
+        self.assertEqual(
+            report["diagnostics"]["same_eval_telemetry_summary"]["run_count"], 0
+        )
         self.assertEqual(report["learning_readiness"]["signals"], [])
 
     def test_build_readiness_report_uses_clean_current_loop_health_for_quality_shadow(
@@ -2421,7 +2690,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/routing-provenance-aggregates/current-clean-goal-run.json",
         )
 
-    def test_build_readiness_report_recommends_seed_run_when_queue_is_empty(self) -> None:
+    def test_build_readiness_report_recommends_seed_run_when_queue_is_empty(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -2482,19 +2753,32 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(report["execution_readiness"]["status"], "warn")
         self.assertFalse(report["can_execute_trial"])
         self.assertFalse(report["can_promote_result"])
-        self.assertTrue(any(item["scope"] == "execution_readiness" for item in report["promotion_blockers"]))
+        self.assertTrue(
+            any(
+                item["scope"] == "execution_readiness"
+                for item in report["promotion_blockers"]
+            )
+        )
         self.assertFalse(readiness_can_run(report))
         self.assertEqual(readiness_exit_code(report), 1)
         self.assertFalse(report["queue"]["ready"])
-        self.assertEqual(report["diagnostics"]["loop_health_summary"]["status"], "missing")
+        self.assertEqual(
+            report["diagnostics"]["loop_health_summary"]["status"], "missing"
+        )
         self.assertEqual(report["fallback"]["status"], "seed_recommended")
         self.assertEqual(report["fallback"]["seed_run_count"], 0)
         self.assertEqual(report["fallback"]["history_requirement"], 2)
         self.assertEqual(report["fallback"]["additional_runs_needed"], 1)
-        self.assertEqual(report["remediations"][0]["blocker"], "fallback_target_history_missing")
-        self.assertEqual(report["remediations"][0]["remediation_code"], "seed_fallback_target_family")
+        self.assertEqual(
+            report["remediations"][0]["blocker"], "fallback_target_history_missing"
+        )
+        self.assertEqual(
+            report["remediations"][0]["remediation_code"], "seed_fallback_target_family"
+        )
         self.assertEqual(report["remediations"][0]["blocker_kind"], "history_gap")
-        self.assertEqual(report["remediations"][0]["unblock_action_type"], "manual_seed_run")
+        self.assertEqual(
+            report["remediations"][0]["unblock_action_type"], "manual_seed_run"
+        )
         self.assertIn("Finalize one narrow manual", report["next_action"])
 
     def test_build_readiness_report_tracks_seeded_fallback_family_history(self) -> None:
@@ -2567,12 +2851,8 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                 "primary_targets": [
                     "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
                 ],
-                "supporting_targets": [
-                    "ops/schemas/run-telemetry.schema.json"
-                ],
-                "test_files": [
-                    "tests/test_auto_improve_iteration_runtime.py"
-                ],
+                "supporting_targets": ["ops/schemas/run-telemetry.schema.json"],
+                "test_files": ["tests/test_auto_improve_iteration_runtime.py"],
             },
         )
 
@@ -2587,19 +2867,39 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "learning_blocked_by_execution_not_runnable",
         )
         self.assertEqual(report["learning_claim_blockers"][0]["gate_effect"], "shadow")
-        self.assertEqual(report["learning_claim_blockers"][0]["source_status"], "not_runnable")
-        self.assertIn("learning-readiness signoff cannot accept", report["learning_claim_blockers"][0]["required_evidence"][1])
-        self.assertNotIn("operator must record accepted risk", " ".join(report["learning_claim_blockers"][0]["required_evidence"]))
-        self.assertTrue(any(item["id"] == "execution_blocked_by_no_runnable_proposal" for item in report["promotion_blockers"]))
+        self.assertEqual(
+            report["learning_claim_blockers"][0]["source_status"], "not_runnable"
+        )
+        self.assertIn(
+            "learning-readiness signoff cannot accept",
+            report["learning_claim_blockers"][0]["required_evidence"][1],
+        )
+        self.assertNotIn(
+            "operator must record accepted risk",
+            " ".join(report["learning_claim_blockers"][0]["required_evidence"]),
+        )
+        self.assertTrue(
+            any(
+                item["id"] == "execution_blocked_by_no_runnable_proposal"
+                for item in report["promotion_blockers"]
+            )
+        )
         self.assertFalse(readiness_can_run(report))
         self.assertEqual(report["fallback"]["status"], "history_seeded")
         self.assertEqual(report["fallback"]["seed_run_count"], 1)
         self.assertEqual(report["fallback"]["seed_runs"], ["run-fallback-seed"])
-        self.assertEqual(report["remediations"][0]["blocker"], "fallback_target_history_depth")
-        self.assertEqual(report["remediations"][0]["remediation_code"], "add_comparable_fallback_history")
+        self.assertEqual(
+            report["remediations"][0]["blocker"], "fallback_target_history_depth"
+        )
+        self.assertEqual(
+            report["remediations"][0]["remediation_code"],
+            "add_comparable_fallback_history",
+        )
         self.assertIn("add another comparable narrow run", report["next_action"])
 
-    def test_build_readiness_report_warns_when_only_blocked_proposals_exist(self) -> None:
+    def test_build_readiness_report_warns_when_only_blocked_proposals_exist(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -2615,7 +2915,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/mechanism-review-candidates.json",
             {
                 "summary": {"candidates_emitted": 1},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
             },
         )
         self._write_report(
@@ -2654,7 +2956,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(len(report["remediations"]), 1)
         remediation = report["remediations"][0]
         self.assertEqual(remediation["blocker"], "recent_log_overlap")
-        self.assertEqual(remediation["remediation_code"], "wait_for_recent_log_overlap_to_clear")
+        self.assertEqual(
+            remediation["remediation_code"], "wait_for_recent_log_overlap_to_clear"
+        )
         self.assertEqual(remediation["blocker_kind"], "hard")
         self.assertEqual(
             remediation["unblock_action_type"],
@@ -2663,21 +2967,30 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(remediation["affected_proposal_count"], 1)
         self.assertEqual(remediation["proposal_ids"], ["proposal-blocked"])
         self.assertTrue(
-            any("runnable_proposal_count" in item for item in remediation["minimum_evidence"])
+            any(
+                "runnable_proposal_count" in item
+                for item in remediation["minimum_evidence"]
+            )
         )
         self.assertIn("make auto-improve-readiness", remediation["retry_condition"])
         self.assertIn("none are runnable yet", report["next_action"])
         self.assertIn("recent_log_overlap", report["next_action"])
         checks = {check["id"]: check for check in report["checks"]}
-        self.assertIn("blocked_proposal_count=1", checks["proposal_queue_nonempty"]["detail"])
-        self.assertIn("recent_log_overlap=1", checks["proposal_queue_nonempty"]["detail"])
+        self.assertIn(
+            "blocked_proposal_count=1", checks["proposal_queue_nonempty"]["detail"]
+        )
+        self.assertIn(
+            "recent_log_overlap=1", checks["proposal_queue_nonempty"]["detail"]
+        )
         self.assertTrue(checks["fallback_target_history_requirement_met"]["pass"])
         self.assertIn(
             "fallback history depth is not needed",
             checks["fallback_target_history_requirement_met"]["detail"],
         )
 
-    def test_build_readiness_report_surfaces_recent_outcome_rework_remediation(self) -> None:
+    def test_build_readiness_report_surfaces_recent_outcome_rework_remediation(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -2693,7 +3006,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/mechanism-review-candidates.json",
             {
                 "summary": {"candidates_emitted": 1},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
             },
         )
         self._write_report(
@@ -2735,12 +3050,17 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             remediation["unblock_action_type"],
             "outcome_rework_repair_or_successful_supersession",
         )
-        self.assertIn("Do not rerun the same queue-unblock proposal", remediation["retry_condition"])
+        self.assertIn(
+            "Do not rerun the same queue-unblock proposal",
+            remediation["retry_condition"],
+        )
         self.assertTrue(
             any("outcome-metrics" in item for item in remediation["minimum_evidence"])
         )
 
-    def test_build_readiness_report_surfaces_empty_queue_blockers_as_blocked_seeds(self) -> None:
+    def test_build_readiness_report_surfaces_empty_queue_blockers_as_blocked_seeds(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -2757,7 +3077,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             {
                 "status": "attention",
                 "summary": {"candidates_emitted": 0},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue blocker is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue blocker is available"}
+                },
             },
         )
         self._write_report(
@@ -2802,11 +3124,16 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(report["fallback"]["status"], "blocked_queue")
         self.assertEqual(report["remediations"][0]["blocker"], "run_artifact_invalid")
         self.assertEqual(report["remediations"][0]["affected_proposal_count"], 2)
-        self.assertIn("diagnostics.empty_queue_blockers", report["remediations"][0]["minimum_evidence"][0])
+        self.assertIn(
+            "diagnostics.empty_queue_blockers",
+            report["remediations"][0]["minimum_evidence"][0],
+        )
         self.assertIn("blocked queue seed", report["next_action"])
         self.assertIn("run_artifact_invalid", report["next_action"])
 
-    def test_build_readiness_report_passes_when_blocked_and_runnable_proposals_coexist(self) -> None:
+    def test_build_readiness_report_passes_when_blocked_and_runnable_proposals_coexist(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -2822,7 +3149,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "ops/reports/mechanism-review-candidates.json",
             {
                 "summary": {"candidates_emitted": 2},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
             },
         )
         self._write_report(
@@ -2884,7 +3213,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             checks["fallback_target_history_requirement_met"]["detail"],
         )
 
-    def test_write_readiness_report_uses_bundled_schema_when_vault_schema_is_absent(self) -> None:
+    def test_write_readiness_report_uses_bundled_schema_when_vault_schema_is_absent(
+        self,
+    ) -> None:
         report = build_readiness_report(
             self.vault,
             context=fixed_context(),
@@ -2896,7 +3227,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             },
             mechanism_review_report={
                 "summary": {"candidates_emitted": 1},
-                "diagnostics": {"bootstrap": {"summary": "candidate queue is available"}},
+                "diagnostics": {
+                    "bootstrap": {"summary": "candidate queue is available"}
+                },
             },
             mutation_proposal_report={
                 "summary": {
@@ -2915,7 +3248,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                 ],
             },
         )
-        (self.vault / "ops" / "schemas" / "auto-improve-readiness-report.schema.json").unlink()
+        (
+            self.vault / "ops" / "schemas" / "auto-improve-readiness-report.schema.json"
+        ).unlink()
 
         destination = write_readiness_report(self.vault, report)
         persisted = json.loads(destination.read_text(encoding="utf-8"))
@@ -2923,7 +3258,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertTrue(readiness_can_run(persisted))
         self.assertEqual(persisted["remediations"], [])
 
-    def test_build_readiness_report_summarizes_upstream_attention_statuses(self) -> None:
+    def test_build_readiness_report_summarizes_upstream_attention_statuses(
+        self,
+    ) -> None:
         self._write_report(
             "ops/reports/outcome-metrics.json",
             {
@@ -3001,7 +3338,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             "mutation_proposal.status=attention (no proposals emitted; proposals_emitted=0)",
         )
 
-    def test_write_readiness_report_does_not_fallback_from_invalid_vault_schema(self) -> None:
+    def test_write_readiness_report_does_not_fallback_from_invalid_vault_schema(
+        self,
+    ) -> None:
         report = build_readiness_report(
             self.vault,
             context=fixed_context(),
@@ -3018,7 +3357,9 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                 "proposals": [],
             },
         )
-        (self.vault / "ops" / "schemas" / "auto-improve-readiness-report.schema.json").write_text(
+        (
+            self.vault / "ops" / "schemas" / "auto-improve-readiness-report.schema.json"
+        ).write_text(
             "{not-json",
             encoding="utf-8",
         )
