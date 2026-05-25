@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
 import datetime as dt
 import json
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
 from .goal_runtime_backoff import backoff_status, freshness_status, parse_iso_z
 from .goal_runtime_resume import resume_status
-
 
 PERIODIC_EVIDENCE_CHECKPOINTS: list[dict[str, Any]] = [
     {
@@ -54,7 +53,7 @@ PERIODIC_CHECKPOINT_COMMAND_EVENT = "goal_periodic_checkpoint_commands_completed
 
 
 def iso_z(value: dt.datetime) -> str:
-    return value.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return value.astimezone(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def periodic_checkpoint_status(*, due: bool, observed: bool) -> str:

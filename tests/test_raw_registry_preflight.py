@@ -11,12 +11,6 @@ from pathlib import Path
 
 from ops.scripts.path_portability_runtime import infozip_c_locale_escape_path
 from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.raw_registry_runtime import (
-    parse_raw_registry_pages,
-    registry_entry_page_paths,
-    registry_summary_page_path,
-    write_raw_registry_export,
-)
 from ops.scripts.raw_registry_preflight import (
     ALIAS_POLICY_VERSION,
     PATH_ALIAS_RESOLUTION_MODE,
@@ -26,12 +20,19 @@ from ops.scripts.raw_registry_preflight import (
     write_report,
     write_reproducibility_report,
 )
+from ops.scripts.raw_registry_runtime import (
+    parse_raw_registry_pages,
+    registry_entry_page_paths,
+    registry_summary_page_path,
+    write_raw_registry_export,
+)
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import (
     RAW_REGISTRY_PREFLIGHT_REPORT_SCHEMA_PATH,
     RAW_REGISTRY_PREFLIGHT_REPRODUCIBILITY_SCHEMA_PATH,
 )
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
 from tests.minimal_vault_runtime import (
     add_registry_entry_scalar_field,
     live_registry_shard_pages,
@@ -41,8 +42,8 @@ from tests.minimal_vault_runtime import (
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
     )
 
 

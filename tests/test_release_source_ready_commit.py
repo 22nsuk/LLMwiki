@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from pathlib import Path
 
 from ops.scripts.release.release_source_ready_commit import classify_path, main
-
 
 LOCAL_GITIGNORE_TEXT = "\n".join(
     [
@@ -33,8 +32,7 @@ def _git(vault: Path, *args: str) -> str:
         cwd=vault,
         check=True,
         text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
     )
     return result.stdout.strip()
 

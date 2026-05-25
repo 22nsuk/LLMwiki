@@ -7,10 +7,6 @@ from pathlib import Path
 
 from ops.scripts.path_portability_runtime import infozip_c_locale_escape_path
 from ops.scripts.policy_runtime import load_policy
-from ops.scripts.registry_exceptions_runtime import (
-    RawRegistryInvalidContinuationLineError,
-    RawRegistryLegacyCompactEntryError,
-)
 from ops.scripts.raw_registry_runtime import (
     build_raw_registry_export,
     build_registry_source_trace_resolution_map,
@@ -19,8 +15,12 @@ from ops.scripts.raw_registry_runtime import (
     parse_raw_registry_page,
     registry_entry_locators,
 )
-from tests.minimal_vault_runtime import live_registry_shard_pages, seed_minimal_vault
+from ops.scripts.registry_exceptions_runtime import (
+    RawRegistryInvalidContinuationLineError,
+    RawRegistryLegacyCompactEntryError,
+)
 
+from tests.minimal_vault_runtime import live_registry_shard_pages, seed_minimal_vault
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "raw_registry"
 

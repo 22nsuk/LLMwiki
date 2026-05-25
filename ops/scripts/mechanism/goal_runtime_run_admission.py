@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
 import hashlib
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+from ops.scripts.artifact_io_runtime import (
+    SchemaBackedReportWriteRequest,
+    write_schema_backed_report,
+)
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
-
 
 DEFAULT_OUT = "tmp/goal-runtime-run-admission.json"
 DEFAULT_CLEANUP_REPORT = "tmp/goal-runtime-clean-transient.json"

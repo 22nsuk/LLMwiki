@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from ops.scripts.wiki_lint import lint
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 

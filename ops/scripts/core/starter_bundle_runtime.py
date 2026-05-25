@@ -5,7 +5,6 @@ from pathlib import Path
 
 from .path_runtime import normalize_repo_path_text
 
-
 DEFAULT_STARTER_BUNDLE = "planning_default"
 SYSTEM_MECHANISM_STARTER_BUNDLE = "system_mechanism"
 

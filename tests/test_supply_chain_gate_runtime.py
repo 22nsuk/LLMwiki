@@ -8,13 +8,14 @@ from pathlib import Path
 
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.supply_chain_gate_runtime import build_gate_report
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 15, 12, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 15, 12, 0, tzinfo=dt.UTC),
     )
 
 

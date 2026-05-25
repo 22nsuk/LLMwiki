@@ -18,21 +18,28 @@ from ops.scripts.artifact_io_runtime import (
 )
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
+from ops.scripts.release.release_authority_vocabulary import (
+    REASON_MACHINE_RELEASE_NOT_ALLOWED,
+)
+from ops.scripts.release.release_status_v2 import (
+    release_status_v2_view_with_readiness_fallback,
+)
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import (
     LEARNING_READINESS_SIGNOFF_REVALIDATION_SCHEMA_PATH,
     LEARNING_READINESS_SIGNOFF_SCHEMA_PATH,
 )
-from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_with_schema
-from ops.scripts.release.release_authority_vocabulary import REASON_MACHINE_RELEASE_NOT_ALLOWED
-from ops.scripts.release.release_status_v2 import release_status_v2_view_with_readiness_fallback
+from ops.scripts.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_with_schema,
+)
+from ops.scripts.source_tree_fingerprint_runtime import producer_input_fingerprint
+
 from .learning_readiness_vocabulary import (
     LEARNING_REVIEW_REQUIRED_BLOCKER_ID,
     is_signoff_supported_learning_blocker_id,
     learning_release_blocker_ids_from_report,
 )
-from ops.scripts.source_tree_fingerprint_runtime import producer_input_fingerprint
-
 
 DEFAULT_OUT = "ops/reports/learning-readiness-signoff-revalidation.json"
 SIGNOFF_PATH = "ops/reports/learning-readiness-signoff.json"
@@ -77,12 +84,12 @@ def _parse_iso_z(value: str) -> dt.datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=dt.timezone.utc)
-    return parsed.astimezone(dt.timezone.utc)
+        return parsed.replace(tzinfo=dt.UTC)
+    return parsed.astimezone(dt.UTC)
 
 
 def _format_iso_z(value: dt.datetime) -> str:
-    return value.astimezone(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return value.astimezone(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _empty_signoff(load_status: str, summary: str) -> dict[str, Any]:

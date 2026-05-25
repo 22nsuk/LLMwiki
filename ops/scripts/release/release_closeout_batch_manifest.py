@@ -21,6 +21,9 @@ from ops.scripts.artifact_io_runtime import (
 )
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy
+from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.wiki_manifest import build_manifest, release_manifest_excludes_path
+
 from .release_authority_vocabulary import (
     REASON_MACHINE_RELEASE_NOT_ALLOWED,
     release_authority_vocabulary_payload,
@@ -31,9 +34,6 @@ from .release_status_v2 import (
     release_status_v2_payload,
     release_status_v2_view_with_readiness_fallback,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.wiki_manifest import build_manifest, release_manifest_excludes_path
-
 
 DEFAULT_OUT = "ops/reports/release-closeout-batch-manifest.json"
 PRODUCER = "ops.scripts.release_closeout_batch_manifest"
@@ -229,14 +229,14 @@ def _parse_utc_z(value: str) -> dt.datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=dt.timezone.utc)
-    return parsed.astimezone(dt.timezone.utc).replace(microsecond=0)
+        parsed = parsed.replace(tzinfo=dt.UTC)
+    return parsed.astimezone(dt.UTC).replace(microsecond=0)
 
 
 def _mtime_iso_z(path: Path) -> str:
     timestamp = path.stat().st_mtime
     return (
-        dt.datetime.fromtimestamp(timestamp, dt.timezone.utc)
+        dt.datetime.fromtimestamp(timestamp, dt.UTC)
         .replace(microsecond=0)
         .isoformat()
         .replace("+00:00", "Z")
@@ -246,18 +246,18 @@ def _mtime_iso_z(path: Path) -> str:
 def _timezone_for_zip_timestamps(name: str) -> dt.tzinfo:
     value = str(name).strip() or DEFAULT_ZIP_TIMESTAMP_TIMEZONE
     if value.upper() == "UTC":
-        return dt.timezone.utc
+        return dt.UTC
     try:
         return ZoneInfo(value)
     except ZoneInfoNotFoundError:
-        return dt.timezone.utc
+        return dt.UTC
 
 
 def _zip_info_mtime_iso_z(info: zipfile.ZipInfo, *, timezone_assumption: str) -> str:
     local_tz = _timezone_for_zip_timestamps(timezone_assumption)
     timestamp = dt.datetime(*info.date_time, tzinfo=local_tz)
     return (
-        timestamp.astimezone(dt.timezone.utc)
+        timestamp.astimezone(dt.UTC)
         .replace(microsecond=0)
         .isoformat()
         .replace("+00:00", "Z")
@@ -760,9 +760,7 @@ def _source_evidence_freshness(
             if resolved_zip_metadata_path is None
             else display_path(vault, resolved_zip_metadata_path)
         ),
-        "archive_timestamp_has_timezone": False
-        if basis == ZIP_MEMBER_TIMESTAMP_BASIS
-        else True,
+        "archive_timestamp_has_timezone": basis != ZIP_MEMBER_TIMESTAMP_BASIS,
         "timestamp_timezone_assumption": (
             str(zip_timestamp_timezone).strip() or DEFAULT_ZIP_TIMESTAMP_TIMEZONE
             if basis == ZIP_MEMBER_TIMESTAMP_BASIS
@@ -1597,7 +1595,7 @@ def _check_manifest(
     existing_generated_at = _parse_utc_z(str(existing.get("generated_at", "")))
     replay_context = (
         RuntimeContext(
-            display_timezone=dt.timezone.utc, clock=lambda: existing_generated_at
+            display_timezone=dt.UTC, clock=lambda: existing_generated_at
         )
         if existing_generated_at is not None
         else None

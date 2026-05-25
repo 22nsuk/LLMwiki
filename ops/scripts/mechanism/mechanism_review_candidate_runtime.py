@@ -20,13 +20,12 @@ from .mechanism_candidate_registry_runtime import (
     schema_changed_file_paths,
     trend_candidate_requirements,
 )
-from .mechanism_review_session_calibration_runtime import apply_session_calibration
 from .mechanism_review_history_runtime import (
     MechanismRunSnapshot,
     group_snapshots_by_targets,
     load_optional_json,
 )
-
+from .mechanism_review_session_calibration_runtime import apply_session_calibration
 
 JsonLoader = Callable[[Path], dict | None]
 

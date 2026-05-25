@@ -5,11 +5,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.raw_intake_source_quality import build_report, extract_clean_lead, main as source_quality_main
+from ops.scripts.raw_intake_source_quality import build_report, extract_clean_lead
+from ops.scripts.raw_intake_source_quality import main as source_quality_main
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
 from tests.cli_test_runtime import invoke_cli_main
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
-
 
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "raw-intake-source-quality-report.schema.json"
 

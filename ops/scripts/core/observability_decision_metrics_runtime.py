@@ -9,6 +9,7 @@ from ops.scripts.auto_improve_session_runtime import (
     build_outcome_metrics_from_attempts,
     list_strings,
 )
+
 from .artifact_freshness_runtime import build_canonical_report_envelope
 from .observability_artifacts_shared_runtime import (
     increment,
@@ -29,11 +30,12 @@ from .schema_constants_runtime import (
     PROMOTION_DECISION_TRENDS_SCHEMA_PATH,
 )
 
-
 PROMOTION_DECISION_TRENDS = PROMOTION_DECISION_TRENDS_SCHEMA_PATH
 PROMOTION_DECISION_TRENDS_REPORT = "ops/reports/promotion-decision-trends.json"
 PROMOTION_DECISION_TRENDS_PRODUCER = "ops.scripts.observability_decision_metrics_runtime"
-PROMOTION_DECISION_TRENDS_SOURCE_COMMAND = "python -m ops.scripts.run_mechanism_experiment --vault ."
+PROMOTION_DECISION_TRENDS_SOURCE_COMMAND = (
+    "python -m ops.scripts.promotion_decision_trends --vault ."
+)
 OUTCOME_METRICS = OUTCOME_METRICS_SCHEMA_PATH
 OUTCOME_METRICS_REPORT = "ops/reports/outcome-metrics.json"
 DEFECT_ESCAPE_CLOSURES_REPORT = "ops/reports/defect-escape-closures.json"
@@ -157,8 +159,9 @@ def build_promotion_decision_trends(
             resolved_policy_path=policy_path,
             schema_path=PROMOTION_DECISION_TRENDS,
             source_paths=[
-                "ops/scripts/observability_decision_metrics_runtime.py",
-                "ops/scripts/promotion_decision_registry_runtime.py",
+                "ops/scripts/mechanism/promotion_decision_trends.py",
+                "ops/scripts/core/observability_decision_metrics_runtime.py",
+                "ops/scripts/core/promotion_decision_registry_runtime.py",
             ],
             path_group_inputs={
                 "promotion_reports": promotion_report_paths,

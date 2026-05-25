@@ -4,8 +4,6 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .policy_runtime import report_path
-from .registry_exceptions_runtime import RawRegistryRuntimeError, raw_registry_exception_detail
 from ops.scripts.raw_registry_runtime import (
     build_raw_sha256_index,
     build_registry_locator_groups,
@@ -14,10 +12,16 @@ from ops.scripts.raw_registry_runtime import (
     load_exported_registry_enrichment,
     parse_raw_registry_pages,
     parse_raw_registry_summary_counts,
-    registry_inventory_resolution_stats,
     registry_entry_page_corpus_map,
     registry_entry_page_paths,
+    registry_inventory_resolution_stats,
     registry_summary_page_path,
+)
+
+from .policy_runtime import report_path
+from .registry_exceptions_runtime import (
+    RawRegistryRuntimeError,
+    raw_registry_exception_detail,
 )
 from .source_page_naming_runtime import source_slug_validation_detail
 

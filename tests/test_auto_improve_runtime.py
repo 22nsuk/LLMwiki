@@ -7,8 +7,6 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts import auto_improve_runtime
-from ops.scripts.codex_goal_client import set_goal
 from ops.scripts.auto_improve_execute_runtime import (
     ExecuteEvaluateDependencies,
     ExecuteEvaluateRequest,
@@ -19,6 +17,7 @@ from ops.scripts.auto_improve_runtime import (
     refresh_auto_improve_session_report,
     run_auto_improve_session,
 )
+from ops.scripts.codex_goal_client import set_goal
 from ops.scripts.run_mechanism_experiment_runtime import (
     RunMechanismExperimentError,
     RunMechanismExperimentMutationError,
@@ -26,17 +25,20 @@ from ops.scripts.run_mechanism_experiment_runtime import (
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
+from ops.scripts import auto_improve_runtime
 from tests.minimal_vault_runtime import seed_subagent_profiles
-from tests.run_mechanism_experiment_test_utils import mutation_proposal_report, seed_wrapper_vault
+from tests.run_mechanism_experiment_test_utils import (
+    mutation_proposal_report,
+    seed_wrapper_vault,
+)
 from tests.test_codex_goal_contract import sample_goal_contract
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _incrementing_runtime_context(start: dt.datetime | None = None) -> RuntimeContext:
     current = {
-        "value": start or dt.datetime(2026, 4, 15, 0, 0, tzinfo=dt.timezone.utc)
+        "value": start or dt.datetime(2026, 4, 15, 0, 0, tzinfo=dt.UTC)
     }
 
     def clock() -> dt.datetime:
@@ -45,7 +47,7 @@ def _incrementing_runtime_context(start: dt.datetime | None = None) -> RuntimeCo
         return value
 
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
+        display_timezone=dt.UTC,
         clock=clock,
         session_id="auto-incrementing",
         executor_id="codex_exec",
@@ -583,7 +585,7 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
             proposal = mutation_proposal_report("ops/scripts/example.py")["proposals"][0]
-            context = RuntimeContext(display_timezone=dt.timezone.utc)
+            context = RuntimeContext(display_timezone=dt.UTC)
 
             def fake_refresh_reports(*_: object, **__: object) -> tuple[dict, dict]:
                 return {}, {"proposals": [proposal]}
@@ -610,7 +612,7 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
             proposal = mutation_proposal_report("ops/scripts/example.py")["proposals"][0]
-            context = RuntimeContext(display_timezone=dt.timezone.utc)
+            context = RuntimeContext(display_timezone=dt.UTC)
 
             def fake_refresh_reports(*_: object, **__: object) -> tuple[dict, dict]:
                 return {}, {"proposals": [proposal]}
@@ -637,7 +639,7 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
             proposal = mutation_proposal_report("ops/scripts/example.py")["proposals"][0]
-            context = RuntimeContext(display_timezone=dt.timezone.utc)
+            context = RuntimeContext(display_timezone=dt.UTC)
             scope_freeze = {
                 "status": "blocked",
                 "resolution": {"test_files": []},
@@ -1084,21 +1086,20 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 mock.patch(
                     "ops.scripts.auto_improve_runtime.write_readiness_report",
                     return_value=readiness_path,
-                ),
+                ),self.assertRaisesRegex(
+                AutoImproveLearningReviewRequiredError,
+                "--allow-learning-uncertain",
+            )
             ):
-                with self.assertRaisesRegex(
-                    AutoImproveLearningReviewRequiredError,
-                    "--allow-learning-uncertain",
-                ):
-                    run_auto_improve_session(
-                        vault,
-                        policy_path="ops/policies/wiki-maintainer-policy.yaml",
-                        session_id="auto-session-blocked",
-                        max_proposals=1,
-                        max_minutes=30,
-                        max_consecutive_failures=1,
-                        executor_name="codex_exec",
-                    )
+                run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    session_id="auto-session-blocked",
+                    max_proposals=1,
+                    max_minutes=30,
+                    max_consecutive_failures=1,
+                    executor_name="codex_exec",
+                )
 
             session = json.loads(
                 (
@@ -1681,7 +1682,7 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 session_id="auto-session-fail",
                 policy_path="ops/policies/wiki-maintainer-policy.yaml",
                 context=_incrementing_runtime_context(
-                    dt.datetime(2026, 4, 16, 0, 0, tzinfo=dt.timezone.utc)
+                    dt.datetime(2026, 4, 16, 0, 0, tzinfo=dt.UTC)
                 ),
             )
             refreshed = json.loads((vault / refresh_result["session_report"]).read_text(encoding="utf-8"))
@@ -2154,9 +2155,9 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             seed_wrapper_vault(vault)
             seed_subagent_profiles(vault, ["worker", "validator"])
             proposal = mutation_proposal_report("ops/scripts/example.py")["proposals"][0]
-            fixed_now = dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc)
+            fixed_now = dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC)
             context = RuntimeContext(
-                display_timezone=dt.timezone.utc,
+                display_timezone=dt.UTC,
                 clock=lambda: fixed_now,
                 session_id="auto-deterministic",
                 executor_id="codex_exec",

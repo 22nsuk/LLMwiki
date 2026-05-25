@@ -74,10 +74,10 @@ def main() -> None:
         )
     except RunMechanismExperimentError as exc:
         print(str(exc), file=sys.stderr)
-        raise SystemExit(exc.exit_code)
+        raise SystemExit(exc.exit_code) from exc
     except Exception as exc:  # pragma: no cover - broad-exception: cli_boundary
         print(str(exc), file=sys.stderr)
-        raise SystemExit(8)
+        raise SystemExit(8) from exc
 
     print(json.dumps(result, ensure_ascii=False, indent=2))
 

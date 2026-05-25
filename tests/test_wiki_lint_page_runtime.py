@@ -7,9 +7,10 @@ from pathlib import Path
 from ops.scripts.policy_runtime import load_policy, required_sections_from_policy
 from ops.scripts.raw_registry_runtime import load_registry_source_trace_resolution_map
 from ops.scripts.wiki_lint_page_runtime import PageLintContext, lint_page, orphan_issues
-from ops.scripts.wikilink_runtime import build_page_lookup
-from ops.scripts.wiki_page_runtime import discover_pages
 from ops.scripts.wiki_lint_registry_runtime import registry_review_exempt_paths
+from ops.scripts.wiki_page_runtime import discover_pages
+from ops.scripts.wikilink_runtime import build_page_lookup
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 

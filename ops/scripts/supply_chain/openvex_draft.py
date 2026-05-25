@@ -11,24 +11,39 @@ from typing import Any
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
+    from ops.scripts.artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        write_schema_backed_report,
+    )
     from ops.scripts.cyclonedx_sbom import build_bom, normalize_requirement_name
-    from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy
     from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import CYCLONEDX_16_SCHEMA_PATH, OPENVEX_DRAFT_SCHEMA_PATH
+    from ops.scripts.schema_constants_runtime import (
+        CYCLONEDX_16_SCHEMA_PATH,
+        OPENVEX_DRAFT_SCHEMA_PATH,
+    )
     from ops.scripts.schema_runtime import load_schema, validate_or_raise
-    from ops.scripts.security_advisories import build_report as build_security_advisories_report
+    from ops.scripts.security_advisories import (
+        build_report as build_security_advisories_report,
+    )
     from ops.scripts.supply_chain_artifact_model import build_model
 else:
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from .cyclonedx_sbom import build_bom, normalize_requirement_name
-    from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+    from ops.scripts.artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        write_schema_backed_report,
+    )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy
     from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import CYCLONEDX_16_SCHEMA_PATH, OPENVEX_DRAFT_SCHEMA_PATH
+    from ops.scripts.schema_constants_runtime import (
+        CYCLONEDX_16_SCHEMA_PATH,
+        OPENVEX_DRAFT_SCHEMA_PATH,
+    )
     from ops.scripts.schema_runtime import load_schema, validate_or_raise
+
+    from .cyclonedx_sbom import build_bom, normalize_requirement_name
     from .security_advisories import build_report as build_security_advisories_report
     from .supply_chain_artifact_model import build_model
 

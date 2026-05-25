@@ -9,7 +9,6 @@ from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.wiki_stage2_eval import evaluate
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LIVE_POLICY_PATH = REPO_ROOT / "ops" / "policies" / "wiki-maintainer-policy.yaml"
 POLICY_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "wiki-maintainer-policy.schema.json"
@@ -18,8 +17,8 @@ STAGE2_REPORT_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "wiki-stage2-eval-re
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
     )
 
 

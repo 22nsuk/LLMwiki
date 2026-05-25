@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Release Authority Inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "artifact_kind", "generated_at", "producer", "status", "authority_claim", "source_revision", "source_revision_status", "source_tree_fingerprint", "summary", "surfaces", "stale_artifacts", "deletion_cautions"],
+  "properties": {
+    "$schema": { "type": "string", "const": "ops/schemas/release-authority-inventory.schema.json" },
+    "artifact_kind": { "type": "string", "const": "release_authority_inventory" },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": { "type": "string", "const": "ops.scripts.release_authority_inventory" },
+    "status": { "type": "string", "enum": ["pass", "attention", "fail"] },
+    "authority_claim": { "type": "string", "const": "none_inventory_only" },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_revision_status": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority_manifest_count", "diagnostic_bridge_count", "stale_artifact_count", "missing_artifact_count"],
+      "properties": {
+        "authority_manifest_count": { "type": "integer", "minimum": 0 },
+        "diagnostic_bridge_count": { "type": "integer", "minimum": 0 },
+        "stale_artifact_count": { "type": "integer", "minimum": 0 },
+        "missing_artifact_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "surfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "question", "authority_role", "owning_stage", "path", "make_target", "check_target", "schema_path", "producer", "verdict_fields", "does_not_claim", "exists", "artifact_status", "artifact_revision", "stale_for_current_revision"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "question": { "type": "string", "enum": ["runnable", "sealed_package", "unattended_promotion"] },
+          "authority_role": { "type": "string", "enum": ["authority_manifest", "diagnostic_bridge", "execution_plan", "diagnostic_report", "compatibility_alias", "schema", "script", "documentation"] },
+          "owning_stage": { "type": "string", "minLength": 1 },
+          "path": { "type": "string", "minLength": 1 },
+          "make_target": { "type": "string", "minLength": 1 },
+          "check_target": { "type": "string" },
+          "schema_path": { "type": "string", "minLength": 1 },
+          "producer": { "type": "string", "minLength": 1 },
+          "verdict_fields": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "does_not_claim": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "exists": { "type": "boolean" },
+          "artifact_status": { "type": "string" },
+          "artifact_revision": { "type": "string" },
+          "stale_for_current_revision": { "type": "boolean" }
+        }
+      }
+    },
+    "stale_artifacts": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "deletion_cautions": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}

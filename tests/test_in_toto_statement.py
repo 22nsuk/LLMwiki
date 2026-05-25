@@ -7,11 +7,15 @@ import unittest
 from pathlib import Path
 
 from ops.scripts.cyclonedx_sbom import build_bom, write_bom
-from ops.scripts.in_toto_statement import build_in_toto_statement, write_in_toto_statement
+from ops.scripts.in_toto_statement import (
+    build_in_toto_statement,
+    write_in_toto_statement,
+)
 from ops.scripts.openvex_draft import build_openvex_draft, write_openvex_draft
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.spdx_sbom import build_spdx_sbom, write_spdx_sbom
 from ops.scripts.supply_chain_artifact_model import build_model, write_model
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_supply_chain_artifact_model import seed_runtime_surface
 from tests.test_supply_chain_provenance import seed_dependency_inputs
@@ -19,8 +23,8 @@ from tests.test_supply_chain_provenance import seed_dependency_inputs
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 20, 12, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 20, 12, 0, tzinfo=dt.UTC),
     )
 
 

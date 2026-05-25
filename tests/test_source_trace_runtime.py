@@ -18,7 +18,11 @@ from ops.scripts.source_trace_profile_runtime import (
     STRICT_PROFILE,
     classify_source_trace_targets,
 )
-from ops.scripts.source_trace_runtime import extract_source_trace_refs, missing_source_trace_targets
+from ops.scripts.source_trace_runtime import (
+    extract_source_trace_refs,
+    missing_source_trace_targets,
+)
+
 from tests.minimal_vault_runtime import seed_open_question_smoke_vault
 
 

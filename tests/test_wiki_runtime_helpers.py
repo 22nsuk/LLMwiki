@@ -22,6 +22,7 @@ from ops.scripts.wiki_quality_runtime import (
 )
 from ops.scripts.wiki_snapshot_runtime import build_wiki_runtime_snapshot
 from ops.scripts.wikilink_runtime import build_page_lookup
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 

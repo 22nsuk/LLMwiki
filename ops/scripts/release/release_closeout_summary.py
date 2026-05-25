@@ -18,13 +18,29 @@ from ops.scripts.artifact_io_runtime import (
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.learning_readiness_vocabulary import (
     LEARNING_REVIEW_REQUIRED_BLOCKER_ID,
     LEARNING_STATUS_LIKELY,
 )
+from ops.scripts.output_runtime import display_path
+from ops.scripts.policy_runtime import load_policy, report_path
+from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.schema_constants_runtime import (
+    LEARNING_READINESS_SIGNOFF_SCHEMA_PATH,
+    RELEASE_CLOSEOUT_SUMMARY_SCHEMA_PATH,
+)
+from ops.scripts.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_with_schema,
+)
+from ops.scripts.source_tree_fingerprint_runtime import (
+    DEFAULT_SOURCE_TREE_CHANGE_PATH_LIMIT,
+    producer_input_fingerprint,
+    release_source_tree_change_sample,
+    release_source_tree_fingerprint,
+)
+
+from .release_authority_vocabulary import release_authority_vocabulary_payload
 from .release_risk_taxonomy_runtime import (
     ADVISORY_REVIEW_BACKLOG,
     CLEAN_LANE_BLOCKS,
@@ -35,20 +51,7 @@ from .release_risk_taxonomy_runtime import (
     load_release_risk_taxonomy,
     unregistered_release_risk_codes,
 )
-from ops.scripts.schema_constants_runtime import (
-    LEARNING_READINESS_SIGNOFF_SCHEMA_PATH,
-    RELEASE_CLOSEOUT_SUMMARY_SCHEMA_PATH,
-)
-from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_with_schema
-from ops.scripts.source_tree_fingerprint_runtime import (
-    DEFAULT_SOURCE_TREE_CHANGE_PATH_LIMIT,
-    producer_input_fingerprint,
-    release_source_tree_change_sample,
-    release_source_tree_fingerprint,
-)
-from .release_authority_vocabulary import release_authority_vocabulary_payload
 from .release_status_v2 import decide_sealed_release_status, release_status_v2_payload
-
 
 DEFAULT_OUT = "ops/reports/release-closeout-summary.json"
 LEARNING_SIGNOFF_PATH = "ops/reports/learning-readiness-signoff.json"
@@ -544,8 +547,8 @@ def _parse_iso_z(value: str) -> dt.datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=dt.timezone.utc)
-    return parsed.astimezone(dt.timezone.utc)
+        return parsed.replace(tzinfo=dt.UTC)
+    return parsed.astimezone(dt.UTC)
 
 
 def _release_readiness_state(
@@ -566,7 +569,7 @@ def _release_readiness_state(
 def _file_mtime_iso_z(path: Path) -> str:
     if not path.exists():
         return ""
-    modified_at = dt.datetime.fromtimestamp(path.stat().st_mtime, tz=dt.timezone.utc)
+    modified_at = dt.datetime.fromtimestamp(path.stat().st_mtime, tz=dt.UTC)
     return modified_at.replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
@@ -579,7 +582,7 @@ def _modified_after_generated_at(report_mtime: str, generated_at: str) -> bool:
 
 
 def _format_iso_z(value: dt.datetime) -> str:
-    return value.astimezone(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return value.astimezone(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _expires_after(generated_at: str, *, days: int) -> str:

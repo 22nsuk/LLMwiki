@@ -6,10 +6,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TypedDict
 
-from .artifact_freshness_runtime import (
-    build_canonical_report_envelope,
-    embed_artifact_envelope_metadata,
-)
 from ops.scripts.auto_improve_session_runtime import (
     build_executor_rollup,
     build_routing_rollup,
@@ -17,9 +13,10 @@ from ops.scripts.auto_improve_session_runtime import (
     build_telemetry_rollup,
     normalize_session_report,
 )
-from .observability_decision_metrics_runtime import (
-    build_session_decision_metrics_summary,
-    collect_outcome_attempts,
+
+from .artifact_freshness_runtime import (
+    build_canonical_report_envelope,
+    embed_artifact_envelope_metadata,
 )
 from .observability_artifacts_shared_runtime import (
     dict_value,
@@ -29,6 +26,10 @@ from .observability_artifacts_shared_runtime import (
     run_artifact_glob_rels,
     write_schema_backed_json,
 )
+from .observability_decision_metrics_runtime import (
+    build_session_decision_metrics_summary,
+    collect_outcome_attempts,
+)
 from .policy_runtime import load_policy, report_path
 from .runtime_context import RuntimeContext
 from .runtime_event_logging_runtime import append_runtime_event
@@ -36,7 +37,6 @@ from .schema_constants_runtime import (
     AUTO_IMPROVE_SESSION_SCHEMA_PATH,
     ROUTING_PROVENANCE_AGGREGATE_SCHEMA_PATH,
 )
-
 
 ROUTING_PROVENANCE_AGGREGATE = ROUTING_PROVENANCE_AGGREGATE_SCHEMA_PATH
 AUTO_IMPROVE_SESSION_SCHEMA = AUTO_IMPROVE_SESSION_SCHEMA_PATH

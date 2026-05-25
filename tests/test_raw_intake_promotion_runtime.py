@@ -5,16 +5,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.schema_constants_runtime import (
-    RAW_INTAKE_PROMOTION_PROFILE_BUNDLE_SCHEMA_PATH,
-    RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH,
-)
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.raw_intake_promotion_runtime import (
     render_family_pages,
     scaffold_profile_bundle,
     validate_profile_bundle,
 )
+from ops.scripts.schema_constants_runtime import (
+    RAW_INTAKE_PROMOTION_PROFILE_BUNDLE_SCHEMA_PATH,
+    RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH,
+)
+from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ops.scripts.validation_check_types_runtime import (
+    ValidationCheckResult,
+    validation_check,
+)
+
 from .mechanism_run_validation_runtime import (
     build_changed_files_scope_phase_check,
     build_event_sequence_phase_checks,
@@ -13,7 +18,6 @@ from .planning_gate_phase_state_runtime import (
     MechanismPhaseState,
     load_completed_mechanism_inputs,
 )
-from ops.scripts.validation_check_types_runtime import ValidationCheckResult, validation_check
 
 
 def slugify_heading(text: str) -> str:

@@ -8,7 +8,9 @@ from pathlib import Path
 from ops.scripts.raw_markdown_normalize import build_report
 from ops.scripts.raw_markdown_runtime import normalize_raw_markdown_file
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import RAW_MARKDOWN_NORMALIZATION_REPORT_SCHEMA_PATH
+from ops.scripts.schema_constants_runtime import (
+    RAW_MARKDOWN_NORMALIZATION_REPORT_SCHEMA_PATH,
+)
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -16,8 +18,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
     )
 
 

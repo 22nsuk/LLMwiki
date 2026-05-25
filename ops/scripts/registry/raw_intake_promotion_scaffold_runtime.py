@@ -4,6 +4,11 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
+from ops.scripts.schema_constants_runtime import (
+    RAW_INTAKE_PROMOTION_PROFILE_BUNDLE_SCHEMA_PATH,
+)
+from ops.scripts.wiki_page_runtime import section_body
+
 from .raw_intake_promotion_bridge_runtime import suggest_bridge_sources_for_family
 from .raw_intake_promotion_shared_runtime import (
     _frontmatter_value,
@@ -14,8 +19,6 @@ from .raw_intake_promotion_shared_runtime import (
     _string_list,
     _titleize_slug,
 )
-from ops.scripts.schema_constants_runtime import RAW_INTAKE_PROMOTION_PROFILE_BUNDLE_SCHEMA_PATH
-from ops.scripts.wiki_page_runtime import section_body
 
 _DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 REVIEWED_ROUTE_STATUSES = {"approved", "reviewed"}

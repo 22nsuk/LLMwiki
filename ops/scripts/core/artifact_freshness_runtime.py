@@ -13,7 +13,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TextIO
 
-from .artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+from .artifact_io_runtime import (
+    SchemaBackedReportWriteRequest,
+    write_schema_backed_report,
+)
 from .output_runtime import display_path
 from .policy_runtime import load_policy, report_path
 from .runtime_context import RuntimeContext
@@ -24,12 +27,12 @@ from .schema_runtime import (
     validate_with_schema,
     validate_with_validator,
 )
+from .source_revision_runtime import resolve_source_revision
 from .source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 DEFAULT_OUT = "ops/reports/artifact-freshness-report.json"
 PRODUCER = "ops.scripts.artifact_freshness_runtime"
 SOURCE_COMMAND = "python -m ops.scripts.artifact_freshness_runtime"
-UNKNOWN_REVISION = "unknown"
 ARTIFACT_ENVELOPE_SCHEMA_PATH = "ops/schemas/artifact-envelope.schema.json"
 ROOT_EPHEMERAL_PATTERNS = [
     "pytest_*.log",
@@ -154,9 +157,7 @@ def _is_noncanonical_json_archive_path(rel_path: str) -> bool:
         return True
     if filename.endswith("-executor-report.json"):
         return True
-    if filename.endswith("-last-message.json"):
-        return True
-    return False
+    return bool(filename.endswith("-last-message.json"))
 
 
 def _sha256_text(text: str) -> str:
@@ -230,7 +231,7 @@ class CanonicalReportEnvelopeRequest:
         cls,
         vault: Path,
         **legacy_kwargs: Any,
-    ) -> "CanonicalReportEnvelopeRequest":
+    ) -> CanonicalReportEnvelopeRequest:
         required_keys = {
             "generated_at",
             "artifact_kind",
@@ -314,13 +315,14 @@ def build_canonical_report_envelope(
     **legacy_kwargs: Any,
 ) -> dict[str, Any]:
     envelope_request = _coerce_canonical_report_envelope_request(request, **legacy_kwargs)
+    source_revision = resolve_source_revision(envelope_request.vault)
     return {
         "$schema": envelope_request.schema_path,
         "artifact_kind": envelope_request.artifact_kind,
         "generated_at": envelope_request.generated_at,
         "producer": envelope_request.producer,
         "source_command": envelope_request.source_command,
-        "source_revision": UNKNOWN_REVISION,
+        "source_revision": source_revision.revision,
         "source_tree_fingerprint": release_source_tree_fingerprint(
             envelope_request.vault,
             extra_excluded_files=envelope_request.source_tree_excluded_files,
@@ -561,20 +563,20 @@ def _parse_generated_at(value: str) -> dt.datetime | None:
     if not value:
         return None
     try:
-        return dt.datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(dt.timezone.utc)
+        return dt.datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(dt.UTC)
     except ValueError:
         return None
 
 
 def _mtime_utc(path: Path) -> dt.datetime | None:
     try:
-        return dt.datetime.fromtimestamp(path.stat().st_mtime, tz=dt.timezone.utc)
+        return dt.datetime.fromtimestamp(path.stat().st_mtime, tz=dt.UTC)
     except OSError:
         return None
 
 
 def _zip_info_mtime(info: zipfile.ZipInfo) -> dt.datetime:
-    return dt.datetime(*info.date_time, tzinfo=dt.timezone.utc)
+    return dt.datetime(*info.date_time, tzinfo=dt.UTC)
 
 
 def _normalize_zip_member_path(path: str) -> str:
@@ -1199,9 +1201,8 @@ def _json_artifact_record(
         mtime_source=mtime_source,
         zip_mtimes=zip_mtimes,
     )
-    if mtime_status == "stale":
-        if not _mtime_drift_is_advisory_only(rel_path):
-            issues.append("generated_at_older_than_file_mtime")
+    if mtime_status == "stale" and not _mtime_drift_is_advisory_only(rel_path):
+        issues.append("generated_at_older_than_file_mtime")
     if not noncanonical_archive:
         issues.extend(_test_target_fingerprint_issues(vault, normalized_payload))
     schema_validation_status, schema_validation_errors, schema_issues = _artifact_record_schema_state(

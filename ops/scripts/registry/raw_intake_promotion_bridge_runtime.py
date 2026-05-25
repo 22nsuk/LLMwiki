@@ -3,8 +3,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from .raw_intake_promotion_shared_runtime import _section_links
 from ops.scripts.wiki_page_runtime import section_body
+
+from .raw_intake_promotion_shared_runtime import _section_links
 
 BRIDGE_TOKEN_STOPWORDS = {
     "and",

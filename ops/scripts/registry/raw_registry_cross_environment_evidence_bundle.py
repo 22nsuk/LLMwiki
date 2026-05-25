@@ -19,8 +19,10 @@ from ops.scripts.schema_constants_runtime import (
     RAW_REGISTRY_CROSS_ENVIRONMENT_EVIDENCE_BUNDLE_SCHEMA_PATH,
     RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_SCHEMA_PATH,
 )
-from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_with_schema
-
+from ops.scripts.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_with_schema,
+)
 
 DEFAULT_OUT = "ops/reports/raw-registry-cross-environment-evidence-bundle.json"
 DEFAULT_REPORTS_DIR = "ops/reports"

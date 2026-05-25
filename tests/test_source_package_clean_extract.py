@@ -10,11 +10,15 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
 from ops.scripts.command_runtime import CommandHeartbeat, TimedProcessResult
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.source_package_clean_extract import SourcePackageCleanExtractRequest, build_report, write_report
+from ops.scripts.source_package_clean_extract import (
+    SourcePackageCleanExtractRequest,
+    build_report,
+    write_report,
+)
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.public
@@ -25,8 +29,8 @@ SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "source-package-clean-extract.sche
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 9, 12, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 9, 12, 0, tzinfo=dt.UTC),
     )
 
 

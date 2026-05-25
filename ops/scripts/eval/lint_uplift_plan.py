@@ -16,7 +16,6 @@ from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import STRICT_LINT_INVENTORY_SCHEMA_PATH
 
-
 DEFAULT_OUT = "ops/reports/lint-uplift-plan.json"
 DEFAULT_TARGETS = "ops/scripts tests tools"
 DEFAULT_RUFF_SELECT = "B,SIM,UP,I"
@@ -54,10 +53,10 @@ def _read_static_mk(vault: Path) -> str:
 
 
 def _strict_preview_target_mode(static_mk: str) -> str:
-    if "--allowlist" in static_mk:
-        return "legacy_target_list"
     if "--targets" in static_mk and "RUFF_STRICT_PREVIEW_TARGETS" in static_mk:
         return "full_scope_targets"
+    if "ruff-strict-preview" in static_mk:
+        return "indirect_target_list"
     return "unknown"
 
 
@@ -116,16 +115,15 @@ def build_report(
         },
         "strict_preview": {
             "target_mode": target_mode,
-            "uses_legacy_allowlist": target_mode == "legacy_target_list",
             "gate_blocks_static": False,
             "audit_path": STRICT_PREVIEW_AUDIT_PATH,
             "audit_status": audit_status,
             "audit_total_error_count": int(audit_summary.get("total_error_count", 0) or 0),
             "audit_ruff_error_count": int(audit_summary.get("ruff_error_count", 0) or 0),
         },
-        "migration": {
+        "target_contract": {
             "strategy": "full_scope_diagnostic_before_gate",
-            "allowlist_removed_from_preview_target": target_mode == "full_scope_targets",
+            "preview_full_scope_targets_enforced": target_mode == "full_scope_targets",
             "promotion_gate_impact": "none",
         },
     }

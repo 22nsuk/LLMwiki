@@ -21,7 +21,6 @@ from ops.scripts.artifact_io_runtime import (
 )
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
-from .release_closeout_summary import BASE_PROFILE, VALID_PROFILES, SourceSpec, source_specs_for_profile
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import RELEASE_EVIDENCE_COHORT_SCHEMA_PATH
 from ops.scripts.source_tree_fingerprint_runtime import (
@@ -31,6 +30,12 @@ from ops.scripts.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
 )
 
+from .release_closeout_summary import (
+    BASE_PROFILE,
+    VALID_PROFILES,
+    SourceSpec,
+    source_specs_for_profile,
+)
 
 DEFAULT_OUT = "ops/reports/release-evidence-cohort.json"
 PRODUCER = "ops.scripts.release_evidence_cohort"
@@ -160,8 +165,8 @@ def _parse_iso_z(value: str) -> dt.datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=dt.timezone.utc)
-    return parsed.astimezone(dt.timezone.utc)
+        return parsed.replace(tzinfo=dt.UTC)
+    return parsed.astimezone(dt.UTC)
 
 
 def _coerce_non_negative_int(value: Any, *, default: int = 0) -> int:
@@ -181,7 +186,7 @@ def _coerce_non_negative_int(value: Any, *, default: int = 0) -> int:
 def _file_mtime_iso_z(path: Path) -> str:
     if not path.exists():
         return ""
-    modified_at = dt.datetime.fromtimestamp(path.stat().st_mtime, tz=dt.timezone.utc)
+    modified_at = dt.datetime.fromtimestamp(path.stat().st_mtime, tz=dt.UTC)
     return modified_at.replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
@@ -222,7 +227,7 @@ def _issue(
 
 
 def _format_iso_z(value: dt.datetime) -> str:
-    return value.astimezone(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return value.astimezone(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _expires_after(generated_at: str, *, days: int) -> str:
@@ -664,7 +669,7 @@ def _check_expired_risks(components: list[dict[str, Any]]) -> tuple[bool, int]:
                 expired_count += 1
                 continue
             expires_dt = _parse_iso_z(expires_at)
-            if expires_dt is None or expires_dt <= dt.datetime.now(tz=dt.timezone.utc):
+            if expires_dt is None or expires_dt <= dt.datetime.now(tz=dt.UTC):
                 expired_count += 1
     return expired_count > 0, expired_count
 

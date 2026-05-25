@@ -3,16 +3,20 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     import sys
 
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import read_json_object, write_schema_validated_json
+    from ops.scripts.artifact_io_runtime import (
+        read_json_object,
+        write_schema_validated_json,
+    )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.runtime_context import RuntimeContext
@@ -55,11 +59,11 @@ class BootstrapReportSpec:
 def _parse_timestamp(value: str) -> dt.datetime:
     if not value.strip():
         raise ValueError("historical bootstrap payload is missing generated_at")
-    return dt.datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(dt.timezone.utc)
+    return dt.datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(dt.UTC)
 
 
 def _isoformat_z(value: dt.datetime) -> str:
-    return value.astimezone(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return value.astimezone(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _normalize_generated_at(value: str) -> str:

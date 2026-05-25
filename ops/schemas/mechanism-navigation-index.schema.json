@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mechanism Navigation Index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "artifact_kind", "generated_at", "producer", "status", "summary", "scripts", "unlinked_cli_entries"],
+  "properties": {
+    "$schema": { "type": "string", "const": "ops/schemas/mechanism-navigation-index.schema.json" },
+    "artifact_kind": { "type": "string", "const": "mechanism_navigation_index" },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": { "type": "string", "const": "ops.scripts.mechanism_navigation_index" },
+    "status": { "type": "string", "enum": ["pass", "attention", "fail"] },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["script_count", "cli_entrypoint_count", "schema_linked_entry_count", "unlinked_cli_entry_count"],
+      "properties": {
+        "script_count": { "type": "integer", "minimum": 0 },
+        "cli_entrypoint_count": { "type": "integer", "minimum": 0 },
+        "schema_linked_entry_count": { "type": "integer", "minimum": 0 },
+        "unlinked_cli_entry_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "scripts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["module", "path", "has_main", "direct_script_fallback", "make_targets", "default_output_paths", "schema_refs"],
+        "properties": {
+          "module": { "type": "string", "minLength": 1 },
+          "path": { "type": "string", "minLength": 1 },
+          "has_main": { "type": "boolean" },
+          "direct_script_fallback": { "type": "boolean" },
+          "make_targets": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "default_output_paths": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "schema_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "unlinked_cli_entries": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}

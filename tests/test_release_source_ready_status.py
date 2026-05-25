@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 import pytest
 
 from ops.scripts.release.release_source_ready_status import build_report
-
 
 pytestmark = pytest.mark.public
 

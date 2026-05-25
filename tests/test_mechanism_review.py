@@ -6,13 +6,13 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts import mechanism_review_runtime
 from ops.scripts.mechanism_review import main as mechanism_review_main
 from ops.scripts.mechanism_review_runtime import build_report
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from tests.cli_test_runtime import invoke_cli_main
 
+from ops.scripts import mechanism_review_runtime
+from tests.cli_test_runtime import invoke_cli_main
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = REPO_ROOT / "ops" / "policies" / "wiki-maintainer-policy.yaml"

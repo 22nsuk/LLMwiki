@@ -5,9 +5,11 @@ import json
 import os
 import shutil
 import tempfile
+from collections.abc import Sequence
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 from .path_runtime import normalize_repo_path_text
 
@@ -64,14 +66,10 @@ def _stage_atomic_text(path: Path, text: str) -> Path:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             handle.write(text)
     except Exception:  # broad-exception: platform_cleanup_boundary
-        try:
+        with suppress(OSError):
             os.close(fd)
-        except OSError:
-            pass
-        try:
+        with suppress(FileNotFoundError):
             Path(staged_path).unlink()
-        except FileNotFoundError:
-            pass
         raise
     return Path(staged_path)
 
@@ -218,10 +216,8 @@ def stage_replace_file(source_path: Path, destination_path: Path) -> None:
         os.replace(staged, destination_path)
     except OSError as exc:
         if backup_path is not None and backup_path.exists():
-            try:
+            with suppress(OSError):
                 os.replace(backup_path, destination_path)
-            except OSError:
-                pass
         raise FilesystemTransactionError(str(exc)) from exc
     finally:
         _cleanup_staged_file(staged)
@@ -776,10 +772,8 @@ def _rollback_manifest_items(applied: Sequence[dict[str, Any]]) -> list[str]:
             live_path = item["live_path"]
             backup_path = item["backup_path"]
             if backup_path is None:
-                try:
+                with suppress(FileNotFoundError):
                     live_path.unlink()
-                except FileNotFoundError:
-                    pass
             else:
                 live_path.parent.mkdir(parents=True, exist_ok=True)
                 os.replace(backup_path, live_path)

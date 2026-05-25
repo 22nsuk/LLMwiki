@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Dict
+from typing import Any
 
 try:
     import yaml
@@ -34,7 +34,7 @@ def _drop_implicit_resolver(tag: str) -> None:
 _drop_implicit_resolver("tag:yaml.org,2002:timestamp")
 
 
-def parse_simple_yaml(text: str) -> Dict[str, Any]:
+def parse_simple_yaml(text: str) -> dict[str, Any]:
     data = yaml.load(text, Loader=WikiLoader)
     if data is None:
         return {}

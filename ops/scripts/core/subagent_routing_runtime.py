@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
 from ops.scripts.mechanism_assess import (
     MechanismAssessmentState,
     build_structural_metrics,
@@ -15,6 +14,11 @@ from ops.scripts.mechanism_assess import (
     normalize_targets,
     target_structural_profiles,
 )
+
+from .artifact_io_runtime import (
+    SchemaBackedReportWriteRequest,
+    write_schema_backed_report,
+)
 from .output_runtime import display_path, resolve_vault_path
 from .policy_runtime import (
     SUPPORTED_SUBAGENT_LADDER,
@@ -25,7 +29,6 @@ from .policy_runtime import (
 )
 from .runtime_context import RuntimeContext
 from .schema_constants_runtime import SUBAGENT_ROUTING_SCHEMA_PATH
-
 
 SUBAGENT_ROUTING_SCHEMA = SUBAGENT_ROUTING_SCHEMA_PATH
 

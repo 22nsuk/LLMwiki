@@ -17,7 +17,6 @@ from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import STRICT_TYPE_INVENTORY_SCHEMA_PATH
 
-
 DEFAULT_OUT = "ops/reports/type-uplift-plan.json"
 DEFAULT_TARGETS = "ops/scripts tests tools"
 STRICT_PREVIEW_AUDIT_PATH = "tmp/strict-preview-audit.json"
@@ -57,7 +56,7 @@ def _read_static_assignments(vault: Path) -> dict[str, str]:
 
 def _target_mode(value: str) -> str:
     if value.startswith("@"):
-        return "legacy_target_list"
+        return "indirect_target_list"
     if value:
         return "full_scope_targets"
     return "unknown"
@@ -118,21 +117,19 @@ def build_report(
         "default_mypy": {
             "targets": default_targets,
             "target_mode": default_mode,
-            "uses_legacy_target_list": default_mode == "legacy_target_list",
         },
         "strict_preview": {
             "targets": strict_targets,
             "target_mode": strict_mode,
-            "uses_legacy_target_list": strict_mode == "legacy_target_list",
             "audit_path": STRICT_PREVIEW_AUDIT_PATH,
             "audit_status": audit_status,
             "audit_total_error_count": int(audit_summary.get("total_error_count", 0) or 0),
             "audit_mypy_error_count": int(audit_summary.get("mypy_error_count", 0) or 0),
         },
-        "migration": {
+        "target_contract": {
             "strategy": "full_scope_diagnostic_before_gate",
-            "allowlist_removed_from_default_target": default_mode == "full_scope_targets",
-            "allowlist_removed_from_strict_preview_target": strict_mode == "full_scope_targets",
+            "default_full_scope_targets_enforced": default_mode == "full_scope_targets",
+            "strict_preview_full_scope_targets_enforced": strict_mode == "full_scope_targets",
             "promotion_gate_impact": "none",
         },
     }

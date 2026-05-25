@@ -20,12 +20,12 @@ from ops.scripts.test_lane_registry_runtime import (
     lane_ci_steps,
     load_registry,
     marker_semantics,
+    pack_by_id,
     pack_ci_entrypoint,
     pack_ci_steps,
     pack_mark_expr,
     pack_selectors,
     pack_summary_suite,
-    pack_by_id,
     selection_by_make_target,
 )
 
@@ -38,10 +38,7 @@ DOCS_DEVELOPMENT = Path("docs/development.md")
 DOCS_CBM = Path("docs/codebase-memory-mcp.md")
 DOCS_RELEASE = Path("docs/release.md")
 CONFTEST = Path("tests/conftest.py")
-MYPY_ALLOWLIST = Path("ops/mypy-allowlist.txt")
-MYPY_STRICT_PREVIEW_ALLOWLIST = Path("ops/mypy-strict-preview-allowlist.txt")
 PYTEST_INI = Path("pytest.ini")
-RUFF_STRICT_PREVIEW_ALLOWLIST = Path("ops/ruff-strict-preview-allowlist.txt")
 CI_WORKFLOW = Path(".github/workflows/ci.yml")
 REPORT_CONTRACT_CLOSEOUT_POLICY = Path("ops/policies/report-contract-closeout.json")
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -56,14 +53,6 @@ def _makefile_text() -> str:
     for mk_file in sorted(REPO_ROOT.glob("mk/*.mk")):
         text += "\n" + mk_file.read_text(encoding="utf-8")
     return text
-
-
-def _allowlist_lines(path: Path) -> set[str]:
-    return {
-        line.strip()
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip() and not line.strip().startswith("#")
-    }
 
 
 def _target_block(text: str, target: str) -> str:
@@ -709,7 +698,7 @@ def _pytest_ini_marker_docs() -> dict[str, str]:
 
 def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) -> None:
     case.assertIn(
-        "refresh-generated-core: registry-preflight raw-registry-export manifest script-output-surfaces routing-provenance-aggregate outcome-metrics mechanism-review mutation-proposal",
+        "refresh-generated-core: registry-preflight raw-registry-export manifest script-output-surfaces routing-provenance-aggregate outcome-metrics promotion-decision-trends mechanism-review mutation-proposal",
         text,
     )
     case.assertEqual(
@@ -861,6 +850,12 @@ def _assert_function_budget_and_outcome_targets(case: unittest.TestCase, text: s
     case.assertIn("--schema ops/schemas/outcome-provenance-gate-policy.schema.json", outcome_policy_block)
     case.assertIn("--expected-artifact-kind outcome_provenance_gate_policy", outcome_policy_block)
     case.assertIn("--expected-producer ops.scripts.outcome_provenance_gate_policy", outcome_policy_block)
+
+    promotion_trends_block = _target_block(text, "promotion-decision-trends")
+    case.assertIn(
+        '$(PYTHON) -m ops.scripts.promotion_decision_trends --vault "$(VAULT)" --recent-window "$(PROMOTION_DECISION_TRENDS_RECENT_WINDOW)"',
+        promotion_trends_block,
+    )
 
 
 def _assert_external_report_action_matrix_target(case: unittest.TestCase, text: str) -> None:
@@ -2733,10 +2728,8 @@ class MakefileStaticGateTests(unittest.TestCase):
         for writer, index in occurrences:
             if index > last_index and writer not in late_operator_refresh_writers:
                 self.fail(
-                    (
-                        f"sealing-inventory canonical writer {writer} at index {index} "
-                        "appears after release-closeout-fixed-point"
-                    )
+                    f"sealing-inventory canonical writer {writer} at index {index} "
+                    "appears after release-closeout-fixed-point"
                 )
         self.assertLessEqual(
             last_index,
@@ -4227,7 +4220,6 @@ class MakefileStaticGateTests(unittest.TestCase):
             '$(PYTHON) tools/ruff_strict_preview.py --vault "$(VAULT)" --targets "$(RUFF_STRICT_PREVIEW_TARGETS)" --select "$(RUFF_STRICT_PREVIEW_RULES)"',
             _target_block(text, "ruff-strict-preview"),
         )
-        self.assertNotIn("RUFF_STRICT_PREVIEW_ALLOWLIST", text)
 
     def test_strict_preview_audit_target_expands_all_public_runtime_targets(self) -> None:
         text = _makefile_text()
@@ -4240,20 +4232,6 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn('--ruff-select "$(RUFF_STRICT_PREVIEW_RULES)"', block)
         self.assertIn('--mypy-flags "$(MYPY_STRICT_PREVIEW_FLAGS)"', block)
         self.assertNotIn("--fail-on-attention", block)
-
-    def test_legacy_mypy_target_list_still_tracks_ops_scripts_surface(self) -> None:
-        allowlist = {
-            line.strip()
-            for line in MYPY_ALLOWLIST.read_text(encoding="utf-8").splitlines()
-            if line.strip() and not line.strip().startswith("#")
-        }
-        script_files = {
-            path.as_posix()
-            for path in Path("ops/scripts").rglob("*.py")
-            if path.is_file() and not path.name.startswith("_") and path.name != "__init__.py"
-        }
-
-        self.assertEqual(script_files, allowlist)
 
     def test_mypy_strict_preview_target_uses_full_scope_targets(self) -> None:
         text = _makefile_text()
@@ -4270,17 +4248,6 @@ class MakefileStaticGateTests(unittest.TestCase):
             "$(PYTHON) -m mypy --config-file pyproject.toml $(MYPY_STRICT_PREVIEW_FLAGS) $(MYPY_STRICT_PREVIEW_TARGETS)",
             _target_block(text, "mypy-strict-preview"),
         )
-
-    def test_strict_preview_allowlists_reference_existing_paths(self) -> None:
-        for allowlist in (RUFF_STRICT_PREVIEW_ALLOWLIST, MYPY_STRICT_PREVIEW_ALLOWLIST):
-            with self.subTest(allowlist=allowlist.as_posix()):
-                missing = [
-                    line
-                    for line in _allowlist_lines(allowlist)
-                    if not Path(line).exists()
-                ]
-
-                self.assertEqual(missing, [])
 
     def test_public_check_targets_use_canonical_summary_artifact(self) -> None:
         text = _makefile_text()

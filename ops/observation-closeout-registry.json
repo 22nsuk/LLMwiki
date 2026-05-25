@@ -1,0 +1,13 @@
+{
+  "$schema": "ops/schemas/observation-closeout-registry.schema.json",
+  "artifact_kind": "observation_closeout_registry",
+  "retained_observations": [
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260524-active-report-full-scope-reconciliation/improvement-observations.json",
+      "observation_id": "strict_preview_full_scope_burndown",
+      "status": "planned",
+      "retained_reason": "Strict-preview burn-down is intentionally tracked as broad lint/type debt rather than deleted from local evidence.",
+      "next_action": "Continue strict-preview burn-down through lint/type uplift work."
+    }
+  ]
+}

@@ -20,7 +20,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.export_public_repo import iter_public_files
     from ops.scripts.output_runtime import display_path, resolve_output_path
     from ops.scripts.policy_runtime import load_policy, zip_normalization_from_policy
-    from ops.scripts.public_surface_policy import PUBLIC_EXCLUDED_FILES, PUBLIC_EXCLUDED_PREFIXES
+    from ops.scripts.public_surface_policy import (
+        PUBLIC_EXCLUDED_FILES,
+        PUBLIC_EXCLUDED_PREFIXES,
+    )
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import REVIEW_ARCHIVE_REPORT_SCHEMA_PATH
 else:
@@ -33,7 +36,10 @@ else:
     from ops.scripts.export_public_repo import iter_public_files
     from ops.scripts.output_runtime import display_path, resolve_output_path
     from ops.scripts.policy_runtime import load_policy, zip_normalization_from_policy
-    from ops.scripts.public_surface_policy import PUBLIC_EXCLUDED_FILES, PUBLIC_EXCLUDED_PREFIXES
+    from ops.scripts.public_surface_policy import (
+        PUBLIC_EXCLUDED_FILES,
+        PUBLIC_EXCLUDED_PREFIXES,
+    )
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import REVIEW_ARCHIVE_REPORT_SCHEMA_PATH
 
@@ -72,7 +78,7 @@ def _normalized_zip_info(
 ) -> zipfile.ZipInfo:
     info = zipfile.ZipInfo(
         filename=arcname,
-        date_time=timestamp_utc.astimezone(dt.timezone.utc).timetuple()[:6],
+        date_time=timestamp_utc.astimezone(dt.UTC).timetuple()[:6],
     )
     info.compress_type = zipfile.ZIP_DEFLATED
     info.create_system = 3
@@ -225,7 +231,7 @@ def build_review_archive(
                 file_path.read_bytes(),
             )
     archive_manifest = _archive_manifest(archive_path, root_prefix=vault.name)
-    runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
     archive_display_path = display_path(vault, archive_path)
     manifest_digest = _manifest_digest(manifest)

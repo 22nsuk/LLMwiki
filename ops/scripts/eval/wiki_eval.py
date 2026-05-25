@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import sys
 
 import argparse
-from dataclasses import dataclass
 import json
 import re
+import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -17,11 +17,14 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         write_schema_backed_report,
     )
     from ops.scripts.frontmatter_runtime import validate_frontmatter
-    from ops.scripts.policy_runtime import load_policy, report_path, required_sections_from_policy
+    from ops.scripts.policy_runtime import (
+        load_policy,
+        report_path,
+        required_sections_from_policy,
+    )
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import EVAL_REPORT_SCHEMA_PATH
     from ops.scripts.source_trace_profile_runtime import source_trace_profile_summary
-    from ops.scripts.wiki_snapshot_runtime import WikiRuntimeSnapshot, build_wiki_runtime_snapshot
     from ops.scripts.wiki_page_runtime import (
         INDEXISH_PAGES,
         SPECIAL_PAGES,
@@ -38,6 +41,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         source_trace_targets_blocking_profile,
         source_trace_targets_for_profile,
     )
+    from ops.scripts.wiki_snapshot_runtime import (
+        WikiRuntimeSnapshot,
+        build_wiki_runtime_snapshot,
+    )
 else:
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
     from ops.scripts.artifact_io_runtime import (
@@ -45,11 +52,15 @@ else:
         write_schema_backed_report,
     )
     from ops.scripts.frontmatter_runtime import validate_frontmatter
-    from ops.scripts.policy_runtime import load_policy, report_path, required_sections_from_policy
+    from ops.scripts.policy_runtime import (
+        load_policy,
+        report_path,
+        required_sections_from_policy,
+    )
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import EVAL_REPORT_SCHEMA_PATH
     from ops.scripts.source_trace_profile_runtime import source_trace_profile_summary
-    from .wiki_snapshot_runtime import WikiRuntimeSnapshot, build_wiki_runtime_snapshot
+
     from .wiki_page_runtime import (
         INDEXISH_PAGES,
         SPECIAL_PAGES,
@@ -66,6 +77,7 @@ else:
         source_trace_targets_blocking_profile,
         source_trace_targets_for_profile,
     )
+    from .wiki_snapshot_runtime import WikiRuntimeSnapshot, build_wiki_runtime_snapshot
 
 
 @dataclass(frozen=True)

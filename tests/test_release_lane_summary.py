@@ -9,10 +9,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from ops.scripts.release_lane_summary import build_report, main, write_report
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.public
@@ -23,8 +23,8 @@ LANE_SUMMARY_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-lane-summary
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 3, 9, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 3, 9, 0, tzinfo=dt.UTC),
     )
 
 

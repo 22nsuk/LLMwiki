@@ -5,17 +5,18 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
+from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
 from ops.scripts.release.release_goal_run_identity_guard import (
     build_report,
     read_effective_run_id_from_report,
     write_report,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = pytest.mark.public
@@ -26,8 +27,8 @@ SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-goal-run-identity.schema.
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 23, 12, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 23, 12, 0, tzinfo=dt.UTC),
     )
 
 
@@ -92,7 +93,7 @@ class ReleaseGoalRunIdentityGuardTests(unittest.TestCase):
             },
         )
 
-    def _patch_current_repo(self):
+    def _patch_current_repo(self) -> Any:
         return patch.multiple(
             "ops.scripts.release.release_goal_run_identity_guard",
             release_source_tree_fingerprint=lambda _vault: "fp-current",

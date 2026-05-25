@@ -1,16 +1,31 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from ops.scripts.experiment_telemetry_runtime import (
     append_ledger_event as telemetry_append_ledger_event,
+)
+from ops.scripts.experiment_telemetry_runtime import (
     load_run_ledger as telemetry_load_run_ledger,
+)
+from ops.scripts.experiment_telemetry_runtime import (
     run_rel as telemetry_run_rel,
+)
+from ops.scripts.experiment_telemetry_runtime import (
     write_command_logs as telemetry_write_command_logs,
+)
+from ops.scripts.experiment_telemetry_runtime import (
     write_run_ledger as telemetry_write_run_ledger,
+)
+from ops.scripts.experiment_telemetry_runtime import (
     write_run_telemetry,
+)
+from ops.scripts.experiment_telemetry_runtime import (
     write_timeout_failure_artifact as telemetry_write_timeout_failure_artifact,
 )
+from ops.scripts.runtime_context import RuntimeContext
+
 from .mechanism_run_common_runtime import ExperimentResolution
 
 
@@ -18,25 +33,25 @@ def run_rel(run_id: str, filename: str) -> str:
     return telemetry_run_rel(run_id, filename)
 
 
-def load_run_ledger(vault, run_id: str) -> dict:
+def load_run_ledger(vault: Path, run_id: str) -> dict[str, Any]:
     return telemetry_load_run_ledger(vault, run_id)
 
 
-def write_run_ledger(vault, run_id: str, ledger: dict) -> None:
+def write_run_ledger(vault: Path, run_id: str, ledger: dict[str, Any]) -> None:
     telemetry_write_run_ledger(vault, run_id, ledger)
 
 
 def append_ledger_event(
-    vault,
+    vault: Path,
     run_id: str,
     *,
     event_type: str,
     summary: str,
     artifacts: list[str],
     decision: str,
-    context,
+    context: RuntimeContext,
     status: str | None = None,
-    decision_event: dict | None = None,
+    decision_event: dict[str, Any] | None = None,
 ) -> None:
     telemetry_append_ledger_event(
         vault,
@@ -51,15 +66,36 @@ def append_ledger_event(
     )
 
 
-def write_command_logs(vault, run_id: str, prefix: str, result: dict) -> list[str]:
+def write_command_logs(vault: Path, run_id: str, prefix: str, result: dict[str, Any]) -> list[str]:
     return telemetry_write_command_logs(vault, run_id, prefix, result)
 
 
-def write_timeout_failure_artifact(vault, run_id: str, **kwargs) -> str:
-    return telemetry_write_timeout_failure_artifact(vault, run_id, **kwargs)
+def write_timeout_failure_artifact(
+    vault: Path,
+    run_id: str,
+    *,
+    phase: str,
+    command: dict[str, Any],
+    result: dict[str, Any],
+    artifacts: dict[str, Any],
+    context: RuntimeContext,
+    role: str = "",
+    diagnostics: dict[str, Any] | None = None,
+) -> str:
+    return telemetry_write_timeout_failure_artifact(
+        vault,
+        run_id,
+        phase=phase,
+        command=command,
+        result=result,
+        artifacts=artifacts,
+        context=context,
+        role=role,
+        diagnostics=diagnostics,
+    )
 
 
-def _timeout_failure_artifacts(vault, run_id: str) -> list[str]:
+def _timeout_failure_artifacts(vault: Path, run_id: str) -> list[str]:
     run_dir = Path(vault) / run_rel(run_id, "")
     if not run_dir.exists():
         return []
@@ -71,11 +107,11 @@ def _timeout_failure_artifacts(vault, run_id: str) -> list[str]:
 
 
 def write_experiment_telemetry(
-    vault,
+    vault: Path,
     *,
     run_id: str,
     resolution: ExperimentResolution,
-    result: dict,
+    result: dict[str, Any],
 ) -> str:
     payload = {
         "session_id": "",

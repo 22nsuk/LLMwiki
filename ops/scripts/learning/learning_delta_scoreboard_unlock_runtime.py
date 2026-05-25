@@ -8,6 +8,8 @@ from ops.scripts.artifact_io_runtime import load_optional_json_object
 
 from .learning_claim_evidence_bundle import (
     DEFAULT_OUT as LEARNING_CLAIM_EVIDENCE_BUNDLE_PATH,
+)
+from .learning_claim_evidence_bundle import (
     validate_learning_claim_evidence_bundle,
 )
 from .learning_claim_model import (

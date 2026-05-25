@@ -4,14 +4,14 @@ import os
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.wiki_manifest import release_manifest_excludes_path
+
 from .source_trace_runtime import (
     extract_source_trace_refs,
     normalize_source_trace_ref,
     report_source_trace_path,
     resolve_source_trace_ref,
 )
-from ops.scripts.wiki_manifest import release_manifest_excludes_path
-
 
 STRICT_PROFILE = "strict"
 RELEASE_ARCHIVE_PROFILE = "release_archive"

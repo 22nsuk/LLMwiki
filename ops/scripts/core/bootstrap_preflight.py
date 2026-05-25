@@ -15,9 +15,13 @@ from typing import Any
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.output_runtime import display_path, sanitize_report_text
-    from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+    from ops.scripts.source_revision_runtime import resolve_source_revision
+    from ops.scripts.source_tree_fingerprint_runtime import (
+        release_source_tree_fingerprint,
+    )
 else:
     from .output_runtime import display_path, sanitize_report_text
+    from .source_revision_runtime import resolve_source_revision
     from .source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 
@@ -50,10 +54,10 @@ def _python_version_label(version: tuple[int, int, int]) -> str:
 
 
 def _isoformat_z(clock: Callable[[], Any] | None = None) -> str:
-    current = clock() if clock else dt.datetime.now(dt.timezone.utc)
+    current = clock() if clock else dt.datetime.now(dt.UTC)
     if current.tzinfo is None:
-        current = current.replace(tzinfo=dt.timezone.utc)
-    return current.astimezone(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        current = current.replace(tzinfo=dt.UTC)
+    return current.astimezone(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _safe_rel_path(vault: Path, path: Path) -> str:
@@ -250,13 +254,14 @@ def build_report(
         guidance = "Run make dev-install, then rerun make bootstrap-preflight."
     else:
         guidance = "Install requirements.txt, or run make dev-install for a complete local environment."
+    source_revision = resolve_source_revision(resolved_vault)
     return {
         "$schema": schema_path,
         "artifact_kind": ARTIFACT_KIND,
         "generated_at": generated_at,
         "producer": PRODUCER,
         "source_command": SOURCE_COMMAND,
-        "source_revision": "unknown",
+        "source_revision": source_revision.revision,
         "source_tree_fingerprint": release_source_tree_fingerprint(resolved_vault),
         "input_fingerprints": input_fingerprints,
         "schema_version": 1,

@@ -10,7 +10,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
 from ops.scripts.command_runtime import TimedProcessResult
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import TEST_EXECUTION_SUMMARY_SCHEMA_PATH
@@ -22,13 +21,15 @@ from ops.scripts.test_execution_summary import (
     classify_interpreter_path,
     classify_status,
     collect_pytest_nodeid_digest,
-    main as summary_main,
     parse_pytest_counts,
-    reusable_summary_is_current,
     resolve_pytest_target_paths,
+    reusable_summary_is_current,
 )
-from tests.minimal_vault_runtime import seed_minimal_vault
+from ops.scripts.test_execution_summary import (
+    main as summary_main,
+)
 
+from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.report_contract
 
@@ -54,8 +55,8 @@ def _result(
 
 def _fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 29, 0, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 29, 0, 0, tzinfo=dt.UTC),
     )
 
 
@@ -266,8 +267,8 @@ class TestExecutionSummaryTest(unittest.TestCase):
                 command=command,
                 suite="unit",
                 context=RuntimeContext(
-                    display_timezone=dt.timezone.utc,
-                    clock=lambda: dt.datetime(2026, 4, 30, 0, 0, tzinfo=dt.timezone.utc),
+                    display_timezone=dt.UTC,
+                    clock=lambda: dt.datetime(2026, 4, 30, 0, 0, tzinfo=dt.UTC),
                 ),
             )
             schema = load_schema(vault / TEST_EXECUTION_SUMMARY_SCHEMA_PATH)

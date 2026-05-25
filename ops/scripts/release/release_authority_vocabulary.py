@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 OPERATOR_SUMMARY_PARSER_ID = "release_authority_operator_summary_v1"
 
 RELEASE_AUTHORITY_CLEAN_PASS = "clean_pass"

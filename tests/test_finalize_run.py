@@ -4,11 +4,15 @@ import datetime as dt
 import json
 import tempfile
 import unittest
-from unittest import mock
 from pathlib import Path
+from unittest import mock
 
 from ops.scripts.filesystem_runtime import FilesystemTransactionError
-from ops.scripts.finalize_run_runtime import FinalizeRunUsageError, FinalizeRunWriteError, finalize_run
+from ops.scripts.finalize_run_runtime import (
+    FinalizeRunUsageError,
+    FinalizeRunWriteError,
+    finalize_run,
+)
 from ops.scripts.finalize_run_write_runtime import build_finalize_atomic_updates
 from ops.scripts.promotion_decision_registry_runtime import attach_decision_contract
 
@@ -239,9 +243,14 @@ class FinalizeRunTests(unittest.TestCase):
                     raise OSError("simulated planning commit failure")
                 real_replace(src, dst)
 
-            with mock.patch("ops.scripts.filesystem_runtime.os.replace", side_effect=fail_on_planning):
-                with self.assertRaises(FinalizeRunWriteError):
-                    finalize_run(vault, "run-atomic-artifact-fail")
+            with (
+                mock.patch(
+                    "ops.scripts.filesystem_runtime.os.replace",
+                    side_effect=fail_on_planning,
+                ),
+                self.assertRaises(FinalizeRunWriteError),
+            ):
+                finalize_run(vault, "run-atomic-artifact-fail")
 
             self.assertEqual(promotion_path.read_text(encoding="utf-8"), original_promotion)
             self.assertEqual(ledger_path.read_text(encoding="utf-8"), original_ledger)
@@ -268,7 +277,7 @@ class FinalizeRunTests(unittest.TestCase):
             finalize_run(
                 vault,
                 "run-finalize-timezone",
-                now=dt.datetime(2026, 4, 14, 12, 34, tzinfo=dt.timezone.utc),
+                now=dt.datetime(2026, 4, 14, 12, 34, tzinfo=dt.UTC),
             )
             system_log = (vault / "system" / "system-log.md").read_text(encoding="utf-8")
 
@@ -299,9 +308,11 @@ class FinalizeRunTests(unittest.TestCase):
                     raise OSError("simulated log commit failure")
                 real_replace(src, dst)
 
-            with mock.patch("ops.scripts.filesystem_runtime.os.replace", side_effect=fail_on_log):
-                with self.assertRaises(FinalizeRunWriteError):
-                    finalize_run(vault, "run-atomic-log-fail")
+            with (
+                mock.patch("ops.scripts.filesystem_runtime.os.replace", side_effect=fail_on_log),
+                self.assertRaises(FinalizeRunWriteError),
+            ):
+                finalize_run(vault, "run-atomic-log-fail")
 
             self.assertEqual(promotion_path.read_text(encoding="utf-8"), original_promotion)
             self.assertEqual(ledger_path.read_text(encoding="utf-8"), original_ledger)

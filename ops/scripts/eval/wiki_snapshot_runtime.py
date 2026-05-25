@@ -5,6 +5,7 @@ from pathlib import Path
 
 from ops.scripts.frontmatter_runtime import parse_frontmatter
 from ops.scripts.raw_registry_runtime import load_registry_source_trace_resolution_state
+
 from .wiki_page_runtime import discover_pages, load_text, section_body
 from .wiki_quality_runtime import resolved_wikilink_targets
 from .wikilink_runtime import build_page_lookup

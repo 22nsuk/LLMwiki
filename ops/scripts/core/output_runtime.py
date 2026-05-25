@@ -1,12 +1,11 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from pathlib import Path
-import re
 
 from .filesystem_runtime import atomic_write_text
 from .path_runtime import normalize_repo_path_text, stable_report_path
-
 
 TEMP_ROOT_RE = re.compile(r"(?<![\w.:-])/tmp/tmp[A-Za-z0-9_.-]+")
 HOME_ROOT_RE = re.compile(r"(?<![\w.:-])/home/[^/\s\"']+")

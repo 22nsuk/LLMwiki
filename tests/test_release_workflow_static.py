@@ -7,19 +7,38 @@ from tests.workflow_static_helpers import (
     PINNED_ATTEST_BUILD_PROVENANCE_ACTION,
     PINNED_DOWNLOAD_ARTIFACT_ACTION,
     PINNED_PYPI_PUBLISH_ACTION,
-    assert_locked_install_shape as _assert_locked_install_shape,
-    assert_workflow_uses_are_sha_pinned as _assert_workflow_uses_are_sha_pinned,
-    assert_workflow_run_contains as _assert_run_contains,
     load_workflow,
+)
+from tests.workflow_static_helpers import (
+    assert_locked_install_shape as _assert_locked_install_shape,
+)
+from tests.workflow_static_helpers import (
+    assert_workflow_run_contains as _assert_run_contains,
+)
+from tests.workflow_static_helpers import (
+    assert_workflow_uses_are_sha_pinned as _assert_workflow_uses_are_sha_pinned,
+)
+from tests.workflow_static_helpers import (
     workflow_job as _job,
+)
+from tests.workflow_static_helpers import (
     workflow_jobs as _jobs,
+)
+from tests.workflow_static_helpers import (
     workflow_on as _workflow_on,
+)
+from tests.workflow_static_helpers import (
     workflow_path_entries as _path_entries,
+)
+from tests.workflow_static_helpers import (
     workflow_run_text as _run_text,
+)
+from tests.workflow_static_helpers import (
     workflow_step as _step,
+)
+from tests.workflow_static_helpers import (
     workflow_steps as _steps,
 )
-
 
 RELEASE_WORKFLOW = Path(".github/workflows/release.yml")
 
@@ -32,6 +51,7 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
     def test_release_workflow_enables_trusted_publishing_and_attestations(self) -> None:
         workflow = _workflow()
         on_section = _workflow_on(workflow)
+        verify = _job(workflow, "verify-clean-release")
         publish = _job(workflow, "publish")
 
         self.assertEqual(workflow.get("name"), "Release")
@@ -44,6 +64,8 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
         self.assertIsInstance(inputs, dict)
         self.assertIn("upload_post_check_finalizer_artifact", inputs)
         self.assertEqual(workflow.get("env"), {"REVIEW_ARCHIVE_PROFILE": "clean"})
+        self.assertEqual(verify.get("timeout-minutes"), 60)
+        self.assertEqual(publish.get("timeout-minutes"), 30)
         self.assertEqual(
             publish.get("permissions"),
             {"contents": "read", "id-token": "write", "attestations": "write"},

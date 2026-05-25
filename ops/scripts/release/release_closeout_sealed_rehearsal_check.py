@@ -10,17 +10,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.artifact_io_runtime import (
     load_optional_json_object_with_diagnostics,
     resolve_repo_artifact_path,
 )
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy
-from .release_authority_vocabulary import legacy_sealed_rehearsal_reason_id
-from .release_status_v2 import release_status_v2_view
 from ops.scripts.runtime_context import RuntimeContext
 
+from .release_authority_vocabulary import legacy_sealed_rehearsal_reason_id
+from .release_status_v2 import release_status_v2_view
 
 BATCH_MANIFEST_PATH = "build/release/release-closeout-batch-manifest.json"
 EXTERNAL_REPORT_REFERENCE_MANIFEST_PATH = (
@@ -475,7 +475,7 @@ def build_report(
     external_manifest: str = EXTERNAL_REPORT_REFERENCE_MANIFEST_PATH,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
-    runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     _policy, resolved_policy_path = load_policy(vault)
     inputs = _sealed_rehearsal_inputs(
         vault,

@@ -11,7 +11,6 @@ from ops.scripts.mechanism_candidate_registry_runtime import (
     HIGH_COMPLEXITY_CANDIDATE,
     SCHEMA_DRIFT_CANDIDATE,
 )
-from ops.scripts import mechanism_review_candidate_runtime
 from ops.scripts.mechanism_review_candidate_runtime import (
     build_candidates,
     candidate_template,
@@ -25,6 +24,8 @@ from ops.scripts.mechanism_review_session_calibration_runtime import (
     session_report_for_run,
 )
 from ops.scripts.policy_runtime import load_policy, report_path
+
+from ops.scripts import mechanism_review_candidate_runtime
 from tests.test_mechanism_review import (
     REPO_ROOT,
     changed_files_manifest,

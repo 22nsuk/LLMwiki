@@ -13,17 +13,27 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         build_canonical_report_envelope,
         embed_artifact_envelope_metadata,
     )
-    from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+    from ops.scripts.artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        write_schema_backed_report,
+    )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy
     from ops.scripts.schema_constants_runtime import SPDX_SBOM_DRAFT_SCHEMA_PATH
     from ops.scripts.supply_chain_artifact_model import build_model
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope, embed_artifact_envelope_metadata
-    from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+    from ops.scripts.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+        embed_artifact_envelope_metadata,
+    )
+    from ops.scripts.artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        write_schema_backed_report,
+    )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy
     from ops.scripts.schema_constants_runtime import SPDX_SBOM_DRAFT_SCHEMA_PATH
+
     from .supply_chain_artifact_model import build_model
 
 

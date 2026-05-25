@@ -8,9 +8,10 @@ import json
 import os
 import sys
 import time
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any
 
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.artifact_io_runtime import (
@@ -24,7 +25,6 @@ from ops.scripts.command_runtime import TimedProcessResult, run_with_timeout
 from ops.scripts.output_runtime import display_path, sanitize_report_text
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
-
 
 DEFAULT_OUT = "ops/reports/release-closeout-fixed-point.json"
 DEFAULT_DRY_RUN_OUT = "tmp/release-closeout-post-check-finalizer.json"
@@ -1042,7 +1042,7 @@ def build_dry_run_report(
     *,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
-    runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
     runtime = _policy_runtime(vault)
     baseline_digest_map, fixed_point_summary = _load_fixed_point_digest_map(vault)
@@ -1165,7 +1165,7 @@ def bootstrap_post_promote_freshness(
 ) -> dict[str, Any]:
     if max_bootstrap_passes < 1:
         raise ValueError("max_bootstrap_passes must be >= 1")
-    runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
     active_python = python_executable or sys.executable
     runtime_env = {**os.environ, "LLMWIKI_RUNTIME_UTC_NOW": generated_at}
@@ -1388,7 +1388,7 @@ def build_report(
 ) -> dict[str, Any]:
     if max_iterations < 1:
         raise ValueError("max_iterations must be >= 1")
-    runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
     active_python = python_executable or sys.executable
     runtime = _policy_runtime(vault)

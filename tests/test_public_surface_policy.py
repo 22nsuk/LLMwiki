@@ -5,7 +5,6 @@ import unittest
 from pathlib import Path
 
 import pytest
-
 from ops.scripts.export_public_repo import export_public_repo, should_export_public
 from ops.scripts.public_surface_policy import (
     PUBLIC_EXCLUDED_SEGMENTS,

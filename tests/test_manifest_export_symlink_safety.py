@@ -6,10 +6,8 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
-
 from ops.scripts.export_public_repo import export_public_repo
 from ops.scripts.wiki_manifest import build_manifest, release_manifest_excludes_path
-
 
 pytestmark = pytest.mark.report_contract
 
@@ -43,10 +41,10 @@ class ManifestExportSymlinkSafetyTests(unittest.TestCase):
 
             original_resolve = Path.resolve
 
-            def patched_resolve(path: Path, *args: object, **kwargs: object) -> Path:
+            def patched_resolve(path: Path, strict: bool = False) -> Path:
                 if path == readme:
                     raise AssertionError("regular manifest file should not require Path.resolve()")
-                return original_resolve(path, *args, **kwargs)
+                return original_resolve(path, strict=strict)
 
             with mock.patch.object(Path, "resolve", autospec=True, side_effect=patched_resolve):
                 manifest = build_manifest(vault, vault / "ops" / "manifest.json")

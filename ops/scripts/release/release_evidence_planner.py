@@ -15,11 +15,15 @@ from ops.scripts.artifact_io_runtime import (
 from ops.scripts.output_runtime import display_path
 from ops.scripts.release.release_run_manifest import (
     DEFAULT_OUT as DEFAULT_RUN_MANIFEST,
+)
+from ops.scripts.release.release_run_manifest import (
     _resolve,
     git_commit,
 )
 from ops.scripts.release.release_sealed_run_manifest import (
     DEFAULT_OUT as DEFAULT_SEALED_RUN_MANIFEST,
+)
+from ops.scripts.release.release_sealed_run_manifest import (
     _json_identity,
     _unique_failures,
 )
@@ -28,7 +32,6 @@ from ops.scripts.source_tree_fingerprint_runtime import (
     producer_input_fingerprint,
     release_source_tree_fingerprint,
 )
-
 
 DEFAULT_OUT = "build/release/release-evidence-plan.json"
 SCHEMA_PATH = "ops/schemas/release-evidence-plan.schema.json"
@@ -202,7 +205,7 @@ def build_plan(
 ) -> dict[str, Any]:
     if stage not in STAGES:
         raise ValueError(f"unsupported release evidence planning stage: {stage}")
-    runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
     fingerprint = release_source_tree_fingerprint(vault)
     nodes = {
@@ -403,19 +406,18 @@ def build_plan(
                     counts=operator_attention_counts,
                 )
             )
-        if not blockers:
-            if not nodes["auto_improve_readiness"]["can_reuse"]:
-                planned_actions.append(
-                    _action(
-                        target="auto-improve-readiness-report-body",
-                        action_type="pre_seal_diagnostic_refresh_required",
-                        cost_class="cheap",
-                        reason=(
-                            "auto-improve readiness is not reusable for the current source tree; "
-                            "refresh it before resealing evidence, not during stage 3 readback."
-                        ),
-                    )
+        if not blockers and not nodes["auto_improve_readiness"]["can_reuse"]:
+            planned_actions.append(
+                _action(
+                    target="auto-improve-readiness-report-body",
+                    action_type="pre_seal_diagnostic_refresh_required",
+                    cost_class="cheap",
+                    reason=(
+                        "auto-improve readiness is not reusable for the current source tree; "
+                        "refresh it before resealing evidence, not during stage 3 readback."
+                    ),
                 )
+            )
 
     plan_status = "ready" if not blockers else "blocked"
     return {

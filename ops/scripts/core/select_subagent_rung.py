@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import sys
 
 import argparse
+import sys
 from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback

@@ -7,8 +7,10 @@ import tempfile
 from pathlib import Path
 
 import pytest
-
-from ops.scripts.artifact_freshness_runtime import EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY, build_report
+from ops.scripts.artifact_freshness_runtime import (
+    EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY,
+    build_report,
+)
 from ops.scripts.backfill_archived_run_artifacts import (
     ARCHIVE_REASON,
     BACKFILL_PROVENANCE_PROPERTY,
@@ -16,6 +18,7 @@ from ops.scripts.backfill_archived_run_artifacts import (
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
@@ -72,8 +75,8 @@ FULL_VAULT_FIXTURE_SENTINELS = (
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 28, 6, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 28, 6, 0, tzinfo=dt.UTC),
     )
 
 

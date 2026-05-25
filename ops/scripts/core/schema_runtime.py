@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache
 from importlib import resources
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from .schema_constants_runtime import LOCAL_SCHEMA_ALIASES
 
@@ -46,7 +47,7 @@ def _schema_alias(identifier: str) -> str | None:
     return LOCAL_SCHEMA_ALIASES.get(_normalize_schema_identifier(identifier))
 
 
-@lru_cache(maxsize=None)
+@cache
 def _load_bundled_schema(schema_rel_path: str) -> dict[str, Any]:
     parts = Path(schema_rel_path).parts
     if parts and parts[0] == "ops":
@@ -74,7 +75,7 @@ def load_schema_with_vault_override(vault: Path, schema_rel_path: str) -> dict:
     return _load_bundled_schema(schema_rel_path)
 
 
-@lru_cache(maxsize=None)
+@cache
 def _local_schema_registry() -> Registry:
     registry = Registry()
     for schema_uri, schema_rel_path in LOCAL_SCHEMA_ALIASES.items():
@@ -85,7 +86,7 @@ def _local_schema_registry() -> Registry:
     return registry
 
 
-def _build_validator(schema: dict):
+def _build_validator(schema: dict) -> Any:
     validator_cls = validator_for(schema)
     try:
         validator_cls.check_schema(schema)

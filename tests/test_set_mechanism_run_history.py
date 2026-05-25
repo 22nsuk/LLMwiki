@@ -13,6 +13,7 @@ from ops.scripts.set_mechanism_run_history import (
     SetMechanismRunHistoryUsageError,
     set_mechanism_run_history,
 )
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_planning_gate_validate import seed_mechanism_run_artifacts
 

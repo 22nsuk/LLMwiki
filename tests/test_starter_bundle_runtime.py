@@ -14,7 +14,6 @@ from ops.scripts.starter_bundle_runtime import (
     starter_bundle_registry,
 )
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 

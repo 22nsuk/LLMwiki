@@ -9,7 +9,6 @@ from pathlib import Path
 
 import pytest
 
-
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -28,9 +27,9 @@ def _pytest_console_script() -> str:
             if candidate.exists():
                 return str(candidate)
     for name in ("pytest", "pytest.exe"):
-        candidate = shutil.which(name)
-        if candidate:
-            return candidate
+        found = shutil.which(name)
+        if found:
+            return found
     raise unittest.SkipTest("pytest console script is unavailable")
 
 

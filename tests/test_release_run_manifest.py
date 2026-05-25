@@ -6,17 +6,18 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
+from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
 from ops.scripts.release.release_run_manifest import (
     build_manifest,
     distribution_zip_path_from_manifest,
     write_manifest,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = pytest.mark.public
@@ -27,8 +28,8 @@ SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-run-manifest.schema.json"
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 23, 12, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 23, 12, 0, tzinfo=dt.UTC),
     )
 
 
@@ -66,7 +67,7 @@ class ReleaseRunManifestTests(unittest.TestCase):
             {"artifact_kind": "source_package_smoke", "status": "pass"},
         )
 
-    def _patch_clean_repo(self, fingerprint: str):
+    def _patch_clean_repo(self, fingerprint: str) -> Any:
         return patch.multiple(
             "ops.scripts.release.release_run_manifest",
             release_source_tree_fingerprint=lambda _vault: fingerprint,

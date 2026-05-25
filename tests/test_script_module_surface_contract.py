@@ -7,7 +7,6 @@ import unittest
 from pathlib import Path
 
 import pytest
-
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
 pytestmark = pytest.mark.public
@@ -87,6 +86,8 @@ def _top_level_bindings(path: Path) -> set[str]:
                     bindings.add(target.id)
         elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             bindings.add(node.target.id)
+        elif isinstance(node, ast.TypeAlias) and isinstance(node.name, ast.Name):
+            bindings.add(node.name.id)
         elif isinstance(node, ast.Import):
             for alias in node.names:
                 bindings.add(alias.asname or alias.name.partition(".")[0])

@@ -12,6 +12,7 @@ from ops.scripts.frontmatter_runtime import (
     validate_source_frontmatter_against_registry,
 )
 from ops.scripts.policy_runtime import load_policy
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 

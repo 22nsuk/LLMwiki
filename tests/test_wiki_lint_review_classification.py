@@ -10,8 +10,8 @@ from ops.scripts.wiki_lint_review_classification import (
     build_report,
     classify_review_candidates,
 )
-from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
+from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "wiki-lint-review-classification.schema.json"
 

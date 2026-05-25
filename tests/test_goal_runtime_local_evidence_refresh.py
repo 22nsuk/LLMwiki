@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
 import tempfile
 import unittest
-from typing import Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from pathlib import Path
 
 from ops.scripts.command_runtime import TimedProcessResult
+
 from ops.scripts.mechanism.goal_runtime_local_evidence_refresh import (
     DEFAULT_TARGET_SEQUENCE,
     GoalRuntimeLocalEvidenceRefreshRequest,

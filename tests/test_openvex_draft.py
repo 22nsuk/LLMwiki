@@ -10,14 +10,18 @@ from ops.scripts.cyclonedx_sbom import build_bom
 from ops.scripts.openvex_draft import build_openvex_draft, write_openvex_draft
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.supply_chain_artifact_model import build_model
+
 from tests.minimal_vault_runtime import seed_minimal_vault
-from tests.test_supply_chain_provenance import LOCKED_CI_INSTALL_SNIPPET, seed_dependency_inputs
+from tests.test_supply_chain_provenance import (
+    LOCKED_CI_INSTALL_SNIPPET,
+    seed_dependency_inputs,
+)
 
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 20, 12, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 20, 12, 0, tzinfo=dt.UTC),
     )
 
 

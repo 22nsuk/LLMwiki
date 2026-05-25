@@ -9,21 +9,21 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
+from ops.scripts.run_mechanism_experiment_runtime import (
+    run_mechanism_experiment,
+)
+from ops.scripts.runtime_context import RuntimeContext
 
-from ops.scripts import (
-    filesystem_runtime,
+from ops.scripts.core import filesystem_runtime
+from ops.scripts.mechanism import (
     mechanism_run_capture_runtime,
     mechanism_run_promotion_runtime,
     mechanism_run_workspace_runtime,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.run_mechanism_experiment_runtime import (
-    run_mechanism_experiment,
-)
 from tests.minimal_vault_runtime import set_policy_value
 from tests.run_mechanism_experiment_test_utils import (
-    ForcedPromotionReportPatch,
     PENDING_SIGNOFF_DECISION_CONTRACT,
+    ForcedPromotionReportPatch,
     PromotionReportCallExpectation,
     forced_promotion_report_builder,
     seed_wrapper_vault,
@@ -36,8 +36,8 @@ pytestmark = pytest.mark.integration
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
     )
 
 
@@ -906,28 +906,27 @@ class RunMechanismExperimentTests(unittest.TestCase):
                     mechanism_run_promotion_runtime,
                     "_build_promotion_report",
                     side_effect=fake_build_promotion_report,
-                ),
+                ),self.assertRaisesRegex(
+                filesystem_runtime.FilesystemTransactionError,
+                "outside allowed_apply_roots: README.md",
+            )
             ):
-                with self.assertRaisesRegex(
-                    filesystem_runtime.FilesystemTransactionError,
-                    "outside allowed_apply_roots: README.md",
-                ):
-                    run_mechanism_experiment(
-                        vault,
-                        run_id="run-wrapper-apply-guard",
-                        policy_path="ops/policies/wiki-maintainer-policy.yaml",
-                        primary_targets=["ops/scripts/example.py"],
-                        supporting_targets=["README.md"],
-                        test_files=["tests/test_example.py"],
-                        log_summary="Wrapper apply guard rejects README changes",
-                        mutation_command=f"{sys.executable} tools/mutate_out_of_scope.py",
-                        check_command=f"{sys.executable} -c \"print('repo health ok')\"",
-                        require_signoff=False,
-                        signoff_status="approved",
-                        signoff_by="human",
-                        signoff_ts="2026-04-16T00:00:00Z",
-                        finalize=False,
-                    )
+                run_mechanism_experiment(
+                    vault,
+                    run_id="run-wrapper-apply-guard",
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    primary_targets=["ops/scripts/example.py"],
+                    supporting_targets=["README.md"],
+                    test_files=["tests/test_example.py"],
+                    log_summary="Wrapper apply guard rejects README changes",
+                    mutation_command=f"{sys.executable} tools/mutate_out_of_scope.py",
+                    check_command=f"{sys.executable} -c \"print('repo health ok')\"",
+                    require_signoff=False,
+                    signoff_status="approved",
+                    signoff_by="human",
+                    signoff_ts="2026-04-16T00:00:00Z",
+                    finalize=False,
+                )
 
             changed_manifest = json.loads(
                 (vault / "runs" / "run-wrapper-apply-guard" / "changed-files-manifest.json").read_text(

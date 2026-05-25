@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import sys
 from importlib.abc import Loader, MetaPathFinder
+from importlib.machinery import ModuleSpec
 from importlib.util import spec_from_loader
 from pathlib import Path
+from types import CodeType, ModuleType
+from typing import Any
 
 _SUBPACKAGES = [
     "core",
@@ -27,20 +30,20 @@ class _ProxyLoader(Loader):
         self._target_name = target_name
         self._target_path = target_path
 
-    def create_module(self, spec):
+    def create_module(self, spec: ModuleSpec) -> ModuleType | None:
         return None
 
-    def exec_module(self, module) -> None:
+    def exec_module(self, module: ModuleType) -> None:
         alias_name = module.__name__
         target = __import__(self._target_name, fromlist=["__name__"])
         sys.modules[alias_name] = target
         module.__dict__.update(target.__dict__)
         module.__file__ = target.__file__
 
-    def get_filename(self, fullname):
+    def get_filename(self, fullname: str) -> str:
         return str(self._target_path)
 
-    def get_code(self, fullname):
+    def get_code(self, fullname: str) -> CodeType:
         with self._target_path.open("r", encoding="utf-8") as f:
             source = f.read()
         return compile(source, str(self._target_path), "exec")
@@ -60,17 +63,22 @@ class _ReexportFinder(MetaPathFinder):
                     continue
                 self._mapping[py_file.stem] = (pkg, py_file)
 
-    def find_spec(self, fullname, path=None, target=None):
+    def find_spec(
+        self,
+        fullname: str,
+        path: Any = None,
+        target: ModuleType | None = None,
+    ) -> ModuleSpec | None:
         if not fullname.startswith("ops.scripts."):
             return None
         parts = fullname.split(".")
         if len(parts) != 3:
             return None
         name = parts[2]
-        target = self._mapping.get(name)
-        if target is None:
+        mapped_target = self._mapping.get(name)
+        if mapped_target is None:
             return None
-        pkg, target_path = target
+        pkg, target_path = mapped_target
         target_name = f"ops.scripts.{pkg}.{name}"
         loader = _ProxyLoader(target_name, target_path)
         return spec_from_loader(fullname, loader, origin=str(target_path))

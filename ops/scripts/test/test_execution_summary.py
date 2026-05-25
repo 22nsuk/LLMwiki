@@ -20,7 +20,10 @@ from typing import Any
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+    from ops.scripts.artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        write_schema_backed_report,
+    )
     from ops.scripts.command_runtime import TimedProcessResult, run_with_timeout
     from ops.scripts.output_runtime import display_path, sanitize_report_text
     from ops.scripts.policy_runtime import load_policy, report_path
@@ -29,11 +32,19 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         TEST_DESELECTION_POLICY_SCHEMA_PATH,
         TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
     )
-    from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_or_raise
-    from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+    from ops.scripts.schema_runtime import (
+        load_schema_with_vault_override,
+        validate_or_raise,
+    )
+    from ops.scripts.source_tree_fingerprint_runtime import (
+        release_source_tree_fingerprint,
+    )
 else:
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+    from ops.scripts.artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        write_schema_backed_report,
+    )
     from ops.scripts.command_runtime import TimedProcessResult, run_with_timeout
     from ops.scripts.output_runtime import display_path, sanitize_report_text
     from ops.scripts.policy_runtime import load_policy, report_path
@@ -42,8 +53,13 @@ else:
         TEST_DESELECTION_POLICY_SCHEMA_PATH,
         TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
     )
-    from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_or_raise
-    from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+    from ops.scripts.schema_runtime import (
+        load_schema_with_vault_override,
+        validate_or_raise,
+    )
+    from ops.scripts.source_tree_fingerprint_runtime import (
+        release_source_tree_fingerprint,
+    )
 
 
 DEFAULT_OUT = "ops/reports/test-execution-summary.json"
@@ -529,7 +545,7 @@ def _parse_utc_timestamp(value: str, *, context: str) -> dt.datetime:
         raise ValueError(f"{context} has an invalid timestamp: {text!r}") from exc
     if parsed.tzinfo is None:
         raise ValueError(f"{context} must include timezone information: {text!r}")
-    return parsed.astimezone(dt.timezone.utc)
+    return parsed.astimezone(dt.UTC)
 
 
 def _deselection_lifecycle(

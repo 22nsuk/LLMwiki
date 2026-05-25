@@ -19,8 +19,10 @@ from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.release.release_status_v2 import release_status_v2_view
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_or_raise
-
+from ops.scripts.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_or_raise,
+)
 
 PRODUCER = "ops.scripts.release_post_seal_attestation"
 SCHEMA_PATH = "ops/schemas/release-post-seal-attestation.schema.json"

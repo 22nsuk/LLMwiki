@@ -5,9 +5,12 @@ import unittest
 from pathlib import Path
 
 import pytest
-
 from ops.scripts.cbm_public_export import CBM_MANIFEST_NAME, build_cbm_public_export
-from ops.scripts.export_public_repo import DEFAULT_PUBLIC_OUT, build_parser, export_public_repo
+from ops.scripts.export_public_repo import (
+    DEFAULT_PUBLIC_OUT,
+    build_parser,
+    export_public_repo,
+)
 
 pytestmark = pytest.mark.public
 

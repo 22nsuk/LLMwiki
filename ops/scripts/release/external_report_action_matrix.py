@@ -9,7 +9,9 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope  # noqa: PLC0415
+    from ops.scripts.artifact_freshness_runtime import (
+        build_canonical_report_envelope,  # noqa: PLC0415
+    )
     from ops.scripts.artifact_io_runtime import (  # noqa: PLC0415
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
@@ -19,8 +21,8 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         REFERENCE_MANIFEST,
         active_report_paths,
         archived_report_count,
-        report_coverage_item,
         reference_manifest_alignment,
+        report_coverage_item,
         status_from_evidence,
     )
     from ops.scripts.output_runtime import display_path  # noqa: PLC0415
@@ -28,19 +30,23 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.runtime_context import RuntimeContext  # noqa: PLC0415
 else:
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+    from ops.scripts.artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        write_schema_backed_report,
+    )
+    from ops.scripts.output_runtime import display_path
+    from ops.scripts.policy_runtime import load_policy, report_path
+    from ops.scripts.runtime_context import RuntimeContext
+
     from .external_report_lifecycle_runtime import (
         ACTION_CATALOG,
         REFERENCE_MANIFEST,
         active_report_paths,
         archived_report_count,
-        report_coverage_item,
         reference_manifest_alignment,
+        report_coverage_item,
         status_from_evidence,
     )
-    from ops.scripts.output_runtime import display_path
-    from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
 
 
 DEFAULT_OUT = "ops/reports/external-report-action-matrix.json"

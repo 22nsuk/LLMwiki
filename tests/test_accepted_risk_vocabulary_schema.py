@@ -12,8 +12,10 @@ import unittest
 from pathlib import Path
 
 import pytest
-
-from ops.scripts.release_closeout_summary import LEARNING_REVIEW_BLOCKER_ID, TAXONOMY_COVERAGE_BLOCKER_ID
+from ops.scripts.release_closeout_summary import (
+    LEARNING_REVIEW_BLOCKER_ID,
+    TAXONOMY_COVERAGE_BLOCKER_ID,
+)
 from ops.scripts.schema_constants_runtime import (
     ACCEPTED_RISK_VOCABULARY_SCHEMA_PATH,
     ACCEPTED_RISK_VOCABULARY_SCHEMA_URI,

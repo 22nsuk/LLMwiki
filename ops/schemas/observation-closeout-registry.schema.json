@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Observation Closeout Registry And Lint",
+  "oneOf": [
+    { "$ref": "#/$defs/registry" },
+    { "$ref": "#/$defs/lint_report" }
+  ],
+  "$defs": {
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["$schema", "artifact_kind", "retained_observations"],
+      "properties": {
+        "$schema": { "type": "string", "const": "ops/schemas/observation-closeout-registry.schema.json" },
+        "artifact_kind": { "type": "string", "const": "observation_closeout_registry" },
+        "retained_observations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "observation_id", "status", "retained_reason", "next_action"],
+            "properties": {
+              "path": { "type": "string", "minLength": 1 },
+              "observation_id": { "type": "string", "minLength": 1 },
+              "status": { "type": "string", "enum": ["open", "planned"] },
+              "retained_reason": { "type": "string", "minLength": 1 },
+              "next_action": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "lint_report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["$schema", "artifact_kind", "generated_at", "producer", "status", "registry_path", "summary", "open_observations", "unregistered_open_observations", "stale_registry_entries"],
+      "properties": {
+        "$schema": { "type": "string", "const": "ops/schemas/observation-closeout-registry.schema.json" },
+        "artifact_kind": { "type": "string", "const": "observation_closeout_lint" },
+        "generated_at": { "type": "string", "minLength": 1 },
+        "producer": { "type": "string", "const": "ops.scripts.observation_closeout_lint" },
+        "status": { "type": "string", "enum": ["pass", "fail"] },
+        "registry_path": { "type": "string", "minLength": 1 },
+        "summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["open_observation_count", "registered_retained_count", "unregistered_open_count", "stale_registry_entry_count"],
+          "properties": {
+            "open_observation_count": { "type": "integer", "minimum": 0 },
+            "registered_retained_count": { "type": "integer", "minimum": 0 },
+            "unregistered_open_count": { "type": "integer", "minimum": 0 },
+            "stale_registry_entry_count": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "open_observations": { "type": "array", "items": { "$ref": "#/$defs/observation_ref" } },
+        "unregistered_open_observations": { "type": "array", "items": { "$ref": "#/$defs/observation_ref" } },
+        "stale_registry_entries": { "type": "array", "items": { "$ref": "#/$defs/stale_registry_entry" } }
+      }
+    },
+    "observation_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "observation_id", "status", "surface", "suggested_followup"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "observation_id": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["open", "planned"] },
+        "surface": { "type": "string" },
+        "suggested_followup": { "type": "string" }
+      }
+    },
+    "stale_registry_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "observation_id"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "observation_id": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

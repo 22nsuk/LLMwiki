@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import sys
 
 import argparse
+import sys
 from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
@@ -31,6 +31,8 @@ else:
     )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy
+    from ops.scripts.schema_constants_runtime import RAW_REGISTRY_EXPORT_SCHEMA_PATH
+
     from .raw_registry_runtime import (
         build_raw_registry_export,
         enrich_registry_entries_with_inventory,
@@ -39,7 +41,6 @@ else:
         registry_entry_page_paths,
         registry_summary_page_path,
     )
-    from ops.scripts.schema_constants_runtime import RAW_REGISTRY_EXPORT_SCHEMA_PATH
 
 
 def main(argv: list[str] | None = None) -> None:

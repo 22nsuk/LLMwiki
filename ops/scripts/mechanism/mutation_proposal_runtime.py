@@ -12,11 +12,24 @@ from ops.scripts.artifact_freshness_runtime import (
     canonical_artifact_payload,
     canonical_report_loading_issue,
 )
-from .auto_improve_readiness_runtime import (
-    FALLBACK_PRIMARY_TARGETS,
-    FALLBACK_SUPPORTING_TARGETS,
-    FALLBACK_TEST_FILES,
+from ops.scripts.filesystem_runtime import manifest_apply_guard_state
+from ops.scripts.output_runtime import display_path
+from ops.scripts.path_runtime import normalize_repo_path_text
+from ops.scripts.policy_runtime import report_path
+from ops.scripts.proposal_scope_runtime import (
+    dedupe_preserve_order,
+    resolve_focus_tests,
 )
+from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.schema_constants_runtime import (
+    MECHANISM_REVIEW_SCHEMA_PATH,
+    MUTATION_PROPOSAL_SCHEMA_PATH,
+)
+from ops.scripts.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_with_schema,
+)
+
 from .auto_improve_next_run_decision_runtime import (
     CARRY_FORWARD_DECISION,
     NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE,
@@ -26,22 +39,16 @@ from .auto_improve_next_run_decision_runtime import (
     next_run_failure_repair_proposal_id,
     normalize_next_run_decisions,
 )
-from ops.scripts.filesystem_runtime import manifest_apply_guard_state
+from .auto_improve_readiness_runtime import (
+    FALLBACK_PRIMARY_TARGETS,
+    FALLBACK_SUPPORTING_TARGETS,
+    FALLBACK_TEST_FILES,
+)
 from .current_target_path_runtime import current_repo_target_paths
 from .mechanism_candidate_registry_runtime import (
     MECHANISM_CANDIDATE_REGISTRY,
     proposal_fields_for_candidate,
 )
-from ops.scripts.output_runtime import display_path
-from ops.scripts.path_runtime import normalize_repo_path_text
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.proposal_scope_runtime import dedupe_preserve_order, resolve_focus_tests
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import (
-    MECHANISM_REVIEW_SCHEMA_PATH,
-    MUTATION_PROPOSAL_SCHEMA_PATH,
-)
-from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_with_schema
 
 MECHANISM_REVIEW_SCHEMA = MECHANISM_REVIEW_SCHEMA_PATH
 MUTATION_PROPOSAL_SCHEMA = MUTATION_PROPOSAL_SCHEMA_PATH
@@ -286,8 +293,8 @@ def _parse_iso_timestamp(value: object) -> dt.datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=dt.timezone.utc)
-    return parsed.astimezone(dt.timezone.utc)
+        parsed = parsed.replace(tzinfo=dt.UTC)
+    return parsed.astimezone(dt.UTC)
 
 
 def _session_report_loading_issue(path: Path, session_report: dict) -> str | None:
@@ -587,7 +594,7 @@ def _filter_recent_log_sections_by_age(
             section.heading,
             display_timezone=runtime_context.display_timezone,
         )
-        if heading_time is None or heading_time.astimezone(dt.timezone.utc) >= cutoff:
+        if heading_time is None or heading_time.astimezone(dt.UTC) >= cutoff:
             filtered.append(section)
     return filtered
 
@@ -807,9 +814,12 @@ def _test_imports_target_module(test_path: Path, target: str) -> bool:
         imported_from = node.module or ""
         if imported_from == module_name or imported_from.endswith(f".{leaf_module}"):
             return True
-        if imported_from and any(alias.name == leaf_module for alias in node.names):
-            if f"{imported_from}.{leaf_module}" == module_name:
-                return True
+        if (
+            imported_from
+            and any(alias.name == leaf_module for alias in node.names)
+            and f"{imported_from}.{leaf_module}" == module_name
+        ):
+            return True
     return False
 
 
@@ -1046,9 +1056,7 @@ def _proposal_blast_radius_score(
     for path in distinct_targets:
         if path.startswith("ops/policies/"):
             score += 15
-        elif path.startswith("ops/schemas/"):
-            score += 12
-        elif path.startswith("system/"):
+        elif path.startswith("ops/schemas/") or path.startswith("system/"):
             score += 12
         elif path.startswith("ops/scripts/"):
             score += 5

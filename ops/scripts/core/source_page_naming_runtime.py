@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 
-
 DEFAULT_ASCII_SUMMARY_SLUG_PATTERN = r"^[a-z0-9]+(?:-[a-z0-9]+)*$"
 _DATE_SUFFIX_RE = re.compile(r"^(?P<slug>.+)-(?P<date>\d{4}-\d{2}-\d{2})$")
 

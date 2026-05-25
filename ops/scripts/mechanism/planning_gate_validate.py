@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-from pathlib import Path
 
 import sys
+from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.planning_gate_validate_runtime import (
         ARTIFACT_SCHEMAS,
-        ArtifactLoadError,
         OPTIONAL_ARTIFACT_SCHEMAS,
+        ArtifactLoadError,
         PlanningArtifactError,
         load_artifact,
         main,
@@ -20,8 +20,8 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
 else:
     from .planning_gate_validate_runtime import (
         ARTIFACT_SCHEMAS,
-        ArtifactLoadError,
         OPTIONAL_ARTIFACT_SCHEMAS,
+        ArtifactLoadError,
         PlanningArtifactError,
         load_artifact,
         main,

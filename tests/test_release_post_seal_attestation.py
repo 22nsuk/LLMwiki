@@ -8,11 +8,15 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from ops.scripts.release_post_seal_attestation import build_attestation, verify_attestation, write_attestation
+from ops.scripts.release_post_seal_attestation import (
+    build_attestation,
+    verify_attestation,
+    write_attestation,
+)
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from tests.minimal_vault_runtime import seed_minimal_vault
 
+from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-post-seal-attestation.schema.json"
@@ -20,8 +24,8 @@ SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-post-seal-attestation.sch
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 8, 2, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 8, 2, 0, tzinfo=dt.UTC),
     )
 
 

@@ -7,10 +7,10 @@ import unittest
 from pathlib import Path
 
 import pytest
-
 from ops.scripts.function_budget_refactor_proposals import build_report, write_report
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = pytest.mark.public
@@ -20,8 +20,8 @@ SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "function-budget-refactor-proposal
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 10, 5, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 10, 5, 0, tzinfo=dt.UTC),
     )
 
 

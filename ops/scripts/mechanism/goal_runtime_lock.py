@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import argparse
-from collections.abc import Callable
-from dataclasses import dataclass
 import json
 import os
-from pathlib import Path
 import signal
 import sys
+from collections.abc import Callable
+from contextlib import suppress
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
-
 
 DEFAULT_LOCK_PATH = "build/goal-runs/goal-runtime.lock.json"
 LOCK_KIND = "goal_runtime_workspace_lock"
@@ -274,10 +274,8 @@ def stop_workspace_lock(
     )
     if status["status"] in {"missing", "stale"}:
         if status["status"] == "stale":
-            try:
+            with suppress(FileNotFoundError):
                 resolved.unlink()
-            except FileNotFoundError:
-                pass
         return {
             "status": "not_running",
             "signaled": False,

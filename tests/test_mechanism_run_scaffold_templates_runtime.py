@@ -46,9 +46,9 @@ class MechanismRunScaffoldTemplatesRuntimeTests(unittest.TestCase):
 
     def test_initial_json_templates_use_context_and_schema_paths(self) -> None:
         proposal = mutation_proposal_report("ops/scripts/example.py")["proposals"][0]
-        fixed_now = dt.datetime(2026, 4, 16, 1, 2, 3, tzinfo=dt.timezone.utc)
+        fixed_now = dt.datetime(2026, 4, 16, 1, 2, 3, tzinfo=dt.UTC)
         context = RuntimeContext(
-            display_timezone=dt.timezone.utc,
+            display_timezone=dt.UTC,
             clock=lambda: fixed_now,
         )
 

@@ -15,7 +15,6 @@ from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 
-
 DEFAULT_OUT = "ops/reports/session-synopsis.json"
 PRODUCER = "ops.scripts.session_synopsis"
 SCHEMA_PATH = "ops/schemas/session-synopsis.schema.json"

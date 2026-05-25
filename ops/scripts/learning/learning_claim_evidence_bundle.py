@@ -18,7 +18,6 @@ from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 
-
 DEFAULT_OUT = "ops/reports/learning-claim-evidence-bundle.json"
 PRODUCER = "ops.scripts.learning_claim_evidence_bundle"
 SCHEMA_PATH = "ops/schemas/learning-claim-evidence-bundle.schema.json"

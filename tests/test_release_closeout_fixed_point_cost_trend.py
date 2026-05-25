@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from ops.scripts.release_closeout_fixed_point_cost_trend import (
     DEFAULT_OUT,
     FIXED_POINT_REPORT_PATH,
@@ -17,6 +16,7 @@ from ops.scripts.release_closeout_fixed_point_cost_trend import (
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.public
@@ -32,8 +32,8 @@ SCHEMA_PATH = (
 
 def context_at(hour: int) -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 9, hour, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 9, hour, 0, tzinfo=dt.UTC),
     )
 
 

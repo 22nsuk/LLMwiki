@@ -64,10 +64,10 @@ def main(argv: list[str] | None = None) -> None:
         report = build_report(vault, args.policy, target_profiles=target_profiles)
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
-        raise SystemExit(3)
+        raise SystemExit(3) from exc
     except OSError as exc:
         print(str(exc), file=sys.stderr)
-        raise SystemExit(7)
+        raise SystemExit(7) from exc
 
     write_report(vault, report, args.out)
     if args.fail_on_attention and report["status"] != "pass":

@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pytest
 
-
 BARE_PYTEST_GUIDANCE = (
     "plain `pytest` is not a supported entrypoint for this repository. "
     "Use `make test`, `make check`, `make public-check`, or `.venv/bin/python -m pytest ...` instead; "

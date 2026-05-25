@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pytest
 import yaml
-
 from ops.scripts.test_lane_registry_runtime import (
     compatibility_map,
     compatibility_names,
@@ -14,6 +13,7 @@ from ops.scripts.test_lane_registry_runtime import (
     pack_by_id,
     pack_ci_steps,
 )
+
 from tests.workflow_static_helpers import (
     PINNED_CHECKOUT_ACTION,
     PINNED_DEPENDENCY_REVIEW_ACTION,
@@ -24,9 +24,10 @@ from tests.workflow_static_helpers import (
     assert_workflow_uses_are_sha_pinned,
     load_workflow,
     workflow_job,
+    workflow_jobs,
+    workflow_mapping,
     workflow_step,
 )
-
 
 CI_WORKFLOW = Path(".github/workflows/ci.yml")
 RELEASE_WORKFLOW = Path(".github/workflows/release.yml")
@@ -38,30 +39,25 @@ pytestmark = pytest.mark.report_contract
 
 
 def _workflow() -> dict[str, object]:
-    payload = yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))
-    assert isinstance(payload, dict)
-    return payload
+    return load_workflow(CI_WORKFLOW)
 
 
 def _jobs(workflow: dict[str, object]) -> dict[str, object]:
-    jobs = workflow.get("jobs", {})
-    if not isinstance(jobs, dict):
-        raise AssertionError("workflow jobs must be a mapping")
-    return jobs
+    return workflow_mapping(workflow.get("jobs", {}), "workflow jobs must be a mapping")
 
 
 def _job(workflow: dict[str, object], name: str) -> dict[str, object]:
-    job = _jobs(workflow).get(name, {})
-    if not isinstance(job, dict):
-        raise AssertionError(f"workflow job must be a mapping: {name}")
-    return job
+    return workflow_mapping(
+        _jobs(workflow).get(name, {}),
+        f"workflow job must be a mapping: {name}",
+    )
 
 
 def _steps(job: dict[str, object]) -> list[dict[str, object]]:
     steps = job.get("steps", [])
     if not isinstance(steps, list):
         raise AssertionError("workflow job steps must be a list")
-    return [step for step in steps if isinstance(step, dict)]
+    return [workflow_mapping(step, "workflow step must be a mapping") for step in steps if isinstance(step, dict)]
 
 
 def _step_by_name(job: dict[str, object], name: str) -> dict[str, object]:
@@ -85,8 +81,10 @@ def _assert_locked_dependency_steps(case: unittest.TestCase, job: dict[str, obje
     ]
 
     case.assertEqual(setup_python.get("uses"), PINNED_SETUP_PYTHON_ACTION)
-    with_config = setup_python.get("with", {})
-    case.assertIsInstance(with_config, dict)
+    with_config = workflow_mapping(
+        setup_python.get("with", {}),
+        "setup-python with section must be a mapping",
+    )
     case.assertIn("uv.lock", str(with_config.get("cache-dependency-path", "")))
     case.assertEqual(
         setup_uv.get("uses"),
@@ -123,6 +121,12 @@ class CiWorkflowStaticTests(unittest.TestCase):
                 self.assertEqual(workflow.get("permissions"), {"contents": "read"})
                 self.assertIn("concurrency", workflow)
                 assert_workflow_uses_are_sha_pinned(self, workflow)
+                for job_name, job in workflow_jobs(workflow).items():
+                    with self.subTest(workflow=str(workflow_path), job=job_name):
+                        self.assertIsInstance(job, dict)
+                        timeout_minutes = job.get("timeout-minutes")
+                        self.assertIsInstance(timeout_minutes, int)
+                        self.assertGreater(timeout_minutes, 0)
 
         codeql = load_workflow(CODEQL_WORKFLOW)
         codeql_job = workflow_job(codeql, "analyze")
@@ -147,7 +151,10 @@ class CiWorkflowStaticTests(unittest.TestCase):
             PINNED_DEPENDENCY_REVIEW_ACTION,
         )
         self.assertEqual(
-            workflow_step(review_job, "Dependency Review").get("with", {}).get("fail-on-severity"),
+            workflow_mapping(
+                workflow_step(review_job, "Dependency Review").get("with", {}),
+                "dependency review with section must be a mapping",
+            ).get("fail-on-severity"),
             "moderate",
         )
 
@@ -155,14 +162,12 @@ class CiWorkflowStaticTests(unittest.TestCase):
         registry = load_registry(Path("."))
         workflow = _workflow()
 
-        jobs = workflow.get("jobs", {})
-        self.assertIsInstance(jobs, dict)
-        test_tier_job = jobs.get("test-tier", {})
-        self.assertIsInstance(test_tier_job, dict)
-        strategy = test_tier_job.get("strategy", {})
-        self.assertIsInstance(strategy, dict)
-        matrix = strategy.get("matrix", {})
-        self.assertIsInstance(matrix, dict)
+        test_tier_job = _job(workflow, "test-tier")
+        strategy = workflow_mapping(
+            test_tier_job.get("strategy", {}),
+            "test-tier strategy must be a mapping",
+        )
+        matrix = workflow_mapping(strategy.get("matrix", {}), "test-tier matrix must be a mapping")
         tiers = matrix.get("tier", [])
         self.assertIsInstance(tiers, list)
         self.assertEqual(tuple(tiers), compatibility_names(registry, "ci_tier"))
@@ -170,14 +175,12 @@ class CiWorkflowStaticTests(unittest.TestCase):
     def test_ci_matrix_covers_supported_python_minor_versions(self) -> None:
         workflow = _workflow()
 
-        jobs = workflow.get("jobs", {})
-        self.assertIsInstance(jobs, dict)
-        test_tier_job = jobs.get("test-tier", {})
-        self.assertIsInstance(test_tier_job, dict)
-        strategy = test_tier_job.get("strategy", {})
-        self.assertIsInstance(strategy, dict)
-        matrix = strategy.get("matrix", {})
-        self.assertIsInstance(matrix, dict)
+        test_tier_job = _job(workflow, "test-tier")
+        strategy = workflow_mapping(
+            test_tier_job.get("strategy", {}),
+            "test-tier strategy must be a mapping",
+        )
+        matrix = workflow_mapping(strategy.get("matrix", {}), "test-tier matrix must be a mapping")
         versions = matrix.get("python-version", [])
         self.assertIsInstance(versions, list)
         self.assertEqual(tuple(versions), ("3.12", "3.13", "3.14"))
@@ -212,9 +215,14 @@ class CiWorkflowStaticTests(unittest.TestCase):
 
         self.assertEqual(job.get("name"), "windows-release-smoke / py3.12")
         self.assertEqual(job.get("runs-on"), "windows-latest")
-        self.assertEqual(job.get("env", {}).get("PYTEST_DISABLE_PLUGIN_AUTOLOAD"), "1")
+        env = workflow_mapping(job.get("env", {}), "windows release smoke env must be a mapping")
+        self.assertEqual(env.get("PYTEST_DISABLE_PLUGIN_AUTOLOAD"), "1")
+        setup_python_with = workflow_mapping(
+            _step_by_name(job, "Setup Python").get("with", {}),
+            "windows setup-python with section must be a mapping",
+        )
         self.assertEqual(
-            _step_by_name(job, "Setup Python").get("with", {}).get("python-version"),
+            setup_python_with.get("python-version"),
             "3.12",
         )
         self.assertIn("Install dependencies from lock", step_names)
@@ -241,9 +249,13 @@ class CiWorkflowStaticTests(unittest.TestCase):
         )
         upload = _step_by_name(job, "Upload Windows smoke artifact")
         self.assertEqual(upload.get("uses"), PINNED_UPLOAD_ARTIFACT_ACTION)
-        self.assertEqual(upload.get("with", {}).get("name"), "windows-release-smoke-report")
+        upload_with = workflow_mapping(
+            upload.get("with", {}),
+            "windows upload artifact with section must be a mapping",
+        )
+        self.assertEqual(upload_with.get("name"), "windows-release-smoke-report")
         self.assertEqual(
-            upload.get("with", {}).get("path"),
+            upload_with.get("path"),
             "ops/reports/release-smoke-report-windows.json",
         )
 

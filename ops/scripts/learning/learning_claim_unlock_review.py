@@ -11,23 +11,27 @@ from ops.scripts.artifact_io_runtime import (
     load_optional_json_object,
     write_schema_backed_report,
 )
+from ops.scripts.output_runtime import display_path
+from ops.scripts.policy_runtime import load_policy, report_path
+from ops.scripts.runtime_context import RuntimeContext
+
 from .learning_claim_evidence_bundle import (
     DEFAULT_OUT as DEFAULT_EVIDENCE_BUNDLE_PATH,
-    validate_learning_claim_evidence_bundle,
 )
-from .learning_confirmed_evidence_cohort import (
-    DEFAULT_OUT as DEFAULT_CONFIRMED_EVIDENCE_COHORT_PATH,
-    validate_learning_confirmed_evidence_cohort,
+from .learning_claim_evidence_bundle import (
+    validate_learning_claim_evidence_bundle,
 )
 from .learning_claim_model import (
     learning_claim_blocker_status,
     normalize_evidence_cohort_summary,
 )
+from .learning_confirmed_evidence_cohort import (
+    DEFAULT_OUT as DEFAULT_CONFIRMED_EVIDENCE_COHORT_PATH,
+)
+from .learning_confirmed_evidence_cohort import (
+    validate_learning_confirmed_evidence_cohort,
+)
 from .learning_readiness_vocabulary import learning_release_blocker_ids_from_report
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
-
 
 DEFAULT_OUT = "ops/reports/learning-claim-unlock-review.json"
 DEFAULT_AUTO_POLICY_PATH = "ops/policies/learning-claim-auto-unlock.json"

@@ -11,6 +11,7 @@ from ops.scripts.run_mechanism_experiment_runtime import (
     run_mechanism_experiment,
 )
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
 from tests.run_mechanism_experiment_test_utils import (
     mutation_proposal_report,
     seed_wrapper_vault,
@@ -197,34 +198,36 @@ class RunMechanismExperimentContractTests(unittest.TestCase):
             ),
         ]
         for label, mutation_command, check_command in command_cases:
-            with self.subTest(command_surface=label):
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    vault = Path(temp_dir) / "vault"
-                    vault.mkdir()
-                    seed_wrapper_vault(vault)
+            with (
+                self.subTest(command_surface=label),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
+                vault = Path(temp_dir) / "vault"
+                vault.mkdir()
+                seed_wrapper_vault(vault)
 
-                    with self.assertRaisesRegex(
-                        RunMechanismExperimentUsageError,
-                        "shell operators are not supported",
-                    ):
-                        run_mechanism_experiment(
-                            vault,
-                            run_id=f"run-wrapper-shell-control-{label}",
-                            policy_path="ops/policies/wiki-maintainer-policy.yaml",
-                            primary_targets=["ops/scripts/example.py"],
-                            supporting_targets=[],
-                            test_files=["tests/test_example.py"],
-                            log_summary=f"Wrapper-driven mechanism experiment shell control {label}",
-                            mutation_command=mutation_command,
-                            check_command=check_command,
-                            require_signoff=False,
-                            signoff_status="approved",
-                            signoff_by="human",
-                            signoff_ts="2026-04-14T00:00:00Z",
-                            finalize=False,
-                        )
+                with self.assertRaisesRegex(
+                    RunMechanismExperimentUsageError,
+                    "shell operators are not supported",
+                ):
+                    run_mechanism_experiment(
+                        vault,
+                        run_id=f"run-wrapper-shell-control-{label}",
+                        policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                        primary_targets=["ops/scripts/example.py"],
+                        supporting_targets=[],
+                        test_files=["tests/test_example.py"],
+                        log_summary=f"Wrapper-driven mechanism experiment shell control {label}",
+                        mutation_command=mutation_command,
+                        check_command=check_command,
+                        require_signoff=False,
+                        signoff_status="approved",
+                        signoff_by="human",
+                        signoff_ts="2026-04-14T00:00:00Z",
+                        finalize=False,
+                    )
 
-                    self.assertFalse((vault / "runs" / f"run-wrapper-shell-control-{label}").exists())
+                self.assertFalse((vault / "runs" / f"run-wrapper-shell-control-{label}").exists())
 
 
 if __name__ == "__main__":

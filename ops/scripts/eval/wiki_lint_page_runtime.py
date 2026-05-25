@@ -10,8 +10,14 @@ from ops.scripts.frontmatter_runtime import (
     validate_frontmatter_pending_required_fields,
 )
 from ops.scripts.source_trace_runtime import extract_source_trace_refs
+
 from .wiki_lint_review_runtime import review_candidates_for
-from .wiki_page_runtime import INDEXISH_PAGES, SPECIAL_PAGES, section_body, source_trace_item_count
+from .wiki_page_runtime import (
+    INDEXISH_PAGES,
+    SPECIAL_PAGES,
+    section_body,
+    source_trace_item_count,
+)
 from .wiki_quality_runtime import (
     broken_wikilinks,
     has_placeholder,
@@ -57,8 +63,8 @@ class PageLintResult:
     review_candidates: list[dict]
 
 
-def _page_issue(path: Path, issue_type: str, detail=None) -> dict:
-    issue = {
+def _page_issue(path: Path, issue_type: str, detail: object | None = None) -> dict[str, object]:
+    issue: dict[str, object] = {
         "type": issue_type,
         "page": path.as_posix(),
     }

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections import defaultdict
 import re
+from collections import defaultdict
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Dict, Iterable
 
 from .wiki_page_runtime import section_body
 from .wiki_quality_runtime import missing_required_sections, resolved_wikilink_targets
@@ -96,7 +96,7 @@ def broad_synthesis_watch_advisory(text: str) -> dict:
     }
 
 
-def inbound_page_linkers(page_links: Dict[str, set[str]], pages: Dict[str, Path]) -> dict[str, set[str]]:
+def inbound_page_linkers(page_links: dict[str, set[str]], pages: dict[str, Path]) -> dict[str, set[str]]:
     inbound_sources: dict[str, set[str]] = defaultdict(set)
     for source_stem, targets in page_links.items():
         for target_stem in targets:

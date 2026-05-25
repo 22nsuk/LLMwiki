@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import argparse
-from collections.abc import Mapping
-from copy import deepcopy
-from dataclasses import dataclass
 import datetime as dt
 import hashlib
 import json
+from collections.abc import Mapping
+from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -30,9 +30,10 @@ from .goal_runtime_certificate import (
     SESSION_REQUIREMENTS,
     evidence_statuses,
     runtime_duration_seconds,
+)
+from .goal_runtime_certificate import (
     runtime_mode as contract_runtime_mode,
 )
-
 
 DEFAULT_OUT = "ops/reports/goal-runtime-certificate.json"
 DEFAULT_STATUS_REPORT_PATH = "ops/reports/goal-run-status.json"
@@ -107,8 +108,8 @@ def _parse_iso_z(value: object) -> dt.datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=dt.timezone.utc)
-    return parsed.astimezone(dt.timezone.utc)
+        parsed = parsed.replace(tzinfo=dt.UTC)
+    return parsed.astimezone(dt.UTC)
 
 
 def _elapsed_seconds(started_at: object, completed_at: object) -> int:
@@ -350,7 +351,7 @@ def _max_gap_seconds(times: list[dt.datetime]) -> int:
         return 0
     return max(
         int((right - left).total_seconds())
-        for left, right in zip(times, times[1:])
+        for left, right in zip(times, times[1:], strict=False)
     )
 
 
@@ -574,10 +575,7 @@ def _session_iterations(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:
 
 
 def _has_success_then_followup(iterations: list[Mapping[str, Any]]) -> bool:
-    for iteration in iterations[:-1]:
-        if _successful_iteration(iteration):
-            return True
-    return False
+    return any(_successful_iteration(iteration) for iteration in iterations[:-1])
 
 
 def _session_requirement_summary() -> dict[str, Any]:

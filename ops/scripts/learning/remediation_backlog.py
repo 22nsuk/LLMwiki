@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 import re
+from pathlib import Path
 from typing import Any
 
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
@@ -15,15 +15,19 @@ from ops.scripts.artifact_io_runtime import (
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_or_raise
+from ops.scripts.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_or_raise,
+)
 from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 from .learning_readiness_signoff_state import (
     SIGNOFF_REPORT_REL_PATH,
-    SUPPORTED_BLOCKER_ID as SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID,
     load_learning_readiness_signoff_summary,
 )
-
+from .learning_readiness_signoff_state import (
+    SUPPORTED_BLOCKER_ID as SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID,
+)
 
 DEFAULT_OUT = "ops/reports/remediation-backlog.json"
 PRODUCER = "ops.scripts.remediation_backlog"
@@ -152,16 +156,14 @@ def _valid_verified_goal_runtime_certificate(vault: Path) -> bool:
     contract_update = report.get("contract_update")
     if not isinstance(certificate, dict) or not isinstance(contract_update, dict):
         return False
-    if (
+    return not (
         report.get("artifact_kind") != "goal_runtime_certificate"
         or report.get("status") != "pass"
         or certificate.get("verification_status") not in {"eligible", "already_verified"}
         or certificate.get("eligible") is not True
         or contract_update.get("runtime_certificate_verified_after") is not True
         or _string_list(report.get("blockers"))
-    ):
-        return False
-    return True
+    )
 
 
 def _goal_runtime_certificate_waiting_for_release_authority(vault: Path) -> bool:

@@ -8,7 +8,6 @@ import unittest
 from pathlib import Path
 
 import pytest
-
 from ops.scripts.experiment_telemetry_runtime import (
     write_run_telemetry,
     write_timeout_failure_artifact,
@@ -25,8 +24,8 @@ from ops.scripts.observability_routing_provenance_runtime import (
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from tests.minimal_vault_runtime import seed_minimal_vault
 
+from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ENVELOPE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "artifact-envelope.schema.json"
@@ -36,8 +35,8 @@ pytestmark = pytest.mark.report_contract
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 15, 12, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 15, 12, 0, tzinfo=dt.UTC),
     )
 
 

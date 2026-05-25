@@ -12,7 +12,6 @@ from ops.scripts.warning_budget_runtime import (
     warning_type_counts,
 )
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -138,7 +137,7 @@ class WarningBudgetRuntimeTest(unittest.TestCase):
         policy, _ = load_policy(REPO_ROOT)
         context = RuntimeContext.from_policy(
             policy,
-            clock=lambda: dt.datetime(2026, 4, 19, 0, 0, tzinfo=dt.timezone.utc),
+            clock=lambda: dt.datetime(2026, 4, 19, 0, 0, tzinfo=dt.UTC),
         )
 
         report = build_report(

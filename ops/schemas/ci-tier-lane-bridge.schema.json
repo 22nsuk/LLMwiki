@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CI Tier Lane Bridge",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "status",
+    "summary",
+    "workflow_tiers",
+    "registry_tiers",
+    "bridge",
+    "missing_in_workflow",
+    "unknown_in_workflow"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "const": "ops/schemas/ci-tier-lane-bridge.schema.json" },
+    "artifact_kind": { "type": "string", "const": "ci_tier_lane_bridge" },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": { "type": "string", "const": "ops.scripts.ci_tier_lane_bridge" },
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workflow_tier_count",
+        "registry_tier_count",
+        "missing_in_workflow_count",
+        "unknown_in_workflow_count",
+        "missing_bridge_count"
+      ],
+      "properties": {
+        "workflow_tier_count": { "type": "integer", "minimum": 0 },
+        "registry_tier_count": { "type": "integer", "minimum": 0 },
+        "missing_in_workflow_count": { "type": "integer", "minimum": 0 },
+        "unknown_in_workflow_count": { "type": "integer", "minimum": 0 },
+        "missing_bridge_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "workflow_tiers": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "registry_tiers": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "bridge": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ci_tier", "registry_id", "registry_kind", "make_target", "ci_entrypoint", "registry_backed"],
+        "properties": {
+          "ci_tier": { "type": "string", "minLength": 1 },
+          "registry_id": { "type": "string" },
+          "registry_kind": { "type": "string", "enum": ["", "persistent_lane", "derived_pack"] },
+          "make_target": { "type": "string" },
+          "ci_entrypoint": { "type": "string" },
+          "registry_backed": { "type": "boolean" }
+        }
+      }
+    },
+    "missing_in_workflow": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "unknown_in_workflow": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}

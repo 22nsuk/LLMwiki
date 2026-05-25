@@ -14,7 +14,6 @@ from .mechanism_run_common_runtime import (
     write_command_timeout_failure,
 )
 
-
 REPO_HEALTH_DIAGNOSTIC_ARTIFACTS = {
     "tmp/artifact-freshness-report-check.json": "repo-health-artifact-freshness-report-check.json",
 }

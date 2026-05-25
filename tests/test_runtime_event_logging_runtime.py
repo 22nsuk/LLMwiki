@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import datetime as dt
 import json
 import tempfile
 import unittest
-import datetime as dt
 from pathlib import Path
 
 from ops.scripts.runtime_context import RuntimeContext
@@ -13,13 +13,16 @@ from ops.scripts.runtime_event_logging_runtime import (
     append_runtime_event,
     build_runtime_event,
 )
-from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_with_schema
+from ops.scripts.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_with_schema,
+)
 
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 23, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 23, tzinfo=dt.UTC),
         session_id="session-a",
     )
 

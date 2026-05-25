@@ -13,22 +13,41 @@ from urllib.parse import quote
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+    from ops.scripts.artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        write_schema_backed_report,
+    )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy
     from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.sbom_export_mapping import build_report as build_sbom_export_mapping_report
-    from ops.scripts.schema_constants_runtime import CYCLONEDX_16_SCHEMA_PATH, CYCLONEDX_16_SCHEMA_URI
-    from ops.scripts.supply_chain_provenance import build_report as build_supply_chain_provenance_report
+    from ops.scripts.sbom_export_mapping import (
+        build_report as build_sbom_export_mapping_report,
+    )
+    from ops.scripts.schema_constants_runtime import (
+        CYCLONEDX_16_SCHEMA_PATH,
+        CYCLONEDX_16_SCHEMA_URI,
+    )
+    from ops.scripts.supply_chain_provenance import (
+        build_report as build_supply_chain_provenance_report,
+    )
 else:
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-    from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+    from ops.scripts.artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        write_schema_backed_report,
+    )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy
     from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.schema_constants_runtime import (
+        CYCLONEDX_16_SCHEMA_PATH,
+        CYCLONEDX_16_SCHEMA_URI,
+    )
+
     from .sbom_export_mapping import build_report as build_sbom_export_mapping_report
-    from ops.scripts.schema_constants_runtime import CYCLONEDX_16_SCHEMA_PATH, CYCLONEDX_16_SCHEMA_URI
-    from .supply_chain_provenance import build_report as build_supply_chain_provenance_report
+    from .supply_chain_provenance import (
+        build_report as build_supply_chain_provenance_report,
+    )
 
 
 CYCLONEDX_SCHEMA_PATH = CYCLONEDX_16_SCHEMA_PATH

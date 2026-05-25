@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 import copy
-import json
 import unittest
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
-
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from tests.run_mechanism_experiment_test_utils import mutation_proposal_report
 
+from tests.report_contract_test_runtime import (
+    ReportPayload,
+    ReportPayloadMap,
+    ReportSchemaMap,
+    load_report_payload_map,
+)
+from tests.run_mechanism_experiment_test_utils import mutation_proposal_report
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_PATH = REPO_ROOT / "tests" / "fixtures" / "report_schema_samples.json"
@@ -46,10 +51,13 @@ REVIEW_ARCHIVE_REPORT_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "review-arch
 
 
 class ReportSchemaContractTest(unittest.TestCase):
+    samples: ClassVar[ReportPayloadMap]
+    schemas: ClassVar[ReportSchemaMap]
+
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        cls.samples = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+        cls.samples = load_report_payload_map(FIXTURE_PATH)
         cls.schemas = {
             "eval": load_schema(EVAL_SCHEMA_PATH),
             "eval_coverage": load_schema(EVAL_COVERAGE_SCHEMA_PATH),
@@ -81,7 +89,7 @@ class ReportSchemaContractTest(unittest.TestCase):
             "review_archive": load_schema(REVIEW_ARCHIVE_REPORT_SCHEMA_PATH),
         }
 
-    def assert_policy_identity_contract(self, report: dict, schema: dict) -> None:
+    def assert_policy_identity_contract(self, report: ReportPayload, schema: ReportPayload) -> None:
         self.assertEqual(validate_with_schema(report, schema), [])
 
         missing_policy = copy.deepcopy(report)
@@ -105,7 +113,7 @@ class ReportSchemaContractTest(unittest.TestCase):
             validate_with_schema(missing_version, schema),
         )
 
-    def assert_artifact_envelope_contract(self, report: dict, schema: dict) -> None:
+    def assert_artifact_envelope_contract(self, report: ReportPayload, schema: ReportPayload) -> None:
         missing_artifact_kind = copy.deepcopy(report)
         missing_artifact_kind.pop("artifact_kind", None)
         self.assertIn(

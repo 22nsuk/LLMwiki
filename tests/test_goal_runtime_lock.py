@@ -3,13 +3,12 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
-from pathlib import Path
 import signal
 import tempfile
 import unittest
+from pathlib import Path
 
 import pytest
-
 from ops.scripts.goal_runtime_lock import (
     GoalRuntimeWorkspaceLockActive,
     acquire_workspace_lock,
@@ -94,7 +93,7 @@ class GoalRuntimeLockTests(unittest.TestCase):
             lock_path=self.lock_path,
             run_id="active-run",
             runtime_mode="self_improvement_loop",
-            started_at=dt.datetime(2026, 5, 21, tzinfo=dt.timezone.utc)
+            started_at=dt.datetime(2026, 5, 21, tzinfo=dt.UTC)
             .isoformat()
             .replace("+00:00", "Z"),
             command_argv=["python", "-m", "ops.scripts.auto_improve_loop"],

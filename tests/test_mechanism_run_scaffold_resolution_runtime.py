@@ -18,8 +18,11 @@ from ops.scripts.mechanism_run_scaffold_resolution_runtime import (
     prepare_execution_commands,
     resolve_experiment_inputs,
 )
-from tests.run_mechanism_experiment_test_utils import mutation_proposal_report
-from tests.run_mechanism_experiment_test_utils import seed_wrapper_vault
+
+from tests.run_mechanism_experiment_test_utils import (
+    mutation_proposal_report,
+    seed_wrapper_vault,
+)
 
 
 class MechanismRunScaffoldResolutionRuntimeTests(unittest.TestCase):

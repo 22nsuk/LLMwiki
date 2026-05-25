@@ -13,12 +13,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from ops.scripts.release_audit_pack import build_audit_pack
 from ops.scripts.release_closeout_batch_manifest import (
     ARCHIVE_SELF_DESCRIPTION_PATH,
-    BatchArtifactInventory,
     FINALITY_ATTESTATION_PATH,
+    BatchArtifactInventory,
     ReleaseDecisionInputs,
     _batch_manifest_render_inputs,
     _batch_status_decision,
@@ -32,6 +31,7 @@ from ops.scripts.release_closeout_batch_manifest import (
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.wiki_manifest import release_manifest_excludes_path
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.release_sealing]
@@ -45,13 +45,13 @@ BATCH_POLICY_PATH = REPO_ROOT / "ops" / "policies" / "release-closeout-batch.jso
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 2, 9, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 2, 9, 0, tzinfo=dt.UTC),
     )
 
 
 def context_at(value: dt.datetime) -> RuntimeContext:
-    return RuntimeContext(display_timezone=dt.timezone.utc, clock=lambda: value)
+    return RuntimeContext(display_timezone=dt.UTC, clock=lambda: value)
 
 
 def complete_inventory() -> BatchArtifactInventory:
@@ -721,7 +721,7 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
 
         report = build_batch_manifest(
             self.vault,
-            context=context_at(dt.datetime(2030, 1, 1, tzinfo=dt.timezone.utc)),
+            context=context_at(dt.datetime(2030, 1, 1, tzinfo=dt.UTC)),
         )
 
         freshness = report["source_evidence_freshness"]
@@ -752,7 +752,7 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         )
         report = build_batch_manifest(
             self.vault,
-            context=context_at(dt.datetime(2030, 1, 1, 9, tzinfo=dt.timezone.utc)),
+            context=context_at(dt.datetime(2030, 1, 1, 9, tzinfo=dt.UTC)),
             zip_metadata_path=archive_path.relative_to(self.vault),
             zip_timestamp_timezone="UTC",
         )
@@ -787,7 +787,7 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
 
         report = build_batch_manifest(
             self.vault,
-            context=context_at(dt.datetime(2030, 1, 1, 9, tzinfo=dt.timezone.utc)),
+            context=context_at(dt.datetime(2030, 1, 1, 9, tzinfo=dt.UTC)),
             zip_metadata_path=archive_path.relative_to(self.vault),
             zip_timestamp_timezone="UTC",
         )
@@ -961,13 +961,13 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         )
         report = build_batch_manifest(
             self.vault,
-            context=context_at(dt.datetime(2030, 1, 1, 9, tzinfo=dt.timezone.utc)),
+            context=context_at(dt.datetime(2030, 1, 1, 9, tzinfo=dt.UTC)),
             zip_metadata_path=archive_path.relative_to(self.vault),
             zip_timestamp_timezone="UTC",
         )
         write_report(self.vault, report, "ops/reports/test-batch-manifest.json")
         source_path = self.vault / "ops" / "policies" / "release-closeout-batch.json"
-        edited_at = dt.datetime(2030, 1, 2, tzinfo=dt.timezone.utc).timestamp()
+        edited_at = dt.datetime(2030, 1, 2, tzinfo=dt.UTC).timestamp()
         os.utime(source_path, (edited_at, edited_at))
 
         exit_code = main(
@@ -993,13 +993,13 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         self._write_closeout_summary()
         report = build_batch_manifest(
             self.vault,
-            context=context_at(dt.datetime(2030, 1, 1, tzinfo=dt.timezone.utc)),
+            context=context_at(dt.datetime(2030, 1, 1, tzinfo=dt.UTC)),
         )
         write_report(self.vault, report, "ops/reports/test-batch-manifest.json")
         source_path = self.vault / "ops" / "scripts" / "post_evidence_edit.py"
         source_path.parent.mkdir(parents=True, exist_ok=True)
         source_path.write_text("print('changed after evidence')\n", encoding="utf-8")
-        edited_at = dt.datetime(2030, 1, 2, tzinfo=dt.timezone.utc).timestamp()
+        edited_at = dt.datetime(2030, 1, 2, tzinfo=dt.UTC).timestamp()
         os.utime(source_path, (edited_at, edited_at))
 
         exit_code = main(
@@ -1019,7 +1019,7 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         self._write_closeout_summary()
         report = build_batch_manifest(
             self.vault,
-            context=context_at(dt.datetime(2030, 1, 1, tzinfo=dt.timezone.utc)),
+            context=context_at(dt.datetime(2030, 1, 1, tzinfo=dt.UTC)),
         )
         write_report(self.vault, report, "ops/reports/test-batch-manifest.json")
         self._write_artifact(

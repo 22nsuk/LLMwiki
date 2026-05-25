@@ -1,8 +1,8 @@
 from __future__ import annotations
-import sys
 
 import argparse
 import re
+import sys
 from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback

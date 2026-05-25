@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/script-output-surfaces.schema.json",
   "artifact_kind": "script_output_surfaces",
-  "generated_at": "2026-05-25T05:48:13Z",
+  "generated_at": "2026-05-25T17:14:01Z",
   "producer": "ops.scripts.script_output_surfaces",
   "source_command": "python -m ops.scripts.script_output_surfaces --vault . --out ops/script-output-surfaces.json",
-  "source_revision": "unknown",
-  "source_tree_fingerprint": "f0663f6f670fa4b8ee997ba1c2e65c7c2e3b71f28f581974f5767a2378d2a415",
+  "source_revision": "f0a09cb5c0a890fbe1b4af4fe17a85e2d6b2353f",
+  "source_tree_fingerprint": "42473a2a5b0912fe14b2b10b6d426ab354f41ecc3acddbfe5aa4db8e25a039e1",
   "input_fingerprints": {
-    "policy": "02269a331e13c6e556b0482ef1cf242e68047df29679f0181a82f6ed5e9a50e9",
+    "policy": "a82d0816042f08c27069cf0ba6d2e33d7e66ad763770b82bbc1919d26f735696",
     "schema": "02cee320f449f8666c341a0a389855f3ef5ac34bddcdf4c2767b5d4b384a9722",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "62c5358cc97c1a41ddc8e0af71afae29a2dbcd1744aa82c4d870f5be8d95b7ac",
-    "ops_scripts": "992fd550b9ab6d7dc19fe84aadb4c801efd5941d3e24499f4e5d3358f0e24bca",
+    "source_paths": "73cafcb788bc134c301b099d44809c9e3a5e1a08d857615b0f5d8fafabce5d2f",
+    "ops_scripts": "44e03ea39fa65da10a582468a2183e186c909aabd2774cd0e99ae6258a26d266",
     "classification_values": "0ba4b7fd8868f9c9d070bea6d90c2cee76e2b9c8089223c413c8e898794923f4"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-25T05:48:13Z"
+    "checked_at": "2026-05-25T17:14:01Z"
   },
   "version": 1,
   "description": "Generated inventory for ops/scripts output path surfaces. Tests compare this registry with the live AST-derived inventory.",
@@ -134,6 +134,17 @@
       "reason": "uses repo artifact resolver"
     },
     {
+      "path": "ops/scripts/core/cli_surface_inventory.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
       "path": "ops/scripts/core/closure_registry_envelope.py",
       "classification": "no_output",
       "output_options": [],
@@ -170,6 +181,17 @@
       "references_resolve_repo_output_path": false,
       "direct_fallback_eligible": false,
       "reason": "no configurable output path surface detected"
+    },
+    {
+      "path": "ops/scripts/core/compatibility_alias_deprecation.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
       "path": "ops/scripts/core/execution_lane_guard.py",
@@ -547,6 +569,15 @@
       "reason": "no configurable output path surface detected"
     },
     {
+      "path": "ops/scripts/core/source_revision_runtime.py",
+      "classification": "no_output",
+      "output_options": [],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": false,
+      "reason": "no configurable output path surface detected"
+    },
+    {
       "path": "ops/scripts/core/source_slug_curation.py",
       "classification": "user_export",
       "output_options": [
@@ -594,6 +625,17 @@
       "reason": "no configurable output path surface detected"
     },
     {
+      "path": "ops/scripts/core/subagent_profile_schema.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
       "path": "ops/scripts/core/subagent_routing_runtime.py",
       "classification": "no_output",
       "output_options": [],
@@ -601,6 +643,17 @@
       "references_resolve_repo_output_path": false,
       "direct_fallback_eligible": false,
       "reason": "no configurable output path surface detected"
+    },
+    {
+      "path": "ops/scripts/core/tools_migration_plan.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
       "path": "ops/scripts/core/validation_check_types_runtime.py",
@@ -630,6 +683,17 @@
       "references_resolve_repo_output_path": false,
       "direct_fallback_eligible": false,
       "reason": "no configurable output path surface detected"
+    },
+    {
+      "path": "ops/scripts/eval/doc_graph_integrity.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
       "path": "ops/scripts/eval/function_budget_refactor_proposals.py",
@@ -1507,6 +1571,17 @@
       "reason": "no configurable output path surface detected"
     },
     {
+      "path": "ops/scripts/mechanism/mechanism_navigation_index.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
       "path": "ops/scripts/mechanism/mechanism_review.py",
       "classification": "repo_artifact",
       "output_options": [
@@ -1682,6 +1757,17 @@
       "reason": "no configurable output path surface detected"
     },
     {
+      "path": "ops/scripts/mechanism/observation_closeout_lint.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
       "path": "ops/scripts/mechanism/outcome_metrics.py",
       "classification": "no_output",
       "output_options": [],
@@ -1745,6 +1831,15 @@
       "references_resolve_repo_output_path": false,
       "direct_fallback_eligible": false,
       "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
+      "path": "ops/scripts/mechanism/promotion_decision_trends.py",
+      "classification": "no_output",
+      "output_options": [],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "no configurable output path surface detected"
     },
     {
       "path": "ops/scripts/mechanism/promotion_gate.py",
@@ -1900,6 +1995,17 @@
       "references_resolve_repo_output_path": false,
       "direct_fallback_eligible": false,
       "reason": "no configurable output path surface detected"
+    },
+    {
+      "path": "ops/scripts/public/public_surface_snapshot.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
     },
     {
       "path": "ops/scripts/public/sync_public_surface_gitignore.py",
@@ -2126,6 +2232,17 @@
     },
     {
       "path": "ops/scripts/release/release_audit_pack.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
+      "path": "ops/scripts/release/release_authority_inventory.py",
       "classification": "repo_artifact",
       "output_options": [
         "--out"
@@ -2628,6 +2745,17 @@
     },
     {
       "path": "ops/scripts/supply_chain/supply_chain_provenance.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
+      "path": "ops/scripts/test/ci_tier_lane_bridge.py",
       "classification": "repo_artifact",
       "output_options": [
         "--out"

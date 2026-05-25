@@ -13,7 +13,6 @@ from ops.scripts.release.release_status_v2 import (
     release_status_v2_view_with_readiness_fallback,
 )
 
-
 pytestmark = [pytest.mark.public, pytest.mark.release_sealing]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

@@ -17,7 +17,6 @@ from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 
-
 DEFAULT_OUT = "ops/reports/learning_claim_activation_report.json"
 PRODUCER = "ops.scripts.learning_claim_activation_report"
 SCHEMA_PATH = "ops/schemas/learning-claim-activation-report.schema.json"

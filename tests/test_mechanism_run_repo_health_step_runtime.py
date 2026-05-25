@@ -19,7 +19,7 @@ from ops.scripts.runtime_context import RuntimeContext
 
 
 def _context() -> RuntimeContext:
-    return RuntimeContext(display_timezone=dt.timezone.utc)
+    return RuntimeContext(display_timezone=dt.UTC)
 
 
 def _resolution(*, include_check_command: bool = True) -> ExperimentResolution:
@@ -48,28 +48,27 @@ def _resolution(*, include_check_command: bool = True) -> ExperimentResolution:
 
 class MechanismRunRepoHealthStepRuntimeTests(unittest.TestCase):
     def test_repo_health_step_requires_prepared_command(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            with self.assertRaisesRegex(
-                RunMechanismExperimentUsageError,
-                "execution commands were not prepared",
-            ):
-                repo_health_step(
-                    Path(temp_dir),
-                    Path(temp_dir),
-                    run_id="run-steps",
-                    resolution=_resolution(include_check_command=False),
-                    baseline_file_digests={},
-                    dependencies=RepoHealthStepDependencies(
-                        command_argv=mock.Mock(),
-                        run_command=mock.Mock(),
-                        write_command_logs=mock.Mock(),
-                        write_timeout_failure_artifact=mock.Mock(),
-                        append_ledger_event=mock.Mock(),
-                        write_changed_files_manifest=mock.Mock(),
-                        write_behavior_delta_artifact=mock.Mock(),
-                        sanitize_path_text=mock.Mock(),
-                    ),
-                )
+        with tempfile.TemporaryDirectory() as temp_dir, self.assertRaisesRegex(
+            RunMechanismExperimentUsageError,
+            "execution commands were not prepared",
+        ):
+            repo_health_step(
+                Path(temp_dir),
+                Path(temp_dir),
+                run_id="run-steps",
+                resolution=_resolution(include_check_command=False),
+                baseline_file_digests={},
+                dependencies=RepoHealthStepDependencies(
+                    command_argv=mock.Mock(),
+                    run_command=mock.Mock(),
+                    write_command_logs=mock.Mock(),
+                    write_timeout_failure_artifact=mock.Mock(),
+                    append_ledger_event=mock.Mock(),
+                    write_changed_files_manifest=mock.Mock(),
+                    write_behavior_delta_artifact=mock.Mock(),
+                    sanitize_path_text=mock.Mock(),
+                ),
+            )
 
     def test_repo_health_step_records_timeout_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

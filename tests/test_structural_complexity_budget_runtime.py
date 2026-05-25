@@ -14,8 +14,8 @@ from ops.scripts.structural_complexity_budget_runtime import (
     target_paths_from_changed_files_manifest,
     touched_target_profiles,
 )
-from tests.test_mechanism_assess import seed_policy
 
+from tests.test_mechanism_assess import seed_policy
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = (
@@ -26,8 +26,8 @@ ENVELOPE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "artifact-envelope.schema
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 21, 1, 30, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 21, 1, 30, tzinfo=dt.UTC),
     )
 
 

@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +15,9 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         write_schema_backed_report,
     )
     from ops.scripts.policy_runtime import load_policy, report_path
+    from ops.scripts.promotion_decision_registry_runtime import (
+        decision_record_from_report,
+    )
     from ops.scripts.promotion_gate_common_runtime import (
         PROMOTION_REPORT_SCHEMA,
         PromotionGateArtifactDecodeError,
@@ -30,10 +33,12 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         ensure_log_args_consistent,
         repo_relative_path,
     )
-    from ops.scripts.promotion_decision_registry_runtime import decision_record_from_report
     from ops.scripts.promotion_gate_mechanism_runtime import (
+        MechanismGateInputs,
         MechanismPromotionReportRequest,
         collect_mechanism_gate_inputs,
+    )
+    from ops.scripts.promotion_gate_mechanism_runtime import (
         mechanism_class_report as build_mechanism_class_report,
     )
     from ops.scripts.promotion_gate_page_runtime import (
@@ -42,6 +47,8 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         evaluate_stage2,
         evaluate_wiki,
         lint_wiki,
+    )
+    from ops.scripts.promotion_gate_page_runtime import (
         page_class_report as build_page_class_report,
     )
 else:
@@ -50,6 +57,10 @@ else:
         write_schema_backed_report,
     )
     from ops.scripts.policy_runtime import load_policy, report_path
+    from ops.scripts.promotion_decision_registry_runtime import (
+        decision_record_from_report,
+    )
+
     from .promotion_gate_common_runtime import (
         PROMOTION_REPORT_SCHEMA,
         PromotionGateArtifactDecodeError,
@@ -65,10 +76,12 @@ else:
         ensure_log_args_consistent,
         repo_relative_path,
     )
-    from ops.scripts.promotion_decision_registry_runtime import decision_record_from_report
     from .promotion_gate_mechanism_runtime import (
+        MechanismGateInputs,
         MechanismPromotionReportRequest,
         collect_mechanism_gate_inputs,
+    )
+    from .promotion_gate_mechanism_runtime import (
         mechanism_class_report as build_mechanism_class_report,
     )
     from .promotion_gate_page_runtime import (
@@ -77,6 +90,8 @@ else:
         evaluate_stage2,
         evaluate_wiki,
         lint_wiki,
+    )
+    from .promotion_gate_page_runtime import (
         page_class_report as build_page_class_report,
     )
 
@@ -190,7 +205,7 @@ def _mechanism_class_report_request(
     return MechanismClassReportRequest(vault=vault_or_request, **fields)
 
 
-def _mechanism_gate_inputs(request: MechanismClassReportRequest):
+def _mechanism_gate_inputs(request: MechanismClassReportRequest) -> MechanismGateInputs:
     return collect_mechanism_gate_inputs(
         request.vault,
         request.baseline_eval_path,

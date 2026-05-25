@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-
 INCLUDE_RE = re.compile(r"^include\s+(?P<paths>.+)$")
 
 

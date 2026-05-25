@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import argparse
-from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
 import datetime as dt
 import json
 import os
-from pathlib import Path
 import re
 import shlex
 import sys
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from ops.scripts.command_runtime import (
@@ -22,27 +22,31 @@ from ops.scripts.command_runtime import (
     WindowsProcessBackend,
     run_with_timeout,
 )
-from ops.scripts.output_runtime import display_path, resolve_repo_output_path, write_output_text
+from ops.scripts.output_runtime import (
+    display_path,
+    resolve_repo_output_path,
+    write_output_text,
+)
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
 
 from .goal_run_status import (
     DEFAULT_STATUS_PATH,
     GoalRunStatusRequest,
-    build_report as build_goal_run_status_report,
     goal_run_artifact_paths,
-    write_report as write_goal_run_status_report,
     write_run_artifacts,
 )
-from .goal_runtime_maintenance import (
-    PERIODIC_CHECKPOINT_COMMAND_EVENT,
-    append_checkpoint_command_event,
-    build_periodic_evidence,
-    checkpoint_command_retry_due,
+from .goal_run_status import (
+    build_report as build_goal_run_status_report,
+)
+from .goal_run_status import (
+    write_report as write_goal_run_status_report,
 )
 from .goal_runtime_certificate import DEFAULT_RUNTIME_MODE, DEFAULT_RUNTIME_SECONDS
 from .goal_runtime_lock import (
     DEFAULT_LOCK_PATH as DEFAULT_WORKSPACE_LOCK_PATH,
+)
+from .goal_runtime_lock import (
     GoalRuntimeWorkspaceLock,
     GoalRuntimeWorkspaceLockActive,
     acquire_workspace_lock,
@@ -50,7 +54,12 @@ from .goal_runtime_lock import (
     release_workspace_lock,
     update_workspace_lock_child,
 )
-
+from .goal_runtime_maintenance import (
+    PERIODIC_CHECKPOINT_COMMAND_EVENT,
+    append_checkpoint_command_event,
+    build_periodic_evidence,
+    checkpoint_command_retry_due,
+)
 
 DEFAULT_RESULT_OUT = "tmp/auto-improve-goal-session-result.json"
 PRODUCER = "ops.scripts.goal_runtime_runner"
@@ -167,7 +176,7 @@ def _workspace_lock_process_backend(
 
 
 def _iso_z(value: dt.datetime) -> str:
-    return value.astimezone(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return value.astimezone(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _context_at(base_context: RuntimeContext, value: dt.datetime) -> RuntimeContext:
@@ -390,7 +399,7 @@ def _parse_retry_after_source(source: str) -> str:
     if parsed is None:
         return ""
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=dt.timezone.utc)
+        parsed = parsed.replace(tzinfo=dt.UTC)
     return _iso_z(parsed)
 
 

@@ -15,7 +15,6 @@ from ops.scripts.wiki_manifest import (
     exclusion_policy,
 )
 
-
 DEFAULT_RELEASE_MANIFEST_PATH = "ops/manifest.json"
 DEFAULT_SOURCE_TREE_CHANGE_PATH_LIMIT = 10
 _SOURCE_TREE_CACHE: dict[tuple[str, tuple[str, ...]], tuple[tuple[tuple[str, int, int], ...], str]] = {}
@@ -209,16 +208,16 @@ def _parse_iso_z(value: str) -> dt.datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=dt.timezone.utc)
-    return parsed.astimezone(dt.timezone.utc)
+        parsed = parsed.replace(tzinfo=dt.UTC)
+    return parsed.astimezone(dt.UTC)
 
 
 def _mtime_ns_datetime(value: int) -> dt.datetime:
-    return dt.datetime.fromtimestamp(value / 1_000_000_000, tz=dt.timezone.utc)
+    return dt.datetime.fromtimestamp(value / 1_000_000_000, tz=dt.UTC)
 
 
 def _isoformat_z(value: dt.datetime) -> str:
-    return value.astimezone(dt.timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    return value.astimezone(dt.UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 def producer_input_fingerprint(payload: dict[str, Any]) -> str:

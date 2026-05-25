@@ -3,7 +3,6 @@ from __future__ import annotations
 import unittest
 
 import pytest
-
 from ops.scripts.auto_improve_readiness_release_authority_runtime import (
     _artifact_contract_promotion_blockers,
     _release_gate_promotion_blockers,

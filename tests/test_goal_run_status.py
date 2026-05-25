@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import datetime as dt
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 import pytest
-
-from ops.scripts.codex_goal_client import set_goal
+from ops.scripts.codex_goal_client import GoalBackendUnavailableError, set_goal
 from ops.scripts.goal_run_status import (
     DEFAULT_STATUS_PATH,
     GoalRunStatusRequest,
@@ -17,15 +16,16 @@ from ops.scripts.goal_run_status import (
     write_run_artifacts,
 )
 from ops.scripts.goal_runtime_backoff import backoff_status, freshness_status
+from ops.scripts.goal_runtime_certificate import build_runtime_certificate
 from ops.scripts.goal_runtime_maintenance import (
     PERIODIC_CHECKPOINT_COMMAND_EVENT,
     append_checkpoint_command_event,
     build_periodic_evidence,
 )
-from ops.scripts.goal_runtime_certificate import build_runtime_certificate
 from ops.scripts.goal_runtime_resume import resume_metadata_from_report, resume_status
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_codex_goal_contract import sample_goal_contract
 
@@ -38,15 +38,15 @@ RESUME_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "goal-run-resume-metadata.s
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.UTC),
     )
 
 
 def context_at(hour: int, minute: int) -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 17, hour, minute, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 17, hour, minute, tzinfo=dt.UTC),
     )
 
 
@@ -570,7 +570,7 @@ class GoalRunStatusTests(unittest.TestCase):
         self.assertEqual(validate_with_schema(refreshed, load_schema(SCHEMA_PATH)), [])
 
     def test_goal_run_status_requires_existing_persistent_goal_contract(self) -> None:
-        with self.assertRaises(Exception):
+        with self.assertRaisesRegex(GoalBackendUnavailableError, "goal contract does not exist"):
             build_report(
                 GoalRunStatusRequest(
                     vault=self.vault,

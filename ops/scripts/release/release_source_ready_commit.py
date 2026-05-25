@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
 import json
-from pathlib import Path
 import subprocess
 import sys
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
+from ops.scripts.release.release_status_v2 import (
+    release_status_v2_view_with_readiness_fallback,
+)
 from ops.scripts.release_authority_vocabulary import REASON_MACHINE_RELEASE_NOT_ALLOWED
-from ops.scripts.release.release_status_v2 import release_status_v2_view_with_readiness_fallback
 
 DEFAULT_OUT = "tmp/release-source-ready-commit.json"
 DEFAULT_MESSAGE = "release: converge source-ready surfaces"
@@ -137,9 +139,8 @@ def _run_git(vault: Path, args: list[str]) -> GitResult:
             ["git", *args],
             cwd=vault,
             check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
             text=True,
+            capture_output=True,
         )
     except FileNotFoundError:
         return GitResult(127, "", "git executable not found")
@@ -172,10 +173,9 @@ def parse_status_porcelain_z(raw: str) -> list[StatusEntry]:
         xy = item[:2]
         path = item[3:] if len(item) >= 4 else ""
         original_path = ""
-        if "R" in xy or "C" in xy:
-            if index < len(parts):
-                original_path = parts[index]
-                index += 1
+        if ("R" in xy or "C" in xy) and index < len(parts):
+            original_path = parts[index]
+            index += 1
         entries.append(StatusEntry(xy=xy, path=path, original_path=original_path))
     return entries
 

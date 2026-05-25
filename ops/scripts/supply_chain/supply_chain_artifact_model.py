@@ -9,27 +9,64 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope, embed_artifact_envelope_metadata
-    from ops.scripts.cyclonedx_sbom import _build_components, _build_dependencies, _build_metadata, _extract_project_identity, _locked_dependency_edge_count
-    from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+    from ops.scripts.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+        embed_artifact_envelope_metadata,
+    )
+    from ops.scripts.artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        write_schema_backed_report,
+    )
+    from ops.scripts.cyclonedx_sbom import (
+        _build_components,
+        _build_dependencies,
+        _build_metadata,
+        _extract_project_identity,
+        _locked_dependency_edge_count,
+    )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.sbom_export_mapping import build_report as build_sbom_export_mapping_report
-    from ops.scripts.schema_constants_runtime import SUPPLY_CHAIN_ARTIFACT_MODEL_SCHEMA_PATH
-    from ops.scripts.security_advisories import build_report as build_security_advisories_report
-    from ops.scripts.supply_chain_provenance import build_report as build_supply_chain_provenance_report
+    from ops.scripts.sbom_export_mapping import (
+        build_report as build_sbom_export_mapping_report,
+    )
+    from ops.scripts.schema_constants_runtime import (
+        SUPPLY_CHAIN_ARTIFACT_MODEL_SCHEMA_PATH,
+    )
+    from ops.scripts.security_advisories import (
+        build_report as build_security_advisories_report,
+    )
+    from ops.scripts.supply_chain_provenance import (
+        build_report as build_supply_chain_provenance_report,
+    )
 else:
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope, embed_artifact_envelope_metadata
-    from .cyclonedx_sbom import _build_components, _build_dependencies, _build_metadata, _extract_project_identity, _locked_dependency_edge_count
-    from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+    from ops.scripts.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+        embed_artifact_envelope_metadata,
+    )
+    from ops.scripts.artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        write_schema_backed_report,
+    )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.schema_constants_runtime import (
+        SUPPLY_CHAIN_ARTIFACT_MODEL_SCHEMA_PATH,
+    )
+
+    from .cyclonedx_sbom import (
+        _build_components,
+        _build_dependencies,
+        _build_metadata,
+        _extract_project_identity,
+        _locked_dependency_edge_count,
+    )
     from .sbom_export_mapping import build_report as build_sbom_export_mapping_report
-    from ops.scripts.schema_constants_runtime import SUPPLY_CHAIN_ARTIFACT_MODEL_SCHEMA_PATH
     from .security_advisories import build_report as build_security_advisories_report
-    from .supply_chain_provenance import build_report as build_supply_chain_provenance_report
+    from .supply_chain_provenance import (
+        build_report as build_supply_chain_provenance_report,
+    )
 
 
 DEFAULT_OUT = "ops/reports/supply-chain-artifact-model.json"
@@ -40,7 +77,7 @@ SOURCE_COMMAND = "python -m ops.scripts.supply_chain.supply_chain_artifact_model
 
 
 def _artifact_set_id(root_ref: str, generated_at: str) -> str:
-    return hashlib.sha256(f"{root_ref}|{generated_at}".encode("utf-8")).hexdigest()[:16]
+    return hashlib.sha256(f"{root_ref}|{generated_at}".encode()).hexdigest()[:16]
 
 
 def _artifact_context(artifact_set_id: str) -> dict[str, str]:

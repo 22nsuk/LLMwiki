@@ -5,10 +5,13 @@ import argparse
 import json
 from pathlib import Path
 
-from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+from ops.scripts.artifact_io_runtime import (
+    SchemaBackedReportWriteRequest,
+    write_schema_backed_report,
+)
 from ops.scripts.policy_runtime import load_policy
-from .wiki_eval_coverage_runtime import WIKI_EVAL_COVERAGE_SCHEMA, build_report
 
+from .wiki_eval_coverage_runtime import WIKI_EVAL_COVERAGE_SCHEMA, build_report
 
 DEFAULT_OUT = "ops/reports/wiki-eval-coverage-report.json"
 

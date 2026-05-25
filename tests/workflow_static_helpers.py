@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import re
 import unittest
+from collections.abc import Mapping
 from pathlib import Path
+from typing import cast
 
 import yaml
 
@@ -28,36 +30,42 @@ def load_workflow(path: Path) -> dict[str, object]:
     payload = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise AssertionError(f"workflow must be a YAML mapping: {path}")
-    return payload
+    return cast(dict[str, object], payload)
+
+
+def workflow_mapping(value: object, message: str) -> dict[str, object]:
+    if not isinstance(value, dict):
+        raise AssertionError(message)
+    return cast(dict[str, object], value)
 
 
 def workflow_on(workflow: dict[str, object]) -> dict[str, object]:
     # PyYAML's YAML 1.1 bool resolver loads the GitHub Actions `on` key as True.
-    on_section = workflow.get("on", workflow.get(True, {}))
-    if not isinstance(on_section, dict):
-        raise AssertionError("workflow on section must be a mapping")
-    return on_section
+    on_section = workflow.get("on")
+    if on_section is None:
+        on_section = cast(Mapping[object, object], workflow).get(True, {})
+    return workflow_mapping(on_section, "workflow on section must be a mapping")
 
 
 def workflow_jobs(workflow: dict[str, object]) -> dict[str, object]:
-    jobs = workflow.get("jobs", {})
-    if not isinstance(jobs, dict):
-        raise AssertionError("workflow jobs section must be a mapping")
-    return jobs
+    return workflow_mapping(
+        workflow.get("jobs", {}),
+        "workflow jobs section must be a mapping",
+    )
 
 
 def workflow_job(workflow: dict[str, object], name: str) -> dict[str, object]:
-    item = workflow_jobs(workflow).get(name)
-    if not isinstance(item, dict):
-        raise AssertionError(f"missing workflow job: {name}")
-    return item
+    return workflow_mapping(
+        workflow_jobs(workflow).get(name),
+        f"missing workflow job: {name}",
+    )
 
 
 def workflow_steps(job: dict[str, object]) -> list[dict[str, object]]:
     steps = job.get("steps", [])
     if not isinstance(steps, list):
         raise AssertionError("workflow job steps must be a list")
-    return [step for step in steps if isinstance(step, dict)]
+    return [cast(dict[str, object], step) for step in steps if isinstance(step, dict)]
 
 
 def workflow_step(job: dict[str, object], name: str) -> dict[str, object]:
@@ -79,9 +87,10 @@ def workflow_run_commands(job: dict[str, object]) -> str:
 
 
 def workflow_path_entries(step: dict[str, object]) -> tuple[str, ...]:
-    with_section = step.get("with", {})
-    if not isinstance(with_section, dict):
-        raise AssertionError("workflow step with section must be a mapping")
+    with_section = workflow_mapping(
+        step.get("with", {}),
+        "workflow step with section must be a mapping",
+    )
     path = with_section.get("path", "")
     if not isinstance(path, str):
         raise AssertionError("workflow step path must be a string")
@@ -107,8 +116,10 @@ def assert_locked_install_shape(
         with case.subTest(job=job_name):
             setup_python = workflow_step(job, "Setup Python")
             case.assertEqual(setup_python.get("uses"), PINNED_SETUP_PYTHON_ACTION)
-            setup_python_with = setup_python.get("with", {})
-            case.assertIsInstance(setup_python_with, dict)
+            setup_python_with = workflow_mapping(
+                setup_python.get("with", {}),
+                "workflow setup-python with section must be a mapping",
+            )
             cache_paths = str(setup_python_with.get("cache-dependency-path", ""))
             case.assertIn("uv.lock", cache_paths.split())
             setup_uv = workflow_step(job, "Setup uv")

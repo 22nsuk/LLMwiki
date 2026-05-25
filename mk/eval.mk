@@ -9,8 +9,10 @@ FUNCTION_BUDGET_REFACTOR_PROPOSALS_OUT ?= ops/reports/function-budget-refactor-p
 FUNCTION_BUDGET_REFACTOR_PROPOSALS_CANDIDATE_OUT ?= tmp/function-budget-refactor-proposals.candidate.json
 LINT_UPLIFT_PLAN_OUT ?= ops/reports/lint-uplift-plan.json
 TYPE_UPLIFT_PLAN_OUT ?= ops/reports/type-uplift-plan.json
+DOC_GRAPH_INTEGRITY_OUT ?= tmp/doc-graph-integrity.json
+DOC_GRAPH_ORPHAN_ALLOWLIST ?= ops/doc-graph-orphan-allowlist.json
 
-.PHONY: lint lint-uplift-plan type-uplift-plan wiki-lint-review-classification function-budget-refactor-proposals eval stage2-eval planning-gate warning-budget complexity-budget complexity-budget-check complexity-budget-touched-check
+.PHONY: lint lint-uplift-plan type-uplift-plan doc-graph-integrity wiki-lint-review-classification function-budget-refactor-proposals eval stage2-eval planning-gate warning-budget complexity-budget complexity-budget-check complexity-budget-touched-check
 
 lint:
 	$(PYTHON) -m ops.scripts.wiki_lint --vault "$(VAULT)"
@@ -20,6 +22,9 @@ lint-uplift-plan:
 
 type-uplift-plan:
 	$(PYTHON) -m ops.scripts.type_uplift_plan --vault "$(VAULT)" --out "$(TYPE_UPLIFT_PLAN_OUT)" --targets "$(STRICT_PREVIEW_AUDIT_TARGETS)"
+
+doc-graph-integrity:
+	$(PYTHON) -m ops.scripts.doc_graph_integrity --vault "$(VAULT)" --allowlist "$(DOC_GRAPH_ORPHAN_ALLOWLIST)" --out "$(DOC_GRAPH_INTEGRITY_OUT)"
 
 wiki-lint-review-classification:
 	$(PYTHON) -m ops.scripts.wiki_lint_review_classification --vault "$(VAULT)" --out "$(WIKI_LINT_REVIEW_CLASSIFICATION_OUT)"

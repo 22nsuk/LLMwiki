@@ -2,16 +2,16 @@
 from __future__ import annotations
 
 import argparse
-import datetime as dt
 import copy
+import datetime as dt
 import hashlib
 import json
 import shlex
+import subprocess
 import sys
 import tempfile
 import time
 import zipfile
-import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -42,7 +42,9 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import RELEASE_SMOKE_SCHEMA_PATH
     from ops.scripts.schema_runtime import load_schema, validate_with_schema
-    from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+    from ops.scripts.source_tree_fingerprint_runtime import (
+        release_source_tree_fingerprint,
+    )
     from ops.scripts.wiki_manifest import build_manifest, exclusion_policy, sha256_file
 else:
     from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
@@ -60,11 +62,17 @@ else:
         python_unicode_escape_byte_len,
         utf8_byte_len,
     )
-    from ops.scripts.policy_runtime import load_policy, release_archive_root_name_from_policy, zip_normalization_from_policy
+    from ops.scripts.policy_runtime import (
+        load_policy,
+        release_archive_root_name_from_policy,
+        zip_normalization_from_policy,
+    )
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import RELEASE_SMOKE_SCHEMA_PATH
     from ops.scripts.schema_runtime import load_schema, validate_with_schema
-    from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+    from ops.scripts.source_tree_fingerprint_runtime import (
+        release_source_tree_fingerprint,
+    )
     from ops.scripts.wiki_manifest import build_manifest, exclusion_policy, sha256_file
 
 
@@ -244,7 +252,7 @@ def _normalized_zip_info(
 ) -> zipfile.ZipInfo:
     info = zipfile.ZipInfo(
         filename=arcname,
-        date_time=timestamp_utc.astimezone(dt.timezone.utc).timetuple()[:6],
+        date_time=timestamp_utc.astimezone(dt.UTC).timetuple()[:6],
     )
     info.compress_type = zipfile.ZIP_DEFLATED
     info.create_system = 3
@@ -318,8 +326,7 @@ def _git_commit(vault: Path) -> str:
         cwd=vault,
         check=False,
         text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
     )
     return completed.stdout.strip() if completed.returncode == 0 else ""
 
@@ -960,7 +967,7 @@ def _render_release_smoke_report(request: ReleaseSmokeReportRequest) -> dict[str
         and archive_reproducibility["status"] in {"pass", "not_run"}
         else "fail"
     )
-    runtime_context = request.context or RuntimeContext(display_timezone=dt.timezone.utc)
+    runtime_context = request.context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
     archive_display_path = _display_release_path(
         request.vault,
@@ -1097,7 +1104,7 @@ def _release_smoke_partial_report_request(
 def _render_partial_release_smoke_report(
     request: ReleaseSmokePartialReportRequest,
 ) -> dict[str, Any]:
-    runtime_context = request.context or RuntimeContext(display_timezone=dt.timezone.utc)
+    runtime_context = request.context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
     manifest = request.source_manifest or _empty_manifest()
     resolved_archive_root_name = request.archive_root_name or DEFAULT_ARCHIVE_ROOT_NAME

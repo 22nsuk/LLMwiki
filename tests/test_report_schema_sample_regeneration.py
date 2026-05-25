@@ -14,7 +14,6 @@ from tools.regenerate_report_schema_samples import (
     build_openvex_schema_sample,
 )
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_PATH = REPO_ROOT / "tests" / "fixtures" / "report_schema_samples.json"
 

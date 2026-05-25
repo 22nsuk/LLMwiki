@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 import datetime as dt
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
 from .filesystem_runtime import normalized_allowed_apply_roots
 from .path_runtime import normalize_repo_path_text
 from .promotion_decision_registry_runtime import promotion_decision_values
-
 
 SUPPORTED_COMPLEXITY_FORMULA = "complexity_score = round(sum(weight_i * dimension_i) / 5)"
 SUPPORTED_COMPLEXITY_OUTPUT_RANGE = "0-100"
@@ -18,8 +17,8 @@ SUPPORTED_SUBAGENT_LADDER = {
     2: ("gpt-5.5", "high"),
     3: ("gpt-5.5", "xhigh"),
 }
-SUPPORTED_SUBAGENT_SANDBOX_MODES = set("read-only workspace-write danger-full-access".split())
-SUPPORTED_WORKSPACE_PREPARATION_MODES = set("full_copy sparse_manifest".split())
+SUPPORTED_SUBAGENT_SANDBOX_MODES = set(["read-only", "workspace-write", "danger-full-access"])
+SUPPORTED_WORKSPACE_PREPARATION_MODES = set(["full_copy", "sparse_manifest"])
 SUPPORTED_SUBAGENT_PRESSURE_DIMENSIONS = {
     "change_surface",
     "dependency_impact",
@@ -28,14 +27,12 @@ SUPPORTED_SUBAGENT_PRESSURE_DIMENSIONS = {
     "environment_risk",
 }
 SUPPORTED_PROMOTION_DECISION_VALUES = set(promotion_decision_values())
-SUPPORTED_LOG_STATUS_VALUES = set("pending recorded not_required".split())
-SUPPORTED_WARNING_BUDGET_SOURCES = set("raw_registry_preflight wiki_lint".split())
+SUPPORTED_LOG_STATUS_VALUES = set(["pending", "recorded", "not_required"])
+SUPPORTED_WARNING_BUDGET_SOURCES = set(["raw_registry_preflight", "wiki_lint"])
 SUPPORTED_PROMOTION_RULE_REDUCERS = set(
-    "none status_fail_discard candidate_lint_status candidate_eval_status "
-    "equal_score_secondary signoff_status page_repo_lint_status "
-    "page_primary_eval_status page_signoff_status".split()
+    ["none", "status_fail_discard", "candidate_lint_status", "candidate_eval_status", "equal_score_secondary", "signoff_status", "page_repo_lint_status", "page_primary_eval_status", "page_signoff_status"]
 )
-SUPPORTED_PROMOTION_RULE_SEVERITIES = set("info advisory warning blocker".split())
+SUPPORTED_PROMOTION_RULE_SEVERITIES = set(["info", "advisory", "warning", "blocker"])
 SUPPORTED_PROMOTION_RULE_ARTIFACT_DEPENDENCIES = {
     "baseline_eval_report",
     "candidate_eval_report",

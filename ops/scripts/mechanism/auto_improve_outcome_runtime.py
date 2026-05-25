@@ -8,11 +8,10 @@ from pathlib import Path
 from ops.scripts.experiment_telemetry_runtime import run_rel
 from ops.scripts.promotion_decision_registry_runtime import (
     PromotionDecisionRegistryError,
-    decision_is_terminal,
     decision_from_payload,
+    decision_is_terminal,
     decision_outcome,
 )
-
 
 TERMINAL_SUCCESS_OUTCOMES = frozenset({"promoted"})
 RETRYABLE_EXECUTOR_FAILURE_OUTCOMES = frozenset({"executor_usage_limited"})

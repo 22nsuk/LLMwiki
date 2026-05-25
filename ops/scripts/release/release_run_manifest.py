@@ -49,8 +49,7 @@ def _run_git(vault: Path, *args: str) -> str:
         cwd=vault,
         check=False,
         text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
     )
     return completed.stdout.strip() if completed.returncode == 0 else ""
 
@@ -147,7 +146,7 @@ def build_manifest(
     source_package_smoke: str = DEFAULT_SOURCE_PACKAGE_SMOKE,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
-    runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
     final_fingerprint = release_source_tree_fingerprint(vault)
     commit = git_commit(vault)

@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from ops.scripts.starter_bundle_runtime import StarterBundleDefinition
+
 from .mechanism_run_validation_runtime import (
     MechanismArtifactBundle,
     normalize_mechanism_artifact_bundle,
@@ -13,7 +15,6 @@ from .planning_gate_artifact_runtime import (
     ArtifactPayload,
     load_and_validate_reported_json_artifact,
 )
-from ops.scripts.starter_bundle_runtime import StarterBundleDefinition
 
 
 @dataclass(frozen=True)

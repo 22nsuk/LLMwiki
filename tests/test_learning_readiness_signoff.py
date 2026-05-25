@@ -7,19 +7,21 @@ import unittest
 from pathlib import Path
 
 import pytest
-
 from ops.scripts.learning_readiness_signoff import (
-    LearningReadinessSignoffRequest,
     SIGNOFF_REPORT_REL_PATH,
     SUPPORTED_BLOCKER_ID,
+    LearningReadinessSignoffRequest,
     build_signoff_report,
     write_signoff_report,
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import LEARNING_READINESS_SIGNOFF_SCHEMA_PATH
-from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_with_schema
-from tests.minimal_vault_runtime import seed_minimal_vault
+from ops.scripts.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_with_schema,
+)
 
+from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -28,8 +30,8 @@ pytestmark = pytest.mark.report_contract
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 29, 8, 30, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 29, 8, 30, tzinfo=dt.UTC),
     )
 
 

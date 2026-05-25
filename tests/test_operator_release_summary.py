@@ -11,8 +11,8 @@ from typing import Any
 from ops.scripts.operator_release_summary import build_report, main
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from tests.minimal_vault_runtime import seed_minimal_vault
 
+from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "operator-release-summary.schema.json"
@@ -20,8 +20,8 @@ SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "operator-release-summary.schema.j
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 4, 10, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 4, 10, 0, tzinfo=dt.UTC),
     )
 
 

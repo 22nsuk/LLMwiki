@@ -19,10 +19,16 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import ARCHIVE_EXECUTION_MANIFEST_SCHEMA_PATH
+    from ops.scripts.schema_constants_runtime import (
+        ARCHIVE_EXECUTION_MANIFEST_SCHEMA_PATH,
+    )
 else:
     from .artifact_freshness_runtime import build_canonical_report_envelope
-    from .artifact_io_runtime import SchemaBackedReportWriteRequest, read_json_object, write_schema_backed_report
+    from .artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        read_json_object,
+        write_schema_backed_report,
+    )
     from .output_runtime import display_path
     from .policy_runtime import load_policy, report_path
     from .runtime_context import RuntimeContext
@@ -59,14 +65,14 @@ def _directory_digest(path: Path) -> str:
     for item in sorted(path.rglob("*"), key=lambda candidate: candidate.relative_to(path).as_posix()):
         relative = item.relative_to(path).as_posix()
         if item.is_dir():
-            digest.update(f"dir:{relative}\n".encode("utf-8"))
+            digest.update(f"dir:{relative}\n".encode())
             continue
         if item.is_file():
-            digest.update(f"file:{relative}:".encode("utf-8"))
+            digest.update(f"file:{relative}:".encode())
             digest.update(_file_digest(item).encode("ascii"))
             digest.update(b"\n")
             continue
-        digest.update(f"unknown:{relative}\n".encode("utf-8"))
+        digest.update(f"unknown:{relative}\n".encode())
     return digest.hexdigest()
 
 

@@ -5,6 +5,18 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
 
+from ops.scripts.observability_artifacts_runtime import (
+    write_promotion_decision_trends,
+    write_run_artifact_fingerprint,
+)
+from ops.scripts.policy_runtime import report_path
+from ops.scripts.promotion_decision_registry_runtime import (
+    PromotionDecisionRegistryError,
+    decision_event_from_record,
+    decision_record_from_report,
+)
+from ops.scripts.runtime_context import RuntimeContext
+
 from .finalize_run_runtime import finalize_run
 from .improvement_observations_runtime import IMPROVEMENT_OBSERVATIONS_FILENAME
 from .mechanism_run_common_runtime import (
@@ -21,23 +33,15 @@ from .mechanism_run_ledger_runtime import (
     run_rel,
     write_experiment_telemetry,
 )
-from ops.scripts.observability_artifacts_runtime import (
-    write_promotion_decision_trends,
-    write_run_artifact_fingerprint,
-)
 from .planning_gate_validate import validate_run_dir
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.promotion_decision_registry_runtime import (
-    PromotionDecisionRegistryError,
-    decision_event_from_record,
-    decision_record_from_report,
-)
 from .promotion_gate import write_report as write_promotion_report
 from .promotion_gate_common_runtime import build_log, build_signoff
 from .promotion_gate_mechanism_runtime import (
     MechanismGateInputs,
     MechanismPromotionReportRequest,
     collect_mechanism_gate_inputs,
+)
+from .promotion_gate_mechanism_runtime import (
     mechanism_class_report as build_mechanism_class_report,
 )
 
@@ -244,7 +248,7 @@ def _finalize_step(
     run_id: str,
     promotion_report: dict,
     finalize: bool,
-    context=None,
+    context: RuntimeContext | None = None,
 ) -> FinalizeStepResult:
     finalized = False
     finalize_result: dict = {}

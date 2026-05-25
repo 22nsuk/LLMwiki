@@ -8,6 +8,7 @@ from pathlib import Path
 
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.supply_chain_benchmark import build_report, write_report
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_supply_chain_artifact_model import seed_runtime_surface
 from tests.test_supply_chain_provenance import seed_dependency_inputs
@@ -15,8 +16,8 @@ from tests.test_supply_chain_provenance import seed_dependency_inputs
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 20, 12, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 20, 12, 0, tzinfo=dt.UTC),
     )
 
 

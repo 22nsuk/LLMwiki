@@ -12,6 +12,7 @@ from ops.scripts.wiki_page_runtime import (
     required_sections_for_page,
     source_trace_item_count,
 )
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 

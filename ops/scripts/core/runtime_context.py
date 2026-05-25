@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import datetime as dt
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, replace
-from typing import Callable
 
 from .policy_runtime import display_timezone_from_policy
-
 
 Clock = Callable[[], dt.datetime]
 
@@ -20,9 +19,9 @@ def _default_clock() -> dt.datetime:
             parsed = None
         if parsed is not None:
             if parsed.tzinfo is None:
-                parsed = parsed.replace(tzinfo=dt.timezone.utc)
-            return parsed.astimezone(dt.timezone.utc)
-    return dt.datetime.now(dt.timezone.utc)
+                parsed = parsed.replace(tzinfo=dt.UTC)
+            return parsed.astimezone(dt.UTC)
+    return dt.datetime.now(dt.UTC)
 
 
 @dataclass(frozen=True)
@@ -42,7 +41,7 @@ class RuntimeContext:
         session_id: str = "",
         iteration: int = 0,
         executor_id: str = "",
-    ) -> "RuntimeContext":
+    ) -> RuntimeContext:
         return cls(
             display_timezone=display_timezone_from_policy(policy),
             clock=clock or _default_clock,
@@ -51,17 +50,17 @@ class RuntimeContext:
             executor_id=executor_id,
         )
 
-    def with_iteration(self, iteration: int) -> "RuntimeContext":
+    def with_iteration(self, iteration: int) -> RuntimeContext:
         return replace(self, iteration=iteration)
 
-    def with_executor(self, executor_id: str) -> "RuntimeContext":
+    def with_executor(self, executor_id: str) -> RuntimeContext:
         return replace(self, executor_id=executor_id)
 
     def utcnow(self) -> dt.datetime:
         current = self.clock()
         if current.tzinfo is None:
-            current = current.replace(tzinfo=dt.timezone.utc)
-        return current.astimezone(dt.timezone.utc)
+            current = current.replace(tzinfo=dt.UTC)
+        return current.astimezone(dt.UTC)
 
     def isoformat_z(self) -> str:
         return self.utcnow().replace(microsecond=0).isoformat().replace("+00:00", "Z")

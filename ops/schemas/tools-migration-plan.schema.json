@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Tools Migration Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "artifact_kind", "generated_at", "producer", "status", "summary", "tools", "deletion_candidates"],
+  "properties": {
+    "$schema": { "type": "string", "const": "ops/schemas/tools-migration-plan.schema.json" },
+    "artifact_kind": { "type": "string", "const": "tools_migration_plan" },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": { "type": "string", "const": "ops.scripts.tools_migration_plan" },
+    "status": { "type": "string", "enum": ["pass", "attention", "fail"] },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_count", "retained_tool_count", "deletion_candidate_count"],
+      "properties": {
+        "tool_count": { "type": "integer", "minimum": 0 },
+        "retained_tool_count": { "type": "integer", "minimum": 0 },
+        "deletion_candidate_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "reference_count", "references", "canonical_replacement", "retained_reason", "deletion_candidate"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "reference_count": { "type": "integer", "minimum": 0 },
+          "references": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "canonical_replacement": { "type": "string" },
+          "retained_reason": { "type": "string", "minLength": 1 },
+          "deletion_candidate": { "type": "boolean" }
+        }
+      }
+    },
+    "deletion_candidates": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}

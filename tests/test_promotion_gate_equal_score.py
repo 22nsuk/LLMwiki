@@ -10,9 +10,18 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.behavior_delta_runtime import classify_surface, contract_touches_for_path
+from ops.scripts.behavior_delta_runtime import (
+    classify_surface,
+    contract_touches_for_path,
+)
 from ops.scripts.policy_runtime import load_policy
-from tests.minimal_vault_runtime import POLICY_PATH, REPO_ROOT, SCHEMA_PATHS, set_policy_value
+
+from tests.minimal_vault_runtime import (
+    POLICY_PATH,
+    REPO_ROOT,
+    SCHEMA_PATHS,
+    set_policy_value,
+)
 
 LIVE_POLICY_VERSION = load_policy(REPO_ROOT)[0]["version"]
 

@@ -6,6 +6,7 @@ import hashlib
 import os
 import sys
 from collections.abc import Iterator
+from contextlib import suppress
 from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
@@ -15,8 +16,8 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         resolve_schema_backed_report_output_path,
         write_schema_backed_report,
     )
-    from ops.scripts.path_runtime import normalize_repo_path_text
     from ops.scripts.output_runtime import display_path
+    from ops.scripts.path_runtime import normalize_repo_path_text
     from ops.scripts.schema_constants_runtime import WIKI_MANIFEST_SCHEMA_PATH
 else:
     from ops.scripts.artifact_io_runtime import (
@@ -24,8 +25,8 @@ else:
         resolve_schema_backed_report_output_path,
         write_schema_backed_report,
     )
-    from ops.scripts.path_runtime import normalize_repo_path_text
     from ops.scripts.output_runtime import display_path
+    from ops.scripts.path_runtime import normalize_repo_path_text
     from ops.scripts.schema_constants_runtime import WIKI_MANIFEST_SCHEMA_PATH
 
 DEFAULT_EXCLUDED_PREFIXES = (
@@ -172,10 +173,8 @@ def _iter_candidate_files(
 
 def build_manifest(vault: Path, out_path: Path) -> dict:
     excluded_files = set(DEFAULT_EXCLUDED_FILES)
-    try:
+    with suppress(ValueError):
         excluded_files.add(out_path.relative_to(vault).as_posix())
-    except ValueError:
-        pass
 
     files = []
     for p, rel_path in _iter_candidate_files(

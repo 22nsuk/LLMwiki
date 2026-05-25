@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Iterable
-
+from collections.abc import Iterable
+from typing import Any
 
 LEARNING_STATUS_LIKELY = "learning_likely"
 LEARNING_STATUS_UNCERTAIN = "learning_uncertain"

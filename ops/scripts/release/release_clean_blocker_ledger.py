@@ -13,12 +13,17 @@ from ops.scripts.artifact_io_runtime import (
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
+from ops.scripts.learning_readiness_vocabulary import (
+    LEARNING_REVIEW_REQUIRED_BLOCKER_ID,
+)
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.learning_readiness_vocabulary import LEARNING_REVIEW_REQUIRED_BLOCKER_ID
 from ops.scripts.release.release_status_v2 import (
     release_status_v2_view_with_readiness_fallback,
 )
+from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+
 from .advisory_lifecycle_runtime import (
     ADVISORY_LIFECYCLE_ACTIVE,
     advisory_lifecycle_assessment,
@@ -33,9 +38,6 @@ from .release_risk_taxonomy_runtime import (
     load_release_risk_taxonomy,
     release_risk_effects,
 )
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
-
 
 DEFAULT_OUT = "ops/reports/release-clean-blocker-ledger.json"
 PRODUCER = "ops.scripts.release_clean_blocker_ledger"

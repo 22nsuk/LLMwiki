@@ -5,12 +5,17 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
+from ops.scripts.wiki_page_runtime import line_count
+
 from .candidate_rule_runtime import CandidateRuleSpec, evaluate_candidate_rules
 from .policy_runtime import report_path
-from .runtime_context import RuntimeContext
 from .registry_diagnostics_runtime import (
     RegistryDiagnosticEmitter as RegistryLintEmitter,
+)
+from .registry_diagnostics_runtime import (
     RegistryInventoryContext,
+)
+from .registry_diagnostics_runtime import (
     RegistryPaths as RegistryLintPaths,
 )
 from .registry_pass_support_runtime import (
@@ -20,7 +25,7 @@ from .registry_pass_support_runtime import (
     registry_topic_family,
     registry_topic_subfamily,
 )
-from ops.scripts.wiki_page_runtime import line_count
+from .runtime_context import RuntimeContext
 
 
 def _summary_shard_review_candidate_pass(
@@ -496,7 +501,7 @@ def _backlog_refactor_threshold_pass(
     emitter: RegistryLintEmitter,
     runtime_context: RuntimeContext | None = None,
 ) -> None:
-    clock_context = runtime_context or RuntimeContext(display_timezone=dt.timezone.utc)
+    clock_context = runtime_context or RuntimeContext(display_timezone=dt.UTC)
     thresholds = _backlog_refactor_thresholds(system_refactor_policy)
     today = clock_context.today()
 

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import datetime as dt
-from copy import deepcopy
 import unittest
+from copy import deepcopy
 from pathlib import Path
 
 from ops.scripts.policy_runtime import load_policy
@@ -16,7 +16,6 @@ from ops.scripts.policy_validation_runtime import (
     workspace_preparation_mode_from_policy,
     zip_normalization_from_policy,
 )
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

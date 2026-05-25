@@ -20,17 +20,25 @@ from ops.scripts.learning_readiness_signoff_revalidation import (
     build_revalidation_report,
     write_revalidation_report,
 )
-from ops.scripts.learning_readiness_vocabulary import LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID
+from ops.scripts.learning_readiness_vocabulary import (
+    LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID,
+)
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import LEARNING_READINESS_SIGNOFF_REVALIDATION_SCHEMA_PATH
-from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_with_schema
+from ops.scripts.schema_constants_runtime import (
+    LEARNING_READINESS_SIGNOFF_REVALIDATION_SCHEMA_PATH,
+)
+from ops.scripts.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_with_schema,
+)
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 
 def fixed_context(timestamp: dt.datetime | None = None) -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: timestamp or dt.datetime(2026, 4, 30, 12, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: timestamp or dt.datetime(2026, 4, 30, 12, 0, tzinfo=dt.UTC),
     )
 
 

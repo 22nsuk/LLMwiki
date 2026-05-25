@@ -13,7 +13,6 @@ from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import set_policy_value
 from tests.run_mechanism_experiment_test_utils import seed_wrapper_vault
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PROPOSAL_SCOPE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "proposal-scope.schema.json"
 

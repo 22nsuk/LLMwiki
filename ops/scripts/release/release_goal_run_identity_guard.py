@@ -14,10 +14,12 @@ from ops.scripts.artifact_io_runtime import (
 )
 from ops.scripts.output_runtime import display_path
 from ops.scripts.release.release_run_manifest import _resolve, git_commit
-from ops.scripts.release.release_sealed_run_manifest import _json_identity, _unique_failures
+from ops.scripts.release.release_sealed_run_manifest import (
+    _json_identity,
+    _unique_failures,
+)
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
-
 
 DEFAULT_OUT = "build/release/release-auto-promotion-goal-run-identity.json"
 DEFAULT_GOAL_RUN_STATUS = "ops/reports/goal-run-status.json"
@@ -155,7 +157,7 @@ def build_report(
     goal_runtime_certificate: str = DEFAULT_GOAL_RUNTIME_CERTIFICATE,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
-    runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
     fingerprint = release_source_tree_fingerprint(vault)
     commit = git_commit(vault)

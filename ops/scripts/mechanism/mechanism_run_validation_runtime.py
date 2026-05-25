@@ -1,19 +1,22 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping
 
 from ops.scripts.filesystem_runtime import manifest_apply_guard_state
 from ops.scripts.path_runtime import normalize_repo_path_text
+from ops.scripts.validation_check_types_runtime import (
+    PhaseCheckResult,
+    validation_check,
+)
+
 from .promotion_gate_common_runtime import (
     extract_policy_identity,
     ledger_artifact_targets,
     normalize_report_vault,
     report_target_list,
 )
-from ops.scripts.validation_check_types_runtime import PhaseCheckResult, validation_check
-
 
 MECHANISM_EVALUATED_EVENT_SEQUENCE = [
     "created",

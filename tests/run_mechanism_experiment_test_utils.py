@@ -8,8 +8,8 @@ from typing import Any
 
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.promotion_decision_registry_runtime import attach_decision_contract
-from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
+from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 LIVE_POLICY_VERSION = load_policy(REPO_ROOT)[0]["version"]
 FIXTURE_GENERATED_AT = "2026-04-15T00:00:00Z"

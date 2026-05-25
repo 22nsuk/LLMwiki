@@ -26,7 +26,6 @@ from ops.scripts.schema_constants_runtime import (
     RELEASE_EVIDENCE_CLOSEOUT_SELF_CHECK_SCHEMA_PATH,
 )
 
-
 PRODUCER = "ops.scripts.release_evidence_closeout_self_check"
 DEFAULT_OUT = "ops/reports/release-evidence-closeout-self-check.json"
 DEFAULT_BATCH_MANIFEST = "ops/reports/release-closeout-batch-manifest.json"

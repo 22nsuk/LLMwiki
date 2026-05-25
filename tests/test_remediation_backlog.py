@@ -2,18 +2,17 @@ from __future__ import annotations
 
 import datetime as dt
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 import pytest
-
 from ops.scripts.remediation_backlog import build_report, write_report
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
-from tests.minimal_vault_runtime import seed_minimal_vault
 
+from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.public
 
@@ -27,8 +26,8 @@ OVERRIDE_POLICY_PATH = REPO_ROOT / "ops" / "policies" / "remediation-backlog-sta
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 17, 13, 30, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 17, 13, 30, tzinfo=dt.UTC),
     )
 
 

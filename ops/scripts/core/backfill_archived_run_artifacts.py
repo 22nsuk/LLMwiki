@@ -5,9 +5,10 @@ import argparse
 import datetime as dt
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     import sys
@@ -18,31 +19,37 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         ENVELOPE_REQUIRED_FIELDS,
         build_canonical_report_envelope,
     )
-    from ops.scripts.artifact_io_runtime import read_json_object, write_schema_validated_json  # noqa: PLC0415
+    from ops.scripts.artifact_io_runtime import (  # noqa: PLC0415
+        read_json_object,
+        write_schema_validated_json,
+    )
     from ops.scripts.output_runtime import display_path  # noqa: PLC0415
     from ops.scripts.policy_runtime import load_policy, report_path  # noqa: PLC0415
     from ops.scripts.runtime_context import RuntimeContext  # noqa: PLC0415
     from ops.scripts.schema_constants_runtime import (  # noqa: PLC0415
-        CHANGED_FILES_MANIFEST_SCHEMA_PATH,
         BEHAVIOR_DELTA_SCHEMA_PATH,
+        CHANGED_FILES_MANIFEST_SCHEMA_PATH,
         MECHANISM_ASSESSMENT_SCHEMA_PATH,
         PLANNING_VALIDATION_SCHEMA_PATH,
-        PROPOSAL_SNAPSHOT_SCHEMA_PATH,
         PROMOTION_REPORT_SCHEMA_PATH,
+        PROPOSAL_SNAPSHOT_SCHEMA_PATH,
         RAW_INTAKE_ABSORPTION_MATRIX_SCHEMA_PATH,
         RAW_INTAKE_FINAL_TREE_VALIDATION_REPORT_SCHEMA_PATH,
         RAW_INTAKE_PROMOTION_PROFILE_BUNDLE_SCHEMA_PATH,
         RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH,
         RAW_MARKDOWN_NORMALIZATION_REPORT_SCHEMA_PATH,
         ROLLBACK_REHEARSAL_REPORT_SCHEMA_PATH,
-        RUN_TELEMETRY_SCHEMA_PATH,
-        RUN_LEDGER_SCHEMA_PATH,
         RUN_ARTIFACT_FINGERPRINT_SCHEMA_PATH,
+        RUN_LEDGER_SCHEMA_PATH,
+        RUN_TELEMETRY_SCHEMA_PATH,
         SHADOW_APPLY_REPORT_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_MANIFEST_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_VALIDATION_REPORT_SCHEMA_PATH,
     )
-    from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_with_schema  # noqa: PLC0415
+    from ops.scripts.schema_runtime import (  # noqa: PLC0415
+        load_schema_with_vault_override,
+        validate_with_schema,
+    )
 else:
     from .artifact_freshness_runtime import (
         EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY,
@@ -54,21 +61,21 @@ else:
     from .policy_runtime import load_policy, report_path
     from .runtime_context import RuntimeContext
     from .schema_constants_runtime import (
-        CHANGED_FILES_MANIFEST_SCHEMA_PATH,
         BEHAVIOR_DELTA_SCHEMA_PATH,
+        CHANGED_FILES_MANIFEST_SCHEMA_PATH,
         MECHANISM_ASSESSMENT_SCHEMA_PATH,
         PLANNING_VALIDATION_SCHEMA_PATH,
-        PROPOSAL_SNAPSHOT_SCHEMA_PATH,
         PROMOTION_REPORT_SCHEMA_PATH,
+        PROPOSAL_SNAPSHOT_SCHEMA_PATH,
         RAW_INTAKE_ABSORPTION_MATRIX_SCHEMA_PATH,
         RAW_INTAKE_FINAL_TREE_VALIDATION_REPORT_SCHEMA_PATH,
         RAW_INTAKE_PROMOTION_PROFILE_BUNDLE_SCHEMA_PATH,
         RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH,
         RAW_MARKDOWN_NORMALIZATION_REPORT_SCHEMA_PATH,
         ROLLBACK_REHEARSAL_REPORT_SCHEMA_PATH,
-        RUN_TELEMETRY_SCHEMA_PATH,
-        RUN_LEDGER_SCHEMA_PATH,
         RUN_ARTIFACT_FINGERPRINT_SCHEMA_PATH,
+        RUN_LEDGER_SCHEMA_PATH,
+        RUN_TELEMETRY_SCHEMA_PATH,
         SHADOW_APPLY_REPORT_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_MANIFEST_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_VALIDATION_REPORT_SCHEMA_PATH,
@@ -116,11 +123,11 @@ def _parse_timestamp(value: str, *, context: str) -> dt.datetime:
         raise ValueError(f"{context} has an invalid timestamp: {text!r}") from exc
     if parsed.tzinfo is None:
         raise ValueError(f"{context} must include timezone information: {text!r}")
-    return parsed.astimezone(dt.timezone.utc)
+    return parsed.astimezone(dt.UTC)
 
 
 def _isoformat_z(value: dt.datetime) -> str:
-    return value.astimezone(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return value.astimezone(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _normalized_timestamp(value: str, *, context: str) -> str:
@@ -129,7 +136,7 @@ def _normalized_timestamp(value: str, *, context: str) -> str:
 
 def _artifact_mtime_is_newer(path: Path, generated_at: str, *, context: str) -> bool:
     generated = _parse_timestamp(generated_at, context=context).replace(microsecond=0)
-    mtime = dt.datetime.fromtimestamp(path.stat().st_mtime, tz=dt.timezone.utc).replace(microsecond=0)
+    mtime = dt.datetime.fromtimestamp(path.stat().st_mtime, tz=dt.UTC).replace(microsecond=0)
     return mtime > generated
 
 

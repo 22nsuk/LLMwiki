@@ -17,7 +17,6 @@ from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 
-
 DEFAULT_OUT = "ops/reports/learning-confirmed-legacy-reconstruction.json"
 PRODUCER = "ops.scripts.learning_confirmed_legacy_reconstruction"
 SCHEMA_PATH = "ops/schemas/learning-confirmed-legacy-reconstruction.schema.json"
@@ -232,9 +231,7 @@ def _reconstruction_row(vault: Path, run_id: str, families: list[str]) -> dict[s
         status = "blocked"
     elif not reconstruction_needed:
         status = "not_needed"
-    elif digest_reconstruction_needed and not behavior_delta_sha256:
-        status = "blocked"
-    elif secondary_reconstruction_needed and (not parsed_strict or not parsed_axes):
+    elif digest_reconstruction_needed and not behavior_delta_sha256 or secondary_reconstruction_needed and (not parsed_strict or not parsed_axes):
         status = "blocked"
     else:
         status = "reconstructed"

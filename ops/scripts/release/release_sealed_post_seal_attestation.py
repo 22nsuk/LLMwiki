@@ -15,10 +15,12 @@ from ops.scripts.artifact_io_runtime import (
 from ops.scripts.output_runtime import display_path
 from ops.scripts.release.release_run_manifest import (
     DEFAULT_DISTRIBUTION_ZIP,
-    DEFAULT_OUT as DEFAULT_RUN_MANIFEST,
     _file_identity,
     _resolve,
     git_commit,
+)
+from ops.scripts.release.release_run_manifest import (
+    DEFAULT_OUT as DEFAULT_RUN_MANIFEST,
 )
 from ops.scripts.release.release_sealed_run_manifest import (
     DEFAULT_BATCH_MANIFEST,
@@ -29,7 +31,6 @@ from ops.scripts.release.release_sealed_run_manifest import (
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
-
 
 DEFAULT_OUT = "build/release/release-sealed-post-seal-attestation.json"
 SCHEMA_PATH = "ops/schemas/release-sealed-post-seal-attestation.schema.json"
@@ -88,7 +89,7 @@ def build_attestation(
     self_check: str = DEFAULT_SELF_CHECK,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
-    runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
     fingerprint = release_source_tree_fingerprint(vault)
     commit = git_commit(vault)

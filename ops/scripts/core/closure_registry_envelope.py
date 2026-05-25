@@ -18,7 +18,6 @@ from .output_runtime import display_path
 from .policy_runtime import load_policy
 from .runtime_context import RuntimeContext
 
-
 PRODUCER = "ops.scripts.closure_registry_envelope"
 DEFAULT_DEFECT_ESCAPE_CLOSURES = "ops/reports/defect-escape-closures.json"
 DEFAULT_REWORK_CLOSURES = "ops/reports/rework-closures.json"

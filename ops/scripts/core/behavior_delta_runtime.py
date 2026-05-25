@@ -9,7 +9,6 @@ from .artifact_io_runtime import write_schema_validated_json
 from .schema_constants_runtime import BEHAVIOR_DELTA_SCHEMA_PATH
 from .schema_runtime import load_schema
 
-
 _RISK_ORDER = {"none": 0, "low": 1, "medium": 2, "high": 3}
 _EXECUTION_SCRIPT_NAMES = {
     "auto_improve_loop.py",

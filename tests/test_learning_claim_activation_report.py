@@ -10,8 +10,8 @@ from typing import Any
 from ops.scripts.learning_claim_activation_report import build_report, write_report
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from tests.minimal_vault_runtime import seed_minimal_vault
 
+from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "learning-claim-activation-report.schema.json"
@@ -19,8 +19,8 @@ SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "learning-claim-activation-report.
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 15, 9, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 15, 9, 0, tzinfo=dt.UTC),
     )
 
 

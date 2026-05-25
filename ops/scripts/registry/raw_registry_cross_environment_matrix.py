@@ -44,6 +44,11 @@ else:
     )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy, report_path
+    from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.schema_constants_runtime import (
+        RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_SCHEMA_PATH,
+    )
+
     from .raw_registry_preflight import (
         ALIAS_POLICY_VERSION,
         EXTRACTION_TOOL,
@@ -54,8 +59,6 @@ else:
         environment_fingerprint,
         preflight,
     )
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_SCHEMA_PATH
 
 
 DEFAULT_OUT = "ops/reports/raw-registry-cross-environment-matrix.json"

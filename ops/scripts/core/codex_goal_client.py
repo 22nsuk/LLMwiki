@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import argparse
-from collections.abc import Mapping
-from copy import deepcopy
-from dataclasses import dataclass, field
 import datetime as dt
 import json
 import os
+from collections.abc import Mapping
+from copy import deepcopy
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol, cast
 
@@ -14,11 +14,14 @@ from .artifact_freshness_runtime import (
     build_canonical_report_envelope,
     embed_artifact_envelope_metadata,
 )
-from .artifact_io_runtime import load_optional_json_object, read_json_object, write_json_object
+from .artifact_io_runtime import (
+    load_optional_json_object,
+    read_json_object,
+    write_json_object,
+)
 from .output_runtime import display_path, resolve_repo_output_path
 from .policy_runtime import load_policy
 from .schema_runtime import load_schema_with_vault_override, validate_with_schema
-
 
 DEFAULT_CONTRACT_PATH = "ops/reports/codex-goal-contract.json"
 SCHEMA_PATH = "ops/schemas/codex-goal-contract.schema.json"
@@ -106,14 +109,14 @@ def _utc_now() -> str:
             parsed = None
         if parsed is not None:
             if parsed.tzinfo is None:
-                parsed = parsed.replace(tzinfo=dt.timezone.utc)
+                parsed = parsed.replace(tzinfo=dt.UTC)
             return (
-                parsed.astimezone(dt.timezone.utc)
+                parsed.astimezone(dt.UTC)
                 .replace(microsecond=0)
                 .isoformat()
                 .replace("+00:00", "Z")
             )
-    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _existing_created_at(vault: Path, contract_path: str | Path, contract_id: str) -> str:

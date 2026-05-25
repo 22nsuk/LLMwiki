@@ -7,7 +7,6 @@ import unittest
 from pathlib import Path
 
 import pytest
-
 from ops.scripts.source_tree_fingerprint_runtime import (
     producer_input_fingerprint,
     release_source_tree_change_sample,

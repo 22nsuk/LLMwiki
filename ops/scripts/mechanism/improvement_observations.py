@@ -1,7 +1,7 @@
 from __future__ import annotations
-from pathlib import Path
 
 import sys
+from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))

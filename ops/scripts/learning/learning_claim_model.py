@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-
 CLAIM_MODEL_VERSION = 2
 CLAIM_STAGES = [
     "regression_safe",

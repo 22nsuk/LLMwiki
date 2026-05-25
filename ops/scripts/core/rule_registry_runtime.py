@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
+
+from ops.scripts.promotion_gate_common_runtime import PromotionGatePolicyError
 
 from .promotion_decision_registry_runtime import (
     reduce_decision_proposals,
     validate_promotion_decision,
 )
-from ops.scripts.promotion_gate_common_runtime import PromotionGatePolicyError
-
 
 RuleDecision = str | None
 

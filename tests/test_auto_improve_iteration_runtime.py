@@ -6,11 +6,10 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 from unittest import mock
 
 import pytest
-
-from ops.scripts import auto_improve_iteration_persistence_runtime
 from ops.scripts.auto_improve_execute_runtime import (
     ExecuteEvaluateDependencies,
     ExecuteEvaluatePhaseResult,
@@ -37,8 +36,9 @@ from ops.scripts.mechanism_run_scaffold_templates_runtime import (
 from ops.scripts.promotion_decision_registry_runtime import reduce_decision_proposals
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema
-from tests.minimal_vault_runtime import seed_minimal_vault
 
+from ops.scripts import auto_improve_iteration_persistence_runtime
+from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.report_contract
 
@@ -62,7 +62,7 @@ def _expected_timeout_summary(
 
 
 def _context() -> RuntimeContext:
-    return RuntimeContext(display_timezone=dt.timezone.utc)
+    return RuntimeContext(display_timezone=dt.UTC)
 
 
 def _execute_dependencies() -> ExecuteEvaluateDependencies:
@@ -512,7 +512,7 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                 role="provenance-auditor",
                 status="fail",
             )
-            session = {
+            session: dict[str, Any] = {
                 "iterations": [],
                 "next_run_decisions": [],
                 "loop_state": {},
@@ -596,7 +596,7 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                 "{}",
                 encoding="utf-8",
             )
-            session = {"iterations": [], "next_run_decisions": [], "loop_state": {}}
+            session: dict[str, Any] = {"iterations": [], "next_run_decisions": [], "loop_state": {}}
             proposal = {
                 "proposal_id": "proposal-1",
                 "source_candidate_id": "candidate-1",
@@ -622,8 +622,8 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                 phase_durations={"experiment": 0.2},
             )
             context = RuntimeContext(
-                display_timezone=dt.timezone.utc,
-                clock=lambda: dt.datetime(2026, 5, 24, 1, 2, 3, tzinfo=dt.timezone.utc),
+                display_timezone=dt.UTC,
+                clock=lambda: dt.datetime(2026, 5, 24, 1, 2, 3, tzinfo=dt.UTC),
             )
 
             persist_iteration_phase(
@@ -694,7 +694,7 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                 "{}",
                 encoding="utf-8",
             )
-            session = {"iterations": [], "next_run_decisions": [], "loop_state": {}}
+            session: dict[str, Any] = {"iterations": [], "next_run_decisions": [], "loop_state": {}}
             proposal = {
                 "proposal_id": "proposal-1",
                 "source_candidate_id": "candidate-1",
@@ -796,7 +796,7 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            session = {
+            session: dict[str, Any] = {
                 "iterations": [],
                 "next_run_decisions": [],
                 "loop_state": {},
@@ -903,8 +903,8 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                         },
                     },
                     context=RuntimeContext(
-                        display_timezone=dt.timezone.utc,
-                        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+                        display_timezone=dt.UTC,
+                        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
                     ),
                 )
             )

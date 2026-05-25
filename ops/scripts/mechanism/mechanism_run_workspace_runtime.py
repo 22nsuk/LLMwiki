@@ -5,7 +5,10 @@ import shutil
 import time
 from pathlib import Path
 
-from ops.scripts.behavior_delta_runtime import build_behavior_delta_report, write_behavior_delta_report
+from ops.scripts.behavior_delta_runtime import (
+    build_behavior_delta_report,
+    write_behavior_delta_report,
+)
 from ops.scripts.command_runtime import run_with_timeout
 from ops.scripts.filesystem_runtime import (
     FilesystemTransactionError,
@@ -13,6 +16,12 @@ from ops.scripts.filesystem_runtime import (
     plan_manifest_apply_transaction,
     rehearse_manifest_apply_rollback,
 )
+from ops.scripts.observability_artifacts_runtime import write_run_artifact_fingerprint
+from ops.scripts.path_runtime import normalize_repo_path_text
+from ops.scripts.policy_runtime import report_path
+from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.schema_constants_runtime import CHANGED_FILES_MANIFEST_SCHEMA_PATH
+
 from .improvement_observations_runtime import IMPROVEMENT_OBSERVATIONS_FILENAME
 from .mechanism_run_common_runtime import (
     CommandStepResult,
@@ -43,13 +52,7 @@ from .mechanism_run_repo_health_step_runtime import (
     repo_health_step,
 )
 from .mechanism_run_scaffold_resolution_runtime import _command_argv
-from ops.scripts.observability_artifacts_runtime import write_run_artifact_fingerprint
 from .planning_gate_validate import validate_run_dir
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.path_runtime import normalize_repo_path_text
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import CHANGED_FILES_MANIFEST_SCHEMA_PATH
-
 
 CHANGED_FILES_MANIFEST_SCHEMA = CHANGED_FILES_MANIFEST_SCHEMA_PATH
 FULL_WORKSPACE_DIFF_MODEL = "full_workspace"

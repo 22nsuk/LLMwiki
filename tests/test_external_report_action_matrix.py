@@ -8,7 +8,6 @@ import unittest
 from pathlib import Path
 
 import pytest
-
 from ops.scripts.external_report_action_matrix import build_report, write_report
 from ops.scripts.external_report_lifecycle_runtime import (
     action_statuses,
@@ -17,6 +16,21 @@ from ops.scripts.external_report_lifecycle_runtime import (
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
+from ops.scripts.release.release_closeout_finality_attestation import (
+    BATCH_MANIFEST_PATH,
+    FIXED_POINT_REPORT_PATH,
+    SELF_CHECK_PATH,
+)
+from ops.scripts.release.release_closeout_finality_attestation import (
+    DEFAULT_OUT as FINALITY_ATTESTATION_PATH,
+)
+from ops.scripts.release.release_closeout_finality_attestation import (
+    build_report as build_finality_attestation_report,
+)
+from ops.scripts.release.release_closeout_finality_attestation import (
+    write_report as write_finality_attestation,
+)
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = pytest.mark.public
@@ -26,14 +40,18 @@ SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "external-report-action-matrix.sch
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 10, 8, 30, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 10, 8, 30, tzinfo=dt.UTC),
     )
 
 
 def _canonical_json_digest(payload: dict) -> str:
     data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 class ExternalReportActionMatrixTests(unittest.TestCase):
@@ -142,15 +160,50 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
                 },
             },
         )
+        generated_path = "ops/reports/generated-artifact-index.json"
         self._write_json(
-            "ops/reports/release-closeout-fixed-point.json",
-            {"status": "pass", "converged": True},
+            generated_path,
+            {"artifact_kind": "generated_artifact_index", "status": "pass"},
         )
         self._write_json(
-            "ops/reports/release-closeout-finality-attestation.json",
-            {"fixed_point_report": {"status": "pass"}},
+            BATCH_MANIFEST_PATH,
+            {
+                "status": "pass",
+                "release_authority_status": "clean_pass",
+                "semantic_release_status": "clean_pass",
+                "sealed_release_status": "sealed_clean_pass",
+                "finality": {
+                    "finality_required": True,
+                    "finality_attestation_path": FINALITY_ATTESTATION_PATH,
+                    "binding_authority": "release-closeout-finality-attestation",
+                },
+            },
         )
-        self._write_json("ops/reports/release-closeout-batch-manifest.json", {"status": "fail"})
+        batch_digest = _sha256_file(self.vault / BATCH_MANIFEST_PATH)
+        self._write_json(
+            SELF_CHECK_PATH,
+            {
+                "status": {"result": "pass"},
+                "closeout_inputs": {"batch_manifest_fingerprint": batch_digest},
+            },
+        )
+        digest_map = {
+            generated_path: _sha256_file(self.vault / generated_path),
+            BATCH_MANIFEST_PATH: batch_digest,
+            SELF_CHECK_PATH: _sha256_file(self.vault / SELF_CHECK_PATH),
+        }
+        self._write_json(
+            FIXED_POINT_REPORT_PATH,
+            {
+                "status": "pass",
+                "converged": True,
+                "converged_iteration": 1,
+                "tracked_artifacts": [{"path": path} for path in sorted(digest_map)],
+                "final_digest_map": digest_map,
+            },
+        )
+        finality_report = build_finality_attestation_report(self.vault, context=fixed_context())
+        write_finality_attestation(self.vault, finality_report)
 
     def test_generated_artifact_policy_status_is_not_self_blocked_by_archive_candidates(self) -> None:
         for rel_path, text in {
@@ -275,6 +328,105 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertEqual(self_evidence["producer"], "ops.scripts.external_report_action_matrix")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_source_revision_unknown_is_explicit_partial_until_canonical_reports_are_refreshed(self) -> None:
+        for rel_path in (
+            "ops/scripts/core/source_revision_runtime.py",
+            "ops/scripts/core/artifact_freshness_runtime.py",
+            "ops/scripts/core/bootstrap_preflight.py",
+            "tests/test_source_revision_runtime.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("def test_placeholder(): pass\n", encoding="utf-8")
+        self._write_json(
+            "ops/reports/artifact-freshness-report.json",
+            {
+                "producer": "ops.scripts.artifact_freshness_runtime",
+                "status": "fail",
+            },
+        )
+        self._write_json(
+            "ops/reports/legacy-canonical-report.json",
+            {"source_revision": "unknown"},
+        )
+        (self.external / "source-revision.md").write_text(
+            "# Source Revision Review\n\n"
+            "P0: remove `source_revision: unknown` from canonical reports and use "
+            "`source_package_without_git` only when git metadata is absent.\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            "external-reports/report-reference-manifest.json",
+            {
+                "references": [{"path": "external-reports/source-revision.md"}],
+                "summary": {"active_reference_set_status": "current"},
+            },
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        action = actions["source_revision_unknown_canonical_reports"]
+        self.assertEqual(action["current_status"], "partially_automated")
+        self.assertIn("external-reports/source-revision.md", action["source_report_paths"])
+
+        self._write_json(
+            "ops/reports/legacy-canonical-report.json",
+            {"source_revision": "source_package_without_git"},
+        )
+
+        refreshed_report = build_report(self.vault, context=fixed_context())
+        refreshed_actions = {item["action_id"]: item for item in refreshed_report["action_items"]}
+        self.assertEqual(
+            refreshed_actions["source_revision_unknown_canonical_reports"]["current_status"],
+            "implemented",
+        )
+
+    def test_source_revision_unknown_release_authority_reports_require_release_verification(self) -> None:
+        for rel_path in (
+            "ops/scripts/core/source_revision_runtime.py",
+            "ops/scripts/core/artifact_freshness_runtime.py",
+            "ops/scripts/core/bootstrap_preflight.py",
+            "tests/test_source_revision_runtime.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("def test_placeholder(): pass\n", encoding="utf-8")
+        self._write_json(
+            "ops/reports/artifact-freshness-report.json",
+            {
+                "producer": "ops.scripts.artifact_freshness_runtime",
+                "status": "pass",
+            },
+        )
+        for rel_path in (
+            "ops/reports/learning-readiness-signoff.json",
+            "ops/reports/release-closeout-finality-attestation.json",
+            "ops/reports/source-package-clean-extract.json",
+        ):
+            self._write_json(rel_path, {"source_revision": "unknown"})
+        (self.external / "source-revision.md").write_text(
+            "# Source Revision Review\n\n"
+            "P0: remove `source_revision: unknown` from canonical reports without "
+            "rewriting release authority evidence by hand.\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            "external-reports/report-reference-manifest.json",
+            {
+                "references": [{"path": "external-reports/source-revision.md"}],
+                "summary": {"active_reference_set_status": "current"},
+            },
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        self.assertEqual(
+            actions["source_revision_unknown_canonical_reports"]["current_status"],
+            "requires_release_run_verification",
+        )
+
     def test_reassessment_actions_are_classified_from_current_source_contracts(self) -> None:
         for rel_path, text in {
             "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py": (
@@ -283,9 +435,6 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
                 ")\n"
             ),
             "tools/ruff_strict_preview.py": "def main(): pass\n",
-            "ops/ruff-strict-preview-allowlist.txt": (
-                "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py\n"
-            ),
             "ops/scripts/release/release_source_ready_commit.py": (
                 "LOCAL_ONLY_PRIVATE_DEINDEX_CATEGORY = 'local_only_private_deindex'\n"
                 "local_only_deindex_paths = []\n"
@@ -331,7 +480,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "# Reassessment\n\n"
             "Ruff strict I001 import order, release_source_ready_commit deindex, "
             "uv lock --check canonical dependency policy, make help operator entrypoint index, "
-            "strict-preview allowlist all-target ops/scripts tests tools audit.\n",
+            "strict-preview all-target ops/scripts tests tools audit after legacy allowlist removal.\n",
             encoding="utf-8",
         )
         self._write_json(
@@ -541,6 +690,31 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertEqual(actions["release_writer_dependency_single_source"]["current_status"], "implemented")
         self.assertEqual(report["summary"]["requires_release_run_verification_count"], 0)
 
+    def test_release_verified_actions_require_current_finality_digest_readback(self) -> None:
+        self._write_release_verification_reports()
+        self._write_json(
+            "ops/reports/generated-artifact-index.json",
+            {"artifact_kind": "generated_artifact_index", "status": "changed_after_finality"},
+        )
+        (self.external / "release.md").write_text(
+            "# Release Review\n\nsource package, evidence bundle, full-suite, promotion_blockers.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        for action_id in {
+            "source_package_distribution_binding",
+            "release_evidence_bundle_and_attestation",
+            "full_suite_evidence_currentness",
+            "promotion_truth_ladder",
+        }:
+            self.assertEqual(
+                actions[action_id]["current_status"],
+                "requires_release_run_verification",
+            )
+
     def test_negative_lessons_and_remediation_backlog_are_implementation_artifacts(self) -> None:
         for rel_path in (
             "ops/schemas/self-improvement-negative-lessons.schema.json",
@@ -578,7 +752,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertEqual(actions["negative_learning_ledger"]["current_status"], "implemented")
         self.assertEqual(actions["remediation_backlog"]["current_status"], "implemented")
 
-    def test_command_heartbeat_requires_source_package_heartbeat_evidence(self) -> None:
+    def test_command_heartbeat_requires_source_package_heartbeat_capability(self) -> None:
         for rel_path in (
             "ops/scripts/core/command_runtime.py",
             "ops/schemas/executor-report.schema.json",
@@ -598,7 +772,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
                     "status": "pass",
                     "command_count": 4,
                     "heartbeat_enabled_command_count": 4,
-                    "heartbeat_event_count": 2,
+                    "heartbeat_event_count": 0,
                 },
             },
         )
@@ -613,6 +787,44 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertEqual(
             actions["command_heartbeat_observability"]["current_status"],
             "implemented",
+        )
+
+    def test_command_heartbeat_blocks_when_source_package_commands_bypass_heartbeat_runtime(self) -> None:
+        for rel_path in (
+            "ops/scripts/core/command_runtime.py",
+            "ops/schemas/executor-report.schema.json",
+            "ops/scripts/core/source_package_clean_extract.py",
+            "ops/schemas/source-package-clean-extract.schema.json",
+            "ops/reports/source-package-clean-extract.json",
+            "tests/test_command_runtime_heartbeat.py",
+            "tests/test_source_package_clean_extract.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+        self._write_json(
+            "ops/reports/source-package-clean-extract.json",
+            {
+                "status": "pass",
+                "heartbeat_observability": {
+                    "status": "attention",
+                    "command_count": 4,
+                    "heartbeat_enabled_command_count": 3,
+                    "heartbeat_event_count": 0,
+                },
+            },
+        )
+        (self.external / "heartbeat.md").write_text(
+            "# Heartbeat Review\n\nquiet_seconds and heartbeat observability.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        self.assertEqual(
+            actions["command_heartbeat_observability"]["current_status"],
+            "requires_release_run_verification",
         )
 
     def test_sealed_preflight_canonicalization_requires_canonical_report(self) -> None:
@@ -1435,6 +1647,42 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             self.assertEqual(actions[action_id]["current_status"], "implemented")
         self.assertEqual(actions["release_writer_dependency_single_source"]["current_status"], "implemented")
 
+    def test_release_verified_actions_allow_non_authoritative_learning_dashboard_fail(self) -> None:
+        self._write_release_verification_reports()
+        self._write_json(
+            "ops/reports/release-evidence-dashboard.json",
+            {
+                "status": "fail",
+                "summary": {
+                    "live_rerun_fail_count": 1,
+                    "live_rerun_not_run_count": 0,
+                    "required_input_fail_count": 0,
+                },
+                "gates": [
+                    {
+                        "gate_id": "learning_delta_scoreboard_guard",
+                        "authoritative_for_release": False,
+                        "live_rerun_state": {"status": "fail"},
+                    }
+                ],
+            },
+        )
+        (self.external / "release.md").write_text(
+            "# Release Review\n\nsource package, evidence bundle, full-suite, promotion_blockers.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        for action_id in {
+            "source_package_distribution_binding",
+            "release_evidence_bundle_and_attestation",
+            "full_suite_evidence_currentness",
+            "promotion_truth_ladder",
+        }:
+            self.assertEqual(actions[action_id]["current_status"], "implemented")
+
     def test_release_verified_actions_block_authoritative_dashboard_not_run(self) -> None:
         self._write_release_verification_reports()
         self._write_json(
@@ -1451,6 +1699,45 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
                         "gate_id": "authoritative_gate",
                         "authoritative_for_release": True,
                         "live_rerun_state": {"status": "not_run"},
+                    }
+                ],
+            },
+        )
+        (self.external / "release.md").write_text(
+            "# Release Review\n\nsource package, evidence bundle, full-suite, promotion_blockers.\n",
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        for action_id in {
+            "source_package_distribution_binding",
+            "release_evidence_bundle_and_attestation",
+            "full_suite_evidence_currentness",
+            "promotion_truth_ladder",
+        }:
+            self.assertEqual(
+                actions[action_id]["current_status"],
+                "requires_release_run_verification",
+            )
+
+    def test_release_verified_actions_block_authoritative_dashboard_fail(self) -> None:
+        self._write_release_verification_reports()
+        self._write_json(
+            "ops/reports/release-evidence-dashboard.json",
+            {
+                "status": "fail",
+                "summary": {
+                    "live_rerun_fail_count": 1,
+                    "live_rerun_not_run_count": 0,
+                    "required_input_fail_count": 0,
+                },
+                "gates": [
+                    {
+                        "gate_id": "authoritative_gate",
+                        "authoritative_for_release": True,
+                        "live_rerun_state": {"status": "fail"},
                     }
                 ],
             },

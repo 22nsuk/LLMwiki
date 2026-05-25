@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import argparse
-from collections.abc import Mapping
-from dataclasses import dataclass
 import hashlib
 import json
+from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -21,19 +21,18 @@ from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
 
+from .goal_runtime_certificate import (
+    DEFAULT_RUNTIME_MODE,
+    build_runtime_certificate,
+    runtime_certificate_blockers,
+)
 from .goal_runtime_maintenance import (
     PERIODIC_EVIDENCE_CHECKPOINTS,
     build_goal_health,
     build_periodic_evidence,
     health_blockers,
 )
-from .goal_runtime_certificate import (
-    DEFAULT_RUNTIME_MODE,
-    build_runtime_certificate,
-    runtime_certificate_blockers,
-)
 from .goal_runtime_resume import mapping_field, resume_metadata_from_report
-
 
 DEFAULT_STATUS_PATH = "ops/reports/goal-run-status.json"
 DEFAULT_RUN_ROOT_TEMPLATE = "runs/goal-{run_id}"

@@ -4,29 +4,35 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.artifact_freshness_runtime import (
+    build_canonical_report_envelope,
+    canonical_report_loading_issue,
+)
 from ops.scripts.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object,
     read_json_object,
     write_schema_backed_report,
 )
-from ops.scripts.artifact_freshness_runtime import (
-    build_canonical_report_envelope,
-    canonical_report_loading_issue,
-)
-from ops.scripts.learning_readiness_vocabulary import EXECUTION_NO_RUNNABLE_PROPOSAL_BLOCKER_ID
 from ops.scripts.learning_readiness_signoff_state import (
     SIGNOFF_REPORT_REL_PATH,
-    SUPPORTED_BLOCKER_ID as SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID,
     learning_readiness_signoff_summary,
+)
+from ops.scripts.learning_readiness_signoff_state import (
+    SUPPORTED_BLOCKER_ID as SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID,
+)
+from ops.scripts.learning_readiness_vocabulary import (
+    EXECUTION_NO_RUNNABLE_PROPOSAL_BLOCKER_ID,
 )
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import AUTO_IMPROVE_READINESS_REPORT_SCHEMA_PATH
+from ops.scripts.schema_constants_runtime import (
+    AUTO_IMPROVE_READINESS_REPORT_SCHEMA_PATH,
+)
 
 from .auto_improve_readiness_constants_runtime import (
-    AUTO_IMPROVE_GOAL_RUN_COMMAND,
     ARTIFACT_FRESHNESS_REPORT_REL_PATH,
+    AUTO_IMPROVE_GOAL_RUN_COMMAND,
     FALLBACK_PRIMARY_TARGETS,
     FALLBACK_SUPPORTING_TARGETS,
     FALLBACK_TEST_FILES,
@@ -40,7 +46,6 @@ from .auto_improve_readiness_constants_runtime import (
     READINESS_SOURCE_PATHS,
     READINESS_TARGET,
     REFRESH_GENERATED_TARGET,
-    REMEDIATION_BACKLOG_REPORT_REL_PATH,
     RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATH,
     RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATHS,
     RELEASE_CLOSEOUT_BATCH_MANIFEST_REPORT_REL_PATH,
@@ -48,14 +53,15 @@ from .auto_improve_readiness_constants_runtime import (
     RELEASE_CLOSEOUT_POST_CHECK_FINALIZER_REPORT_REL_PATH,
     RELEASE_CLOSEOUT_SUMMARY_REPORT_REL_PATH,
     RELEASE_EVIDENCE_COHORT_REPORT_REL_PATH,
+    REMEDIATION_BACKLOG_REPORT_REL_PATH,
     SELECTED_CONTRACT_SUMMARY_REPORT_REL_PATH,
     SOURCE_PACKAGE_CLEAN_EXTRACT_REPORT_REL_PATH,
 )
 from .auto_improve_readiness_learning_runtime import (
     LearningReadinessAssessment,
     _build_loop_health_summary,
-    _learning_readiness_assessment,
     _learning_claim_blockers,
+    _learning_readiness_assessment,
 )
 from .auto_improve_readiness_queue_runtime import (
     _blocked_proposal_count,
@@ -82,7 +88,6 @@ from .auto_improve_readiness_worktree_guard_runtime import (
     _goal_worktree_guard_promotion_blockers,
     _goal_worktree_guard_summary,
 )
-
 
 READINESS_REPORT_SCHEMA_PATH = AUTO_IMPROVE_READINESS_REPORT_SCHEMA_PATH
 

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from contextlib import redirect_stderr
 import datetime as dt
 import io
 import json
@@ -8,10 +7,10 @@ import os
 import tempfile
 import unittest
 import zipfile
+from contextlib import redirect_stderr
 from pathlib import Path
 
 import pytest
-
 from ops.scripts.artifact_freshness_runtime import (
     ArtifactFreshnessContext,
     build_canonical_report_envelope,
@@ -21,6 +20,8 @@ from ops.scripts.artifact_freshness_runtime import (
 from ops.scripts.command_runtime import TimedProcessResult
 from ops.scripts.generated_artifact_index import (
     build_report as build_generated_artifact_index,
+)
+from ops.scripts.generated_artifact_index import (
     write_report as write_generated_artifact_index,
 )
 from ops.scripts.runtime_context import RuntimeContext
@@ -28,8 +29,11 @@ from ops.scripts.schema_constants_runtime import CYCLONEDX_16_SCHEMA_URI
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.test_execution_summary import (
     build_report as build_test_execution_summary,
+)
+from ops.scripts.test_execution_summary import (
     write_report as write_test_execution_summary,
 )
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
@@ -48,8 +52,8 @@ ROOT_EPHEMERAL_PATTERNS = [
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 24, 12, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 24, 12, 0, tzinfo=dt.UTC),
     )
 
 
@@ -219,7 +223,7 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
                 context=fixed_context(),
             )
             write_test_execution_summary(vault, summary, "ops/reports/test-execution-summary.json")
-            newer_timestamp = dt.datetime(2026, 4, 24, 12, 0, 1, tzinfo=dt.timezone.utc).timestamp()
+            newer_timestamp = dt.datetime(2026, 4, 24, 12, 0, 1, tzinfo=dt.UTC).timestamp()
             os.utime(test_file, (newer_timestamp, newer_timestamp))
 
             report = build_report(vault, context=fixed_context())
@@ -285,7 +289,7 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             seed_minimal_vault(vault)
             generated_index = build_generated_artifact_index(vault, context=fixed_context())
             generated_index_path = write_generated_artifact_index(vault, generated_index)
-            newer_timestamp = dt.datetime(2026, 4, 24, 12, 0, 1, tzinfo=dt.timezone.utc).timestamp()
+            newer_timestamp = dt.datetime(2026, 4, 24, 12, 0, 1, tzinfo=dt.UTC).timestamp()
             os.utime(generated_index_path, (newer_timestamp, newer_timestamp))
 
             report = build_report(vault, context=fixed_context())
@@ -314,7 +318,7 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             vault.mkdir()
             seed_minimal_vault(vault)
             artifact_path = self._write_current_artifact(vault)
-            stale_timestamp = dt.datetime(2026, 4, 24, 12, 0, 1, tzinfo=dt.timezone.utc).timestamp()
+            stale_timestamp = dt.datetime(2026, 4, 24, 12, 0, 1, tzinfo=dt.UTC).timestamp()
             os.utime(artifact_path, (stale_timestamp, stale_timestamp))
             archive_path = vault / "tmp" / "release.zip"
             archive_path.parent.mkdir(parents=True, exist_ok=True)
@@ -427,7 +431,7 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             vault.mkdir()
             seed_minimal_vault(vault)
             artifact_path = self._write_current_artifact(vault)
-            stale_timestamp = dt.datetime(2026, 4, 24, 12, 0, 1, tzinfo=dt.timezone.utc).timestamp()
+            stale_timestamp = dt.datetime(2026, 4, 24, 12, 0, 1, tzinfo=dt.UTC).timestamp()
             os.utime(artifact_path, (stale_timestamp, stale_timestamp))
 
             filesystem_report = build_report(vault, context=fixed_context())

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CLI Surface Inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "status",
+    "summary",
+    "modules",
+    "unresolved_modules"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "const": "ops/schemas/cli-surface-inventory.schema.json" },
+    "artifact_kind": { "type": "string", "const": "cli_surface_inventory" },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": { "type": "string", "const": "ops.scripts.cli_surface_inventory" },
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module_count",
+        "pyproject_script_count",
+        "makefile_module_invocation_count",
+        "direct_fallback_module_count",
+        "unresolved_module_count"
+      ],
+      "properties": {
+        "module_count": { "type": "integer", "minimum": 0 },
+        "pyproject_script_count": { "type": "integer", "minimum": 0 },
+        "makefile_module_invocation_count": { "type": "integer", "minimum": 0 },
+        "direct_fallback_module_count": { "type": "integer", "minimum": 0 },
+        "unresolved_module_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["module", "path", "aliases", "sources"],
+        "properties": {
+          "module": { "type": "string", "minLength": 1 },
+          "path": { "type": "string" },
+          "aliases": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "sources": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "unresolved_modules": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

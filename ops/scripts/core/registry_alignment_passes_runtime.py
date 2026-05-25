@@ -6,7 +6,11 @@ from .frontmatter_runtime import validate_source_frontmatter_against_registry
 from .policy_runtime import report_path
 from .registry_diagnostics_runtime import (
     RegistryDiagnosticEmitter as RegistryLintEmitter,
+)
+from .registry_diagnostics_runtime import (
     RegistryInventoryContext,
+)
+from .registry_diagnostics_runtime import (
     RegistryPaths as RegistryLintPaths,
 )
 

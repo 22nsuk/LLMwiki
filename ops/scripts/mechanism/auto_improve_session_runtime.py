@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import suppress
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -13,6 +14,7 @@ from ops.scripts.promotion_decision_registry_runtime import (
     decision_outcome,
     decision_record_from_report,
 )
+
 from .auto_improve_next_run_decision_runtime import normalize_next_run_decisions
 
 TERMINAL_NON_BLOCKING_OUTCOMES = frozenset({"promoted"})
@@ -637,10 +639,8 @@ def _operator_effort_proxy(attempts: list[AttemptRecord]) -> OutcomeOperatorEffo
             except (TypeError, ValueError):
                 continue
             phase_totals[str(phase)] = round(phase_totals.get(str(phase), 0.0) + duration, 3)
-        try:
+        with suppress(TypeError, ValueError):
             executor_report_count += int(attempt.get("executor_report_count", 0))
-        except (TypeError, ValueError):
-            pass
         for role in list_strings(attempt.get("executor_roles")):
             if role == "reviewer":
                 reviewer_dispatch_count += 1

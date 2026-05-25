@@ -88,14 +88,16 @@ class FilesystemRuntimeTests(unittest.TestCase):
                     raise OSError("replace failed")
                 real_replace(src, dst)
 
-            with mock.patch("ops.scripts.filesystem_runtime.os.replace", side_effect=flaky_replace):
-                with self.assertRaises(FilesystemTransactionError):
-                    atomic_multi_write(
-                        [
-                            AtomicTextUpdate(path=alpha, text="updated-alpha\n"),
-                            AtomicTextUpdate(path=beta, text="new-beta\n"),
-                        ]
-                    )
+            with (
+                mock.patch("ops.scripts.filesystem_runtime.os.replace", side_effect=flaky_replace),
+                self.assertRaises(FilesystemTransactionError),
+            ):
+                atomic_multi_write(
+                    [
+                        AtomicTextUpdate(path=alpha, text="updated-alpha\n"),
+                        AtomicTextUpdate(path=beta, text="new-beta\n"),
+                    ]
+                )
 
             self.assertEqual(alpha.read_text(encoding="utf-8"), "original-alpha\n")
             self.assertFalse(beta.exists())
@@ -139,14 +141,16 @@ class FilesystemRuntimeTests(unittest.TestCase):
                     raise OSError("workspace apply failed")
                 real_replace(src, dst)
 
-            with mock.patch("ops.scripts.filesystem_runtime.os.replace", side_effect=flaky_replace):
-                with self.assertRaises(FilesystemTransactionError):
-                    apply_manifest_transaction(
-                        live_root,
-                        workspace_root,
-                        manifest,
-                        allowed_apply_roots=["ops/"],
-                    )
+            with (
+                mock.patch("ops.scripts.filesystem_runtime.os.replace", side_effect=flaky_replace),
+                self.assertRaises(FilesystemTransactionError),
+            ):
+                apply_manifest_transaction(
+                    live_root,
+                    workspace_root,
+                    manifest,
+                    allowed_apply_roots=["ops/"],
+                )
 
             self.assertEqual(
                 (live_root / "ops" / "scripts" / "example.py").read_text(encoding="utf-8"),
@@ -200,16 +204,21 @@ class FilesystemRuntimeTests(unittest.TestCase):
                     raise OSError("live apply failed")
                 real_replace(src, dst)
 
-            with mock.patch("ops.scripts.filesystem_runtime.os.replace", side_effect=fail_first_live_apply):
-                with self.assertRaisesRegex(FilesystemTransactionError, "live apply failed"):
-                    apply_manifest_transaction(
-                        live_root,
-                        workspace_root,
-                        manifest,
-                        allowed_apply_roots=["ops/"],
-                        shadow_report_path=shadow_report_path,
-                        shadow_report_generated_at="2026-04-15T03:45:00Z",
-                    )
+            with (
+                mock.patch(
+                    "ops.scripts.filesystem_runtime.os.replace",
+                    side_effect=fail_first_live_apply,
+                ),
+                self.assertRaisesRegex(FilesystemTransactionError, "live apply failed"),
+            ):
+                apply_manifest_transaction(
+                    live_root,
+                    workspace_root,
+                    manifest,
+                    allowed_apply_roots=["ops/"],
+                    shadow_report_path=shadow_report_path,
+                    shadow_report_generated_at="2026-04-15T03:45:00Z",
+                )
 
             shadow_report = json.loads(shadow_report_path.read_text(encoding="utf-8"))
             self.assertEqual(shadow_report["mode"], "shadow")

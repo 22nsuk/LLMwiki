@@ -4,10 +4,10 @@ import os
 import signal
 import subprocess
 import time
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Mapping, Protocol, Sequence, cast
-
+from typing import Protocol, cast
 
 SignalValue = int | signal.Signals
 TIMEOUT_GRACE_SECONDS = 2.0

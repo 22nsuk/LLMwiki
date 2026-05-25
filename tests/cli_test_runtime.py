@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import io
 import os
+from collections.abc import Callable
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 
 @dataclass

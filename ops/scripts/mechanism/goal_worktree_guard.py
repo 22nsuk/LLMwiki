@@ -1,20 +1,22 @@
 from __future__ import annotations
 
 import argparse
-from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
 import hashlib
 import json
-from pathlib import Path
 import subprocess
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+from ops.scripts.artifact_io_runtime import (
+    SchemaBackedReportWriteRequest,
+    write_schema_backed_report,
+)
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
-
 
 DEFAULT_OUT = "ops/reports/goal-worktree-guard.json"
 PRODUCER = "ops.scripts.goal_worktree_guard"
@@ -111,8 +113,7 @@ def _subprocess_git_runner(cwd: Path) -> GitRunner:
                 cwd=cwd,
                 check=False,
                 text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
             )
         except FileNotFoundError:
             return GitCommandResult(returncode=127, stdout="", stderr="git executable not found")
@@ -160,12 +161,9 @@ def _normalize_repo_path(value: str) -> str:
 def _porcelain_line_path(line: str) -> str:
     if len(line) < 3:
         return ""
-    if line[1:2] == " " and line[2:3] != " ":
-        # _subprocess_git_runner strips stdout, so an unstaged-only porcelain
-        # line like " M path" can arrive as "M path".
-        path = line[2:]
-    else:
-        path = line[3:]
+    # _subprocess_git_runner strips stdout, so an unstaged-only porcelain
+    # line like " M path" can arrive as "M path".
+    path = line[2:] if line[1:2] == " " and line[2:3] != " " else line[3:]
     if " -> " in path:
         path = path.rsplit(" -> ", 1)[1]
     return _normalize_repo_path(path)

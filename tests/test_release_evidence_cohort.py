@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.release_evidence_cohort import (
@@ -27,7 +26,10 @@ from ops.scripts.release_evidence_cohort import (
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_change_sample
+from ops.scripts.source_tree_fingerprint_runtime import (
+    release_source_tree_change_sample,
+)
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
@@ -51,8 +53,8 @@ SCHEMA_BY_KIND = {
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 29, 9, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 29, 9, 0, tzinfo=dt.UTC),
     )
 
 

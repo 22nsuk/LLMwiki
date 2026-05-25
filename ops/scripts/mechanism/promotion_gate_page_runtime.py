@@ -1,19 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
-from .promotion_gate_common_runtime import (
-    PROMOTION_REPORT_SCHEMA,
-    PromotionGatePolicyError,
-    build_history_status,
-    decision_to_next_action,
-    eval_input_summary,
-    extract_policy_identity,
-    page_record_map,
-    page_target_matches,
-)
 from ops.scripts.policy_runtime import report_path
 from ops.scripts.rule_registry_runtime import (
     RuleMetadata,
@@ -27,6 +17,17 @@ from ops.scripts.rule_registry_runtime import (
 from ops.scripts.wiki_eval import evaluate as evaluate_wiki
 from ops.scripts.wiki_lint import lint as lint_wiki
 from ops.scripts.wiki_stage2_eval import evaluate as evaluate_stage2
+
+from .promotion_gate_common_runtime import (
+    PROMOTION_REPORT_SCHEMA,
+    PromotionGatePolicyError,
+    build_history_status,
+    decision_to_next_action,
+    eval_input_summary,
+    extract_policy_identity,
+    page_record_map,
+    page_target_matches,
+)
 
 
 def _page_signoff_decision(

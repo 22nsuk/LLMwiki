@@ -7,9 +7,9 @@ import unittest
 from pathlib import Path
 
 import pytest
-
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.wiki_lint import lint
+
 from tests.minimal_vault_runtime import seed_minimal_vault, set_policy_value
 
 pytestmark = pytest.mark.slow
@@ -17,8 +17,8 @@ pytestmark = pytest.mark.slow
 
 def _fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
     )
 
 

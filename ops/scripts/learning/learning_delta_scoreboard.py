@@ -12,6 +12,10 @@ from ops.scripts.artifact_io_runtime import (
     load_optional_json_object,
     write_schema_backed_report,
 )
+from ops.scripts.output_runtime import display_path
+from ops.scripts.policy_runtime import load_policy, report_path
+from ops.scripts.runtime_context import RuntimeContext
+
 from .learning_claim_model import (
     ImprovementClaimInputs,
     improvement_claim_model,
@@ -37,10 +41,6 @@ from .learning_delta_scoreboard_unlock_runtime import (
     _learning_claim_unlock_review,
 )
 from .learning_readiness_vocabulary import learning_release_blocker_ids_from_report
-from ops.scripts.output_runtime import display_path
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.runtime_context import RuntimeContext
-
 
 PLACEHOLDER_RE = re.compile(r"\{(?:[A-Za-z_][A-Za-z0-9_]*\.get\([^{}\n]*\)|(?:ref|zip)_[^{}\n]*)\}")
 

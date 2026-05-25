@@ -22,25 +22,32 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         lifecycle_decision,
         report_lifecycle_profiles,
     )
-    from ops.scripts.improvement_observations_runtime import improvement_observation_paths
+    from ops.scripts.improvement_observations_runtime import (
+        improvement_observation_paths,
+    )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import GENERATED_ARTIFACT_INDEX_SCHEMA_PATH
-else:
-    from .artifact_freshness_runtime import build_canonical_report_envelope
-    from .artifact_io_runtime import (
-        SchemaBackedReportWriteRequest,
-        load_optional_json_object_with_diagnostics,
-        write_schema_backed_report,
+    from ops.scripts.schema_constants_runtime import (
+        GENERATED_ARTIFACT_INDEX_SCHEMA_PATH,
     )
+else:
     from ops.scripts.external_report_lifecycle_runtime import (
         action_statuses,
         content_lifecycle_inventory,
         lifecycle_decision,
         report_lifecycle_profiles,
     )
-    from ops.scripts.improvement_observations_runtime import improvement_observation_paths
+    from ops.scripts.improvement_observations_runtime import (
+        improvement_observation_paths,
+    )
+
+    from .artifact_freshness_runtime import build_canonical_report_envelope
+    from .artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        load_optional_json_object_with_diagnostics,
+        write_schema_backed_report,
+    )
     from .output_runtime import display_path
     from .policy_runtime import load_policy, report_path
     from .runtime_context import RuntimeContext

@@ -1,0 +1,45 @@
+{
+  "$schema": "ops/schemas/doc-graph-integrity.schema.json",
+  "allowed_orphans": [
+    {
+      "path": ".github/pull_request_template.md",
+      "retained_reason": "GitHub convention entrypoint; it is consumed by the hosting platform rather than markdown links."
+    },
+    {
+      "path": "CHANGELOG.md",
+      "retained_reason": "Release chronology root document retained for public package history."
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "retained_reason": "Contributor contract root document retained for public repository conventions."
+    },
+    {
+      "path": "ops/evals/wiki-quality-evals.md",
+      "retained_reason": "Evaluation spec consumed by ops evaluation workflows."
+    },
+    {
+      "path": "ops/evals/wiki-stage2-evals.md",
+      "retained_reason": "Stage-2 evaluation spec consumed by ops evaluation workflows."
+    },
+    {
+      "path": "ops/templates/README.md",
+      "retained_reason": "Template source entrypoint retained for operator template discovery."
+    },
+    {
+      "path": "ops/templates/mechanism-run/plan.md",
+      "retained_reason": "Mechanism-run template source retained for mechanism scaffolding."
+    },
+    {
+      "path": "ops/templates/mechanism-run/open-questions.md",
+      "retained_reason": "Mechanism-run template source retained for mechanism scaffolding."
+    },
+    {
+      "path": "ops/templates/plan.md",
+      "retained_reason": "Top-level run template source retained for scaffolding."
+    },
+    {
+      "path": "ops/templates/open-questions.md",
+      "retained_reason": "Top-level run template source retained for scaffolding."
+    }
+  ]
+}

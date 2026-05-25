@@ -24,7 +24,7 @@
     "full_scope",
     "default_mypy",
     "strict_preview",
-    "migration"
+    "target_contract"
   ],
   "properties": {
     "$schema": { "type": "string", "const": "ops/schemas/strict-type-inventory.schema.json" },
@@ -72,7 +72,6 @@
       "required": [
         "targets",
         "target_mode",
-        "uses_legacy_target_list",
         "audit_path",
         "audit_status",
         "audit_total_error_count",
@@ -80,27 +79,26 @@
       ],
       "properties": {
         "targets": { "type": "string" },
-        "target_mode": { "type": "string", "enum": ["full_scope_targets", "legacy_target_list", "unknown"] },
-        "uses_legacy_target_list": { "type": "boolean" },
+        "target_mode": { "type": "string", "enum": ["full_scope_targets", "indirect_target_list", "unknown"] },
         "audit_path": { "type": "string", "minLength": 1 },
         "audit_status": { "type": "string", "minLength": 1 },
         "audit_total_error_count": { "type": "integer", "minimum": 0 },
         "audit_mypy_error_count": { "type": "integer", "minimum": 0 }
       }
     },
-    "migration": {
+    "target_contract": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "strategy",
-        "allowlist_removed_from_default_target",
-        "allowlist_removed_from_strict_preview_target",
+        "default_full_scope_targets_enforced",
+        "strict_preview_full_scope_targets_enforced",
         "promotion_gate_impact"
       ],
       "properties": {
         "strategy": { "type": "string", "minLength": 1 },
-        "allowlist_removed_from_default_target": { "type": "boolean" },
-        "allowlist_removed_from_strict_preview_target": { "type": "boolean" },
+        "default_full_scope_targets_enforced": { "type": "boolean" },
+        "strict_preview_full_scope_targets_enforced": { "type": "boolean" },
         "promotion_gate_impact": { "type": "string", "minLength": 1 }
       }
     }
@@ -127,11 +125,10 @@
     "target_state": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["targets", "target_mode", "uses_legacy_target_list"],
+      "required": ["targets", "target_mode"],
       "properties": {
         "targets": { "type": "string" },
-        "target_mode": { "type": "string", "enum": ["full_scope_targets", "legacy_target_list", "unknown"] },
-        "uses_legacy_target_list": { "type": "boolean" }
+        "target_mode": { "type": "string", "enum": ["full_scope_targets", "indirect_target_list", "unknown"] }
       }
     }
   }

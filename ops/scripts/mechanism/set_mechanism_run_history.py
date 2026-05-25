@@ -8,17 +8,31 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.filesystem_runtime import AtomicTextUpdate, build_atomic_text_updates, atomic_multi_write
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import PROMOTION_REPORT_SCHEMA_PATH, RUN_LEDGER_SCHEMA_PATH
-    from ops.scripts.schema_runtime import load_schema, validate_or_raise
+    from ops.scripts.filesystem_runtime import (
+        AtomicTextUpdate,
+        atomic_multi_write,
+        build_atomic_text_updates,
+    )
     from ops.scripts.policy_runtime import load_policy
+    from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.schema_constants_runtime import (
+        PROMOTION_REPORT_SCHEMA_PATH,
+        RUN_LEDGER_SCHEMA_PATH,
+    )
+    from ops.scripts.schema_runtime import load_schema, validate_or_raise
 else:
-    from ops.scripts.filesystem_runtime import AtomicTextUpdate, build_atomic_text_updates, atomic_multi_write
-    from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import PROMOTION_REPORT_SCHEMA_PATH, RUN_LEDGER_SCHEMA_PATH
-    from ops.scripts.schema_runtime import load_schema, validate_or_raise
+    from ops.scripts.filesystem_runtime import (
+        AtomicTextUpdate,
+        atomic_multi_write,
+        build_atomic_text_updates,
+    )
     from ops.scripts.policy_runtime import load_policy
+    from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.schema_constants_runtime import (
+        PROMOTION_REPORT_SCHEMA_PATH,
+        RUN_LEDGER_SCHEMA_PATH,
+    )
+    from ops.scripts.schema_runtime import load_schema, validate_or_raise
 
 
 PROMOTION_REPORT_SCHEMA = PROMOTION_REPORT_SCHEMA_PATH
@@ -228,10 +242,10 @@ def main(argv: list[str] | None = None) -> None:
         )
     except SetMechanismRunHistoryError as exc:
         print(str(exc), file=sys.stderr)
-        raise SystemExit(exc.exit_code)
+        raise SystemExit(exc.exit_code) from exc
     except Exception as exc:  # pragma: no cover - broad-exception: cli_boundary
         print(str(exc), file=sys.stderr)
-        raise SystemExit(8)
+        raise SystemExit(8) from exc
 
     print(json.dumps(result, ensure_ascii=False, indent=2))
 

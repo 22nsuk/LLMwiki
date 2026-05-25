@@ -1,32 +1,37 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import sys
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.output_runtime import resolve_output_path, write_output_text
     from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.raw_markdown_runtime import (
         apply_raw_markdown_normalization,
         iter_raw_markdown_paths,
         normalize_raw_markdown_file,
     )
-    from ops.scripts.schema_constants_runtime import RAW_MARKDOWN_NORMALIZATION_REPORT_SCHEMA_PATH
+    from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.schema_constants_runtime import (
+        RAW_MARKDOWN_NORMALIZATION_REPORT_SCHEMA_PATH,
+    )
 else:
     from ops.scripts.output_runtime import resolve_output_path, write_output_text
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.schema_constants_runtime import (
+        RAW_MARKDOWN_NORMALIZATION_REPORT_SCHEMA_PATH,
+    )
+
     from .raw_markdown_runtime import (
         apply_raw_markdown_normalization,
         iter_raw_markdown_paths,
         normalize_raw_markdown_file,
     )
-    from ops.scripts.schema_constants_runtime import RAW_MARKDOWN_NORMALIZATION_REPORT_SCHEMA_PATH
 
 
 def build_report(

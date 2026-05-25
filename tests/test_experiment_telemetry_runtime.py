@@ -10,6 +10,7 @@ from ops.scripts.experiment_telemetry_runtime import (
     write_timeout_failure_artifact,
 )
 from ops.scripts.runtime_context import RuntimeContext
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 

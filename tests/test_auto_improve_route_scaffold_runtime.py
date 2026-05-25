@@ -5,6 +5,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import cast
 
 from ops.scripts.auto_improve_route_scaffold_runtime import (
     RouteScaffoldDependencies,
@@ -15,8 +16,8 @@ from ops.scripts.runtime_context import RuntimeContext
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
         session_id="auto-session",
         executor_id="codex_exec",
     )
@@ -66,7 +67,7 @@ class AutoImproveRouteScaffoldRuntimeTests(unittest.TestCase):
                 path = vault / out_path
                 path.parent.mkdir(parents=True, exist_ok=True)
                 score_band = "high" if role == "worker" else "low"
-                report = {
+                report: dict[str, object] = {
                     "role": role,
                     "routing_decision": {
                         "selected_rung": 3 if role != "worker" else 2,
@@ -136,7 +137,7 @@ class AutoImproveRouteScaffoldRuntimeTests(unittest.TestCase):
                     "runs/run-route/subagent-routing.provenance-auditor.json",
                 ],
             )
-            kwargs = dict(captured_calls["kwargs"])
+            kwargs = dict(cast(dict[str, object], captured_calls["kwargs"]))
             self.assertTrue(kwargs["scaffold_only"])
             self.assertEqual(
                 kwargs["executor_report_paths"],
@@ -196,7 +197,7 @@ class AutoImproveRouteScaffoldRuntimeTests(unittest.TestCase):
             ) -> tuple[dict[str, object], Path]:
                 path = vault / out_path
                 path.parent.mkdir(parents=True, exist_ok=True)
-                report = {
+                report: dict[str, object] = {
                     "role": role,
                     "routing_decision": {
                         "selected_rung": 2,

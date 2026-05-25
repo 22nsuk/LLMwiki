@@ -3,20 +3,19 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 import pytest
-
 from ops.scripts.goal_runtime_run_admission import (
     GoalRuntimeRunAdmissionRequest,
     build_report,
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from tests.minimal_vault_runtime import seed_minimal_vault
 
+from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "goal-runtime-run-admission.schema.json"
@@ -25,8 +24,8 @@ pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 21, 0, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 21, 0, 0, tzinfo=dt.UTC),
     )
 
 

@@ -7,7 +7,6 @@ from typing import Any
 
 from .release_risk_taxonomy_runtime import ADVISORY_REVIEW_BACKLOG
 
-
 ADVISORY_LIFECYCLE_ACTIVE = "active"
 ADVISORY_LIFECYCLE_EXPIRED = "expired"
 ADVISORY_LIFECYCLE_METADATA_MISSING = "metadata_missing"
@@ -25,8 +24,8 @@ def _parse_iso_z(value: str) -> dt.datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=dt.timezone.utc)
-    return parsed.astimezone(dt.timezone.utc)
+        parsed = parsed.replace(tzinfo=dt.UTC)
+    return parsed.astimezone(dt.UTC)
 
 
 def advisory_lifecycle_assessment(

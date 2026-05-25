@@ -5,11 +5,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.raw_intake_route_proposal import build_report, main as route_proposal_main
+from ops.scripts.raw_intake_route_proposal import build_report
+from ops.scripts.raw_intake_route_proposal import main as route_proposal_main
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
 from tests.cli_test_runtime import invoke_cli_main
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
-
 
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "raw-intake-route-proposal-report.schema.json"
 

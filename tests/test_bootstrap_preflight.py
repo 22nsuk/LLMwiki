@@ -4,14 +4,20 @@ import datetime as dt
 import os
 import tempfile
 import unittest
+from collections.abc import Callable
 from pathlib import Path
 from unittest import mock
 
 import pytest
-
-from ops.scripts.bootstrap_preflight import build_report, format_text, main, write_report
+from ops.scripts.bootstrap_preflight import (
+    build_report,
+    format_text,
+    main,
+    write_report,
+)
 from ops.scripts.schema_constants_runtime import BOOTSTRAP_PREFLIGHT_REPORT_SCHEMA_PATH
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
@@ -19,7 +25,7 @@ pytestmark = [pytest.mark.public, pytest.mark.report_contract]
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
-def _module_available(missing: set[str]):
+def _module_available(missing: set[str]) -> Callable[[str], bool]:
     return lambda module: module not in missing
 
 
@@ -149,7 +155,7 @@ class BootstrapPreflightTests(unittest.TestCase):
                     29,
                     8,
                     30,
-                    tzinfo=dt.timezone.utc,
+                    tzinfo=dt.UTC,
                 ),
             )
             schema = load_schema(REPO_ROOT / BOOTSTRAP_PREFLIGHT_REPORT_SCHEMA_PATH)

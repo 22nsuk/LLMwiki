@@ -13,7 +13,6 @@ from .schema_constants_runtime import (
 )
 from .schema_runtime import load_schema_with_vault_override
 
-
 RUN_LEDGER_SCHEMA = RUN_LEDGER_SCHEMA_PATH
 RUN_TELEMETRY_SCHEMA = RUN_TELEMETRY_SCHEMA_PATH
 TIMEOUT_FAILURE_SCHEMA = TIMEOUT_FAILURE_SCHEMA_PATH

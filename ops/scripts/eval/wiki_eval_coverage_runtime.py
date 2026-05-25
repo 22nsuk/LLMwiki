@@ -1,21 +1,21 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.policy_runtime import report_path
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import WIKI_EVAL_COVERAGE_SCHEMA_PATH
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
 from .wiki_snapshot_runtime import WikiRuntimeSnapshot, build_wiki_runtime_snapshot
 from .wiki_stage2_runtime import (
     broad_wiki_synthesis_metrics,
     inbound_page_linkers,
     stable_wiki_inbound_linkers,
 )
-
 
 WIKI_EVAL_COVERAGE_SCHEMA = WIKI_EVAL_COVERAGE_SCHEMA_PATH
 PRODUCER = "ops.scripts.wiki_eval_coverage_runtime"

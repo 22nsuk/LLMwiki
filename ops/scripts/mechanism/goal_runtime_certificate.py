@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
-
 
 DEFAULT_RUNTIME_MODE = "self_improvement_loop"
 RUNTIME_MODES = (DEFAULT_RUNTIME_MODE,)

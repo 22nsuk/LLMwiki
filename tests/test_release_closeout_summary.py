@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.release_closeout_summary import (
@@ -28,7 +27,10 @@ from ops.scripts.release_closeout_summary import (
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_change_sample
+from ops.scripts.source_tree_fingerprint_runtime import (
+    release_source_tree_change_sample,
+)
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
@@ -55,8 +57,8 @@ SCHEMA_BY_KIND = {
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 29, 9, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 29, 9, 0, tzinfo=dt.UTC),
     )
 
 
@@ -86,7 +88,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
         self.assertEqual(report["operator_release_allowed"], operator_release_allowed)
         self.assertEqual(report["requires_accepted_risk_review"], requires_accepted_risk_review)
 
-    def _source_spec(self, name: str):
+    def _source_spec(self, name: str) -> Any:
         for profile in (BASE_PROFILE, PROVENANCE_PROFILE, SBOM_PROFILE):
             for spec in source_specs_for_profile(profile):
                 if spec.name == name:
@@ -217,7 +219,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        generated_at = dt.datetime(2026, 4, 29, 8, 30, tzinfo=dt.timezone.utc)
+        generated_at = dt.datetime(2026, 4, 29, 8, 30, tzinfo=dt.UTC)
         os.utime(path, (generated_at.timestamp(), generated_at.timestamp()))
 
     def _write_happy_sources(self) -> None:

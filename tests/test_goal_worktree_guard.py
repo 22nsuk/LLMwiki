@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import datetime as dt
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 import pytest
-
 from ops.scripts.goal_worktree_guard import (
     GitCommandResult,
     GoalWorktreeGuardRequest,
@@ -16,8 +15,8 @@ from ops.scripts.goal_worktree_guard import (
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from tests.minimal_vault_runtime import seed_minimal_vault
 
+from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.public
 
@@ -27,8 +26,8 @@ SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "goal-worktree-guard.schema.json"
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.UTC),
     )
 
 
@@ -36,7 +35,7 @@ class FakeGit:
     def __init__(self, responses: dict[tuple[str, ...], GitCommandResult]) -> None:
         self.responses = responses
 
-    def __call__(self, args):
+    def __call__(self, args: list[str]) -> GitCommandResult:
         key = tuple(args)
         if key[:5] == (
             "status",

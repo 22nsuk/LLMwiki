@@ -9,8 +9,8 @@ from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.wiki_eval_coverage_runtime import build_report
-from tests.minimal_vault_runtime import seed_eval_coverage_smoke_vault, set_policy_value
 
+from tests.minimal_vault_runtime import seed_eval_coverage_smoke_vault, set_policy_value
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WIKI_EVAL_COVERAGE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "wiki-eval-coverage-report.schema.json"
@@ -18,8 +18,8 @@ WIKI_EVAL_COVERAGE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "wiki-eval-cove
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
     )
 
 

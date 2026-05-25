@@ -7,7 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+from ops.scripts.artifact_io_runtime import (
+    SchemaBackedReportWriteRequest,
+    write_schema_backed_report,
+)
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
@@ -67,11 +70,14 @@ def _check_parser_errors(provenance: dict[str, Any]) -> dict[str, Any]:
         and item["parser_status"].get("status") == "error"
     ]
     lock_evidence = provenance.get("lock_evidence", {})
-    if isinstance(lock_evidence, dict) and isinstance(lock_evidence.get("parser_status"), dict):
-        if lock_evidence["parser_status"].get("status") == "error":
-            path = str(lock_evidence.get("path", "uv.lock"))
-            if path not in errors:
-                errors.append(path)
+    if (
+        isinstance(lock_evidence, dict)
+        and isinstance(lock_evidence.get("parser_status"), dict)
+        and lock_evidence["parser_status"].get("status") == "error"
+    ):
+        path = str(lock_evidence.get("path", "uv.lock"))
+        if path not in errors:
+            errors.append(path)
 
     if errors:
         return {"rule": "no_parser_errors", "pass": False, "details": f"Parser errors in: {', '.join(errors)}"}

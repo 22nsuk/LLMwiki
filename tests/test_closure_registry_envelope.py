@@ -9,8 +9,8 @@ from pathlib import Path
 from ops.scripts.closure_registry_envelope import refresh_registries
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from tests.minimal_vault_runtime import seed_minimal_vault
 
+from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFECT_SCHEMA = REPO_ROOT / "ops" / "schemas" / "defect-escape-closures.schema.json"
@@ -20,8 +20,8 @@ ENVELOPE_SCHEMA = REPO_ROOT / "ops" / "schemas" / "artifact-envelope.schema.json
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 8, 1, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 8, 1, 0, tzinfo=dt.UTC),
     )
 
 

@@ -2,18 +2,16 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, TypeVar
+
+from ops.scripts.runtime_context import RuntimeContext
 
 from .finalize_run_artifact_runtime import (
     CHANGED_FILES_MANIFEST_SCHEMA,
     load_validated_json,
 )
 from .finalize_run_errors_runtime import FinalizeRunUsageError, FinalizeRunWriteError
-from ops.scripts.runtime_context import RuntimeContext
-
-
-LogStateT = TypeVar("LogStateT")
 
 
 def slugify_heading(text: str) -> str:
@@ -28,7 +26,7 @@ def slugify_heading(text: str) -> str:
 def timestamp_strings(context: RuntimeContext, now: dt.datetime | None) -> tuple[str, str]:
     if now is not None:
         if now.tzinfo is None:
-            now = now.replace(tzinfo=dt.timezone.utc)
+            now = now.replace(tzinfo=dt.UTC)
         override_context = RuntimeContext(
             display_timezone=context.display_timezone,
             clock=lambda: now,
@@ -156,7 +154,7 @@ def build_log_entry_markdown(
     return entry, slugify_heading(heading_text)
 
 
-def resolve_finalize_log_state(
+def resolve_finalize_log_state[LogStateT](
     vault: Path,
     *,
     report: dict,

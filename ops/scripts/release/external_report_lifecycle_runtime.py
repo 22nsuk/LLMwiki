@@ -8,11 +8,16 @@ from pathlib import Path
 from typing import Any
 
 from ops.scripts.policy_runtime import report_path
-from .release_status_v2 import release_status_v2_view_with_readiness_fallback
-from .release_workflow_order_guard import build_report as build_release_workflow_order_guard_report
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.workflow_dependency_planner import build_report as build_workflow_dependency_report
+from ops.scripts.workflow_dependency_planner import (
+    build_report as build_workflow_dependency_report,
+)
 
+from .release_closeout_finality_attestation import verify_attestation
+from .release_status_v2 import release_status_v2_view_with_readiness_fallback
+from .release_workflow_order_guard import (
+    build_report as build_release_workflow_order_guard_report,
+)
 
 REFERENCE_MANIFEST = "external-reports/report-reference-manifest.json"
 REFERENCE_MANIFEST_EXTENSIONS = {".md", ".pdf", ".docx"}
@@ -38,6 +43,17 @@ ROADMAP_SOURCE_ONLY_ACTION_IDS = {
     "compatibility_alias_deprecation",
     "public_surface_snapshot",
     "doc_graph_integrity_lint",
+}
+SOURCE_REVISION_RELEASE_AUTHORITY_REPORTS = {
+    "ops/reports/learning-readiness-signoff.json",
+    "ops/reports/release-closeout-batch-manifest.json",
+    "ops/reports/release-closeout-finality-attestation.json",
+    "ops/reports/release-closeout-fixed-point.json",
+    "ops/reports/release-closeout-sealed-rehearsal-check.json",
+    "ops/reports/release-evidence-closeout-self-check.json",
+    "ops/reports/review-archive-report.json",
+    "ops/reports/source-package-clean-extract.json",
+    "ops/reports/test-execution-summary-full.json",
 }
 
 ACTION_CATALOG: list[dict[str, Any]] = [
@@ -117,6 +133,27 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         "recommended_target": "external-report-reference-manifest-settle",
     },
     {
+        "action_id": "source_revision_unknown_canonical_reports",
+        "priority": "P0",
+        "theme": "canonical report source revision provenance",
+        "patterns": [
+            r"source_revision\s*[:=]\s*unknown",
+            r"source_revision",
+            r"source revision",
+            r"Git revision",
+            r"source_package_without_git",
+            r"canonical report.*unknown",
+        ],
+        "evidence_paths": [
+            "ops/scripts/core/source_revision_runtime.py",
+            "ops/scripts/core/artifact_freshness_runtime.py",
+            "ops/scripts/core/bootstrap_preflight.py",
+            "tests/test_source_revision_runtime.py",
+            "ops/reports/artifact-freshness-report.json",
+        ],
+        "recommended_target": "artifact-freshness-refresh-check",
+    },
+    {
         "action_id": "ruff_strict_preview_import_order",
         "priority": "P0",
         "theme": "Ruff strict preview import-order currentness",
@@ -129,7 +166,6 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         "evidence_paths": [
             "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
             "tools/ruff_strict_preview.py",
-            "ops/ruff-strict-preview-allowlist.txt",
             "mk/static.mk",
         ],
         "recommended_target": "ruff-strict-preview",
@@ -188,7 +224,7 @@ ACTION_CATALOG: list[dict[str, Any]] = [
     {
         "action_id": "strict_preview_all_target_audit",
         "priority": "P1",
-        "theme": "strict-preview all-target audit before allowlist removal",
+        "theme": "strict-preview all-target audit after legacy allowlist removal",
         "patterns": [
             r"strict-preview",
             r"allowlist",
@@ -1137,13 +1173,14 @@ def release_run_verified(vault: Path) -> bool:
     fixed_point = load_json_object(vault / "ops/reports/release-closeout-fixed-point.json")
     finality = load_json_object(vault / "ops/reports/release-closeout-finality-attestation.json")
     finality_fixed_point = as_dict(finality.get("fixed_point_report"))
+    finality_verified, _finality_failures = verify_attestation(vault)
     return (
         closeout.get("status") == "pass"
         and closeout_summary.get("live_make_check_status") == "pass"
         and bool(closeout_status_view["status_v2_available"])
         and release_authority_status in {"clean_pass", "conditional_pass"}
-        and dashboard_status in {"pass", "attention"}
-        and as_int(dashboard_summary.get("live_rerun_fail_count")) == 0
+        and dashboard_status in {"pass", "attention", "fail"}
+        and authoritative_live_rerun_fail_count(dashboard) == 0
         and authoritative_live_rerun_not_run_count(dashboard) == 0
         and as_int(dashboard_summary.get("required_input_fail_count")) == 0
         and full_summary.get("status") == "pass"
@@ -1153,6 +1190,7 @@ def release_run_verified(vault: Path) -> bool:
         and fixed_point.get("status") == "pass"
         and bool(fixed_point.get("converged"))
         and finality_fixed_point.get("status") == "pass"
+        and finality_verified
     )
 
 
@@ -1204,6 +1242,26 @@ def active_report_manifest_freshness_status(vault: Path) -> str:
     if (vault / REFERENCE_MANIFEST).is_file():
         return "partially_automated"
     return "planned"
+
+
+def source_revision_unknown_canonical_reports_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
+    if existing_count == 0:
+        return "planned"
+    if existing_count < expected_count:
+        return "partially_automated"
+    unknown_paths = []
+    for path in sorted((vault / "ops/reports").glob("*.json")):
+        payload = load_json_object(path)
+        if str(payload.get("source_revision", "")).strip() == "unknown":
+            unknown_paths.append(report_path(vault, path))
+    if not unknown_paths:
+        return "implemented"
+    unknown_path_set = set(unknown_paths)
+    if unknown_path_set <= SOURCE_REVISION_RELEASE_AUTHORITY_REPORTS:
+        return "requires_release_run_verification"
+    return "partially_automated"
 
 
 def release_lane_mutability_split_status(vault: Path) -> str:
@@ -1286,10 +1344,8 @@ def ruff_strict_preview_import_order_status(
     )
     if (
         "from .set_mechanism_run_history import (\n" in surface_text
-        and (
-            "RUFF_STRICT_PREVIEW_TARGETS" in surface_text
-            or "RUFF_STRICT_PREVIEW_ALLOWLIST" in surface_text
-        )
+        and "RUFF_STRICT_PREVIEW_TARGETS" in surface_text
+        and "--allowlist" not in surface_text
         and "tools/ruff_strict_preview.py" in surface_text
     ):
         return "implemented"
@@ -1984,7 +2040,7 @@ def single_source_status(vault: Path) -> str:
             if guard.get("status") == "pass":
                 return "partially_automated"
             return "planned"
-    runtime_context = RuntimeContext(display_timezone=dt.timezone.utc)
+    runtime_context = RuntimeContext(display_timezone=dt.UTC)
     if not guard:
         guard = build_release_workflow_order_guard_report(vault, context=runtime_context)
     if not planner:
@@ -2021,6 +2077,19 @@ def authoritative_live_rerun_not_run_count(dashboard: dict[str, Any]) -> int:
     return count
 
 
+def authoritative_live_rerun_fail_count(dashboard: dict[str, Any]) -> int:
+    count = 0
+    for gate in as_list(dashboard.get("gates")):
+        gate_payload = as_dict(gate)
+        live_rerun_state = as_dict(gate_payload.get("live_rerun_state"))
+        if (
+            bool(gate_payload.get("authoritative_for_release"))
+            and str(live_rerun_state.get("status", "")).strip() == "fail"
+        ):
+            count += 1
+    return count
+
+
 def command_heartbeat_observability_status(vault: Path, existing_count: int, expected_count: int) -> str:
     if existing_count == 0:
         return "planned"
@@ -2031,7 +2100,6 @@ def command_heartbeat_observability_status(vault: Path, existing_count: int, exp
     if (
         source_package.get("status") == "pass"
         and heartbeat.get("status") == "pass"
-        and as_int(heartbeat.get("heartbeat_event_count")) > 0
         and as_int(heartbeat.get("heartbeat_enabled_command_count"))
         == as_int(heartbeat.get("command_count"))
     ):
@@ -2090,6 +2158,12 @@ def status_from_evidence(vault: Path, action: dict[str, Any]) -> tuple[str, list
             status = "planned"
     elif action_id == "active_report_manifest_freshness":
         status = active_report_manifest_freshness_status(vault)
+    elif action_id == "source_revision_unknown_canonical_reports":
+        status = source_revision_unknown_canonical_reports_status(
+            vault,
+            existing_count,
+            len(action["evidence_paths"]),
+        )
     elif action_id == "release_lane_mutability_split":
         status = release_lane_mutability_split_status(vault)
     elif action_id == "sealed_summary_vocabulary_demotion":

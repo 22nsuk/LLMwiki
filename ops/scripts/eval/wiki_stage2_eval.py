@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import sys
 
 import argparse
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -17,7 +17,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import WIKI_STAGE2_EVAL_SCHEMA_PATH
-    from ops.scripts.wiki_snapshot_runtime import WikiRuntimeSnapshot, build_wiki_runtime_snapshot
+    from ops.scripts.wiki_snapshot_runtime import (
+        WikiRuntimeSnapshot,
+        build_wiki_runtime_snapshot,
+    )
     from ops.scripts.wiki_stage2_runtime import (
         broad_synthesis_boundary_missing_sections,
         broad_wiki_synthesis_metrics,
@@ -36,6 +39,7 @@ else:
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import WIKI_STAGE2_EVAL_SCHEMA_PATH
+
     from .wiki_snapshot_runtime import WikiRuntimeSnapshot, build_wiki_runtime_snapshot
     from .wiki_stage2_runtime import (
         broad_synthesis_boundary_missing_sections,

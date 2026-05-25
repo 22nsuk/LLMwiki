@@ -3,6 +3,14 @@ from __future__ import annotations
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+
+from ops.scripts.policy_runtime import (
+    workspace_preparation_declared_dependencies_from_policy,
+    workspace_preparation_mode_from_policy,
+)
+from ops.scripts.promotion_decision_registry_runtime import decision_from_report
+from ops.scripts.runtime_context import RuntimeContext
 
 from .mechanism_run_capture_runtime import (
     _capture_baseline_step,
@@ -30,12 +38,12 @@ from .mechanism_run_promotion_runtime import (
     _finalize_step,
     _record_promotion_step,
 )
+from .mechanism_run_scaffold_resolution_runtime import _resolve_experiment_inputs
 from .mechanism_run_scaffold_runtime import (
     _build_scaffold_only_result,
     _freeze_seed_scope,
     _scaffold_or_load_run,
 )
-from .mechanism_run_scaffold_resolution_runtime import _resolve_experiment_inputs
 from .mechanism_run_workspace_runtime import (
     _apply_or_discard_workspace_changes,
     _build_repo_health_blocked_result,
@@ -47,13 +55,6 @@ from .mechanism_run_workspace_runtime import (
     _snapshot_repo_file_digests,
     _write_changed_files_manifest,
 )
-from ops.scripts.promotion_decision_registry_runtime import decision_from_report
-from ops.scripts.policy_runtime import (
-    workspace_preparation_declared_dependencies_from_policy,
-    workspace_preparation_mode_from_policy,
-)
-from ops.scripts.runtime_context import RuntimeContext
-
 
 __all__ = [
     "RunMechanismExperimentArtifactError",
@@ -101,7 +102,7 @@ class RunMechanismExperimentRequest:
     context: RuntimeContext | None = None
 
     @classmethod
-    def from_kwargs(cls, kwargs: dict) -> "RunMechanismExperimentRequest":
+    def from_kwargs(cls, kwargs: dict[str, Any]) -> RunMechanismExperimentRequest:
         required_fields = {
             "run_id",
             "policy_path",
@@ -154,8 +155,8 @@ class _WorkspaceExperimentResult:
 def run_mechanism_experiment(
     vault: Path,
     request: RunMechanismExperimentRequest | None = None,
-    **kwargs,
-) -> dict:
+    **kwargs: Any,
+) -> dict[str, Any]:
     if request is not None and kwargs:
         raise TypeError("run_mechanism_experiment request cannot be combined with keyword arguments")
     resolved_request = request or RunMechanismExperimentRequest.from_kwargs(kwargs)
@@ -165,7 +166,7 @@ def run_mechanism_experiment(
 def _run_mechanism_experiment_request(
     vault: Path,
     request: RunMechanismExperimentRequest,
-) -> dict:
+) -> dict[str, Any]:
     vault = vault.resolve()
     resolution = _resolve_experiment_inputs(
         vault,
@@ -233,7 +234,10 @@ def _run_mechanism_experiment_request(
     )
 
 
-def _resolve_apply_mode(request: RunMechanismExperimentRequest, resolution) -> str:
+def _resolve_apply_mode(
+    request: RunMechanismExperimentRequest,
+    resolution: Any,
+) -> str:
     apply_mode = request.apply_mode or str(
         resolution.policy["auto_improve_policy"].get("apply_mode", "live")
     )
@@ -246,10 +250,10 @@ def _run_workspace_experiment_phase(
     vault: Path,
     *,
     request: RunMechanismExperimentRequest,
-    scaffold,
-    resolution,
-    baseline_artifacts: dict,
-) -> _WorkspaceExperimentResult | dict:
+    scaffold: Any,
+    resolution: Any,
+    baseline_artifacts: dict[str, Any],
+) -> _WorkspaceExperimentResult | dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix=f"{request.run_id}-workspace-") as workspace_root:
         workspace = _prepare_workspace_copy(
             vault,

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .raw_intake_promotion_shared_runtime import _json_load_object, _string_list
 from ops.scripts.schema_constants_runtime import RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH
+
+from .raw_intake_promotion_shared_runtime import _json_load_object, _string_list
 
 SYNTHESIS_ANALYSIS_TEMPLATE_MARKERS = (
     "이 묶음이 새로 더하는 것",

@@ -12,7 +12,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.mechanism_review_runtime import MECHANISM_REVIEW_SCHEMA, build_report
+    from ops.scripts.mechanism_review_runtime import (
+        MECHANISM_REVIEW_SCHEMA,
+        build_report,
+    )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy
 else:
@@ -20,9 +23,10 @@ else:
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from .mechanism_review_runtime import MECHANISM_REVIEW_SCHEMA, build_report
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy
+
+    from .mechanism_review_runtime import MECHANISM_REVIEW_SCHEMA, build_report
 
 
 DEFAULT_OUT = "ops/reports/mechanism-review-candidates.json"
@@ -45,7 +49,7 @@ def main(argv: list[str] | None = None) -> None:
         policy, policy_path = load_policy(vault, args.policy_path)
     except Exception as exc:  # broad-exception: cli_policy_load_boundary
         print(str(exc), file=sys.stderr)
-        raise SystemExit(3)
+        raise SystemExit(3) from exc
 
     try:
         report = build_report(
@@ -68,10 +72,10 @@ def main(argv: list[str] | None = None) -> None:
         )
     except (OSError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
-        raise SystemExit(7)
+        raise SystemExit(7) from exc
     except Exception as exc:  # pragma: no cover - broad-exception: cli_boundary
         print(str(exc), file=sys.stderr)
-        raise SystemExit(8)
+        raise SystemExit(8) from exc
 
     print(json.dumps(report, ensure_ascii=False, indent=2))
     print(f"\nwritten_to={display_path(vault, destination)}")

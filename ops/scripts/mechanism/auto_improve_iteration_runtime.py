@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.runtime_context import RuntimeContext
+
 from .auto_improve_execute_runtime import (
     ExecuteEvaluateDependencies,
     ExecuteEvaluatePhaseResult,
@@ -15,7 +17,6 @@ from .auto_improve_iteration_persistence_runtime import (
     PersistIterationDependencies,
     PersistIterationPhaseResult,
 )
-from ops.scripts.runtime_context import RuntimeContext
 
 
 @dataclass(frozen=True)

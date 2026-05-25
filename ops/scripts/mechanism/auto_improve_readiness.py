@@ -16,6 +16,8 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
     from ops.scripts.output_runtime import display_path
 else:
+    from ops.scripts.output_runtime import display_path
+
     from .auto_improve_readiness_runtime import (
         READINESS_REPORT_REL_PATH,
         REMEDIATION_BACKLOG_REPORT_REL_PATH,
@@ -23,7 +25,6 @@ else:
         readiness_exit_code,
         write_readiness_report,
     )
-    from ops.scripts.output_runtime import display_path
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

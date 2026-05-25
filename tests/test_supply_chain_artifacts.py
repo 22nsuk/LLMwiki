@@ -7,8 +7,12 @@ from pathlib import Path
 from unittest import mock
 
 from ops.scripts.supply_chain_artifacts import main as run_supply_chain_artifacts
+
 from tests.minimal_vault_runtime import seed_minimal_vault
-from tests.test_supply_chain_provenance import LOCKED_CI_INSTALL_SNIPPET, seed_dependency_inputs
+from tests.test_supply_chain_provenance import (
+    LOCKED_CI_INSTALL_SNIPPET,
+    seed_dependency_inputs,
+)
 
 
 class SupplyChainArtifactsPipelineTests(unittest.TestCase):

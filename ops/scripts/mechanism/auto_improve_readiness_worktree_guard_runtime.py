@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from .auto_improve_readiness_constants_runtime import GOAL_WORKTREE_GUARD_REPORT_REL_PATH
+from .auto_improve_readiness_constants_runtime import (
+    GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
+)
 
 
 def _string_list(value: object) -> list[str]:

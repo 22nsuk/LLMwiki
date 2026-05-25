@@ -15,16 +15,21 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         scaffold_profile_bundle,
         validate_profile_bundle,
     )
-    from ops.scripts.schema_constants_runtime import RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH
+    from ops.scripts.schema_constants_runtime import (
+        RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH,
+    )
 else:
     from ops.scripts.artifact_io_runtime import resolve_repo_artifact_path
     from ops.scripts.output_runtime import resolve_output_path, write_output_text
+    from ops.scripts.schema_constants_runtime import (
+        RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH,
+    )
+
     from .raw_intake_promotion_runtime import (
         render_family_pages,
         scaffold_profile_bundle,
         validate_profile_bundle,
     )
-    from ops.scripts.schema_constants_runtime import RAW_INTAKE_PROMOTION_REPORT_SCHEMA_PATH
 
 
 def main() -> None:

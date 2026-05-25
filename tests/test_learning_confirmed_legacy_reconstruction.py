@@ -7,11 +7,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.learning_confirmed_legacy_reconstruction import build_report, write_report
+from ops.scripts.learning_confirmed_legacy_reconstruction import (
+    build_report,
+    write_report,
+)
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from tests.minimal_vault_runtime import seed_minimal_vault
 
+from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "learning-confirmed-legacy-reconstruction.schema.json"
@@ -19,8 +22,8 @@ SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "learning-confirmed-legacy-reconst
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 9, 9, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 9, 9, 0, tzinfo=dt.UTC),
     )
 
 

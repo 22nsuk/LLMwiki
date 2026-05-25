@@ -2,15 +2,16 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
 import hashlib
 import json
 import shlex
 import shutil
 import time
 import zipfile
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 from .artifact_freshness_runtime import build_canonical_report_envelope
 from .artifact_io_runtime import (
@@ -20,9 +21,12 @@ from .artifact_io_runtime import (
 )
 from .command_runtime import CommandHeartbeat, run_with_timeout
 from .output_runtime import display_path, resolve_vault_path, sanitize_report_text
-from .policy_runtime import load_policy, release_archive_root_name_from_policy, report_path
+from .policy_runtime import (
+    load_policy,
+    release_archive_root_name_from_policy,
+    report_path,
+)
 from .runtime_context import RuntimeContext
-
 
 DEFAULT_OUT = "ops/reports/source-package-clean-extract.json"
 PRODUCER = "ops.scripts.source_package_clean_extract"

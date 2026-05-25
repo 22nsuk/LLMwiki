@@ -150,8 +150,8 @@ This older source can bridge a cyber statecraft synthesis family.
             manifest = scaffold_manifest(
                 matrix_path,
                 context=RuntimeContext(
-                    display_timezone=dt.timezone.utc,
-                    clock=lambda: dt.datetime(2026, 4, 25, 5, 6, 7, tzinfo=dt.timezone.utc),
+                    display_timezone=dt.UTC,
+                    clock=lambda: dt.datetime(2026, 4, 25, 5, 6, 7, tzinfo=dt.UTC),
                 ),
             )
 

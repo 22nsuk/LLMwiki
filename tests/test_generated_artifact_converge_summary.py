@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 import pytest
-
 from ops.scripts.generated_artifact_converge_summary import build_report, write_report
-
 
 pytestmark = pytest.mark.public
 

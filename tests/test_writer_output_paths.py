@@ -4,6 +4,7 @@ import ast
 import json
 import tempfile
 import unittest
+from collections.abc import Callable
 from pathlib import Path
 
 from ops.scripts.mechanism_assess import main as mechanism_assess_main
@@ -15,19 +16,31 @@ from ops.scripts.promotion_gate import main as promotion_gate_main
 from ops.scripts.raw_registry_export import main as raw_registry_export_main
 from ops.scripts.raw_registry_preflight import main as raw_registry_preflight_main
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import RAW_REGISTRY_EXPORT_SCHEMA_PATH, WIKI_MANIFEST_SCHEMA_PATH
+from ops.scripts.schema_constants_runtime import (
+    RAW_REGISTRY_EXPORT_SCHEMA_PATH,
+    WIKI_MANIFEST_SCHEMA_PATH,
+)
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.script_output_surfaces import build_registry as build_script_output_surface_registry
+from ops.scripts.script_output_surfaces import (
+    build_registry as build_script_output_surface_registry,
+)
 from ops.scripts.select_subagent_rung import main as select_subagent_rung_main
-from ops.scripts.starter_bundle_runtime import DEFAULT_STARTER_BUNDLE, starter_bundle_path
+from ops.scripts.starter_bundle_runtime import (
+    DEFAULT_STARTER_BUNDLE,
+    starter_bundle_path,
+)
 from ops.scripts.wiki_eval import main as wiki_eval_main
 from ops.scripts.wiki_eval_coverage import main as wiki_eval_coverage_main
 from ops.scripts.wiki_lint import main as wiki_lint_main
 from ops.scripts.wiki_manifest import main as wiki_manifest_main
 from ops.scripts.wiki_stage2_eval import main as wiki_stage2_eval_main
-from tests.cli_test_runtime import invoke_cli_main
-from tests.minimal_vault_runtime import seed_minimal_vault, seed_planning_artifacts, seed_subagent_profiles
 
+from tests.cli_test_runtime import invoke_cli_main
+from tests.minimal_vault_runtime import (
+    seed_minimal_vault,
+    seed_planning_artifacts,
+    seed_subagent_profiles,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_RUNTIME_FILE = "ops/scripts/core/output_runtime.py"
@@ -86,7 +99,7 @@ def _runtime_context_for_generated_at(iso_z: str) -> RuntimeContext:
     import datetime as dt
 
     instant = dt.datetime.fromisoformat(iso_z.replace("Z", "+00:00"))
-    return RuntimeContext(display_timezone=dt.timezone.utc, clock=lambda: instant)
+    return RuntimeContext(display_timezone=dt.UTC, clock=lambda: instant)
 
 
 def _script_output_surface_entries() -> list[dict]:
@@ -106,7 +119,12 @@ def _files_referencing(name: str) -> set[str]:
 
 
 class WriterOutputPathsTest(unittest.TestCase):
-    def run_main(self, main_fn, *args: str, cwd: Path) -> None:
+    def run_main(
+        self,
+        main_fn: Callable[[list[str] | None], None],
+        *args: str,
+        cwd: Path,
+    ) -> None:
         result = invoke_cli_main(main_fn, list(args), cwd=cwd)
         self.assertEqual(
             result.exit_code,

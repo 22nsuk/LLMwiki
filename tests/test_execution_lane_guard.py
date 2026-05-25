@@ -1,15 +1,14 @@
 from __future__ import annotations
 
+import shutil
 import tempfile
 import unittest
-import shutil
 from pathlib import Path
 
 import pytest
-
 from ops.scripts.execution_lane_guard import build_result, main
-from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
+from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = pytest.mark.public
 

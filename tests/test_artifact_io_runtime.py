@@ -131,7 +131,7 @@ class ArtifactIoRuntimeTests(unittest.TestCase):
                 context="artifact test failed",
             )
 
-            modified_at = dt.datetime.fromtimestamp(destination.stat().st_mtime, tz=dt.timezone.utc)
+            modified_at = dt.datetime.fromtimestamp(destination.stat().st_mtime, tz=dt.UTC)
             self.assertEqual(
                 modified_at.replace(microsecond=0).isoformat().replace("+00:00", "Z"),
                 "2026-04-29T08:00:00Z",

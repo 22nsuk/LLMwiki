@@ -7,6 +7,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.policy_runtime import report_path
+from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.schema_constants_runtime import MUTATION_PROPOSAL_SCHEMA_PATH
+from ops.scripts.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_with_schema,
+)
+
 from .mechanism_assess import _dedupe_preserve_order, normalize_targets
 from .mechanism_run_common_runtime import (
     CommandSpec,
@@ -17,11 +25,6 @@ from .mechanism_run_common_runtime import (
     load_json,
 )
 from .mechanism_run_scaffold_templates_runtime import default_log_summary
-from ops.scripts.policy_runtime import report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import MUTATION_PROPOSAL_SCHEMA_PATH
-from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_with_schema
-
 
 MUTATION_PROPOSAL_SCHEMA = MUTATION_PROPOSAL_SCHEMA_PATH
 DEFAULT_MUTATION_PROPOSAL_REPORT = "ops/reports/mutation-proposals.json"

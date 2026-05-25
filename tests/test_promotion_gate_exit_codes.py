@@ -8,10 +8,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.promotion_gate import main as promotion_gate_main
 from ops.scripts.policy_runtime import load_policy
-from tests.cli_test_runtime import invoke_cli_main
+from ops.scripts.promotion_gate import main as promotion_gate_main
 
+from tests.cli_test_runtime import CliInvocationResult, invoke_cli_main
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = REPO_ROOT / "ops" / "policies" / "wiki-maintainer-policy.yaml"
@@ -293,7 +293,7 @@ class PromotionGateExitCodeTest(unittest.TestCase):
             check=False,
         )
 
-    def run_main(self, vault: Path, *args: str):
+    def run_main(self, vault: Path, *args: str) -> CliInvocationResult:
         return invoke_cli_main(promotion_gate_main, list(args), cwd=vault)
 
     def seed_valid_artifacts(self, vault: Path) -> None:

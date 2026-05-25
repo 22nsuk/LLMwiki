@@ -22,7 +22,6 @@ from tests.test_promotion_gate_exit_codes import (
     write_json,
 )
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 

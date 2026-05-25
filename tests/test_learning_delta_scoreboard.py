@@ -10,21 +10,36 @@ from typing import Any
 
 from ops.scripts.learning_claim_evidence_bundle import (
     build_report as build_evidence_bundle,
+)
+from ops.scripts.learning_claim_evidence_bundle import (
     write_report as write_evidence_bundle,
 )
-from ops.scripts.learning_claim_model import ImprovementClaimInputs, improvement_claim_model
+from ops.scripts.learning_claim_model import (
+    ImprovementClaimInputs,
+    improvement_claim_model,
+)
 from ops.scripts.learning_claim_unlock_review import build_report as build_unlock_review
-from ops.scripts.learning_confirmed_evidence_cohort import build_report as build_confirmed_cohort
-from ops.scripts.learning_confirmed_evidence_cohort import write_report as write_confirmed_cohort
-from ops.scripts.learning_confirmed_legacy_reconstruction import build_report as build_legacy_reconstruction
-from ops.scripts.learning_confirmed_legacy_reconstruction import write_report as write_legacy_reconstruction
+from ops.scripts.learning_confirmed_evidence_cohort import (
+    build_report as build_confirmed_cohort,
+)
+from ops.scripts.learning_confirmed_evidence_cohort import (
+    write_report as write_confirmed_cohort,
+)
+from ops.scripts.learning_confirmed_legacy_reconstruction import (
+    build_report as build_legacy_reconstruction,
+)
+from ops.scripts.learning_confirmed_legacy_reconstruction import (
+    write_report as write_legacy_reconstruction,
+)
 from ops.scripts.learning_delta_scoreboard import build_report, write_report
 from ops.scripts.learning_delta_scoreboard_constants import SCOREBOARD_SOURCE_PATHS
-from ops.scripts.learning_readiness_vocabulary import LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID
+from ops.scripts.learning_readiness_vocabulary import (
+    LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID,
+)
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from tests.minimal_vault_runtime import seed_minimal_vault
 
+from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "learning-delta-scoreboard.schema.json"
@@ -34,8 +49,8 @@ AUTO_UNLOCK_POLICY_PATH = "ops/policies/learning-claim-auto-unlock.json"
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 5, 9, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 5, 9, 0, tzinfo=dt.UTC),
     )
 
 

@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from ops.scripts.release_closeout_batch_manifest import main as batch_manifest_main
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.release_sealing

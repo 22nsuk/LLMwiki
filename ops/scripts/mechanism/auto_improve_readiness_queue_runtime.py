@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Any
 
 from ops.scripts.artifact_io_runtime import load_optional_json_object
+from ops.scripts.policy_runtime import report_path
+
 from .auto_improve_queue_runtime import build_proposal_queue
 from .auto_improve_readiness_constants_runtime import (
     AUTO_IMPROVE_GOAL_RUN_COMMAND,
@@ -14,7 +16,6 @@ from .auto_improve_readiness_constants_runtime import (
     RECENT_OUTCOME_REWORK_REMEDIATION,
     SAME_EVAL_PROPOSAL_FAILURE_MODES,
 )
-from ops.scripts.policy_runtime import report_path
 
 
 @dataclass(frozen=True)

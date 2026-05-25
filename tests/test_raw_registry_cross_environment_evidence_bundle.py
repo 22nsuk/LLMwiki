@@ -8,23 +8,30 @@ import unittest
 from pathlib import Path
 
 import pytest
-
 from ops.scripts.raw_registry_cross_environment_evidence_bundle import (
     DEFAULT_EXPECTED_PROFILES,
     build_evidence_bundle,
+)
+from ops.scripts.raw_registry_cross_environment_evidence_bundle import (
     main as evidence_bundle_main,
+)
+from ops.scripts.raw_registry_cross_environment_evidence_bundle import (
     write_report as write_evidence_bundle,
 )
 from ops.scripts.raw_registry_cross_environment_matrix import (
     build_matrix_report,
+)
+from ops.scripts.raw_registry_cross_environment_matrix import (
     write_report as write_matrix_report,
 )
-from ops.scripts.raw_registry_preflight import preflight, write_report as write_preflight_report
+from ops.scripts.raw_registry_preflight import preflight
+from ops.scripts.raw_registry_preflight import write_report as write_preflight_report
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import (
     RAW_REGISTRY_CROSS_ENVIRONMENT_EVIDENCE_BUNDLE_SCHEMA_PATH,
 )
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
 from tests.cli_test_runtime import invoke_cli_main
 from tests.minimal_vault_runtime import seed_minimal_vault
 
@@ -36,8 +43,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def fixed_context(hour: int = 0) -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 29, hour, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 29, hour, 0, tzinfo=dt.UTC),
     )
 
 

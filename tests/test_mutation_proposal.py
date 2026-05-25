@@ -12,8 +12,8 @@ from ops.scripts.mutation_proposal_runtime import build_report
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from tests.cli_test_runtime import invoke_cli_main
 
+from tests.cli_test_runtime import invoke_cli_main
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = REPO_ROOT / "ops" / "policies" / "wiki-maintainer-policy.yaml"
@@ -55,7 +55,7 @@ def seed_vault(vault: Path) -> None:
 def write_json(path: Path, payload: dict) -> None:
     payload_to_write = copy.deepcopy(payload)
     if "generated_at" in payload_to_write:
-        timestamp = dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        timestamp = dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
         payload_to_write["generated_at"] = timestamp
         currentness = payload_to_write.get("currentness")
         if isinstance(currentness, dict):

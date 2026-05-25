@@ -10,6 +10,7 @@ from ops.scripts.source_trace_profile_runtime import (
     classify_source_trace_targets,
 )
 from ops.scripts.source_trace_runtime import missing_source_trace_targets
+
 from .wiki_manifest import release_manifest_excludes_path
 from .wiki_page_runtime import open_question_severity_counts, section_exists
 from .wikilink_runtime import extract_wikilinks, resolve_wikilink_target

@@ -20,7 +20,6 @@ from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.release.release_status_v2 import release_status_v2_view
 from ops.scripts.runtime_context import RuntimeContext
 
-
 DEFAULT_OUT = "ops/reports/release-closeout-finality-attestation.json"
 PRODUCER = "ops.scripts.release_closeout_finality_attestation"
 SCHEMA_PATH = "ops/schemas/release-closeout-finality-attestation.schema.json"

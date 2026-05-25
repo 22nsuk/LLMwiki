@@ -17,7 +17,9 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy, report_path
     from ops.scripts.runtime_context import RuntimeContext
-    from ops.scripts.schema_constants_runtime import MANUAL_MUTATE_DEFECT_REGISTRY_SCHEMA_PATH
+    from ops.scripts.schema_constants_runtime import (
+        MANUAL_MUTATE_DEFECT_REGISTRY_SCHEMA_PATH,
+    )
 else:
     from .artifact_freshness_runtime import build_canonical_report_envelope
     from .artifact_io_runtime import (

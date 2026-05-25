@@ -9,16 +9,16 @@ from ops.scripts.mechanism_assess import build_report, normalize_targets
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from tests.minimal_vault_runtime import POLICY_PATH, SCHEMA_PATHS, set_policy_value
 
+from tests.minimal_vault_runtime import POLICY_PATH, SCHEMA_PATHS, set_policy_value
 
 MECHANISM_SCHEMA_PATH = SCHEMA_PATHS["mechanism-assessment-report.schema.json"]
 
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
     )
 
 

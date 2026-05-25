@@ -4,22 +4,37 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
-
 from ops.scripts.artifact_freshness_runtime import ENVELOPE_REQUIRED_FIELDS
+from ops.scripts.mechanism_review_runtime import (
+    build_report as build_mechanism_review_report,
+)
+from ops.scripts.mutation_proposal_runtime import (
+    build_report as build_mutation_proposal_report,
+)
+from ops.scripts.policy_runtime import load_policy
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.structural_complexity_budget_runtime import (
     build_report as build_structural_complexity_budget_report,
 )
 from ops.scripts.wiki_eval import evaluate
-from ops.scripts.wiki_eval_coverage_runtime import build_report as build_eval_coverage_report
+from ops.scripts.wiki_eval_coverage_runtime import (
+    build_report as build_eval_coverage_report,
+)
 from ops.scripts.wiki_lint import lint
-from ops.scripts.mechanism_review_runtime import build_report as build_mechanism_review_report
-from ops.scripts.mutation_proposal_runtime import build_report as build_mutation_proposal_report
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.wiki_snapshot_runtime import build_wiki_runtime_snapshot
+from ops.scripts.wiki_snapshot_runtime import (
+    WikiRuntimeSnapshot,
+    build_wiki_runtime_snapshot,
+)
 from ops.scripts.wiki_stage2_eval import evaluate as evaluate_stage2
+
+from tests.report_contract_test_runtime import (
+    ReportPayload,
+    ReportPayloadMap,
+    ReportSchemaMap,
+)
 
 pytestmark = [pytest.mark.integration_heavy, pytest.mark.report_contract]
 
@@ -37,6 +52,13 @@ STRUCTURAL_COMPLEXITY_BUDGET_SCHEMA_PATH = (
 
 
 class ReportGenerationSmokeTest(unittest.TestCase):
+    _temp_dir: ClassVar[tempfile.TemporaryDirectory[str]]
+    policy: ClassVar[ReportPayload]
+    policy_path: ClassVar[Path]
+    runtime_snapshot: ClassVar[WikiRuntimeSnapshot]
+    schemas: ClassVar[ReportSchemaMap]
+    live_reports: ClassVar[ReportPayloadMap]
+
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()

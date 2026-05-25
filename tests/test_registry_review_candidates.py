@@ -5,9 +5,9 @@ import unittest
 from pathlib import Path
 
 import pytest
-
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.wiki_lint import lint
+
 from tests.minimal_vault_runtime import (
     add_registry_entry_scalar_field,
     seed_registry_review_smoke_vault,
@@ -18,19 +18,19 @@ from tests.vault_test_runtime import SeededMinimalVaultTestCase
 pytestmark = pytest.mark.slow
 
 
-def override_system_refactor_policy(vault, **overrides: int) -> None:
+def override_system_refactor_policy(vault: Path, **overrides: int | float) -> None:
     for key, value in overrides.items():
         set_policy_value(vault, ("system_refactor_policy", key), value)
 
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2000, 1, 3, 12, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2000, 1, 3, 12, tzinfo=dt.UTC),
     )
 
 
-def add_topic_family_to_wiki_shard(vault, family: str) -> None:
+def add_topic_family_to_wiki_shard(vault: Path, family: str) -> None:
     add_registry_entry_scalar_field(
         vault / "system" / "system-raw-registry" / "wiki.md",
         "R-100",

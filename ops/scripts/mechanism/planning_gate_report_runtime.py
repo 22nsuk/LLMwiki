@@ -4,6 +4,20 @@ import time
 from pathlib import Path
 from typing import TypedDict
 
+from ops.scripts.path_runtime import stable_report_path
+from ops.scripts.policy_runtime import load_policy
+from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.runtime_event_logging_runtime import append_runtime_event
+from ops.scripts.starter_bundle_runtime import (
+    StarterBundleDefinition,
+    starter_bundle_allowed_promotion_input_paths,
+    starter_bundle_for_artifact_dir,
+)
+from ops.scripts.validation_check_types_runtime import (
+    ValidationCheckResult,
+    validation_check,
+)
+
 from .planning_gate_artifact_runtime import (
     ARTIFACT_SCHEMAS,
     OPTIONAL_ARTIFACT_SCHEMAS,
@@ -15,16 +29,6 @@ from .planning_gate_artifact_runtime import (
 )
 from .planning_gate_phase_checks_runtime import mechanism_phase_checks
 from .planning_gate_phase_state_runtime import mechanism_phase_state
-from ops.scripts.policy_runtime import load_policy
-from ops.scripts.path_runtime import stable_report_path
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.runtime_event_logging_runtime import append_runtime_event
-from ops.scripts.starter_bundle_runtime import (
-    StarterBundleDefinition,
-    starter_bundle_allowed_promotion_input_paths,
-    starter_bundle_for_artifact_dir,
-)
-from ops.scripts.validation_check_types_runtime import ValidationCheckResult, validation_check
 
 
 class PlanningValidationReport(TypedDict):

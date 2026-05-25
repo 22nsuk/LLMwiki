@@ -9,11 +9,11 @@ from typing import Any
 
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.artifact_io_runtime import read_json_object
-from .mechanism_run_common_runtime import timestamp, write_json
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import IMPROVEMENT_OBSERVATIONS_SCHEMA_PATH
 
+from .mechanism_run_common_runtime import timestamp, write_json
 
 IMPROVEMENT_OBSERVATIONS_SCHEMA = IMPROVEMENT_OBSERVATIONS_SCHEMA_PATH
 IMPROVEMENT_OBSERVATIONS_FILENAME = "improvement-observations.json"

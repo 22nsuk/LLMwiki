@@ -1,13 +1,18 @@
 from __future__ import annotations
 
-import re
-import time
-from dataclasses import dataclass
 import hashlib
 import json
+import re
+import time
+from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
+from ops.scripts.artifact_freshness_runtime import (
+    build_canonical_report_envelope,
+    embed_artifact_envelope_metadata,
+)
 from ops.scripts.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object,
@@ -16,23 +21,27 @@ from ops.scripts.artifact_io_runtime import (
     write_schema_backed_report,
     write_schema_validated_json,
 )
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope, embed_artifact_envelope_metadata
 from ops.scripts.codex_goal_client import FileGoalBackend
-from .auto_improve_readiness_runtime import (
-    build_readiness_report,
-    learning_review_required,
-    write_readiness_report,
+from ops.scripts.experiment_telemetry_runtime import append_ledger_event
+from ops.scripts.observability_artifacts_runtime import (
+    write_outcome_metrics_report,
+    write_promotion_decision_trends,
+    write_routing_provenance_aggregate,
+    write_run_artifact_fingerprint,
 )
+from ops.scripts.policy_runtime import load_policy, report_path
+from ops.scripts.proposal_scope_runtime import build_scope_freeze, write_scope_freeze
+from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.runtime_event_logging_runtime import append_runtime_event
+from ops.scripts.schema_constants_runtime import AUTO_IMPROVE_SESSION_SCHEMA_PATH
+from ops.scripts.schema_runtime import load_schema_with_vault_override
+from ops.scripts.subagent_routing_runtime import run_selector
+
 from .auto_improve_execute_runtime import (
     ExecuteEvaluateDependencies,
     ExecuteEvaluatePhaseResult,
     ExecuteEvaluateRequest,
     execute_evaluate_phase,
-)
-from .auto_improve_iteration_runtime import (
-    AutoImproveIterationDependencies,
-    AutoImproveIterationRequest,
-    run_auto_improve_iteration as run_auto_improve_iteration_helper,
 )
 from .auto_improve_execution_runtime import mutation_command
 from .auto_improve_iteration_persistence_runtime import (
@@ -41,19 +50,12 @@ from .auto_improve_iteration_persistence_runtime import (
     persist_iteration_phase,
     write_iteration_telemetry,
 )
-from .auto_improve_route_scaffold_runtime import (
-    RouteScaffoldDependencies,
-    RouteScaffoldPhaseResult,
-    route_scaffold_phase,
+from .auto_improve_iteration_runtime import (
+    AutoImproveIterationDependencies,
+    AutoImproveIterationRequest,
 )
-from .auto_improve_session_completion_runtime import (
-    SessionCompletionDependencies,
-    complete_auto_improve_session,
-)
-from ops.scripts.experiment_telemetry_runtime import append_ledger_event
-from .auto_improve_queue_runtime import (
-    build_proposal_queue,
-    select_next_proposal,
+from .auto_improve_iteration_runtime import (
+    run_auto_improve_iteration as run_auto_improve_iteration_helper,
 )
 from .auto_improve_outcome_runtime import (
     apply_execution_outcome,
@@ -64,32 +66,36 @@ from .auto_improve_outcome_runtime import (
     evaluate_scope_blocked,
     role_report_path,
 )
+from .auto_improve_queue_runtime import (
+    build_proposal_queue,
+    select_next_proposal,
+)
+from .auto_improve_readiness_runtime import (
+    build_readiness_report,
+    learning_review_required,
+    write_readiness_report,
+)
+from .auto_improve_route_scaffold_runtime import (
+    RouteScaffoldDependencies,
+    RouteScaffoldPhaseResult,
+    route_scaffold_phase,
+)
+from .auto_improve_session_completion_runtime import (
+    SessionCompletionDependencies,
+    complete_auto_improve_session,
+)
 from .auto_improve_session_runtime import (
     build_executor_rollup,
     build_iteration_rollup,
-    normalize_session_report,
     build_routing_rollup,
     build_session_rollups,
     build_telemetry_rollup,
     increment_counter,
+    normalize_session_report,
 )
 from .mechanism_review_runtime import build_report as build_mechanism_review_report
 from .mutation_proposal_runtime import build_report as build_mutation_proposal_report
-from ops.scripts.observability_artifacts_runtime import (
-    write_outcome_metrics_report,
-    write_promotion_decision_trends,
-    write_routing_provenance_aggregate,
-    write_run_artifact_fingerprint,
-)
-from ops.scripts.policy_runtime import load_policy, report_path
-from ops.scripts.proposal_scope_runtime import build_scope_freeze, write_scope_freeze
 from .run_mechanism_experiment_runtime import run_mechanism_experiment
-from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.runtime_event_logging_runtime import append_runtime_event
-from ops.scripts.schema_constants_runtime import AUTO_IMPROVE_SESSION_SCHEMA_PATH
-from ops.scripts.schema_runtime import load_schema_with_vault_override
-from ops.scripts.subagent_routing_runtime import run_selector
-
 
 AUTO_IMPROVE_SESSION_SCHEMA = AUTO_IMPROVE_SESSION_SCHEMA_PATH
 DEFAULT_MECHANISM_REVIEW_REPORT = "ops/reports/mechanism-review-candidates.json"
@@ -167,7 +173,7 @@ class AutoImproveSessionRequest:
     post_promote_maintenance_cycles: int | None = None
     context: RuntimeContext | None = None
 
-    def resolved(self) -> "AutoImproveSessionRequest":
+    def resolved(self) -> AutoImproveSessionRequest:
         return AutoImproveSessionRequest(
             vault=self.vault.resolve(),
             policy_path=self.policy_path,

@@ -3,9 +3,9 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict
 
 from ops.scripts.policy_runtime import report_path
+
 from .wiki_page_runtime import load_text, section_body
 from .wiki_stage2_runtime import (
     broad_synthesis_boundary_missing_sections,
@@ -102,8 +102,8 @@ def review_candidates_for(
 
 def wiki_synthesis_multi_question_candidates(
     vault: Path,
-    pages: Dict[str, Path],
-    evidence_links: Dict[str, set[str]],
+    pages: dict[str, Path],
+    evidence_links: dict[str, set[str]],
     content_promotion_review: dict,
     refactor_triggers: dict,
 ) -> list[dict]:
@@ -164,13 +164,13 @@ def wiki_synthesis_multi_question_candidates(
 
 def synthesis_analysis_template_candidates(
     vault: Path,
-    pages: Dict[str, Path],
+    pages: dict[str, Path],
     refactor_triggers: dict,
 ) -> list[dict]:
     candidates: list[dict] = []
     max_candidates = max(1, int(refactor_triggers.get("max_candidates_per_family", 1)))
 
-    for stem, path in sorted(pages.items()):
+    for _stem, path in sorted(pages.items()):
         relative_path = report_path(vault, path)
         if not relative_path.startswith("wiki/synthesis--"):
             continue
@@ -203,13 +203,13 @@ def synthesis_analysis_template_candidates(
 
 def synthesis_follow_up_split_candidates(
     vault: Path,
-    pages: Dict[str, Path],
+    pages: dict[str, Path],
     refactor_triggers: dict,
 ) -> list[dict]:
     candidates: list[dict] = []
     max_candidates = max(1, int(refactor_triggers.get("max_candidates_per_family", 1)))
 
-    for stem, path in sorted(pages.items()):
+    for _stem, path in sorted(pages.items()):
         relative_path = report_path(vault, path)
         if not relative_path.startswith("wiki/synthesis--"):
             continue
@@ -246,8 +246,8 @@ def synthesis_follow_up_split_candidates(
 
 def concept_carryover_continuity_candidates(
     vault: Path,
-    pages: Dict[str, Path],
-    related_links: Dict[str, set[str]],
+    pages: dict[str, Path],
+    related_links: dict[str, set[str]],
     refactor_triggers: dict,
 ) -> list[dict]:
     candidates: list[dict] = []
@@ -327,9 +327,9 @@ def concept_carryover_continuity_candidates(
 @dataclass(frozen=True)
 class _ContentPromotionContext:
     vault: Path
-    pages: Dict[str, Path]
-    related_links: Dict[str, set[str]]
-    evidence_links: Dict[str, set[str]]
+    pages: dict[str, Path]
+    related_links: dict[str, set[str]]
+    evidence_links: dict[str, set[str]]
     content_promotion_review: dict
     max_candidates: int
 
@@ -475,9 +475,9 @@ def _system_missing_concept_candidates(
 
 def content_promotion_candidates(
     vault: Path,
-    pages: Dict[str, Path],
-    related_links: Dict[str, set[str]],
-    evidence_links: Dict[str, set[str]],
+    pages: dict[str, Path],
+    related_links: dict[str, set[str]],
+    evidence_links: dict[str, set[str]],
     registry_entries: list[dict],
     refactor_triggers: dict,
     content_promotion_review: dict,
@@ -537,9 +537,9 @@ def content_promotion_candidates(
 
 def active_source_missing_concept_candidates(
     vault: Path,
-    pages: Dict[str, Path],
-    related_links: Dict[str, set[str]],
-    frontmatters: Dict[str, dict | None],
+    pages: dict[str, Path],
+    related_links: dict[str, set[str]],
+    frontmatters: dict[str, dict | None],
 ) -> list[dict]:
     candidates: list[dict] = []
     for stem, path in sorted(pages.items()):
@@ -594,9 +594,9 @@ def active_source_missing_concept_candidates(
 
 def research_source_anchor_candidates(
     vault: Path,
-    pages: Dict[str, Path],
-    page_links: Dict[str, set[str]],
-    frontmatters: Dict[str, dict | None],
+    pages: dict[str, Path],
+    page_links: dict[str, set[str]],
+    frontmatters: dict[str, dict | None],
     refactor_triggers: dict,
     content_promotion_review: dict,
 ) -> list[dict]:

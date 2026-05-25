@@ -5,7 +5,6 @@ import re
 import unittest
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BROAD_EXCEPTION_MARKER = re.compile(r"broad-exception:\s*([a-z_]+)")
 ALLOWED_BOUNDARY_CLASSES = frozenset(

@@ -8,8 +8,12 @@ from pathlib import Path
 
 from ops.scripts.cyclonedx_sbom import build_bom, write_bom
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import CYCLONEDX_16_SCHEMA_PATH, CYCLONEDX_16_SCHEMA_URI
+from ops.scripts.schema_constants_runtime import (
+    CYCLONEDX_16_SCHEMA_PATH,
+    CYCLONEDX_16_SCHEMA_URI,
+)
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_supply_chain_provenance import (
     LOCKED_CI_INSTALL_SNIPPET,
@@ -21,8 +25,8 @@ from tests.test_supply_chain_provenance import (
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 20, 12, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 20, 12, 0, tzinfo=dt.UTC),
     )
 
 

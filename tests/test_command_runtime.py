@@ -7,12 +7,13 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts import command_runtime
 from ops.scripts.command_runtime import (
     FakeProcess,
     FakeProcessBackend,
     run_with_timeout,
 )
+
+from ops.scripts import command_runtime
 
 
 class CompletingOnDrainFakeProcess(FakeProcess):
@@ -77,13 +78,15 @@ class CommandRuntimeTests(unittest.TestCase):
         self.assertNotEqual(result.signal_sent, "none")
 
     def test_run_with_timeout_rejects_nonpositive_timeout(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            with self.assertRaisesRegex(ValueError, "timeout_seconds must be >= 1"):
-                run_with_timeout(
-                    ["python", "-c", "print('ok')"],
-                    cwd=Path(temp_dir),
-                    timeout_seconds=0,
-                )
+        with (
+            tempfile.TemporaryDirectory() as temp_dir,
+            self.assertRaisesRegex(ValueError, "timeout_seconds must be >= 1"),
+        ):
+            run_with_timeout(
+                ["python", "-c", "print('ok')"],
+                cwd=Path(temp_dir),
+                timeout_seconds=0,
+            )
 
     def test_run_with_timeout_passes_clean_env_and_python_minus_s_in_hermetic_mode(self) -> None:
         process = FakeProcess(communicate_side_effect=[("ok\n", "")])
@@ -167,16 +170,16 @@ class CommandRuntimeTests(unittest.TestCase):
         process.communicate.return_value = ("ok\n", "")
         process.returncode = 0
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            with (
-                mock.patch.object(command_runtime.os, "name", "posix"),
-                mock.patch("ops.scripts.command_runtime.subprocess.Popen", return_value=process) as popen,
-            ):
-                result = command_runtime.run_with_timeout(
-                    ["python", "-c", "print('ok')"],
-                    cwd=Path(temp_dir),
-                    timeout_seconds=5,
-                )
+        with (
+            tempfile.TemporaryDirectory() as temp_dir,
+            mock.patch.object(command_runtime.os, "name", "posix"),
+            mock.patch("ops.scripts.command_runtime.subprocess.Popen", return_value=process) as popen,
+        ):
+            result = command_runtime.run_with_timeout(
+                ["python", "-c", "print('ok')"],
+                cwd=Path(temp_dir),
+                timeout_seconds=5,
+            )
 
         self.assertEqual(result.termination_reason, "completed")
         self.assertTrue(popen.call_args.kwargs["start_new_session"])
@@ -188,16 +191,16 @@ class CommandRuntimeTests(unittest.TestCase):
         process.communicate.return_value = ("ok\n", "")
         process.returncode = 0
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            with (
-                mock.patch.object(command_runtime.os, "name", "nt"),
-                mock.patch("ops.scripts.command_runtime.subprocess.Popen", return_value=process) as popen,
-            ):
-                result = command_runtime.run_with_timeout(
-                    ["python", "-c", "print('ok')"],
-                    cwd=Path(temp_dir),
-                    timeout_seconds=5,
-                )
+        with (
+            tempfile.TemporaryDirectory() as temp_dir,
+            mock.patch.object(command_runtime.os, "name", "nt"),
+            mock.patch("ops.scripts.command_runtime.subprocess.Popen", return_value=process) as popen,
+        ):
+            result = command_runtime.run_with_timeout(
+                ["python", "-c", "print('ok')"],
+                cwd=Path(temp_dir),
+                timeout_seconds=5,
+            )
 
         self.assertEqual(result.termination_reason, "completed")
         self.assertFalse(popen.call_args.kwargs["start_new_session"])

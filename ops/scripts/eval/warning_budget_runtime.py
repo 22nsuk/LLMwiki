@@ -9,9 +9,9 @@ from ops.scripts.raw_registry_preflight import preflight
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import WARNING_BUDGET_REPORT_SCHEMA_PATH
 from ops.scripts.schema_runtime import load_schema, validate_or_raise
+
 from .wiki_lint import lint
 from .wiki_snapshot_runtime import WikiRuntimeSnapshot
-
 
 WARNING_BUDGET_REPORT_SCHEMA = WARNING_BUDGET_REPORT_SCHEMA_PATH
 

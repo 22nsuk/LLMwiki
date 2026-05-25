@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -9,7 +9,6 @@ from .output_runtime import write_output_text
 from .runtime_context import RuntimeContext
 from .schema_constants_runtime import RUNTIME_EVENT_SCHEMA_PATH
 from .schema_runtime import load_schema_with_vault_override, validate_or_raise
-
 
 RUNTIME_EVENT_LOG_DIR = "ops/reports/runtime-events"
 RUN_RUNTIME_EVENT_LOG_FILENAME = "runtime-events.jsonl"

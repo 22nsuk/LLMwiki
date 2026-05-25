@@ -5,7 +5,6 @@ import unittest
 from pathlib import Path
 
 import pytest
-
 from ops.scripts.public_mirror_boundary_runtime import (
     PublicMirrorBoundaryError,
     assert_within_public_mirror,

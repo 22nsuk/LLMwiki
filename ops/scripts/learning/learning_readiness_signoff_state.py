@@ -8,7 +8,6 @@ from ops.scripts.artifact_io_runtime import load_optional_json_object
 
 from .learning_readiness_vocabulary import LEARNING_REVIEW_REQUIRED_BLOCKER_ID
 
-
 SIGNOFF_REPORT_REL_PATH = "ops/reports/learning-readiness-signoff.json"
 SUPPORTED_BLOCKER_ID = LEARNING_REVIEW_REQUIRED_BLOCKER_ID
 
@@ -21,8 +20,8 @@ def _parse_timestamp(value: object) -> dt.datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=dt.timezone.utc)
-    return parsed.astimezone(dt.timezone.utc).replace(microsecond=0)
+        parsed = parsed.replace(tzinfo=dt.UTC)
+    return parsed.astimezone(dt.UTC).replace(microsecond=0)
 
 
 def _empty_summary(*, path: str, signoff_status: str, summary: str) -> dict[str, Any]:

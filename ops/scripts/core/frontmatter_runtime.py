@@ -3,11 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.raw_registry_runtime import (
+    normalize_registry_locator,
+    registry_entry_locators,
+)
+
 from .policy_runtime import report_path
-from ops.scripts.raw_registry_runtime import normalize_registry_locator, registry_entry_locators
 from .source_page_naming_runtime import source_slug_validation_detail
 from .yaml_runtime import parse_simple_yaml
-
 
 FRONTMATTER_DELIMITER = "---"
 

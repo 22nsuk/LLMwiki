@@ -11,7 +11,6 @@ from .codex_exec_executor import CodexExecError, execute_codex_exec_role
 from .policy_runtime import load_policy
 from .runtime_context import RuntimeContext
 
-
 ROLE_ORDER = ("worker", "reviewer", "validator")
 SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
 OPS_SCRIPTS_PREFIX = "ops/scripts/"
@@ -222,12 +221,12 @@ def main(argv: list[str] | None = None) -> None:
         )
     except ExecutorRuntimeError as exc:
         print(str(exc), file=sys.stderr)
-        raise SystemExit(exc.exit_code)
+        raise SystemExit(exc.exit_code) from exc
     except CodexExecError as exc:
         print(str(exc), file=sys.stderr)
-        raise SystemExit(5)
+        raise SystemExit(5) from exc
     except Exception as exc:  # pragma: no cover - broad-exception: cli_boundary
         print(str(exc), file=sys.stderr)
-        raise SystemExit(8)
+        raise SystemExit(8) from exc
 
     print(json.dumps(result, ensure_ascii=False, indent=2))

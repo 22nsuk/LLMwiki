@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import json
 import os
 import re
@@ -9,7 +10,7 @@ import sys
 import tomllib
 import unittest
 from pathlib import Path
-from unittest.mock import sentinel, patch
+from unittest.mock import patch, sentinel
 
 import pytest
 
@@ -93,9 +94,8 @@ class ImportFallbackContractTests(unittest.TestCase):
             cwd=Path(__file__).resolve().parents[1],
             env=env,
             text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
             check=False,
+            capture_output=True,
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -118,7 +118,7 @@ class ImportFallbackContractTests(unittest.TestCase):
         }
         all_targets = sorted(project_targets | flat_targets | direct_fallback_targets)
 
-        self.assertEqual(len(project_targets), 69)
+        self.assertEqual(len(project_targets), 80)
         self.assertTrue(flat_targets)
         self.assertTrue(direct_fallback_targets)
         for module_name in all_targets:

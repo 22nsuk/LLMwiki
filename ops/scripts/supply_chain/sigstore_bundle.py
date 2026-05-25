@@ -9,21 +9,38 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from ops.scripts.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+        embed_artifact_envelope_metadata,
+    )
+    from ops.scripts.artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        write_schema_backed_report,
+    )
     from ops.scripts.in_toto_statement import DEFAULT_OUT as IN_TOTO_DEFAULT_OUT
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope, embed_artifact_envelope_metadata
-    from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.schema_constants_runtime import SIGSTORE_BUNDLE_VERIFICATION_SCHEMA_PATH
+    from ops.scripts.schema_constants_runtime import (
+        SIGSTORE_BUNDLE_VERIFICATION_SCHEMA_PATH,
+    )
     from ops.scripts.supply_chain_artifact_model import build_model
     from ops.scripts.supply_chain_provenance import sha256_file
 else:
-    from .in_toto_statement import DEFAULT_OUT as IN_TOTO_DEFAULT_OUT
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope, embed_artifact_envelope_metadata
-    from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+    from ops.scripts.artifact_freshness_runtime import (
+        build_canonical_report_envelope,
+        embed_artifact_envelope_metadata,
+    )
+    from ops.scripts.artifact_io_runtime import (
+        SchemaBackedReportWriteRequest,
+        write_schema_backed_report,
+    )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.policy_runtime import load_policy, report_path
-    from ops.scripts.schema_constants_runtime import SIGSTORE_BUNDLE_VERIFICATION_SCHEMA_PATH
+    from ops.scripts.schema_constants_runtime import (
+        SIGSTORE_BUNDLE_VERIFICATION_SCHEMA_PATH,
+    )
+
+    from .in_toto_statement import DEFAULT_OUT as IN_TOTO_DEFAULT_OUT
     from .supply_chain_artifact_model import build_model
     from .supply_chain_provenance import sha256_file
 

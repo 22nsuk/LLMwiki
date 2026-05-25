@@ -1,12 +1,11 @@
 from __future__ import annotations
 
+import unittest
 from copy import deepcopy
 from pathlib import Path
-import unittest
 from typing import Any
 
 import pytest
-
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
 pytestmark = pytest.mark.public

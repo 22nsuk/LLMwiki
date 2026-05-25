@@ -3,13 +3,12 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
-from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from pathlib import Path
 
 import pytest
-
 from ops.scripts.codex_goal_client import set_goal
 from ops.scripts.command_runtime import FakeProcess, FakeProcessBackend
 from ops.scripts.goal_runtime_runner import (
@@ -18,6 +17,7 @@ from ops.scripts.goal_runtime_runner import (
     run_goal_runtime_command,
 )
 from ops.scripts.runtime_context import RuntimeContext
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_codex_goal_contract import sample_goal_contract
 
@@ -39,15 +39,15 @@ class SteppedClock:
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.UTC),
     )
 
 
 def context_at(hour: int, minute: int) -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 17, hour, minute, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 17, hour, minute, tzinfo=dt.UTC),
     )
 
 

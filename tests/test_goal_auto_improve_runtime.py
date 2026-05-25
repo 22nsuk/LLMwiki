@@ -5,9 +5,7 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
-
 from ops.scripts.auto_improve_loop import main as auto_improve_loop_main
-
 
 pytestmark = pytest.mark.public
 
@@ -19,29 +17,28 @@ def test_auto_improve_loop_goal_contract_uses_canonical_session_path() -> None:
             "session_id": "goal-session",
             "session_report": "ops/reports/auto-improve-sessions/goal-session.json",
         },
-    ) as run_session:
-        with mock.patch("builtins.print") as printed:
-            auto_improve_loop_main(
-                [
-                    "--vault",
-                    ".",
-                    "--session-id",
-                    "goal-session",
-                    "--goal-contract",
-                    "ops/reports/codex-goal-contract.json",
-                    "--max-minutes",
-                    "30",
-                    "--max-proposals",
-                    "1",
-                    "--max-consecutive-failures",
-                    "1",
-                    "--maintain-until-budget",
-                    "--maintenance-interval-seconds",
-                    "300",
-                    "--post-promote-maintenance-cycles",
-                    "2",
-                ]
-            )
+    ) as run_session, mock.patch("builtins.print") as printed:
+        auto_improve_loop_main(
+            [
+                "--vault",
+                ".",
+                "--session-id",
+                "goal-session",
+                "--goal-contract",
+                "ops/reports/codex-goal-contract.json",
+                "--max-minutes",
+                "30",
+                "--max-proposals",
+                "1",
+                "--max-consecutive-failures",
+                "1",
+                "--maintain-until-budget",
+                "--maintenance-interval-seconds",
+                "300",
+                "--post-promote-maintenance-cycles",
+                "2",
+            ]
+        )
 
     run_session.assert_called_once()
     kwargs = run_session.call_args.kwargs
@@ -71,19 +68,19 @@ def test_auto_improve_loop_prints_maintenance_action_next_budget() -> None:
         mock.patch(
             "ops.scripts.mechanism.auto_improve_loop.write_maintenance_action_resume_plan",
         ) as write_plan,
+        mock.patch("builtins.print") as printed,
     ):
-        with mock.patch("builtins.print") as printed:
-            auto_improve_loop_main(
-                [
-                    "--vault",
-                    ".",
-                    "--resume-session",
-                    "goal-session",
-                    "--print-maintenance-action-next-max-proposals",
-                    "--maintenance-action-plan-out",
-                    "tmp/goal-runtime-maintenance-action.json",
-                ]
-            )
+        auto_improve_loop_main(
+            [
+                "--vault",
+                ".",
+                "--resume-session",
+                "goal-session",
+                "--print-maintenance-action-next-max-proposals",
+                "--maintenance-action-plan-out",
+                "tmp/goal-runtime-maintenance-action.json",
+            ]
+        )
 
     action_plan.assert_called_once_with(Path("."), session_id="goal-session")
     write_plan.assert_called_once()

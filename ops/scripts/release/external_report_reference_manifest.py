@@ -24,8 +24,9 @@ from ops.scripts.path_portability_runtime import (
 )
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import EXTERNAL_REPORT_REFERENCE_MANIFEST_SCHEMA_PATH
-
+from ops.scripts.schema_constants_runtime import (
+    EXTERNAL_REPORT_REFERENCE_MANIFEST_SCHEMA_PATH,
+)
 
 PRODUCER = "ops.scripts.external_report_reference_manifest"
 DEFAULT_OUT = "external-reports/report-reference-manifest.json"

@@ -2,22 +2,22 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .artifact_io_runtime import (
-    SchemaBackedReportWriteRequest,
-    write_schema_backed_report,
-)
-from .filesystem_runtime import normalized_allowed_apply_roots
 from ops.scripts.mechanism_assess import (
     MechanismAssessmentState,
     configured_high_risk_flags,
     detect_risk_flags,
     normalize_targets,
 )
+
+from .artifact_io_runtime import (
+    SchemaBackedReportWriteRequest,
+    write_schema_backed_report,
+)
+from .filesystem_runtime import normalized_allowed_apply_roots
 from .path_runtime import normalize_repo_path_text
 from .policy_runtime import report_path
 from .runtime_context import RuntimeContext
 from .schema_constants_runtime import PROPOSAL_SCOPE_SCHEMA_PATH
-
 
 PROPOSAL_SCOPE_SCHEMA = PROPOSAL_SCOPE_SCHEMA_PATH
 

@@ -11,21 +11,25 @@ from pathlib import Path
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from ops.scripts.auto_improve_readiness_runtime import build_readiness_report
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.auto_improve_readiness_runtime import build_readiness_report
 from ops.scripts.cyclonedx_sbom import build_bom
 from ops.scripts.openvex_draft import build_openvex_draft
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.sbom_export_mapping import build_report as build_sbom_export_mapping_report
-from ops.scripts.supply_chain_provenance import build_report as build_supply_chain_provenance_report
+from ops.scripts.sbom_export_mapping import (
+    build_report as build_sbom_export_mapping_report,
+)
+from ops.scripts.supply_chain_provenance import (
+    build_report as build_supply_chain_provenance_report,
+)
+
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 from tests.test_supply_chain_provenance import (
     LOCKED_CI_INSTALL_SNIPPET,
     seed_dependency_inputs,
     seed_source_package_evidence,
 )
-
 
 FIXTURE_PATH = REPO_ROOT / "tests" / "fixtures" / "report_schema_samples.json"
 OPENVEX_SAMPLE_ID = "urn:uuid:12345678-1234-4234-9234-123456789abd"
@@ -84,8 +88,8 @@ def load_report_schema_samples(fixture_path: Path = FIXTURE_PATH) -> dict:
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 15, 0, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 15, 0, 0, tzinfo=dt.UTC),
     )
 
 

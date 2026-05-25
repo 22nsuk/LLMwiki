@@ -136,7 +136,7 @@ def run_release_ready(
         vault,
         expected_source_tree_fingerprint=expected,
         steps=steps,
-        context=context or RuntimeContext(display_timezone=dt.timezone.utc),
+        context=context or RuntimeContext(display_timezone=dt.UTC),
     )
     write_manifest(vault, manifest, out_path)
     return manifest

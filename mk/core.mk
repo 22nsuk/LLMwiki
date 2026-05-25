@@ -1,7 +1,10 @@
 BOOTSTRAP_PREFLIGHT_OUT ?= ops/reports/bootstrap-preflight-report.json
 BOOTSTRAP_PREFLIGHT_ENVIRONMENT_CLASS ?= developer
+TOOLS_MIGRATION_PLAN_OUT ?= tmp/tools-migration-plan.json
+SUBAGENT_PROFILE_SCHEMA_OUT ?= tmp/subagent-profile-schema.json
+COMPATIBILITY_ALIAS_DEPRECATION_OUT ?= tmp/compatibility-alias-deprecation.json
 
-.PHONY: help dev-install bootstrap-preflight
+.PHONY: help dev-install bootstrap-preflight tools-migration-plan subagent-profile-schema compatibility-alias-deprecation
 
 help:
 	@printf '%s\n' \
@@ -13,8 +16,8 @@ help:
 		"" \
 		"Source checks:" \
 		"  make static                       run Ruff and mypy base gates" \
-		"  make ruff-strict-preview          run current strict Ruff preview allowlist" \
-		"  make mypy-strict-preview          run current strict mypy preview allowlist" \
+		"  make ruff-strict-preview          run strict Ruff preview across ops/scripts tests tools" \
+		"  make mypy-strict-preview          run strict mypy preview across ops/scripts tests tools" \
 		"  make strict-preview-audit         audit strict preview debt across ops/scripts tests tools" \
 		"" \
 		"Report contracts:" \
@@ -54,3 +57,12 @@ dev-install:
 
 bootstrap-preflight:
 	$(PYTHON) -m ops.scripts.bootstrap_preflight --vault "$(VAULT)" --dev --environment-class "$(BOOTSTRAP_PREFLIGHT_ENVIRONMENT_CLASS)" --out "$(BOOTSTRAP_PREFLIGHT_OUT)"
+
+tools-migration-plan:
+	$(PYTHON) -m ops.scripts.tools_migration_plan --vault "$(VAULT)" --out "$(TOOLS_MIGRATION_PLAN_OUT)"
+
+subagent-profile-schema:
+	$(PYTHON) -m ops.scripts.subagent_profile_schema --vault "$(VAULT)" --out "$(SUBAGENT_PROFILE_SCHEMA_OUT)"
+
+compatibility-alias-deprecation:
+	$(PYTHON) -m ops.scripts.compatibility_alias_deprecation --vault "$(VAULT)" --out "$(COMPATIBILITY_ALIAS_DEPRECATION_OUT)"

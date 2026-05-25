@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Subagent Profile Schema Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "artifact_kind", "generated_at", "producer", "status", "summary", "profiles", "missing_profiles", "extra_profiles", "incomplete_profiles"],
+  "properties": {
+    "$schema": { "type": "string", "const": "ops/schemas/subagent-profile.schema.json" },
+    "artifact_kind": { "type": "string", "const": "subagent_profile_schema" },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": { "type": "string", "const": "ops.scripts.subagent_profile_schema" },
+    "status": { "type": "string", "enum": ["pass", "fail"] },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_count", "policy_role_count", "missing_profile_count", "extra_profile_count", "incomplete_profile_count"],
+      "properties": {
+        "profile_count": { "type": "integer", "minimum": 0 },
+        "policy_role_count": { "type": "integer", "minimum": 0 },
+        "missing_profile_count": { "type": "integer", "minimum": 0 },
+        "extra_profile_count": { "type": "integer", "minimum": 0 },
+        "incomplete_profile_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "name", "description_present", "model", "model_reasoning_effort", "sandbox_mode", "developer_instructions_present", "policy_role_declared", "default_rung", "allowed_rungs"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "description_present": { "type": "boolean" },
+          "model": { "type": "string" },
+          "model_reasoning_effort": { "type": "string" },
+          "sandbox_mode": { "type": "string" },
+          "developer_instructions_present": { "type": "boolean" },
+          "policy_role_declared": { "type": "boolean" },
+          "default_rung": { "type": "integer", "minimum": 0 },
+          "allowed_rungs": { "type": "array", "items": { "type": "integer", "minimum": 1 } }
+        }
+      }
+    },
+    "missing_profiles": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "extra_profiles": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "incomplete_profiles": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}

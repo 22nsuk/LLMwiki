@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import datetime as dt
-from collections.abc import Mapping
-from dataclasses import dataclass
 import hashlib
 import json
 import os
+from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -183,8 +183,8 @@ def _sync_generated_at_mtime(path: Path, payload: Any) -> None:
     except ValueError:
         return
     if generated_dt.tzinfo is None:
-        generated_dt = generated_dt.replace(tzinfo=dt.timezone.utc)
-    timestamp = generated_dt.astimezone(dt.timezone.utc).timestamp()
+        generated_dt = generated_dt.replace(tzinfo=dt.UTC)
+    timestamp = generated_dt.astimezone(dt.UTC).timestamp()
     os.utime(path, (timestamp, timestamp))
 
 

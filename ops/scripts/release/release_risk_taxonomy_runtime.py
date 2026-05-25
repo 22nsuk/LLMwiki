@@ -4,8 +4,10 @@ from pathlib import Path
 from typing import Any
 
 from ops.scripts.artifact_io_runtime import load_optional_json_object_with_diagnostics
-from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_or_raise
-
+from ops.scripts.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_or_raise,
+)
 
 RELEASE_RISK_TAXONOMY_PATH = "ops/policies/release-risk-taxonomy.json"
 RELEASE_RISK_TAXONOMY_SCHEMA_PATH = "ops/schemas/release-risk-taxonomy.schema.json"

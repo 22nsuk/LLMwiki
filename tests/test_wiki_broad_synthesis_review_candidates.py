@@ -5,8 +5,8 @@ import unittest
 from pathlib import Path
 
 import pytest
-
 from ops.scripts.wiki_lint import lint
+
 from tests.test_wiki_lint_review_runtime import seed_broad_synthesis_vault
 
 pytestmark = pytest.mark.slow

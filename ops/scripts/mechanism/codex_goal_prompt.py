@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import argparse
-from collections.abc import Mapping
 import hashlib
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +16,6 @@ from ops.scripts.codex_goal_client import DEFAULT_CONTRACT_PATH, FileGoalBackend
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
-
 
 DEFAULT_OUT = "ops/reports/codex-goal-prompt.json"
 PRODUCER = "ops.scripts.codex_goal_prompt"

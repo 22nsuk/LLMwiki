@@ -12,12 +12,16 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.warning_budget_runtime import WARNING_BUDGET_REPORT_SCHEMA, build_report
+    from ops.scripts.warning_budget_runtime import (
+        WARNING_BUDGET_REPORT_SCHEMA,
+        build_report,
+    )
 else:
     from ops.scripts.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
+
     from .warning_budget_runtime import WARNING_BUDGET_REPORT_SCHEMA, build_report
 
 
@@ -44,10 +48,10 @@ def main(argv: list[str] | None = None) -> None:
         )
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
-        raise SystemExit(3)
+        raise SystemExit(3) from exc
     except OSError as exc:
         print(str(exc), file=sys.stderr)
-        raise SystemExit(7)
+        raise SystemExit(7) from exc
 
     text = json.dumps(report, ensure_ascii=False, indent=2)
     if args.out:

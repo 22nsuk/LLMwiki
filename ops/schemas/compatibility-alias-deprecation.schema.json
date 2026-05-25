@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Compatibility Alias Deprecation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "artifact_kind", "generated_at", "producer", "status", "summary", "aliases", "removal_ready_aliases"],
+  "properties": {
+    "$schema": { "type": "string", "const": "ops/schemas/compatibility-alias-deprecation.schema.json" },
+    "artifact_kind": { "type": "string", "const": "compatibility_alias_deprecation" },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": { "type": "string", "const": "ops.scripts.compatibility_alias_deprecation" },
+    "status": { "type": "string", "enum": ["pass", "attention", "fail"] },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alias_count", "make_alias_count", "removal_ready_count"],
+      "properties": {
+        "alias_count": { "type": "integer", "minimum": 0 },
+        "make_alias_count": { "type": "integer", "minimum": 0 },
+        "removal_ready_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "aliases": { "type": "array", "items": { "$ref": "#/$defs/alias" } },
+    "removal_ready_aliases": { "type": "array", "items": { "$ref": "#/$defs/alias" } }
+  },
+  "$defs": {
+    "alias": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alias_type", "name", "path", "preferred_replacement", "removal_ready", "retained_reason"],
+      "properties": {
+        "alias_type": { "type": "string", "enum": ["make_target", "stable_import_surface", "flat_import_reexport"] },
+        "name": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 },
+        "preferred_replacement": { "type": "string" },
+        "removal_ready": { "type": "boolean" },
+        "retained_reason": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

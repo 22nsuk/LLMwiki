@@ -12,9 +12,12 @@ from ops.scripts.schema_constants_runtime import (
     MECHANISM_ASSESSMENT_SCHEMA_PATH,
     PROMOTION_REPORT_SCHEMA_PATH,
 )
-from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_with_schema
-from .current_target_path_runtime import current_repo_target_paths
+from ops.scripts.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_with_schema,
+)
 
+from .current_target_path_runtime import current_repo_target_paths
 
 PROMOTION_REPORT_SCHEMA = PROMOTION_REPORT_SCHEMA_PATH
 MECHANISM_ASSESSMENT_SCHEMA = MECHANISM_ASSESSMENT_SCHEMA_PATH

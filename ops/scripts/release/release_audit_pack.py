@@ -10,7 +10,6 @@ from typing import Any
 from ops.scripts.artifact_io_runtime import read_json_object, resolve_repo_artifact_path
 from ops.scripts.output_runtime import display_path
 
-
 DEFAULT_BATCH_MANIFEST = "ops/reports/release-closeout-batch-manifest.json"
 DEFAULT_OUT = "build/release/release-audit-pack.zip"
 PACK_MANIFEST_NAME = "release-audit-pack-manifest.json"

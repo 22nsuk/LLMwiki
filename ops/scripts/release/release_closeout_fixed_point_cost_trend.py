@@ -17,7 +17,6 @@ from ops.scripts.artifact_io_runtime import (
 from ops.scripts.output_runtime import display_path
 from ops.scripts.runtime_context import RuntimeContext
 
-
 DEFAULT_OUT = "ops/reports/release-closeout-fixed-point-cost-trend.json"
 FIXED_POINT_REPORT_PATH = "ops/reports/release-closeout-fixed-point.json"
 POLICY_PATH = "ops/policies/release-closeout-fixed-point.json"
@@ -261,7 +260,7 @@ def build_report(
     previous_path: str = DEFAULT_OUT,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
-    runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
     policy = _load_json(vault / POLICY_PATH)
     cost_policy = _cost_policy(policy)

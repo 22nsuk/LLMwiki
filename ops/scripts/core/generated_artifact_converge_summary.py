@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-
 DEFAULT_OUT = "tmp/generated-artifact-converge-summary.json"
 DEFAULT_BEFORE_OUT = "tmp/generated-artifact-converge-summary.before.json"
 SEMANTIC_VOLATILE_KEYS = {

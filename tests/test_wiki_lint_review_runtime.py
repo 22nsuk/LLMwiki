@@ -4,8 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ops.scripts.wiki_lint import lint
 from ops.scripts.policy_runtime import load_policy
+from ops.scripts.wiki_lint import lint
 from ops.scripts.wiki_lint_review_runtime import (
     active_source_missing_concept_candidates,
     concept_carryover_continuity_candidates,
@@ -15,6 +15,7 @@ from ops.scripts.wiki_lint_review_runtime import (
     wiki_synthesis_multi_question_candidates,
 )
 from ops.scripts.wiki_snapshot_runtime import build_wiki_runtime_snapshot
+
 from tests.minimal_vault_runtime import seed_open_question_smoke_vault
 
 

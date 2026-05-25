@@ -9,6 +9,7 @@ from ops.scripts.behavior_delta_runtime import (
     build_behavior_delta_report,
     write_behavior_delta_report,
 )
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 

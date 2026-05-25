@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from ops.scripts.experiment_telemetry_runtime import run_rel
 from ops.scripts.policy_runtime import report_path

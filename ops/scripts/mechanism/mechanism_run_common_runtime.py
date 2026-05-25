@@ -9,7 +9,10 @@ from pathlib import Path
 from ops.scripts.output_runtime import write_output_text
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_or_raise
+from ops.scripts.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_or_raise,
+)
 
 
 class RunMechanismExperimentError(Exception):
@@ -147,7 +150,7 @@ class CompletedRunSteps:
 
 
 def timestamp(context: RuntimeContext | None = None) -> str:
-    runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     return runtime_context.isoformat_z()
 
 

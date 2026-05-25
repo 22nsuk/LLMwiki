@@ -6,25 +6,28 @@ import json
 import os
 import tempfile
 import unittest
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import pytest
-
 from ops.scripts.release_closeout_fixed_point import (
     ARTIFACT_FRESHNESS_REPORT_PATH,
-    DRY_RUN_SCHEMA_PATH,
     DEFAULT_OUT,
+    DRY_RUN_SCHEMA_PATH,
     bootstrap_post_promote_freshness,
     build_dry_run_report,
     build_report,
-    main as fixed_point_main,
     write_dry_run_plan,
     write_dry_run_recommended_targets,
+)
+from ops.scripts.release_closeout_fixed_point import (
+    main as fixed_point_main,
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = pytest.mark.public
@@ -35,8 +38,8 @@ SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-closeout-fixed-point.sche
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 9, 12, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 9, 12, 0, tzinfo=dt.UTC),
     )
 
 

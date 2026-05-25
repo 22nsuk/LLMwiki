@@ -159,7 +159,7 @@ def build_report(
     timeout_seconds: int,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
-    runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
     source_zip_path = _resolve(vault, source_zip)
     extract_parent_path = _resolve(vault, extract_parent)

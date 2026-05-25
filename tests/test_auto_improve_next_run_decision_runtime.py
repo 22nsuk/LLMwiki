@@ -16,8 +16,8 @@ from ops.scripts.runtime_context import RuntimeContext
 
 
 def _context() -> RuntimeContext:
-    instant = dt.datetime(2026, 5, 20, 12, 0, tzinfo=dt.timezone.utc)
-    return RuntimeContext(clock=lambda: instant, display_timezone=dt.timezone.utc)
+    instant = dt.datetime(2026, 5, 20, 12, 0, tzinfo=dt.UTC)
+    return RuntimeContext(clock=lambda: instant, display_timezone=dt.UTC)
 
 
 def _proposal() -> dict:

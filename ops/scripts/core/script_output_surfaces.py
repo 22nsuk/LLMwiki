@@ -14,7 +14,6 @@ from .output_runtime import display_path
 from .policy_runtime import load_policy
 from .runtime_context import RuntimeContext
 
-
 DEFAULT_OUT = "ops/script-output-surfaces.json"
 SCHEMA_PATH = "ops/schemas/script-output-surfaces.schema.json"
 PRODUCER = "ops.scripts.script_output_surfaces"

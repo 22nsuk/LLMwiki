@@ -12,14 +12,15 @@ from types import SimpleNamespace
 from unittest import mock
 
 import pytest
-
 from ops.scripts.release_smoke import (
     ARCHIVE_SELF_DESCRIPTION_PATH,
     EPHEMERAL_REPORT_PREFIX,
-    FAST_PROFILE,
     FAST_DEFAULT_REPORT_OUT,
+    FAST_PROFILE,
     FULL_PROFILE,
     ReleaseArchiveBuildError,
+    _archive_budget,
+    _verify_release_archive,
     build_partial_report,
     build_release_archive,
     build_report,
@@ -34,12 +35,12 @@ from ops.scripts.release_smoke import (
     release_smoke_reuse_diagnostics,
     run_smoke_commands,
     write_report,
-    _archive_budget,
-    _verify_release_archive,
 )
-from ops.scripts.review_archive import build_review_archive, write_report as write_review_archive_report
+from ops.scripts.review_archive import build_review_archive
+from ops.scripts.review_archive import write_report as write_review_archive_report
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.wiki_manifest import build_manifest
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.integration, pytest.mark.report_contract]
@@ -144,8 +145,8 @@ class ReleaseSmokeTest(unittest.TestCase):
             (vault / "raw").mkdir(exist_ok=True)
             (vault / "raw" / "source.pdf").write_text("pdf", encoding="utf-8")
             context = RuntimeContext(
-                display_timezone=dt.timezone.utc,
-                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+                display_timezone=dt.UTC,
+                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
             )
 
             archive_path = vault / "tmp" / "review.zip"
@@ -361,9 +362,8 @@ class ReleaseSmokeTest(unittest.TestCase):
             with mock.patch(
                 "ops.scripts.release_smoke._verify_release_archive",
                 side_effect=ValueError("bad archive"),
-            ):
-                with self.assertRaises(ReleaseArchiveBuildError) as raised:
-                    build_release_archive(vault, archive_path)
+            ), self.assertRaises(ReleaseArchiveBuildError) as raised:
+                build_release_archive(vault, archive_path)
 
             archive_write = raised.exception.archive_write
             self.assertEqual(archive_path.read_text(encoding="utf-8"), "old-bytes")
@@ -639,8 +639,8 @@ class ReleaseSmokeTest(unittest.TestCase):
             archive_path.write_text("zip-bytes", encoding="utf-8")
             extracted_vault = Path(temp_dir) / "unpacked" / "vault"
             context = RuntimeContext(
-                display_timezone=dt.timezone.utc,
-                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+                display_timezone=dt.UTC,
+                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
             )
             policy_path = vault / "ops" / "policies" / "wiki-maintainer-policy.yaml"
             report = build_report(
@@ -747,8 +747,8 @@ class ReleaseSmokeTest(unittest.TestCase):
             archive_path.write_text("zip-bytes", encoding="utf-8")
             extracted_vault = ephemeral_root / "unpacked" / "vault"
             context = RuntimeContext(
-                display_timezone=dt.timezone.utc,
-                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+                display_timezone=dt.UTC,
+                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
             )
 
             report = build_report(
@@ -803,8 +803,8 @@ class ReleaseSmokeTest(unittest.TestCase):
             archive_path.write_text("zip-bytes", encoding="utf-8")
             extracted_vault = Path(temp_dir) / "unpacked" / "vault"
             context = RuntimeContext(
-                display_timezone=dt.timezone.utc,
-                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+                display_timezone=dt.UTC,
+                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
             )
 
             report = build_report(
@@ -833,8 +833,8 @@ class ReleaseSmokeTest(unittest.TestCase):
             archive_path.write_text("zip-bytes", encoding="utf-8")
             extracted_vault = Path(temp_dir) / "unpacked" / "vault"
             context = RuntimeContext(
-                display_timezone=dt.timezone.utc,
-                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+                display_timezone=dt.UTC,
+                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
             )
 
             report = build_report(
@@ -869,8 +869,8 @@ class ReleaseSmokeTest(unittest.TestCase):
             archive_path.write_text("zip-bytes", encoding="utf-8")
             extracted_vault = ephemeral_root / "unpacked" / "vault"
             context = RuntimeContext(
-                display_timezone=dt.timezone.utc,
-                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+                display_timezone=dt.UTC,
+                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
             )
 
             report = build_partial_report(
@@ -934,8 +934,8 @@ class ReleaseSmokeTest(unittest.TestCase):
             extracted_vault = Path(temp_dir) / "unpacked" / "vault"
             long_component = "a" * 260
             context = RuntimeContext(
-                display_timezone=dt.timezone.utc,
-                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+                display_timezone=dt.UTC,
+                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
             )
 
             report = build_report(
@@ -968,8 +968,8 @@ class ReleaseSmokeTest(unittest.TestCase):
             extracted_vault = Path(temp_dir) / "unpacked" / "vault"
             offender = "속보트럼프 “미 대표단, 20일 협상 위해 파키스탄 간다···합의 안하면 모든 발전소와 다리 파괴”.md"
             context = RuntimeContext(
-                display_timezone=dt.timezone.utc,
-                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+                display_timezone=dt.UTC,
+                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
             )
 
             report = build_report(

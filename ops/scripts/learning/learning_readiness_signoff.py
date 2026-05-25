@@ -8,13 +8,16 @@ from pathlib import Path
 from typing import Any
 
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.artifact_io_runtime import SchemaBackedReportWriteRequest, write_schema_backed_report
+from ops.scripts.artifact_io_runtime import (
+    SchemaBackedReportWriteRequest,
+    write_schema_backed_report,
+)
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import LEARNING_READINESS_SIGNOFF_SCHEMA_PATH
-from .learning_readiness_vocabulary import LEARNING_REVIEW_REQUIRED_BLOCKER_ID
 
+from .learning_readiness_vocabulary import LEARNING_REVIEW_REQUIRED_BLOCKER_ID
 
 SIGNOFF_REPORT_REL_PATH = "ops/reports/learning-readiness-signoff.json"
 SUPPORTED_BLOCKER_ID = LEARNING_REVIEW_REQUIRED_BLOCKER_ID
@@ -45,14 +48,14 @@ def _normalize_timestamp(value: str, *, field_name: str) -> str:
     except ValueError as exc:
         raise ValueError(f"{field_name} must be an ISO-8601 timestamp") from exc
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=dt.timezone.utc)
-    return parsed.astimezone(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        parsed = parsed.replace(tzinfo=dt.UTC)
+    return parsed.astimezone(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _timestamp_plus_days(timestamp_z: str, days: int) -> str:
     if days <= 0:
         raise ValueError("expiry_days must be greater than zero")
-    parsed = dt.datetime.fromisoformat(timestamp_z.replace("Z", "+00:00")).astimezone(dt.timezone.utc)
+    parsed = dt.datetime.fromisoformat(timestamp_z.replace("Z", "+00:00")).astimezone(dt.UTC)
     return (parsed + dt.timedelta(days=days)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 

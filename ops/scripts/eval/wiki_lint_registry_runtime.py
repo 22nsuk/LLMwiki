@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime as dt
 from pathlib import Path
 
-from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.registry_alignment_passes_runtime import (
     _locator_raw_path_corpus_consistency_pass,
     _registry_frontmatter_alignment_pass,
@@ -12,14 +11,32 @@ from ops.scripts.registry_alignment_passes_runtime import (
 )
 from ops.scripts.registry_diagnostics_runtime import (
     RegistryDiagnosticEmitter as RegistryLintEmitter,
+)
+from ops.scripts.registry_diagnostics_runtime import (
     RegistryInventoryContext,
+)
+from ops.scripts.registry_diagnostics_runtime import (
     RegistryPaths as RegistryLintPaths,
+)
+from ops.scripts.registry_diagnostics_runtime import (
     registry_diagnostic_paths as _registry_lint_paths,
+)
+from ops.scripts.registry_diagnostics_runtime import (
     registry_inventory_context_pass as _registry_inventory_context_pass,
+)
+from ops.scripts.registry_diagnostics_runtime import (
     registry_page_presence_pass as _registry_page_presence_pass,
+)
+from ops.scripts.registry_diagnostics_runtime import (
     registry_raw_inventory_consistency_pass as _raw_inventory_consistency_pass,
-    registry_source_target_page_naming_pass as _registry_source_target_page_naming_pass,
+)
+from ops.scripts.registry_diagnostics_runtime import (
     registry_shared_inventory_diagnostics_pass as _shared_registry_inventory_diagnostics_pass,
+)
+from ops.scripts.registry_diagnostics_runtime import (
+    registry_source_target_page_naming_pass as _registry_source_target_page_naming_pass,
+)
+from ops.scripts.registry_diagnostics_runtime import (
     registry_summary_consistency_pass as _registry_summary_consistency_pass,
 )
 from ops.scripts.registry_pass_support_runtime import (
@@ -37,6 +54,7 @@ from ops.scripts.registry_review_candidate_passes_runtime import (
     backlog_refactor_threshold_pass,
     summary_shard_review_candidate_pass,
 )
+from ops.scripts.runtime_context import RuntimeContext
 
 
 def lint_registry_contract(
@@ -52,7 +70,7 @@ def lint_registry_contract(
     *,
     context: RuntimeContext | None = None,
 ) -> dict:
-    runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     emitter = RegistryLintEmitter(lint_thresholds=lint_thresholds)
     paths = _registry_lint_paths(vault, registry_contract)
     registry_entries: list[dict] = []

@@ -11,23 +11,34 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.output_runtime import resolve_output_path, write_output_text
     from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.raw_intake_promotion_runtime import suggest_bridge_sources_for_family
+    from ops.scripts.raw_intake_promotion_runtime import (
+        suggest_bridge_sources_for_family,
+    )
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import (
         SOURCE_SLUG_CURATION_MANIFEST_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_VALIDATION_REPORT_SCHEMA_PATH,
     )
-    from ops.scripts.source_page_naming_runtime import source_slug_validation_detail, source_stem_slug_and_date
+    from ops.scripts.source_page_naming_runtime import (
+        source_slug_validation_detail,
+        source_stem_slug_and_date,
+    )
 else:
+    from ops.scripts.raw_intake_promotion_runtime import (
+        suggest_bridge_sources_for_family,
+    )
+
     from .output_runtime import resolve_output_path, write_output_text
     from .policy_runtime import load_policy
-    from ops.scripts.raw_intake_promotion_runtime import suggest_bridge_sources_for_family
     from .runtime_context import RuntimeContext
     from .schema_constants_runtime import (
         SOURCE_SLUG_CURATION_MANIFEST_SCHEMA_PATH,
         SOURCE_SLUG_CURATION_VALIDATION_REPORT_SCHEMA_PATH,
     )
-    from .source_page_naming_runtime import source_slug_validation_detail, source_stem_slug_and_date
+    from .source_page_naming_runtime import (
+        source_slug_validation_detail,
+        source_stem_slug_and_date,
+    )
 
 
 def _matrix_entries(matrix_path: Path) -> list[dict]:
@@ -46,7 +57,7 @@ def scaffold_manifest(
     context: RuntimeContext | None = None,
 ) -> dict:
     entries = _matrix_entries(matrix_path)
-    runtime_context = context or RuntimeContext(display_timezone=dt.timezone.utc)
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     target_to_source_stems: dict[str, list[str]] = {}
     for entry in entries:
         target = entry.get("target")

@@ -24,7 +24,7 @@
     "strict_rule_families",
     "full_scope",
     "strict_preview",
-    "migration"
+    "target_contract"
   ],
   "properties": {
     "$schema": { "type": "string", "const": "ops/schemas/strict-lint-inventory.schema.json" },
@@ -76,7 +76,6 @@
       "additionalProperties": false,
       "required": [
         "target_mode",
-        "uses_legacy_allowlist",
         "gate_blocks_static",
         "audit_path",
         "audit_status",
@@ -84,8 +83,7 @@
         "audit_ruff_error_count"
       ],
       "properties": {
-        "target_mode": { "type": "string", "enum": ["full_scope_targets", "legacy_target_list", "unknown"] },
-        "uses_legacy_allowlist": { "type": "boolean" },
+        "target_mode": { "type": "string", "enum": ["full_scope_targets", "indirect_target_list", "unknown"] },
         "gate_blocks_static": { "type": "boolean" },
         "audit_path": { "type": "string", "minLength": 1 },
         "audit_status": { "type": "string", "minLength": 1 },
@@ -93,13 +91,13 @@
         "audit_ruff_error_count": { "type": "integer", "minimum": 0 }
       }
     },
-    "migration": {
+    "target_contract": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["strategy", "allowlist_removed_from_preview_target", "promotion_gate_impact"],
+      "required": ["strategy", "preview_full_scope_targets_enforced", "promotion_gate_impact"],
       "properties": {
         "strategy": { "type": "string", "minLength": 1 },
-        "allowlist_removed_from_preview_target": { "type": "boolean" },
+        "preview_full_scope_targets_enforced": { "type": "boolean" },
         "promotion_gate_impact": { "type": "string", "minLength": 1 }
       }
     }

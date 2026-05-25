@@ -7,6 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
+from ops.scripts.auto_improve_readiness_constants_runtime import READINESS_SOURCE_PATHS
 from ops.scripts.auto_improve_readiness_runtime import (
     build_readiness_report,
     load_readiness_inputs,
@@ -14,13 +16,11 @@ from ops.scripts.auto_improve_readiness_runtime import (
     readiness_exit_code,
     write_readiness_report,
 )
-from ops.scripts.auto_improve_readiness_constants_runtime import READINESS_SOURCE_PATHS
-from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from tests.minimal_vault_runtime import seed_minimal_vault
 
+from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ENVELOPE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "artifact-envelope.schema.json"
@@ -78,8 +78,8 @@ PRIMARY_REPORT_SPECS = {
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 22, 4, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 22, 4, 0, tzinfo=dt.UTC),
     )
 
 
@@ -212,7 +212,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
     def _canonical_report_payload(self, relative_path: str, payload: dict) -> dict:
         policy, resolved_policy_path = load_policy(self.vault, "ops/policies/wiki-maintainer-policy.yaml")
         spec = PRIMARY_REPORT_SPECS[relative_path]
-        generated_at = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(seconds=5)).replace(
+        generated_at = (dt.datetime.now(dt.UTC) + dt.timedelta(seconds=5)).replace(
             microsecond=0,
         ).isoformat().replace("+00:00", "Z")
         return {
@@ -253,7 +253,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         can_promote: bool = True,
     ) -> None:
         _policy, resolved_policy_path = load_policy(self.vault, "ops/policies/wiki-maintainer-policy.yaml")
-        generated_at = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(seconds=5)).replace(
+        generated_at = (dt.datetime.now(dt.UTC) + dt.timedelta(seconds=5)).replace(
             microsecond=0,
         ).isoformat().replace("+00:00", "Z")
         fatal_blockers = fatal_blockers or []
@@ -484,7 +484,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         outcome_path = self.vault / "ops" / "reports" / "outcome-metrics.json"
         payload = json.loads(outcome_path.read_text(encoding="utf-8"))
         generated_at = dt.datetime.strptime(payload["generated_at"], "%Y-%m-%dT%H:%M:%SZ")
-        newer_timestamp = (generated_at + dt.timedelta(seconds=1)).replace(tzinfo=dt.timezone.utc).timestamp()
+        newer_timestamp = (generated_at + dt.timedelta(seconds=1)).replace(tzinfo=dt.UTC).timestamp()
         os.utime(outcome_path, (newer_timestamp, newer_timestamp))
 
         inputs = load_readiness_inputs(self.vault, context=fixed_context())

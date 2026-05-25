@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
-
+from typing import Any
 
 MechanismCandidateTemplate = Callable[..., dict]
 MechanismCandidateBuilder = Callable[[dict, list[Any], MechanismCandidateTemplate], dict | None]

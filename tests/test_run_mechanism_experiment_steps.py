@@ -8,17 +8,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ops.scripts import (
-    filesystem_runtime,
-    mechanism_run_promotion_runtime,
-    mechanism_run_workspace_runtime,
-)
 from ops.scripts.command_runtime import TimedProcessResult
-from ops.scripts.run_mechanism_experiment_runtime import (
-    RunMechanismExperimentMutationError,
-    RunMechanismExperimentUsageError,
-)
-from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.mechanism_run_promotion_runtime import _finalize_step
 from ops.scripts.mechanism_run_scaffold_resolution_runtime import (
     ExperimentInputRequest,
@@ -34,7 +24,17 @@ from ops.scripts.mechanism_run_workspace_runtime import (
     _write_changed_files_manifest,
 )
 from ops.scripts.promotion_decision_registry_runtime import attach_decision_contract
+from ops.scripts.run_mechanism_experiment_runtime import (
+    RunMechanismExperimentMutationError,
+    RunMechanismExperimentUsageError,
+)
+from ops.scripts.runtime_context import RuntimeContext
 
+from ops.scripts import (
+    filesystem_runtime,
+    mechanism_run_promotion_runtime,
+    mechanism_run_workspace_runtime,
+)
 from tests.run_mechanism_experiment_test_utils import seed_wrapper_vault
 
 
@@ -365,17 +365,17 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
                     ],
                 ),
                 mock.patch.object(mechanism_run_workspace_runtime, "append_ledger_event") as append_event,
-            ):
-                with self.assertRaisesRegex(
+                self.assertRaisesRegex(
                     RunMechanismExperimentMutationError,
                     "mutation command timed out after 5400 seconds",
-                ):
-                    _execute_mutation_step(
-                        vault.resolve(),
-                        workspace.resolve(),
-                        run_id="run-mutation-timeout",
-                        resolution=resolution,
-                    )
+                ),
+            ):
+                _execute_mutation_step(
+                    vault.resolve(),
+                    workspace.resolve(),
+                    run_id="run-mutation-timeout",
+                    resolution=resolution,
+                )
 
             self.assertEqual(append_event.call_args.kwargs["decision"], "mutation_timeout")
             timeout_failure_rel = "runs/run-mutation-timeout/mutation-command-timeout-failure.json"
@@ -619,8 +619,8 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
                 encoding="utf-8",
             )
             context = RuntimeContext(
-                display_timezone=dt.timezone.utc,
-                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+                display_timezone=dt.UTC,
+                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
             )
 
             result = _apply_or_discard_workspace_changes(
@@ -703,8 +703,8 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
                 encoding="utf-8",
             )
             context = RuntimeContext(
-                display_timezone=dt.timezone.utc,
-                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+                display_timezone=dt.UTC,
+                clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
             )
 
             result = _apply_or_discard_workspace_changes(
@@ -793,8 +793,8 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
                     workspace,
                     run_id="run-steps",
                     context=RuntimeContext(
-                        display_timezone=dt.timezone.utc,
-                        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+                        display_timezone=dt.UTC,
+                        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
                     ),
                     decision="PROMOTE",
                     changed_files_manifest="runs/run-steps/changed-files-manifest.json",

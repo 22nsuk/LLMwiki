@@ -7,6 +7,7 @@ from pathlib import Path
 
 from ops.scripts.schema_runtime import load_schema, validate_or_raise
 from ops.scripts.select_subagent_rung import main as select_subagent_rung_main
+
 from tests.cli_test_runtime import invoke_cli_main
 from tests.minimal_vault_runtime import seed_minimal_vault, seed_subagent_profiles
 

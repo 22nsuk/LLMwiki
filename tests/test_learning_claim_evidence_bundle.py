@@ -13,12 +13,16 @@ from ops.scripts.learning_claim_evidence_bundle import (
     validate_learning_claim_evidence_bundle,
     write_report,
 )
-from ops.scripts.learning_confirmed_legacy_reconstruction import build_report as build_legacy_reconstruction
-from ops.scripts.learning_confirmed_legacy_reconstruction import write_report as write_legacy_reconstruction
+from ops.scripts.learning_confirmed_legacy_reconstruction import (
+    build_report as build_legacy_reconstruction,
+)
+from ops.scripts.learning_confirmed_legacy_reconstruction import (
+    write_report as write_legacy_reconstruction,
+)
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from tests.minimal_vault_runtime import seed_minimal_vault
 
+from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "learning-claim-evidence-bundle.schema.json"
@@ -26,8 +30,8 @@ SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "learning-claim-evidence-bundle.sc
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 5, 8, 9, 0, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 5, 8, 9, 0, tzinfo=dt.UTC),
     )
 
 

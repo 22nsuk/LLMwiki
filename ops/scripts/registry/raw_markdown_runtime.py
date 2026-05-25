@@ -12,7 +12,6 @@ from typing import Any
 from ops.scripts.policy_runtime import report_path
 from ops.scripts.yaml_runtime import parse_simple_yaml
 
-
 FRONTMATTER_FIELD_ORDER = [
     "title",
     "source",

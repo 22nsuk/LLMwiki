@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-from dataclasses import dataclass
 import hashlib
 import json
 import os
-from pathlib import Path
 import sys
-from typing import Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
+from pathlib import Path
+from typing import TypedDict
 
 from ops.scripts.command_runtime import TimedProcessResult, run_with_timeout
 from ops.scripts.output_runtime import display_path, sanitize_report_text
-
 
 DEFAULT_OUT = "tmp/goal-runtime-local-evidence-refresh.json"
 PRODUCER = "ops.scripts.goal_runtime_local_evidence_refresh"
@@ -56,6 +56,55 @@ CommandRunner = Callable[
 ]
 
 
+class GoalRuntimeLocalEvidenceRefreshCommandPayload(TypedDict):
+    target: str
+    command: list[str]
+    returncode: int
+    timed_out: bool
+    timeout_seconds: int
+    termination_reason: str
+    stdout_tail: str
+    stderr_tail: str
+    status: str
+
+
+class GoalRuntimeLocalEvidenceRefreshIteration(TypedDict):
+    iteration_index: int
+    command_results: list[GoalRuntimeLocalEvidenceRefreshCommandPayload]
+    changed_paths: list[str]
+    missing_paths: list[str]
+    status: str
+
+
+class GoalRuntimeLocalEvidenceRefreshSummary(TypedDict):
+    iteration_count: int
+    command_count: int
+    converged_iteration: int
+    changed_path_count: int
+    missing_path_count: int
+
+
+class GoalRuntimeLocalEvidenceRefreshReport(TypedDict):
+    artifact_kind: str
+    producer: str
+    source_command: str
+    generated_at: str
+    vault: str
+    status: str
+    reason: str
+    converged: bool
+    summary: GoalRuntimeLocalEvidenceRefreshSummary
+    max_iterations: int
+    timeout_seconds: int
+    target_sequence: list[str]
+    tracked_paths: list[str]
+    digest_mode: str
+    semantic_volatile_keys: list[str]
+    semantic_volatile_paths: list[str]
+    final_digest_map: dict[str, str]
+    iterations: list[GoalRuntimeLocalEvidenceRefreshIteration]
+
+
 @dataclass(frozen=True)
 class GoalRuntimeLocalEvidenceRefreshRequest:
     vault: Path
@@ -71,8 +120,8 @@ class GoalRuntimeLocalEvidenceRefreshRequest:
 
 def _isoformat_z(value: dt.datetime) -> str:
     if value.tzinfo is None:
-        value = value.replace(tzinfo=dt.timezone.utc)
-    return value.astimezone(dt.timezone.utc).replace(microsecond=0).isoformat().replace(
+        value = value.replace(tzinfo=dt.UTC)
+    return value.astimezone(dt.UTC).replace(microsecond=0).isoformat().replace(
         "+00:00", "Z"
     )
 
@@ -84,7 +133,7 @@ def _runtime_utc_now(requested: str | None, env: Mapping[str, str]) -> str:
     injected = env.get("LLMWIKI_RUNTIME_UTC_NOW", "").strip()
     if injected:
         return injected
-    return _isoformat_z(dt.datetime.now(dt.timezone.utc))
+    return _isoformat_z(dt.datetime.now(dt.UTC))
 
 
 def _sha256_file(path: Path) -> str:
@@ -99,7 +148,10 @@ def _matches_semantic_volatile_path(path: tuple[str, ...]) -> bool:
     for volatile_path in SEMANTIC_VOLATILE_PATHS:
         if len(path) != len(volatile_path):
             continue
-        if all(expected == "*" or actual == expected for actual, expected in zip(path, volatile_path)):
+        if all(
+            expected == "*" or actual == expected
+            for actual, expected in zip(path, volatile_path, strict=False)
+        ):
             return True
     return False
 
@@ -205,7 +257,7 @@ def _command_payload(
     *,
     vault: Path,
     target: str,
-) -> dict[str, object]:
+) -> GoalRuntimeLocalEvidenceRefreshCommandPayload:
     return {
         "target": target,
         "command": [sanitize_report_text(vault, item) for item in result.args],
@@ -219,7 +271,11 @@ def _command_payload(
     }
 
 
-def _write_report(vault: Path, report: dict[str, object], out_path: str) -> Path:
+def _write_report(
+    vault: Path,
+    report: GoalRuntimeLocalEvidenceRefreshReport,
+    out_path: str,
+) -> Path:
     destination = vault / out_path
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
@@ -234,7 +290,7 @@ def run_refresh(
     *,
     command_runner: CommandRunner = _run_command,
     base_env: Mapping[str, str] | None = None,
-) -> dict[str, object]:
+) -> GoalRuntimeLocalEvidenceRefreshReport:
     vault = request.vault.resolve()
     if request.max_iterations < 1:
         raise ValueError("max_iterations must be at least 1")
@@ -242,7 +298,7 @@ def run_refresh(
     runtime_utc_now = _runtime_utc_now(request.runtime_utc_now, env)
     env["LLMWIKI_RUNTIME_UTC_NOW"] = runtime_utc_now
     previous_digests = _digest_map(vault, request.tracked_paths)
-    iterations: list[dict[str, object]] = []
+    iterations: list[GoalRuntimeLocalEvidenceRefreshIteration] = []
     status = "fail"
     reason = "not_converged"
     converged_iteration = 0
@@ -250,7 +306,7 @@ def run_refresh(
 
     for iteration_index in range(1, request.max_iterations + 1):
         before_digests = previous_digests
-        command_results: list[dict[str, object]] = []
+        command_results: list[GoalRuntimeLocalEvidenceRefreshCommandPayload] = []
         failed = False
         print(f"goal-runtime-local-evidence-refresh: iteration {iteration_index}")
         for target in request.targets:
@@ -300,12 +356,8 @@ def run_refresh(
             break
         previous_digests = after_digests
 
-    command_count = 0
-    for iteration in iterations:
-        iteration_commands = iteration.get("command_results", [])
-        if isinstance(iteration_commands, list):
-            command_count += len(iteration_commands)
-    summary = {
+    command_count = sum(len(iteration["command_results"]) for iteration in iterations)
+    summary: GoalRuntimeLocalEvidenceRefreshSummary = {
         "iteration_count": len(iterations),
         "command_count": command_count,
         "converged_iteration": converged_iteration,

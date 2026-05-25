@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from functools import lru_cache
 import posixpath
 import unicodedata
+from functools import lru_cache
 from pathlib import Path
 
 

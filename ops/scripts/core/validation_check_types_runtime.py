@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, TypeAlias, TypedDict
-
+from typing import Any, TypedDict
 
 ValidationCheckResult = TypedDict(
     "ValidationCheckResult",
@@ -12,7 +11,7 @@ ValidationCheckResult = TypedDict(
         "detail": Any,
     },
 )
-PhaseCheckResult: TypeAlias = ValidationCheckResult
+type PhaseCheckResult = ValidationCheckResult
 
 
 def validation_check(check: str, passed: bool, detail: Any) -> ValidationCheckResult:

@@ -6,7 +6,6 @@ from pathlib import Path
 
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MATRIX_PATH = REPO_ROOT / "ops" / "policies" / "distribution-profile-matrix.json"
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "distribution-profile-matrix.schema.json"

@@ -5,17 +5,18 @@ from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 
-from .finalize_run_artifact_runtime import PLANNING_VALIDATION_SCHEMA
-from .finalize_run_errors_runtime import FinalizeRunUsageError
-from .finalize_run_log_runtime import (
-    resolve_finalize_log_state,
-)
 from ops.scripts.promotion_decision_registry_runtime import (
     PromotionDecisionRegistryError,
     decision_event_from_record,
     decision_record_from_report,
 )
 from ops.scripts.runtime_context import RuntimeContext
+
+from .finalize_run_artifact_runtime import PLANNING_VALIDATION_SCHEMA
+from .finalize_run_errors_runtime import FinalizeRunUsageError
+from .finalize_run_log_runtime import (
+    resolve_finalize_log_state,
+)
 
 
 @dataclass(frozen=True)

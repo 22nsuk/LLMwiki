@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 STATUS_V2_SCHEMA_VERSION = 2
 STATUS_V2_MIGRATION_READINESS_STATUS = "active"
 STATUS_V2_RECOMMENDED_CONSUMER_FIELDS = [

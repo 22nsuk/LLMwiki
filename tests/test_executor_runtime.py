@@ -7,10 +7,13 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest import mock
 
-from ops.scripts.codex_exec_executor import ExecutorContractError, execute_codex_exec_role
+from ops.scripts.codex_exec_executor import (
+    ExecutorContractError,
+    execute_codex_exec_role,
+)
 from ops.scripts.executor import main as executor_cli_main
 from ops.scripts.executor_runtime import (
     ExecutorRuntimeExecutionError,
@@ -19,7 +22,11 @@ from ops.scripts.executor_runtime import (
 from ops.scripts.runtime_context import RuntimeContext
 
 from tests.cli_test_runtime import invoke_cli_main
-from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault, seed_subagent_profiles
+from tests.minimal_vault_runtime import (
+    REPO_ROOT,
+    seed_minimal_vault,
+    seed_subagent_profiles,
+)
 
 
 def _seed_executor_vault(vault: Path) -> None:
@@ -411,7 +418,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 out_index = argv.index("-o") + 1
                 env = kwargs.get("env")
                 self.assertIsInstance(env, dict)
-                captured_env.update(env)
+                captured_env.update(cast(dict[str, str], env))
                 Path(argv[out_index]).write_text(
                     json.dumps(
                         {"status": "pass", "diagnostics": {"notes": ["validated"]}},
@@ -477,21 +484,23 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 selected_rung=3,
             )
 
-            with mock.patch.dict(os.environ, {"PATH": str(venv_bin)}):
-                with self.assertRaisesRegex(
+            with (
+                mock.patch.dict(os.environ, {"PATH": str(venv_bin)}),
+                self.assertRaisesRegex(
                     ExecutorContractError,
                     "refusing to launch workspace .venv/bin/codex",
-                ):
-                    execute_codex_exec_role(
-                        artifact_root=vault,
-                        workspace_root=vault,
-                        run_id="run-executor",
-                        role="validator",
-                        routing_report_rel="runs/run-executor/subagent-routing.validator.json",
-                        scope_freeze_rel="runs/run-executor/scope-freeze.json",
-                        proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
-                        context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
-                    )
+                ),
+            ):
+                execute_codex_exec_role(
+                    artifact_root=vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    role="validator",
+                    routing_report_rel="runs/run-executor/subagent-routing.validator.json",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    context=RuntimeContext(display_timezone=__import__("datetime").timezone.utc),
+                )
 
     def test_reviewer_role_uses_workspace_write_sandbox_with_read_only_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -967,21 +976,23 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 )
                 return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
 
-            with mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run):
-                with self.assertRaisesRegex(
+            with (
+                mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                self.assertRaisesRegex(
                     ExecutorRuntimeExecutionError,
                     "without modifying any declared primary target",
-                ):
-                    run_executor_pipeline(
-                        vault,
-                        workspace_root=vault,
-                        run_id="run-executor",
-                        policy_path="ops/policies/wiki-maintainer-policy.yaml",
-                        scope_freeze_rel="runs/run-executor/scope-freeze.json",
-                        proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
-                        roles=["worker", "validator"],
-                        routing_reports=[worker_routing, validator_routing],
-                    )
+                ),
+            ):
+                run_executor_pipeline(
+                    vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    roles=["worker", "validator"],
+                    routing_reports=[worker_routing, validator_routing],
+                )
 
             self.assertEqual(executed_roles, ["worker"])
             self.assertTrue((vault / "runs" / "run-executor" / "worker-executor-report.json").exists())
@@ -1175,18 +1186,20 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 output_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
                 return mock.Mock(returncode=returncode, stdout=f"{role}\n", stderr="")
 
-            with mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run):
-                with self.assertRaises(ExecutorRuntimeExecutionError):
-                    run_executor_pipeline(
-                        vault,
-                        workspace_root=vault,
-                        run_id="run-executor",
-                        policy_path="ops/policies/wiki-maintainer-policy.yaml",
-                        scope_freeze_rel="runs/run-executor/scope-freeze.json",
-                        proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
-                        roles=["worker", "validator"],
-                        routing_reports=[worker_routing, validator_routing],
-                    )
+            with (
+                mock.patch("ops.scripts.codex_exec_executor.run_with_timeout", side_effect=fake_run),
+                self.assertRaises(ExecutorRuntimeExecutionError),
+            ):
+                run_executor_pipeline(
+                    vault,
+                    workspace_root=vault,
+                    run_id="run-executor",
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                    proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                    roles=["worker", "validator"],
+                    routing_reports=[worker_routing, validator_routing],
+                )
 
             validator_report = json.loads(
                 (vault / "runs" / "run-executor" / "validator-executor-report.json").read_text(encoding="utf-8")

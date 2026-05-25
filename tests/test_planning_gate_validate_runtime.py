@@ -19,13 +19,21 @@ from ops.scripts.planning_gate_phase_state_runtime import (
     classify_mechanism_phase,
     load_completed_mechanism_inputs,
 )
-from ops.scripts.planning_gate_report_runtime import validate_run_dir
-from ops.scripts.planning_gate_report_runtime import artifact_dir_report_path
+from ops.scripts.planning_gate_report_runtime import (
+    artifact_dir_report_path,
+    validate_run_dir,
+)
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.schema_constants_runtime import PLANNING_GATE_VALIDATION_REPORT_SCHEMA_PATH
+from ops.scripts.schema_constants_runtime import (
+    PLANNING_GATE_VALIDATION_REPORT_SCHEMA_PATH,
+)
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
-from ops.scripts.starter_bundle_runtime import DEFAULT_STARTER_BUNDLE, StarterBundleDefinition, starter_bundle_path
+from ops.scripts.starter_bundle_runtime import (
+    DEFAULT_STARTER_BUNDLE,
+    StarterBundleDefinition,
+    starter_bundle_path,
+)
 
 from tests.minimal_vault_runtime import seed_minimal_vault, seed_planning_artifacts
 from tests.test_planning_gate_validate import seed_mechanism_run_artifacts
@@ -33,8 +41,8 @@ from tests.test_planning_gate_validate import seed_mechanism_run_artifacts
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2026, 4, 15, 3, 45, tzinfo=dt.UTC),
     )
 
 

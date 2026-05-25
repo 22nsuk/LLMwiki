@@ -10,7 +10,9 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope  # noqa: PLC0415
+    from ops.scripts.artifact_freshness_runtime import (
+        build_canonical_report_envelope,  # noqa: PLC0415
+    )
     from ops.scripts.artifact_io_runtime import (  # noqa: PLC0415
         SchemaBackedReportWriteRequest,
         load_optional_json_object,
@@ -24,8 +26,15 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         fixed_point_writer_specs_from_policy,
     )
     from ops.scripts.runtime_context import RuntimeContext  # noqa: PLC0415
-    from ops.scripts.schema_constants_runtime import WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH  # noqa: PLC0415
+    from ops.scripts.schema_constants_runtime import (
+        WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH,  # noqa: PLC0415
+    )
 else:
+    from ops.scripts.release_closeout_fixed_point import (
+        fixed_point_initial_targets_from_policy,
+        fixed_point_writer_specs_from_policy,
+    )
+
     from .artifact_freshness_runtime import build_canonical_report_envelope
     from .artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
@@ -35,10 +44,6 @@ else:
     from .makefile_runtime import load_makefile_text
     from .output_runtime import display_path
     from .policy_runtime import load_policy, report_path
-    from ops.scripts.release_closeout_fixed_point import (
-        fixed_point_initial_targets_from_policy,
-        fixed_point_writer_specs_from_policy,
-    )
     from .runtime_context import RuntimeContext
     from .schema_constants_runtime import WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH
 

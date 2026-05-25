@@ -3,14 +3,15 @@ from __future__ import annotations
 import shutil
 import tempfile
 import unittest
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
 
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.wiki_eval import evaluate
 from ops.scripts.wiki_lint import lint
 from ops.scripts.wiki_snapshot_runtime import build_wiki_runtime_snapshot
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 

@@ -4,9 +4,9 @@ import re
 from pathlib import Path
 
 from ops.scripts.policy_runtime import report_path
+
 from .wiki_page_runtime import heading_body, load_text, section_body
 from .wiki_quality_runtime import resolved_wikilink_targets
-
 
 SUMMARY_COUNT_RE = re.compile(r"^\s*-\s*(?P<label>[^:]+):\s*`(?P<count>\d+)`\s*$", re.MULTILINE)
 DEFAULT_EXTERNAL_REPORT_EXTENSIONS = (".pdf", ".docx")

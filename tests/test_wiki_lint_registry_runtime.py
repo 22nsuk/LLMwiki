@@ -6,14 +6,15 @@ import unittest
 from pathlib import Path
 
 from ops.scripts.policy_runtime import load_policy
-from ops.scripts.registry_alignment_passes_runtime import _registry_frontmatter_alignment_pass
+from ops.scripts.registry_alignment_passes_runtime import (
+    _registry_frontmatter_alignment_pass,
+)
 from ops.scripts.registry_pass_support_runtime import registry_review_exempt_paths
 from ops.scripts.registry_review_candidate_passes_runtime import (
     _backlog_refactor_threshold_pass,
     _summary_shard_review_candidate_pass,
 )
 from ops.scripts.runtime_context import RuntimeContext
-from ops.scripts.wiki_lint_review_runtime import review_candidates_for
 from ops.scripts.wiki_lint_registry_runtime import (
     RegistryLintEmitter,
     _registry_inventory_context_pass,
@@ -21,15 +22,20 @@ from ops.scripts.wiki_lint_registry_runtime import (
     _registry_page_presence_pass,
     lint_registry_contract,
 )
+from ops.scripts.wiki_lint_review_runtime import review_candidates_for
 from ops.scripts.wiki_snapshot_runtime import build_wiki_runtime_snapshot
 
-from tests.minimal_vault_runtime import add_registry_entry_scalar_field, seed_minimal_vault, set_policy_value
+from tests.minimal_vault_runtime import (
+    add_registry_entry_scalar_field,
+    seed_minimal_vault,
+    set_policy_value,
+)
 
 
 def fixed_context() -> RuntimeContext:
     return RuntimeContext(
-        display_timezone=dt.timezone.utc,
-        clock=lambda: dt.datetime(2000, 1, 3, 12, tzinfo=dt.timezone.utc),
+        display_timezone=dt.UTC,
+        clock=lambda: dt.datetime(2000, 1, 3, 12, tzinfo=dt.UTC),
     )
 
 
@@ -433,9 +439,7 @@ class WikiLintRegistryRuntimeTests(unittest.TestCase):
             )
 
 
-def build_vault(temp_dir: str):
-    from pathlib import Path
-
+def build_vault(temp_dir: str) -> Path:
     vault = Path(temp_dir) / "vault"
     vault.mkdir()
     seed_minimal_vault(vault)

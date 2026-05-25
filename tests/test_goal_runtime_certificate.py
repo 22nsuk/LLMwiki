@@ -2,26 +2,32 @@ from __future__ import annotations
 
 import datetime as dt
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 import pytest
-
 from ops.scripts.codex_goal_client import get_goal, set_goal
-from ops.scripts.goal_runtime_certificate_report import (
-    GoalRuntimeCertificateRequest,
-    RUNNER_PRODUCER,
-    build_report as build_certificate_report,
-)
 from ops.scripts.goal_run_status import (
     GoalRunStatusRequest,
-    build_report as build_goal_run_status_report,
-    write_report as write_goal_run_status_report,
     write_run_artifacts,
+)
+from ops.scripts.goal_run_status import (
+    build_report as build_goal_run_status_report,
+)
+from ops.scripts.goal_run_status import (
+    write_report as write_goal_run_status_report,
+)
+from ops.scripts.goal_runtime_certificate_report import (
+    RUNNER_PRODUCER,
+    GoalRuntimeCertificateRequest,
+)
+from ops.scripts.goal_runtime_certificate_report import (
+    build_report as build_certificate_report,
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.test_codex_goal_contract import sample_goal_contract
 
@@ -32,15 +38,15 @@ SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "goal-runtime-certificate.schema.j
 
 
 def context_at(value: dt.datetime) -> RuntimeContext:
-    return RuntimeContext(display_timezone=dt.timezone.utc, clock=lambda: value)
+    return RuntimeContext(display_timezone=dt.UTC, clock=lambda: value)
 
 
 def parse_iso_z(value: str) -> dt.datetime:
-    return dt.datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(dt.timezone.utc)
+    return dt.datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(dt.UTC)
 
 
 def iso_z(value: dt.datetime) -> str:
-    return value.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return value.astimezone(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 class GoalRuntimeCertificateTests(unittest.TestCase):
@@ -224,7 +230,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         report = build_certificate_report(
             GoalRuntimeCertificateRequest(
                 vault=self.vault,
-                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.timezone.utc)),
+                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.UTC)),
             )
         )
 
@@ -255,7 +261,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
             GoalRuntimeCertificateRequest(
                 vault=self.vault,
                 apply_update=True,
-                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.timezone.utc)),
+                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.UTC)),
             )
         )
 
@@ -277,7 +283,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
                 status="completed",
                 started_at="2026-05-17T11:00:00Z",
                 completed_at="2026-05-17T11:30:00Z",
-                context=context_at(dt.datetime(2026, 5, 17, 12, 15, tzinfo=dt.timezone.utc)),
+                context=context_at(dt.datetime(2026, 5, 17, 12, 15, tzinfo=dt.UTC)),
             )
         )
         write_goal_run_status_report(self.vault, refreshed)
@@ -286,7 +292,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         report = build_certificate_report(
             GoalRuntimeCertificateRequest(
                 vault=self.vault,
-                context=context_at(dt.datetime(2026, 5, 17, 12, 30, tzinfo=dt.timezone.utc)),
+                context=context_at(dt.datetime(2026, 5, 17, 12, 30, tzinfo=dt.UTC)),
             )
         )
 
@@ -330,7 +336,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         report = build_certificate_report(
             GoalRuntimeCertificateRequest(
                 vault=self.vault,
-                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.timezone.utc)),
+                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.UTC)),
             )
         )
 
@@ -352,7 +358,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
                 started_at="2026-05-17T11:00:00Z",
                 last_heartbeat_at="2026-05-17T11:05:00Z",
                 last_checkpoint_at="2026-05-17T11:05:00Z",
-                context=context_at(dt.datetime(2026, 5, 17, 11, 5, tzinfo=dt.timezone.utc)),
+                context=context_at(dt.datetime(2026, 5, 17, 11, 5, tzinfo=dt.UTC)),
             )
         )
         write_goal_run_status_report(self.vault, current)
@@ -361,7 +367,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         report = build_certificate_report(
             GoalRuntimeCertificateRequest(
                 vault=self.vault,
-                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.timezone.utc)),
+                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.UTC)),
             )
         )
 
@@ -391,7 +397,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
             GoalRuntimeCertificateRequest(
                 vault=self.vault,
                 apply_update=True,
-                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.timezone.utc)),
+                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.UTC)),
             )
         )
         for item in verified["evidence_paths"]:
@@ -410,7 +416,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
                 started_at="2026-05-17T12:10:00Z",
                 last_heartbeat_at="2026-05-17T12:15:00Z",
                 last_checkpoint_at="2026-05-17T12:15:00Z",
-                context=context_at(dt.datetime(2026, 5, 17, 12, 15, tzinfo=dt.timezone.utc)),
+                context=context_at(dt.datetime(2026, 5, 17, 12, 15, tzinfo=dt.UTC)),
             )
         )
         write_goal_run_status_report(self.vault, current)
@@ -419,7 +425,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         report = build_certificate_report(
             GoalRuntimeCertificateRequest(
                 vault=self.vault,
-                context=context_at(dt.datetime(2026, 5, 17, 12, 30, tzinfo=dt.timezone.utc)),
+                context=context_at(dt.datetime(2026, 5, 17, 12, 30, tzinfo=dt.UTC)),
             )
         )
 
@@ -444,7 +450,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
             GoalRuntimeCertificateRequest(
                 vault=self.vault,
                 apply_update=True,
-                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.timezone.utc)),
+                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.UTC)),
             )
         )
         existing_report = self.vault / "ops" / "reports" / "goal-runtime-certificate.json"
@@ -462,7 +468,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
                 started_at="2026-05-17T12:10:00Z",
                 last_heartbeat_at="2026-05-17T12:15:00Z",
                 last_checkpoint_at="2026-05-17T12:15:00Z",
-                context=context_at(dt.datetime(2026, 5, 17, 12, 15, tzinfo=dt.timezone.utc)),
+                context=context_at(dt.datetime(2026, 5, 17, 12, 15, tzinfo=dt.UTC)),
             )
         )
         write_goal_run_status_report(self.vault, current)
@@ -471,7 +477,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         report = build_certificate_report(
             GoalRuntimeCertificateRequest(
                 vault=self.vault,
-                context=context_at(dt.datetime(2026, 5, 17, 12, 30, tzinfo=dt.timezone.utc)),
+                context=context_at(dt.datetime(2026, 5, 17, 12, 30, tzinfo=dt.UTC)),
             )
         )
 
@@ -489,7 +495,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
             GoalRuntimeCertificateRequest(
                 vault=self.vault,
                 apply_update=True,
-                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.timezone.utc)),
+                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.UTC)),
             )
         )
         existing_report = self.vault / "ops" / "reports" / "goal-runtime-certificate.json"
@@ -509,7 +515,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
                 started_at="2026-05-17T12:10:00Z",
                 last_heartbeat_at="2026-05-17T12:15:00Z",
                 last_checkpoint_at="2026-05-17T12:15:00Z",
-                context=context_at(dt.datetime(2026, 5, 17, 12, 15, tzinfo=dt.timezone.utc)),
+                context=context_at(dt.datetime(2026, 5, 17, 12, 15, tzinfo=dt.UTC)),
             )
         )
         write_goal_run_status_report(self.vault, current, explicit_status_path)
@@ -520,7 +526,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
                 vault=self.vault,
                 goal_contract_path=explicit_contract_path,
                 status_report_path=explicit_status_path,
-                context=context_at(dt.datetime(2026, 5, 17, 12, 30, tzinfo=dt.timezone.utc)),
+                context=context_at(dt.datetime(2026, 5, 17, 12, 30, tzinfo=dt.UTC)),
             )
         )
 
@@ -543,7 +549,7 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         report = build_certificate_report(
             GoalRuntimeCertificateRequest(
                 vault=self.vault,
-                context=context_at(dt.datetime(2026, 5, 17, 13, 0, tzinfo=dt.timezone.utc)),
+                context=context_at(dt.datetime(2026, 5, 17, 13, 0, tzinfo=dt.UTC)),
             )
         )
 
