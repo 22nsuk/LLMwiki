@@ -2099,6 +2099,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
         )
         self.assertIn("LEARNING_READINESS_SIGNOFF_ACCEPTED_BY ?=", text)
+        self.assertIn("LEARNING_READINESS_SIGNOFF_EXPIRY_DAYS ?= 14", text)
         block = _target_block(text, "learning-readiness-signoff")
         self.assertIn("ops.scripts.learning_readiness_signoff", block)
         self.assertIn(
