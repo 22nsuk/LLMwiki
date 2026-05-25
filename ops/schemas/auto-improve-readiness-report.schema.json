@@ -1283,7 +1283,6 @@
         "can_execute_goal_runtime",
         "can_promote_result",
         "zip_mode_replay_only",
-        "dirty_worktree_allowed",
         "dirty_entry_count",
         "fatal_blockers",
         "promotion_blockers",
@@ -1307,7 +1306,6 @@
         "can_execute_goal_runtime": { "type": "boolean" },
         "can_promote_result": { "type": "boolean" },
         "zip_mode_replay_only": { "type": "boolean" },
-        "dirty_worktree_allowed": { "type": "boolean" },
         "dirty_entry_count": { "type": "integer", "minimum": 0 },
         "fatal_blockers": {
           "type": "array",

@@ -84,6 +84,9 @@ GOAL_RUNTIME_QUARANTINE_PREFLIGHT_SCHEMA_PATH = (
     "ops/schemas/goal-runtime-quarantine-preflight.schema.json"
 )
 GOAL_RUNTIME_RUN_ADMISSION_SCHEMA_PATH = "ops/schemas/goal-runtime-run-admission.schema.json"
+GOAL_RUNTIME_MAINTENANCE_ACTION_PLAN_SCHEMA_PATH = (
+    "ops/schemas/goal-runtime-maintenance-action-plan.schema.json"
+)
 TEST_DESELECTION_POLICY_SCHEMA_PATH = "ops/schemas/test-deselection-policy.schema.json"
 RAW_MARKDOWN_NORMALIZATION_REPORT_SCHEMA_PATH = "ops/schemas/raw-markdown-normalization-report.schema.json"
 RAW_INTAKE_ABSORPTION_MATRIX_SCHEMA_PATH = "ops/schemas/raw-intake-absorption-matrix.schema.json"

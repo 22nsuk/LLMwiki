@@ -6,6 +6,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import shutil
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -34,6 +35,7 @@ DEV_DEPENDENCIES = {
     "ruff": "ruff",
     "mypy": "mypy",
 }
+CODEX_EXECUTABLE_NAMES = ("codex", "codex.exe", "codex.cmd", "codex.ps1", "codex.js")
 
 
 ModuleAvailable = Callable[[str], bool]
@@ -102,6 +104,85 @@ def _resolve_repo_output_path(vault: Path, out_path: str) -> Path:
     return resolved
 
 
+def _same_path(left: Path, right: Path) -> bool:
+    try:
+        return left.resolve() == right.resolve()
+    except OSError:
+        return left.absolute() == right.absolute()
+
+
+def _workspace_virtualenv_bin(vault: Path) -> Path | None:
+    venv_root = vault / ".venv"
+    for rel_path in ("bin/python", "Scripts/python.exe", "Scripts/python"):
+        python_path = venv_root / rel_path
+        if python_path.exists():
+            return python_path.parent
+    return None
+
+
+def _path_without_workspace_virtualenv(vault: Path) -> str:
+    path_text = os.environ.get("PATH", "")
+    venv_bin = _workspace_virtualenv_bin(vault)
+    if venv_bin is None or not path_text:
+        return path_text
+    entries: list[str] = []
+    for entry in path_text.split(os.pathsep):
+        if entry and _same_path(Path(entry), venv_bin):
+            continue
+        entries.append(entry)
+    return os.pathsep.join(entries)
+
+
+def _safe_tool_path(vault: Path, path_text: str | None) -> str:
+    if not path_text:
+        return ""
+    return sanitize_report_text(vault, display_path(vault, Path(path_text)))
+
+
+def _workspace_codex_paths(venv_bin: Path | None) -> list[Path]:
+    if venv_bin is None:
+        return []
+    return [venv_bin / name for name in CODEX_EXECUTABLE_NAMES if (venv_bin / name).exists()]
+
+
+def _path_matches_any(path_text: str | None, candidates: list[Path]) -> bool:
+    if not path_text:
+        return False
+    path = Path(path_text)
+    return any(_same_path(path, candidate) for candidate in candidates)
+
+
+def _executor_tooling(vault: Path, *, environment_class: str) -> dict[str, Any]:
+    venv_bin = _workspace_virtualenv_bin(vault)
+    workspace_codex_paths = _workspace_codex_paths(venv_bin)
+    codex_on_path = shutil.which("codex")
+    codex_outside_workspace_virtualenv = shutil.which(
+        "codex",
+        path=_path_without_workspace_virtualenv(vault),
+    )
+    workspace_shadowing = _path_matches_any(codex_on_path, workspace_codex_paths)
+    failures: list[str] = []
+    if environment_class == "goal-runtime":
+        if not codex_outside_workspace_virtualenv and workspace_codex_paths:
+            failures.append("workspace_virtualenv_codex_shadow")
+        elif not codex_outside_workspace_virtualenv:
+            failures.append("codex_not_resolved_outside_workspace_virtualenv")
+    return {
+        "status": "fail" if failures else "pass",
+        "environment_class": environment_class,
+        "workspace_virtualenv_bin": _safe_tool_path(vault, str(venv_bin)) if venv_bin else "",
+        "workspace_virtualenv_present": venv_bin is not None,
+        "workspace_virtualenv_codex_present": bool(workspace_codex_paths),
+        "codex_on_path": _safe_tool_path(vault, codex_on_path),
+        "codex_outside_workspace_virtualenv": _safe_tool_path(
+            vault,
+            codex_outside_workspace_virtualenv,
+        ),
+        "workspace_virtualenv_codex_shadowing_path": workspace_shadowing,
+        "failures": failures,
+    }
+
+
 def _dependency_rows(
     dependencies: dict[str, str],
     *,
@@ -138,7 +219,7 @@ def build_report(
     generated_at = _isoformat_z(clock)
     schema_path = "ops/schemas/bootstrap-preflight-report.schema.json"
     source_paths = [
-        "ops/scripts/bootstrap_preflight.py",
+        "ops/scripts/core/bootstrap_preflight.py",
         schema_path,
         resolved_policy_path,
     ]
@@ -155,7 +236,20 @@ def build_report(
             _dependency_rows(DEV_DEPENDENCIES, module_available=module_available, category="dev")
         )
     missing = [row for row in dependency_rows if not bool(row["installed"])]
-    status = "pass" if python_ok and not missing else "fail"
+    executor_tooling = _executor_tooling(resolved_vault, environment_class=environment_class)
+    executor_tooling_failures = [
+        str(item) for item in executor_tooling.get("failures", []) if str(item).strip()
+    ]
+    status = "pass" if python_ok and not missing and not executor_tooling_failures else "fail"
+    if executor_tooling_failures:
+        guidance = (
+            "Expose the operator Codex CLI outside the repository virtualenv and remove "
+            "repo-local .venv/bin/codex shims before running goal-runtime execution."
+        )
+    elif include_dev:
+        guidance = "Run make dev-install, then rerun make bootstrap-preflight."
+    else:
+        guidance = "Install requirements.txt, or run make dev-install for a complete local environment."
     return {
         "$schema": schema_path,
         "artifact_kind": ARTIFACT_KIND,
@@ -195,18 +289,17 @@ def build_report(
             ),
             "interpreter_selection": "active interpreter",
             "include_dev": include_dev,
+            "executor_tooling": executor_tooling,
         },
         "dependencies": dependency_rows,
         "summary": {
             "dependency_count": len(dependency_rows),
             "missing_dependency_count": len(missing),
             "missing_packages": [str(row["package"]) for row in missing],
+            "executor_tooling_failure_count": len(executor_tooling_failures),
+            "executor_tooling_failures": executor_tooling_failures,
         },
-        "guidance": (
-            "Run make dev-install, then rerun make bootstrap-preflight."
-            if include_dev
-            else "Install requirements.txt, or run make dev-install for a complete local environment."
-        ),
+        "guidance": guidance,
     }
 
 
@@ -231,6 +324,10 @@ def format_text(report: dict[str, Any]) -> str:
         f"python: {report['python']['version']} (minimum {report['python']['minimum']}) "
         f"[{report['python']['status']}]",
     ]
+    executor_tooling = report["environment"].get("executor_tooling", {})
+    if isinstance(executor_tooling, dict):
+        resolved_codex = executor_tooling.get("codex_outside_workspace_virtualenv") or "unresolved"
+        lines.append(f"codex executor: {resolved_codex} [{executor_tooling.get('status', 'unknown')}]")
     for row in report["dependencies"]:
         marker = "ok" if row["installed"] else "missing"
         lines.append(f"{row['category']}: {row['package']} ({row['module']}) [{marker}]")

@@ -84,6 +84,9 @@ RELEASE_DISTRIBUTION_ZIP_OUT ?= build/release/LLMwiki-source.zip
 RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT ?= build/release/release-distribution-zip-smoke.json
 RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP ?= $(if $(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),$(RELEASE_DISTRIBUTION_ZIP_OUT))
 RELEASE_CLOSEOUT_SEALED_ZIP_METADATA ?= $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA),$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA),$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP))
+RELEASE_AUTO_PROMOTION_RUN_MANIFEST_DISTRIBUTION_ZIP = $(shell $(PYTHON) -m ops.scripts.release_run_manifest --vault "$(VAULT)" --out "$(RELEASE_RUN_MANIFEST_OUT)" --print-distribution-zip 2>/dev/null)
+RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP = $(strip $(if $(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),$(RELEASE_AUTO_PROMOTION_RUN_MANIFEST_DISTRIBUTION_ZIP)))
+RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA = $(strip $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA),$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA),$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)))
 RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_OUT ?= build/release/release-closeout-sealed-rehearsal-check.json
 RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_CANONICAL_OUT ?= ops/reports/release-closeout-sealed-rehearsal-check.json
 RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_RELEASE_OUT ?= build/release/release-closeout-sealed-rehearsal-check.json
@@ -280,7 +283,13 @@ release-auto-promotion-safe-cleanup:
 	$(PYTHON) -m ops.scripts.backfill_archived_run_artifacts --vault "$(VAULT)"
 	$(MAKE) generated-artifact-index
 	$(MAKE) artifact-freshness-refresh-check
-	$(MAKE) external-report-reference-manifest-release-check
+	@if [ -n "$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)" ]; then \
+		$(MAKE) external-report-reference-manifest-release-check EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)" EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"; \
+		$(MAKE) release-closeout-batch-manifest-promote RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"; \
+		$(MAKE) release-closeout-fixed-point RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"; \
+	else \
+		$(MAKE) external-report-reference-manifest-release-check; \
+	fi
 	$(MAKE) release-closeout-summary-report
 	$(MAKE) tmp-json-clean
 
@@ -297,9 +306,9 @@ release-auto-promotion-preseal-resolved:
 	$(MAKE) goal-runtime-local-evidence-converge
 	$(MAKE) release-auto-promotion-safe-cleanup
 	$(MAKE) learning-readiness-signoff-revalidation
-	$(MAKE) release-evidence-cohort-preseal-refresh
+	$(MAKE) release-evidence-cohort-preseal-refresh RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"
 	$(MAKE) release-closeout-summary-report
-	$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint
+	$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"
 	$(MAKE) release-evidence-dashboard-report
 	$(MAKE) release-lane-summary
 	$(MAKE) release-clean-blocker-ledger
@@ -331,7 +340,7 @@ release-preflight-current:
 release-test-current:
 	$(MAKE) static
 	$(MAKE) test-execution-summary-report-contract
-	$(MAKE) test-execution-summary-full-refresh-no-converge
+	$(MAKE) test-execution-summary-full-current-or-refresh
 
 release-public-current:
 	$(MAKE) public-check-summary-check
@@ -442,8 +451,12 @@ release-smoke-fast-current-check: release-smoke-lane-guard
 	$(PYTHON) -m ops.scripts.release_smoke --vault "$(VAULT)" --profile fast --out "$(RELEASE_SMOKE_FAST_CURRENT_CHECK_OUT)" --reuse-if-current --reuse-only --reuse-from "$(RELEASE_SMOKE_FAST_OUT)"
 
 release-smoke-fast-refresh-check:
-	$(MAKE) release-smoke-fast
-	$(MAKE) release-smoke-fast-current-check
+	@if $(MAKE) release-smoke-fast-current-check; then \
+		echo "fast release smoke evidence is current; reused $(RELEASE_SMOKE_FAST_OUT)"; \
+	else \
+		$(MAKE) release-smoke-fast; \
+		$(MAKE) release-smoke-fast-current-check; \
+	fi
 
 release-closeout-summary:
 	$(PYTHON) -m ops.scripts.release_closeout_summary --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_SUMMARY_CANDIDATE_OUT)" --profile "$(RELEASE_CLOSEOUT_PROFILE)"
@@ -573,7 +586,7 @@ release-worktree-clean-check:
 	$(PYTHON) -m ops.scripts.goal_worktree_guard --vault "$(VAULT)" --requested-mode git --out "$(RELEASE_WORKTREE_CLEAN_CHECK_OUT)" --strict
 
 release-converge-preflight:
-	$(MAKE) report-schema-samples-regenerate CLEAN_FIXTURE_REGENERATION_ALLOW_DIRTY_REPORTS=1
+	$(MAKE) report-schema-samples-regenerate
 	$(MAKE) goal-runtime-local-evidence-refresh
 	$(MAKE) test-execution-summary-report-contract-refresh-no-smoke
 
@@ -604,7 +617,7 @@ release-source-ready-snapshot:
 release-source-ready-prepare:
 	$(MAKE) release-source-ready-snapshot
 	$(MAKE) release-converge-all-surfaces
-	$(MAKE) test-execution-summary-full-refresh-no-converge
+	$(MAKE) test-execution-summary-full-current-or-refresh
 
 release-source-ready-commit:
 	$(PYTHON) -m ops.scripts.release_source_ready_commit --vault "$(VAULT)" --out "$(RELEASE_SOURCE_READY_COMMIT_OUT)" --pre-status "$(RELEASE_SOURCE_READY_PRE_STATUS_OUT)" --message "$(RELEASE_SOURCE_READY_COMMIT_MESSAGE)"
@@ -664,6 +677,7 @@ release-provenance-clean: release-clean supply-chain-check
 
 release-sbom-clean: release-provenance-clean sbom-readiness-check
 release-closeout-fixed-point:
+	$(MAKE) bootstrap-preflight
 	$(PYTHON) -m ops.scripts.release_closeout_fixed_point --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_FIXED_POINT_CANDIDATE_OUT)" --max-iterations "$(RELEASE_CLOSEOUT_FIXED_POINT_MAX_ITERATIONS)" --timeout-seconds "$(RELEASE_CLOSEOUT_FIXED_POINT_TIMEOUT_SECONDS)" $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA),--make-variable "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA)",) $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE),--make-variable "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE)",) $(if $(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),--make-variable "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP)",)
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_CLOSEOUT_FIXED_POINT_CANDIDATE_OUT)" --out "$(RELEASE_CLOSEOUT_FIXED_POINT_OUT)" --schema ops/schemas/release-closeout-fixed-point.schema.json --expected-artifact-kind release_closeout_fixed_point_report --expected-producer ops.scripts.release_closeout_fixed_point
 	$(PYTHON) -m ops.scripts.release_closeout_fixed_point --vault "$(VAULT)" --bootstrap-post-promote --max-iterations "$(RELEASE_CLOSEOUT_FIXED_POINT_MAX_ITERATIONS)" --timeout-seconds "$(RELEASE_CLOSEOUT_FIXED_POINT_TIMEOUT_SECONDS)" $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA),--make-variable "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA)",) $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE),--make-variable "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE)",) $(if $(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),--make-variable "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP)",)

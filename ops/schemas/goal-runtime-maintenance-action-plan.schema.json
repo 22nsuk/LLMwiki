@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Goal Runtime Maintenance Action Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_kind",
+    "producer",
+    "session_id",
+    "status",
+    "current_max_proposals",
+    "current_iteration_count",
+    "next_max_proposals",
+    "queue_action",
+    "selected_proposal",
+    "blockers",
+    "recommended_next_action",
+    "decisions"
+  ],
+  "properties": {
+    "artifact_kind": { "const": "goal_runtime_maintenance_action_plan" },
+    "producer": { "const": "ops.scripts.auto_improve_runtime" },
+    "session_id": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["pass", "attention"] },
+    "current_max_proposals": { "type": "integer", "minimum": 0 },
+    "current_iteration_count": { "type": "integer", "minimum": 0 },
+    "next_max_proposals": { "type": "integer", "minimum": 0 },
+    "queue_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "reason",
+        "proposal_ids",
+        "runner_action",
+        "proposal_budget_increment",
+        "resume_target"
+      ],
+      "properties": {
+        "status": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string" },
+        "proposal_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "runner_action": { "type": "string" },
+        "proposal_budget_increment": { "type": "integer", "minimum": 0 },
+        "resume_target": { "type": "string" },
+        "recommended_next_step": { "type": "string" }
+      }
+    },
+    "selected_proposal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proposal_id", "family", "failure_mode"],
+      "properties": {
+        "proposal_id": { "type": "string" },
+        "family": { "type": "string" },
+        "failure_mode": { "type": "string" }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "recommended_next_action": { "type": "string" },
+    "decisions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["can_resume", "requires_budget_increment"],
+      "properties": {
+        "can_resume": { "type": "boolean" },
+        "requires_budget_increment": { "type": "boolean" }
+      }
+    },
+    "actionable_queue_snapshot": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          { "type": "string", "minLength": 1 },
+          { "type": "object" }
+        ]
+      }
+    }
+  }
+}

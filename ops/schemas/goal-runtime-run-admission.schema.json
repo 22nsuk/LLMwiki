@@ -122,6 +122,7 @@
         "goal_contract": { "type": "string", "minLength": 1 },
         "goal_run_status": { "type": "string", "minLength": 1 },
         "runtime_certificate_report": { "type": "string", "minLength": 1 },
+        "maintenance_action_plan": { "type": "string", "minLength": 1 },
         "resume_session_report": { "type": "string", "minLength": 1 }
       }
     },

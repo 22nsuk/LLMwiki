@@ -114,7 +114,8 @@
         "install_attempted",
         "interpreter",
         "interpreter_selection",
-        "include_dev"
+        "include_dev",
+        "executor_tooling"
       ],
       "properties": {
         "environment_class": {
@@ -138,6 +139,9 @@
         },
         "include_dev": {
           "type": "boolean"
+        },
+        "executor_tooling": {
+          "$ref": "#/$defs/executor_tooling"
         }
       }
     },
@@ -150,13 +154,25 @@
     "summary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["dependency_count", "missing_dependency_count", "missing_packages"],
+      "required": [
+        "dependency_count",
+        "missing_dependency_count",
+        "missing_packages",
+        "executor_tooling_failure_count",
+        "executor_tooling_failures"
+      ],
       "properties": {
         "dependency_count": { "type": "integer", "minimum": 0 },
         "missing_dependency_count": { "type": "integer", "minimum": 0 },
         "missing_packages": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
+        },
+        "executor_tooling_failure_count": { "type": "integer", "minimum": 0 },
+        "executor_tooling_failures": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
         }
       }
     },
@@ -203,6 +219,36 @@
         "package": { "type": "string", "minLength": 1 },
         "installed": { "type": "boolean" },
         "status": { "type": "string", "enum": ["pass", "fail"] }
+      }
+    },
+    "executor_tooling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "environment_class",
+        "workspace_virtualenv_bin",
+        "workspace_virtualenv_present",
+        "workspace_virtualenv_codex_present",
+        "codex_on_path",
+        "codex_outside_workspace_virtualenv",
+        "workspace_virtualenv_codex_shadowing_path",
+        "failures"
+      ],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "fail"] },
+        "environment_class": { "type": "string", "minLength": 1 },
+        "workspace_virtualenv_bin": { "type": "string" },
+        "workspace_virtualenv_present": { "type": "boolean" },
+        "workspace_virtualenv_codex_present": { "type": "boolean" },
+        "codex_on_path": { "type": "string" },
+        "codex_outside_workspace_virtualenv": { "type": "string" },
+        "workspace_virtualenv_codex_shadowing_path": { "type": "boolean" },
+        "failures": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
       }
     }
   }

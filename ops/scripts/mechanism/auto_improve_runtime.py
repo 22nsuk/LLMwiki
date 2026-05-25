@@ -9,9 +9,11 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from ops.scripts.artifact_io_runtime import (
+    SchemaBackedReportWriteRequest,
     load_optional_json_object,
     read_json_object,
     write_json_object,
+    write_schema_backed_report,
     write_schema_validated_json,
 )
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope, embed_artifact_envelope_metadata
@@ -93,6 +95,7 @@ AUTO_IMPROVE_SESSION_SCHEMA = AUTO_IMPROVE_SESSION_SCHEMA_PATH
 DEFAULT_MECHANISM_REVIEW_REPORT = "ops/reports/mechanism-review-candidates.json"
 DEFAULT_MUTATION_PROPOSAL_REPORT = "ops/reports/mutation-proposals.json"
 DEFAULT_MAINTENANCE_ACTION_PLAN = "tmp/goal-runtime-maintenance-action.json"
+MAINTENANCE_ACTION_PLAN_SCHEMA = "ops/schemas/goal-runtime-maintenance-action-plan.schema.json"
 REPEATED_BLOCKER_THRESHOLD = 2
 REMEDIATION_BACKLOG_REPORT = "ops/reports/remediation-backlog.json"
 REPEAT_BACKLOG_ITEM_TYPES = frozenset(
@@ -1401,6 +1404,18 @@ def maintenance_action_resume_plan(
     session = _load_session_report(vault, session_id)
     maintenance = _mapping_value(session, "maintenance")
     queue_action = _mapping_value(maintenance, "queue_action")
+    queue_action_payload: dict[str, Any] = {
+        "status": "none",
+        "reason": "",
+        "proposal_ids": [],
+        "runner_action": "none",
+        "proposal_budget_increment": 0,
+        "resume_target": "",
+        "recommended_next_step": "",
+    }
+    queue_action_payload.update(dict(queue_action))
+    if not isinstance(queue_action_payload.get("proposal_ids"), list):
+        queue_action_payload["proposal_ids"] = []
     current_budget = _int_value(_mapping_value(session, "budget").get("max_proposals"))
     current_iterations = len(session.get("iterations", [])) if isinstance(session.get("iterations"), list) else 0
     base_plan: dict[str, Any] = {
@@ -1411,7 +1426,7 @@ def maintenance_action_resume_plan(
         "current_max_proposals": current_budget,
         "current_iteration_count": current_iterations,
         "next_max_proposals": current_budget,
-        "queue_action": dict(queue_action),
+        "queue_action": queue_action_payload,
         "selected_proposal": {
             "proposal_id": "",
             "family": "",
@@ -1424,17 +1439,17 @@ def maintenance_action_resume_plan(
             "requires_budget_increment": False,
         },
     }
-    if str(queue_action.get("status", "")).strip() != "action_required":
+    if str(queue_action_payload.get("status", "")).strip() != "action_required":
         base_plan["status"] = "pass"
         base_plan["recommended_next_action"] = "No maintenance queue action requires a resume."
         return base_plan
-    if str(queue_action.get("runner_action", "")).strip() != MAINTENANCE_ACTION_RUNNER_ACTION:
+    if str(queue_action_payload.get("runner_action", "")).strip() != MAINTENANCE_ACTION_RUNNER_ACTION:
         base_plan["blockers"] = ["maintenance queue action has no executable runner action"]
         base_plan["recommended_next_action"] = (
             "Refresh maintenance evidence, then rerun maintenance action planning."
         )
         return base_plan
-    increment = _int_value(queue_action.get("proposal_budget_increment"))
+    increment = _int_value(queue_action_payload.get("proposal_budget_increment"))
     if increment < 1:
         base_plan["blockers"] = ["maintenance queue action has invalid proposal budget increment"]
         base_plan["recommended_next_action"] = (
@@ -1456,7 +1471,7 @@ def maintenance_action_resume_plan(
         attempted=set(_list_text(session.get("attempted_proposal_ids"))),
         quarantined=set(_list_text(session.get("quarantined_proposal_ids"))),
     )
-    action_proposal_ids = set(_list_text(queue_action.get("proposal_ids")))
+    action_proposal_ids = set(_list_text(queue_action_payload.get("proposal_ids")))
     if not selected:
         base_plan["blockers"] = ["no unattempted runnable proposal is available"]
         base_plan["recommended_next_action"] = (
@@ -1502,7 +1517,17 @@ def write_maintenance_action_resume_plan(
     *,
     out_path: str = DEFAULT_MAINTENANCE_ACTION_PLAN,
 ) -> Path:
-    return write_json_object(vault / out_path, dict(plan), trailing_newline=True)
+    return write_schema_backed_report(
+        SchemaBackedReportWriteRequest(
+            vault=vault,
+            payload=dict(plan),
+            schema_path=MAINTENANCE_ACTION_PLAN_SCHEMA,
+            out_path=out_path,
+            default_relative_path=DEFAULT_MAINTENANCE_ACTION_PLAN,
+            context="goal runtime maintenance action plan schema validation failed",
+            trailing_newline=True,
+        )
+    )
 
 
 def _maintenance_queue_action(queue_snapshot: list[str]) -> dict[str, Any]:

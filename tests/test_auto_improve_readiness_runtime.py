@@ -292,7 +292,6 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                 "can_execute_goal_runtime": can_execute,
                 "can_promote_result": can_promote,
                 "zip_mode_replay_only": detected_mode == "zip_extract",
-                "dirty_worktree_allowed": False,
                 "fatal_blockers": fatal_blockers,
                 "promotion_blockers": promotion_blockers,
             },

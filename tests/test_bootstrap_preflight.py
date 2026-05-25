@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import datetime as dt
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
@@ -30,12 +32,16 @@ class BootstrapPreflightTests(unittest.TestCase):
 
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["artifact_kind"], "bootstrap_preflight_report")
+        self.assertIn("ops/scripts/core/bootstrap_preflight.py", report["input_fingerprints"])
         self.assertEqual(report["summary"]["missing_dependency_count"], 0)
+        self.assertEqual(report["summary"]["executor_tooling_failure_count"], 0)
         self.assertFalse(report["include_dev"])
         self.assertEqual(report["environment"]["environment_class"], "developer")
         self.assertEqual(report["environment"]["dependency_source"], "current_python_environment")
+        self.assertEqual(report["environment"]["executor_tooling"]["status"], "pass")
         self.assertIn("bootstrap preflight: pass", format_text(report))
         self.assertIn("interpreter:", format_text(report))
+        self.assertIn("codex executor:", format_text(report))
 
     def test_dev_report_fails_with_guidance_when_dependency_is_missing(self) -> None:
         report = build_report(
@@ -58,6 +64,70 @@ class BootstrapPreflightTests(unittest.TestCase):
 
         self.assertEqual(report["status"], "fail")
         self.assertEqual(report["python"]["status"], "fail")
+
+    def test_goal_runtime_report_blocks_workspace_virtualenv_codex_shadow(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            venv_bin = vault / ".venv" / "bin"
+            venv_bin.mkdir(parents=True)
+            (venv_bin / "python").write_text("#!/bin/sh\n", encoding="utf-8")
+            (venv_bin / "python").chmod(0o755)
+            (venv_bin / "codex").write_text("#!/bin/sh\n", encoding="utf-8")
+            (venv_bin / "codex").chmod(0o755)
+
+            with mock.patch.dict(os.environ, {"PATH": str(venv_bin)}):
+                report = build_report(
+                    vault=vault,
+                    environment_class="goal-runtime",
+                    python_version=(3, 12, 1),
+                    module_available=_module_available(set()),
+                )
+
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["environment"]["executor_tooling"]["status"], "fail")
+        self.assertTrue(
+            report["environment"]["executor_tooling"]["workspace_virtualenv_codex_shadowing_path"]
+        )
+        self.assertEqual(
+            report["summary"]["executor_tooling_failures"],
+            ["workspace_virtualenv_codex_shadow"],
+        )
+
+    def test_goal_runtime_report_allows_outer_codex_when_workspace_virtualenv_is_on_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            venv_bin = vault / ".venv" / "bin"
+            venv_bin.mkdir(parents=True)
+            (venv_bin / "python").write_text("#!/bin/sh\n", encoding="utf-8")
+            (venv_bin / "python").chmod(0o755)
+            (venv_bin / "codex").write_text("#!/bin/sh\n", encoding="utf-8")
+            (venv_bin / "codex").chmod(0o755)
+            outer_codex = Path(temp_dir) / "outer-bin" / "codex"
+            outer_codex.parent.mkdir()
+            outer_codex.write_text("#!/bin/sh\n", encoding="utf-8")
+            outer_codex.chmod(0o755)
+
+            with mock.patch.dict(
+                os.environ,
+                {"PATH": f"{venv_bin}{os.pathsep}{outer_codex.parent}"},
+            ):
+                report = build_report(
+                    vault=vault,
+                    environment_class="goal-runtime",
+                    python_version=(3, 12, 1),
+                    module_available=_module_available(set()),
+                )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["environment"]["executor_tooling"]["status"], "pass")
+        self.assertTrue(
+            report["environment"]["executor_tooling"]["workspace_virtualenv_codex_shadowing_path"]
+        )
+        self.assertTrue(report["environment"]["executor_tooling"]["codex_outside_workspace_virtualenv"])
 
     def test_main_returns_nonzero_for_missing_dependency(self) -> None:
         self.assertEqual(main(["--json"]), 0)

@@ -227,7 +227,6 @@ def _write_goal_worktree_guard_sample_report(vault: Path) -> None:
             "can_execute_goal_runtime": True,
             "can_promote_result": True,
             "zip_mode_replay_only": False,
-            "dirty_worktree_allowed": False,
             "fatal_blockers": [],
             "promotion_blockers": [],
         },

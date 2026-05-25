@@ -188,11 +188,17 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
             },
         )
 
-    def _build_report(self, *, resume_session_id: str = "") -> dict:
+    def _build_report(
+        self,
+        *,
+        resume_session_id: str = "",
+        maintenance_action_plan_path: str = "",
+    ) -> dict:
         return build_report(
             GoalRuntimeRunAdmissionRequest(
                 vault=self.vault,
                 resume_session_id=resume_session_id,
+                maintenance_action_plan_path=maintenance_action_plan_path,
                 context=fixed_context(),
             )
         )
@@ -365,6 +371,170 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         self.assertEqual(queue_check["status"], "pass")
         self.assertEqual(execution_check["status"], "pass")
         self.assertTrue(queue_check["observed"]["resume_completion"]["active"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_build_report_accepts_current_maintenance_action_plan_for_resume(self) -> None:
+        self._write_json(
+            "tmp/goal-runtime-maintenance-action.json",
+            {
+                "artifact_kind": "goal_runtime_maintenance_action_plan",
+                "producer": "ops.scripts.auto_improve_runtime",
+                "session_id": "auto-session-resume",
+                "status": "pass",
+                "current_max_proposals": 1,
+                "current_iteration_count": 1,
+                "next_max_proposals": 2,
+                "queue_action": {
+                    "status": "action_required",
+                    "reason": "stable_runnable_queue",
+                    "proposal_ids": ["repair-runtime"],
+                    "runner_action": "resume_session_with_additional_proposal_budget",
+                    "proposal_budget_increment": 1,
+                    "resume_target": "auto-improve-goal-maintenance-action",
+                },
+                "selected_proposal": {
+                    "proposal_id": "repair-runtime",
+                    "family": "runtime",
+                    "failure_mode": "blocked_queue",
+                },
+                "blockers": [],
+                "recommended_next_action": "Run make auto-improve-goal-maintenance-action.",
+                "decisions": {
+                    "can_resume": True,
+                    "requires_budget_increment": True,
+                },
+            },
+        )
+
+        report = self._build_report(
+            resume_session_id="auto-session-resume",
+            maintenance_action_plan_path="tmp/goal-runtime-maintenance-action.json",
+        )
+
+        plan_check = next(
+            check for check in report["checks"] if check["id"] == "start_maintenance_action_plan_current"
+        )
+        self.assertEqual(plan_check["status"], "pass")
+        self.assertEqual(
+            report["inputs"]["maintenance_action_plan"],
+            "tmp/goal-runtime-maintenance-action.json",
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_build_report_blocks_stale_maintenance_action_plan_for_resume(self) -> None:
+        self._write_json(
+            "tmp/goal-runtime-maintenance-action.json",
+            {
+                "artifact_kind": "goal_runtime_maintenance_action_plan",
+                "producer": "ops.scripts.auto_improve_runtime",
+                "session_id": "auto-session-resume",
+                "status": "pass",
+                "current_max_proposals": 1,
+                "current_iteration_count": 1,
+                "next_max_proposals": 2,
+                "queue_action": {
+                    "status": "action_required",
+                    "reason": "stable_runnable_queue",
+                    "proposal_ids": ["stale-runtime"],
+                    "runner_action": "resume_session_with_additional_proposal_budget",
+                    "proposal_budget_increment": 1,
+                    "resume_target": "auto-improve-goal-maintenance-action",
+                },
+                "selected_proposal": {
+                    "proposal_id": "stale-runtime",
+                    "family": "runtime",
+                    "failure_mode": "blocked_queue",
+                },
+                "blockers": [],
+                "recommended_next_action": "Run make auto-improve-goal-maintenance-action.",
+                "decisions": {
+                    "can_resume": True,
+                    "requires_budget_increment": True,
+                },
+            },
+        )
+
+        report = self._build_report(
+            resume_session_id="auto-session-resume",
+            maintenance_action_plan_path="tmp/goal-runtime-maintenance-action.json",
+        )
+
+        self.assertEqual(report["status"], "fail")
+        self.assertFalse(report["decisions"]["can_start_goal_runtime"])
+        plan_check = next(
+            check for check in report["checks"] if check["id"] == "start_maintenance_action_plan_current"
+        )
+        self.assertEqual(plan_check["status"], "fail")
+        self.assertFalse(plan_check["observed"]["selected_in_current_report"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_build_report_blocks_maintenance_action_plan_when_selected_proposal_is_no_longer_runnable(
+        self,
+    ) -> None:
+        self._write_json(
+            "ops/reports/mutation-proposals.json",
+            {
+                "artifact_kind": "mutation_proposals_report",
+                "proposals": [
+                    {
+                        "proposal_id": "repair-runtime",
+                        "blocked_by": ["recent_log_overlap"],
+                    }
+                ],
+                "diagnostics": {
+                    "queue_selection": {
+                        "runnable_available_count": 0,
+                        "selected_runnable_count": 0,
+                        "blocked_available_count": 1,
+                        "blocked_reason_counts": [{"reason": "recent_log_overlap", "count": 1}],
+                    }
+                },
+            },
+        )
+        self._write_json(
+            "tmp/goal-runtime-maintenance-action.json",
+            {
+                "artifact_kind": "goal_runtime_maintenance_action_plan",
+                "producer": "ops.scripts.auto_improve_runtime",
+                "session_id": "auto-session-resume",
+                "status": "pass",
+                "current_max_proposals": 1,
+                "current_iteration_count": 1,
+                "next_max_proposals": 2,
+                "queue_action": {
+                    "status": "action_required",
+                    "reason": "stable_runnable_queue",
+                    "proposal_ids": ["repair-runtime"],
+                    "runner_action": "resume_session_with_additional_proposal_budget",
+                    "proposal_budget_increment": 1,
+                    "resume_target": "auto-improve-goal-maintenance-action",
+                },
+                "selected_proposal": {
+                    "proposal_id": "repair-runtime",
+                    "family": "runtime",
+                    "failure_mode": "blocked_queue",
+                },
+                "blockers": [],
+                "recommended_next_action": "Run make auto-improve-goal-maintenance-action.",
+                "decisions": {
+                    "can_resume": True,
+                    "requires_budget_increment": True,
+                },
+            },
+        )
+
+        report = self._build_report(
+            resume_session_id="auto-session-resume",
+            maintenance_action_plan_path="tmp/goal-runtime-maintenance-action.json",
+        )
+
+        self.assertEqual(report["status"], "fail")
+        plan_check = next(
+            check for check in report["checks"] if check["id"] == "start_maintenance_action_plan_current"
+        )
+        self.assertEqual(plan_check["status"], "fail")
+        self.assertTrue(plan_check["observed"]["selected_in_current_report"])
+        self.assertFalse(plan_check["observed"]["selected_runnable"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_build_report_blocks_start_from_dirty_worktree_guard(self) -> None:

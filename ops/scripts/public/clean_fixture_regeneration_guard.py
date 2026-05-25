@@ -30,7 +30,6 @@ class CleanFixtureRegenerationGuardRequest:
     vault: Path
     out_path: str | None = None
     policy_path: str | None = None
-    allow_dirty_ops_reports: bool = False
     context: RuntimeContext | None = None
     git_status_lines: tuple[str, ...] | None = None
     git_status_error: str = ""
@@ -79,10 +78,10 @@ def _path_set(entries: list[dict[str, str]], predicate: Callable[[str], bool]) -
     return sorted({entry["path"] for entry in entries if predicate(entry["path"])})
 
 
-def _status(*, git_status_error: str, dirty_ops_reports: list[str], allow_dirty: bool) -> str:
+def _status(*, git_status_error: str, dirty_ops_reports: list[str]) -> str:
     if git_status_error:
         return "fail"
-    if dirty_ops_reports and not allow_dirty:
+    if dirty_ops_reports:
         return "fail"
     return "pass"
 
@@ -91,15 +90,13 @@ def _summary(
     *,
     dirty_ops_reports: list[str],
     dirty_public_surfaces: list[str],
-    allow_dirty: bool,
 ) -> dict[str, Any]:
     return {
         "dirty_ops_report_count": len(dirty_ops_reports),
         "dirty_public_surface_count": len(dirty_public_surfaces),
-        "allow_dirty_ops_reports": allow_dirty,
         "next_action": (
             "Use a clean checkout/worktree before regenerating public fixtures."
-            if dirty_ops_reports and not allow_dirty
+            if dirty_ops_reports
             else "Public fixture regeneration guard is clear."
         ),
     }
@@ -126,7 +123,6 @@ def build_report(request: CleanFixtureRegenerationGuardRequest) -> dict[str, Any
     status = _status(
         git_status_error=git_status_error,
         dirty_ops_reports=dirty_ops_reports,
-        allow_dirty=request.allow_dirty_ops_reports,
     )
     return {
         **build_canonical_report_envelope(
@@ -151,7 +147,6 @@ def build_report(request: CleanFixtureRegenerationGuardRequest) -> dict[str, Any
         ),
         "vault": report_path(vault, vault),
         "status": status,
-        "allow_dirty_ops_reports": request.allow_dirty_ops_reports,
         "git_status_error": git_status_error,
         "dirty_entries": dirty_entries,
         "dirty_ops_report_paths": dirty_ops_reports,
@@ -159,7 +154,6 @@ def build_report(request: CleanFixtureRegenerationGuardRequest) -> dict[str, Any
         "summary": _summary(
             dirty_ops_reports=dirty_ops_reports,
             dirty_public_surfaces=dirty_public_surfaces,
-            allow_dirty=request.allow_dirty_ops_reports,
         ),
     }
 
@@ -183,11 +177,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--vault", default=".", help="Repository/vault root.")
     parser.add_argument("--out", default=DEFAULT_OUT, help="Output report path.")
     parser.add_argument("--policy-path", default=None, help="Policy path relative to the vault.")
-    parser.add_argument(
-        "--allow-dirty-ops-reports",
-        action="store_true",
-        help="Record but do not fail when ops/reports is dirty.",
-    )
     return parser.parse_args(argv)
 
 
@@ -199,7 +188,6 @@ def main(argv: list[str] | None = None) -> int:
             vault=vault,
             out_path=args.out,
             policy_path=args.policy_path,
-            allow_dirty_ops_reports=args.allow_dirty_ops_reports,
         )
     )
     destination = write_report(vault, report, args.out)

@@ -65,7 +65,6 @@ GitRunner = Callable[[Sequence[str]], GitCommandResult]
 class GoalWorktreeGuardRequest:
     vault: Path
     requested_mode: str = "git"
-    allow_dirty: bool = False
     out_path: str | None = None
     policy_path: str | None = None
     context: RuntimeContext | None = None
@@ -348,7 +347,6 @@ def evaluate_blockers(
     requested_mode: str,
     detected_mode: str,
     git: GitInspection,
-    allow_dirty: bool,
 ) -> list[WorktreeBlocker]:
     blockers: list[WorktreeBlocker] = []
     if requested_mode not in REQUESTED_MODES:
@@ -405,16 +403,16 @@ def evaluate_blockers(
                 "Use ZIP mode for package replay checks only; use a Git checkout for unattended mutation and promotion.",
             )
         )
-    if git.dirty_entry_count and not allow_dirty:
+    if git.dirty_entry_count:
         blockers.append(
             _blocker(
                 "git_worktree_dirty",
                 "blocking",
                 f"Git worktree has {git.dirty_entry_count} dirty status entries",
-                "Commit, stash, or explicitly allow dirty mode before treating goal output as promotable.",
+                "Commit, stash, or remove dirty entries before treating goal output as promotable.",
             )
         )
-    if git.durable_private_ignored_entry_count and not allow_dirty:
+    if git.durable_private_ignored_entry_count:
         blockers.append(
             _blocker(
                 "git_durable_private_ignored_dirty",
@@ -485,7 +483,6 @@ def build_report(
         requested_mode=request.requested_mode,
         detected_mode=detected_mode,
         git=git,
-        allow_dirty=request.allow_dirty,
     )
     fatal_blockers = [item.blocker_id for item in blockers if item.severity == "fatal"]
     blocking_blockers = [item.blocker_id for item in blockers if item.severity != "fatal"]
@@ -558,7 +555,6 @@ def build_report(
             "can_execute_goal_runtime": can_execute,
             "can_promote_result": can_promote,
             "zip_mode_replay_only": detected_mode == "zip_extract",
-            "dirty_worktree_allowed": request.allow_dirty,
             "fatal_blockers": fatal_blockers,
             "promotion_blockers": blocking_blockers,
         },
@@ -585,7 +581,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Classify Git vs ZIP mode before long goal runs.")
     parser.add_argument("--vault", default=".", help="Repository/vault root.")
     parser.add_argument("--requested-mode", choices=REQUESTED_MODES, default="git")
-    parser.add_argument("--allow-dirty", action="store_true")
     parser.add_argument("--strict", action="store_true", help="Exit nonzero for attention as well as fail.")
     parser.add_argument("--out", default=DEFAULT_OUT)
     return parser.parse_args(argv)
@@ -598,7 +593,6 @@ def main(argv: list[str] | None = None) -> int:
         GoalWorktreeGuardRequest(
             vault=vault,
             requested_mode=args.requested_mode,
-            allow_dirty=args.allow_dirty,
             out_path=args.out,
         )
     )

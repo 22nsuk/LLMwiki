@@ -227,6 +227,16 @@ def load_steps(path: str | None) -> list[dict[str, Any]]:
     return [item for item in payload if isinstance(item, dict)]
 
 
+def distribution_zip_path_from_manifest(vault: Path, manifest_path: str) -> str:
+    payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, manifest_path))
+    if diagnostics.get("status") != "ok" or not isinstance(payload, dict):
+        return ""
+    distribution_zip = payload.get("distribution_zip")
+    if not isinstance(distribution_zip, dict):
+        return ""
+    return str(distribution_zip.get("path", "")).strip()
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build or verify the release-run manifest.")
     parser.add_argument("--vault", default=".")
@@ -236,12 +246,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--distribution-zip", default=DEFAULT_DISTRIBUTION_ZIP)
     parser.add_argument("--source-package-smoke", default=DEFAULT_SOURCE_PACKAGE_SMOKE)
+    parser.add_argument("--print-distribution-zip", action="store_true")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
+    if args.print_distribution_zip:
+        distribution_zip_path = distribution_zip_path_from_manifest(vault, args.out)
+        if distribution_zip_path:
+            print(distribution_zip_path)
+            return 0
+        return 1
     if args.check:
         payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, args.out))
         if diagnostics.get("status") != "ok":

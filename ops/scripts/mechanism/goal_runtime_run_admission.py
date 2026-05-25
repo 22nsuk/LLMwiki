@@ -25,11 +25,13 @@ DEFAULT_REMEDIATION_BACKLOG_REPORT = "ops/reports/remediation-backlog.json"
 DEFAULT_GOAL_CONTRACT_REPORT = "ops/reports/codex-goal-contract.json"
 DEFAULT_GOAL_RUN_STATUS_REPORT = "ops/reports/goal-run-status.json"
 DEFAULT_RUNTIME_CERTIFICATE_REPORT = "ops/reports/goal-runtime-certificate.json"
+DEFAULT_MAINTENANCE_ACTION_PLAN = "tmp/goal-runtime-maintenance-action.json"
 PRODUCER = "ops.scripts.goal_runtime_run_admission"
 SCHEMA_PATH = "ops/schemas/goal-runtime-run-admission.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.goal_runtime_run_admission --vault ."
 START_BLOCKER_SEVERITY = "block_start"
 PROMOTION_BLOCKER_SEVERITY = "block_promotion"
+MAINTENANCE_ACTION_RUNNER_ACTION = "resume_session_with_additional_proposal_budget"
 
 
 @dataclass(frozen=True)
@@ -47,6 +49,7 @@ class GoalRuntimeRunAdmissionRequest:
     goal_contract_path: str = DEFAULT_GOAL_CONTRACT_REPORT
     goal_run_status_path: str = DEFAULT_GOAL_RUN_STATUS_REPORT
     runtime_certificate_report_path: str = DEFAULT_RUNTIME_CERTIFICATE_REPORT
+    maintenance_action_plan_path: str = ""
     resume_session_id: str = ""
     context: RuntimeContext | None = None
 
@@ -460,6 +463,116 @@ def _readiness_execution_check(
     )
 
 
+def _proposal_is_runnable(proposal: dict[str, Any]) -> bool:
+    blocked_by = _list_strings(proposal.get("blocked_by"))
+    blockers = _list_strings(proposal.get("blockers"))
+    status = str(proposal.get("status", "") or proposal.get("queue_status", "")).strip()
+    return not blocked_by and not blockers and status not in {"blocked", "discarded", "quarantined"}
+
+
+def _maintenance_action_plan_check(
+    maintenance_action_plan: dict[str, Any],
+    path: str,
+    *,
+    mutation_proposals: dict[str, Any],
+    mutation_proposals_path: str,
+    readiness: dict[str, Any],
+    readiness_path: str,
+    resume_session_id: str,
+) -> dict[str, Any]:
+    kind_status = _artifact_kind_check(
+        maintenance_action_plan,
+        "goal_runtime_maintenance_action_plan",
+    )
+    status = str(maintenance_action_plan.get("status", "missing")).strip() or "missing"
+    decisions = _dict_field(maintenance_action_plan, "decisions")
+    queue_action = _dict_field(maintenance_action_plan, "queue_action")
+    selected = _dict_field(maintenance_action_plan, "selected_proposal")
+    selected_proposal_id = str(selected.get("proposal_id", "")).strip()
+    proposal_ids = _list_strings(queue_action.get("proposal_ids"))
+    runner_action = str(queue_action.get("runner_action", "")).strip()
+    can_resume = _as_bool(decisions.get("can_resume"))
+    plan_session_id = str(maintenance_action_plan.get("session_id", "")).strip()
+    plan_blockers = _list_strings(maintenance_action_plan.get("blockers"))
+
+    proposals = [
+        proposal
+        for proposal in _list_field(mutation_proposals, "proposals")
+        if isinstance(proposal, dict)
+    ]
+    matching_proposals = [
+        proposal
+        for proposal in proposals
+        if str(proposal.get("proposal_id", "")).strip() == selected_proposal_id
+    ]
+    matching_proposal = matching_proposals[0] if matching_proposals else {}
+    selected_in_current_report = bool(matching_proposal)
+    selected_runnable = bool(matching_proposal) and _proposal_is_runnable(matching_proposal)
+
+    execution = _dict_field(readiness, "execution_readiness")
+    readiness_can_run = _as_bool(execution.get("can_run"))
+    readiness_runnable_count = _as_int(execution.get("runnable_proposal_count"))
+    selected_in_action_queue = not proposal_ids or selected_proposal_id in proposal_ids
+    passed = (
+        kind_status == "present"
+        and status == "pass"
+        and can_resume
+        and bool(resume_session_id)
+        and plan_session_id == resume_session_id
+        and not plan_blockers
+        and runner_action == MAINTENANCE_ACTION_RUNNER_ACTION
+        and bool(selected_proposal_id)
+        and selected_in_action_queue
+        and selected_in_current_report
+        and selected_runnable
+        and readiness_can_run
+        and readiness_runnable_count > 0
+    )
+    return _check(
+        check_id="start_maintenance_action_plan_current",
+        status="pass" if passed else "fail",
+        severity=START_BLOCKER_SEVERITY,
+        expected={
+            "artifact_kind": "goal_runtime_maintenance_action_plan",
+            "status": "pass",
+            "decisions.can_resume": True,
+            "session_id": resume_session_id or "<resume session id>",
+            "blockers": [],
+            "queue_action.runner_action": MAINTENANCE_ACTION_RUNNER_ACTION,
+            "selected_proposal": "present in current runnable mutation proposal queue",
+            "execution_readiness.can_run": True,
+            "execution_readiness.runnable_proposal_count": ">0",
+        },
+        observed={
+            "artifact_status": kind_status,
+            "status": status,
+            "decisions.can_resume": can_resume,
+            "resume_session_id": resume_session_id,
+            "plan_session_id": plan_session_id,
+            "blockers": plan_blockers,
+            "queue_action.runner_action": runner_action,
+            "queue_action.proposal_ids": proposal_ids,
+            "selected_proposal_id": selected_proposal_id,
+            "selected_in_action_queue": selected_in_action_queue,
+            "selected_in_current_report": selected_in_current_report,
+            "selected_runnable": selected_runnable,
+            "execution_readiness.can_run": readiness_can_run,
+            "execution_readiness.runnable_proposal_count": readiness_runnable_count,
+        },
+        reason=(
+            "maintenance action resume plan selects a current runnable proposal"
+            if passed
+            else "maintenance action resumes must be tied to a current passing plan and a runnable selected proposal, not only a repeated blocked snapshot"
+        ),
+        next_action=(
+            "Proceed with maintenance-action resume."
+            if passed
+            else "Run `make goal-runtime-between-run-settle`, regenerate the maintenance action plan, and resolve any plan blocker before resuming."
+        ),
+        evidence_paths=[path, mutation_proposals_path, readiness_path],
+    )
+
+
 def _readiness_promotion_check(readiness: dict[str, Any], path: str) -> dict[str, Any]:
     kind_status = _artifact_kind_check(readiness, "auto_improve_readiness_report")
     can_promote = _as_bool(readiness.get("can_promote_result"))
@@ -706,6 +819,11 @@ def build_report(
     goal_contract = _load_json_object(vault, active_request.goal_contract_path)
     goal_run_status = _load_json_object(vault, active_request.goal_run_status_path)
     resume_completion = _resume_completion_context(vault, active_request.resume_session_id)
+    maintenance_action_plan = (
+        _load_json_object(vault, active_request.maintenance_action_plan_path)
+        if active_request.maintenance_action_plan_path
+        else {}
+    )
     runtime_certificate = _load_json_object(
         vault,
         active_request.runtime_certificate_report_path,
@@ -727,6 +845,21 @@ def build_report(
             readiness,
             active_request.readiness_report_path,
             resume_completion=resume_completion,
+        ),
+        *(
+            [
+                _maintenance_action_plan_check(
+                    maintenance_action_plan,
+                    active_request.maintenance_action_plan_path,
+                    mutation_proposals=mutation_proposals,
+                    mutation_proposals_path=active_request.mutation_proposals_report_path,
+                    readiness=readiness,
+                    readiness_path=active_request.readiness_report_path,
+                    resume_session_id=active_request.resume_session_id,
+                )
+            ]
+            if active_request.maintenance_action_plan_path
+            else []
         ),
         _readiness_promotion_check(readiness, active_request.readiness_report_path),
         _remediation_backlog_check(remediation_backlog, active_request.remediation_backlog_report_path),
@@ -760,6 +893,9 @@ def build_report(
         "runtime_certificate_report": active_request.runtime_certificate_report_path,
     }
     inputs = dict(file_inputs)
+    if active_request.maintenance_action_plan_path:
+        file_inputs["maintenance_action_plan"] = active_request.maintenance_action_plan_path
+        inputs["maintenance_action_plan"] = active_request.maintenance_action_plan_path
     resume_session_report = str(resume_completion.get("session_report", "")).strip()
     if resume_session_report:
         file_inputs["resume_session_report"] = resume_session_report
@@ -820,6 +956,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--goal-contract", default=DEFAULT_GOAL_CONTRACT_REPORT)
     parser.add_argument("--goal-run-status", default=DEFAULT_GOAL_RUN_STATUS_REPORT)
     parser.add_argument("--runtime-certificate-report", default=DEFAULT_RUNTIME_CERTIFICATE_REPORT)
+    parser.add_argument("--maintenance-action-plan", default="")
     parser.add_argument("--resume-session", default="")
     parser.add_argument("--policy-path", default=None)
     parser.add_argument(
@@ -848,6 +985,7 @@ def main(argv: list[str] | None = None) -> int:
             goal_contract_path=args.goal_contract,
             goal_run_status_path=args.goal_run_status,
             runtime_certificate_report_path=args.runtime_certificate_report,
+            maintenance_action_plan_path=args.maintenance_action_plan,
             resume_session_id=args.resume_session,
         )
     )

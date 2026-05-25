@@ -68,19 +68,18 @@ class CleanFixtureRegenerationGuardTests(unittest.TestCase):
         )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
-    def test_allow_dirty_ops_reports_records_override(self) -> None:
+    def test_dirty_ops_reports_always_block_regeneration(self) -> None:
         report = build_report(
             CleanFixtureRegenerationGuardRequest(
                 vault=self.vault,
-                allow_dirty_ops_reports=True,
                 git_status_lines=(" M ops/reports/goal-run-status.json",),
                 context=fixed_context(),
             )
         )
 
-        self.assertEqual(report["status"], "pass")
-        self.assertTrue(report["allow_dirty_ops_reports"])
+        self.assertEqual(report["status"], "fail")
         self.assertEqual(report["summary"]["dirty_ops_report_count"], 1)
+        self.assertIn("clean checkout/worktree", report["summary"]["next_action"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_public_surface_dirty_without_ops_reports_passes(self) -> None:

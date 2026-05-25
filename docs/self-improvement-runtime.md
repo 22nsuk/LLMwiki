@@ -62,9 +62,14 @@ Useful checks:
 
 ```bash
 make goal-runtime-python-preflight
-command -v codex
 .venv/bin/python -m pytest --version
 ```
+
+`goal-runtime-python-preflight` records the Codex executable visible outside
+the repository virtualenv and fails the goal-runtime environment check when the
+only resolvable Codex command is a repository-local `.venv/bin/codex` shim. Use
+`command -v codex` only as a local diagnostic when the report's executor tooling
+section points at a shadowed or missing Codex command.
 
 ## Trial Triage Runbook
 
@@ -108,8 +113,9 @@ When the previous session's maintenance evidence contains a `queue_action` with
 target computes the next `GOAL_MAX_PROPOSALS` from the session evidence and
 reuses `auto-improve-goal-resume`, so the actual unblock attempt is captured by
 runner heartbeat, checkpoint, and resume evidence. It also writes
-`tmp/goal-runtime-maintenance-action.json` before launching the resume, which
-keeps the budget-increase decision inspectable.
+`tmp/goal-runtime-maintenance-action.json` before launching the resume and
+validates that plan against `ops/schemas/goal-runtime-maintenance-action-plan.schema.json`,
+which keeps the budget-increase decision inspectable and admission-checkable.
 
 Do not start `make auto-improve-goal-run` while any of these remain unresolved:
 

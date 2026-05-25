@@ -20,7 +20,9 @@ result can be promoted without operator intervention.
 - `make release-run-ready-check`: revalidate the existing manifest against the
   current HEAD, source fingerprint, source ZIP, and source-package smoke report.
 - `make release-sealed-run-ready-plan`: inspect runnable authority evidence and
-  write the cost-aware action plan for sealing without rerunning stage 1.
+  write the cost-aware action plan for sealing without rerunning stage 1. The
+  planner requires both current passing run-ready evidence and current passing
+  auto-promotion preseal evidence before it spends work on sealed sidecars.
 - `make release-sealed-run-ready`: build sealed sidecars, including the sealed
   operator summary diagnostic, write the operator-free sealed post-seal
   attestation, run the sealed rehearsal check, and write the sealed-run
@@ -110,8 +112,9 @@ result can be promoted without operator intervention.
    preseal.
 5. Run `make release-sealed-run-ready` when you need source ZIP and sidecar
    evidence sealed for release review. Its planner requires a current passing
-   run-ready manifest and reports the minimal next action if that evidence is
-   missing, stale, or failing.
+   run-ready manifest plus current passing auto-promotion preseal evidence, and
+   reports the minimal next action if either authority is missing, stale, or
+   failing.
 6. Run `make release-auto-promotion-ready` when unattended promotion must be
    evaluated. Its planner reuses current passing preflight, run, preseal, and
    sealed authority evidence, reports minimal next actions for missing or stale

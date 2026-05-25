@@ -24,10 +24,14 @@ from ops.scripts.run_mechanism_experiment_runtime import (
     RunMechanismExperimentMutationError,
 )
 from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
 from tests.minimal_vault_runtime import seed_subagent_profiles
 from tests.run_mechanism_experiment_test_utils import mutation_proposal_report, seed_wrapper_vault
 from tests.test_codex_goal_contract import sample_goal_contract
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _incrementing_runtime_context(start: dt.datetime | None = None) -> RuntimeContext:
@@ -854,6 +858,10 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertTrue(plan["decisions"]["can_resume"])
             self.assertEqual(plan["next_max_proposals"], 2)
             self.assertEqual(plan["selected_proposal"]["proposal_id"], "proposal-b")
+            plan_path = auto_improve_runtime.write_maintenance_action_resume_plan(vault, plan)
+            plan_schema = load_schema(REPO_ROOT / "ops/schemas/goal-runtime-maintenance-action-plan.schema.json")
+            written_plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            self.assertEqual(validate_with_schema(written_plan, plan_schema), [])
 
             extended_contract = sample_goal_contract()
             extended_contract["budgets"]["max_proposals"] = 2

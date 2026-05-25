@@ -270,6 +270,24 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self.assertIn("run_manifest_not_reusable", plan["failures"])
         self.assertEqual(plan["planned_actions"], [])
 
+    def test_sealed_plan_requires_current_preseal_before_operator_refresh(self) -> None:
+        self._write_authorities()
+        preseal = json.loads(
+            (self.vault / "build/release/release-auto-promotion-preseal.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        preseal["source_tree_fingerprint"] = "fp-old"
+        self._write_json("build/release/release-auto-promotion-preseal.json", preseal)
+
+        with self._patch_current_repo():
+            plan = build_plan(self.vault, stage="sealed-run-ready", context=fixed_context())
+
+        self.assertEqual(plan["plan_status"], "blocked")
+        self.assertIn("auto_promotion_preseal_not_reusable", plan["failures"])
+        self.assertEqual(plan["planned_actions"], [])
+        self.assertIn("release-auto-promotion-preseal", plan["blockers"][0]["recommended_next_step"])
+
     def test_sealed_plan_refreshes_operator_diagnostic_with_sealed_sidecars(self) -> None:
         self._write_authorities()
 
@@ -280,6 +298,7 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self.assertIn("release-evidence-closeout-sealed-sidecars", planned_actions)
         self.assertNotIn("release-evidence-closeout-sealed-core-sidecars", planned_actions)
         self.assertIn("operator diagnostic", planned_actions["release-evidence-closeout-sealed-sidecars"]["reason"])
+        self.assertIn("preseal authorities", planned_actions["release-evidence-closeout-sealed-sidecars"]["reason"])
 
 
 if __name__ == "__main__":

@@ -10,7 +10,11 @@ from unittest.mock import patch
 
 import pytest
 
-from ops.scripts.release.release_run_manifest import build_manifest, write_manifest
+from ops.scripts.release.release_run_manifest import (
+    build_manifest,
+    distribution_zip_path_from_manifest,
+    write_manifest,
+)
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
@@ -148,6 +152,25 @@ class ReleaseRunManifestTests(unittest.TestCase):
         self.assertEqual(manifest["status"], "fail")
         self.assertIn("step_failed:release-public-current", manifest["failures"])
         self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+
+    def test_distribution_zip_path_can_be_read_from_manifest_for_release_reuse(self) -> None:
+        self._write_run_inputs()
+
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+        write_manifest(self.vault, manifest, "build/release/release-run-manifest.json")
+
+        self.assertEqual(
+            distribution_zip_path_from_manifest(
+                self.vault,
+                "build/release/release-run-manifest.json",
+            ),
+            "build/release/LLMwiki-source.zip",
+        )
 
     def test_manifest_fails_on_source_fingerprint_drift(self) -> None:
         self._write_run_inputs()

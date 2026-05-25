@@ -1,7 +1,6 @@
 SCRIPT_OUTPUT_SURFACES_OUT ?= ops/script-output-surfaces.json
 SCRIPT_OUTPUT_SURFACES_CANDIDATE_OUT ?= tmp/script-output-surfaces.candidate.json
 CLEAN_FIXTURE_REGENERATION_GUARD_OUT ?= tmp/clean-fixture-regeneration-guard.json
-CLEAN_FIXTURE_REGENERATION_ALLOW_DIRTY_REPORTS ?=
 CLOSURE_REGISTRY_ENVELOPE_REGISTRY ?= all
 GENERATED_ARTIFACT_INDEX_OUT ?= ops/reports/generated-artifact-index.json
 GENERATED_ARTIFACT_INDEX_CANDIDATE_OUT ?= tmp/generated-artifact-index.candidate.json
@@ -76,7 +75,7 @@ script-output-surfaces:
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(SCRIPT_OUTPUT_SURFACES_CANDIDATE_OUT)" --out "$(SCRIPT_OUTPUT_SURFACES_OUT)" --schema ops/schemas/script-output-surfaces.schema.json --expected-artifact-kind script_output_surfaces --expected-producer ops.scripts.script_output_surfaces
 
 clean-fixture-regeneration-guard:
-	$(PYTHON) -m ops.scripts.clean_fixture_regeneration_guard --vault "$(VAULT)" --out "$(CLEAN_FIXTURE_REGENERATION_GUARD_OUT)" $(if $(CLEAN_FIXTURE_REGENERATION_ALLOW_DIRTY_REPORTS),--allow-dirty-ops-reports,)
+	$(PYTHON) -m ops.scripts.clean_fixture_regeneration_guard --vault "$(VAULT)" --out "$(CLEAN_FIXTURE_REGENERATION_GUARD_OUT)"
 
 script-output-surfaces-clean-regenerate: clean-fixture-regeneration-guard script-output-surfaces
 

@@ -295,6 +295,18 @@ def build_plan(
                     recommended_next_step="Run make release-run-ready, then rerun the planner.",
                 )
             )
+        if not nodes["auto_promotion_preseal"]["can_reuse"]:
+            blockers.append(
+                _blocker(
+                    blocker_id="auto_promotion_preseal_not_reusable",
+                    node=nodes["auto_promotion_preseal"],
+                    summary="Auto-promotion preseal is missing, stale, invalid, or not passing.",
+                    recommended_next_step=(
+                        "Run make release-auto-promotion-preseal before release-sealed-run-ready, "
+                        "then rerun the planner."
+                    ),
+                )
+            )
         if not blockers:
             planned_actions.extend(
                 [
@@ -303,8 +315,8 @@ def build_plan(
                         action_type="refresh_sealed_sidecars",
                         cost_class="medium",
                         reason=(
-                            "run-ready authority is reusable; sealed sidecars and the sealed "
-                            "operator diagnostic may be refreshed."
+                            "run-ready and preseal authorities are reusable; sealed sidecars "
+                            "and the sealed operator diagnostic may be refreshed."
                         ),
                     ),
                     _action(
