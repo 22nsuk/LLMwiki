@@ -2771,6 +2771,7 @@
       "source_paths": "3fd64eb4cddfa126925a79d3794aaf0fdda480de5e64173dfa2f903f0f60f616",
       "artifact_freshness_report": "a1bee618ea7be7282cc5d51547766239db093d4383c508d38ab9dd9c5da3163d",
       "goal_worktree_guard_report": "b0ec8f2dc5a5ef78b94223d743e0eeafbf8fb2165b05890a39712328b11dabe5",
+      "learning_confirmed_legacy_reconstruction_report": "missing",
       "learning_readiness_signoff_report": "missing",
       "mechanism_review_report": "e6eeb1257bb7b266b3c2d434b9b483c3944f5d897ec4b45e3620f125a266968f",
       "mutation_proposal_report": "dd22cc168a9fd156c0700afed5daf26c9b6ee73974f98a0e5981d773313ba958",
