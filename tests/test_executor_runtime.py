@@ -330,6 +330,9 @@ class ExecutorRuntimeTests(unittest.TestCase):
             prompt = (vault / "runs" / "run-executor" / "worker-prompt.md").read_text(encoding="utf-8")
             self.assertIn("Return JSON only.", prompt)
             self.assertIn("proposal_snapshot", prompt)
+            self.assertIn("Repository-required local skills", prompt)
+            self.assertIn("$CODEX_HOME/skills/<skill>/SKILL.md", prompt)
+            self.assertIn("do not fail solely because the system available-skills list omitted", prompt)
             self.assertNotIn(str(vault).replace("\\", "/"), prompt)
             event_log = vault / "runs" / "run-executor" / "runtime-events.jsonl"
             events = [json.loads(line) for line in event_log.read_text(encoding="utf-8").splitlines()]

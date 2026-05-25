@@ -496,6 +496,11 @@ Execution environment guidance:
 - In reviewer, validator, and auditor roles, set `PYTHONDONTWRITEBYTECODE=1` and pass pytest `-p no:cacheprovider` when cache writes are not part of the check.
 - If dependencies are genuinely absent and setup would write to the workspace, report the exact blocked command and the missing dependency surface.
 
+Repository-required local skills:
+- If `AGENTS.md` or `AGENTS.local.md` names a required skill that is absent from the system-provided available skills list, check for a local skill body at `$CODEX_HOME/skills/<skill>/SKILL.md` or `~/.codex/skills/<skill>/SKILL.md`.
+- When that local skill body exists and is readable, read and apply it before continuing; do not fail solely because the system available-skills list omitted a readable local required skill.
+- If the required local skill body is absent or unreadable, report the exact missing skill path surface as a blocker.
+
 Executor phase boundary:
 - Executor roles run before repo-health capture, candidate artifacts, changed-files manifest, behavior delta, final promotion report, and workspace apply.
 - Validator/reviewer/auditor roles should not fail only because post-executor artifacts such as `candidate-mechanism-assessment.json`, `candidate-eval.json`, `candidate-lint.json`, `changed-files-manifest.json`, or finalized `promotion-report.json` are not available yet.
