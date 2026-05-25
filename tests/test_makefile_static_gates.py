@@ -3676,8 +3676,8 @@ class MakefileStaticGateTests(unittest.TestCase):
             (
                 "$(MAKE) refresh-generated-core",
                 "$(MAKE) release-smoke-fast-refresh-check",
-                "$(MAKE) goal-runtime-quarantine-preflight",
                 "$(MAKE) goal-runtime-pre-run-cleanup",
+                "$(MAKE) goal-runtime-quarantine-preflight",
                 "$(MAKE) goal-runtime-publish-local-evidence",
                 "$(MAKE) goal-runtime-fixed-point-check",
             ),
@@ -3688,8 +3688,8 @@ class MakefileStaticGateTests(unittest.TestCase):
             "goal-runtime-run-admission-local-refresh",
             (
                 "$(MAKE) release-smoke-fast-refresh-check",
-                "$(MAKE) goal-runtime-quarantine-preflight",
                 "$(MAKE) goal-runtime-pre-run-cleanup",
+                "$(MAKE) goal-runtime-quarantine-preflight",
             ),
         )
         _assert_recipe_contains_tokens(
@@ -3697,8 +3697,8 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-pre-run-cleanup",
             (
-                "$(MAKE) goal-runtime-clean-transient",
                 "$(MAKE) tmp-json-clean",
+                "$(MAKE) goal-runtime-clean-transient",
                 "$(MAKE) goal-runtime-local-evidence-converge",
                 "$(MAKE) artifact-freshness-refresh-check",
             ),
@@ -3718,8 +3718,21 @@ class MakefileStaticGateTests(unittest.TestCase):
         ):
             admission_recipe = _recipe_lines(text, admission_target)
             self.assertLess(
+                admission_recipe.index("$(MAKE) tmp-json-clean"),
+                admission_recipe.index("$(MAKE) goal-runtime-clean-transient"),
+            )
+            self.assertLess(
                 admission_recipe.index("$(MAKE) goal-runtime-local-evidence-converge"),
                 admission_recipe.index("$(MAKE) artifact-freshness-refresh-check"),
+            )
+        for admission_target in (
+            "goal-runtime-run-admission-converge",
+            "goal-runtime-run-admission-local-refresh",
+        ):
+            admission_recipe = _recipe_lines(text, admission_target)
+            self.assertLess(
+                admission_recipe.index("$(MAKE) goal-runtime-pre-run-cleanup"),
+                admission_recipe.index("$(MAKE) goal-runtime-quarantine-preflight"),
             )
         _assert_recipe_contains_tokens(
             self,
