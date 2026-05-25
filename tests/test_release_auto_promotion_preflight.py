@@ -199,6 +199,52 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
         self.assertEqual(manifest["status"], "pass")
         self.assertTrue(manifest["checks"]["learning_revalidation_current"])
 
+    def test_preflight_accepts_not_due_signoff_supported_learning_blocker(self) -> None:
+        self._write_common_inputs()
+        readiness = json.loads(
+            (self.vault / "ops/reports/auto-improve-readiness.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        readiness["learning_claim_blockers"] = [
+            {
+                "id": "learning_blocked_by_review_required",
+                "scope": "learning_readiness",
+                "status": "open",
+                "accepted_risk": False,
+            }
+        ]
+        readiness["diagnostics"] = {
+            "learning_signoff_summary": {
+                "active": True,
+                "linked_blocker_id": "learning_blocked_by_review_required",
+            }
+        }
+        self._write_json("ops/reports/auto-improve-readiness.json", readiness)
+        learning = json.loads(
+            (
+                self.vault / "ops/reports/learning-readiness-signoff-revalidation.json"
+            ).read_text(encoding="utf-8")
+        )
+        learning["revalidation"]["status"] = "not_due"
+        self._write_json("ops/reports/learning-readiness-signoff-revalidation.json", learning)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, phase="preflight", context=fixed_context())
+
+        self.assertEqual(manifest["status"], "pass")
+        self.assertTrue(manifest["checks"]["auto_improve_learning_claim_blockers_clear"])
+        self.assertEqual(
+            manifest["diagnostics"]["auto_improve"]["learning_claim_blocker_count"],
+            1,
+        )
+        self.assertEqual(
+            manifest["diagnostics"]["auto_improve"][
+                "unaccepted_learning_claim_blocker_count"
+            ],
+            0,
+        )
+
     def test_preflight_treats_release_gate_blockers_as_diagnostics(self) -> None:
         self._write_common_inputs(
             promotion_blockers=[

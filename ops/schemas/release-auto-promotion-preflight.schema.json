@@ -239,6 +239,7 @@
         "raw_can_promote_result",
         "stage3_can_promote_result",
         "learning_claim_blocker_count",
+        "unaccepted_learning_claim_blocker_count",
         "stage3_blocking_promotion_blocker_count",
         "release_gate_diagnostic_promotion_blocker_count",
         "clean_release_blocker_count"
@@ -248,6 +249,7 @@
         "raw_can_promote_result": { "type": "boolean" },
         "stage3_can_promote_result": { "type": "boolean" },
         "learning_claim_blocker_count": { "type": "integer", "minimum": 0 },
+        "unaccepted_learning_claim_blocker_count": { "type": "integer", "minimum": 0 },
         "stage3_blocking_promotion_blocker_count": { "type": "integer", "minimum": 0 },
         "release_gate_diagnostic_promotion_blocker_count": { "type": "integer", "minimum": 0 },
         "clean_release_blocker_count": { "type": "integer", "minimum": 0 }

@@ -35,6 +35,7 @@ ALLOWED_LEARNING_REVALIDATION_STATUSES = {
     "current",
     "fresh",
     "metrics_close_candidate",
+    "not_due",
     "not_required",
     "pass",
 }
@@ -97,12 +98,25 @@ def _auto_improve_diagnostics(payload: dict[str, Any]) -> dict[str, Any]:
     stage3_promotion_blockers = _stage3_blocking_promotion_blockers(promotion_blockers)
     release_gate_diagnostic_blockers = _release_gate_diagnostic_blockers(promotion_blockers)
     clean_release_blockers = _list(payload.get("clean_release_blockers"))
+    signoff_summary = _dict(_dict(payload.get("diagnostics")).get("learning_signoff_summary"))
+    signoff_supported_blocker_id = str(signoff_summary.get("linked_blocker_id", "")).strip()
+    signoff_active = _bool_value(signoff_summary.get("active", False))
+    unaccepted_learning_claim_blockers = [
+        blocker
+        for blocker in (_dict(item) for item in learning_claim_blockers)
+        if not (
+            signoff_active
+            and signoff_supported_blocker_id
+            and str(blocker.get("id", "")).strip() == signoff_supported_blocker_id
+        )
+    ]
     can_execute_trial = bool(payload.get("can_execute_trial", False))
     return {
         "can_execute_trial": can_execute_trial,
         "raw_can_promote_result": bool(payload.get("can_promote_result", False)),
         "stage3_can_promote_result": can_execute_trial and not stage3_promotion_blockers,
         "learning_claim_blocker_count": len(learning_claim_blockers),
+        "unaccepted_learning_claim_blocker_count": len(unaccepted_learning_claim_blockers),
         "stage3_blocking_promotion_blocker_count": len(stage3_promotion_blockers),
         "release_gate_diagnostic_promotion_blocker_count": len(release_gate_diagnostic_blockers),
         "clean_release_blocker_count": len(clean_release_blockers),
@@ -292,7 +306,7 @@ def build_manifest(
             int(auto["stage3_blocking_promotion_blocker_count"]) == 0
         ),
         "auto_improve_learning_claim_blockers_clear": (
-            int(auto["learning_claim_blocker_count"]) == 0
+            int(auto["unaccepted_learning_claim_blocker_count"]) == 0
         ),
         "auto_improve_clean_release_blockers_clear": (
             int(auto["clean_release_blocker_count"]) == 0
@@ -578,7 +592,7 @@ def build_manifest(
         source="learning_revalidation",
         field_path="$.revalidation.status",
         observed=learning["revalidation_status"],
-        expected="one of current, fresh, metrics_close_candidate, not_required, pass",
+        expected="one of current, fresh, metrics_close_candidate, not_due, not_required, pass",
         summary="Learning revalidation is not current enough for unattended promotion.",
         recommended_next_step="Renew or resolve learning readiness before spending run/seal cycles.",
     )
