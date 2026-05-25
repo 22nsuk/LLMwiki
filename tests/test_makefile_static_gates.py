@@ -1627,6 +1627,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             [
                 "$(MAKE) release-source-ready-snapshot",
                 "$(MAKE) release-converge-all-surfaces",
+                "$(MAKE) test-execution-summary-full-refresh-no-converge",
             ],
         )
         self.assertIn("ops.scripts.release_source_ready_commit", ready_commit_block)
