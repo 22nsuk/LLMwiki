@@ -13,6 +13,10 @@ from ops.scripts.artifact_io_runtime import (
     write_schema_backed_report,
 )
 from ops.scripts.output_runtime import display_path
+from ops.scripts.release.auto_promotion_learning_runtime import (
+    ALLOWED_LEARNING_REVALIDATION_STATUSES,
+    unaccepted_learning_claim_blockers,
+)
 from ops.scripts.release.release_run_manifest import (
     DEFAULT_OUT as DEFAULT_RUN_MANIFEST,
 )
@@ -38,13 +42,6 @@ DEFAULT_OPERATOR_SUMMARY = "build/release/operator-release-summary.json"
 DEFAULT_AUTO_IMPROVE_READINESS = "ops/reports/auto-improve-readiness.json"
 DEFAULT_AUTO_PROMOTION_PREFLIGHT = "build/release/release-auto-promotion-preflight.json"
 DEFAULT_AUTO_PROMOTION_PRESEAL = "build/release/release-auto-promotion-preseal.json"
-ALLOWED_LEARNING_REVALIDATION_STATUSES = {
-    "current",
-    "fresh",
-    "metrics_close_candidate",
-    "not_required",
-    "pass",
-}
 STRICT_ZERO_ACCEPTED_RISK_FIELDS = (
     "accepted_risk_count",
     "release_accepted_risk_count",
@@ -181,6 +178,10 @@ def _auto_improve_diagnostics(
     clean_release_blockers = _list(auto_improve_readiness.get("clean_release_blockers"))
     stage3_promotion_blockers = _stage3_blocking_promotion_blockers(promotion_blockers)
     release_gate_diagnostic_blockers = _release_gate_diagnostic_blockers(promotion_blockers)
+    learning_claim_blockers_without_signoff = unaccepted_learning_claim_blockers(
+        learning_claim_blockers,
+        auto_improve_readiness.get("diagnostics"),
+    )
     report_fingerprint = str(auto_improve_readiness.get("source_tree_fingerprint", "")).strip()
     can_execute_trial = bool(auto_improve_readiness.get("can_execute_trial", False))
     return {
@@ -190,6 +191,9 @@ def _auto_improve_diagnostics(
         "can_promote_result": bool(auto_improve_readiness.get("can_promote_result", False)),
         "stage3_can_promote_result": can_execute_trial and not stage3_promotion_blockers,
         "learning_claim_blocker_count": len(learning_claim_blockers),
+        "unaccepted_learning_claim_blocker_count": len(
+            learning_claim_blockers_without_signoff
+        ),
         "promotion_blocker_count": len(promotion_blockers),
         "stage3_blocking_promotion_blocker_count": len(stage3_promotion_blockers),
         "release_gate_diagnostic_promotion_blocker_count": len(release_gate_diagnostic_blockers),
@@ -328,7 +332,7 @@ def build_manifest(
         "auto_improve_can_execute_trial": bool(auto_improve["can_execute_trial"]),
         "auto_improve_can_promote_result": bool(auto_improve["stage3_can_promote_result"]),
         "auto_improve_blockers_clear": (
-            int(auto_improve["learning_claim_blocker_count"]) == 0
+            int(auto_improve["unaccepted_learning_claim_blocker_count"]) == 0
             and int(auto_improve["stage3_blocking_promotion_blocker_count"]) == 0
             and int(auto_improve["clean_release_blocker_count"]) == 0
         ),
@@ -702,7 +706,7 @@ def build_manifest(
         source="operator_release_summary",
         field_path="$.learning_readiness.revalidation_status",
         observed=learning_revalidation_status,
-        expected="one of current, fresh, metrics_close_candidate, not_required, pass",
+        expected="one of current, fresh, metrics_close_candidate, not_due, not_required, pass",
         summary="Learning revalidation is not current enough for unattended promotion.",
         recommended_next_step="Run learning-readiness-signoff-revalidation and refresh operator summary.",
     )
@@ -816,11 +820,13 @@ def build_manifest(
             "learning_claim="
             f"{auto_improve['learning_claim_blocker_count']};stage3_promotion="
             f"{auto_improve['stage3_blocking_promotion_blocker_count']};"
+            f"unaccepted_learning_claim="
+            f"{auto_improve['unaccepted_learning_claim_blocker_count']};"
             f"release_gate_diagnostic="
             f"{auto_improve['release_gate_diagnostic_promotion_blocker_count']};"
             f"clean_release={auto_improve['clean_release_blocker_count']}"
         ),
-        expected="all blocker counts are 0",
+        expected="all blocking blocker counts are 0",
         summary="Auto-improve readiness still has Stage 3 blocking diagnostics.",
         recommended_next_step=(
             "Resolve learning, non-release-gate promotion, or clean-release blockers listed in "

@@ -226,6 +226,51 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
         self.assertTrue(manifest["checks"]["learning_revalidation_current"])
         self.assertTrue(manifest["unattended_promotion_allowed"])
 
+    def test_manifest_accepts_not_due_signoff_supported_learning_blocker(self) -> None:
+        self._write_inputs()
+        self._write_json(
+            "build/release/operator-release-summary.json",
+            self._operator_summary(learning_readiness={"revalidation_status": "not_due"}),
+        )
+        readiness = json.loads(
+            (self.vault / "ops/reports/auto-improve-readiness.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        readiness["learning_claim_blockers"] = [
+            {
+                "id": "learning_blocked_by_review_required",
+                "scope": "learning_readiness",
+                "status": "open",
+                "accepted_risk": False,
+            }
+        ]
+        readiness["diagnostics"] = {
+            "learning_signoff_summary": {
+                "active": True,
+                "linked_blocker_id": "learning_blocked_by_review_required",
+            }
+        }
+        self._write_json("ops/reports/auto-improve-readiness.json", readiness)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, context=fixed_context())
+
+        self.assertEqual(manifest["status"], "pass")
+        self.assertTrue(manifest["checks"]["learning_revalidation_current"])
+        self.assertTrue(manifest["checks"]["auto_improve_blockers_clear"])
+        self.assertEqual(
+            manifest["diagnostics"]["auto_improve"]["learning_claim_blocker_count"],
+            1,
+        )
+        self.assertEqual(
+            manifest["diagnostics"]["auto_improve"][
+                "unaccepted_learning_claim_blocker_count"
+            ],
+            0,
+        )
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+
     def test_operator_attention_blocks_auto_promotion(self) -> None:
         self._write_inputs()
         self._write_json(

@@ -13,6 +13,11 @@ from ops.scripts.artifact_io_runtime import (
     write_schema_backed_report,
 )
 from ops.scripts.output_runtime import display_path
+from ops.scripts.release.auto_promotion_learning_runtime import (
+    ALLOWED_LEARNING_REVALIDATION_STATUSES,
+    bool_value,
+    unaccepted_learning_claim_blockers,
+)
 from ops.scripts.release.release_run_manifest import _resolve, git_commit
 from ops.scripts.release.release_sealed_run_manifest import (
     _json_identity,
@@ -31,14 +36,6 @@ DEFAULT_GOAL_RUN_IDENTITY = "build/release/release-auto-promotion-goal-run-ident
 SCHEMA_PATH = "ops/schemas/release-auto-promotion-preflight.schema.json"
 PRODUCER = "ops.scripts.release_auto_promotion_preflight"
 SOURCE_COMMAND = "python -m ops.scripts.release_auto_promotion_preflight --vault ."
-ALLOWED_LEARNING_REVALIDATION_STATUSES = {
-    "current",
-    "fresh",
-    "metrics_close_candidate",
-    "not_due",
-    "not_required",
-    "pass",
-}
 PHASES = {"preflight", "preseal"}
 
 
@@ -58,14 +55,6 @@ def _int_value(value: Any) -> int:
     if isinstance(value, str) and value.strip().isdigit():
         return int(value.strip())
     return 0
-
-
-def _bool_value(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.strip().lower() in {"1", "true", "yes", "pass", "allowed"}
-    return False
 
 
 def _load_report(vault: Path, path_value: str) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -98,25 +87,19 @@ def _auto_improve_diagnostics(payload: dict[str, Any]) -> dict[str, Any]:
     stage3_promotion_blockers = _stage3_blocking_promotion_blockers(promotion_blockers)
     release_gate_diagnostic_blockers = _release_gate_diagnostic_blockers(promotion_blockers)
     clean_release_blockers = _list(payload.get("clean_release_blockers"))
-    signoff_summary = _dict(_dict(payload.get("diagnostics")).get("learning_signoff_summary"))
-    signoff_supported_blocker_id = str(signoff_summary.get("linked_blocker_id", "")).strip()
-    signoff_active = _bool_value(signoff_summary.get("active", False))
-    unaccepted_learning_claim_blockers = [
-        blocker
-        for blocker in (_dict(item) for item in learning_claim_blockers)
-        if not (
-            signoff_active
-            and signoff_supported_blocker_id
-            and str(blocker.get("id", "")).strip() == signoff_supported_blocker_id
-        )
-    ]
+    learning_claim_blockers_without_signoff = unaccepted_learning_claim_blockers(
+        learning_claim_blockers,
+        payload.get("diagnostics"),
+    )
     can_execute_trial = bool(payload.get("can_execute_trial", False))
     return {
         "can_execute_trial": can_execute_trial,
         "raw_can_promote_result": bool(payload.get("can_promote_result", False)),
         "stage3_can_promote_result": can_execute_trial and not stage3_promotion_blockers,
         "learning_claim_blocker_count": len(learning_claim_blockers),
-        "unaccepted_learning_claim_blocker_count": len(unaccepted_learning_claim_blockers),
+        "unaccepted_learning_claim_blocker_count": len(
+            learning_claim_blockers_without_signoff
+        ),
         "stage3_blocking_promotion_blocker_count": len(stage3_promotion_blockers),
         "release_gate_diagnostic_promotion_blocker_count": len(release_gate_diagnostic_blockers),
         "clean_release_blocker_count": len(clean_release_blockers),
@@ -149,8 +132,8 @@ def _closeout_diagnostics(payload: dict[str, Any]) -> dict[str, Any]:
         status_v2 = _dict(payload.get("status_v2"))
         axes = _dict(status_v2.get("status_axes"))
         release_authority_status = str(axes.get("release_authority_status", "")).strip()
-    machine_release_allowed = _bool_value(payload.get("machine_release_allowed", False))
-    clean_release_ready = _bool_value(payload.get("clean_release_ready", False))
+    machine_release_allowed = bool_value(payload.get("machine_release_allowed", False))
+    clean_release_ready = bool_value(payload.get("clean_release_ready", False))
     return {
         "status": str(payload.get("status", "")).strip(),
         "release_authority_status": release_authority_status,
