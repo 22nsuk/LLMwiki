@@ -99,7 +99,93 @@ news-snapshot
 """
 
 
+def content_quality_scaffold() -> str:
+    return """### Core model
+model
+
+### Common misread
+misread
+
+### Key variables
+- variable
+
+### Mechanism
+mechanism
+
+### Evidence ladder
+evidence
+
+### Concrete examples
+example
+
+### Boundary
+boundary
+"""
+
+
 class WikiStage2EvalTest(unittest.TestCase):
+    def test_content_quality_scaffold_missing_sections_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            seed_policy(root)
+            write_page(
+                root,
+                "wiki/concept--thin.md",
+                """---
+title: "Thin Concept"
+page_type: "concept"
+corpus: "wiki"
+canonical: true
+aliases:
+  - "concept--thin"
+tags:
+  - "corpus/wiki"
+  - "type/concept"
+---
+
+# concept--thin
+
+## Summary
+summary
+
+## Why it matters here
+matters
+
+## Main body
+body
+
+## Related pages
+- none
+
+## Open questions
+- none
+
+## Source trace
+- `raw/fake.pdf`
+""",
+            )
+
+            report = evaluate(root, context=fixed_context())
+            page_report = next(page for page in report["pages"] if page["page"] == "wiki/concept--thin.md")
+            result = next(
+                item for item in page_report["results"] if item["eval"] == "content_quality_scaffold_present"
+            )
+
+            self.assertEqual(report["status"], "fail")
+            self.assertFalse(result["pass"])
+            self.assertEqual(
+                result["detail"]["missing_sections"],
+                [
+                    "Core model",
+                    "Common misread",
+                    "Key variables",
+                    "Mechanism",
+                    "Evidence ladder",
+                    "Concrete examples",
+                    "Boundary",
+                ],
+            )
+
     def test_synthesis_source_count_mismatch_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -289,6 +375,7 @@ summary
 matters
 
 ## Main body
+{content_quality_scaffold()}
 - [[source--paper]]
 
 ## Related pages
@@ -526,6 +613,7 @@ summary
 matters
 
 ## Main body
+{content_quality_scaffold()}
 - [[source--one]]
 
 ## Related pages

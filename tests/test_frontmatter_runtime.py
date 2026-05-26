@@ -148,6 +148,60 @@ class FrontmatterRuntimeTest(unittest.TestCase):
             [],
         )
 
+    def test_policy_accepts_concept_taxonomy_optional_frontmatter_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            policy, _ = load_policy(vault)
+            contract = policy["frontmatter_contract"]
+
+            path = vault / "wiki" / "concept--taxonomy.md"
+            frontmatter = {
+                "title": "Taxonomy Concept",
+                "page_type": "concept",
+                "corpus": "wiki",
+                "canonical": True,
+                "aliases": ["concept--taxonomy"],
+                "tags": ["corpus/wiki", "type/concept"],
+                "topic_area": "AI",
+                "topic_subarea": "capability validation",
+                "primary_lens": "evidence type before capability narrative",
+                "jurisdiction_scope": ["global"],
+                "concept_role": "canonical_lens",
+            }
+
+            issues = validate_frontmatter(vault, path, "concept--taxonomy", frontmatter, contract)
+            self.assertEqual(issues, [])
+
+    def test_policy_accepts_source_route_optional_frontmatter_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            policy, _ = load_policy(vault)
+            contract = policy["frontmatter_contract"]
+
+            path = vault / "wiki" / "source--route.md"
+            frontmatter = {
+                "title": "Route Source",
+                "page_type": "source",
+                "corpus": "wiki",
+                "registry_id": "W-999",
+                "raw_path": "raw/fake.pdf",
+                "source_type": "news-snapshot",
+                "domain": "ai-adoption",
+                "aliases": ["source--route"],
+                "tags": ["corpus/wiki", "type/source"],
+                "primary_concept": "concept--ai-adoption-labor-and-public-sector-deployment",
+                "primary_lens": "workflow redesign before adoption headline",
+                "authority_class": "supporting_evidence",
+                "route_decision": "absorb_existing_concept",
+            }
+
+            issues = validate_frontmatter(vault, path, "source--route", frontmatter, contract)
+            self.assertEqual(issues, [])
+
     def test_validate_source_frontmatter_against_registry_accepts_locator_aliases(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

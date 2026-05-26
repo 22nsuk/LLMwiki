@@ -249,6 +249,10 @@
             "source_type",
             "research_mode",
             "domain",
+            "primary_concept",
+            "primary_lens",
+            "authority_class",
+            "route_decision",
             "created",
             "updated",
             "canonical",
@@ -277,6 +281,18 @@
               "type": "string"
             },
             "domain": {
+              "type": "string"
+            },
+            "primary_concept": {
+              "type": "string"
+            },
+            "primary_lens": {
+              "type": "string"
+            },
+            "authority_class": {
+              "type": "string"
+            },
+            "route_decision": {
               "type": "string"
             },
             "created": {
@@ -381,6 +397,94 @@
               ],
               "properties": {
                 "domain": {
+                  "type": "string"
+                }
+              }
+            },
+            "source_route_advisory": {
+              "type": "object",
+              "required": [
+                "enabled",
+                "applies_to_page_types",
+                "recommended_fields",
+                "allowed_authority_classes",
+                "allowed_route_decisions",
+                "severity",
+                "rollout",
+                "rationale"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "applies_to_page_types": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "recommended_fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "allowed_authority_classes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "allowed_route_decisions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "severity": {
+                  "type": "string"
+                },
+                "rollout": {
+                  "type": "string"
+                },
+                "rationale": {
+                  "type": "string"
+                }
+              }
+            },
+            "content_quality_advisory": {
+              "type": "object",
+              "required": [
+                "enabled",
+                "applies_to_page_types",
+                "recommended_headings",
+                "severity",
+                "rollout",
+                "rationale"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "applies_to_page_types": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "recommended_headings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "severity": {
+                  "type": "string"
+                },
+                "rollout": {
+                  "type": "string"
+                },
+                "rationale": {
                   "type": "string"
                 }
               }
@@ -642,7 +746,8 @@
         "source_count_consistency_enabled",
         "central_research_anchor_enabled",
         "broad_synthesis_boundary_enabled",
-        "seed_source_absorption_enabled"
+        "seed_source_absorption_enabled",
+        "content_quality_scaffold_enabled"
       ],
       "additionalProperties": false,
       "properties": {
@@ -656,6 +761,9 @@
           "type": "boolean"
         },
         "seed_source_absorption_enabled": {
+          "type": "boolean"
+        },
+        "content_quality_scaffold_enabled": {
           "type": "boolean"
         }
       }
@@ -2372,6 +2480,44 @@
         },
         "default_corpus": {
           "type": "string"
+        },
+        "route_overrides": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "required": [
+                "required_fields",
+                "required_values"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "description": {
+                  "type": "string"
+                },
+                "required_fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "required_values": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "reason_field": {
+                  "type": "string"
+                },
+                "reason_min_length": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          }
         }
       }
     },

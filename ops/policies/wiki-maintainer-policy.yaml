@@ -83,6 +83,11 @@ page_shape:
       - Registered raw sources
       - Related pages
       - Source trace
+    system/system-raw-registry/wiki/early-root-intake-2026-04-12-16.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
     system/system-raw-registry/wiki/defense-statecraft-intake-2026-04-21.md:
       - Summary
       - Registered raw sources
@@ -99,6 +104,11 @@ page_shape:
       - Related pages
       - Source trace
     system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-2.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-3.md:
       - Summary
       - Registered raw sources
       - Related pages
@@ -144,6 +154,11 @@ page_shape:
       - Related pages
       - Source trace
     system/system-raw-registry/wiki/raw-intake-2026-05-25.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-05-26.md:
       - Summary
       - Registered raw sources
       - Related pages
@@ -218,9 +233,18 @@ frontmatter_contract:
     source_type: string
     research_mode: string
     domain: string
+    primary_concept: string
+    primary_lens: string
+    authority_class: string
+    route_decision: string
     created: string
     updated: string
     canonical: boolean
+    topic_area: string
+    topic_subarea: string
+    primary_lens: string
+    jurisdiction_scope: string_array
+    concept_role: string
     source_count: integer
     question_scope: string
     maintenance_scope: string
@@ -244,6 +268,66 @@ frontmatter_contract:
       source_type: type
     source_registry_optional_alignment:
       domain: domain
+    source_route_advisory:
+      enabled: true
+      applies_to_page_types:
+        - source
+      recommended_fields:
+        - primary_concept
+        - primary_lens
+        - authority_class
+        - route_decision
+      allowed_authority_classes:
+        - primary_evidence
+        - supporting_evidence
+        - background_context
+        - vendor_or_claim
+        - weak_signal
+        - source_only_seed
+      allowed_route_decisions:
+        - absorb_existing_concept
+        - refresh_existing_synthesis
+        - seed_new_cluster
+        - create_new_concept
+        - create_new_synthesis
+        - keep_source_only_seed
+      severity: review_candidate
+      rollout: "advisory_before_required"
+      rationale: "Surface source routing metadata migration debt without turning legacy source pages into fail gates."
+    concept_taxonomy_advisory:
+      enabled: true
+      applies_to_page_types:
+        - concept
+      recommended_fields:
+        - topic_area
+        - topic_subarea
+        - primary_lens
+        - jurisdiction_scope
+        - concept_role
+      allowed_concept_roles:
+        - canonical_lens
+        - routing_map
+        - seed_cluster
+        - warning_candidate
+      severity: review_candidate
+      rollout: "advisory_before_required"
+      rationale: "Surface concept taxonomy migration debt without turning taxonomy metadata into a fail gate."
+    content_quality_advisory:
+      enabled: true
+      applies_to_page_types:
+        - concept
+        - synthesis
+      recommended_headings:
+        - Core model
+        - Common misread
+        - Key variables
+        - Mechanism
+        - Evidence ladder
+        - Concrete examples
+        - Boundary
+      severity: review_candidate
+      rollout: "all_wiki_concept_synthesis_pages"
+      rationale: "Surface concept/synthesis pages that preserve routing shape but lack wiki-substance scaffolding."
   conditional_rules:
     source_type:
       domain-research-paper:
@@ -339,6 +423,13 @@ frontmatter_contract:
         page_type: registry-shard
         corpus: system
         special_role: raw-registry-shard
+    system/system-raw-registry/wiki/early-root-intake-2026-04-12-16.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
     system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-1.md:
       required:
         - special_role
@@ -347,6 +438,13 @@ frontmatter_contract:
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-2.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-3.md:
       required:
         - special_role
       expected:
@@ -531,6 +629,7 @@ stage2_eval:
   central_research_anchor_enabled: true
   broad_synthesis_boundary_enabled: true
   seed_source_absorption_enabled: true
+  content_quality_scaffold_enabled: true
 
 eval_coverage_review:
   cohorts:
@@ -1348,9 +1447,11 @@ registry_contract:
     - system/system-raw-registry/wiki/ai-execution.md
     - system/system-raw-registry/wiki/coffee.md
     - system/system-raw-registry/wiki/defense-statecraft-intake-2026-04-21.md
+    - system/system-raw-registry/wiki/early-root-intake-2026-04-12-16.md
     - system/system-raw-registry/wiki/europe-tech-sovereignty.md
     - system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-1.md
     - system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-2.md
+    - system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-3.md
     - system/system-raw-registry/wiki/global-policy-and-market-seeds.md
     - system/system-raw-registry/wiki/health-and-science-intake-2026-04-21.md
     - system/system-raw-registry/wiki/korea-fx.md
@@ -1359,6 +1460,7 @@ registry_contract:
     - system/system-raw-registry/wiki/middle-east-energy-intake-2026-04-21.md
     - system/system-raw-registry/wiki/middle-east-followups.md
     - system/system-raw-registry/wiki/raw-intake-2026-05-25.md
+    - system/system-raw-registry/wiki/raw-intake-2026-05-26.md
     - system/system-raw-registry/system.md
   raw_registry_shard_by_corpus:
     wiki: system/system-raw-registry/wiki.md
@@ -1372,9 +1474,11 @@ registry_contract:
     system/system-raw-registry/wiki/ai-execution.md: wiki
     system/system-raw-registry/wiki/coffee.md: wiki
     system/system-raw-registry/wiki/defense-statecraft-intake-2026-04-21.md: wiki
+    system/system-raw-registry/wiki/early-root-intake-2026-04-12-16.md: wiki
     system/system-raw-registry/wiki/europe-tech-sovereignty.md: wiki
     system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-1.md: wiki
     system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-2.md: wiki
+    system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-3.md: wiki
     system/system-raw-registry/wiki/global-policy-and-market-seeds.md: wiki
     system/system-raw-registry/wiki/health-and-science-intake-2026-04-21.md: wiki
     system/system-raw-registry/wiki/korea-fx.md: wiki
@@ -1383,6 +1487,7 @@ registry_contract:
     system/system-raw-registry/wiki/middle-east-energy-intake-2026-04-21.md: wiki
     system/system-raw-registry/wiki/middle-east-followups.md: wiki
     system/system-raw-registry/wiki/raw-intake-2026-05-25.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-05-26.md: wiki
     system/system-raw-registry/system.md: system
   raw_registry_export: ops/raw-registry.json
   corpus_roots:
@@ -1400,6 +1505,17 @@ corpus_routing:
     web-snapshot: system
     research-paper: system
   default_corpus: system
+  route_overrides:
+    news-snapshot:
+      system:
+        description: "Allow news snapshots in system only when they are explicit maintainer-runtime evidence."
+        required_fields:
+          - corpus_route_override
+          - override_reason
+        required_values:
+          corpus_route_override: system
+        reason_field: override_reason
+        reason_min_length: 20
 
 starter_bundles:
   planning_default:

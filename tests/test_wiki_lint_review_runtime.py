@@ -9,9 +9,12 @@ from ops.scripts.wiki_lint import lint
 from ops.scripts.wiki_lint_review_runtime import (
     active_source_missing_concept_candidates,
     concept_carryover_continuity_candidates,
+    concept_taxonomy_advisory_candidates,
+    content_quality_advisory_candidates,
     content_promotion_candidates,
     synthesis_analysis_template_candidates,
     synthesis_follow_up_split_candidates,
+    source_route_advisory_candidates,
     wiki_synthesis_multi_question_candidates,
 )
 from ops.scripts.wiki_snapshot_runtime import build_wiki_runtime_snapshot
@@ -106,6 +109,83 @@ matters
 
 ## Main body
 text
+
+## Scope boundaries
+- applies to the canonical topic only
+
+## Examples and non-examples
+- example: source cluster interpretation anchor
+- non-example: ad hoc scratch answer
+
+## How to reuse this concept
+- link it from synthesis pages that reuse the same interpretation layer
+
+## Related pages
+- [[index]]
+- [[source--fake]]
+
+## Open questions
+- none
+
+## Source trace
+- `raw/fake.pdf`
+"""
+
+
+def concept_with_content_quality_scaffold(
+    stem: str,
+    *,
+    created: str,
+    include_scaffold: bool,
+) -> str:
+    if include_scaffold:
+        main_body = """### Core model
+core model
+
+### Common misread
+common misread
+
+### Key variables
+- variable
+
+### Mechanism
+mechanism
+
+### Evidence ladder
+- strong evidence
+
+### Concrete examples
+- example
+
+### Boundary
+boundary
+"""
+    else:
+        main_body = "thin route note"
+
+    return f"""---
+title: "{stem}"
+page_type: "concept"
+corpus: "wiki"
+canonical: true
+created: "{created}"
+aliases:
+  - "{stem}"
+tags:
+  - "corpus/wiki"
+  - "type/concept"
+---
+
+# {stem}
+
+## Summary
+summary
+
+## Why it matters here
+matters
+
+## Main body
+{main_body}
 
 ## Scope boundaries
 - applies to the canonical topic only
@@ -495,6 +575,22 @@ matters
 """
 
 
+def source_with_route_metadata(stem: str) -> str:
+    text = valid_source(stem)
+    insert_after = "domain: \"fake\"\n" if "domain: \"fake\"\n" in text else "corpus: \"wiki\"\n"
+    return text.replace(
+        insert_after,
+        (
+            f"{insert_after}"
+            "primary_concept: \"concept--theme\"\n"
+            "primary_lens: \"route source by concept before headline\"\n"
+            "authority_class: \"supporting_evidence\"\n"
+            "route_decision: \"absorb_existing_concept\"\n"
+        ),
+        1,
+    )
+
+
 def theme_synthesis() -> str:
     return """---
 title: "Theme Synthesis"
@@ -832,6 +928,217 @@ class WikiLintReviewRuntimeTest(unittest.TestCase):
             self.assertIn("기존 corpus와 이번 intake", candidate["markers"])
             self.assertEqual(candidate["suggested_action"], "merge_bridge_context_into_concept_main_body")
 
+    def test_concept_taxonomy_advisory_candidates_are_aggregate_and_non_failing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_open_question_smoke_vault(vault)
+            write_page(vault / "wiki" / "concept--taxonomy-gap.md", valid_concept("concept--taxonomy-gap"))
+
+            policy, _ = load_policy(vault)
+            snapshot = build_wiki_runtime_snapshot(vault, registry_contract=policy["registry_contract"])
+            candidates = concept_taxonomy_advisory_candidates(
+                vault,
+                snapshot.pages,
+                snapshot.frontmatters,
+                policy["frontmatter_contract"],
+            )
+
+            self.assertEqual(len(candidates), 1)
+            candidate = candidates[0]
+            self.assertEqual(candidate["type"], "concept_taxonomy_frontmatter_advisory")
+            self.assertEqual(candidate["page"], "wiki/concept--*.md")
+            self.assertGreater(candidate["value"]["missing_field_page_count"], 0)
+            self.assertEqual(
+                candidate["suggested_action"],
+                "backfill_concept_taxonomy_frontmatter_after_taxonomy_review",
+            )
+
+    def test_concept_taxonomy_advisory_candidates_flag_invalid_concept_role(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_open_question_smoke_vault(vault)
+            concept = vault / "wiki" / "concept--fake.md"
+            write_page(concept, valid_concept("concept--fake"))
+            text = concept.read_text(encoding="utf-8")
+            text = text.replace(
+                "canonical: true\n",
+                (
+                    "canonical: true\n"
+                    "topic_area: \"AI\"\n"
+                    "topic_subarea: \"capability validation\"\n"
+                    "primary_lens: \"evidence type\"\n"
+                    "jurisdiction_scope:\n"
+                    "  - \"global\"\n"
+                    "concept_role: \"catchall\"\n"
+                ),
+            )
+            concept.write_text(text, encoding="utf-8")
+
+            policy, _ = load_policy(vault)
+            snapshot = build_wiki_runtime_snapshot(vault, registry_contract=policy["registry_contract"])
+            candidate = concept_taxonomy_advisory_candidates(
+                vault,
+                snapshot.pages,
+                snapshot.frontmatters,
+                policy["frontmatter_contract"],
+            )[0]
+
+            invalid = candidate["pages_with_invalid_roles"][0]
+            self.assertEqual(invalid["page"], "wiki/concept--fake.md")
+            self.assertEqual(invalid["actual"], "catchall")
+
+    def test_content_quality_advisory_candidates_flag_missing_scaffold_without_date_floor(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_open_question_smoke_vault(vault)
+            write_page(
+                vault / "wiki" / "concept--recent-thin.md",
+                concept_with_content_quality_scaffold(
+                    "concept--recent-thin",
+                    created="2026-05-26",
+                    include_scaffold=False,
+                ),
+            )
+            write_page(
+                vault / "wiki" / "concept--recent-complete.md",
+                concept_with_content_quality_scaffold(
+                    "concept--recent-complete",
+                    created="2026-05-26",
+                    include_scaffold=True,
+                ),
+            )
+            write_page(
+                vault / "wiki" / "concept--old-thin.md",
+                concept_with_content_quality_scaffold(
+                    "concept--old-thin",
+                    created="2026-05-25",
+                    include_scaffold=False,
+                ),
+            )
+
+            policy, _ = load_policy(vault)
+            snapshot = build_wiki_runtime_snapshot(vault, registry_contract=policy["registry_contract"])
+            candidates = content_quality_advisory_candidates(
+                vault,
+                snapshot.pages,
+                snapshot.frontmatters,
+                policy["frontmatter_contract"],
+            )
+
+            self.assertEqual(len(candidates), 1)
+            candidate = candidates[0]
+            self.assertEqual(candidate["type"], "content_quality_scaffold_advisory")
+            self.assertEqual(candidate["page"], "wiki/{concept,synthesis}--*.md")
+            self.assertEqual(candidate["value"]["page_count"], 2)
+            missing_pages = {
+                item["page"]: item["missing_headings"]
+                for item in candidate["pages_with_missing_headings"]
+            }
+            self.assertEqual(
+                set(missing_pages),
+                {"wiki/concept--old-thin.md", "wiki/concept--recent-thin.md"},
+            )
+            missing = missing_pages["wiki/concept--recent-thin.md"]
+            self.assertIn("Core model", missing)
+            self.assertIn("Boundary", missing)
+
+    def test_source_route_advisory_candidates_are_aggregate_and_non_failing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_open_question_smoke_vault(vault)
+            write_page(vault / "wiki" / "source--route-gap.md", valid_source("source--route-gap"))
+
+            policy, _ = load_policy(vault)
+            snapshot = build_wiki_runtime_snapshot(vault, registry_contract=policy["registry_contract"])
+            candidates = source_route_advisory_candidates(
+                vault,
+                snapshot.pages,
+                snapshot.frontmatters,
+                policy["frontmatter_contract"],
+            )
+
+            self.assertEqual(len(candidates), 1)
+            candidate = candidates[0]
+            self.assertEqual(candidate["type"], "source_route_frontmatter_advisory")
+            self.assertEqual(candidate["page"], "wiki/source--*.md")
+            self.assertGreater(candidate["value"]["missing_field_page_count"], 0)
+            self.assertEqual(
+                candidate["suggested_action"],
+                "backfill_source_route_frontmatter_during_source_template_rollout",
+            )
+
+    def test_source_route_advisory_candidates_flag_invalid_values(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_open_question_smoke_vault(vault)
+            source = vault / "wiki" / "source--fake.md"
+            text = source.read_text(encoding="utf-8")
+            text = text.replace(
+                "domain: \"fake\"\n",
+                (
+                    "domain: \"fake\"\n"
+                    "primary_concept: \"concept--theme\"\n"
+                    "primary_lens: \"route source by concept before headline\"\n"
+                    "authority_class: \"rumor\"\n"
+                    "route_decision: \"park_somewhere\"\n"
+                ),
+                1,
+            )
+            source.write_text(text, encoding="utf-8")
+
+            policy, _ = load_policy(vault)
+            snapshot = build_wiki_runtime_snapshot(vault, registry_contract=policy["registry_contract"])
+            candidate = source_route_advisory_candidates(
+                vault,
+                snapshot.pages,
+                snapshot.frontmatters,
+                policy["frontmatter_contract"],
+            )[0]
+
+            invalid_fields = {item["field"] for item in candidate["pages_with_invalid_values"]}
+            self.assertEqual(invalid_fields, {"authority_class", "route_decision"})
+
+    def test_source_route_advisory_candidates_skip_complete_route_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_open_question_smoke_vault(vault)
+            source = vault / "wiki" / "source--fake.md"
+            source.write_text(
+                source.read_text(encoding="utf-8").replace(
+                    "domain: \"fake\"\n",
+                    (
+                        "domain: \"fake\"\n"
+                        "primary_concept: \"concept--theme\"\n"
+                        "primary_lens: \"route source by concept before headline\"\n"
+                        "authority_class: \"supporting_evidence\"\n"
+                        "route_decision: \"absorb_existing_concept\"\n"
+                    ),
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            write_page(
+                vault / "wiki" / "source--routed.md",
+                source_with_route_metadata("source--routed"),
+            )
+
+            policy, _ = load_policy(vault)
+            snapshot = build_wiki_runtime_snapshot(vault, registry_contract=policy["registry_contract"])
+            candidates = source_route_advisory_candidates(
+                vault,
+                snapshot.pages,
+                snapshot.frontmatters,
+                policy["frontmatter_contract"],
+            )
+
+            self.assertEqual(candidates, [])
+
     def test_lint_wires_analysis_template_review_candidate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -848,6 +1155,42 @@ class WikiLintReviewRuntimeTest(unittest.TestCase):
                 candidate["page"],
                 str((vault / "wiki" / "synthesis--template-drift.md").as_posix()),
             )
+
+    def test_lint_wires_source_route_advisory_review_candidate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_open_question_smoke_vault(vault)
+
+            candidate = next(
+                item
+                for item in lint(vault)["review_candidates"]
+                if item["type"] == "source_route_frontmatter_advisory"
+            )
+
+            self.assertEqual(candidate["page"], "wiki/source--*.md")
+
+    def test_lint_wires_content_quality_advisory_review_candidate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_open_question_smoke_vault(vault)
+            write_page(
+                vault / "wiki" / "concept--recent-thin.md",
+                concept_with_content_quality_scaffold(
+                    "concept--recent-thin",
+                    created="2026-05-26",
+                    include_scaffold=False,
+                ),
+            )
+
+            candidate = next(
+                item
+                for item in lint(vault)["review_candidates"]
+                if item["type"] == "content_quality_scaffold_advisory"
+            )
+
+            self.assertEqual(candidate["page"], "wiki/{concept,synthesis}--*.md")
 
     def test_lint_wires_active_source_missing_concept_review_candidate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -7,8 +7,10 @@ from pathlib import Path
 
 from ops.scripts.policy_runtime import load_policy
 from ops.scripts.registry_alignment_passes_runtime import (
+    _locator_raw_path_corpus_consistency_pass,
     _registry_frontmatter_alignment_pass,
 )
+from ops.scripts.registry_diagnostics_runtime import RegistryInventoryContext
 from ops.scripts.registry_pass_support_runtime import registry_review_exempt_paths
 from ops.scripts.registry_review_candidate_passes_runtime import (
     _backlog_refactor_threshold_pass,
@@ -93,6 +95,26 @@ def build_registry_review_candidates(vault: Path) -> list[dict]:
         emitter=emitter,
     )
     return emitter.review_candidates
+
+
+def build_inventory_context_with_entries(policy: dict, entries: list[dict]) -> RegistryInventoryContext:
+    return RegistryInventoryContext(
+        registry_entries=entries,
+        registered_raw_paths={entry["storage_path"] for entry in entries},
+        entries_by_page={},
+        corpus_counts={},
+        total_entry_count=len(entries),
+        shard_corpus_by_page={},
+        registry_id_to_entries={},
+        registry_id_to_entry={},
+        locator_groups={},
+        raw_sha256_index=None,
+        resolution_stats={},
+        corpus_roots=policy["registry_contract"]["corpus_roots"],
+        type_to_corpus=policy["corpus_routing"]["type_to_corpus"],
+        default_corpus=policy["corpus_routing"]["default_corpus"],
+        route_overrides=policy["corpus_routing"].get("route_overrides", {}),
+    )
 
 
 class WikiLintRegistryRuntimeTests(unittest.TestCase):
@@ -436,6 +458,82 @@ class WikiLintRegistryRuntimeTests(unittest.TestCase):
             self.assertEqual(
                 emitter.errors[0]["detail"]["diagnostic_type"],
                 "raw_registry_invalid_continuation_line",
+            )
+
+    def test_locator_raw_path_corpus_consistency_allows_explicit_system_news_override(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = build_vault(temp_dir)
+            policy, _ = load_policy(vault)
+            paths = _registry_lint_paths(vault, policy["registry_contract"])
+            emitter = RegistryLintEmitter(lint_thresholds=policy["lint_thresholds"])
+            context = build_inventory_context_with_entries(
+                policy,
+                [
+                    {
+                        "_registry_page": "system/system-raw-registry/system.md",
+                        "registry_id": "R-200",
+                        "storage_path": "raw/web-snapshots/system-news.md",
+                        "display_path": "raw/web-snapshots/system-news.md",
+                        "type": "news-snapshot",
+                        "corpus": "system",
+                        "target_page": "source--system-news",
+                        "status": "registered-not-ingested",
+                        "corpus_route_override": "system",
+                        "override_reason": "Maintainer-runtime evidence for anti-slop governance policy.",
+                    }
+                ],
+            )
+
+            _locator_raw_path_corpus_consistency_pass(
+                vault,
+                paths,
+                inventory_context=context,
+                emitter=emitter,
+            )
+
+            issue_types = {issue["type"] for issue in emitter.errors + emitter.warnings}
+            self.assertNotIn("corpus_routing_mismatch", issue_types)
+
+    def test_locator_raw_path_corpus_consistency_rejects_system_news_without_override_reason(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = build_vault(temp_dir)
+            policy, _ = load_policy(vault)
+            paths = _registry_lint_paths(vault, policy["registry_contract"])
+            emitter = RegistryLintEmitter(lint_thresholds=policy["lint_thresholds"])
+            context = build_inventory_context_with_entries(
+                policy,
+                [
+                    {
+                        "_registry_page": "system/system-raw-registry/system.md",
+                        "registry_id": "R-201",
+                        "storage_path": "raw/web-snapshots/system-news.md",
+                        "display_path": "raw/web-snapshots/system-news.md",
+                        "type": "news-snapshot",
+                        "corpus": "system",
+                        "target_page": "source--system-news",
+                        "status": "registered-not-ingested",
+                        "corpus_route_override": "system",
+                    }
+                ],
+            )
+
+            _locator_raw_path_corpus_consistency_pass(
+                vault,
+                paths,
+                inventory_context=context,
+                emitter=emitter,
+            )
+
+            mismatch = next(
+                issue for issue in emitter.errors if issue["type"] == "corpus_routing_mismatch"
+            )
+            self.assertEqual(
+                mismatch["detail"]["route_override"]["reason"],
+                "override_requirements_not_met",
+            )
+            self.assertEqual(
+                mismatch["detail"]["route_override"]["missing_fields"],
+                ["override_reason"],
             )
 
 

@@ -382,6 +382,20 @@ a
 - [[source--fake]]
 ## Analysis
 - x
+### Core model
+- x
+### Common misread
+- x
+### Key variables
+- x
+### Mechanism
+- x
+### Evidence ladder
+- x
+### Concrete examples
+- [[source--fake]]
+### Boundary
+- x
 ## What this synthesis excludes
 - x
 ## Tensions / contradictions

@@ -13,6 +13,11 @@ from ops.scripts.artifact_io_runtime import (
     write_schema_backed_report,
 )
 from ops.scripts.output_runtime import display_path
+from ops.scripts.release.auto_promotion_manifest_sections import (
+    RequirementSpec,
+    append_requirement_blockers,
+    input_fingerprints,
+)
 from ops.scripts.release.release_run_manifest import _resolve, git_commit
 from ops.scripts.release.release_sealed_run_manifest import (
     _json_identity,
@@ -114,86 +119,81 @@ def _verified_inferred_run_id(
     *,
     status_identity: dict[str, Any],
     certificate_identity: dict[str, Any],
-    status_run_id: str,
-    certificate_run_id: str,
-    status_report_status: str,
-    status_run_status: str,
-    status_promotion_status: str,
-    status_can_promote_result: bool,
-    certificate_report_status: str,
-    certificate_verification_status: str,
-    certificate_eligible: bool,
+    observed: dict[str, Any],
     fingerprint: str,
 ) -> str:
     status_verified = (
         status_identity["load_status"] == "ok"
         and status_identity["artifact_kind"] == "goal_run_status"
         and _identity_current(status_identity, fingerprint)
-        and status_report_status == "pass"
-        and status_run_status == "completed"
-        and status_promotion_status == "allowed"
-        and status_can_promote_result
+        and observed["goal_run_status_report_status"] == "pass"
+        and observed["goal_run_status_run_status"] == "completed"
+        and observed["goal_run_status_promotion_status"] == "allowed"
+        and bool(observed["goal_run_status_can_promote_result"])
     )
     certificate_verified = (
         certificate_identity["load_status"] == "ok"
         and certificate_identity["artifact_kind"] == "goal_runtime_certificate"
         and _identity_current(certificate_identity, fingerprint)
-        and certificate_report_status == "pass"
-        and certificate_verification_status in {"eligible", "already_verified"}
-        and certificate_eligible
+        and observed["goal_runtime_certificate_report_status"] == "pass"
+        and observed["goal_runtime_certificate_verification_status"]
+        in {"eligible", "already_verified"}
+        and bool(observed["goal_runtime_certificate_eligible"])
     )
+    status_run_id = str(observed["goal_run_status_run_id"])
+    certificate_run_id = str(observed["goal_runtime_certificate_run_id"])
     if status_verified and certificate_verified and status_run_id and status_run_id == certificate_run_id:
         return status_run_id
     return ""
 
 
-def build_report(
-    vault: Path,
-    *,
-    goal_run_id: str = "",
-    goal_run_id_origin: str = "undefined",
-    default_goal_run_id: str = DEFAULT_DEV_GOAL_RUN_ID,
-    goal_run_status: str = DEFAULT_GOAL_RUN_STATUS,
-    goal_runtime_certificate: str = DEFAULT_GOAL_RUNTIME_CERTIFICATE,
-    context: RuntimeContext | None = None,
+def _observed_evidence(
+    status_payload: dict[str, Any],
+    certificate_payload: dict[str, Any],
 ) -> dict[str, Any]:
-    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
-    generated_at = runtime_context.isoformat_z()
-    fingerprint = release_source_tree_fingerprint(vault)
-    commit = git_commit(vault)
-    requested_run_id = goal_run_id.strip()
-    origin = goal_run_id_origin.strip()
-    inputs = {
-        "goal_run_status": _json_identity(vault, goal_run_status),
-        "goal_runtime_certificate": _json_identity(vault, goal_runtime_certificate),
-    }
-    status_payload, _ = _load_report(vault, goal_run_status)
-    certificate_payload, _ = _load_report(vault, goal_runtime_certificate)
     status_run = _dict(status_payload.get("run"))
     status_health = _dict(status_payload.get("health"))
     certificate = _dict(certificate_payload.get("certificate"))
     certificate_run = _dict(certificate_payload.get("run"))
-    status_run_id = str(status_run.get("run_id", "")).strip()
-    certificate_run_id = str(certificate_run.get("run_id", "")).strip()
-    status_report_status = str(status_payload.get("status", "")).strip()
-    status_run_status = str(status_run.get("status", "")).strip()
-    status_promotion_status = str(status_health.get("promotion_status", "")).strip()
-    status_can_promote_result = _bool_value(status_health.get("can_promote_result", False))
-    certificate_report_status = str(certificate_payload.get("status", "")).strip()
-    certificate_verification_status = str(certificate.get("verification_status", "")).strip()
-    certificate_eligible = _bool_value(certificate.get("eligible", False))
+    return {
+        "goal_run_status_run_id": str(status_run.get("run_id", "")).strip(),
+        "goal_run_status_run_status": str(status_run.get("status", "")).strip(),
+        "goal_run_status_report_status": str(status_payload.get("status", "")).strip(),
+        "goal_run_status_promotion_status": str(
+            status_health.get("promotion_status", "")
+        ).strip(),
+        "goal_run_status_can_promote_result": _bool_value(
+            status_health.get("can_promote_result", False)
+        ),
+        "goal_runtime_certificate_run_id": str(certificate_run.get("run_id", "")).strip(),
+        "goal_runtime_certificate_run_status": str(
+            certificate_run.get("run_status", "")
+        ).strip(),
+        "goal_runtime_certificate_report_status": str(
+            certificate_payload.get("status", "")
+        ).strip(),
+        "goal_runtime_certificate_verification_status": str(
+            certificate.get("verification_status", "")
+        ).strip(),
+        "goal_runtime_certificate_eligible": _bool_value(certificate.get("eligible", False)),
+        "goal_runtime_certificate_already_verified": _bool_value(
+            certificate.get("already_verified", False)
+        ),
+    }
+
+
+def _goal_run_selection(
+    inputs: dict[str, dict[str, Any]],
+    observed: dict[str, Any],
+    *,
+    requested_run_id: str,
+    origin: str,
+    fingerprint: str,
+) -> dict[str, str]:
     inferred_run_id = _verified_inferred_run_id(
         status_identity=inputs["goal_run_status"],
         certificate_identity=inputs["goal_runtime_certificate"],
-        status_run_id=status_run_id,
-        certificate_run_id=certificate_run_id,
-        status_report_status=status_report_status,
-        status_run_status=status_run_status,
-        status_promotion_status=status_promotion_status,
-        status_can_promote_result=status_can_promote_result,
-        certificate_report_status=certificate_report_status,
-        certificate_verification_status=certificate_verification_status,
-        certificate_eligible=certificate_eligible,
+        observed=observed,
         fingerprint=fingerprint,
     )
     explicit_run_id = requested_run_id if origin in EXPLICIT_GOAL_RUN_ID_ORIGINS else ""
@@ -204,29 +204,35 @@ def build_report(
         selection_mode = INFERRED_SELECTION_MODE
     else:
         selection_mode = UNRESOLVED_SELECTION_MODE
-    observed = {
+    return {
         "requested_run_id": requested_run_id,
         "effective_run_id": effective_run_id,
         "inferred_run_id": inferred_run_id,
         "selection_mode": selection_mode,
         "goal_run_id_origin": origin,
-        "goal_run_status_run_id": status_run_id,
-        "goal_run_status_run_status": status_run_status,
-        "goal_run_status_report_status": status_report_status,
-        "goal_run_status_promotion_status": status_promotion_status,
-        "goal_run_status_can_promote_result": status_can_promote_result,
-        "goal_runtime_certificate_run_id": certificate_run_id,
-        "goal_runtime_certificate_run_status": str(
-            certificate_run.get("run_status", "")
-        ).strip(),
-        "goal_runtime_certificate_report_status": certificate_report_status,
-        "goal_runtime_certificate_verification_status": certificate_verification_status,
-        "goal_runtime_certificate_eligible": certificate_eligible,
-        "goal_runtime_certificate_already_verified": _bool_value(
-            certificate.get("already_verified", False)
-        ),
     }
-    checks = {
+
+
+def _goal_observed(
+    selection: dict[str, str],
+    evidence: dict[str, Any],
+) -> dict[str, Any]:
+    return {**selection, **evidence}
+
+
+def _goal_checks(
+    inputs: dict[str, dict[str, Any]],
+    observed: dict[str, Any],
+    *,
+    default_goal_run_id: str,
+    fingerprint: str,
+) -> dict[str, bool]:
+    requested_run_id = str(observed["requested_run_id"])
+    effective_run_id = str(observed["effective_run_id"])
+    inferred_run_id = str(observed["inferred_run_id"])
+    origin = str(observed["goal_run_id_origin"])
+    explicit_run_id = requested_run_id if origin in EXPLICIT_GOAL_RUN_ID_ORIGINS else ""
+    return {
         "goal_run_id_explicit": bool(explicit_run_id),
         "goal_run_id_inferred": bool(inferred_run_id) and not explicit_run_id,
         "goal_run_id_resolved": bool(effective_run_id),
@@ -270,193 +276,291 @@ def build_report(
             and bool(observed["goal_runtime_certificate_eligible"])
         ),
     }
-    blockers: list[dict[str, Any]] = []
-    _require(
-        blockers,
-        passed=checks["goal_run_id_resolved"],
-        blocker_id="goal_run_id_unresolved",
-        source="make|goal_run_status|goal_runtime_certificate",
-        field_path="GOAL_RUN_ID|$.run.run_id",
-        observed=(
-            f"requested={requested_run_id}; origin={origin};"
-            f"status_run_id={status_run_id}; certificate_run_id={certificate_run_id}"
-        ),
-        expected="explicit GOAL_RUN_ID or matching verified promoted run evidence",
-        summary="Release auto-promotion could not resolve the goal run id.",
-        recommended_next_step="Rerun with GOAL_RUN_ID=<promoted-run-id> or publish matching verified run evidence.",
-    )
-    _require(
-        blockers,
-        passed=checks["goal_run_id_not_file_default"],
-        blocker_id="goal_run_id_file_default",
-        source="make",
-        field_path="GOAL_RUN_ID",
-        observed=(
-            f"requested={requested_run_id}; effective={effective_run_id}; origin={origin}"
-        ),
-        expected=f"effective run id inferred away from Makefile default {default_goal_run_id}",
-        summary="Release auto-promotion must not select the developer default goal run id.",
-        recommended_next_step="Publish promoted evidence for a non-default run or pass GOAL_RUN_ID explicitly.",
-    )
-    _require(
-        blockers,
-        passed=checks["explicit_goal_run_id_matches_inferred"],
-        blocker_id="explicit_goal_run_id_mismatch",
-        source="make|goal_run_status|goal_runtime_certificate",
-        field_path="GOAL_RUN_ID|$.run.run_id",
-        observed=f"explicit={explicit_run_id}; inferred={inferred_run_id}",
-        expected="explicit GOAL_RUN_ID matches verified promoted run evidence",
-        summary="The explicit GOAL_RUN_ID does not match the verified promoted run evidence.",
-        recommended_next_step="Use the verified promoted run id or republish the intended run evidence.",
-    )
-    _require(
-        blockers,
-        passed=checks["goal_run_status_load_ok"],
-        blocker_id="goal_run_status_not_loadable",
-        source="goal_run_status",
-        field_path="$.load_status",
-        observed=inputs["goal_run_status"]["load_status"],
-        expected="ok",
-        summary="Global goal-run status evidence is missing or invalid.",
-        recommended_next_step="Publish the promoted run status before auto-promotion.",
-    )
-    _require(
-        blockers,
-        passed=checks["goal_run_status_artifact_kind_ok"],
-        blocker_id="goal_run_status_artifact_kind_invalid",
-        source="goal_run_status",
-        field_path="$.artifact_kind",
-        observed=inputs["goal_run_status"]["artifact_kind"],
-        expected="goal_run_status",
-        summary="Global goal-run status evidence has an unexpected artifact kind.",
-        recommended_next_step="Regenerate goal-run status evidence for the promoted run.",
-    )
-    _require(
-        blockers,
-        passed=checks["goal_run_status_current"],
-        blocker_id="goal_run_status_stale",
-        source="goal_run_status",
-        field_path="$.source_tree_fingerprint",
-        observed=inputs["goal_run_status"]["source_tree_fingerprint"],
-        expected=fingerprint,
-        summary="Global goal-run status evidence does not describe the current source tree.",
-        recommended_next_step="Refresh goal-run status evidence for the current source tree.",
-    )
-    _require(
-        blockers,
-        passed=checks["goal_run_status_run_id_match"],
-        blocker_id="goal_run_status_run_id_mismatch",
-        source="goal_run_status",
-        field_path="$.run.run_id",
-        observed=observed["goal_run_status_run_id"],
-        expected=effective_run_id,
-        summary="GOAL_RUN_ID does not match the global goal-run status evidence.",
-        recommended_next_step="Use the promoted run id or republish the intended run status.",
-    )
-    _require(
-        blockers,
-        passed=checks["goal_run_status_promotable"],
-        blocker_id="goal_run_status_not_promotable",
-        source="goal_run_status",
-        field_path="$.status|$.run.status|$.health.promotion_status|$.health.can_promote_result",
-        observed=(
-            f"report_status={observed['goal_run_status_report_status']};"
-            f"run_status={observed['goal_run_status_run_status']};"
-            f"promotion_status={observed['goal_run_status_promotion_status']};"
-            f"can_promote_result={observed['goal_run_status_can_promote_result']}"
-        ),
-        expected="report_status=pass; run_status=completed; promotion_status=allowed; can_promote_result=true",
-        summary="The selected goal-run status is not promotable release evidence.",
-        recommended_next_step="Complete and publish a promoted goal run before auto-promotion.",
-    )
-    _require(
-        blockers,
-        passed=checks["goal_runtime_certificate_load_ok"],
-        blocker_id="goal_runtime_certificate_not_loadable",
-        source="goal_runtime_certificate",
-        field_path="$.load_status",
-        observed=inputs["goal_runtime_certificate"]["load_status"],
-        expected="ok",
-        summary="Goal runtime certificate evidence is missing or invalid.",
-        recommended_next_step="Run make goal-runtime-certificate for the promoted run.",
-    )
-    _require(
-        blockers,
-        passed=checks["goal_runtime_certificate_artifact_kind_ok"],
-        blocker_id="goal_runtime_certificate_artifact_kind_invalid",
-        source="goal_runtime_certificate",
-        field_path="$.artifact_kind",
-        observed=inputs["goal_runtime_certificate"]["artifact_kind"],
-        expected="goal_runtime_certificate",
-        summary="Goal runtime certificate evidence has an unexpected artifact kind.",
-        recommended_next_step="Regenerate goal-runtime certificate evidence.",
-    )
-    _require(
-        blockers,
-        passed=checks["goal_runtime_certificate_current"],
-        blocker_id="goal_runtime_certificate_stale",
-        source="goal_runtime_certificate",
-        field_path="$.source_tree_fingerprint",
-        observed=inputs["goal_runtime_certificate"]["source_tree_fingerprint"],
-        expected=fingerprint,
-        summary="Goal runtime certificate evidence does not describe the current source tree.",
-        recommended_next_step="Refresh the goal-runtime certificate for the current source tree.",
-    )
-    _require(
-        blockers,
-        passed=checks["goal_runtime_certificate_run_id_match"],
-        blocker_id="goal_runtime_certificate_run_id_mismatch",
-        source="goal_runtime_certificate",
-        field_path="$.run.run_id",
-        observed=observed["goal_runtime_certificate_run_id"],
-        expected=effective_run_id,
-        summary="GOAL_RUN_ID does not match the goal runtime certificate evidence.",
-        recommended_next_step="Use the promoted run id or regenerate the certificate for that run.",
-    )
-    _require(
-        blockers,
-        passed=checks["goal_runtime_certificate_verified"],
-        blocker_id="goal_runtime_certificate_not_verified",
-        source="goal_runtime_certificate",
-        field_path="$.status|$.certificate.verification_status|$.certificate.eligible",
-        observed=(
-            f"report_status={observed['goal_runtime_certificate_report_status']};"
-            f"verification_status={observed['goal_runtime_certificate_verification_status']};"
-            f"eligible={observed['goal_runtime_certificate_eligible']}"
-        ),
-        expected="report_status=pass; verification_status in eligible,already_verified; eligible=true",
-        summary="The selected goal run does not have verified certificate evidence.",
-        recommended_next_step="Run make goal-runtime-certificate after the promoted run is complete.",
-    )
 
+
+def _goal_run_requirements(
+    checks: dict[str, bool],
+    inputs: dict[str, dict[str, Any]],
+    observed: dict[str, Any],
+    *,
+    default_goal_run_id: str,
+    fingerprint: str,
+) -> list[RequirementSpec]:
+    requested_run_id = str(observed["requested_run_id"])
+    origin = str(observed["goal_run_id_origin"])
+    effective_run_id = str(observed["effective_run_id"])
+    inferred_run_id = str(observed["inferred_run_id"])
+    explicit_run_id = requested_run_id if origin in EXPLICIT_GOAL_RUN_ID_ORIGINS else ""
+    status_run_id = str(observed["goal_run_status_run_id"])
+    certificate_run_id = str(observed["goal_runtime_certificate_run_id"])
+    return [
+        RequirementSpec(
+            checks["goal_run_id_resolved"],
+            "goal_run_id_unresolved",
+            "make|goal_run_status|goal_runtime_certificate",
+            "GOAL_RUN_ID|$.run.run_id",
+            (
+                f"requested={requested_run_id}; origin={origin};"
+                f"status_run_id={status_run_id}; certificate_run_id={certificate_run_id}"
+            ),
+            "explicit GOAL_RUN_ID or matching verified promoted run evidence",
+            "Release auto-promotion could not resolve the goal run id.",
+            "Rerun with GOAL_RUN_ID=<promoted-run-id> or publish matching verified run evidence.",
+        ),
+        RequirementSpec(
+            checks["goal_run_id_not_file_default"],
+            "goal_run_id_file_default",
+            "make",
+            "GOAL_RUN_ID",
+            f"requested={requested_run_id}; effective={effective_run_id}; origin={origin}",
+            f"effective run id inferred away from Makefile default {default_goal_run_id}",
+            "Release auto-promotion must not select the developer default goal run id.",
+            "Publish promoted evidence for a non-default run or pass GOAL_RUN_ID explicitly.",
+        ),
+        RequirementSpec(
+            checks["explicit_goal_run_id_matches_inferred"],
+            "explicit_goal_run_id_mismatch",
+            "make|goal_run_status|goal_runtime_certificate",
+            "GOAL_RUN_ID|$.run.run_id",
+            f"explicit={explicit_run_id}; inferred={inferred_run_id}",
+            "explicit GOAL_RUN_ID matches verified promoted run evidence",
+            "The explicit GOAL_RUN_ID does not match the verified promoted run evidence.",
+            "Use the verified promoted run id or republish the intended run evidence.",
+        ),
+        *_goal_run_status_requirements(checks, inputs, observed, effective_run_id, fingerprint),
+        *_goal_runtime_certificate_requirements(
+            checks,
+            inputs,
+            observed,
+            effective_run_id,
+            fingerprint,
+        ),
+    ]
+
+
+def _goal_run_status_requirements(
+    checks: dict[str, bool],
+    inputs: dict[str, dict[str, Any]],
+    observed: dict[str, Any],
+    effective_run_id: str,
+    fingerprint: str,
+) -> list[RequirementSpec]:
+    status_input = inputs["goal_run_status"]
+    return [
+        RequirementSpec(
+            checks["goal_run_status_load_ok"],
+            "goal_run_status_not_loadable",
+            "goal_run_status",
+            "$.load_status",
+            status_input["load_status"],
+            "ok",
+            "Global goal-run status evidence is missing or invalid.",
+            "Publish the promoted run status before auto-promotion.",
+        ),
+        RequirementSpec(
+            checks["goal_run_status_artifact_kind_ok"],
+            "goal_run_status_artifact_kind_invalid",
+            "goal_run_status",
+            "$.artifact_kind",
+            status_input["artifact_kind"],
+            "goal_run_status",
+            "Global goal-run status evidence has an unexpected artifact kind.",
+            "Regenerate goal-run status evidence for the promoted run.",
+        ),
+        RequirementSpec(
+            checks["goal_run_status_current"],
+            "goal_run_status_stale",
+            "goal_run_status",
+            "$.source_tree_fingerprint",
+            status_input["source_tree_fingerprint"],
+            fingerprint,
+            "Global goal-run status evidence does not describe the current source tree.",
+            "Refresh goal-run status evidence for the current source tree.",
+        ),
+        RequirementSpec(
+            checks["goal_run_status_run_id_match"],
+            "goal_run_status_run_id_mismatch",
+            "goal_run_status",
+            "$.run.run_id",
+            observed["goal_run_status_run_id"],
+            effective_run_id,
+            "GOAL_RUN_ID does not match the global goal-run status evidence.",
+            "Use the promoted run id or republish the intended run status.",
+        ),
+        RequirementSpec(
+            checks["goal_run_status_promotable"],
+            "goal_run_status_not_promotable",
+            "goal_run_status",
+            "$.status|$.run.status|$.health.promotion_status|$.health.can_promote_result",
+            (
+                f"report_status={observed['goal_run_status_report_status']};"
+                f"run_status={observed['goal_run_status_run_status']};"
+                f"promotion_status={observed['goal_run_status_promotion_status']};"
+                f"can_promote_result={observed['goal_run_status_can_promote_result']}"
+            ),
+            "report_status=pass; run_status=completed; promotion_status=allowed; can_promote_result=true",
+            "The selected goal-run status is not promotable release evidence.",
+            "Complete and publish a promoted goal run before auto-promotion.",
+        ),
+    ]
+
+
+def _goal_runtime_certificate_requirements(
+    checks: dict[str, bool],
+    inputs: dict[str, dict[str, Any]],
+    observed: dict[str, Any],
+    effective_run_id: str,
+    fingerprint: str,
+) -> list[RequirementSpec]:
+    certificate_input = inputs["goal_runtime_certificate"]
+    return [
+        RequirementSpec(
+            checks["goal_runtime_certificate_load_ok"],
+            "goal_runtime_certificate_not_loadable",
+            "goal_runtime_certificate",
+            "$.load_status",
+            certificate_input["load_status"],
+            "ok",
+            "Goal runtime certificate evidence is missing or invalid.",
+            "Run make goal-runtime-certificate for the promoted run.",
+        ),
+        RequirementSpec(
+            checks["goal_runtime_certificate_artifact_kind_ok"],
+            "goal_runtime_certificate_artifact_kind_invalid",
+            "goal_runtime_certificate",
+            "$.artifact_kind",
+            certificate_input["artifact_kind"],
+            "goal_runtime_certificate",
+            "Goal runtime certificate evidence has an unexpected artifact kind.",
+            "Regenerate goal-runtime certificate evidence.",
+        ),
+        RequirementSpec(
+            checks["goal_runtime_certificate_current"],
+            "goal_runtime_certificate_stale",
+            "goal_runtime_certificate",
+            "$.source_tree_fingerprint",
+            certificate_input["source_tree_fingerprint"],
+            fingerprint,
+            "Goal runtime certificate evidence does not describe the current source tree.",
+            "Refresh the goal-runtime certificate for the current source tree.",
+        ),
+        RequirementSpec(
+            checks["goal_runtime_certificate_run_id_match"],
+            "goal_runtime_certificate_run_id_mismatch",
+            "goal_runtime_certificate",
+            "$.run.run_id",
+            observed["goal_runtime_certificate_run_id"],
+            effective_run_id,
+            "GOAL_RUN_ID does not match the goal runtime certificate evidence.",
+            "Use the promoted run id or regenerate the certificate for that run.",
+        ),
+        RequirementSpec(
+            checks["goal_runtime_certificate_verified"],
+            "goal_runtime_certificate_not_verified",
+            "goal_runtime_certificate",
+            "$.status|$.certificate.verification_status|$.certificate.eligible",
+            (
+                f"report_status={observed['goal_runtime_certificate_report_status']};"
+                f"verification_status={observed['goal_runtime_certificate_verification_status']};"
+                f"eligible={observed['goal_runtime_certificate_eligible']}"
+            ),
+            "report_status=pass; verification_status in eligible,already_verified; eligible=true",
+            "The selected goal run does not have verified certificate evidence.",
+            "Run make goal-runtime-certificate after the promoted run is complete.",
+        ),
+    ]
+
+
+def _goal_report_payload(
+    metadata: dict[str, Any],
+    observed: dict[str, Any],
+    checks: dict[str, bool],
+    blockers: list[dict[str, Any]],
+) -> dict[str, Any]:
     status = "pass" if not blockers else "fail"
     return {
         "$schema": SCHEMA_PATH,
         "artifact_kind": "release_goal_run_identity",
-        "generated_at": generated_at,
+        "generated_at": metadata["generated_at"],
         "producer": PRODUCER,
         "source_command": SOURCE_COMMAND,
-        "source_revision": commit,
-        "source_tree_fingerprint": fingerprint,
-        "input_fingerprints": {key: str(value["sha256"]) for key, value in inputs.items()},
+        "source_revision": metadata["commit"],
+        "source_tree_fingerprint": metadata["fingerprint"],
+        "input_fingerprints": input_fingerprints(metadata["inputs"]),
         "schema_version": 1,
         "artifact_status": "current",
         "retention_policy": "release_sidecar_diagnostic",
         "encoding": "utf-8",
-        "currentness": {"status": "current", "checked_at": generated_at},
+        "currentness": {"status": "current", "checked_at": metadata["generated_at"]},
         "status": status,
-        "requested_run_id": requested_run_id,
-        "effective_run_id": effective_run_id,
-        "inferred_run_id": inferred_run_id,
-        "selection_mode": selection_mode,
-        "goal_run_id_origin": origin,
-        "default_goal_run_id": default_goal_run_id,
-        "inputs": inputs,
+        "requested_run_id": observed["requested_run_id"],
+        "effective_run_id": observed["effective_run_id"],
+        "inferred_run_id": observed["inferred_run_id"],
+        "selection_mode": observed["selection_mode"],
+        "goal_run_id_origin": observed["goal_run_id_origin"],
+        "default_goal_run_id": metadata["default_goal_run_id"],
+        "inputs": metadata["inputs"],
         "observed": observed,
         "checks": checks,
         "blockers": blockers,
         "failures": _unique_failures([str(blocker["id"]) for blocker in blockers]),
     }
+
+
+def build_report(
+    vault: Path,
+    *,
+    goal_run_id: str = "",
+    goal_run_id_origin: str = "undefined",
+    default_goal_run_id: str = DEFAULT_DEV_GOAL_RUN_ID,
+    goal_run_status: str = DEFAULT_GOAL_RUN_STATUS,
+    goal_runtime_certificate: str = DEFAULT_GOAL_RUNTIME_CERTIFICATE,
+    context: RuntimeContext | None = None,
+) -> dict[str, Any]:
+    runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
+    generated_at = runtime_context.isoformat_z()
+    fingerprint = release_source_tree_fingerprint(vault)
+    commit = git_commit(vault)
+    requested_run_id = goal_run_id.strip()
+    origin = goal_run_id_origin.strip()
+    inputs = {
+        "goal_run_status": _json_identity(vault, goal_run_status),
+        "goal_runtime_certificate": _json_identity(vault, goal_runtime_certificate),
+    }
+    status_payload, _ = _load_report(vault, goal_run_status)
+    certificate_payload, _ = _load_report(vault, goal_runtime_certificate)
+    evidence = _observed_evidence(status_payload, certificate_payload)
+    selection = _goal_run_selection(
+        inputs,
+        evidence,
+        requested_run_id=requested_run_id,
+        origin=origin,
+        fingerprint=fingerprint,
+    )
+    observed = _goal_observed(selection, evidence)
+    checks = _goal_checks(
+        inputs,
+        observed,
+        default_goal_run_id=default_goal_run_id,
+        fingerprint=fingerprint,
+    )
+    requirements = _goal_run_requirements(
+        checks,
+        inputs,
+        observed,
+        default_goal_run_id=default_goal_run_id,
+        fingerprint=fingerprint,
+    )
+    blockers: list[dict[str, Any]] = []
+    append_requirement_blockers(blockers, requirements)
+    metadata = {
+        "generated_at": generated_at,
+        "commit": commit,
+        "fingerprint": fingerprint,
+        "default_goal_run_id": default_goal_run_id,
+        "inputs": inputs,
+    }
+    return _goal_report_payload(metadata, observed, checks, blockers)
 
 
 def write_report(vault: Path, report: dict[str, Any], out_path: str | None) -> Path:

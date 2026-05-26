@@ -77,6 +77,7 @@ class RegistryInventoryContext:
     corpus_roots: dict[str, str]
     type_to_corpus: dict[str, str]
     default_corpus: str
+    route_overrides: dict
 
 
 def registry_diagnostic_paths(vault: Path, registry_contract: dict) -> RegistryPaths:
@@ -194,6 +195,7 @@ def registry_inventory_context_pass(
         corpus_roots=registry_contract.get("corpus_roots", {}),
         type_to_corpus=corpus_routing.get("type_to_corpus", {}),
         default_corpus=corpus_routing.get("default_corpus", "system"),
+        route_overrides=corpus_routing.get("route_overrides", {}),
     )
 
 

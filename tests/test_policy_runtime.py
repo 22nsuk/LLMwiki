@@ -31,6 +31,7 @@ class PolicyRuntimeTest(unittest.TestCase):
                 "central_research_anchor_enabled": True,
                 "broad_synthesis_boundary_enabled": True,
                 "seed_source_absorption_enabled": True,
+                "content_quality_scaffold_enabled": True,
             },
         )
         self.assertEqual(

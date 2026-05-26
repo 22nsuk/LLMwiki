@@ -60,6 +60,7 @@ def broad_synthesis_boundary_missing_sections(text: str) -> list[str]:
 
 
 BACKTICK_AXIS_RE = re.compile(r"`([^`\n]{1,120})`")
+CONTENT_QUALITY_HEADING_RE = re.compile(r"^#{2,6}\s+(.+?)\s*$", re.MULTILINE)
 
 
 def _backticked_axes(body: str | None) -> list[str]:
@@ -125,3 +126,8 @@ def seed_source_missing_sections(text: str) -> list[str]:
             "What future cluster would absorb this",
         ],
     )
+
+
+def content_quality_scaffold_missing_sections(text: str, recommended_headings: list[str]) -> list[str]:
+    headings = {match.group(1).strip() for match in CONTENT_QUALITY_HEADING_RE.finditer(text)}
+    return [heading for heading in recommended_headings if heading not in headings]

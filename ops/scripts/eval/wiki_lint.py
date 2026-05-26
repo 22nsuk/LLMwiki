@@ -46,8 +46,11 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.wiki_lint_review_runtime import (
         active_source_missing_concept_candidates,
         concept_carryover_continuity_candidates,
+        concept_taxonomy_advisory_candidates,
+        content_quality_advisory_candidates,
         content_promotion_candidates,
         research_source_anchor_candidates,
+        source_route_advisory_candidates,
         synthesis_analysis_template_candidates,
         synthesis_follow_up_split_candidates,
         wiki_synthesis_multi_question_candidates,
@@ -89,8 +92,11 @@ else:
     from .wiki_lint_review_runtime import (
         active_source_missing_concept_candidates,
         concept_carryover_continuity_candidates,
+        concept_taxonomy_advisory_candidates,
+        content_quality_advisory_candidates,
         content_promotion_candidates,
         research_source_anchor_candidates,
+        source_route_advisory_candidates,
         synthesis_analysis_template_candidates,
         synthesis_follow_up_split_candidates,
         wiki_synthesis_multi_question_candidates,
@@ -450,6 +456,30 @@ def _run_registry_and_review_passes(
             pages,
             acc.related_links,
             config.refactor_triggers,
+        )
+    )
+    acc.review_candidates.extend(
+        concept_taxonomy_advisory_candidates(
+            vault,
+            pages,
+            acc.frontmatters,
+            config.frontmatter_contract,
+        )
+    )
+    acc.review_candidates.extend(
+        content_quality_advisory_candidates(
+            vault,
+            pages,
+            acc.frontmatters,
+            config.frontmatter_contract,
+        )
+    )
+    acc.review_candidates.extend(
+        source_route_advisory_candidates(
+            vault,
+            pages,
+            acc.frontmatters,
+            config.frontmatter_contract,
         )
     )
     return registry_result

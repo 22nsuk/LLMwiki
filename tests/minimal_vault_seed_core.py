@@ -353,6 +353,20 @@ tags:
 - x
 ## Main body
 - x
+### Core model
+- x
+### Common misread
+- x
+### Key variables
+- x
+### Mechanism
+- x
+### Evidence ladder
+- x
+### Concrete examples
+- [[source--fake]]
+### Boundary
+- x
 ## Scope boundaries
 - x
 ## Examples and non-examples
@@ -392,6 +406,20 @@ a
 ## Evidence considered
 - [[source--fake]]
 ## Analysis
+- x
+### Core model
+- x
+### Common misread
+- x
+### Key variables
+- x
+### Mechanism
+- x
+### Evidence ladder
+- x
+### Concrete examples
+- [[source--fake]]
+### Boundary
 - x
 ## What this synthesis excludes
 - exclude unrelated adjacent question

@@ -11,6 +11,7 @@ from .wiki_stage2_runtime import (
     broad_synthesis_boundary_missing_sections,
     broad_synthesis_watch_advisory,
     broad_wiki_synthesis_metrics,
+    content_quality_scaffold_missing_sections,
     inbound_page_linkers,
     research_anchor_missing_sections,
 )
@@ -322,6 +323,246 @@ def concept_carryover_continuity_candidates(
 
     candidates.sort(key=lambda item: (-item["value"], item["page"]))
     return candidates[:max_candidates]
+
+
+def concept_taxonomy_advisory_candidates(
+    vault: Path,
+    pages: dict[str, Path],
+    frontmatters: dict[str, dict | None],
+    frontmatter_contract: dict,
+) -> list[dict]:
+    advisory = (
+        frontmatter_contract.get("metadata_review", {})
+        .get("concept_taxonomy_advisory", {})
+    )
+    if not advisory.get("enabled", False):
+        return []
+
+    applies_to = set(advisory.get("applies_to_page_types", ["concept"]))
+    recommended_fields = list(advisory.get("recommended_fields", []))
+    allowed_roles = list(advisory.get("allowed_concept_roles", []))
+    pages_with_missing_fields: list[dict] = []
+    pages_with_invalid_roles: list[dict] = []
+
+    for stem, path in sorted(pages.items()):
+        relative_path = report_path(vault, path)
+        if not relative_path.startswith("wiki/concept--"):
+            continue
+
+        frontmatter = frontmatters.get(stem) or {}
+        if frontmatter.get("page_type") not in applies_to:
+            continue
+
+        missing_fields = [field for field in recommended_fields if field not in frontmatter]
+        if missing_fields:
+            pages_with_missing_fields.append(
+                {
+                    "page": relative_path,
+                    "missing_fields": missing_fields,
+                }
+            )
+
+        concept_role = frontmatter.get("concept_role")
+        if concept_role is not None and allowed_roles and concept_role not in allowed_roles:
+            pages_with_invalid_roles.append(
+                {
+                    "page": relative_path,
+                    "field": "concept_role",
+                    "actual": concept_role,
+                    "expected_one_of": allowed_roles,
+                }
+            )
+
+    if not pages_with_missing_fields and not pages_with_invalid_roles:
+        return []
+
+    return [
+        {
+            "type": "concept_taxonomy_frontmatter_advisory",
+            "page": "wiki/concept--*.md",
+            "value": {
+                "missing_field_page_count": len(pages_with_missing_fields),
+                "invalid_role_page_count": len(pages_with_invalid_roles),
+            },
+            "threshold": {
+                "missing_field_page_count": 0,
+                "invalid_role_page_count": 0,
+            },
+            "recommended_fields": recommended_fields,
+            "allowed_concept_roles": allowed_roles,
+            "pages_with_missing_fields": pages_with_missing_fields,
+            "pages_with_invalid_roles": pages_with_invalid_roles,
+            "reason": (
+                "concept taxonomy fields are optional during rollout, but missing or invalid "
+                "taxonomy metadata weakens routing, Obsidian filtering, and source intake decisions"
+            ),
+            "suggested_action": "backfill_concept_taxonomy_frontmatter_after_taxonomy_review",
+        }
+    ]
+
+
+def content_quality_advisory_candidates(
+    vault: Path,
+    pages: dict[str, Path],
+    frontmatters: dict[str, dict | None],
+    frontmatter_contract: dict,
+) -> list[dict]:
+    advisory = (
+        frontmatter_contract.get("metadata_review", {})
+        .get("content_quality_advisory", {})
+    )
+    if not advisory.get("enabled", False):
+        return []
+
+    applies_to = set(advisory.get("applies_to_page_types", ["concept", "synthesis"]))
+    recommended_headings = list(advisory.get("recommended_headings", []))
+    pages_with_missing_headings: list[dict] = []
+
+    for stem, path in sorted(pages.items()):
+        relative_path = report_path(vault, path)
+        if not (
+            relative_path.startswith("wiki/concept--")
+            or relative_path.startswith("wiki/synthesis--")
+        ):
+            continue
+
+        frontmatter = frontmatters.get(stem) or {}
+        if frontmatter.get("page_type") not in applies_to:
+            continue
+
+        created = str(frontmatter.get("created", "")).strip()
+
+        text = load_text(path)
+        missing_headings = content_quality_scaffold_missing_sections(text, recommended_headings)
+        if missing_headings:
+            pages_with_missing_headings.append(
+                {
+                    "page": relative_path,
+                    "created": created,
+                    "missing_headings": missing_headings,
+                }
+            )
+
+    if not pages_with_missing_headings:
+        return []
+
+    return [
+        {
+            "type": "content_quality_scaffold_advisory",
+            "page": "wiki/{concept,synthesis}--*.md",
+            "value": {
+                "page_count": len(pages_with_missing_headings),
+            },
+            "threshold": {
+                "page_count": 0,
+            },
+            "recommended_headings": recommended_headings,
+            "pages_with_missing_headings": pages_with_missing_headings,
+            "reason": (
+                "concept/synthesis pages should carry wiki-substance scaffolding "
+                "before routing tables or source aggregation dominate the page"
+            ),
+            "suggested_action": "rewrite_concept_or_synthesis_with_substance_scaffold",
+        }
+    ]
+
+
+def source_route_advisory_candidates(
+    vault: Path,
+    pages: dict[str, Path],
+    frontmatters: dict[str, dict | None],
+    frontmatter_contract: dict,
+) -> list[dict]:
+    advisory = (
+        frontmatter_contract.get("metadata_review", {})
+        .get("source_route_advisory", {})
+    )
+    if not advisory.get("enabled", False):
+        return []
+
+    applies_to = set(advisory.get("applies_to_page_types", ["source"]))
+    recommended_fields = list(advisory.get("recommended_fields", []))
+    allowed_authority_classes = list(advisory.get("allowed_authority_classes", []))
+    allowed_route_decisions = list(advisory.get("allowed_route_decisions", []))
+    pages_with_missing_fields: list[dict] = []
+    pages_with_invalid_values: list[dict] = []
+
+    for stem, path in sorted(pages.items()):
+        relative_path = report_path(vault, path)
+        if not relative_path.startswith("wiki/source--"):
+            continue
+
+        frontmatter = frontmatters.get(stem) or {}
+        if frontmatter.get("page_type") not in applies_to:
+            continue
+
+        missing_fields = [field for field in recommended_fields if field not in frontmatter]
+        if missing_fields:
+            pages_with_missing_fields.append(
+                {
+                    "page": relative_path,
+                    "missing_fields": missing_fields,
+                }
+            )
+
+        authority_class = frontmatter.get("authority_class")
+        if (
+            authority_class is not None
+            and allowed_authority_classes
+            and authority_class not in allowed_authority_classes
+        ):
+            pages_with_invalid_values.append(
+                {
+                    "page": relative_path,
+                    "field": "authority_class",
+                    "actual": authority_class,
+                    "expected_one_of": allowed_authority_classes,
+                }
+            )
+
+        route_decision = frontmatter.get("route_decision")
+        if (
+            route_decision is not None
+            and allowed_route_decisions
+            and route_decision not in allowed_route_decisions
+        ):
+            pages_with_invalid_values.append(
+                {
+                    "page": relative_path,
+                    "field": "route_decision",
+                    "actual": route_decision,
+                    "expected_one_of": allowed_route_decisions,
+                }
+            )
+
+    if not pages_with_missing_fields and not pages_with_invalid_values:
+        return []
+
+    return [
+        {
+            "type": "source_route_frontmatter_advisory",
+            "page": "wiki/source--*.md",
+            "value": {
+                "missing_field_page_count": len(pages_with_missing_fields),
+                "invalid_value_count": len(pages_with_invalid_values),
+            },
+            "threshold": {
+                "missing_field_page_count": 0,
+                "invalid_value_count": 0,
+            },
+            "recommended_fields": recommended_fields,
+            "allowed_authority_classes": allowed_authority_classes,
+            "allowed_route_decisions": allowed_route_decisions,
+            "pages_with_missing_fields": pages_with_missing_fields,
+            "pages_with_invalid_values": pages_with_invalid_values,
+            "reason": (
+                "source route fields are optional during rollout, but missing or invalid "
+                "metadata weakens raw intake triage, concept absorption, and source-only "
+                "seed promotion decisions"
+            ),
+            "suggested_action": "backfill_source_route_frontmatter_during_source_template_rollout",
+        }
+    ]
 
 
 @dataclass(frozen=True)

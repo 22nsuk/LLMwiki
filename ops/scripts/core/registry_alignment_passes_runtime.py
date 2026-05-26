@@ -15,6 +15,71 @@ from .registry_diagnostics_runtime import (
 )
 
 
+def _has_nonempty_scalar(value: object) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _corpus_route_override_failure_detail(
+    entry: dict,
+    *,
+    source_type: str,
+    corpus: str,
+    expected_corpus: str,
+    route_overrides: dict,
+) -> dict | None:
+    source_type_overrides = route_overrides.get(source_type)
+    if not isinstance(source_type_overrides, dict):
+        return {
+            "reason": "override_not_allowed_for_source_type",
+            "expected_corpus": expected_corpus,
+        }
+
+    override_rule = source_type_overrides.get(corpus)
+    if not isinstance(override_rule, dict):
+        return {
+            "reason": "override_not_allowed_for_target_corpus",
+            "expected_corpus": expected_corpus,
+        }
+
+    missing_fields = [
+        field
+        for field in override_rule.get("required_fields", [])
+        if not _has_nonempty_scalar(entry.get(field))
+    ]
+    value_mismatches = {}
+    for field, expected_value in override_rule.get("required_values", {}).items():
+        actual_value = entry.get(field)
+        if actual_value == expected_value:
+            continue
+        value_mismatches[field] = {
+            "expected": expected_value,
+            "actual": actual_value,
+        }
+
+    reason_field = override_rule.get("reason_field")
+    reason_min_length = override_rule.get("reason_min_length")
+    reason_length_mismatch = None
+    if isinstance(reason_field, str) and isinstance(reason_min_length, int):
+        reason_value = entry.get(reason_field)
+        reason_length = len(reason_value.strip()) if isinstance(reason_value, str) else 0
+        if reason_length < reason_min_length:
+            reason_length_mismatch = {
+                "field": reason_field,
+                "minimum": reason_min_length,
+                "actual": reason_length,
+            }
+
+    if not missing_fields and not value_mismatches and reason_length_mismatch is None:
+        return None
+
+    return {
+        "reason": "override_requirements_not_met",
+        "missing_fields": missing_fields,
+        "value_mismatches": value_mismatches,
+        "reason_length_mismatch": reason_length_mismatch,
+    }
+
+
 def _registry_frontmatter_alignment_pass(
     vault: Path,
     *,
@@ -96,20 +161,29 @@ def _locator_raw_path_corpus_consistency_pass(
             inventory_context.default_corpus,
         )
         if corpus != expected_corpus:
-            emitter.issue(
-                {
-                    "type": "corpus_routing_mismatch",
-                    "page": entry_page_report,
-                    "detail": {
-                        "registry_id": entry.get("registry_id"),
-                        "storage_path": storage_path,
-                        "type": source_type,
-                        "corpus": corpus,
-                        "expected_corpus": expected_corpus,
-                    },
-                },
-                "corpus_routing_mismatch",
+            override_failure_detail = _corpus_route_override_failure_detail(
+                entry,
+                source_type=source_type,
+                corpus=corpus,
+                expected_corpus=expected_corpus,
+                route_overrides=inventory_context.route_overrides,
             )
+            if override_failure_detail is not None:
+                emitter.issue(
+                    {
+                        "type": "corpus_routing_mismatch",
+                        "page": entry_page_report,
+                        "detail": {
+                            "registry_id": entry.get("registry_id"),
+                            "storage_path": storage_path,
+                            "type": source_type,
+                            "corpus": corpus,
+                            "expected_corpus": expected_corpus,
+                            "route_override": override_failure_detail,
+                        },
+                    },
+                    "corpus_routing_mismatch",
+                )
         if root_name is None:
             emitter.issue(
                 {

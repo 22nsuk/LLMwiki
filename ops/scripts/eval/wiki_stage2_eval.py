@@ -24,6 +24,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.wiki_stage2_runtime import (
         broad_synthesis_boundary_missing_sections,
         broad_wiki_synthesis_metrics,
+        content_quality_scaffold_missing_sections,
         evidence_source_links,
         inbound_page_linkers,
         research_anchor_missing_sections,
@@ -44,6 +45,7 @@ else:
     from .wiki_stage2_runtime import (
         broad_synthesis_boundary_missing_sections,
         broad_wiki_synthesis_metrics,
+        content_quality_scaffold_missing_sections,
         evidence_source_links,
         inbound_page_linkers,
         research_anchor_missing_sections,
@@ -61,6 +63,7 @@ class _Stage2EvalContext:
     frontmatters: dict
     stage2_eval_policy: dict
     content_promotion_review: dict
+    frontmatter_contract: dict
     inbound_sources: dict
     research_anchor_required_sections: list
     research_anchor_min_inbound_links: int
@@ -149,6 +152,7 @@ def _stage2_context(vault: Path, policy: dict, runtime_snapshot: WikiRuntimeSnap
         frontmatters=runtime_snapshot.frontmatters,
         stage2_eval_policy=policy["stage2_eval"],
         content_promotion_review=content_promotion_review,
+        frontmatter_contract=policy["frontmatter_contract"],
         inbound_sources=inbound_page_linkers(runtime_snapshot.page_links, runtime_snapshot.pages),
         research_anchor_required_sections=content_promotion_review["research_anchor_required_sections"],
         research_anchor_min_inbound_links=content_promotion_review["research_anchor_min_inbound_links"],
@@ -267,6 +271,45 @@ def _broad_synthesis_result(ctx: _Stage2EvalContext, *, relative_path: str, text
     }
 
 
+def _content_quality_scaffold_result(
+    ctx: _Stage2EvalContext,
+    *,
+    relative_path: str,
+    text: str,
+    frontmatter: dict,
+) -> dict | None:
+    if not (
+        ctx.stage2_eval_policy["content_quality_scaffold_enabled"]
+        and (
+            relative_path.startswith("wiki/concept--")
+            or relative_path.startswith("wiki/synthesis--")
+        )
+        and isinstance(frontmatter, dict)
+    ):
+        return None
+
+    advisory = (
+        ctx.frontmatter_contract.get("metadata_review", {})
+        .get("content_quality_advisory", {})
+    )
+    if not advisory.get("enabled", False):
+        return None
+    applies_to = set(advisory.get("applies_to_page_types", ["concept", "synthesis"]))
+    if frontmatter.get("page_type") not in applies_to:
+        return None
+
+    recommended_headings = list(advisory.get("recommended_headings", []))
+    missing_sections = content_quality_scaffold_missing_sections(text, recommended_headings)
+    return {
+        "eval": "content_quality_scaffold_present",
+        "pass": not missing_sections,
+        "detail": {
+            "recommended_headings": recommended_headings,
+            "missing_sections": missing_sections,
+        },
+    }
+
+
 def _page_results(ctx: _Stage2EvalContext, stem: str, path: Path) -> list[dict]:
     relative_path = report_path(ctx.vault, path)
     text = ctx.texts[stem]
@@ -288,6 +331,12 @@ def _page_results(ctx: _Stage2EvalContext, stem: str, path: Path) -> list[dict]:
             frontmatter=frontmatter,
         ),
         _broad_synthesis_result(ctx, relative_path=relative_path, text=text),
+        _content_quality_scaffold_result(
+            ctx,
+            relative_path=relative_path,
+            text=text,
+            frontmatter=frontmatter,
+        ),
     ]
     return [result for result in candidates if result is not None]
 

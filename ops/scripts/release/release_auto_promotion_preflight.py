@@ -18,6 +18,11 @@ from ops.scripts.release.auto_promotion_learning_runtime import (
     bool_value,
     unaccepted_learning_claim_blockers,
 )
+from ops.scripts.release.auto_promotion_manifest_sections import (
+    RequirementSpec,
+    append_requirement_blockers,
+    input_fingerprints,
+)
 from ops.scripts.release.release_run_manifest import _resolve, git_commit
 from ops.scripts.release.release_sealed_run_manifest import (
     _json_identity,
@@ -178,56 +183,512 @@ def _goal_run_identity_diagnostics(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _blocker(
+def _identity_current(identity: dict[str, Any], fingerprint: str) -> bool:
+    return str(identity.get("source_tree_fingerprint", "")).strip() == fingerprint
+
+
+def _goal_run_identity_requirements(
+    checks: dict[str, bool],
+    inputs: dict[str, dict[str, Any]],
+    identity: dict[str, Any],
+    fingerprint: str,
+) -> list[RequirementSpec]:
+    goal_input = inputs["goal_run_identity"]
+    return [
+        RequirementSpec(
+            checks["goal_run_identity_load_ok"],
+            "goal_run_identity_not_loadable",
+            "goal_run_identity",
+            "$.load_status",
+            goal_input["load_status"],
+            "ok",
+            "Release auto-promotion goal-run identity evidence is missing or invalid.",
+            "Run make release-auto-promotion-goal-run-id-guard with explicit GOAL_RUN_ID.",
+        ),
+        RequirementSpec(
+            checks["goal_run_identity_artifact_kind_ok"],
+            "goal_run_identity_artifact_kind_invalid",
+            "goal_run_identity",
+            "$.artifact_kind",
+            goal_input["artifact_kind"],
+            "release_goal_run_identity",
+            "Goal-run identity evidence has an unexpected artifact kind.",
+            "Regenerate release auto-promotion goal-run identity evidence.",
+        ),
+        RequirementSpec(
+            checks["goal_run_identity_current"],
+            "goal_run_identity_stale",
+            "goal_run_identity",
+            "$.source_tree_fingerprint",
+            goal_input["source_tree_fingerprint"],
+            fingerprint,
+            "Goal-run identity evidence does not describe the current source tree.",
+            "Rerun make release-auto-promotion-goal-run-id-guard.",
+        ),
+        RequirementSpec(
+            checks["goal_run_identity_pass"],
+            "goal_run_identity_not_pass",
+            "goal_run_identity",
+            "$.status|$.failures",
+            f"status={identity['status']}; failures={identity['failure_count']}",
+            "status=pass; failures=0",
+            "The selected GOAL_RUN_ID is not verified release auto-promotion evidence.",
+            "Use an explicit GOAL_RUN_ID that matches the promoted run status and certificate.",
+        ),
+        RequirementSpec(
+            checks["goal_run_identity_effective_run_id_present"],
+            "goal_run_identity_missing_effective_run_id",
+            "goal_run_identity",
+            "$.effective_run_id",
+            identity["effective_run_id"],
+            "non-empty run id",
+            "Goal-run identity evidence does not name the selected run.",
+            "Rerun with GOAL_RUN_ID=<promoted-run-id>.",
+        ),
+    ]
+
+
+def _auto_improve_requirements(
+    checks: dict[str, bool],
+    inputs: dict[str, dict[str, Any]],
+    auto: dict[str, Any],
+    fingerprint: str,
+) -> list[RequirementSpec]:
+    auto_input = inputs["auto_improve_readiness"]
+    return [
+        RequirementSpec(
+            checks["auto_improve_readiness_load_ok"],
+            "auto_improve_readiness_not_loadable",
+            "auto_improve_readiness",
+            "$.load_status",
+            auto_input["load_status"],
+            "ok",
+            "Auto-improve readiness diagnostics are missing or invalid.",
+            "Run make auto-improve-readiness-report-body.",
+        ),
+        RequirementSpec(
+            checks["auto_improve_readiness_artifact_kind_ok"],
+            "auto_improve_readiness_artifact_kind_invalid",
+            "auto_improve_readiness",
+            "$.artifact_kind",
+            auto_input["artifact_kind"],
+            "auto_improve_readiness_report",
+            "Auto-improve readiness diagnostics have an unexpected artifact kind.",
+            "Regenerate auto-improve readiness diagnostics.",
+        ),
+        RequirementSpec(
+            checks["auto_improve_readiness_current"],
+            "auto_improve_readiness_stale",
+            "auto_improve_readiness",
+            "$.source_tree_fingerprint",
+            auto_input["source_tree_fingerprint"],
+            fingerprint,
+            "Auto-improve readiness does not describe the current source tree.",
+            "Run make release-auto-promotion-preflight.",
+        ),
+        RequirementSpec(
+            checks["auto_improve_can_execute_trial"],
+            "auto_improve_trial_not_executable",
+            "auto_improve_readiness",
+            "$.can_execute_trial",
+            auto["can_execute_trial"],
+            "true",
+            "The auto-improve lane cannot execute a trial.",
+            "Refresh auto-improve readiness and resolve execution blockers.",
+        ),
+        RequirementSpec(
+            checks["auto_improve_stage3_promotion_blockers_clear"],
+            "auto_improve_independent_promotion_blockers_open",
+            "auto_improve_readiness",
+            "$.promotion_blockers[?scope!='release_gate']",
+            auto["stage3_blocking_promotion_blocker_count"],
+            "0",
+            "Auto-improve readiness has independent promotion blockers.",
+            "Resolve non-release-gate auto-improve promotion blockers before sealing.",
+        ),
+        RequirementSpec(
+            checks["auto_improve_learning_claim_blockers_clear"],
+            "auto_improve_learning_claim_blockers_open",
+            "auto_improve_readiness",
+            "$.learning_claim_blockers",
+            auto["learning_claim_blocker_count"],
+            "0",
+            "Learning-claim blockers are still open for unattended promotion.",
+            "Resolve or renew learning readiness before running expensive release stages.",
+        ),
+        RequirementSpec(
+            checks["auto_improve_clean_release_blockers_clear"],
+            "auto_improve_clean_release_blockers_open",
+            "auto_improve_readiness",
+            "$.clean_release_blockers",
+            auto["clean_release_blocker_count"],
+            "0",
+            "Clean-release blockers are still open.",
+            "Resolve clean-release blockers before sealing.",
+        ),
+    ]
+
+
+def _artifact_requirements(
+    checks: dict[str, bool],
+    inputs: dict[str, dict[str, Any]],
     *,
-    blocker_id: str,
+    input_key: str,
     source: str,
-    field_path: str,
-    observed: Any,
-    expected: str,
-    summary: str,
-    recommended_next_step: str,
-) -> dict[str, Any]:
+    artifact_kind: str,
+    stale_next_step: str,
+    fingerprint: str,
+) -> list[RequirementSpec]:
+    identity = inputs[input_key]
+    return [
+        RequirementSpec(
+            checks[f"{input_key}_load_ok"],
+            f"{input_key}_not_loadable",
+            source,
+            "$.load_status",
+            identity["load_status"],
+            "ok",
+            f"{source.replace('_', ' ').capitalize()} evidence is missing or invalid.",
+            stale_next_step,
+        ),
+        RequirementSpec(
+            checks[f"{input_key}_artifact_kind_ok"],
+            f"{input_key}_artifact_kind_invalid",
+            source,
+            "$.artifact_kind",
+            identity["artifact_kind"],
+            artifact_kind,
+            f"{source.replace('_', ' ').capitalize()} evidence has an unexpected artifact kind.",
+            f"Regenerate {source.replace('_', ' ')} evidence.",
+        ),
+        RequirementSpec(
+            checks[f"{input_key}_current"],
+            f"{input_key}_stale",
+            source,
+            "$.source_tree_fingerprint",
+            identity["source_tree_fingerprint"],
+            fingerprint,
+            f"{source.replace('_', ' ').capitalize()} does not describe the current source tree.",
+            stale_next_step,
+        ),
+    ]
+
+
+def _base_phase_requirements(
+    checks: dict[str, bool],
+    inputs: dict[str, dict[str, Any]],
+    *,
+    identity: dict[str, Any],
+    auto: dict[str, Any],
+    remediation: dict[str, Any],
+    learning: dict[str, Any],
+    fingerprint: str,
+) -> list[RequirementSpec]:
+    requirements = [
+        *_goal_run_identity_requirements(checks, inputs, identity, fingerprint),
+        *_auto_improve_requirements(checks, inputs, auto, fingerprint),
+        *_artifact_requirements(
+            checks,
+            inputs,
+            input_key="remediation_backlog",
+            source="remediation_backlog",
+            artifact_kind="remediation_backlog",
+            stale_next_step="Run make remediation-backlog.",
+            fingerprint=fingerprint,
+        ),
+        RequirementSpec(
+            checks["remediation_backlog_promotion_clear"],
+            "remediation_backlog_promotion_open",
+            "remediation_backlog",
+            "$.summary.open_promotion_count",
+            remediation["open_promotion_count"],
+            "0",
+            "Promotion-blocking remediation backlog items are open.",
+            "Close or defer promotion-blocking remediation items before run-ready.",
+        ),
+        *_artifact_requirements(
+            checks,
+            inputs,
+            input_key="learning_revalidation",
+            source="learning_revalidation",
+            artifact_kind="learning_readiness_signoff_revalidation",
+            stale_next_step="Run make learning-readiness-signoff-revalidation.",
+            fingerprint=fingerprint,
+        ),
+        RequirementSpec(
+            checks["learning_revalidation_current"],
+            "learning_revalidation_due",
+            "learning_revalidation",
+            "$.revalidation.status",
+            learning["revalidation_status"],
+            "one of current, fresh, metrics_close_candidate, not_due, not_required, pass",
+            "Learning revalidation is not current enough for unattended promotion.",
+            "Renew or resolve learning readiness before spending run/seal cycles.",
+        ),
+    ]
+    return requirements
+
+
+def _preseal_phase_requirements(
+    checks: dict[str, bool],
+    inputs: dict[str, dict[str, Any]],
+    *,
+    closeout: dict[str, Any],
+    cohort: dict[str, Any],
+    fingerprint: str,
+) -> list[RequirementSpec]:
+    return [
+        *_artifact_requirements(
+            checks,
+            inputs,
+            input_key="closeout_summary",
+            source="closeout_summary",
+            artifact_kind="release_closeout_summary",
+            stale_next_step="Run make release-auto-promotion-preseal.",
+            fingerprint=fingerprint,
+        ),
+        RequirementSpec(
+            checks["closeout_summary_clean"],
+            "closeout_summary_not_clean",
+            "closeout_summary",
+            "$.release_authority_status|$.machine_release_allowed|$.clean_release_ready",
+            (
+                f"release_authority_status={closeout['release_authority_status']};"
+                f"machine_release_allowed={closeout['machine_release_allowed']};"
+                f"clean_release_ready={closeout['clean_release_ready']}"
+            ),
+            "release_authority_status=clean_pass; machine_release_allowed=true; clean_release_ready=true",
+            "Release closeout is not clean enough for unattended promotion.",
+            "Resolve closeout blockers before sealing promotion evidence.",
+        ),
+        RequirementSpec(
+            checks["closeout_accepted_risk_clean"],
+            "closeout_accepted_risk_not_clean",
+            "closeout_summary",
+            "$.summary.accepted_risk_instance_count|$.summary.release_blocking_risk_family_count",
+            (
+                f"accepted={closeout['accepted_risk_instance_count']};"
+                f"release_blocking={closeout['release_blocking_risk_family_count']}"
+            ),
+            "release_blocking=0; advisory accepted risks may remain diagnostic",
+            "Closeout has accepted-risk families that still block the clean release lane.",
+            "Resolve clean-lane blocking release risks before sealing.",
+        ),
+        RequirementSpec(
+            checks["closeout_gate_attention_clean"],
+            "closeout_gate_attention_not_clean",
+            "closeout_summary",
+            "$.summary.gate_attention_count",
+            closeout["gate_attention_count"],
+            "0",
+            "Closeout gate-attention count is not clean.",
+            "Resolve gate attention before sealing promotion evidence.",
+        ),
+        RequirementSpec(
+            checks["closeout_source_tree_coherence_clean"],
+            "closeout_source_tree_coherence_not_clean",
+            "closeout_summary",
+            "$.summary.source_tree_coherence_status",
+            closeout["source_tree_coherence_status"],
+            "pass",
+            "Closeout source-tree coherence is not clean.",
+            "Refresh lower release evidence into one source-tree cohort before sealing.",
+        ),
+        *_artifact_requirements(
+            checks,
+            inputs,
+            input_key="evidence_cohort",
+            source="evidence_cohort",
+            artifact_kind="release_evidence_cohort",
+            stale_next_step="Run make release-evidence-cohort.",
+            fingerprint=fingerprint,
+        ),
+        RequirementSpec(
+            checks["evidence_cohort_strict"],
+            "evidence_cohort_not_strict",
+            "evidence_cohort",
+            "$.cohort.strict_same_fingerprint|$.summary.clean_lane_contract_status",
+            (
+                f"strict_same_fingerprint={cohort['strict_same_fingerprint']};"
+                f"clean_lane_contract_status={cohort['clean_lane_contract_status']}"
+            ),
+            "strict_same_fingerprint=true; clean_lane_contract_status=pass",
+            "Release evidence cohort is not strict enough for unattended promotion.",
+            "Refresh release evidence into one strict source-tree cohort before sealing.",
+        ),
+    ]
+
+
+def _preflight_checks(
+    inputs: dict[str, dict[str, Any]],
+    *,
+    phase: str,
+    identity: dict[str, Any],
+    auto: dict[str, Any],
+    remediation: dict[str, Any],
+    learning: dict[str, Any],
+    closeout: dict[str, Any],
+    cohort: dict[str, Any],
+    fingerprint: str,
+) -> dict[str, bool]:
+    checks = {
+        "goal_run_identity_load_ok": inputs["goal_run_identity"]["load_status"] == "ok",
+        "goal_run_identity_artifact_kind_ok": (
+            inputs["goal_run_identity"]["artifact_kind"] == "release_goal_run_identity"
+        ),
+        "goal_run_identity_current": _identity_current(inputs["goal_run_identity"], fingerprint),
+        "goal_run_identity_pass": identity["status"] == "pass",
+        "goal_run_identity_effective_run_id_present": bool(identity["effective_run_id"]),
+        "auto_improve_readiness_load_ok": inputs["auto_improve_readiness"]["load_status"] == "ok",
+        "auto_improve_readiness_artifact_kind_ok": (
+            inputs["auto_improve_readiness"]["artifact_kind"] == "auto_improve_readiness_report"
+        ),
+        "auto_improve_readiness_current": _identity_current(inputs["auto_improve_readiness"], fingerprint),
+        "auto_improve_can_execute_trial": auto["can_execute_trial"],
+        "auto_improve_stage3_promotion_blockers_clear": (
+            int(auto["stage3_blocking_promotion_blocker_count"]) == 0
+        ),
+        "auto_improve_learning_claim_blockers_clear": (
+            int(auto["unaccepted_learning_claim_blocker_count"]) == 0
+        ),
+        "auto_improve_clean_release_blockers_clear": int(auto["clean_release_blocker_count"]) == 0,
+        "remediation_backlog_load_ok": inputs["remediation_backlog"]["load_status"] == "ok",
+        "remediation_backlog_artifact_kind_ok": (
+            inputs["remediation_backlog"]["artifact_kind"] == "remediation_backlog"
+        ),
+        "remediation_backlog_current": _identity_current(inputs["remediation_backlog"], fingerprint),
+        "remediation_backlog_promotion_clear": int(remediation["open_promotion_count"]) == 0,
+        "learning_revalidation_load_ok": inputs["learning_revalidation"]["load_status"] == "ok",
+        "learning_revalidation_artifact_kind_ok": (
+            inputs["learning_revalidation"]["artifact_kind"]
+            == "learning_readiness_signoff_revalidation"
+        ),
+        "learning_revalidation_current_source": _identity_current(inputs["learning_revalidation"], fingerprint),
+        "learning_revalidation_current": (
+            str(learning["revalidation_status"]) in ALLOWED_LEARNING_REVALIDATION_STATUSES
+        ),
+        "closeout_summary_load_ok": True,
+        "closeout_summary_artifact_kind_ok": True,
+        "closeout_summary_current": True,
+        "closeout_summary_clean": True,
+        "closeout_accepted_risk_clean": True,
+        "closeout_gate_attention_clean": True,
+        "closeout_source_tree_coherence_clean": True,
+        "evidence_cohort_load_ok": True,
+        "evidence_cohort_artifact_kind_ok": True,
+        "evidence_cohort_current": True,
+        "evidence_cohort_strict": True,
+    }
+    if phase == "preseal":
+        checks.update(_preseal_checks(inputs, closeout=closeout, cohort=cohort, fingerprint=fingerprint))
+    return checks
+
+
+def _preseal_checks(
+    inputs: dict[str, dict[str, Any]],
+    *,
+    closeout: dict[str, Any],
+    cohort: dict[str, Any],
+    fingerprint: str,
+) -> dict[str, bool]:
     return {
-        "id": blocker_id,
-        "source": source,
-        "field_path": field_path,
-        "observed": str(observed),
-        "expected": expected,
-        "summary": summary,
-        "recommended_next_step": recommended_next_step,
+        "closeout_summary_load_ok": inputs["closeout_summary"]["load_status"] == "ok",
+        "closeout_summary_artifact_kind_ok": (
+            inputs["closeout_summary"]["artifact_kind"] == "release_closeout_summary"
+        ),
+        "closeout_summary_current": _identity_current(inputs["closeout_summary"], fingerprint),
+        "closeout_summary_clean": (
+            closeout["status"] == "pass"
+            and closeout["release_authority_status"] == "clean_pass"
+            and bool(closeout["machine_release_allowed"])
+            and bool(closeout["clean_release_ready"])
+        ),
+        "closeout_accepted_risk_clean": int(closeout["release_blocking_risk_family_count"]) == 0,
+        "closeout_gate_attention_clean": int(closeout["gate_attention_count"]) == 0,
+        "closeout_source_tree_coherence_clean": closeout["source_tree_coherence_status"] == "pass",
+        "evidence_cohort_load_ok": inputs["evidence_cohort"]["load_status"] == "ok",
+        "evidence_cohort_artifact_kind_ok": (
+            inputs["evidence_cohort"]["artifact_kind"] == "release_evidence_cohort"
+        ),
+        "evidence_cohort_current": _identity_current(inputs["evidence_cohort"], fingerprint),
+        "evidence_cohort_strict": (
+            bool(cohort["strict_same_fingerprint"])
+            and cohort["clean_lane_contract_status"] == "pass"
+        ),
     }
 
 
-def _require(
-    blockers: list[dict[str, Any]],
+def _preflight_requirements(
+    checks: dict[str, bool],
+    inputs: dict[str, dict[str, Any]],
     *,
-    passed: bool,
-    blocker_id: str,
-    source: str,
-    field_path: str,
-    observed: Any,
-    expected: str,
-    summary: str,
-    recommended_next_step: str,
-) -> None:
-    if passed:
-        return
-    blockers.append(
-        _blocker(
-            blocker_id=blocker_id,
-            source=source,
-            field_path=field_path,
-            observed=observed,
-            expected=expected,
-            summary=summary,
-            recommended_next_step=recommended_next_step,
-        )
+    phase: str,
+    identity: dict[str, Any],
+    auto: dict[str, Any],
+    remediation: dict[str, Any],
+    learning: dict[str, Any],
+    closeout: dict[str, Any],
+    cohort: dict[str, Any],
+    fingerprint: str,
+) -> list[RequirementSpec]:
+    requirements = _base_phase_requirements(
+        checks,
+        inputs,
+        identity=identity,
+        auto=auto,
+        remediation=remediation,
+        learning=learning,
+        fingerprint=fingerprint,
     )
+    if phase == "preseal":
+        requirements.extend(
+            _preseal_phase_requirements(
+                checks,
+                inputs,
+                closeout=closeout,
+                cohort=cohort,
+                fingerprint=fingerprint,
+            )
+        )
+    return requirements
 
 
-def _identity_current(identity: dict[str, Any], fingerprint: str) -> bool:
-    return str(identity.get("source_tree_fingerprint", "")).strip() == fingerprint
+def _preflight_manifest_payload(
+    *,
+    generated_at: str,
+    commit: str,
+    fingerprint: str,
+    phase: str,
+    status: str,
+    inputs: dict[str, dict[str, Any]],
+    goal_run_identity: dict[str, Any],
+    diagnostics: dict[str, Any],
+    checks: dict[str, bool],
+    blockers: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "$schema": SCHEMA_PATH,
+        "artifact_kind": "release_auto_promotion_preflight",
+        "generated_at": generated_at,
+        "producer": PRODUCER,
+        "source_command": SOURCE_COMMAND,
+        "source_revision": commit,
+        "source_tree_fingerprint": fingerprint,
+        "input_fingerprints": input_fingerprints(inputs),
+        "schema_version": 1,
+        "artifact_status": "current",
+        "retention_policy": "release_sidecar_diagnostic",
+        "encoding": "utf-8",
+        "currentness": {"status": "current", "checked_at": generated_at},
+        "phase": phase,
+        "status": status,
+        "goal_run_identity": goal_run_identity,
+        "inputs": inputs,
+        "diagnostics": diagnostics,
+        "checks": checks,
+        "blockers": blockers,
+        "failures": _unique_failures([str(blocker["id"]) for blocker in blockers]),
+    }
 
 
 def build_manifest(
@@ -269,481 +730,53 @@ def build_manifest(
     closeout = _closeout_diagnostics(closeout_payload)
     cohort = _cohort_diagnostics(cohort_payload)
     identity = _goal_run_identity_diagnostics(goal_identity_payload)
-    checks = {
-        "goal_run_identity_load_ok": inputs["goal_run_identity"]["load_status"] == "ok",
-        "goal_run_identity_artifact_kind_ok": (
-            inputs["goal_run_identity"]["artifact_kind"] == "release_goal_run_identity"
-        ),
-        "goal_run_identity_current": _identity_current(inputs["goal_run_identity"], fingerprint),
-        "goal_run_identity_pass": identity["status"] == "pass",
-        "goal_run_identity_effective_run_id_present": bool(identity["effective_run_id"]),
-        "auto_improve_readiness_load_ok": inputs["auto_improve_readiness"]["load_status"] == "ok",
-        "auto_improve_readiness_artifact_kind_ok": (
-            inputs["auto_improve_readiness"]["artifact_kind"] == "auto_improve_readiness_report"
-        ),
-        "auto_improve_readiness_current": _identity_current(
-            inputs["auto_improve_readiness"], fingerprint
-        ),
-        "auto_improve_can_execute_trial": auto["can_execute_trial"],
-        "auto_improve_stage3_promotion_blockers_clear": (
-            int(auto["stage3_blocking_promotion_blocker_count"]) == 0
-        ),
-        "auto_improve_learning_claim_blockers_clear": (
-            int(auto["unaccepted_learning_claim_blocker_count"]) == 0
-        ),
-        "auto_improve_clean_release_blockers_clear": (
-            int(auto["clean_release_blocker_count"]) == 0
-        ),
-        "remediation_backlog_load_ok": inputs["remediation_backlog"]["load_status"] == "ok",
-        "remediation_backlog_artifact_kind_ok": (
-            inputs["remediation_backlog"]["artifact_kind"] == "remediation_backlog"
-        ),
-        "remediation_backlog_current": _identity_current(inputs["remediation_backlog"], fingerprint),
-        "remediation_backlog_promotion_clear": int(remediation["open_promotion_count"]) == 0,
-        "learning_revalidation_load_ok": inputs["learning_revalidation"]["load_status"] == "ok",
-        "learning_revalidation_artifact_kind_ok": (
-            inputs["learning_revalidation"]["artifact_kind"]
-            == "learning_readiness_signoff_revalidation"
-        ),
-        "learning_revalidation_current_source": _identity_current(
-            inputs["learning_revalidation"], fingerprint
-        ),
-        "learning_revalidation_current": (
-            str(learning["revalidation_status"]) in ALLOWED_LEARNING_REVALIDATION_STATUSES
-        ),
-        "closeout_summary_load_ok": True,
-        "closeout_summary_artifact_kind_ok": True,
-        "closeout_summary_current": True,
-        "closeout_summary_clean": True,
-        "closeout_accepted_risk_clean": True,
-        "closeout_gate_attention_clean": True,
-        "closeout_source_tree_coherence_clean": True,
-        "evidence_cohort_load_ok": True,
-        "evidence_cohort_artifact_kind_ok": True,
-        "evidence_cohort_current": True,
-        "evidence_cohort_strict": True,
-    }
-    if phase == "preseal":
-        checks.update(
-            {
-                "closeout_summary_load_ok": inputs["closeout_summary"]["load_status"] == "ok",
-                "closeout_summary_artifact_kind_ok": (
-                    inputs["closeout_summary"]["artifact_kind"] == "release_closeout_summary"
-                ),
-                "closeout_summary_current": _identity_current(inputs["closeout_summary"], fingerprint),
-                "closeout_summary_clean": (
-                    closeout["status"] == "pass"
-                    and closeout["release_authority_status"] == "clean_pass"
-                    and bool(closeout["machine_release_allowed"])
-                    and bool(closeout["clean_release_ready"])
-                ),
-                "closeout_accepted_risk_clean": (
-                    int(closeout["release_blocking_risk_family_count"]) == 0
-                ),
-                "closeout_gate_attention_clean": (
-                    int(closeout["gate_attention_count"]) == 0
-                ),
-                "closeout_source_tree_coherence_clean": (
-                    closeout["source_tree_coherence_status"] == "pass"
-                ),
-                "evidence_cohort_load_ok": inputs["evidence_cohort"]["load_status"] == "ok",
-                "evidence_cohort_artifact_kind_ok": (
-                    inputs["evidence_cohort"]["artifact_kind"] == "release_evidence_cohort"
-                ),
-                "evidence_cohort_current": _identity_current(inputs["evidence_cohort"], fingerprint),
-                "evidence_cohort_strict": (
-                    bool(cohort["strict_same_fingerprint"])
-                    and cohort["clean_lane_contract_status"] == "pass"
-                ),
-            }
-        )
-
+    checks = _preflight_checks(
+        inputs,
+        phase=phase,
+        identity=identity,
+        auto=auto,
+        remediation=remediation,
+        learning=learning,
+        closeout=closeout,
+        cohort=cohort,
+        fingerprint=fingerprint,
+    )
+    requirements = _preflight_requirements(
+        checks,
+        inputs,
+        phase=phase,
+        identity=identity,
+        auto=auto,
+        remediation=remediation,
+        learning=learning,
+        closeout=closeout,
+        cohort=cohort,
+        fingerprint=fingerprint,
+    )
     blockers: list[dict[str, Any]] = []
-    _require(
-        blockers,
-        passed=checks["goal_run_identity_load_ok"],
-        blocker_id="goal_run_identity_not_loadable",
-        source="goal_run_identity",
-        field_path="$.load_status",
-        observed=inputs["goal_run_identity"]["load_status"],
-        expected="ok",
-        summary="Release auto-promotion goal-run identity evidence is missing or invalid.",
-        recommended_next_step="Run make release-auto-promotion-goal-run-id-guard with explicit GOAL_RUN_ID.",
-    )
-    _require(
-        blockers,
-        passed=checks["goal_run_identity_artifact_kind_ok"],
-        blocker_id="goal_run_identity_artifact_kind_invalid",
-        source="goal_run_identity",
-        field_path="$.artifact_kind",
-        observed=inputs["goal_run_identity"]["artifact_kind"],
-        expected="release_goal_run_identity",
-        summary="Goal-run identity evidence has an unexpected artifact kind.",
-        recommended_next_step="Regenerate release auto-promotion goal-run identity evidence.",
-    )
-    _require(
-        blockers,
-        passed=checks["goal_run_identity_current"],
-        blocker_id="goal_run_identity_stale",
-        source="goal_run_identity",
-        field_path="$.source_tree_fingerprint",
-        observed=inputs["goal_run_identity"]["source_tree_fingerprint"],
-        expected=fingerprint,
-        summary="Goal-run identity evidence does not describe the current source tree.",
-        recommended_next_step="Rerun make release-auto-promotion-goal-run-id-guard.",
-    )
-    _require(
-        blockers,
-        passed=checks["goal_run_identity_pass"],
-        blocker_id="goal_run_identity_not_pass",
-        source="goal_run_identity",
-        field_path="$.status|$.failures",
-        observed=f"status={identity['status']}; failures={identity['failure_count']}",
-        expected="status=pass; failures=0",
-        summary="The selected GOAL_RUN_ID is not verified release auto-promotion evidence.",
-        recommended_next_step="Use an explicit GOAL_RUN_ID that matches the promoted run status and certificate.",
-    )
-    _require(
-        blockers,
-        passed=checks["goal_run_identity_effective_run_id_present"],
-        blocker_id="goal_run_identity_missing_effective_run_id",
-        source="goal_run_identity",
-        field_path="$.effective_run_id",
-        observed=identity["effective_run_id"],
-        expected="non-empty run id",
-        summary="Goal-run identity evidence does not name the selected run.",
-        recommended_next_step="Rerun with GOAL_RUN_ID=<promoted-run-id>.",
-    )
-    _require(
-        blockers,
-        passed=checks["auto_improve_readiness_load_ok"],
-        blocker_id="auto_improve_readiness_not_loadable",
-        source="auto_improve_readiness",
-        field_path="$.load_status",
-        observed=inputs["auto_improve_readiness"]["load_status"],
-        expected="ok",
-        summary="Auto-improve readiness diagnostics are missing or invalid.",
-        recommended_next_step="Run make auto-improve-readiness-report-body.",
-    )
-    _require(
-        blockers,
-        passed=checks["auto_improve_readiness_artifact_kind_ok"],
-        blocker_id="auto_improve_readiness_artifact_kind_invalid",
-        source="auto_improve_readiness",
-        field_path="$.artifact_kind",
-        observed=inputs["auto_improve_readiness"]["artifact_kind"],
-        expected="auto_improve_readiness_report",
-        summary="Auto-improve readiness diagnostics have an unexpected artifact kind.",
-        recommended_next_step="Regenerate auto-improve readiness diagnostics.",
-    )
-    _require(
-        blockers,
-        passed=checks["auto_improve_readiness_current"],
-        blocker_id="auto_improve_readiness_stale",
-        source="auto_improve_readiness",
-        field_path="$.source_tree_fingerprint",
-        observed=inputs["auto_improve_readiness"]["source_tree_fingerprint"],
-        expected=fingerprint,
-        summary="Auto-improve readiness does not describe the current source tree.",
-        recommended_next_step="Run make release-auto-promotion-preflight.",
-    )
-    _require(
-        blockers,
-        passed=checks["auto_improve_can_execute_trial"],
-        blocker_id="auto_improve_trial_not_executable",
-        source="auto_improve_readiness",
-        field_path="$.can_execute_trial",
-        observed=auto["can_execute_trial"],
-        expected="true",
-        summary="The auto-improve lane cannot execute a trial.",
-        recommended_next_step="Refresh auto-improve readiness and resolve execution blockers.",
-    )
-    _require(
-        blockers,
-        passed=checks["auto_improve_stage3_promotion_blockers_clear"],
-        blocker_id="auto_improve_independent_promotion_blockers_open",
-        source="auto_improve_readiness",
-        field_path="$.promotion_blockers[?scope!='release_gate']",
-        observed=auto["stage3_blocking_promotion_blocker_count"],
-        expected="0",
-        summary="Auto-improve readiness has independent promotion blockers.",
-        recommended_next_step="Resolve non-release-gate auto-improve promotion blockers before sealing.",
-    )
-    _require(
-        blockers,
-        passed=checks["auto_improve_learning_claim_blockers_clear"],
-        blocker_id="auto_improve_learning_claim_blockers_open",
-        source="auto_improve_readiness",
-        field_path="$.learning_claim_blockers",
-        observed=auto["learning_claim_blocker_count"],
-        expected="0",
-        summary="Learning-claim blockers are still open for unattended promotion.",
-        recommended_next_step="Resolve or renew learning readiness before running expensive release stages.",
-    )
-    _require(
-        blockers,
-        passed=checks["auto_improve_clean_release_blockers_clear"],
-        blocker_id="auto_improve_clean_release_blockers_open",
-        source="auto_improve_readiness",
-        field_path="$.clean_release_blockers",
-        observed=auto["clean_release_blocker_count"],
-        expected="0",
-        summary="Clean-release blockers are still open.",
-        recommended_next_step="Resolve clean-release blockers before sealing.",
-    )
-    _require(
-        blockers,
-        passed=checks["remediation_backlog_load_ok"],
-        blocker_id="remediation_backlog_not_loadable",
-        source="remediation_backlog",
-        field_path="$.load_status",
-        observed=inputs["remediation_backlog"]["load_status"],
-        expected="ok",
-        summary="Remediation backlog evidence is missing or invalid.",
-        recommended_next_step="Run make remediation-backlog.",
-    )
-    _require(
-        blockers,
-        passed=checks["remediation_backlog_artifact_kind_ok"],
-        blocker_id="remediation_backlog_artifact_kind_invalid",
-        source="remediation_backlog",
-        field_path="$.artifact_kind",
-        observed=inputs["remediation_backlog"]["artifact_kind"],
-        expected="remediation_backlog",
-        summary="Remediation backlog evidence has an unexpected artifact kind.",
-        recommended_next_step="Regenerate remediation backlog evidence.",
-    )
-    _require(
-        blockers,
-        passed=checks["remediation_backlog_current"],
-        blocker_id="remediation_backlog_stale",
-        source="remediation_backlog",
-        field_path="$.source_tree_fingerprint",
-        observed=inputs["remediation_backlog"]["source_tree_fingerprint"],
-        expected=fingerprint,
-        summary="Remediation backlog does not describe the current source tree.",
-        recommended_next_step="Run make remediation-backlog.",
-    )
-    _require(
-        blockers,
-        passed=checks["remediation_backlog_promotion_clear"],
-        blocker_id="remediation_backlog_promotion_open",
-        source="remediation_backlog",
-        field_path="$.summary.open_promotion_count",
-        observed=remediation["open_promotion_count"],
-        expected="0",
-        summary="Promotion-blocking remediation backlog items are open.",
-        recommended_next_step="Close or defer promotion-blocking remediation items before run-ready.",
-    )
-    _require(
-        blockers,
-        passed=checks["learning_revalidation_load_ok"],
-        blocker_id="learning_revalidation_not_loadable",
-        source="learning_revalidation",
-        field_path="$.load_status",
-        observed=inputs["learning_revalidation"]["load_status"],
-        expected="ok",
-        summary="Learning revalidation evidence is missing or invalid.",
-        recommended_next_step="Run make learning-readiness-signoff-revalidation.",
-    )
-    _require(
-        blockers,
-        passed=checks["learning_revalidation_artifact_kind_ok"],
-        blocker_id="learning_revalidation_artifact_kind_invalid",
-        source="learning_revalidation",
-        field_path="$.artifact_kind",
-        observed=inputs["learning_revalidation"]["artifact_kind"],
-        expected="learning_readiness_signoff_revalidation",
-        summary="Learning revalidation evidence has an unexpected artifact kind.",
-        recommended_next_step="Regenerate learning revalidation evidence.",
-    )
-    _require(
-        blockers,
-        passed=checks["learning_revalidation_current_source"],
-        blocker_id="learning_revalidation_stale",
-        source="learning_revalidation",
-        field_path="$.source_tree_fingerprint",
-        observed=inputs["learning_revalidation"]["source_tree_fingerprint"],
-        expected=fingerprint,
-        summary="Learning revalidation does not describe the current source tree.",
-        recommended_next_step="Run make learning-readiness-signoff-revalidation.",
-    )
-    _require(
-        blockers,
-        passed=checks["learning_revalidation_current"],
-        blocker_id="learning_revalidation_due",
-        source="learning_revalidation",
-        field_path="$.revalidation.status",
-        observed=learning["revalidation_status"],
-        expected="one of current, fresh, metrics_close_candidate, not_due, not_required, pass",
-        summary="Learning revalidation is not current enough for unattended promotion.",
-        recommended_next_step="Renew or resolve learning readiness before spending run/seal cycles.",
-    )
-
-    if phase == "preseal":
-        _require(
-            blockers,
-            passed=checks["closeout_summary_load_ok"],
-            blocker_id="closeout_summary_not_loadable",
-            source="closeout_summary",
-            field_path="$.load_status",
-            observed=inputs["closeout_summary"]["load_status"],
-            expected="ok",
-            summary="Release closeout summary is missing or invalid.",
-            recommended_next_step="Run make release-closeout-summary-report.",
-        )
-        _require(
-            blockers,
-            passed=checks["closeout_summary_artifact_kind_ok"],
-            blocker_id="closeout_summary_artifact_kind_invalid",
-            source="closeout_summary",
-            field_path="$.artifact_kind",
-            observed=inputs["closeout_summary"]["artifact_kind"],
-            expected="release_closeout_summary",
-            summary="Release closeout summary has an unexpected artifact kind.",
-            recommended_next_step="Regenerate release closeout summary evidence.",
-        )
-        _require(
-            blockers,
-            passed=checks["closeout_summary_current"],
-            blocker_id="closeout_summary_stale",
-            source="closeout_summary",
-            field_path="$.source_tree_fingerprint",
-            observed=inputs["closeout_summary"]["source_tree_fingerprint"],
-            expected=fingerprint,
-            summary="Release closeout summary does not describe the current source tree.",
-            recommended_next_step="Run make release-auto-promotion-preseal.",
-        )
-        _require(
-            blockers,
-            passed=checks["closeout_summary_clean"],
-            blocker_id="closeout_summary_not_clean",
-            source="closeout_summary",
-            field_path="$.release_authority_status|$.machine_release_allowed|$.clean_release_ready",
-            observed=(
-                f"release_authority_status={closeout['release_authority_status']};"
-                f"machine_release_allowed={closeout['machine_release_allowed']};"
-                f"clean_release_ready={closeout['clean_release_ready']}"
-            ),
-            expected="release_authority_status=clean_pass; machine_release_allowed=true; clean_release_ready=true",
-            summary="Release closeout is not clean enough for unattended promotion.",
-            recommended_next_step="Resolve closeout blockers before sealing promotion evidence.",
-        )
-        _require(
-            blockers,
-            passed=checks["closeout_accepted_risk_clean"],
-            blocker_id="closeout_accepted_risk_not_clean",
-            source="closeout_summary",
-            field_path="$.summary.accepted_risk_instance_count|$.summary.release_blocking_risk_family_count",
-            observed=(
-                f"accepted={closeout['accepted_risk_instance_count']};"
-                f"release_blocking={closeout['release_blocking_risk_family_count']}"
-            ),
-            expected="release_blocking=0; advisory accepted risks may remain diagnostic",
-            summary="Closeout has accepted-risk families that still block the clean release lane.",
-            recommended_next_step="Resolve clean-lane blocking release risks before sealing.",
-        )
-        _require(
-            blockers,
-            passed=checks["closeout_gate_attention_clean"],
-            blocker_id="closeout_gate_attention_not_clean",
-            source="closeout_summary",
-            field_path="$.summary.gate_attention_count",
-            observed=closeout["gate_attention_count"],
-            expected="0",
-            summary="Closeout gate-attention count is not clean.",
-            recommended_next_step="Resolve gate attention before sealing promotion evidence.",
-        )
-        _require(
-            blockers,
-            passed=checks["closeout_source_tree_coherence_clean"],
-            blocker_id="closeout_source_tree_coherence_not_clean",
-            source="closeout_summary",
-            field_path="$.summary.source_tree_coherence_status",
-            observed=closeout["source_tree_coherence_status"],
-            expected="pass",
-            summary="Closeout source-tree coherence is not clean.",
-            recommended_next_step="Refresh lower release evidence into one source-tree cohort before sealing.",
-        )
-        _require(
-            blockers,
-            passed=checks["evidence_cohort_load_ok"],
-            blocker_id="evidence_cohort_not_loadable",
-            source="evidence_cohort",
-            field_path="$.load_status",
-            observed=inputs["evidence_cohort"]["load_status"],
-            expected="ok",
-            summary="Release evidence cohort is missing or invalid.",
-            recommended_next_step="Run make release-evidence-cohort.",
-        )
-        _require(
-            blockers,
-            passed=checks["evidence_cohort_artifact_kind_ok"],
-            blocker_id="evidence_cohort_artifact_kind_invalid",
-            source="evidence_cohort",
-            field_path="$.artifact_kind",
-            observed=inputs["evidence_cohort"]["artifact_kind"],
-            expected="release_evidence_cohort",
-            summary="Release evidence cohort has an unexpected artifact kind.",
-            recommended_next_step="Regenerate release evidence cohort evidence.",
-        )
-        _require(
-            blockers,
-            passed=checks["evidence_cohort_current"],
-            blocker_id="evidence_cohort_stale",
-            source="evidence_cohort",
-            field_path="$.source_tree_fingerprint",
-            observed=inputs["evidence_cohort"]["source_tree_fingerprint"],
-            expected=fingerprint,
-            summary="Release evidence cohort does not describe the current source tree.",
-            recommended_next_step="Run make release-evidence-cohort.",
-        )
-        _require(
-            blockers,
-            passed=checks["evidence_cohort_strict"],
-            blocker_id="evidence_cohort_not_strict",
-            source="evidence_cohort",
-            field_path="$.cohort.strict_same_fingerprint|$.summary.clean_lane_contract_status",
-            observed=(
-                f"strict_same_fingerprint={cohort['strict_same_fingerprint']};"
-                f"clean_lane_contract_status={cohort['clean_lane_contract_status']}"
-            ),
-            expected="strict_same_fingerprint=true; clean_lane_contract_status=pass",
-            summary="Release evidence cohort is not strict enough for unattended promotion.",
-            recommended_next_step="Refresh release evidence into one strict source-tree cohort before sealing.",
-        )
+    append_requirement_blockers(blockers, requirements)
 
     status = "pass" if not blockers else "fail"
-    return {
-        "$schema": SCHEMA_PATH,
-        "artifact_kind": "release_auto_promotion_preflight",
-        "generated_at": generated_at,
-        "producer": PRODUCER,
-        "source_command": SOURCE_COMMAND,
-        "source_revision": commit,
-        "source_tree_fingerprint": fingerprint,
-        "input_fingerprints": {key: str(value["sha256"]) for key, value in inputs.items()},
-        "schema_version": 1,
-        "artifact_status": "current",
-        "retention_policy": "release_sidecar_diagnostic",
-        "encoding": "utf-8",
-        "currentness": {"status": "current", "checked_at": generated_at},
-        "phase": phase,
-        "status": status,
+    diagnostics = {
         "goal_run_identity": identity,
-        "inputs": inputs,
-        "diagnostics": {
-            "goal_run_identity": identity,
-            "auto_improve": auto,
-            "remediation_backlog": remediation,
-            "learning_revalidation": learning,
-            "closeout_summary": closeout,
-            "evidence_cohort": cohort,
-        },
-        "checks": checks,
-        "blockers": blockers,
-        "failures": _unique_failures([str(blocker["id"]) for blocker in blockers]),
+        "auto_improve": auto,
+        "remediation_backlog": remediation,
+        "learning_revalidation": learning,
+        "closeout_summary": closeout,
+        "evidence_cohort": cohort,
     }
+    return _preflight_manifest_payload(
+        generated_at=generated_at,
+        commit=commit,
+        fingerprint=fingerprint,
+        phase=phase,
+        status=status,
+        inputs=inputs,
+        goal_run_identity=identity,
+        diagnostics=diagnostics,
+        checks=checks,
+        blockers=blockers,
+    )
 
 
 def write_manifest(vault: Path, manifest: dict[str, Any], out_path: str | None) -> Path:

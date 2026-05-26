@@ -5,7 +5,7 @@ import hashlib
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from ops.scripts.policy_runtime import report_path
 from ops.scripts.runtime_context import RuntimeContext
@@ -2127,7 +2127,81 @@ def sealed_preflight_canonicalization_status(
     return "requires_release_run_verification"
 
 
-def status_from_evidence(vault: Path, action: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
+StatusResolver = Callable[[Path], str]
+CountStatusResolver = Callable[[Path, int, int], str]
+
+
+def external_report_lifecycle_status(vault: Path) -> str:
+    alignment = reference_manifest_alignment(vault)
+    if alignment["status"] == "current":
+        return "implemented"
+    if (vault / REFERENCE_MANIFEST).exists():
+        return "partially_automated"
+    return "planned"
+
+
+STATUS_RESOLVERS: dict[str, StatusResolver] = {
+    "release_writer_dependency_single_source": single_source_status,
+    "outcome_provenance_gate_policy": lambda vault: json_report_status(
+        vault / "ops/reports/outcome-provenance-gate-policy.json"
+    ),
+    "external_report_lifecycle": external_report_lifecycle_status,
+    "active_report_manifest_freshness": active_report_manifest_freshness_status,
+    "release_lane_mutability_split": release_lane_mutability_split_status,
+    "sealed_summary_vocabulary_demotion": sealed_summary_vocabulary_demotion_status,
+    "selector_marker_scope_parity": selector_marker_scope_parity_status,
+}
+
+COUNT_STATUS_RESOLVERS: dict[str, CountStatusResolver] = {
+    "source_revision_unknown_canonical_reports": source_revision_unknown_canonical_reports_status,
+    "ruff_strict_preview_import_order": ruff_strict_preview_import_order_status,
+    "release_source_ready_deindex_hardening": release_source_ready_deindex_hardening_status,
+    "uv_lock_canonical_policy": uv_lock_canonical_policy_status,
+    "operator_entrypoint_index": operator_entrypoint_index_status,
+    "strict_preview_all_target_audit": strict_preview_all_target_audit_status,
+    "command_heartbeat_observability": command_heartbeat_observability_status,
+    "sealed_preflight_canonicalization": sealed_preflight_canonicalization_status,
+    "goal_contract_schema": goal_contract_schema_status,
+    "codex_goal_adapter": codex_goal_adapter_status,
+    "codex_goal_prompt_generator": codex_goal_prompt_generator_status,
+    "auto_improve_goal_contract_input": auto_improve_goal_contract_input_status,
+    "goal_run_status_audit_resume": goal_run_status_audit_resume_status,
+    "goal_execution_runtime_certificate": goal_execution_runtime_certificate_status,
+    "goal_executor_backoff_observability": goal_executor_backoff_observability_status,
+    "selected_contract_currentness_gate": selected_contract_currentness_gate_status,
+    "git_worktree_goal_guard": git_worktree_goal_guard_status,
+    "goal_runtime_transient_cleanup_gate": goal_runtime_transient_cleanup_gate_status,
+    "artifact_freshness_performance_observability": artifact_freshness_performance_observability_status,
+    "repo_boundary_history_hygiene": repo_boundary_history_hygiene_status,
+    "github_native_security_automation": github_native_security_automation_status,
+    "maintainability_hotspot_refactor_backlog": maintainability_hotspot_refactor_backlog_status,
+    "generated_artifact_tracking_policy": generated_artifact_tracking_policy_status,
+    "public_export_negative_assertions": public_export_negative_assertions_status,
+    "supply_chain_external_verification": supply_chain_external_verification_status,
+    "collaboration_governance_surface": collaboration_governance_surface_status,
+}
+
+ALL_EVIDENCE_OR_PLANNED_ACTION_IDS = {
+    "script_output_surfaces_currentness",
+    "function_budget_proposal_adapter",
+    "windows_path_and_archive_alias_parity",
+}
+
+IMPLEMENTED_ARTIFACT_ACTIONS = {
+    "negative_learning_ledger": (
+        "ops/reports/self-improvement-negative-lessons.json",
+        "self_improvement_negative_lessons",
+    ),
+    "remediation_backlog": (
+        "ops/reports/remediation-backlog.json",
+        "remediation_backlog",
+    ),
+}
+
+
+def _collect_action_evidence(
+    vault: Path, action: dict[str, Any]
+) -> tuple[list[dict[str, Any]], int, int]:
     evidence = []
     existing_count = 0
     for rel_path in action["evidence_paths"]:
@@ -2143,225 +2217,70 @@ def status_from_evidence(vault: Path, action: dict[str, Any]) -> tuple[str, list
                 "producer": str(payload.get("producer", "")) if payload else "",
             }
         )
+    return evidence, existing_count, len(action["evidence_paths"])
+
+
+def _implemented_artifact_status(
+    vault: Path,
+    existing_count: int,
+    expected_count: int,
+    *,
+    rel_path: str,
+    artifact_kind: str,
+) -> str:
+    if existing_count == expected_count and _implemented_artifact_report(vault, rel_path, artifact_kind):
+        return "implemented"
+    if existing_count:
+        return "partially_automated"
+    return "planned"
+
+
+def _default_evidence_status(existing_count: int, expected_count: int) -> str:
+    if existing_count == expected_count:
+        return "requires_release_run_verification"
+    if existing_count:
+        return "partially_automated"
+    return "planned"
+
+
+def _resolve_action_status(
+    vault: Path,
+    action_id: str,
+    *,
+    existing_count: int,
+    expected_count: int,
+) -> str:
+    if action_id in STATUS_RESOLVERS:
+        return STATUS_RESOLVERS[action_id](vault)
+    if action_id in COUNT_STATUS_RESOLVERS:
+        return COUNT_STATUS_RESOLVERS[action_id](vault, existing_count, expected_count)
+    if action_id in ROADMAP_SOURCE_ONLY_ACTION_IDS:
+        return roadmap_source_only_status(existing_count, expected_count)
+    if action_id in ALL_EVIDENCE_OR_PLANNED_ACTION_IDS:
+        return "implemented" if existing_count == expected_count else "planned"
+    if action_id in IMPLEMENTED_ARTIFACT_ACTIONS:
+        rel_path, artifact_kind = IMPLEMENTED_ARTIFACT_ACTIONS[action_id]
+        return _implemented_artifact_status(
+            vault,
+            existing_count,
+            expected_count,
+            rel_path=rel_path,
+            artifact_kind=artifact_kind,
+        )
+    if action_id in RELEASE_VERIFIED_ACTION_IDS and existing_count == expected_count:
+        return "implemented" if release_run_verified(vault) else "requires_release_run_verification"
+    return _default_evidence_status(existing_count, expected_count)
+
+
+def status_from_evidence(vault: Path, action: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
+    evidence, existing_count, expected_count = _collect_action_evidence(vault, action)
     action_id = str(action["action_id"])
-    if action_id == "release_writer_dependency_single_source":
-        status = single_source_status(vault)
-    elif action_id == "outcome_provenance_gate_policy":
-        status = json_report_status(vault / "ops/reports/outcome-provenance-gate-policy.json")
-    elif action_id == "external_report_lifecycle":
-        alignment = reference_manifest_alignment(vault)
-        if alignment["status"] == "current":
-            status = "implemented"
-        elif (vault / REFERENCE_MANIFEST).exists():
-            status = "partially_automated"
-        else:
-            status = "planned"
-    elif action_id == "active_report_manifest_freshness":
-        status = active_report_manifest_freshness_status(vault)
-    elif action_id == "source_revision_unknown_canonical_reports":
-        status = source_revision_unknown_canonical_reports_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "release_lane_mutability_split":
-        status = release_lane_mutability_split_status(vault)
-    elif action_id == "sealed_summary_vocabulary_demotion":
-        status = sealed_summary_vocabulary_demotion_status(vault)
-    elif action_id == "selector_marker_scope_parity":
-        status = selector_marker_scope_parity_status(vault)
-    elif action_id == "ruff_strict_preview_import_order":
-        status = ruff_strict_preview_import_order_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "release_source_ready_deindex_hardening":
-        status = release_source_ready_deindex_hardening_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "uv_lock_canonical_policy":
-        status = uv_lock_canonical_policy_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "operator_entrypoint_index":
-        status = operator_entrypoint_index_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "strict_preview_all_target_audit":
-        status = strict_preview_all_target_audit_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id in ROADMAP_SOURCE_ONLY_ACTION_IDS:
-        status = roadmap_source_only_status(existing_count, len(action["evidence_paths"]))
-    elif action_id in {
-        "script_output_surfaces_currentness",
-        "function_budget_proposal_adapter",
-        "windows_path_and_archive_alias_parity",
-    }:
-        status = "implemented" if existing_count == len(action["evidence_paths"]) else "planned"
-    elif action_id == "negative_learning_ledger":
-        status = (
-            "implemented"
-            if existing_count == len(action["evidence_paths"])
-            and _implemented_artifact_report(
-                vault,
-                "ops/reports/self-improvement-negative-lessons.json",
-                "self_improvement_negative_lessons",
-            )
-            else "partially_automated"
-            if existing_count
-            else "planned"
-        )
-    elif action_id == "remediation_backlog":
-        status = (
-            "implemented"
-            if existing_count == len(action["evidence_paths"])
-            and _implemented_artifact_report(
-                vault,
-                "ops/reports/remediation-backlog.json",
-                "remediation_backlog",
-            )
-            else "partially_automated"
-            if existing_count
-            else "planned"
-        )
-    elif action_id == "command_heartbeat_observability":
-        status = command_heartbeat_observability_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "sealed_preflight_canonicalization":
-        status = sealed_preflight_canonicalization_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "goal_contract_schema":
-        status = goal_contract_schema_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "codex_goal_adapter":
-        status = codex_goal_adapter_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "codex_goal_prompt_generator":
-        status = codex_goal_prompt_generator_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "auto_improve_goal_contract_input":
-        status = auto_improve_goal_contract_input_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "goal_run_status_audit_resume":
-        status = goal_run_status_audit_resume_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "goal_execution_runtime_certificate":
-        status = goal_execution_runtime_certificate_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "goal_executor_backoff_observability":
-        status = goal_executor_backoff_observability_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "selected_contract_currentness_gate":
-        status = selected_contract_currentness_gate_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "git_worktree_goal_guard":
-        status = git_worktree_goal_guard_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "goal_runtime_transient_cleanup_gate":
-        status = goal_runtime_transient_cleanup_gate_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "artifact_freshness_performance_observability":
-        status = artifact_freshness_performance_observability_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "repo_boundary_history_hygiene":
-        status = repo_boundary_history_hygiene_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "github_native_security_automation":
-        status = github_native_security_automation_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "maintainability_hotspot_refactor_backlog":
-        status = maintainability_hotspot_refactor_backlog_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "generated_artifact_tracking_policy":
-        status = generated_artifact_tracking_policy_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "public_export_negative_assertions":
-        status = public_export_negative_assertions_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "supply_chain_external_verification":
-        status = supply_chain_external_verification_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id == "collaboration_governance_surface":
-        status = collaboration_governance_surface_status(
-            vault,
-            existing_count,
-            len(action["evidence_paths"]),
-        )
-    elif action_id in RELEASE_VERIFIED_ACTION_IDS and existing_count == len(action["evidence_paths"]):
-        status = "implemented" if release_run_verified(vault) else "requires_release_run_verification"
-    elif existing_count == len(action["evidence_paths"]):
-        status = "requires_release_run_verification"
-    elif existing_count:
-        status = "partially_automated"
-    else:
-        status = "planned"
+    status = _resolve_action_status(
+        vault,
+        action_id,
+        existing_count=existing_count,
+        expected_count=expected_count,
+    )
     return status, evidence
 
 
