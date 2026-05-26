@@ -46,6 +46,7 @@ DEFAULT_OUT = "ops/reports/supply-chain-provenance.json"
 CI_WORKFLOW_PATH = ".github/workflows/ci.yml"
 LOCKED_REQUIREMENTS_EXPORT_PATH = "tmp/locked-requirements.ci.txt"
 SOURCE_PACKAGE_CLEAN_EXTRACT_REPORT_PATH = "ops/reports/source-package-clean-extract.json"
+UV_LOCK_CHECK_COMMAND = "uv lock --check"
 DEPENDENCY_INPUTS = (
     "pyproject.toml",
     "requirements.txt",
@@ -279,6 +280,8 @@ def ci_install_proof(vault: Path) -> dict:
         "workflow_sha256": "",
         "install_commands": [],
         "locked_requirements_path": LOCKED_REQUIREMENTS_EXPORT_PATH,
+        "lock_check_commands": [],
+        "checks_uv_lock_freshness": False,
         "exports_frozen_uv_lock": False,
         "installs_locked_requirements": False,
         "installs_requirements_dev": False,
@@ -291,8 +294,13 @@ def ci_install_proof(vault: Path) -> dict:
 
     content = path.read_text(encoding="utf-8")
     command_lines = []
+    lock_check_commands = []
     exports_frozen_uv_lock = False
+    checks_uv_lock_freshness = False
     for line in content.splitlines():
+        if _line_has_tokens(line, ("uv lock", "--check")):
+            checks_uv_lock_freshness = True
+            lock_check_commands.append(line.strip())
         if _line_has_tokens(line, ("uv export", "--frozen", LOCKED_REQUIREMENTS_EXPORT_PATH)):
             exports_frozen_uv_lock = True
         match = PIP_INSTALL_LINE_PATTERN.search(line)
@@ -311,6 +319,8 @@ def ci_install_proof(vault: Path) -> dict:
             "workflow_exists": True,
             "workflow_sha256": sha256_file(path),
             "install_commands": command_lines,
+            "lock_check_commands": lock_check_commands,
+            "checks_uv_lock_freshness": checks_uv_lock_freshness,
             "exports_frozen_uv_lock": exports_frozen_uv_lock,
             "installs_locked_requirements": installs_locked_requirements,
             "installs_requirements_dev": installs_requirements_dev,
@@ -322,14 +332,24 @@ def ci_install_proof(vault: Path) -> dict:
     return proof
 
 
-def lock_evidence(inputs: list[dict], uv_lock_status: dict) -> dict:
+def lock_evidence(inputs: list[dict], uv_lock_status: dict, ci_proof: dict) -> dict:
     uv_lock_input = next((item for item in inputs if item["path"] == "uv.lock"), None)
+    uv_lock_exists = bool(uv_lock_input and uv_lock_input.get("exists"))
+    checks_uv_lock_freshness = bool(ci_proof.get("checks_uv_lock_freshness"))
+    if not uv_lock_exists:
+        lock_check_status = "missing_lockfile"
+    elif checks_uv_lock_freshness:
+        lock_check_status = "enforced"
+    else:
+        lock_check_status = "missing_ci_check"
     return {
         "path": "uv.lock",
-        "exists": bool(uv_lock_input and uv_lock_input.get("exists")),
+        "exists": uv_lock_exists,
         "sha256": "" if uv_lock_input is None else str(uv_lock_input.get("sha256", "")),
         "parser_status": uv_lock_status,
-        "note": "uv.lock is canonical lock evidence; replay requires frozen locked-requirements install proof.",
+        "lock_check_status": lock_check_status,
+        "lock_check_command": UV_LOCK_CHECK_COMMAND if checks_uv_lock_freshness else "",
+        "note": "uv.lock is canonical lock evidence; replay requires uv lock --check plus frozen locked-requirements install proof.",
     }
 
 
@@ -421,7 +441,9 @@ def build_report(
     has_non_pass = any(item["parser_status"]["status"] != "pass" for item in inputs)
     status = "fail" if has_error else ("warn" if has_non_pass else "pass")
     ci_proof = ci_install_proof(vault)
-    uv_lock_evidence = lock_evidence(inputs, uv_lock_status)
+    uv_lock_evidence = lock_evidence(inputs, uv_lock_status, ci_proof)
+    if status == "pass" and uv_lock_evidence["lock_check_status"] != "enforced":
+        status = "fail"
     source_package = source_package_evidence(vault)
     if status == "pass" and source_package["status"] in {"fail", "error"}:
         status = "warn"
@@ -446,8 +468,8 @@ def build_report(
         "source_package_evidence": source_package,
         "release_manifest": release_manifest_summary(vault),
         "provenance_notes": [
-            "CI install proof is recorded from .github/workflows/ci.yml and must show a frozen uv.lock export for release replay.",
-            "uv.lock is canonical dependency evidence only when paired with a frozen locked-requirements install.",
+            "CI install proof is recorded from .github/workflows/ci.yml and must show uv lock --check before frozen uv.lock export for release replay.",
+            "uv.lock is canonical dependency evidence only when paired with uv lock --check and a frozen locked-requirements install.",
             "source-package-clean-extract links SBOM/provenance evidence to a replayed source ZIP digest when that release check has run.",
             "This repo-native provenance report is audit evidence only; it does not sign artifacts or gate release/promotion.",
         ],

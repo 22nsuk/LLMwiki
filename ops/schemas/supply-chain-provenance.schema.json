@@ -369,6 +369,8 @@
         "workflow_sha256",
         "install_commands",
         "locked_requirements_path",
+        "lock_check_commands",
+        "checks_uv_lock_freshness",
         "exports_frozen_uv_lock",
         "installs_locked_requirements",
         "installs_requirements_dev",
@@ -394,6 +396,15 @@
         },
         "locked_requirements_path": {
           "type": "string"
+        },
+        "lock_check_commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "checks_uv_lock_freshness": {
+          "type": "boolean"
         },
         "exports_frozen_uv_lock": {
           "type": "boolean"
@@ -428,6 +439,8 @@
         "exists",
         "sha256",
         "parser_status",
+        "lock_check_status",
+        "lock_check_command",
         "note"
       ],
       "properties": {
@@ -442,6 +455,17 @@
         },
         "parser_status": {
           "$ref": "#/$defs/parser_status"
+        },
+        "lock_check_status": {
+          "type": "string",
+          "enum": [
+            "enforced",
+            "missing_ci_check",
+            "missing_lockfile"
+          ]
+        },
+        "lock_check_command": {
+          "type": "string"
         },
         "note": {
           "type": "string"

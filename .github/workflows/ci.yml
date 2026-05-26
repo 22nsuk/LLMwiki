@@ -60,6 +60,7 @@ jobs:
       - name: Install dependencies from lock
         run: |
           python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
+          uv lock --check
           uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
           python -m pip install --upgrade pip
           python -m pip install -r tmp/locked-requirements.ci.txt
@@ -184,6 +185,7 @@ jobs:
       - name: Install dependencies from lock
         run: |
           python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
+          uv lock --check
           uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
           python -m pip install --upgrade pip
           python -m pip install -r tmp/locked-requirements.ci.txt
@@ -251,6 +253,7 @@ jobs:
         shell: bash
         run: |
           python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
+          uv lock --check
           uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
           python -m pip install --upgrade pip
           python -m pip install -r tmp/locked-requirements.ci.txt
@@ -302,6 +305,7 @@ jobs:
       - name: Install dependencies from lock
         run: |
           python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
+          uv lock --check
           uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
           python -m pip install --upgrade pip
           python -m pip install -r tmp/locked-requirements.ci.txt
@@ -355,6 +359,7 @@ jobs:
       - name: Install dependencies from lock
         run: |
           python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
+          uv lock --check
           uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
           python -m pip install --upgrade pip
           python -m pip install -r tmp/locked-requirements.ci.txt

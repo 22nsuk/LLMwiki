@@ -4,8 +4,9 @@ import datetime as dt
 import hashlib
 import json
 import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from ops.scripts.policy_runtime import report_path
 from ops.scripts.runtime_context import RuntimeContext

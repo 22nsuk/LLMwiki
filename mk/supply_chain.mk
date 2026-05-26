@@ -19,7 +19,7 @@ supply-chain-provenance:
 sbom-export-mapping:
 	$(PYTHON) -m ops.scripts.sbom_export_mapping --vault "$(VAULT)" --out "$(SBOM_EXPORT_MAPPING_OUT)"
 
-supply-chain-check: supply-chain-provenance
+supply-chain-check: uv-lock-check supply-chain-provenance
 	$(PYTHON) -m ops.scripts.supply_chain_gate_runtime --vault "$(VAULT)"
 
 security-advisories:

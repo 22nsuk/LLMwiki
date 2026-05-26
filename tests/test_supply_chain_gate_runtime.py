@@ -29,6 +29,7 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
         (self.vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
         (self.vault / ".github" / "workflows").mkdir(parents=True, exist_ok=True)
         (self.vault / ".github" / "workflows" / "ci.yml").write_text(
+            "uv lock --check\n"
             "uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt\n"
             "python -m pip install -r tmp/locked-requirements.ci.txt\n",
             encoding="utf-8",
@@ -46,10 +47,16 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
         self._write_provenance(
             {
                 "inputs": [{"path": "pyproject.toml", "exists": True, "parser_status": {"status": "pass"}}],
-                "lock_evidence": {"path": "uv.lock", "parser_status": {"status": "pass"}},
+                "lock_evidence": {
+                    "path": "uv.lock",
+                    "parser_status": {"status": "pass"},
+                    "lock_check_status": "enforced",
+                    "lock_check_command": "uv lock --check",
+                },
                 "ci_install_proof": {
                     "workflow_path": ".github/workflows/ci.yml",
                     "workflow_exists": True,
+                    "checks_uv_lock_freshness": True,
                     "exports_frozen_uv_lock": True,
                     "installs_locked_requirements": True,
                     "install_resolution_mode": "canonical_lock_export",
@@ -65,10 +72,15 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
         self._write_provenance(
             {
                 "inputs": [{"path": "requirements-dev.txt", "exists": False, "parser_status": {"status": "missing"}}],
-                "lock_evidence": {"parser_status": {"status": "pass"}},
+                "lock_evidence": {
+                    "parser_status": {"status": "pass"},
+                    "lock_check_status": "enforced",
+                    "lock_check_command": "uv lock --check",
+                },
                 "ci_install_proof": {
                     "workflow_path": ".github/workflows/ci.yml",
                     "workflow_exists": True,
+                    "checks_uv_lock_freshness": True,
                     "exports_frozen_uv_lock": True,
                     "installs_locked_requirements": True,
                     "install_resolution_mode": "canonical_lock_export",
@@ -85,10 +97,16 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
         self._write_provenance(
             {
                 "inputs": [],
-                "lock_evidence": {"path": "uv.lock", "parser_status": {"status": "error"}},
+                "lock_evidence": {
+                    "path": "uv.lock",
+                    "parser_status": {"status": "error"},
+                    "lock_check_status": "enforced",
+                    "lock_check_command": "uv lock --check",
+                },
                 "ci_install_proof": {
                     "workflow_path": ".github/workflows/ci.yml",
                     "workflow_exists": True,
+                    "checks_uv_lock_freshness": True,
                     "exports_frozen_uv_lock": True,
                     "installs_locked_requirements": True,
                     "install_resolution_mode": "canonical_lock_export",
@@ -106,10 +124,16 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
         self._write_provenance(
             {
                 "inputs": [],
-                "lock_evidence": {"path": "uv.lock", "parser_status": {"status": "pass"}},
+                "lock_evidence": {
+                    "path": "uv.lock",
+                    "parser_status": {"status": "pass"},
+                    "lock_check_status": "enforced",
+                    "lock_check_command": "uv lock --check",
+                },
                 "ci_install_proof": {
                     "workflow_path": ".github/workflows/ci.yml",
                     "workflow_exists": True,
+                    "checks_uv_lock_freshness": True,
                     "exports_frozen_uv_lock": True,
                     "installs_locked_requirements": True,
                     "install_resolution_mode": "canonical_lock_export",
@@ -126,10 +150,16 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
         self._write_provenance(
             {
                 "inputs": [],
-                "lock_evidence": {"path": "uv.lock", "parser_status": {"status": "pass"}},
+                "lock_evidence": {
+                    "path": "uv.lock",
+                    "parser_status": {"status": "pass"},
+                    "lock_check_status": "enforced",
+                    "lock_check_command": "uv lock --check",
+                },
                 "ci_install_proof": {
                     "workflow_path": ".github/workflows/ci.yml",
                     "workflow_exists": True,
+                    "checks_uv_lock_freshness": True,
                     "exports_frozen_uv_lock": False,
                     "installs_locked_requirements": True,
                     "install_resolution_mode": "unknown",
@@ -141,6 +171,32 @@ class SupplyChainGateRuntimeTests(unittest.TestCase):
         report = build_gate_report(self.vault, context=fixed_context())
         self.assertEqual(report["status"], "fail")
         self.assertFalse(next(c["pass"] for c in report["checks"] if c["rule"] == "ci_install_note_drift"))
+
+    def test_gate_fails_when_uv_lock_check_is_not_enforced(self) -> None:
+        self._write_provenance(
+            {
+                "inputs": [],
+                "lock_evidence": {
+                    "path": "uv.lock",
+                    "parser_status": {"status": "pass"},
+                    "lock_check_status": "missing_ci_check",
+                    "lock_check_command": "",
+                },
+                "ci_install_proof": {
+                    "workflow_path": ".github/workflows/ci.yml",
+                    "workflow_exists": True,
+                    "checks_uv_lock_freshness": False,
+                    "exports_frozen_uv_lock": True,
+                    "installs_locked_requirements": True,
+                    "install_resolution_mode": "canonical_lock_export",
+                    "editable_install": True,
+                },
+            }
+        )
+
+        report = build_gate_report(self.vault, context=fixed_context())
+        self.assertEqual(report["status"], "fail")
+        self.assertFalse(next(c["pass"] for c in report["checks"] if c["rule"] == "uv_lock_freshness_enforced"))
 
 
 if __name__ == "__main__":

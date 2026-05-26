@@ -6,10 +6,14 @@ RUFF_STRICT_PREVIEW_TARGETS ?= $(STRICT_PREVIEW_AUDIT_TARGETS)
 MYPY_TARGETS ?= ops/scripts
 MYPY_STRICT_PREVIEW_FLAGS ?= --check-untyped-defs --disallow-untyped-defs --disallow-incomplete-defs
 MYPY_STRICT_PREVIEW_TARGETS ?= $(STRICT_PREVIEW_AUDIT_TARGETS)
+UV ?= uv
 
-.PHONY: static ruff ruff-strict-preview strict-preview-audit typecheck mypy-strict-preview
+.PHONY: static ruff ruff-strict-preview strict-preview-audit typecheck mypy-strict-preview uv-lock-check
 
-static: ruff typecheck
+static: uv-lock-check ruff typecheck
+
+uv-lock-check:
+	$(UV) lock --check
 
 ruff:
 	$(PYTHON) -m ruff check $(RUFF_TARGETS)

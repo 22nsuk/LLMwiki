@@ -20,7 +20,7 @@ export PYTEST_DISABLE_PLUGIN_AUTOLOAD
 
 .PHONY: check check-finalized check-clean check-clean-lane-guard check-conditional check-serial check-all check-all-serial check-strict canonical-parity-guard
 
-check: static artifact-freshness-check registry-preflight-check lint eval stage2-eval planning-gate unit-tests
+check: uv-lock-check static artifact-freshness-check registry-preflight-check lint eval stage2-eval planning-gate unit-tests
 
 check-finalized:
 	$(MAKE) auto-improve-readiness-report
@@ -47,10 +47,10 @@ check-clean-lane-guard:
 
 check-clean: check-clean-lane-guard check-conditional warning-budget release-evidence-cohort-check
 
-check-serial: static artifact-freshness-check registry-preflight-check lint eval stage2-eval planning-gate unit-tests-serial
+check-serial: uv-lock-check static artifact-freshness-check registry-preflight-check lint eval stage2-eval planning-gate unit-tests-serial
 
-check-all: static artifact-freshness-check registry-preflight-check lint eval stage2-eval planning-gate unit-tests-all
+check-all: uv-lock-check static artifact-freshness-check registry-preflight-check lint eval stage2-eval planning-gate unit-tests-all
 
-check-all-serial: static artifact-freshness-check registry-preflight-check lint eval stage2-eval planning-gate unit-tests-all-serial
+check-all-serial: uv-lock-check static artifact-freshness-check registry-preflight-check lint eval stage2-eval planning-gate unit-tests-all-serial
 
 check-strict: check warning-budget complexity-budget-touched-check

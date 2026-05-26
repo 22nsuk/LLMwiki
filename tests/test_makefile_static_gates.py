@@ -419,6 +419,7 @@ def _assert_supply_chain_make_variables(case: unittest.TestCase, text: str) -> N
         "IN_TOTO_STATEMENT_OUT ?= ops/reports/in-toto-statement.json",
         "SIGSTORE_BUNDLE_OUT ?= ops/reports/sigstore-bundle-verification.json",
         "SUPPLY_CHAIN_BENCHMARK_OUT ?= ops/reports/supply-chain-benchmark.json",
+        "UV ?= uv",
         "STRUCTURAL_COMPLEXITY_BUDGET_OUT ?= ops/reports/structural-complexity-budget.json",
         "GENERATED_ARTIFACT_INDEX_OUT ?= ops/reports/generated-artifact-index.json",
         "GENERATED_ARTIFACT_INDEX_CANDIDATE_OUT ?= tmp/generated-artifact-index.candidate.json",
@@ -480,6 +481,7 @@ def _assert_supply_chain_target_names(case: unittest.TestCase, text: str) -> Non
         "supply-chain-benchmark:",
         "sbom-export-mapping:",
         "supply-chain-artifacts-cached:",
+        "uv-lock-check:",
     ):
         case.assertIn(target, text)
     case.assertIn(
@@ -510,7 +512,7 @@ def _assert_sbom_supply_chain_recipes(case: unittest.TestCase, text: str) -> Non
         "openvex-draft: cyclonedx-sbom",
         "release-sbom-clean: release-provenance-clean sbom-readiness-check",
         "openvex-draft-cached: supply-chain-artifacts-cached",
-        "supply-chain-check: supply-chain-provenance",
+        "supply-chain-check: uv-lock-check supply-chain-provenance",
         "provenance-check: supply-chain-check",
     ):
         case.assertIn(dependency, text)
@@ -932,10 +934,13 @@ class MakefileStaticGateTests(unittest.TestCase):
 
         for target in ("check", "check-serial", "check-all", "check-all-serial"):
             with self.subTest(target=target):
-                target_line = _target_block(text, target).splitlines()[0]
-                self.assertRegex(target_line, rf"^{target}: static(?:\s|$)")
-                self.assertIn("registry-preflight-check", target_line)
-                self.assertNotIn("registry-preflight ", target_line)
+                dependencies = _target_dependencies(text, target)
+                self.assertEqual(dependencies[:2], ("uv-lock-check", "static"))
+                self.assertIn("registry-preflight-check", dependencies)
+                self.assertNotIn("registry-preflight", dependencies)
+        self.assertEqual(_target_dependencies(text, "static"), ("uv-lock-check", "ruff", "typecheck"))
+        self.assertEqual(_recipe_lines(text, "uv-lock-check"), ["$(UV) lock --check"])
+        self.assertIn("uv-lock-check", _target_block(text, ".PHONY"))
 
     def test_strict_targets_include_warning_budget_gate(self) -> None:
         text = _makefile_text()
@@ -1001,7 +1006,8 @@ class MakefileStaticGateTests(unittest.TestCase):
 
         self.assertIn("RUFF_TARGETS ?= ops/scripts tests tools", text)
         self.assertIn("MYPY_TARGETS ?= ops/scripts", text)
-        self.assertIn("static: ruff typecheck", text)
+        self.assertIn("static: uv-lock-check ruff typecheck", text)
+        self.assertIn("$(UV) lock --check", _target_block(text, "uv-lock-check"))
         self.assertIn(
             "$(PYTHON) -m ruff check $(RUFF_TARGETS)", _target_block(text, "ruff")
         )

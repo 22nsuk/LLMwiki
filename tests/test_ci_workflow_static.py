@@ -92,11 +92,16 @@ def _assert_locked_dependency_steps(case: unittest.TestCase, job: dict[str, obje
     )
     case.assertEqual(len(install_steps), 1)
     run_text = _run_text(install_steps[0])
+    case.assertIn("uv lock --check", run_text)
     case.assertIn(
         "uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt",
         run_text,
     )
     case.assertIn("python -m pip install -r tmp/locked-requirements.ci.txt", run_text)
+    case.assertLess(
+        run_text.index("uv lock --check"),
+        run_text.index("uv export --frozen"),
+    )
     case.assertNotIn("python -m pip install -r requirements-dev.txt build", run_text)
 
 

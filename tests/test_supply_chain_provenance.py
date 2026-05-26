@@ -14,6 +14,7 @@ from tests.minimal_vault_runtime import seed_minimal_vault
 
 LOCKED_CI_INSTALL_SNIPPET = (
     '- run: python -c "from pathlib import Path; Path(\'tmp\').mkdir(exist_ok=True)"\n'
+    "- run: uv lock --check\n"
     "- run: uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt\n"
     "- run: python -m pip install -r tmp/locked-requirements.ci.txt\n"
 )
@@ -118,6 +119,7 @@ jobs:
   test:
     steps:
       - run: python -c "from pathlib import Path; Path('tmp').mkdir(exist_ok=True)"
+      - run: uv lock --check
       - run: uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
       - run: python -m pip install -r tmp/locked-requirements.ci.txt
 """.strip()
@@ -158,6 +160,8 @@ jobs:
             )
             self.assertTrue(persisted["ci_install_proof"]["exports_frozen_uv_lock"])
             self.assertTrue(persisted["ci_install_proof"]["installs_locked_requirements"])
+            self.assertTrue(persisted["ci_install_proof"]["checks_uv_lock_freshness"])
+            self.assertEqual(persisted["ci_install_proof"]["lock_check_commands"], ["- run: uv lock --check"])
             self.assertEqual(persisted["ci_install_proof"]["locked_requirements_path"], "tmp/locked-requirements.ci.txt")
             self.assertEqual(persisted["ci_install_proof"]["install_resolution_mode"], "canonical_lock_export")
             self.assertFalse(persisted["ci_install_proof"]["installs_requirements_dev"])
@@ -170,6 +174,8 @@ jobs:
             self.assertIn("lock_evidence", persisted)
             self.assertEqual(persisted["lock_evidence"]["path"], "uv.lock")
             self.assertEqual(persisted["lock_evidence"]["parser_status"]["status"], "pass")
+            self.assertEqual(persisted["lock_evidence"]["lock_check_status"], "enforced")
+            self.assertEqual(persisted["lock_evidence"]["lock_check_command"], "uv lock --check")
             self.assertTrue(persisted["lock_evidence"]["exists"])
             self.assertEqual(persisted["lock_evidence"]["sha256"], input_by_path["uv.lock"]["sha256"])
             self.assertEqual(persisted["source_package_evidence"]["status"], "pass")
@@ -211,6 +217,7 @@ jobs:
             self.assertEqual(report["status"], "fail")
             self.assertEqual(input_by_path["uv.lock"]["parser_status"]["status"], "error")
             self.assertEqual(report["lock_evidence"]["parser_status"]["status"], "error")
+            self.assertEqual(report["lock_evidence"]["lock_check_status"], "missing_ci_check")
             self.assertEqual(report["locked_packages"], [])
 
 

@@ -653,6 +653,7 @@ release-check-core:
 	$(MAKE) release-worktree-clean-check
 	$(MAKE) test-execution-summary-current-check
 	$(MAKE) test-execution-summary-full-current-check
+	$(MAKE) uv-lock-check
 	$(MAKE) static
 	$(MAKE) artifact-freshness-check
 	$(MAKE) registry-preflight-check

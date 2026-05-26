@@ -10,11 +10,11 @@ from ops.scripts.wiki_lint_review_runtime import (
     active_source_missing_concept_candidates,
     concept_carryover_continuity_candidates,
     concept_taxonomy_advisory_candidates,
-    content_quality_advisory_candidates,
     content_promotion_candidates,
+    content_quality_advisory_candidates,
+    source_route_advisory_candidates,
     synthesis_analysis_template_candidates,
     synthesis_follow_up_split_candidates,
-    source_route_advisory_candidates,
     wiki_synthesis_multi_question_candidates,
 )
 from ops.scripts.wiki_snapshot_runtime import build_wiki_runtime_snapshot
