@@ -1669,6 +1669,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             release_test_current_lines,
             [
                 "$(MAKE) static",
+                "$(MAKE) report-schema-samples-check",
                 "$(MAKE) test-execution-summary-report-contract",
                 "$(MAKE) test-execution-summary-full-current-or-refresh",
             ],

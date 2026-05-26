@@ -344,6 +344,7 @@ release-preflight-current:
 
 release-test-current:
 	$(MAKE) static
+	$(MAKE) report-schema-samples-check
 	$(MAKE) test-execution-summary-report-contract
 	$(MAKE) test-execution-summary-full-current-or-refresh
 
