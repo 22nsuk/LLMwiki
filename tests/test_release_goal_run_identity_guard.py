@@ -129,6 +129,50 @@ class ReleaseGoalRunIdentityGuardTests(unittest.TestCase):
         self.assertEqual(error, "")
         self.assertEqual(effective_run_id, "promote-run")
 
+    def test_release_gate_pending_goal_status_can_select_completed_certified_run(self) -> None:
+        self._write_identity_inputs()
+        status = json.loads(
+            (self.vault / "ops/reports/goal-run-status.json").read_text(encoding="utf-8")
+        )
+        status["status"] = "attention"
+        status["health"] = {
+            "promotion_status": "blocked",
+            "can_promote_result": False,
+        }
+        status["blockers"] = ["promotion_blocked_by_release_batch_manifest_failure"]
+        self._write_json("ops/reports/goal-run-status.json", status)
+
+        with self._patch_current_repo():
+            report = build_report(
+                self.vault,
+                goal_run_id="promote-run",
+                goal_run_id_origin="command line",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["effective_run_id"], "promote-run")
+        self.assertEqual(report["blockers"], [])
+
+    def test_failed_goal_status_cannot_select_run(self) -> None:
+        self._write_identity_inputs()
+        status = json.loads(
+            (self.vault / "ops/reports/goal-run-status.json").read_text(encoding="utf-8")
+        )
+        status["status"] = "fail"
+        self._write_json("ops/reports/goal-run-status.json", status)
+
+        with self._patch_current_repo():
+            report = build_report(
+                self.vault,
+                goal_run_id="promote-run",
+                goal_run_id_origin="command line",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(report["status"], "fail")
+        self.assertIn("goal_run_status_not_promotable", report["failures"])
+
     def test_makefile_default_goal_run_id_infers_verified_promoted_evidence(self) -> None:
         self._write_identity_inputs(run_id="promote-run")
 

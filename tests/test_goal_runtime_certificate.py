@@ -271,6 +271,37 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         self.assertEqual(loaded["runtime"]["certificate_status"], "verified")
         self.assertTrue(loaded["promotion_guard"]["runtime_certificate_verified"])
 
+    def test_runtime_certificate_is_independent_from_release_promotion_guard(self) -> None:
+        self._seed_goal_contract()
+        contract = get_goal(vault=self.vault)
+        contract["promotion_guard"].update(
+            {
+                "can_promote_result": False,
+                "promotion_blockers": [
+                    "promotion_blocked_by_release_batch_manifest_failure",
+                    "promotion_blocked_by_remediation_backlog_open",
+                ],
+                "sealed_authority_clean": False,
+            }
+        )
+        set_goal(contract, vault=self.vault)
+        self._seed_full_gate_reports()
+        self._write_completed_goal_status(completed_at="2026-05-17T11:30:00Z")
+
+        report = build_certificate_report(
+            GoalRuntimeCertificateRequest(
+                vault=self.vault,
+                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.UTC)),
+            )
+        )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["certificate"]["verification_status"], "eligible")
+        self.assertEqual(report["blockers"], [])
+        self.assertEqual(report["session_evidence"]["status"], "clean")
+        self.assertEqual(report["command_observability"]["status"], "clean")
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_refreshed_completed_status_accepts_original_runner_command_audit(self) -> None:
         self._seed_goal_contract()
         self._seed_full_gate_reports()

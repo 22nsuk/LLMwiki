@@ -126,10 +126,7 @@ def _verified_inferred_run_id(
         status_identity["load_status"] == "ok"
         and status_identity["artifact_kind"] == "goal_run_status"
         and _identity_current(status_identity, fingerprint)
-        and observed["goal_run_status_report_status"] == "pass"
-        and observed["goal_run_status_run_status"] == "completed"
-        and observed["goal_run_status_promotion_status"] == "allowed"
-        and bool(observed["goal_run_status_can_promote_result"])
+        and _goal_run_status_selectable(observed)
     )
     certificate_verified = (
         certificate_identity["load_status"] == "ok"
@@ -145,6 +142,13 @@ def _verified_inferred_run_id(
     if status_verified and certificate_verified and status_run_id and status_run_id == certificate_run_id:
         return status_run_id
     return ""
+
+
+def _goal_run_status_selectable(observed: dict[str, Any]) -> bool:
+    return (
+        observed["goal_run_status_report_status"] in {"pass", "attention"}
+        and observed["goal_run_status_run_status"] == "completed"
+    )
 
 
 def _observed_evidence(
@@ -251,12 +255,7 @@ def _goal_checks(
         ),
         "goal_run_status_current": _identity_current(inputs["goal_run_status"], fingerprint),
         "goal_run_status_run_id_match": observed["goal_run_status_run_id"] == effective_run_id,
-        "goal_run_status_promotable": (
-            observed["goal_run_status_report_status"] == "pass"
-            and observed["goal_run_status_run_status"] == "completed"
-            and observed["goal_run_status_promotion_status"] == "allowed"
-            and bool(observed["goal_run_status_can_promote_result"])
-        ),
+        "goal_run_status_promotable": _goal_run_status_selectable(observed),
         "goal_runtime_certificate_load_ok": (
             inputs["goal_runtime_certificate"]["load_status"] == "ok"
         ),
@@ -398,9 +397,9 @@ def _goal_run_status_requirements(
                 f"promotion_status={observed['goal_run_status_promotion_status']};"
                 f"can_promote_result={observed['goal_run_status_can_promote_result']}"
             ),
-            "report_status=pass; run_status=completed; promotion_status=allowed; can_promote_result=true",
-            "The selected goal-run status is not promotable release evidence.",
-            "Complete and publish a promoted goal run before auto-promotion.",
+            "report_status in pass,attention; run_status=completed",
+            "The selected goal-run status is not completed release auto-promotion evidence.",
+            "Complete and publish the goal run before auto-promotion.",
         ),
     ]
 

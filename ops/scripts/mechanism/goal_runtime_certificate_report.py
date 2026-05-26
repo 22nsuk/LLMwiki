@@ -120,27 +120,6 @@ def _elapsed_seconds(started_at: object, completed_at: object) -> int:
     return max(0, int((completed - started).total_seconds()))
 
 
-def _report_status_fields(path: Path) -> dict[str, str]:
-    if not path.is_file() or path.suffix.lower() != ".json":
-        return {}
-    payload = load_optional_json_object(path)
-    if not payload:
-        return {"report_status": "unreadable"}
-    fields: dict[str, str] = {}
-    status = str(payload.get("status", "")).strip()
-    if status:
-        fields["report_status"] = status
-    for key in (
-        "preflight_status",
-        "distribution_binding_status",
-        "authority_preflight_status",
-    ):
-        value = str(payload.get(key, "")).strip()
-        if value:
-            fields[key] = value
-    return fields
-
-
 def _load_audit_events(path: Path) -> list[dict[str, Any]]:
     if not path.is_file():
         return []
@@ -856,18 +835,6 @@ def _observability_blockers(
     return blockers
 
 
-def _sealed_authority_clean(vault: Path) -> bool:
-    payload = load_optional_json_object(
-        vault / "ops" / "reports" / "release-closeout-sealed-rehearsal-check.json"
-    )
-    return (
-        payload.get("status") == "pass"
-        and payload.get("preflight_status") == "sealed_clean_pass"
-        and payload.get("distribution_binding_status") == "pass"
-        and payload.get("authority_preflight_status") == "clean"
-    )
-
-
 def _verification_blockers(
     *,
     vault: Path,
@@ -914,17 +881,6 @@ def _verification_blockers(
         promotion_guard.get("runtime_certificate_verified", False)
     ):
         blockers.append("sustained runtime was claimed before loop certificate verification")
-    if not bool(promotion_guard.get("can_promote_result", False)):
-        blockers.append("can_promote_result is not clean for runtime certificate")
-    if not bool(promotion_guard.get("sealed_authority_clean", False)) or not _sealed_authority_clean(vault):
-        blockers.append("sealed authority clean pass is not verified for runtime certificate")
-    promotion_blockers = [
-        blocker
-        for blocker in _list_text(promotion_guard.get("promotion_blockers"))
-        if blocker != "self-improvement loop certificate incomplete"
-    ]
-    if promotion_blockers:
-        blockers.append("promotion guard still has blockers")
     return list(dict.fromkeys(blockers))
 
 
