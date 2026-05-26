@@ -516,12 +516,13 @@ def _blocking_promotion_check_ids(
     statuses: dict[str, str],
     decision_record: dict[str, Any] | None,
 ) -> list[str]:
-    blocking_ids = {check_id for check_id, status in statuses.items() if status == "FAIL"}
-    if isinstance(decision_record, dict):
-        evidence_refs = decision_record.get("evidence_refs")
-        if isinstance(evidence_refs, list):
-            blocking_ids.update(str(item).strip() for item in evidence_refs if str(item).strip())
-    return sorted(blocking_ids)
+    failed_ids = sorted(check_id for check_id, status in statuses.items() if status == "FAIL")
+    if failed_ids or not isinstance(decision_record, dict):
+        return failed_ids
+    evidence_refs = decision_record.get("evidence_refs")
+    if not isinstance(evidence_refs, list):
+        return []
+    return sorted(str(item).strip() for item in evidence_refs if str(item).strip())
 
 
 def _non_regression_check_statuses(statuses: dict[str, str]) -> dict[str, str]:
@@ -631,25 +632,16 @@ def _specific_failure_taxonomy(
         return ""
     if outcome_text not in GENERIC_PROMOTION_FAILURE_TAXONOMIES:
         return outcome_text
+    blocking_check_ids = []
+    if isinstance(discard_evidence, dict):
+        blocking_check_ids = [str(item).strip() for item in discard_evidence.get("blocking_check_ids", []) if str(item).strip()]
     if isinstance(decision_record, dict):
         reason_code = str(decision_record.get("reason_code", "")).strip()
-        if reason_code and reason_code not in LEGACY_PROMOTION_REASON_CODES:
+        if reason_code and reason_code not in LEGACY_PROMOTION_REASON_CODES and (not blocking_check_ids or reason_code in blocking_check_ids):
             return reason_code
-    if isinstance(discard_evidence, dict):
-        blocking_check_ids = discard_evidence.get("blocking_check_ids")
-        if isinstance(blocking_check_ids, list):
-            for check_id in blocking_check_ids:
-                check_id_text = str(check_id).strip()
-                if check_id_text:
-                    return check_id_text
+    if blocking_check_ids:
+        return blocking_check_ids[0]
     return outcome_text
-
-
-def _run_telemetry_failure_taxonomy(vault: Path, telemetry_rel: str) -> str:
-    payload = load_optional_json(vault / telemetry_rel)
-    if not isinstance(payload, dict):
-        return ""
-    return str(payload.get("failure_taxonomy", "")).strip()
 
 
 def _update_session_loop_state(
@@ -880,6 +872,8 @@ def persist_iteration_phase(
         )
     )
     executor_report_rels = _iteration_executor_report_rels(vault, run_id, route_scaffold.roles)
+    telemetry_payload = load_optional_json(vault / telemetry_rel)
+    telemetry_failure_taxonomy = str(telemetry_payload.get("failure_taxonomy", "")).strip() if isinstance(telemetry_payload, dict) else ""
     next_run_decision = build_next_run_decision(
         session_id=session_id,
         iteration=iteration,
@@ -893,7 +887,7 @@ def persist_iteration_phase(
         context=context,
         executor_report_rels=executor_report_rels,
         blocking_role=_blocking_role_from_executor_reports(vault, executor_report_rels),
-        failure_taxonomy_override=_run_telemetry_failure_taxonomy(vault, telemetry_rel),
+        failure_taxonomy_override=telemetry_failure_taxonomy,
     )
     if next_run_decision is not None:
         session.setdefault("next_run_decisions", []).append(next_run_decision)

@@ -1064,9 +1064,9 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                     {"id": "candidate_eval_pass", "status": "PASS"},
                     {"id": "eval_score_improves", "status": "WARN"},
                     {"id": "lint_non_regression", "status": "PASS"},
-                    {"id": "structural_complexity_non_regression", "status": "PASS"},
+                    {"id": "structural_complexity_non_regression", "status": "FAIL"},
                     {"id": "tests_non_regression", "status": "PASS"},
-                    {"id": "equal_score_secondary_eligibility", "status": "FAIL"},
+                    {"id": "equal_score_secondary_eligibility", "status": "WARN"},
                 ],
                 "decision_record": contract["decision_record"],
             }
@@ -1105,7 +1105,7 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             self.assertTrue(evidence["candidate_eval_pass"])
             self.assertFalse(evidence["eval_score_improves"])
             self.assertTrue(evidence["lint_non_regression"])
-            self.assertTrue(evidence["structural_complexity_non_regression"])
+            self.assertFalse(evidence["structural_complexity_non_regression"])
             self.assertTrue(evidence["tests_non_regression"])
             self.assertEqual(
                 evidence["non_regression_check_statuses"],
@@ -1113,11 +1113,14 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                     "candidate_eval_pass": "PASS",
                     "eval_score_improves": "WARN",
                     "lint_non_regression": "PASS",
-                    "structural_complexity_non_regression": "PASS",
+                    "structural_complexity_non_regression": "FAIL",
                     "tests_non_regression": "PASS",
                 },
             )
-            self.assertEqual(evidence["blocking_check_ids"], ["equal_score_secondary_eligibility"])
+            self.assertEqual(payload["failure_taxonomy"], "structural_complexity_non_regression")
+            self.assertEqual(
+                evidence["blocking_check_ids"], ["structural_complexity_non_regression"]
+            )
             self.assertEqual(
                 evidence["decision_record_reason_code"],
                 "equal_score_secondary_eligibility",
