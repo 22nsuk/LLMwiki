@@ -582,7 +582,7 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                 decision["evidence_paths"],
             )
 
-    def test_persist_iteration_phase_auto_quarantines_pre_promotion_placeholder_history(
+    def test_persist_iteration_phase_keeps_pre_promotion_placeholder_history_active(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -621,11 +621,6 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                 ),
                 phase_durations={"experiment": 0.2},
             )
-            context = RuntimeContext(
-                display_timezone=dt.UTC,
-                clock=lambda: dt.datetime(2026, 5, 24, 1, 2, 3, tzinfo=dt.UTC),
-            )
-
             persist_iteration_phase(
                 vault,
                 session,
@@ -635,7 +630,7 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                 route_scaffold=route_scaffold,
                 execution=execution,
                 quarantined=set(),
-                context=context,
+                context=_context(),
                 dependencies=PersistIterationDependencies(
                     apply_execution_outcome=lambda *_args, **_kwargs: 1,
                     write_iteration_telemetry=write_iteration_telemetry,
@@ -654,15 +649,11 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             run_ledger = json.loads(
                 (vault / "runs" / run_id / "run-ledger.json").read_text(encoding="utf-8")
             )
-            self.assertEqual(promotion_report["history"]["status"], "quarantined")
-            self.assertEqual(promotion_report["history"]["by"], "auto-improve")
-            self.assertEqual(promotion_report["history"]["ts"], "2026-05-24T01:02:03Z")
-            self.assertIn(
-                "validation_blocked before promotion gate evidence was recorded",
-                promotion_report["history"]["reason"],
+            self.assertEqual(promotion_report["history"]["status"], "active")
+            self.assertNotIn(
+                "history_status_updated",
+                [event["type"] for event in run_ledger["events"]],
             )
-            self.assertEqual(run_ledger["events"][-1]["type"], "history_status_updated")
-            self.assertEqual(run_ledger["events"][-1]["decision"], "quarantined")
 
     def test_persist_iteration_phase_does_not_quarantine_report_with_gate_decision(
         self,
