@@ -12,6 +12,7 @@ from ops.scripts.artifact_io_runtime import (
     load_optional_json_object,
     write_schema_backed_report,
 )
+from ops.scripts.core.learning_claim_state_runtime import confirmed_evidence_summary
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
@@ -37,7 +38,6 @@ from .learning_delta_scoreboard_constants import (
     SOURCE_COMMAND,
 )
 from .learning_delta_scoreboard_unlock_runtime import (
-    _confirmed_evidence_summary,
     _learning_claim_unlock_review,
 )
 from .learning_readiness_vocabulary import learning_release_blocker_ids_from_report
@@ -447,9 +447,9 @@ def _learning_claim_decision(
         for item in unlock_review.get("confirmed_blocking_predicate_ids", [])
         if str(item).strip()
     ]
-    confirmed_summary = _confirmed_evidence_summary(
+    confirmed_summary = confirmed_evidence_summary(
         unlock_review.get("confirmed_evidence_summary"),
-        confirmed_blocking_predicate_ids=blocking_predicate_ids,
+        blocking_predicate_ids=blocking_predicate_ids,
     )
     evidence_cohort_status = str(
         confirmed_summary.get("evidence_cohort_status", "not_ready")

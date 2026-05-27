@@ -8,14 +8,18 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.release_authority_state_runtime import (
+    current_release_manifest_pass,
+    release_authority_reports_verified,
+)
 from ops.scripts.policy_runtime import report_path
 from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 from ops.scripts.workflow_dependency_planner import (
     build_report as build_workflow_dependency_report,
 )
 
 from .release_closeout_finality_attestation import verify_attestation
-from .release_status_v2 import release_status_v2_view_with_readiness_fallback
 from .release_workflow_order_guard import (
     build_report as build_release_workflow_order_guard_report,
 )
@@ -24,12 +28,6 @@ REFERENCE_MANIFEST = "external-reports/report-reference-manifest.json"
 REFERENCE_MANIFEST_EXTENSIONS = {".md", ".pdf", ".docx"}
 REPORT_EXTENSIONS = REFERENCE_MANIFEST_EXTENSIONS
 NARRATIVE_REPORT_EXTENSIONS = {".md"}
-RELEASE_VERIFIED_ACTION_IDS = {
-    "source_package_distribution_binding",
-    "release_evidence_bundle_and_attestation",
-    "full_suite_evidence_currentness",
-    "promotion_truth_ladder",
-}
 ROADMAP_SOURCE_ONLY_ACTION_IDS = {
     "public_mirror_boundary_helper",
     "lint_uplift_plan_full_scope",
@@ -964,6 +962,64 @@ ACTION_CATALOG: list[dict[str, Any]] = [
         "recommended_target": "public-check",
     },
     {
+        "action_id": "repository_surface_entrypoint_documentation",
+        "priority": "P2",
+        "theme": "full-vault, public export, and release source ZIP entrypoint documentation",
+        "patterns": [
+            r"repository-surfaces",
+            r"full-vault",
+            r"full vault",
+            r"public export",
+            r"release source zip",
+            r"source ZIP",
+            r"세\s*표면",
+        ],
+        "evidence_paths": [
+            "docs/repository-surfaces.md",
+            "docs/README.md",
+            "README.md",
+            "ARCHITECTURE.md",
+            "docs/public-mirror.md",
+            "docs/release.md",
+            "tests/test_doc_graph_integrity.py",
+        ],
+        "recommended_target": "doc-graph-integrity",
+    },
+    {
+        "action_id": "release_mechanism_service_layer_extraction",
+        "priority": "P2",
+        "theme": "release and mechanism service-layer extraction",
+        "patterns": [
+            r"service layer",
+            r"runtime service",
+            r"release/mechanism",
+            r"authority.*currentness.*risk.*learning_claim",
+            r"JSON payload assembly",
+            r"domain decision logic",
+        ],
+        "evidence_paths": [
+            "ops/scripts/core/release_authority_state_runtime.py",
+            "ops/scripts/core/release_currentness_state_runtime.py",
+            "ops/scripts/core/release_risk_state_runtime.py",
+            "ops/scripts/core/learning_claim_state_runtime.py",
+            "ops/scripts/release/release_status_v2.py",
+            "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
+            "ops/scripts/release/external_report_lifecycle_runtime.py",
+            "ops/scripts/release/release_authority_inventory.py",
+            "ops/scripts/release/release_evidence_cohort.py",
+            "ops/scripts/release/release_evidence_dashboard.py",
+            "ops/scripts/release/release_closeout_summary.py",
+            "ops/scripts/release/release_clean_blocker_ledger.py",
+            "ops/scripts/learning/learning_delta_scoreboard_unlock_runtime.py",
+            "tests/test_release_authority_state_runtime.py",
+            "tests/test_release_currentness_state_runtime.py",
+            "tests/test_release_risk_state_runtime.py",
+            "tests/test_learning_claim_state_runtime.py",
+            "tests/test_release_status_v2.py",
+        ],
+        "recommended_target": "release-authority-inventory",
+    },
+    {
         "action_id": "supply_chain_external_verification",
         "priority": "P2",
         "theme": "external supply-chain verification",
@@ -1160,39 +1216,118 @@ def coverage_markers(path: Path, text: str) -> list[str]:
     ]
 
 
-def release_run_verified(vault: Path) -> bool:
+def _release_authority_reports_verified(vault: Path) -> bool:
     closeout = load_json_object(vault / "ops/reports/release-closeout-summary.json")
-    closeout_summary = as_dict(closeout.get("summary"))
-    closeout_status_view = release_status_v2_view_with_readiness_fallback(closeout)
-    release_authority_status = str(closeout_status_view["release_authority_status"])
     dashboard = load_json_object(vault / "ops/reports/release-evidence-dashboard.json")
-    dashboard_summary = as_dict(dashboard.get("summary"))
-    dashboard_status = str(dashboard.get("status", "")).strip()
+    return release_authority_reports_verified(closeout=closeout, dashboard=dashboard)
+
+
+def _full_suite_evidence_verified(vault: Path) -> bool:
     full_summary = load_json_object(vault / "ops/reports/test-execution-summary-full.json")
     full_counts = as_dict(full_summary.get("counts"))
+    return (
+        full_summary.get("status") == "pass"
+        and as_int(full_counts.get("failed")) == 0
+        and as_int(full_counts.get("errors")) == 0
+    )
+
+
+def source_package_distribution_binding_verified(vault: Path) -> bool:
     source_package = load_json_object(vault / "ops/reports/source-package-clean-extract.json")
+    return (
+        _release_authority_reports_verified(vault)
+        and source_package.get("status") == "pass"
+        and current_release_manifest_pass(
+            vault,
+            "build/release/release-run-manifest.json",
+            "release_run_manifest",
+        )
+        and current_release_manifest_pass(
+            vault,
+            "build/release/release-sealed-run-manifest.json",
+            "release_sealed_run_manifest",
+        )
+    )
+
+
+def full_suite_evidence_currentness_verified(vault: Path) -> bool:
+    return (
+        _release_authority_reports_verified(vault)
+        and _full_suite_evidence_verified(vault)
+        and current_release_manifest_pass(
+            vault,
+            "build/release/release-run-manifest.json",
+            "release_run_manifest",
+        )
+    )
+
+
+def promotion_truth_ladder_verified(vault: Path) -> bool:
+    ready = load_json_object(vault / "build/release/release-auto-promotion-ready-manifest.json")
+    return (
+        _release_authority_reports_verified(vault)
+        and ready.get("status") == "pass"
+        and ready.get("artifact_kind") == "release_auto_promotion_ready_manifest"
+        and ready.get("auto_promotion_status") == "allowed"
+        and ready.get("unattended_promotion_allowed") is True
+        and str(ready.get("source_tree_fingerprint", "")).strip()
+        == release_source_tree_fingerprint(vault)
+    )
+
+
+def release_evidence_bundle_and_attestation_verified(vault: Path) -> bool:
     fixed_point = load_json_object(vault / "ops/reports/release-closeout-fixed-point.json")
     finality = load_json_object(vault / "ops/reports/release-closeout-finality-attestation.json")
     finality_fixed_point = as_dict(finality.get("fixed_point_report"))
     finality_verified, _finality_failures = verify_attestation(vault)
     return (
-        closeout.get("status") == "pass"
-        and closeout_summary.get("live_make_check_status") == "pass"
-        and bool(closeout_status_view["status_v2_available"])
-        and release_authority_status in {"clean_pass", "conditional_pass"}
-        and dashboard_status in {"pass", "attention", "fail"}
-        and authoritative_live_rerun_fail_count(dashboard) == 0
-        and authoritative_live_rerun_not_run_count(dashboard) == 0
-        and as_int(dashboard_summary.get("required_input_fail_count")) == 0
-        and full_summary.get("status") == "pass"
-        and as_int(full_counts.get("failed")) == 0
-        and as_int(full_counts.get("errors")) == 0
-        and source_package.get("status") == "pass"
+        _release_authority_reports_verified(vault)
+        and _full_suite_evidence_verified(vault)
+        and source_package_distribution_binding_verified(vault)
         and fixed_point.get("status") == "pass"
         and bool(fixed_point.get("converged"))
         and finality_fixed_point.get("status") == "pass"
         and finality_verified
     )
+
+
+RELEASE_VERIFIED_ACTION_RESOLVERS: dict[str, Callable[[Path], bool]] = {
+    "source_package_distribution_binding": source_package_distribution_binding_verified,
+    "release_evidence_bundle_and_attestation": release_evidence_bundle_and_attestation_verified,
+    "full_suite_evidence_currentness": full_suite_evidence_currentness_verified,
+    "promotion_truth_ladder": promotion_truth_ladder_verified,
+}
+
+
+def release_run_verified(vault: Path) -> bool:
+    return all(verifier(vault) for verifier in RELEASE_VERIFIED_ACTION_RESOLVERS.values())
+
+
+def release_verified_action_status(
+    vault: Path,
+    existing_count: int,
+    expected_count: int,
+    *,
+    action_id: str,
+) -> str:
+    if existing_count == 0:
+        return "planned"
+    if existing_count < expected_count:
+        return "partially_automated"
+    verifier = RELEASE_VERIFIED_ACTION_RESOLVERS[action_id]
+    return "implemented" if verifier(vault) else "requires_release_run_verification"
+
+
+def _release_verified_count_status(action_id: str) -> CountStatusResolver:
+    def resolver(vault: Path, existing_count: int, expected_count: int) -> str:
+        return release_verified_action_status(
+            vault,
+            existing_count,
+            expected_count,
+            action_id=action_id,
+        )
+
+    return resolver
 
 
 def json_report_status(path: Path) -> str:
@@ -1698,6 +1833,7 @@ def selected_contract_currentness_gate_status(
         if isinstance(item, dict)
     }
     selected_status = str(selected_contract.get("status", "")).strip()
+    artifact_freshness_status = str(artifact_freshness.get("status", "")).strip()
     selected_gate_active = selected_status == "pass" or (
         selected_status == "fail"
         and "promotion_blocked_by_selected_contract_failure" in blocker_ids
@@ -1707,7 +1843,7 @@ def selected_contract_currentness_gate_status(
         and test_summary.get("artifact_kind") == "test_execution_summary"
         and selected_contract.get("path") == "ops/reports/test-execution-summary.json"
         and selected_gate_active
-        and artifact_freshness.get("status") in {"pass", "fail"}
+        and artifact_freshness_status in {"pass", "attention", "fail"}
     ):
         return "implemented"
     return "requires_release_run_verification"
@@ -1849,6 +1985,162 @@ def repo_boundary_history_hygiene_status(vault: Path, existing_count: int, expec
     if has_public_policy or existing_count:
         return "partially_automated"
     return "planned"
+
+
+def repository_surface_entrypoint_documentation_status(
+    vault: Path,
+    existing_count: int,
+    expected_count: int,
+) -> str:
+    if existing_count == 0:
+        return "planned"
+    text = _read_text_or_empty(vault / "docs/repository-surfaces.md")
+    linked_text = "\n".join(
+        _read_text_or_empty(vault / rel_path)
+        for rel_path in (
+            "docs/README.md",
+            "README.md",
+            "ARCHITECTURE.md",
+            "docs/public-mirror.md",
+            "docs/release.md",
+        )
+    )
+    required_tokens = (
+        "Full local vault",
+        "Public mirror",
+        "Release source ZIP",
+        "ops/scripts/public/public_surface_policy.py",
+        "make public-export",
+        "make release-run-ready",
+        "build/release/",
+        "AGENTS.local.md",
+    )
+    if (
+        existing_count == expected_count
+        and all(token in text for token in required_tokens)
+        and "repository-surfaces.md" in linked_text
+    ):
+        return "implemented"
+    return "partially_automated"
+
+
+def release_mechanism_service_layer_extraction_status(
+    vault: Path,
+    existing_count: int,
+    expected_count: int,
+) -> str:
+    if existing_count == 0:
+        return "planned"
+    core_text = _read_text_or_empty(vault / "ops/scripts/core/release_authority_state_runtime.py")
+    facade_text = _read_text_or_empty(vault / "ops/scripts/release/release_status_v2.py")
+    mechanism_text = _read_text_or_empty(
+        vault / "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py"
+    )
+    lifecycle_text = _read_text_or_empty(
+        vault / "ops/scripts/release/external_report_lifecycle_runtime.py"
+    )
+    inventory_text = _read_text_or_empty(vault / "ops/scripts/release/release_authority_inventory.py")
+    currentness_text = _read_text_or_empty(
+        vault / "ops/scripts/core/release_currentness_state_runtime.py"
+    )
+    risk_text = _read_text_or_empty(vault / "ops/scripts/core/release_risk_state_runtime.py")
+    learning_text = _read_text_or_empty(
+        vault / "ops/scripts/core/learning_claim_state_runtime.py"
+    )
+    cohort_text = _read_text_or_empty(vault / "ops/scripts/release/release_evidence_cohort.py")
+    dashboard_text = _read_text_or_empty(
+        vault / "ops/scripts/release/release_evidence_dashboard.py"
+    )
+    closeout_text = _read_text_or_empty(
+        vault / "ops/scripts/release/release_closeout_summary.py"
+    )
+    clean_blocker_text = _read_text_or_empty(
+        vault / "ops/scripts/release/release_clean_blocker_ledger.py"
+    )
+    unlock_text = _read_text_or_empty(
+        vault / "ops/scripts/learning/learning_delta_scoreboard_unlock_runtime.py"
+    )
+    authority_extracted = all(
+        token in core_text
+        for token in (
+            "release_status_v2_view",
+            "machine_release_allowed_from_status_view",
+            "clean_required_preflight_passes",
+            "release_authority_reports_verified",
+            "current_release_manifest_pass",
+            "release_artifact_revision",
+        )
+    )
+    facade_uses_authority_service = (
+        "from ops.scripts.core.release_authority_state_runtime import" in facade_text
+        or "from ops.scripts.core import release_authority_state_runtime" in facade_text
+    )
+    consumers_use_service = (
+        facade_uses_authority_service
+        and "machine_release_allowed_from_status_view" in mechanism_text
+        and "clean_required_preflight_passes" in mechanism_text
+        and "release_authority_reports_verified" in lifecycle_text
+        and "current_release_manifest_pass" in lifecycle_text
+        and "release_artifact_revision" in inventory_text
+    )
+    currentness_extracted = all(
+        token in currentness_text
+        for token in (
+            "def currentness_field",
+            "def live_rerun_state",
+            "def components_match_current_source_tree",
+        )
+    )
+    currentness_consumers_use_service = (
+        "from ops.scripts.core.release_currentness_state_runtime import" in cohort_text
+        and "from ops.scripts.core.release_currentness_state_runtime import" in closeout_text
+        and "from ops.scripts.core.release_currentness_state_runtime import" in dashboard_text
+        and "live_rerun_state(" in dashboard_text
+        and "components_match_current_source_tree(" in closeout_text
+    )
+    risk_extracted = all(
+        token in risk_text
+        for token in (
+            "def release_risk_identity",
+            "def release_risk_blocks_clean_lane",
+            "def release_risk_list",
+            "def release_blocker_entry",
+        )
+    )
+    risk_consumers_use_service = (
+        "from ops.scripts.core.release_risk_state_runtime import" in closeout_text
+        and "from ops.scripts.core.release_risk_state_runtime import" in clean_blocker_text
+        and "release_risk_identity(" in closeout_text
+        and "release_risk_blocks_clean_lane(" in clean_blocker_text
+    )
+    learning_extracted = all(
+        token in learning_text
+        for token in (
+            "def confirmed_evidence_summary",
+            "def confirmed_predicate_results",
+            "def confirmed_blocking_predicate_ids",
+            "def confirmed_wording_allowed",
+        )
+    )
+    learning_consumers_use_service = (
+        "from ops.scripts.core.learning_claim_state_runtime import" in dashboard_text
+        and "from ops.scripts.core.learning_claim_state_runtime import" in unlock_text
+        and "confirmed_evidence_summary(" in dashboard_text
+        and "confirmed_evidence_summary(" in unlock_text
+    )
+    complete_service_family = all(
+        (
+            currentness_extracted,
+            currentness_consumers_use_service,
+            risk_extracted,
+            risk_consumers_use_service,
+            learning_extracted,
+            learning_consumers_use_service,
+        )
+    )
+    if existing_count == expected_count and authority_extracted and consumers_use_service:
+        return "implemented" if complete_service_family else "partially_automated"
+    return "partially_automated"
 
 
 def github_native_security_automation_status(
@@ -2063,32 +2355,6 @@ def single_source_status(vault: Path) -> str:
     return "planned"
 
 
-def authoritative_live_rerun_not_run_count(dashboard: dict[str, Any]) -> int:
-    count = 0
-    for gate in as_list(dashboard.get("gates")):
-        gate_payload = as_dict(gate)
-        live_rerun_state = as_dict(gate_payload.get("live_rerun_state"))
-        if (
-            bool(gate_payload.get("authoritative_for_release"))
-            and str(live_rerun_state.get("status", "")).strip() == "not_run"
-        ):
-            count += 1
-    return count
-
-
-def authoritative_live_rerun_fail_count(dashboard: dict[str, Any]) -> int:
-    count = 0
-    for gate in as_list(dashboard.get("gates")):
-        gate_payload = as_dict(gate)
-        live_rerun_state = as_dict(gate_payload.get("live_rerun_state"))
-        if (
-            bool(gate_payload.get("authoritative_for_release"))
-            and str(live_rerun_state.get("status", "")).strip() == "fail"
-        ):
-            count += 1
-    return count
-
-
 def command_heartbeat_observability_status(vault: Path, existing_count: int, expected_count: int) -> str:
     if existing_count == 0:
         return "planned"
@@ -2152,6 +2418,16 @@ STATUS_RESOLVERS: dict[str, StatusResolver] = {
 }
 
 COUNT_STATUS_RESOLVERS: dict[str, CountStatusResolver] = {
+    "source_package_distribution_binding": _release_verified_count_status(
+        "source_package_distribution_binding"
+    ),
+    "release_evidence_bundle_and_attestation": _release_verified_count_status(
+        "release_evidence_bundle_and_attestation"
+    ),
+    "full_suite_evidence_currentness": _release_verified_count_status(
+        "full_suite_evidence_currentness"
+    ),
+    "promotion_truth_ladder": _release_verified_count_status("promotion_truth_ladder"),
     "source_revision_unknown_canonical_reports": source_revision_unknown_canonical_reports_status,
     "ruff_strict_preview_import_order": ruff_strict_preview_import_order_status,
     "release_source_ready_deindex_hardening": release_source_ready_deindex_hardening_status,
@@ -2167,6 +2443,8 @@ COUNT_STATUS_RESOLVERS: dict[str, CountStatusResolver] = {
     "goal_run_status_audit_resume": goal_run_status_audit_resume_status,
     "goal_execution_runtime_certificate": goal_execution_runtime_certificate_status,
     "goal_executor_backoff_observability": goal_executor_backoff_observability_status,
+    "repository_surface_entrypoint_documentation": repository_surface_entrypoint_documentation_status,
+    "release_mechanism_service_layer_extraction": release_mechanism_service_layer_extraction_status,
     "selected_contract_currentness_gate": selected_contract_currentness_gate_status,
     "git_worktree_goal_guard": git_worktree_goal_guard_status,
     "goal_runtime_transient_cleanup_gate": goal_runtime_transient_cleanup_gate_status,
@@ -2266,8 +2544,6 @@ def _resolve_action_status(
             rel_path=rel_path,
             artifact_kind=artifact_kind,
         )
-    if action_id in RELEASE_VERIFIED_ACTION_IDS and existing_count == expected_count:
-        return "implemented" if release_run_verified(vault) else "requires_release_run_verification"
     return _default_evidence_status(existing_count, expected_count)
 
 

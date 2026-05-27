@@ -34,6 +34,7 @@ make check
 ## Documentation Map
 
 - [docs/development.md](./docs/development.md): setup, test lanes, CI tier map, and change-type gates.
+- [docs/repository-surfaces.md](./docs/repository-surfaces.md): full-vault, public export, and release source ZIP comparison.
 - [docs/public-mirror.md](./docs/public-mirror.md): public/private boundary, export policy, and durable report exceptions.
 - [docs/ops-runtime.md](./docs/ops-runtime.md): `mk/`, `ops/scripts/`, schemas, templates, and report surfaces.
 - [docs/release.md](./docs/release.md): release evidence, source packages, sealing, and SBOM/provenance lanes.
@@ -44,20 +45,11 @@ make check
 
 ## Public Mirror
 
-The public mirror tracks the code/ops runtime without private corpus contents.
-The policy source is [ops/scripts/public/public_surface_policy.py](./ops/scripts/public/public_surface_policy.py).
-
-Included surfaces:
-
-- `docs/`, `ops/`, `tests/`, `tools/`, `mk/`
-- `.codex/agents/`, `.github/`
-- root public documents and development configuration
-
-Excluded surfaces:
-
-- `raw/`, `wiki/`, `system/`, `runs/`, `external-reports/`
-- private inventory files such as `ops/manifest.json` and `ops/raw-registry.json`
-- generated `ops/reports/` artifacts except policy-approved durable evidence
+The public mirror tracks the code/ops runtime without private corpus contents;
+the release source ZIP is a separate replay surface. See
+[docs/repository-surfaces.md](./docs/repository-surfaces.md) for the comparison
+and [ops/scripts/public/public_surface_policy.py](./ops/scripts/public/public_surface_policy.py)
+for the public membership policy.
 
 When public boundaries change, run:
 

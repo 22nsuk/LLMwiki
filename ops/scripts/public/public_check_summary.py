@@ -55,6 +55,7 @@ PRODUCER = "ops.scripts.public_check_summary"
 SCHEMA_PATH = "ops/schemas/public-check-summary.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.public_check_summary --vault ."
 DEFAULT_TIMEOUT_SECONDS = 5400
+DEFAULT_HEARTBEAT_INTERVAL_SECONDS = 30
 TAIL_LINE_COUNT = 80
 CommandRunner = Callable[[Sequence[str], Path, int], TimedProcessResult]
 PRIVATE_EXPORT_PATTERNS = (
@@ -80,6 +81,7 @@ class PublicCheckRequest:
     pytest_mark_expr: str = "public"
     pytest_flags: str = ""
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS
+    heartbeat_interval_seconds: int = DEFAULT_HEARTBEAT_INTERVAL_SECONDS
 
 
 def _sha256_file(path: Path) -> str:
@@ -252,10 +254,20 @@ def _default_command_runner(
     argv: Sequence[str],
     cwd: Path,
     timeout_seconds: int,
+    *,
+    heartbeat_interval_seconds: int = DEFAULT_HEARTBEAT_INTERVAL_SECONDS,
 ) -> TimedProcessResult:
     env = dict(os.environ)
     env.setdefault("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
-    return run_with_timeout(argv, cwd=cwd, timeout_seconds=timeout_seconds, env=env)
+    heartbeat_callback = (lambda _event: None) if heartbeat_interval_seconds else None
+    return run_with_timeout(
+        argv,
+        cwd=cwd,
+        timeout_seconds=timeout_seconds,
+        env=env,
+        heartbeat_interval_seconds=heartbeat_interval_seconds or None,
+        heartbeat_callback=heartbeat_callback,
+    )
 
 
 def _command_record(
@@ -281,6 +293,10 @@ def _command_record(
         "timeout_seconds": result.timeout_seconds,
         "termination_reason": result.termination_reason,
         "duration_ms": duration_ms,
+        "heartbeat_count": result.heartbeat_count,
+        "heartbeat_interval_seconds": result.heartbeat_interval_seconds,
+        "quiet_seconds": result.quiet_seconds,
+        "observation_mode": result.observation_mode,
         "stdout_tail": sanitize_report_text(display_vault, _tail_text(result.stdout)),
         "stderr_tail": sanitize_report_text(display_vault, _tail_text(result.stderr)),
         "pytest_counts": counts,
@@ -329,7 +345,14 @@ def build_report(
     )
     export_root_fingerprint = _canonical_sha256(export_records)
     manifest_path = public_out_path / str(manifest.get("manifest_file", "PUBLIC-EXPORT-MANIFEST.json"))
-    runner = command_runner or _default_command_runner
+    runner = command_runner or (
+        lambda argv, cwd, timeout_seconds: _default_command_runner(
+            argv,
+            cwd,
+            timeout_seconds,
+            heartbeat_interval_seconds=request.heartbeat_interval_seconds,
+        )
+    )
     public_python = _resolve_public_python(vault, request.public_python)
     commands_to_run: list[tuple[str, list[str]]] = [
         (
@@ -488,6 +511,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--pytest-mark-expr", default="public")
     parser.add_argument("--pytest-flags", default="")
     parser.add_argument("--timeout-seconds", type=int, default=DEFAULT_TIMEOUT_SECONDS)
+    parser.add_argument("--heartbeat-interval-seconds", type=int, default=DEFAULT_HEARTBEAT_INTERVAL_SECONDS)
     parser.add_argument("--reuse-if-current", action="store_true")
     parser.add_argument("--reuse-from")
     parser.add_argument(
@@ -521,6 +545,7 @@ def main(argv: list[str] | None = None) -> int:
             pytest_mark_expr=args.pytest_mark_expr,
             pytest_flags=args.pytest_flags,
             timeout_seconds=args.timeout_seconds,
+            heartbeat_interval_seconds=args.heartbeat_interval_seconds,
         ),
     )
     destination = write_report(vault, report, args.out)

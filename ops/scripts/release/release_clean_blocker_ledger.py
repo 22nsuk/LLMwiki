@@ -13,6 +13,13 @@ from ops.scripts.artifact_io_runtime import (
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
+from ops.scripts.core.release_risk_state_runtime import (
+    release_blocker_entry,
+    release_risk_blocks_clean_lane,
+    release_risk_identity,
+    release_risk_list,
+    release_risk_with_effects,
+)
 from ops.scripts.learning_readiness_vocabulary import (
     LEARNING_REVIEW_REQUIRED_BLOCKER_ID,
 )
@@ -166,66 +173,32 @@ def _learning_delta_guard_summary(payload: dict[str, Any], load_status: str) -> 
 
 
 def _risk_identity(risk: dict[str, Any]) -> str:
-    source = str(risk.get("source", "")).strip()
-    code = str(risk.get("code", "")).strip()
-    return f"{source}:{code}"
+    return release_risk_identity(risk)
 
 
 def _blocker_entry(risk: dict[str, Any], *, generated_at: str) -> dict[str, Any]:
-    acceptance = risk.get("risk_acceptance", {})
-    if not isinstance(acceptance, dict):
-        acceptance = {}
-    effects = {
-        "clean_lane_effect": str(risk.get("clean_lane_effect", CLEAN_LANE_BLOCKS)).strip() or CLEAN_LANE_BLOCKS,
-        "conditional_lane_effect": str(risk.get("conditional_lane_effect", "operator_review_required")).strip()
-        or "operator_review_required",
-        "learning_lane_effect": str(risk.get("learning_lane_effect", "not_applicable")).strip() or "not_applicable",
-        "advisory_lifecycle_effect": str(risk.get("advisory_lifecycle_effect", "not_applicable")).strip()
-        or "not_applicable",
-    }
-    required_evidence = [
-        str(item).strip()
-        for item in risk.get("required_evidence", [])
-        if str(item).strip()
-    ]
-    return {
-        "id": _risk_identity(risk),
-        "code": str(risk.get("code", "")).strip(),
-        "source": str(risk.get("source", "")).strip(),
-        "source_path": str(risk.get("source_path", "")).strip(),
-        "severity": str(risk.get("severity", "")).strip(),
-        "gate_effect": str(risk.get("gate_effect", "")).strip(),
-        **effects,
-        "message": str(risk.get("message", "")).strip(),
-        "required_evidence": required_evidence,
-        "risk_owner": str(acceptance.get("risk_owner", "")).strip(),
-        "expires_at": str(acceptance.get("expires_at", "")).strip(),
-        "acceptance_source": str(acceptance.get("acceptance_source", "")).strip(),
-        "closure_action": str(acceptance.get("revalidation_condition", "")).strip()
-        or (required_evidence[0] if required_evidence else "Resolve this blocker before relying on the affected lane."),
-        "rollback_trigger": str(acceptance.get("rollback_trigger", "")).strip(),
-        **advisory_lifecycle_assessment(risk, generated_at=generated_at),
-    }
+    return release_blocker_entry(
+        risk,
+        generated_at=generated_at,
+        advisory_lifecycle_assessment=advisory_lifecycle_assessment,
+        clean_lane_effect_default=CLEAN_LANE_BLOCKS,
+    )
 
 
 def _risk_blocks_clean_lane(risk: dict[str, Any]) -> bool:
-    acceptance = risk.get("risk_acceptance")
-    if not isinstance(acceptance, dict):
-        return True
-    code = str(risk.get("code", "")).strip()
-    acceptance_source = str(acceptance.get("acceptance_source", "")).strip()
-    accepted_by = str(acceptance.get("accepted_by", "")).strip()
-    if code == LEARNING_REVIEW_BLOCKER_ID and acceptance_source == LEARNING_SIGNOFF_PATH:
-        return False
-    return accepted_by in {POLICY_RISK_ACCEPTED_BY, "test_deselection_policy"} or not accepted_by
+    return release_risk_blocks_clean_lane(
+        risk,
+        learning_review_blocker_id=LEARNING_REVIEW_BLOCKER_ID,
+        learning_signoff_path=LEARNING_SIGNOFF_PATH,
+        policy_risk_accepted_by=POLICY_RISK_ACCEPTED_BY,
+    )
 
 
 def _risk_with_effects(risk: dict[str, Any], taxonomy: dict[str, Any]) -> dict[str, Any]:
-    enriched = dict(risk)
-    effects = release_risk_effects(taxonomy, str(risk.get("code", "")).strip())
-    for field, value in effects.items():
-        enriched.setdefault(field, value)
-    return enriched
+    return release_risk_with_effects(
+        risk,
+        release_risk_effects(taxonomy, str(risk.get("code", "")).strip()),
+    )
 
 
 def _dict_child(payload: dict[str, Any], key: str) -> dict[str, Any]:
@@ -242,13 +215,11 @@ def _first_known_status(*values: object) -> str:
 
 
 def _risk_list(payload: dict[str, Any], key: str, taxonomy: dict[str, Any]) -> list[dict[str, Any]]:
-    values = payload.get(key, [])
-    values = values if isinstance(values, list) else []
-    return [
-        _risk_with_effects(risk, taxonomy)
-        for risk in values
-        if isinstance(risk, dict)
-    ]
+    return release_risk_list(
+        payload,
+        key,
+        lambda risk: release_risk_effects(taxonomy, str(risk.get("code", "")).strip()),
+    )
 
 
 def _load_clean_blocker_sources(vault: Path) -> CleanBlockerSources:

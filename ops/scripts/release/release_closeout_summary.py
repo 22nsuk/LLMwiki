@@ -18,6 +18,11 @@ from ops.scripts.artifact_io_runtime import (
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
+from ops.scripts.core.release_currentness_state_runtime import (
+    components_match_current_source_tree,
+    currentness_field,
+)
+from ops.scripts.core.release_risk_state_runtime import release_risk_identity
 from ops.scripts.learning_readiness_vocabulary import (
     LEARNING_REVIEW_REQUIRED_BLOCKER_ID,
     LEARNING_STATUS_LIKELY,
@@ -530,13 +535,6 @@ def _live_make_check_gate(
             f"nodeid_outcome_consistency={consistency_status}; toolchain={toolchain_status}/{toolchain_effect}"
         ),
     }
-
-
-def _currentness_field(payload: dict[str, Any], field: str) -> str:
-    currentness = payload.get("currentness")
-    if not isinstance(currentness, dict):
-        return ""
-    return str(currentness.get(field, "")).strip()
 
 
 def _parse_iso_z(value: str) -> dt.datetime | None:
@@ -1538,16 +1536,11 @@ def _finalize_accepted_risks(
 
 
 def _risk_identity(risk: dict[str, Any]) -> str:
-    source = str(risk.get("source", "")).strip()
-    code = str(risk.get("code", "")).strip()
-    acceptance = risk.get("risk_acceptance")
-    linked = ""
-    if isinstance(acceptance, dict):
-        linked = str(acceptance.get("linked_blocker_id", "")).strip()
-    parts = [source, code]
-    if linked:
-        parts.append(linked)
-    return "::".join(parts)
+    return release_risk_identity(
+        risk,
+        include_linked_blocker=True,
+        separator="::",
+    )
 
 
 def _risk_delta(previous_report: dict[str, Any], accepted_risks: list[dict[str, Any]]) -> dict[str, Any]:
@@ -1681,23 +1674,6 @@ def _taxonomy_coverage_blockers(
             ],
         )
     ]
-
-
-def _components_match_current_source_tree(
-    components: list[dict[str, Any]],
-    *,
-    current_source_tree_fingerprint: str,
-) -> bool:
-    if not components:
-        return False
-    for component in components:
-        if component.get("load_status") != "ok":
-            return False
-        if str(component.get("source_tree_fingerprint", "")).strip() != current_source_tree_fingerprint:
-            return False
-        if str(component.get("currentness_status", "")).strip() != "current":
-            return False
-    return True
 
 
 def _blocks_source_clean_lane(issue: dict[str, Any]) -> bool:
@@ -1859,8 +1835,8 @@ def _component_input_from_source(
         producer_input_fingerprint=producer_input_fingerprint(payload),
         artifact_status=str(payload.get("artifact_status", "")).strip()
         or "unknown",
-        currentness_status=_currentness_field(payload, "status") or "unknown",
-        currentness_checked_at=_currentness_field(payload, "checked_at"),
+        currentness_status=currentness_field(payload, "status") or "unknown",
+        currentness_checked_at=currentness_field(payload, "checked_at"),
         report_mtime=report_mtime,
         modified_after_generated_at=_modified_after_generated_at(
             report_mtime,
@@ -2021,7 +1997,7 @@ def _closeout_readiness_state(
         checked_in_release_ready
         and all(lane["status"] == "pass" for lane in gates.test_failure_lanes)
         and gates.live_make_check["status"] == "pass"
-        and _components_match_current_source_tree(
+        and components_match_current_source_tree(
             collection.components,
             current_source_tree_fingerprint=current_source_tree_fingerprint,
         )

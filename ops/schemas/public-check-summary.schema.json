@@ -179,6 +179,10 @@
         "timeout_seconds",
         "termination_reason",
         "duration_ms",
+        "heartbeat_count",
+        "heartbeat_interval_seconds",
+        "quiet_seconds",
+        "observation_mode",
         "stdout_tail",
         "stderr_tail",
         "pytest_counts"
@@ -193,6 +197,13 @@
         "timeout_seconds": { "type": "integer", "minimum": 1 },
         "termination_reason": { "type": "string", "minLength": 1 },
         "duration_ms": { "type": "integer", "minimum": 0 },
+        "heartbeat_count": { "type": "integer", "minimum": 0 },
+        "heartbeat_interval_seconds": { "type": "integer", "minimum": 0 },
+        "quiet_seconds": { "type": "integer", "minimum": 0 },
+        "observation_mode": {
+          "type": "string",
+          "enum": ["communicate", "process_heartbeat"]
+        },
         "stdout_tail": { "type": "string" },
         "stderr_tail": { "type": "string" },
         "pytest_counts": {

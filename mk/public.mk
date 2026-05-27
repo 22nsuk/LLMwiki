@@ -3,6 +3,7 @@ PUBLIC_CHECK_SUMMARY_CANDIDATE_OUT ?= tmp/public-check-summary.candidate.json
 PUBLIC_CHECK_SUMMARY_CHECK_OUT ?= tmp/public-check-summary-check.json
 PUBLIC_CHECK_SUMMARY_REUSE_FROM ?= $(PUBLIC_CHECK_SUMMARY_OUT)
 PUBLIC_CHECK_TIMEOUT_SECONDS ?= 5400
+PUBLIC_CHECK_HEARTBEAT_INTERVAL_SECONDS ?= 30
 PUBLIC_OUT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)/llm-wiki-public-repo
 PUBLIC_PYTHON ?= $(if $(wildcard $(firstword $(PYTHON))),$(abspath $(firstword $(PYTHON))),$(shell command -v $(firstword $(PYTHON))))
 PUBLIC_GITIGNORE_TEMPLATE ?= ops/templates/public-mirror.gitignore
@@ -48,14 +49,14 @@ cbm-reset-local:
 	rm -rf "$(CBM_CACHE_DIR)" "$(CBM_PUBLIC_OUT)"
 
 public-check-summary: script-output-surfaces
-	$(PYTHON) -m ops.scripts.public_check_summary --vault "$(VAULT)" --out "$(PUBLIC_CHECK_SUMMARY_CANDIDATE_OUT)" --public-out "$(PUBLIC_OUT)" --public-python "$(PUBLIC_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --pytest-mark-expr "$(PYTEST_PUBLIC_MARK_EXPR)" --pytest-flags "$(PYTEST_FLAGS)" --timeout-seconds "$(PUBLIC_CHECK_TIMEOUT_SECONDS)"
+	$(PYTHON) -m ops.scripts.public_check_summary --vault "$(VAULT)" --out "$(PUBLIC_CHECK_SUMMARY_CANDIDATE_OUT)" --public-out "$(PUBLIC_OUT)" --public-python "$(PUBLIC_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --pytest-mark-expr "$(PYTEST_PUBLIC_MARK_EXPR)" --pytest-flags "$(PYTEST_FLAGS)" --timeout-seconds "$(PUBLIC_CHECK_TIMEOUT_SECONDS)" --heartbeat-interval-seconds "$(PUBLIC_CHECK_HEARTBEAT_INTERVAL_SECONDS)"
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(PUBLIC_CHECK_SUMMARY_CANDIDATE_OUT)" --out "$(PUBLIC_CHECK_SUMMARY_OUT)" --schema ops/schemas/public-check-summary.schema.json --expected-artifact-kind public_check_summary --expected-producer ops.scripts.public_check_summary
 
 public-check-summary-check:
-	$(PYTHON) -m ops.scripts.public_check_summary --vault "$(VAULT)" --out "$(PUBLIC_CHECK_SUMMARY_CHECK_OUT)" --public-out "$(PUBLIC_OUT)" --public-python "$(PUBLIC_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --pytest-mark-expr "$(PYTEST_PUBLIC_MARK_EXPR)" --pytest-flags "$(PYTEST_FLAGS)" --timeout-seconds "$(PUBLIC_CHECK_TIMEOUT_SECONDS)"
+	$(PYTHON) -m ops.scripts.public_check_summary --vault "$(VAULT)" --out "$(PUBLIC_CHECK_SUMMARY_CHECK_OUT)" --public-out "$(PUBLIC_OUT)" --public-python "$(PUBLIC_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --pytest-mark-expr "$(PYTEST_PUBLIC_MARK_EXPR)" --pytest-flags "$(PYTEST_FLAGS)" --timeout-seconds "$(PUBLIC_CHECK_TIMEOUT_SECONDS)" --heartbeat-interval-seconds "$(PUBLIC_CHECK_HEARTBEAT_INTERVAL_SECONDS)"
 
 public-check-summary-current-check:
-	$(PYTHON) -m ops.scripts.public_check_summary --vault "$(VAULT)" --out "$(PUBLIC_CHECK_SUMMARY_CHECK_OUT)" --public-out "$(PUBLIC_OUT)" --public-python "$(PUBLIC_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --pytest-mark-expr "$(PYTEST_PUBLIC_MARK_EXPR)" --pytest-flags "$(PYTEST_FLAGS)" --timeout-seconds "$(PUBLIC_CHECK_TIMEOUT_SECONDS)" --reuse-if-current --reuse-only --reuse-from "$(PUBLIC_CHECK_SUMMARY_REUSE_FROM)"
+	$(PYTHON) -m ops.scripts.public_check_summary --vault "$(VAULT)" --out "$(PUBLIC_CHECK_SUMMARY_CHECK_OUT)" --public-out "$(PUBLIC_OUT)" --public-python "$(PUBLIC_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --pytest-mark-expr "$(PYTEST_PUBLIC_MARK_EXPR)" --pytest-flags "$(PYTEST_FLAGS)" --timeout-seconds "$(PUBLIC_CHECK_TIMEOUT_SECONDS)" --heartbeat-interval-seconds "$(PUBLIC_CHECK_HEARTBEAT_INTERVAL_SECONDS)" --reuse-if-current --reuse-only --reuse-from "$(PUBLIC_CHECK_SUMMARY_REUSE_FROM)"
 
 public-check: public-check-summary
 

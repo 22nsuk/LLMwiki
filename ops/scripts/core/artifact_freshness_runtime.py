@@ -93,6 +93,15 @@ STABLE_CONTRACT_ISSUES = (
 MTIME_SENSITIVE_ISSUES = (
     "generated_at_older_than_file_mtime",
 )
+TEST_TARGET_FINGERPRINT_ISSUES = (
+    "test_target_fingerprint_mismatch",
+    "test_target_missing",
+)
+SOURCE_TREE_FINGERPRINT_ISSUES = (
+    "source_tree_fingerprint_mismatch",
+    "source_tree_fingerprint_unknown",
+)
+OPERATIONAL_ATTENTION_ISSUES = TEST_TARGET_FINGERPRINT_ISSUES + SOURCE_TREE_FINGERPRINT_ISSUES
 MTIME_SOURCES = (
     "filesystem",
     "zip_info",
@@ -102,10 +111,6 @@ PROGRESS_FORMATS = ("none", "jsonl")
 ADVISORY_ONLY_MTIME_DRIFT_PATHS = {
     "ops/reports/generated-artifact-index.json",
 }
-TEST_TARGET_FINGERPRINT_ISSUES = (
-    "test_target_fingerprint_mismatch",
-    "test_target_missing",
-)
 SCHEMALESS_HISTORICAL_BOOTSTRAP_REPORTS = {
     "ops/reports/eval-initial-2026-04-12.json",
     "ops/reports/lint-initial-2026-04-12.json",
@@ -387,6 +392,7 @@ class ArtifactFreshnessContext:
     progress_stream: TextIO = field(default_factory=lambda: sys.stderr)
     schema_cache: dict[str, dict[str, Any]] = field(default_factory=dict)
     validator_cache: dict[str, Any] = field(default_factory=dict)
+    source_tree_fingerprint_cache: str | None = None
     phase_timings: list[dict[str, Any]] = field(default_factory=list)
     started_at: float = field(default_factory=time.perf_counter)
 
@@ -457,6 +463,11 @@ class ArtifactFreshnessContext:
         if errors:
             return "fail", errors
         return "pass", []
+
+    def current_source_tree_fingerprint(self) -> str:
+        if self.source_tree_fingerprint_cache is None:
+            self.source_tree_fingerprint_cache = release_source_tree_fingerprint(self.vault)
+        return self.source_tree_fingerprint_cache
 
 
 def _input_fingerprints(vault: Path, policy_path: Path) -> dict[str, str]:
@@ -730,6 +741,40 @@ def _owner_surface(rel_path: str) -> str:
     return "repo_root"
 
 
+def _requires_source_tree_fingerprint_check(rel_path: str) -> bool:
+    if not rel_path.startswith("ops/reports/"):
+        return False
+    report_name = rel_path.removeprefix("ops/reports/")
+    return "/" not in report_name
+
+
+def _source_tree_fingerprint_status(
+    *,
+    vault: Path,
+    rel_path: str,
+    normalized_payload: dict[str, Any],
+    schema_validation_status: str,
+    freshness_context: ArtifactFreshnessContext | None,
+) -> str:
+    if not _requires_source_tree_fingerprint_check(rel_path):
+        return "not_applicable"
+    if schema_validation_status != "pass":
+        return "not_applicable"
+    if str(normalized_payload.get("artifact_status", "")).strip() != "current":
+        return "not_applicable"
+    if str(normalized_payload.get("retention_policy", "")).strip() != "canonical_report":
+        return "not_applicable"
+    observed = str(normalized_payload.get("source_tree_fingerprint", "")).strip()
+    if not observed:
+        return "unknown"
+    current = (
+        freshness_context.current_source_tree_fingerprint()
+        if freshness_context is not None
+        else release_source_tree_fingerprint(vault)
+    )
+    return "current" if observed == current else "stale"
+
+
 def _currentness_status(payload: dict[str, Any]) -> str:
     normalized_payload = _normalized_artifact_payload(payload)
     currentness = normalized_payload.get("currentness")
@@ -737,6 +782,18 @@ def _currentness_status(payload: dict[str, Any]) -> str:
         return "unknown"
     status = str(currentness.get("status", "")).strip()
     return status or "unknown"
+
+
+def _computed_currentness_status(
+    *,
+    declared_currentness_status: str,
+    source_tree_fingerprint_status: str,
+) -> str:
+    if declared_currentness_status != "current":
+        return declared_currentness_status
+    if source_tree_fingerprint_status in {"stale", "unknown"}:
+        return source_tree_fingerprint_status
+    return declared_currentness_status
 
 
 def _has_artifact_envelope(payload: dict[str, Any]) -> bool:
@@ -954,6 +1011,10 @@ def _recommended_next_action(issues: list[str], schema_validation_status: str) -
         return "add_schema_or_exclude_noncanonical_json"
     if _matching_issues(issues, TEST_TARGET_FINGERPRINT_ISSUES):
         return "regenerate_test_execution_summary"
+    if "source_tree_fingerprint_mismatch" in issues:
+        return "regenerate_canonical_report"
+    if "source_tree_fingerprint_unknown" in issues:
+        return "regenerate_canonical_report_with_source_tree_fingerprint"
     if "generated_at_older_than_file_mtime" in issues:
         return "regenerate_artifact_or_refresh_timestamp"
     if "missing_generated_at" in issues:
@@ -1212,12 +1273,28 @@ def _json_artifact_record(
         freshness_context=freshness_context,
     )
     issues.extend(schema_issues)
+    declared_currentness_status = currentness_status
+    source_tree_fingerprint_status = _source_tree_fingerprint_status(
+        vault=vault,
+        rel_path=rel_path,
+        normalized_payload=normalized_payload,
+        schema_validation_status=schema_validation_status,
+        freshness_context=freshness_context,
+    )
+    currentness_status = _computed_currentness_status(
+        declared_currentness_status=declared_currentness_status,
+        source_tree_fingerprint_status=source_tree_fingerprint_status,
+    )
+    if source_tree_fingerprint_status == "stale":
+        issues.append("source_tree_fingerprint_mismatch")
+    elif source_tree_fingerprint_status == "unknown":
+        issues.append("source_tree_fingerprint_unknown")
     safe_to_backfill = _safe_to_backfill(
         utf8_ok=utf8_ok,
         json_ok=json_ok,
         schema_validation_status=schema_validation_status,
         mtime_status=mtime_status,
-    )
+    ) and source_tree_fingerprint_status != "stale"
     mtime_sensitive = mtime_status == "stale"
     issues = sorted(set(issues))
     stable_contract_issues = _matching_issues(issues, STABLE_CONTRACT_ISSUES)
@@ -1235,6 +1312,8 @@ def _json_artifact_record(
         "generated_at": generated_at,
         "artifact_status": str(fields["artifact_status"]),
         "retention_policy": str(fields["retention_policy"]),
+        "declared_currentness_status": declared_currentness_status,
+        "source_tree_fingerprint_status": source_tree_fingerprint_status,
         "currentness_status": currentness_status,
         "file_mtime_utc": _format_mtime(source_mtime),
         "mtime_source": mtime_source,
@@ -1294,6 +1373,8 @@ def _issue_priority(issue: str) -> int:
         "missing_artifact_envelope": 4,
         "missing_schema": 5,
         "schema_unavailable": 6,
+        "source_tree_fingerprint_mismatch": 7,
+        "source_tree_fingerprint_unknown": 7,
         "generated_at_older_than_file_mtime": 7,
         "test_target_fingerprint_mismatch": 7,
         "test_target_missing": 7,
@@ -1666,10 +1747,16 @@ def _summarize_artifact_freshness_counts(
 ) -> _ArtifactFreshnessCountSummary:
     return _ArtifactFreshnessCountSummary(
         stale_count=sum(
-            1 for record in artifact_records if "generated_at_older_than_file_mtime" in record["issues"]
+            1
+            for record in artifact_records
+            if record["currentness_status"] == "stale"
+            or "generated_at_older_than_file_mtime" in record["issues"]
         ),
         unknown_currentness_count=sum(
-            1 for record in artifact_records if "unknown_currentness" in record["issues"]
+            1
+            for record in artifact_records
+            if record["currentness_status"] == "unknown"
+            or "unknown_currentness" in record["issues"]
         ),
         missing_schema_count=sum(1 for record in artifact_records if "missing_schema" in record["issues"]),
         missing_envelope_count=sum(
@@ -1698,10 +1785,10 @@ def _summarize_artifact_freshness_counts(
         operational_attention_artifact_count=sum(
             1
             for record in artifact_records
-            if _matching_issues(record["issues"], TEST_TARGET_FINGERPRINT_ISSUES)
+            if _matching_issues(record["issues"], OPERATIONAL_ATTENTION_ISSUES)
         ),
         operational_attention_issue_count=sum(
-            len(_matching_issues(record["issues"], TEST_TARGET_FINGERPRINT_ISSUES))
+            len(_matching_issues(record["issues"], OPERATIONAL_ATTENTION_ISSUES))
             for record in artifact_records
         ),
     )

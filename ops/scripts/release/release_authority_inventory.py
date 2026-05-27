@@ -10,6 +10,10 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from ops.scripts.core.release_authority_state_runtime import (  # noqa: PLC0415
+        release_artifact_revision,
+        release_artifact_stale_for_revision,
+    )
     from ops.scripts.output_runtime import display_path  # noqa: PLC0415
     from ops.scripts.runtime_context import RuntimeContext  # noqa: PLC0415
     from ops.scripts.source_revision_runtime import (
@@ -19,6 +23,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         release_source_tree_fingerprint,  # noqa: PLC0415
     )
 else:
+    from ops.scripts.core.release_authority_state_runtime import (
+        release_artifact_revision,
+        release_artifact_stale_for_revision,
+    )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.source_revision_runtime import resolve_source_revision
@@ -94,28 +102,18 @@ def _read_json(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
-def _artifact_revision(payload: dict[str, Any]) -> str:
-    for key in ("source_revision", "commit", "git_revision"):
-        value = payload.get(key)
-        if isinstance(value, str) and value:
-            return value
-    source = payload.get("source")
-    if isinstance(source, dict):
-        value = source.get("source_revision") or source.get("revision")
-        if isinstance(value, str):
-            return value
-    return ""
-
-
 def _surface_entry(vault: Path, spec: dict[str, Any], current_revision: str) -> dict[str, Any]:
     payload = _read_json(vault / str(spec["path"]))
-    artifact_revision = _artifact_revision(payload)
+    artifact_revision = release_artifact_revision(payload)
     return {
         **spec,
         "exists": bool(payload),
         "artifact_status": str(payload.get("status", "")) if payload else "missing",
         "artifact_revision": artifact_revision,
-        "stale_for_current_revision": bool(artifact_revision and artifact_revision != current_revision),
+        "stale_for_current_revision": release_artifact_stale_for_revision(
+            payload,
+            current_revision,
+        ),
     }
 
 

@@ -4,6 +4,10 @@ The public mirror is a self-contained code/ops view of the repository. It must
 be useful without private corpus files, live run directories, or external
 review material.
 
+For a side-by-side comparison of the full local vault, public export, and
+release source ZIP, see [repository-surfaces.md](repository-surfaces.md). This
+document owns the public mirror/export lane only.
+
 ## Included Surface
 
 The source of truth is `ops/scripts/public/public_surface_policy.py`.

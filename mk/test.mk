@@ -103,10 +103,13 @@ TEST_EXECUTION_SUMMARY_CANDIDATE_OUT ?= tmp/test-execution-summary.candidate.jso
 TEST_EXECUTION_SUMMARY_CHECK_OUT ?= tmp/test-execution-summary-check.json
 TEST_EXECUTION_SUMMARY_FAST_OUT ?= ops/reports/test-execution-summary-fast.json
 TEST_EXECUTION_SUMMARY_FAST_CANDIDATE_OUT ?= tmp/test-execution-summary-fast.candidate.json
+TEST_EXECUTION_SUMMARY_PUBLIC_OUT ?= ops/reports/test-execution-summary-public.json
+TEST_EXECUTION_SUMMARY_PUBLIC_CANDIDATE_OUT ?= tmp/test-execution-summary-public.candidate.json
 TEST_EXECUTION_SUMMARY_FULL_OUT ?= ops/reports/test-execution-summary-full.json
 TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT ?= tmp/test-execution-summary-full.candidate.json
 TEST_EXECUTION_SUMMARY_FULL_CHECK_OUT ?= tmp/test-execution-summary-full-check.json
 TEST_EXECUTION_SUMMARY_FAST_SUITE ?= fast
+TEST_EXECUTION_SUMMARY_PUBLIC_SUITE ?= public
 TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE ?= report-contract-summary
 TEST_EXECUTION_SUMMARY_FULL_SUITE ?= full
 TEST_EXECUTION_SUMMARY_FULL_SHARD_SUITE ?= full-shard-1
@@ -122,7 +125,7 @@ RELEASE_CLOSEOUT_REGRESSION_TESTS ?= tests/test_release_closeout_finality_attest
 RELEASE_CLOSEOUT_REGRESSION_FRESHNESS_CHECK_OUT ?= tmp/release-closeout-regression-artifact-freshness-check.json
 RELEASE_CLOSEOUT_COST_EVIDENCE_CI_OUT ?= tmp/release-closeout-fixed-point-cost-trend-ci.json
 
-.PHONY: fast-smoke report-contracts report-contracts-core report-contracts-all report-contracts-extended test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact test-report-contract test-report-contract-core test-report-contract-all report-contract-summary test-release-sealing test-release-sealing-core test-release-sealing-all test-subprocess report-schema-samples-check report-schema-samples-regenerate report-contract-closeout-precheck report-contract-closeout test-execution-summary-fast test-execution-summary-report-contract test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary test-execution-summary-current-check test-execution-summary-full-body test-execution-summary-full test-execution-summary-full-refresh test-execution-summary-full-refresh-no-converge test-execution-summary-full-current-check test-execution-summary-full-current-or-refresh test-execution-summary-reuse test-execution-summary-aggregate test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
+.PHONY: fast-smoke report-contracts report-contracts-core report-contracts-all report-contracts-extended test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact test-report-contract test-report-contract-core test-report-contract-all report-contract-summary test-release-sealing test-release-sealing-core test-release-sealing-all test-subprocess report-schema-samples-check report-schema-samples-regenerate report-contract-closeout-precheck report-contract-closeout test-execution-summary-fast test-execution-summary-public test-execution-summary-report-contract test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary test-execution-summary-current-check test-execution-summary-full-body test-execution-summary-full test-execution-summary-full-refresh test-execution-summary-full-refresh-no-converge test-execution-summary-full-current-check test-execution-summary-full-current-or-refresh test-execution-summary-reuse test-execution-summary-aggregate test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
 
 fast-smoke:
 	$(PYTHON) -m pytest -m "$(PYTEST_FAST_SMOKE_MARK_EXPR)" $(FAST_SMOKE_TESTS) $(PYTEST_SERIAL_FLAGS)
@@ -199,6 +202,10 @@ report-contract-closeout:
 test-execution-summary-fast:
 	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_FAST_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_FAST_SUITE)" --collect-nodeids -- $(PYTHON) -m pytest -m "$(PYTEST_FAST_MARK_EXPR)" $(PYTEST_SERIAL_FLAGS)
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(TEST_EXECUTION_SUMMARY_FAST_CANDIDATE_OUT)" --out "$(TEST_EXECUTION_SUMMARY_FAST_OUT)" --schema ops/schemas/test-execution-summary.schema.json --expected-artifact-kind test_execution_summary --expected-producer ops.scripts.test_execution_summary
+
+test-execution-summary-public:
+	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_PUBLIC_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_PUBLIC_SUITE)" --collect-nodeids -- $(PYTHON) -m pytest -m "$(PYTEST_PUBLIC_MARK_EXPR)" $(PYTEST_FLAGS)
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(TEST_EXECUTION_SUMMARY_PUBLIC_CANDIDATE_OUT)" --out "$(TEST_EXECUTION_SUMMARY_PUBLIC_OUT)" --schema ops/schemas/test-execution-summary.schema.json --expected-artifact-kind test_execution_summary --expected-producer ops.scripts.test_execution_summary
 
 test-execution-summary-report-contract:
 	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)" --collect-nodeids --deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)" -- $(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_SERIAL_FLAGS)
@@ -308,8 +315,7 @@ test-integration-heavy:
 test-integration-heavy-serial:
 	$(PYTHON) -m pytest -m "$(PYTEST_INTEGRATION_HEAVY_MARK_EXPR)" $(PYTEST_SERIAL_FLAGS)
 
-test-public:
-	$(PYTHON) -m pytest -m "$(PYTEST_PUBLIC_MARK_EXPR)" $(PYTEST_FLAGS)
+test-public: test-execution-summary-public
 
 test-public-serial:
-	$(PYTHON) -m pytest -m "$(PYTEST_PUBLIC_MARK_EXPR)" $(PYTEST_SERIAL_FLAGS)
+	$(MAKE) test-execution-summary-public PYTEST_FLAGS="$(PYTEST_SERIAL_FLAGS)"

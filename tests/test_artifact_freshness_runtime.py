@@ -27,6 +27,7 @@ from ops.scripts.generated_artifact_index import (
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import CYCLONEDX_16_SCHEMA_URI
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 from ops.scripts.test_execution_summary import (
     build_report as build_test_execution_summary,
 )
@@ -133,7 +134,7 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
                     "producer": "test",
                     "source_command": "pytest",
                     "source_revision": "unknown",
-                    "source_tree_fingerprint": "abc",
+                    "source_tree_fingerprint": release_source_tree_fingerprint(vault),
                     "input_fingerprints": {"policy": "abc"},
                     "schema_version": 1,
                     "artifact_status": "current",
@@ -280,7 +281,8 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             )
             self.assertIn(report["status"], {"pass", "attention"})
             self.assertEqual(report["summary"]["operational_attention_artifact_count"], 1)
-            self.assertEqual(report["summary"]["operational_attention_issue_count"], 1)
+            self.assertEqual(report["summary"]["operational_attention_issue_count"], 2)
+            self.assertIn("source_tree_fingerprint_mismatch", record["issues"])
 
     def test_generated_artifact_index_mtime_drift_is_advisory_not_canonical_debt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -722,6 +724,65 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertTrue(record["safe_to_backfill"])
             self.assertNotIn("missing_artifact_envelope", record["issues"])
 
+    def test_canonical_report_source_tree_mismatch_overrides_self_declared_currentness(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            (vault / "ops" / "schemas" / "example.schema.json").write_text(
+                json.dumps(
+                    {
+                        "$schema": "https://json-schema.org/draft/2020-12/schema",
+                        "type": "object",
+                        "required": ["answer"],
+                        "properties": {"answer": {"type": "string"}},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            current_source_tree = release_source_tree_fingerprint(vault)
+            self.assertNotEqual(current_source_tree, "stale-source-tree")
+            (vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
+            (vault / "ops" / "reports" / "public-check-summary.json").write_text(
+                json.dumps(
+                    {
+                        "$schema": "ops/schemas/example.schema.json",
+                        "artifact_kind": "public_check_summary",
+                        "generated_at": "2999-01-01T00:00:00Z",
+                        "producer": "test",
+                        "source_command": "pytest",
+                        "source_revision": "unknown",
+                        "source_tree_fingerprint": "stale-source-tree",
+                        "input_fingerprints": {"policy": "abc"},
+                        "schema_version": 1,
+                        "artifact_status": "current",
+                        "retention_policy": "canonical_report",
+                        "encoding": "utf-8",
+                        "currentness": {
+                            "status": "current",
+                            "checked_at": "2999-01-01T00:00:00Z",
+                        },
+                        "answer": "ok",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+            schema = load_schema(REPORT_SCHEMA_PATH)
+            record = next(
+                item for item in report["artifact_records"] if item["path"] == "ops/reports/public-check-summary.json"
+            )
+
+            self.assertEqual(validate_with_schema(report, schema), [])
+            self.assertEqual(report["status"], "attention")
+            self.assertEqual(record["declared_currentness_status"], "current")
+            self.assertEqual(record["source_tree_fingerprint_status"], "stale")
+            self.assertEqual(record["currentness_status"], "stale")
+            self.assertIn("source_tree_fingerprint_mismatch", record["issues"])
+            self.assertFalse(record["safe_to_backfill"])
+            self.assertEqual(record["recommended_next_action"], "regenerate_canonical_report")
+
     def test_active_run_auxiliary_json_is_not_canonical_release_debt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -743,6 +804,60 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertEqual(record["schema_validation_status"], "not_applicable")
             self.assertEqual(record["issues"], [])
             self.assertNotIn("missing_artifact_envelope", record["stable_contract_issues"])
+
+    def test_nested_ops_report_history_is_not_live_source_tree_currentness_debt(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            (vault / "ops" / "schemas" / "example.schema.json").write_text(
+                json.dumps(
+                    {
+                        "$schema": "https://json-schema.org/draft/2020-12/schema",
+                        "type": "object",
+                        "required": ["answer"],
+                        "properties": {"answer": {"type": "string"}},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            nested_path = vault / "ops/reports/auto-improve-sessions/history.json"
+            nested_path.parent.mkdir(parents=True)
+            nested_path.write_text(
+                json.dumps(
+                    {
+                        "$schema": "ops/schemas/example.schema.json",
+                        "artifact_kind": "historical_session_report",
+                        "generated_at": "2999-01-01T00:00:00Z",
+                        "producer": "test",
+                        "source_command": "pytest",
+                        "source_revision": "unknown",
+                        "source_tree_fingerprint": "historical-source-tree",
+                        "input_fingerprints": {"policy": "abc"},
+                        "schema_version": 1,
+                        "artifact_status": "current",
+                        "retention_policy": "canonical_report",
+                        "encoding": "utf-8",
+                        "currentness": {
+                            "status": "current",
+                            "checked_at": "2999-01-01T00:00:00Z",
+                        },
+                        "answer": "ok",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context())
+            record = next(
+                item
+                for item in report["artifact_records"]
+                if item["path"] == "ops/reports/auto-improve-sessions/history.json"
+            )
+
+            self.assertEqual(record["source_tree_fingerprint_status"], "not_applicable")
+            self.assertEqual(record["currentness_status"], "current")
+            self.assertNotIn("source_tree_fingerprint_mismatch", record["issues"])
 
     def test_archived_artifacts_with_archive_retention_do_not_accumulate_mtime_drift_debt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -962,7 +1077,7 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
                                             "producer": "ops.scripts.cyclonedx_sbom",
                                             "source_command": "python -m ops.scripts.supply_chain.cyclonedx_sbom",
                                             "source_revision": "unknown",
-                                            "source_tree_fingerprint": "abc",
+                                            "source_tree_fingerprint": release_source_tree_fingerprint(vault),
                                             "input_fingerprints": {"policy": "abc"},
                                             "schema_version": 1,
                                             "artifact_status": "current",

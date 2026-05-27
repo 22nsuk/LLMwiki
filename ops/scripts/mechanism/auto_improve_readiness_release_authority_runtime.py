@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from ops.scripts.release.release_status_v2 import (
+from ops.scripts.core.release_authority_state_runtime import (
+    clean_required_preflight_passes,
+    machine_release_allowed_from_status_view,
     release_status_v2_view,
     release_status_v2_view_with_readiness_fallback,
 )
@@ -290,14 +292,13 @@ def _release_closeout_summary_gate(payload: dict[str, Any]) -> dict[str, Any]:
     source_status = str(status_view["compatibility_status_value"])
     authority_status = str(status_view["release_authority_status"])
     sealed_status = str(status_view["sealed_release_status"])
-    blocker_reason_ids = [str(reason) for reason in status_view["blocker_reason_ids"]]
-    machine_release_allowed = (
-        authority_status == "clean_pass"
-        and REASON_MACHINE_RELEASE_NOT_ALLOWED not in blocker_reason_ids
+    machine_release_allowed = machine_release_allowed_from_status_view(
+        status_view,
+        machine_release_not_allowed_reason_id=REASON_MACHINE_RELEASE_NOT_ALLOWED,
     )
     clean_release_ready = bool(payload.get("clean_release_ready", False))
     status = "pass" if machine_release_allowed else "fail"
-    signal_ids = blocker_reason_ids if status != "pass" else []
+    signal_ids = [str(reason) for reason in status_view["blocker_reason_ids"]] if status != "pass" else []
     if status != "pass" and not signal_ids:
         signal_ids = [REASON_MACHINE_RELEASE_NOT_ALLOWED]
     return {
@@ -449,14 +450,14 @@ def _release_authority_preflight_summary(payload: dict[str, Any]) -> dict[str, A
     )
     expected_blocked_preflight = bool(payload.get("expected_blocked_preflight", False))
     clean_required_preflight = bool(payload.get("clean_required_preflight", True))
-    clean_required_gate = (
-        status == "pass"
-        and preflight_status == "sealed_clean_pass"
-        and preflight_mode == "clean_required"
-        and distribution_binding_status == "pass"
-        and authority_preflight_status == "clean"
-        and not expected_blocked_preflight
-        and clean_required_preflight
+    clean_required_gate = clean_required_preflight_passes(
+        status=status,
+        preflight_status=preflight_status,
+        preflight_mode=preflight_mode,
+        distribution_binding_status=distribution_binding_status,
+        authority_preflight_status=authority_preflight_status,
+        expected_blocked_preflight=expected_blocked_preflight,
+        clean_required_preflight=clean_required_preflight,
     )
     blocker_reason_ids = _string_list(payload.get("blocking_reason_ids"))
     linked_blockers: list[str] = []
@@ -727,14 +728,14 @@ def _release_authority_preflight_promotion_blockers(
     preflight_mode = str(summary.get("preflight_mode", "clean_required")).strip() or "clean_required"
     expected_blocked_preflight = bool(summary.get("expected_blocked_preflight", False))
     clean_required_preflight = bool(summary.get("clean_required_preflight", True))
-    gate_pass = (
-        status == "pass"
-        and preflight_status == "sealed_clean_pass"
-        and preflight_mode == "clean_required"
-        and distribution_binding_status == "pass"
-        and authority_preflight_status == "clean"
-        and not expected_blocked_preflight
-        and clean_required_preflight
+    gate_pass = clean_required_preflight_passes(
+        status=status,
+        preflight_status=preflight_status,
+        preflight_mode=preflight_mode,
+        distribution_binding_status=distribution_binding_status,
+        authority_preflight_status=authority_preflight_status,
+        expected_blocked_preflight=expected_blocked_preflight,
+        clean_required_preflight=clean_required_preflight,
     )
     if gate_pass:
         return []

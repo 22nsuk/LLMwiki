@@ -50,7 +50,9 @@ evidence form the bounded meta-maintainer loop. See
 Release evidence is generated under policy-approved paths and checked by Make
 targets. Public export is generated from the source policy rather than
 hand-maintained file lists. See [docs/public-mirror.md](./docs/public-mirror.md)
-and [docs/release.md](./docs/release.md).
+and [docs/release.md](./docs/release.md). For the operator-facing comparison
+between the full local vault, public export, and release source ZIP, see
+[docs/repository-surfaces.md](./docs/repository-surfaces.md).
 
 ## Source Of Truth Map
 
@@ -64,24 +66,18 @@ and [docs/release.md](./docs/release.md).
 | What may agents do? | `AGENTS.md` and `AGENTS.local.md` |
 | How is CBM used? | `docs/codebase-memory-mcp.md` |
 
-## Public vs Private
+## Surface Boundaries
 
-Included in the public mirror:
+The short rule is: public mirror membership comes from
+`ops/scripts/public/public_surface_policy.py`; private corpus and local evidence
+remain outside public source; release source ZIP authority comes from staged
+manifests under `build/release/`. The full comparison lives in
+[docs/repository-surfaces.md](./docs/repository-surfaces.md).
+
+Representative public roots remain visible here for quick orientation:
 
 - `docs/`
-- `ops/`, `tests/`, `tools/`, `mk/`
-- `.codex/agents/`
 - `.github/`
-- root public documents and development configuration
-
-Excluded from the public mirror:
-
-- `raw/`
-- `wiki/`
-- `system/`
-- `runs/`
-- `external-reports/`
-- private inventory and most generated report artifacts
 
 Generated report exceptions are explicit and policy-backed. If a new durable
 public report is needed, update policy, `.gitignore`, export tests, and docs in

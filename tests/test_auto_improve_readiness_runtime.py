@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import importlib.abc
+import importlib.machinery
 import json
 import os
 import runpy
@@ -87,7 +88,9 @@ def fixed_context() -> RuntimeContext:
 
 
 class _BlockFlatReadinessAlias(importlib.abc.MetaPathFinder):
-    def find_spec(self, fullname: str, path: object = None, target: object = None):
+    def find_spec(
+        self, fullname: str, path: object = None, target: object = None
+    ) -> importlib.machinery.ModuleSpec | None:
         if fullname in {
             "ops.scripts.auto_improve_readiness_runtime",
             "ops.scripts.output_runtime",

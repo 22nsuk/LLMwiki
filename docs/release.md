@@ -9,6 +9,10 @@ source ZIP and sidecars are sealed evidence, and
 `build/release/release-auto-promotion-ready-manifest.json` says whether the
 result can be promoted without operator intervention.
 
+The release source ZIP is distinct from both the full local vault and the
+public export. See [repository-surfaces.md](repository-surfaces.md) for the
+surface comparison; this document owns release evidence and staged authority.
+
 ## Common Targets
 
 - `make release-check`: check-only release gate for the current tree.

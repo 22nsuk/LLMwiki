@@ -23,6 +23,18 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
+    from ops.scripts.core.learning_claim_state_runtime import (  # noqa: PLC0415
+        confirmed_blocking_predicate_ids,
+        confirmed_evidence_summary,
+        confirmed_predicate_results,
+        confirmed_wording_allowed,
+        evidence_cohort_status,
+        improvement_claim_status,
+        learning_claim_bundle_status,
+    )
+    from ops.scripts.core.release_currentness_state_runtime import (  # noqa: PLC0415
+        live_rerun_state,
+    )
     from ops.scripts.learning.learning_claim_model import (  # noqa: PLC0415
         ImprovementClaimInputs,
         improvement_claim_model,
@@ -50,6 +62,16 @@ else:
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
+    from ops.scripts.core.learning_claim_state_runtime import (
+        confirmed_blocking_predicate_ids,
+        confirmed_evidence_summary,
+        confirmed_predicate_results,
+        confirmed_wording_allowed,
+        evidence_cohort_status,
+        improvement_claim_status,
+        learning_claim_bundle_status,
+    )
+    from ops.scripts.core.release_currentness_state_runtime import live_rerun_state
     from ops.scripts.learning.learning_claim_model import (
         ImprovementClaimInputs,
         improvement_claim_model,
@@ -367,37 +389,6 @@ def _next_action(blockers: list[dict[str, Any]], risks: list[dict[str, Any]]) ->
     return "none"
 
 
-def _live_rerun_state(
-    component: dict[str, Any], *, current_fingerprint: str
-) -> dict[str, str]:
-    component_fingerprint = str(component.get("source_tree_fingerprint", "")).strip()
-    currentness_status = str(component.get("currentness_status", "")).strip()
-    if not component_fingerprint:
-        return {
-            "status": "not_run",
-            "reason": "component has no source_tree_fingerprint",
-        }
-    if component_fingerprint != current_fingerprint:
-        return {
-            "status": "not_run",
-            "reason": "component fingerprint differs from current source tree",
-        }
-    if currentness_status != "current":
-        return {
-            "status": "not_run",
-            "reason": f"component currentness_status={currentness_status or 'unknown'}",
-        }
-    if bool(component.get("ready")):
-        return {
-            "status": "pass",
-            "reason": "checked-in component matches current source tree",
-        }
-    return {
-        "status": "fail",
-        "reason": "checked-in component matches current source tree but is not ready",
-    }
-
-
 def _component_evidence_label(live: dict[str, str]) -> str:
     reason = str(live.get("reason", "")).strip()
     if "matches current source tree" in reason:
@@ -413,7 +404,7 @@ def _component_gate(
     current_fingerprint: str,
 ) -> dict[str, Any]:
     ready = bool(component.get("ready"))
-    live = _live_rerun_state(component, current_fingerprint=current_fingerprint)
+    live = live_rerun_state(component, current_fingerprint=current_fingerprint)
     owner, expiry = _risk_owner_and_expiry(accepted_risks)
     checked_state = "pass" if ready else ("attention" if accepted_risks else "fail")
     if ready and blockers:
@@ -921,54 +912,6 @@ def _summary_coverage_status(summary: dict[str, Any], key: str, ratio_key: str) 
     return _coverage_status(summary.get(ratio_key))
 
 
-def _confirmed_evidence_summary(
-    value: object, blocking_ids: list[str]
-) -> dict[str, Any]:
-    summary = value if isinstance(value, dict) else {}
-    evidence_status = (
-        str(
-            summary.get(
-                "evidence_cohort_status",
-                summary.get("confirmed_evidence_status", "not_ready"),
-            )
-        ).strip()
-        or "not_ready"
-    )
-    legacy_summary = summary.get("legacy_reconstruction_summary")
-    return {
-        "evidence_cohort_status": evidence_status,
-        "confirmed_evidence_status": evidence_status,
-        "valid_run_count": int(summary.get("valid_run_count", 0) or 0),
-        "min_required_run_count": int(summary.get("min_required_run_count", 0) or 0),
-        "eligible_family_count": int(summary.get("eligible_family_count", 0) or 0),
-        "selected_valid_run_ids": [
-            str(item).strip()
-            for item in summary.get("selected_valid_run_ids", [])
-            if str(item).strip()
-        ],
-        "blocking_predicate_ids": [
-            str(item).strip()
-            for item in summary.get("blocking_predicate_ids", blocking_ids)
-            if str(item).strip()
-        ],
-        "rejected_run_count": int(summary.get("rejected_run_count", 0) or 0),
-        "rejected_run_diagnostics": [
-            item
-            for item in summary.get("rejected_run_diagnostics", [])
-            if isinstance(item, dict)
-        ],
-        "legacy_reconstruction_summary": legacy_summary
-        if isinstance(legacy_summary, dict)
-        else {
-            "status": "not_used",
-            "reconstruction_needed_count": 0,
-            "reconstructed_run_count": 0,
-            "blocked_run_count": 0,
-            "run_diagnostics": [],
-        },
-    }
-
-
 def _missing_learning_delta_claim_model() -> dict[str, Any]:
     return improvement_claim_model(
         ImprovementClaimInputs(
@@ -1006,7 +949,7 @@ def _missing_learning_delta_guard_summary(load_status: str) -> dict[str, Any]:
         "evidence_cohort_status": "not_ready",
         "learning_claim_blocker_status": "not_evaluated",
         "confirmed_blocking_predicate_ids": [],
-        "confirmed_evidence_summary": _confirmed_evidence_summary({}, []),
+        "confirmed_evidence_summary": confirmed_evidence_summary({}),
         "confirmed_predicate_results": [],
         "claim_level": "none",
         "claim_scope": "",
@@ -1048,32 +991,6 @@ def _learning_delta_sections(payload: dict[str, Any]) -> LearningDeltaSections:
     )
 
 
-def _confirmed_predicate_results(unlock: dict[str, Any]) -> list[dict[str, Any]]:
-    return [
-        item
-        for item in unlock.get("confirmed_predicate_results", [])
-        if isinstance(item, dict)
-    ]
-
-
-def _confirmed_blocking_predicate_ids(
-    summary: dict[str, Any], predicate_results: list[dict[str, Any]]
-) -> list[str]:
-    explicit_ids = [
-        str(item).strip()
-        for item in summary.get("confirmed_blocking_predicate_ids", [])
-        if str(item).strip()
-    ]
-    if explicit_ids:
-        return explicit_ids
-    return [
-        str(item.get("id", "")).strip()
-        for item in predicate_results
-        if str(item.get("id", "")).strip()
-        and str(item.get("status", "")).strip() != "pass"
-    ]
-
-
 def _confirmed_summary_payload(
     payload: dict[str, Any], unlock: dict[str, Any]
 ) -> object:
@@ -1093,62 +1010,6 @@ def _learning_delta_coverage(summary: dict[str, Any]) -> LearningDeltaCoverage:
         digest_ratio=float(
             summary.get("behavior_delta_digest_coverage_ratio", 0.0) or 0.0
         ),
-    )
-
-
-def _improvement_claim_status(summary: dict[str, Any]) -> str:
-    return (
-        str(
-            summary.get(
-                "improvement_claim_status",
-                summary.get("confirmed_learning_improvement_status", "not_ready"),
-            )
-        ).strip()
-        or "not_ready"
-    )
-
-
-def _evidence_cohort_status(
-    summary: dict[str, Any], confirmed_summary: dict[str, Any]
-) -> str:
-    return (
-        str(
-            summary.get(
-                "evidence_cohort_status",
-                confirmed_summary.get("evidence_cohort_status", "not_ready"),
-            )
-        ).strip()
-        or "not_ready"
-    )
-
-
-def _learning_claim_bundle_status(summary: dict[str, Any]) -> str:
-    return (
-        str(
-            summary.get("learning_claim_evidence_bundle_status", "not_evaluated")
-        ).strip()
-        or "not_evaluated"
-    )
-
-
-def _confirmed_wording_allowed(
-    *,
-    summary: dict[str, Any],
-    claim_level: str,
-    confirmed_status: str,
-    evidence_cohort_status: str,
-    bundle_status: str,
-    blocking_predicate_ids: list[str],
-) -> bool:
-    if "claim_wording_allowed" in summary:
-        return bool(summary.get("claim_wording_allowed"))
-    return (
-        claim_level == "confirmed_learning_improvement"
-        and bool(summary.get("confirmed_learning_improvement_allowed"))
-        and confirmed_status == "auto_confirmed"
-        and evidence_cohort_status == "auto_confirmed"
-        and bundle_status == "active"
-        and not blocking_predicate_ids
     )
 
 
@@ -1213,14 +1074,17 @@ def _learning_delta_claim_model(
 
 def _learning_delta_decision(payload: dict[str, Any]) -> LearningDeltaDecision:
     sections = _learning_delta_sections(payload)
-    predicate_results = _confirmed_predicate_results(sections.unlock)
-    blocking_ids = _confirmed_blocking_predicate_ids(sections.summary, predicate_results)
-    confirmed_summary = _confirmed_evidence_summary(
-        _confirmed_summary_payload(payload, sections.unlock),
-        blocking_ids,
+    predicate_results = confirmed_predicate_results(sections.unlock)
+    blocking_ids = confirmed_blocking_predicate_ids(
+        predicate_results,
+        summary=sections.summary,
     )
-    confirmed_status = _improvement_claim_status(sections.summary)
-    evidence_status = _evidence_cohort_status(sections.summary, confirmed_summary)
+    confirmed_summary = confirmed_evidence_summary(
+        _confirmed_summary_payload(payload, sections.unlock),
+        blocking_predicate_ids=blocking_ids,
+    )
+    confirmed_status = improvement_claim_status(sections.summary)
+    evidence_status = evidence_cohort_status(sections.summary, confirmed_summary)
     has_confirmed_predicates = bool(predicate_results)
     blocker_status = (
         str(
@@ -1234,8 +1098,8 @@ def _learning_delta_decision(payload: dict[str, Any]) -> LearningDeltaDecision:
         or ("clear" if has_confirmed_predicates else "not_evaluated")
     )
     claim_level = str(sections.summary.get("claim_level", "none")).strip() or "none"
-    bundle_status = _learning_claim_bundle_status(sections.summary)
-    wording_allowed = _confirmed_wording_allowed(
+    bundle_status = learning_claim_bundle_status(sections.summary)
+    wording_allowed = confirmed_wording_allowed(
         summary=sections.summary,
         claim_level=claim_level,
         confirmed_status=confirmed_status,

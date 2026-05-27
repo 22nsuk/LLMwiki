@@ -96,6 +96,14 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertEqual(report["summary"]["private_surface_history_absence_status"], "pass")
             self.assertEqual(report["summary"]["pytest_passed"], 217)
             self.assertEqual(report["summary"]["pytest_skipped"], 5)
+            self.assertEqual(
+                {command["observation_mode"] for command in report["commands"]},
+                {"communicate"},
+            )
+            self.assertEqual(
+                {command["heartbeat_interval_seconds"] for command in report["commands"]},
+                {0},
+            )
             self.assertRegex(report["summary"]["export_root_fingerprint"], r"^[a-f0-9]{64}$")
             self.assertRegex(report["summary"]["public_surface_policy_sha256"], r"^[a-f0-9]{64}$")
             self.assertTrue(report["public_export"]["output_dir"].startswith("<tmp>/"))

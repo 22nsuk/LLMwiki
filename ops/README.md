@@ -44,6 +44,7 @@ make auto-improve-readiness
 `make help` is the compact operator index. Detailed usage lives in:
 
 - [../docs/development.md](../docs/development.md)
+- [../docs/repository-surfaces.md](../docs/repository-surfaces.md)
 - [../docs/public-mirror.md](../docs/public-mirror.md)
 - [../docs/release.md](../docs/release.md)
 - [../docs/self-improvement-runtime.md](../docs/self-improvement-runtime.md)

@@ -19,6 +19,7 @@ from ops.scripts.artifact_io_runtime import (
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
+from ops.scripts.core.release_currentness_state_runtime import currentness_field
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
@@ -198,13 +199,6 @@ def _modified_after_generated_at(report_mtime: str, generated_at: str) -> bool:
     return modified_at > generated
 
 
-def _currentness_field(payload: dict[str, Any], field: str) -> str:
-    currentness = payload.get("currentness")
-    if not isinstance(currentness, dict):
-        return ""
-    return str(currentness.get(field, "")).strip()
-
-
 def _issue(
     *,
     source: str,
@@ -295,8 +289,8 @@ def _component_from_payload(
         "source_tree_fingerprint": str(payload.get("source_tree_fingerprint", "")).strip(),
         "producer_input_fingerprint": producer_input_fingerprint(payload),
         "artifact_status": str(payload.get("artifact_status", "")).strip() or "unknown",
-        "currentness_status": _currentness_field(payload, "status") or "unknown",
-        "currentness_checked_at": _currentness_field(payload, "checked_at"),
+        "currentness_status": currentness_field(payload, "status") or "unknown",
+        "currentness_checked_at": currentness_field(payload, "checked_at"),
         "provenance_mode": provenance_mode,
         "report_mtime_source": provenance_mode,
         "report_mtime": report_mtime,

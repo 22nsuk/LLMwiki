@@ -705,6 +705,18 @@
         "retention_policy": {
           "type": "string"
         },
+        "declared_currentness_status": {
+          "type": "string"
+        },
+        "source_tree_fingerprint_status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "stale",
+            "unknown",
+            "not_applicable"
+          ]
+        },
         "currentness_status": {
           "type": "string"
         },

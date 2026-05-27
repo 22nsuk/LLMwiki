@@ -7,12 +7,14 @@ Root documents stay short; detailed procedures live here.
 
 1. [../README.md](../README.md) - repository identity, quickstart, and common workflows.
 2. [../ARCHITECTURE.md](../ARCHITECTURE.md) - current system model and public/private boundary.
-3. [development.md](development.md) - setup, tests, CI tiers, and change-type gates.
-4. [ops-runtime.md](ops-runtime.md) - Make, scripts, schemas, templates, and generated artifacts.
-5. [self-improvement-runtime.md](self-improvement-runtime.md) - mechanism review, goal runtime, and promotion.
+3. [repository-surfaces.md](repository-surfaces.md) - full-vault, public export, and release source ZIP comparison.
+4. [development.md](development.md) - setup, tests, CI tiers, and change-type gates.
+5. [ops-runtime.md](ops-runtime.md) - Make, scripts, schemas, templates, and generated artifacts.
+6. [self-improvement-runtime.md](self-improvement-runtime.md) - mechanism review, goal runtime, and promotion.
 
 ## Topic Index
 
+- Repository surface comparison: [repository-surfaces.md](repository-surfaces.md)
 - Public export and boundary rules: [public-mirror.md](public-mirror.md)
 - Release evidence and package sealing: [release.md](release.md)
 - Optional codebase-memory-mcp sidecar: [codebase-memory-mcp.md](codebase-memory-mcp.md)

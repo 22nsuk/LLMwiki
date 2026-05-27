@@ -133,7 +133,7 @@ class AutoImproveQueueRuntimeTests(unittest.TestCase):
         self.assertEqual(proposals_report["proposals"][0]["blocked_by"], ["", "  "])
 
     def test_queue_normalizes_identity_and_priority_without_mutating_source(self) -> None:
-        proposals_report = {
+        proposals_report: dict[str, list[dict[str, object]]] = {
             "proposals": [
                 {"proposal_id": "  chosen ", "priority": "12", "blocked_by": []},
                 {"proposal_id": "", "priority": 99, "blocked_by": []},

@@ -2932,6 +2932,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         for target in (
             "test-execution-summary",
             "test-execution-summary-fast",
+            "test-execution-summary-public",
             "test-execution-summary-report-contract",
             "test-execution-summary-report-contract-refresh",
             "test-execution-summary-report-contract-refresh-no-smoke",
@@ -2963,6 +2964,15 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
             "TEST_EXECUTION_SUMMARY_FAST_CANDIDATE_OUT",
             "tmp/test-execution-summary-fast.candidate.json",
+        )
+        _assert_assignment_exists(
+            self, text, "TEST_EXECUTION_SUMMARY_PUBLIC_OUT", "ops/reports/test-execution-summary-public.json"
+        )
+        _assert_assignment_exists(
+            self,
+            text,
+            "TEST_EXECUTION_SUMMARY_PUBLIC_CANDIDATE_OUT",
+            "tmp/test-execution-summary-public.candidate.json",
         )
         _assert_assignment_exists(
             self, text, "TEST_EXECUTION_SUMMARY_FULL_OUT", "ops/reports/test-execution-summary-full.json"
@@ -3014,6 +3024,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "TEST_EXECUTION_SUMMARY_FAST_SUITE",
             pack_summary_suite(registry, "fast")["suite_id"],
         )
+        _assert_assignment_exists(self, text, "TEST_EXECUTION_SUMMARY_PUBLIC_SUITE", "public")
         _assert_assignment_exists(
             self,
             text,
@@ -3032,6 +3043,22 @@ class MakefileStaticGateTests(unittest.TestCase):
                 '$(PYTHON) -m pytest -m "$(PYTEST_FAST_MARK_EXPR)"',
                 "ops.scripts.canonical_artifact_promote",
             ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "test-execution-summary-public",
+            (
+                "ops.scripts.test_execution_summary",
+                "--collect-nodeids",
+                '$(PYTHON) -m pytest -m "$(PYTEST_PUBLIC_MARK_EXPR)"',
+                "ops.scripts.canonical_artifact_promote",
+            ),
+        )
+        _assert_target_depends_on(self, text, "test-public", "test-execution-summary-public")
+        self.assertIn(
+            '$(MAKE) test-execution-summary-public PYTEST_FLAGS="$(PYTEST_SERIAL_FLAGS)"',
+            _target_block(text, "test-public-serial"),
         )
         _assert_recipe_contains_tokens(
             self,
@@ -4285,6 +4312,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         _assert_assignment_exists(
             self, text, "PUBLIC_CHECK_SUMMARY_REUSE_FROM", "$(PUBLIC_CHECK_SUMMARY_OUT)"
         )
+        _assert_assignment_exists(self, text, "PUBLIC_CHECK_HEARTBEAT_INTERVAL_SECONDS", "30")
         _assert_assignment_exists(
             self, text, "PUBLIC_GITIGNORE_TEMPLATE", "ops/templates/public-mirror.gitignore"
         )
@@ -4294,6 +4322,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn('--mypy-targets "$(MYPY_TARGETS)"', summary_block)
         self.assertIn('--pytest-mark-expr "$(PYTEST_PUBLIC_MARK_EXPR)"', summary_block)
         self.assertIn('--pytest-flags "$(PYTEST_FLAGS)"', summary_block)
+        self.assertIn('--heartbeat-interval-seconds "$(PUBLIC_CHECK_HEARTBEAT_INTERVAL_SECONDS)"', summary_block)
         self.assertIn("ops.scripts.canonical_artifact_promote", summary_block)
         self.assertIn('--out "$(PUBLIC_CHECK_SUMMARY_CHECK_OUT)"', summary_check_block)
         self.assertNotIn("ops.scripts.canonical_artifact_promote", summary_check_block)

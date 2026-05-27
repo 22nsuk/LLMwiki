@@ -5,6 +5,12 @@ from pathlib import Path
 from typing import Any
 
 from ops.scripts.artifact_io_runtime import load_optional_json_object
+from ops.scripts.core.learning_claim_state_runtime import (
+    confirmed_blocking_predicate_ids,
+    confirmed_evidence_summary,
+    confirmed_predicate_results,
+    improvement_claim_status,
+)
 
 from .learning_claim_evidence_bundle import (
     DEFAULT_OUT as LEARNING_CLAIM_EVIDENCE_BUNDLE_PATH,
@@ -12,25 +18,11 @@ from .learning_claim_evidence_bundle import (
 from .learning_claim_evidence_bundle import (
     validate_learning_claim_evidence_bundle,
 )
-from .learning_claim_model import (
-    learning_claim_blocker_status,
-    normalize_evidence_cohort_summary,
-)
+from .learning_claim_model import learning_claim_blocker_status
 from .learning_delta_scoreboard_constants import (
     LEARNING_CLAIM_UNLOCK_REVIEW_PATH,
     REQUIRED_LEARNING_CLAIM_REVIEW_ITEMS,
 )
-
-
-def _confirmed_evidence_summary(
-    value: object,
-    *,
-    confirmed_blocking_predicate_ids: list[str] | None = None,
-) -> dict[str, Any]:
-    return normalize_evidence_cohort_summary(
-        value,
-        blocking_predicate_ids=confirmed_blocking_predicate_ids,
-    )
 
 
 @dataclass(frozen=True)
@@ -56,23 +48,6 @@ def _review_items_pass(review: dict[str, Any]) -> bool:
         isinstance(item, dict) and str(item.get("status", "")).strip() == "pass"
         for item in items
     )
-
-
-def _confirmed_predicate_results(machine_policy: dict[str, Any]) -> list[dict[str, Any]]:
-    return [
-        item
-        for item in machine_policy.get("confirmed_predicate_results", [])
-        if isinstance(item, dict)
-    ]
-
-
-def _confirmed_blocking_predicate_ids(predicates: list[dict[str, Any]]) -> list[str]:
-    return [
-        str(item.get("id", "")).strip()
-        for item in predicates
-        if str(item.get("id", "")).strip()
-        and str(item.get("status", "")).strip() != "pass"
-    ]
 
 
 def _machine_policy_payload(review: dict[str, Any]) -> dict[str, Any]:
@@ -116,24 +91,16 @@ def _learning_claim_unlock_state(vault: Path) -> LearningClaimUnlockState:
     review = load_optional_json_object(vault / LEARNING_CLAIM_UNLOCK_REVIEW_PATH)
     review_status = str(review.get("review_status", "")).strip()
     machine_policy = _machine_policy_payload(review)
-    confirmed_predicates = _confirmed_predicate_results(machine_policy)
-    blocking_predicate_ids = _confirmed_blocking_predicate_ids(confirmed_predicates)
-    confirmed_summary = _confirmed_evidence_summary(
+    confirmed_predicates = confirmed_predicate_results(machine_policy)
+    blocking_predicate_ids = confirmed_blocking_predicate_ids(confirmed_predicates)
+    confirmed_summary = confirmed_evidence_summary(
         machine_policy.get("confirmed_evidence_summary"),
-        confirmed_blocking_predicate_ids=blocking_predicate_ids,
+        blocking_predicate_ids=blocking_predicate_ids,
     )
     evidence_cohort_status = str(
         confirmed_summary.get("evidence_cohort_status", "not_ready")
     ).strip() or "not_ready"
-    improvement_claim_status = (
-        str(
-            machine_policy.get(
-                "improvement_claim_status",
-                machine_policy.get("confirmed_learning_improvement_status", "not_ready"),
-            )
-        ).strip()
-        or "not_ready"
-    )
+    claim_status = improvement_claim_status(machine_policy)
     bundle_validation = _learning_claim_bundle_validation(
         vault,
         review_status=review_status,
@@ -147,7 +114,7 @@ def _learning_claim_unlock_state(vault: Path) -> LearningClaimUnlockState:
         confirmed_blocking_predicate_ids=blocking_predicate_ids,
         confirmed_evidence_summary=confirmed_summary,
         evidence_cohort_status=evidence_cohort_status,
-        improvement_claim_status=improvement_claim_status,
+        improvement_claim_status=claim_status,
         learning_claim_blocker_status=str(
             machine_policy.get(
                 "learning_claim_blocker_status",
@@ -345,5 +312,3 @@ def _learning_claim_unlock_review(
         reason=reason,
         status=status,
     )
-
-

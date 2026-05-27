@@ -16,6 +16,7 @@ from ops.scripts.external_report_lifecycle_runtime import (
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 from ops.scripts.release.release_closeout_finality_attestation import (
     BATCH_MANIFEST_PATH,
@@ -204,6 +205,33 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         )
         finality_report = build_finality_attestation_report(self.vault, context=fixed_context())
         write_finality_attestation(self.vault, finality_report)
+        current_source_tree_fingerprint = release_source_tree_fingerprint(self.vault)
+        self._write_json(
+            "build/release/release-run-manifest.json",
+            {
+                "status": "pass",
+                "artifact_kind": "release_run_manifest",
+                "source_tree_fingerprint": current_source_tree_fingerprint,
+            },
+        )
+        self._write_json(
+            "build/release/release-sealed-run-manifest.json",
+            {
+                "status": "pass",
+                "artifact_kind": "release_sealed_run_manifest",
+                "source_tree_fingerprint": current_source_tree_fingerprint,
+            },
+        )
+        self._write_json(
+            "build/release/release-auto-promotion-ready-manifest.json",
+            {
+                "status": "pass",
+                "artifact_kind": "release_auto_promotion_ready_manifest",
+                "source_tree_fingerprint": current_source_tree_fingerprint,
+                "auto_promotion_status": "allowed",
+                "unattended_promotion_allowed": True,
+            },
+        )
 
     def test_generated_artifact_policy_status_is_not_self_blocked_by_archive_candidates(self) -> None:
         for rel_path, text in {
@@ -572,6 +600,168 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertEqual(actions["mechanism_navigation_index"]["current_status"], "planned")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_p2_repository_surface_and_service_layer_actions_are_tracked(self) -> None:
+        for rel_path, text in {
+            "docs/repository-surfaces.md": (
+                "Full local vault, Public mirror, Release source ZIP, "
+                "ops/scripts/public/public_surface_policy.py, make public-export, "
+                "make release-run-ready, build/release/, AGENTS.local.md.\n"
+            ),
+            "docs/README.md": "[Surfaces](repository-surfaces.md)\n",
+            "README.md": "[Surfaces](docs/repository-surfaces.md)\n",
+            "ARCHITECTURE.md": "[Surfaces](./docs/repository-surfaces.md)\n",
+            "docs/public-mirror.md": "[Surfaces](repository-surfaces.md)\n",
+            "docs/release.md": "[Surfaces](repository-surfaces.md)\n",
+            "tests/test_doc_graph_integrity.py": "def test_placeholder(): pass\n",
+            "ops/scripts/core/release_authority_state_runtime.py": (
+                "def release_status_v2_view(): pass\n"
+                "def machine_release_allowed_from_status_view(): pass\n"
+                "def clean_required_preflight_passes(): pass\n"
+                "def release_authority_reports_verified(): pass\n"
+                "def current_release_manifest_pass(): pass\n"
+                "def release_artifact_revision(): pass\n"
+            ),
+            "ops/scripts/release/release_status_v2.py": (
+                "from ops.scripts.core.release_authority_state_runtime import release_status_v2_view\n"
+            ),
+            "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py": (
+                "machine_release_allowed_from_status_view\nclean_required_preflight_passes\n"
+            ),
+            "ops/scripts/release/external_report_lifecycle_runtime.py": (
+                "release_authority_reports_verified\ncurrent_release_manifest_pass\n"
+            ),
+            "ops/scripts/release/release_authority_inventory.py": "release_artifact_revision\n",
+            "tests/test_release_authority_state_runtime.py": "def test_placeholder(): pass\n",
+            "tests/test_release_status_v2.py": "def test_placeholder(): pass\n",
+        }.items():
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        (self.external / "p2.md").write_text(
+            "# P2\n\n"
+            "repository-surfaces, full-vault, public export, release source zip. "
+            "release/mechanism service layer should separate authority, currentness, "
+            "risk, learning_claim, JSON payload assembly, and domain decision logic.\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            "external-reports/report-reference-manifest.json",
+            {
+                "references": [{"path": "external-reports/p2.md"}],
+                "summary": {"active_reference_set_status": "current"},
+            },
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        self.assertEqual(
+            actions["repository_surface_entrypoint_documentation"]["current_status"],
+            "implemented",
+        )
+        self.assertEqual(
+            actions["release_mechanism_service_layer_extraction"]["current_status"],
+            "partially_automated",
+        )
+        coverage = {item["path"]: item for item in report["active_report_coverage"]}
+        self.assertIn(
+            "repository_surface_entrypoint_documentation",
+            coverage["external-reports/p2.md"]["matched_action_ids"],
+        )
+        self.assertIn(
+            "release_mechanism_service_layer_extraction",
+            coverage["external-reports/p2.md"]["matched_action_ids"],
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_p2_service_layer_requires_symbols_and_consumer_imports(self) -> None:
+        for rel_path, text in {
+            "ops/scripts/core/release_authority_state_runtime.py": (
+                "def release_status_v2_view(): pass\n"
+                "def machine_release_allowed_from_status_view(): pass\n"
+                "def clean_required_preflight_passes(): pass\n"
+                "def release_authority_reports_verified(): pass\n"
+                "def current_release_manifest_pass(): pass\n"
+                "def release_artifact_revision(): pass\n"
+            ),
+            "ops/scripts/core/release_currentness_state_runtime.py": (
+                "def currentness_field(): pass\n"
+                "def live_rerun_state(): pass\n"
+                "def components_match_current_source_tree(): pass\n"
+            ),
+            "ops/scripts/core/release_risk_state_runtime.py": (
+                "def release_risk_identity(): pass\n"
+                "def release_risk_blocks_clean_lane(): pass\n"
+                "def release_risk_list(): pass\n"
+                "def release_blocker_entry(): pass\n"
+            ),
+            "ops/scripts/core/learning_claim_state_runtime.py": (
+                "def confirmed_evidence_summary(): pass\n"
+                "def confirmed_predicate_results(): pass\n"
+                "def confirmed_blocking_predicate_ids(): pass\n"
+                "def confirmed_wording_allowed(): pass\n"
+            ),
+            "ops/scripts/release/release_status_v2.py": (
+                "from ops.scripts.core.release_authority_state_runtime import release_status_v2_view\n"
+            ),
+            "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py": (
+                "machine_release_allowed_from_status_view\nclean_required_preflight_passes\n"
+            ),
+            "ops/scripts/release/external_report_lifecycle_runtime.py": (
+                "release_authority_reports_verified\ncurrent_release_manifest_pass\n"
+            ),
+            "ops/scripts/release/release_authority_inventory.py": "release_artifact_revision\n",
+            "tests/test_release_authority_state_runtime.py": "def test_placeholder(): pass\n",
+            "tests/test_release_status_v2.py": "def test_placeholder(): pass\n",
+            "tests/test_release_currentness_state_runtime.py": "def test_placeholder(): pass\n",
+            "tests/test_release_risk_state_runtime.py": "def test_placeholder(): pass\n",
+            "tests/test_learning_claim_state_runtime.py": "def test_placeholder(): pass\n",
+            "ops/scripts/release/release_evidence_cohort.py": (
+                "from ops.scripts.core.release_currentness_state_runtime import currentness_field\n"
+            ),
+            "ops/scripts/release/release_closeout_summary.py": (
+                "from ops.scripts.core.release_currentness_state_runtime import components_match_current_source_tree\n"
+                "from ops.scripts.core.release_risk_state_runtime import release_risk_identity\n"
+                "components_match_current_source_tree(\nrelease_risk_identity(\n"
+            ),
+            "ops/scripts/release/release_evidence_dashboard.py": (
+                "from ops.scripts.core.release_currentness_state_runtime import live_rerun_state\n"
+                "from ops.scripts.core.learning_claim_state_runtime import confirmed_evidence_summary\n"
+                "live_rerun_state(\nconfirmed_evidence_summary(\n"
+            ),
+            "ops/scripts/release/release_clean_blocker_ledger.py": (
+                "from ops.scripts.core.release_risk_state_runtime import release_risk_blocks_clean_lane\n"
+                "release_risk_blocks_clean_lane(\n"
+            ),
+            "ops/scripts/learning/learning_delta_scoreboard_unlock_runtime.py": (
+                "from ops.scripts.core.learning_claim_state_runtime import confirmed_evidence_summary\n"
+                "confirmed_evidence_summary(\n"
+            ),
+        }.items():
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        (self.external / "p2.md").write_text(
+            "# P2\n\nrelease/mechanism service layer should separate authority, "
+            "currentness, risk, and learning_claim.\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            "external-reports/report-reference-manifest.json",
+            {
+                "references": [{"path": "external-reports/p2.md"}],
+                "summary": {"active_reference_set_status": "current"},
+            },
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        actions = {item["action_id"]: item for item in report["action_items"]}
+        self.assertEqual(
+            actions["release_mechanism_service_layer_extraction"]["current_status"],
+            "implemented",
+        )
+
     def test_self_improvement_strategy_actions_remain_open_until_canonical_evidence(self) -> None:
         for rel_path, text in {
             "ops/scripts/core/artifact_freshness_runtime.py": "def build_report(): pass\n",
@@ -690,7 +880,7 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         self.assertEqual(actions["release_writer_dependency_single_source"]["current_status"], "implemented")
         self.assertEqual(report["summary"]["requires_release_run_verification_count"], 0)
 
-    def test_release_verified_actions_require_current_finality_digest_readback(self) -> None:
+    def test_finality_digest_drift_blocks_only_evidence_bundle_attestation(self) -> None:
         self._write_release_verification_reports()
         self._write_json(
             "ops/reports/generated-artifact-index.json",
@@ -706,14 +896,15 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
         actions = {item["action_id"]: item for item in report["action_items"]}
         for action_id in {
             "source_package_distribution_binding",
-            "release_evidence_bundle_and_attestation",
             "full_suite_evidence_currentness",
             "promotion_truth_ladder",
         }:
-            self.assertEqual(
-                actions[action_id]["current_status"],
-                "requires_release_run_verification",
-            )
+            self.assertEqual(actions[action_id]["current_status"], "implemented")
+        self.assertEqual(
+            actions["release_evidence_bundle_and_attestation"]["current_status"],
+            "requires_release_run_verification",
+        )
+        self.assertEqual(report["summary"]["requires_release_run_verification_count"], 1)
 
     def test_negative_lessons_and_remediation_backlog_are_implementation_artifacts(self) -> None:
         for rel_path in (
@@ -1180,6 +1371,38 @@ class ExternalReportActionMatrixTests(unittest.TestCase):
             "auto_improve_goal_contract_input",
         }:
             self.assertEqual(completed_actions[action_id]["current_status"], "implemented", action_id)
+
+    def test_selected_contract_gate_accepts_attention_freshness_with_current_contract(self) -> None:
+        for rel_path in (
+            "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
+            "tests/test_auto_improve_readiness_release_authority_runtime.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("def test_placeholder(): pass\n", encoding="utf-8")
+        self._write_json(
+            "ops/reports/test-execution-summary.json",
+            {"artifact_kind": "test_execution_summary", "status": "pass"},
+        )
+        self._write_json(
+            "ops/reports/auto-improve-readiness.json",
+            {
+                "artifact_kind": "auto_improve_readiness_report",
+                "diagnostics": {
+                    "selected_contract_summary": {
+                        "path": "ops/reports/test-execution-summary.json",
+                        "status": "pass",
+                    },
+                    "artifact_freshness_summary": {"status": "attention"},
+                },
+                "promotion_blockers": [],
+            },
+        )
+
+        self.assertEqual(
+            action_statuses(self.vault)["selected_contract_currentness_gate"],
+            "implemented",
+        )
 
     def test_goal_certificate_action_requires_verified_clean_certificate_report(self) -> None:
         for rel_path in (
