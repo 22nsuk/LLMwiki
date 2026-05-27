@@ -658,14 +658,18 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             vault.mkdir()
             proposal = mutation_proposal_report("ops/scripts/example.py")["proposals"][0]
             context = RuntimeContext(display_timezone=dt.UTC)
+            mechanism_review = {"summary": {"candidates_emitted": 1}}
+            proposals_report = {"proposals": [proposal]}
 
             def fake_refresh_reports(*_: object, **__: object) -> tuple[dict, dict]:
-                return {}, {"proposals": [proposal]}
+                return mechanism_review, proposals_report
 
             with mock.patch(
                 "ops.scripts.auto_improve_runtime._refresh_reports",
                 side_effect=fake_refresh_reports,
-            ):
+            ), mock.patch(
+                "ops.scripts.auto_improve_runtime._refresh_readiness_report"
+            ) as refresh_readiness:
                 result = auto_improve_runtime._refresh_select_phase(
                     vault,
                     {},
@@ -675,6 +679,13 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                     context=context,
                 )
 
+            refresh_readiness.assert_called_once_with(
+                vault,
+                Path("ops/policies/wiki-maintainer-policy.yaml"),
+                context=context,
+                mechanism_review=mechanism_review,
+                proposals=proposals_report,
+            )
             self.assertEqual(result.proposal, proposal)
             self.assertEqual(result.queue_snapshot, [proposal["proposal_id"]])
             self.assertIsNone(result.stop_reason)
@@ -685,14 +696,18 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             vault.mkdir()
             proposal = mutation_proposal_report("ops/scripts/example.py")["proposals"][0]
             context = RuntimeContext(display_timezone=dt.UTC)
+            mechanism_review = {"summary": {"candidates_emitted": 0}}
+            proposals_report = {"proposals": [proposal]}
 
             def fake_refresh_reports(*_: object, **__: object) -> tuple[dict, dict]:
-                return {}, {"proposals": [proposal]}
+                return mechanism_review, proposals_report
 
             with mock.patch(
                 "ops.scripts.auto_improve_runtime._refresh_reports",
                 side_effect=fake_refresh_reports,
-            ):
+            ), mock.patch(
+                "ops.scripts.auto_improve_runtime._refresh_readiness_report"
+            ) as refresh_readiness:
                 result = auto_improve_runtime._refresh_select_phase(
                     vault,
                     {},
@@ -702,6 +717,13 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                     context=context,
                 )
 
+            refresh_readiness.assert_called_once_with(
+                vault,
+                Path("ops/policies/wiki-maintainer-policy.yaml"),
+                context=context,
+                mechanism_review=mechanism_review,
+                proposals=proposals_report,
+            )
             self.assertIsNone(result.proposal)
             self.assertEqual(result.queue_snapshot, [])
             self.assertEqual(result.stop_reason, "queue_exhausted")

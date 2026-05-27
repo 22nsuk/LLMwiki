@@ -1086,14 +1086,13 @@ def _preflight_learning_gate(
         start.resolved_policy_path,
         context=start.context,
     )
-    readiness_report = build_readiness_report(
+    readiness_report, readiness_destination = _refresh_readiness_report(
         vault,
-        policy_path=str(start.resolved_policy_path),
+        start.resolved_policy_path,
         context=start.context,
-        mechanism_review_report=mechanism_review,
-        mutation_proposal_report=proposals,
+        mechanism_review=mechanism_review,
+        proposals=proposals,
     )
-    readiness_destination = write_readiness_report(vault, readiness_report)
     runnable_proposal_ids = _readiness_queue_snapshot(readiness_report)
     repeat_backlog_repair_active = _record_pre_run_selected_proposal_metadata(
         start.session,
@@ -1177,6 +1176,24 @@ def _refresh_reports(
     return mechanism_review, proposals
 
 
+def _refresh_readiness_report(
+    vault: Path,
+    policy_path: Path,
+    *,
+    context: RuntimeContext,
+    mechanism_review: dict,
+    proposals: dict,
+) -> tuple[dict, Path]:
+    readiness_report = build_readiness_report(
+        vault,
+        policy_path=str(policy_path),
+        context=context,
+        mechanism_review_report=mechanism_review,
+        mutation_proposal_report=proposals,
+    )
+    return readiness_report, write_readiness_report(vault, readiness_report)
+
+
 def _refresh_select_phase(
     vault: Path,
     policy: dict,
@@ -1191,6 +1208,13 @@ def _refresh_select_phase(
         policy,
         resolved_policy_path,
         context=context,
+    )
+    _refresh_readiness_report(
+        vault,
+        resolved_policy_path,
+        context=context,
+        mechanism_review=_mechanism_review,
+        proposals=proposals_report,
     )
     proposal, queue_snapshot = _select_next_proposal(
         proposals_report,
