@@ -29,6 +29,7 @@ from ops.scripts.schema_runtime import (
     load_schema_with_vault_override,
     validate_with_schema,
 )
+from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 from .auto_improve_next_run_decision_runtime import (
     CARRY_FORWARD_DECISION,
@@ -444,6 +445,12 @@ def _repo_health_artifact_freshness_failure_now_clean(vault: Path, source_run_id
     except (OSError, json.JSONDecodeError):
         return False
     if str(report.get("status", "")).strip() != "fail":
+        return False
+    observed_source_tree_fingerprint = str(report.get("source_tree_fingerprint", "")).strip()
+    if (
+        observed_source_tree_fingerprint
+        and observed_source_tree_fingerprint != release_source_tree_fingerprint(vault)
+    ):
         return False
     top_debt_files = report.get("top_debt_files", [])
     if not isinstance(top_debt_files, list):

@@ -3336,6 +3336,109 @@ class MutationProposalTest(unittest.TestCase):
                 [],
             )
 
+    def test_candidate_fingerprint_repo_health_schema_debt_stays_open(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            primary_target = "ops/scripts/mechanism/example_runtime.py"
+            schema_path = "ops/schemas/generated-report.schema.json"
+            report_path = "ops/reports/generated-report.json"
+            (vault / primary_target).parent.mkdir(parents=True, exist_ok=True)
+            (vault / primary_target).write_text("VALUE = 1\n", encoding="utf-8")
+            write_json(
+                vault / schema_path,
+                {
+                    "type": "object",
+                    "required": ["$schema", "status"],
+                    "properties": {
+                        "$schema": {"type": "string"},
+                        "status": {"const": "pass"},
+                    },
+                    "additionalProperties": True,
+                },
+            )
+            write_json(
+                vault / report_path,
+                {
+                    "$schema": schema_path,
+                    "status": "pass",
+                },
+            )
+            source_run_id = "auto-session-a-run-01-example-runtime"
+            source_run = vault / "runs" / source_run_id
+            source_run.mkdir(parents=True, exist_ok=True)
+            write_json(
+                source_run / "repo-health-artifact-freshness-report-check.json",
+                {
+                    "status": "fail",
+                    "source_tree_fingerprint": "candidate-workspace-fingerprint",
+                    "recommended_next_action": "regenerate_schema_invalid_artifacts",
+                    "top_debt_files": [
+                        {
+                            "path": report_path,
+                            "primary_issue": "schema_validation_failed",
+                            "issues": ["schema_validation_failed"],
+                        }
+                    ],
+                },
+            )
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:repo-health",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": source_run_id,
+                            "proposal_id": "next_run_failure_repair__example-runtime__review-blocked",
+                            "source_candidate_id": "next-run-decision:prior-review",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__example-runtime__repo-health-blocked"
+                            ),
+                            "proposal_family": "next_run_failure_repair",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "repo_health_blocked",
+                            "blocking_role": "repo_health",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "candidate-fingerprint artifact freshness failure should remain repairable",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [primary_target],
+                            "supporting_targets": [report_path],
+                            "must_change_tests": ["tests/test_example_runtime.py"],
+                            "evidence_paths": [
+                                f"runs/{source_run_id}/repo-health-artifact-freshness-report-check.json"
+                            ],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            repair_proposals = [
+                proposal
+                for proposal in proposal_report["proposals"]
+                if proposal["failure_mode"] == "next_run_failure_repair"
+            ]
+
+            self.assertEqual(len(repair_proposals), 1)
+            self.assertEqual(
+                repair_proposals[0]["proposal_id"],
+                "next_run_failure_repair__example-runtime__repo-health-blocked",
+            )
+            self.assertEqual(
+                proposal_report["diagnostics"]["next_run_decision_queue"][
+                    "open_carry_forward_decisions"
+                ],
+                1,
+            )
+
     def test_noop_repair_mutation_failure_does_not_emit_followup_repair(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
