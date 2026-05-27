@@ -1003,6 +1003,7 @@
         "missing_raw_registry_page",
         "missing_raw_registry_shard_page",
         "raw_registry_parse_error",
+        "raw_registry_content_sha256_mismatch",
         "raw_registry_summary_mismatch",
         "missing_registry_field",
         "duplicate_registry_id",

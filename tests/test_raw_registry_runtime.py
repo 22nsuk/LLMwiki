@@ -178,6 +178,42 @@ class RawRegistryRuntimeTest(unittest.TestCase):
             )
             self.assertEqual(enriched[0]["path_aliases"], ["raw/alias.pdf"])
 
+    def test_inventory_enrichment_prefers_existing_raw_digest_over_stale_registry_hash(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            raw_dir = vault / "raw"
+            raw_dir.mkdir()
+            payload = b"current-bytes"
+            (raw_dir / "current.pdf").write_bytes(payload)
+            stale_digest = hashlib.sha256(b"old-bytes").hexdigest()
+
+            entries = [
+                {
+                    "registry_id": "R-302",
+                    "storage_path": "raw/current.pdf",
+                    "display_path": "raw/current.pdf",
+                    "content_sha256": stale_digest,
+                    "title": "Inventory refreshed",
+                    "type": "news-snapshot",
+                    "corpus": "wiki",
+                    "target_page": "source--inventory-refreshed",
+                    "status": "ingested",
+                }
+            ]
+
+            enriched = enrich_registry_entries_with_inventory(
+                vault,
+                entries,
+                exported_enrichment={
+                    ("R-302", "raw/current.pdf"): {"content_sha256": stale_digest},
+                },
+            )
+
+            self.assertEqual(
+                enriched[0]["content_sha256"],
+                hashlib.sha256(payload).hexdigest(),
+            )
+
     def test_inventory_enrichment_derives_infozip_c_locale_alias_from_storage_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)

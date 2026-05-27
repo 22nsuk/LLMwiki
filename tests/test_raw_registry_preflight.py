@@ -365,6 +365,51 @@ Body
             self.assertEqual(report["warnings"], [])
             self.assertEqual(report["stats"]["content_hash_fallback_count"], 1)
 
+    def test_preflight_fails_when_exported_content_hash_conflicts_with_existing_raw_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+
+            stale_digest = hashlib.sha256(b"old-bytes").hexdigest()
+            (vault / "ops").mkdir(exist_ok=True)
+            (vault / "ops" / "raw-registry.json").write_text(
+                json.dumps(
+                    {
+                        "summary_page": "system/system-raw-registry.md",
+                        "entry_pages": live_registry_shard_pages(),
+                        "entry_count": 1,
+                        "entries": [
+                            {
+                                "registry_id": "R-100",
+                                "storage_path": "raw/fake.pdf",
+                                "display_path": "raw/fake.pdf",
+                                "content_sha256": stale_digest,
+                                "type": "news-snapshot",
+                                "corpus": "wiki",
+                                "target_page": "source--fake",
+                                "status": "ingested",
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            report = preflight(vault)
+
+            self.assertEqual(report["status"], "fail")
+            self.assertEqual(report["warnings"], [])
+            self.assertEqual(len(report["errors"]), 1)
+            error = report["errors"][0]
+            self.assertEqual(error["type"], "raw_registry_content_sha256_mismatch")
+            self.assertEqual(error["page"], "ops/raw-registry.json")
+            self.assertEqual(error["detail"]["registry_id"], "R-100")
+            self.assertEqual(error["detail"]["digest_source_path"], "raw/fake.pdf")
+            self.assertEqual(error["detail"]["exported_content_sha256"], stale_digest)
+
     def test_preflight_keeps_pass_result_after_full_zip_roundtrip_with_exported_registry(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

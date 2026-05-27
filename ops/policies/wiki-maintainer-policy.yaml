@@ -787,6 +787,7 @@ lint_thresholds:
   missing_raw_registry_page: fail
   missing_raw_registry_shard_page: fail
   raw_registry_parse_error: fail
+  raw_registry_content_sha256_mismatch: fail
   raw_registry_summary_mismatch: warn
   missing_registry_field: fail
   duplicate_registry_id: fail

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import tempfile
 import unittest
@@ -456,6 +457,57 @@ class WriterOutputPathsTest(unittest.TestCase):
                 validate_with_schema(export, load_schema(vault / RAW_REGISTRY_EXPORT_SCHEMA_PATH)),
                 [],
             )
+
+    def test_raw_registry_export_cli_refreshes_stale_existing_content_hash(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            launcher = Path(temp_dir) / "launcher"
+            vault.mkdir()
+            launcher.mkdir()
+            seed_minimal_vault(vault)
+            export_path = vault / "generated" / "registry" / "export.json"
+            export_path.parent.mkdir(parents=True)
+            stale_digest = hashlib.sha256(b"old-bytes").hexdigest()
+            export_path.write_text(
+                json.dumps(
+                    {
+                        "summary_page": "system/system-raw-registry.md",
+                        "entry_pages": ["system/system-raw-registry/wiki.md"],
+                        "entry_count": 1,
+                        "entries": [
+                            {
+                                "registry_id": "R-100",
+                                "storage_path": "raw/fake.pdf",
+                                "display_path": "raw/fake.pdf",
+                                "content_sha256": stale_digest,
+                                "type": "news-snapshot",
+                                "corpus": "wiki",
+                                "target_page": "source--fake",
+                                "status": "ingested",
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            self.run_main(
+                raw_registry_export_main,
+                "--vault",
+                str(vault),
+                "--out",
+                "generated/registry/export.json",
+                cwd=launcher,
+            )
+
+            export = json.loads(export_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                export["entries"][0]["content_sha256"],
+                hashlib.sha256((vault / "raw" / "fake.pdf").read_bytes()).hexdigest(),
+            )
+            self.assertNotEqual(export["entries"][0]["content_sha256"], stale_digest)
 
     def test_raw_registry_preflight_cli_writes_relative_outs_under_vault(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

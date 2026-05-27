@@ -10,8 +10,10 @@ from ops.scripts.raw_registry_runtime import (
     enrich_registry_entries_with_inventory,
     entry_existing_registered_paths,
     load_exported_registry_enrichment,
+    normalize_content_sha256,
     parse_raw_registry_pages,
     parse_raw_registry_summary_counts,
+    registry_entry_locators,
     registry_entry_page_corpus_map,
     registry_entry_page_paths,
     registry_inventory_resolution_stats,
@@ -180,6 +182,14 @@ def registry_inventory_context_pass(
             registry_id_to_entry.setdefault(registry_id, entry)
 
     locator_groups = build_registry_locator_groups(registry_entries)
+    raw_sha256_index = build_raw_sha256_index(vault) if registry_entries else None
+    registry_export_content_hash_consistency_pass(
+        vault,
+        export_path,
+        exported_enrichment,
+        raw_sha256_index=raw_sha256_index,
+        emitter=emitter,
+    )
     return RegistryInventoryContext(
         registry_entries=registry_entries,
         registered_raw_paths=set(locator_groups),
@@ -190,13 +200,61 @@ def registry_inventory_context_pass(
         registry_id_to_entries=registry_id_to_entries,
         registry_id_to_entry=registry_id_to_entry,
         locator_groups=locator_groups,
-        raw_sha256_index=build_raw_sha256_index(vault) if registry_entries else None,
+        raw_sha256_index=raw_sha256_index,
         resolution_stats=resolution_stats,
         corpus_roots=registry_contract.get("corpus_roots", {}),
         type_to_corpus=corpus_routing.get("type_to_corpus", {}),
         default_corpus=corpus_routing.get("default_corpus", "system"),
         route_overrides=corpus_routing.get("route_overrides", {}),
     )
+
+
+def _digest_for_raw_path(raw_sha256_index: dict[str, list[str]], raw_path: str) -> str | None:
+    for digest, paths in raw_sha256_index.items():
+        if raw_path in paths:
+            return digest
+    return None
+
+
+def registry_export_content_hash_consistency_pass(
+    vault: Path,
+    export_path: Path,
+    exported_enrichment: dict[tuple[str, str], dict],
+    *,
+    raw_sha256_index: dict[str, list[str]] | None,
+    emitter: RegistryDiagnosticEmitter,
+) -> None:
+    if raw_sha256_index is None:
+        return
+    for (registry_id, storage_path), enrichment in sorted(exported_enrichment.items()):
+        exported_digest = normalize_content_sha256(enrichment.get("content_sha256"))
+        if exported_digest is None:
+            continue
+        locator_entry = {
+            "storage_path": storage_path,
+            "path_aliases": enrichment.get("path_aliases", []),
+        }
+        for locator in registry_entry_locators(locator_entry):
+            actual_digest = _digest_for_raw_path(raw_sha256_index, locator)
+            if actual_digest is None:
+                continue
+            if exported_digest != actual_digest:
+                emitter.issue(
+                    {
+                        "type": "raw_registry_content_sha256_mismatch",
+                        "page": report_path(vault, export_path),
+                        "detail": {
+                            "registry_id": registry_id,
+                            "storage_path": storage_path,
+                            "digest_source_path": locator,
+                            "exported_content_sha256": exported_digest,
+                            "actual_content_sha256": actual_digest,
+                            "recommended_action": "regenerate_raw_registry_export",
+                        },
+                    },
+                    "raw_registry_content_sha256_mismatch",
+                )
+            break
 
 
 def registry_summary_consistency_pass(

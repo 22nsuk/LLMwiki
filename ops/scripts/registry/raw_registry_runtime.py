@@ -311,17 +311,18 @@ def _entry_content_sha256(
     existing_paths: list[str],
     path_to_digest: dict[str, str],
 ) -> str | None:
-    content_sha256 = normalize_content_sha256(enriched_entry.get("content_sha256"))
-    if content_sha256 is None:
-        content_sha256 = normalize_content_sha256(exported_entry_enrichment.get("content_sha256"))
-    if content_sha256 is not None:
-        return content_sha256
     digest_source_path = None
     if canonical_storage_path and canonical_storage_path in path_to_digest:
         digest_source_path = canonical_storage_path
     elif existing_paths:
         digest_source_path = existing_paths[0]
-    return path_to_digest.get(digest_source_path) if digest_source_path is not None else None
+    if digest_source_path is not None:
+        return path_to_digest.get(digest_source_path)
+
+    content_sha256 = normalize_content_sha256(enriched_entry.get("content_sha256"))
+    if content_sha256 is None:
+        content_sha256 = normalize_content_sha256(exported_entry_enrichment.get("content_sha256"))
+    return content_sha256
 
 
 def _derived_aliases(
