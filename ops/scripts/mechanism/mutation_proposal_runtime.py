@@ -58,6 +58,7 @@ DEFAULT_OUTCOME_METRICS_REPORT = "ops/reports/outcome-metrics.json"
 DEFAULT_SYSTEM_LOG = "system/system-log.md"
 QUEUE_PRESSURE_SUMMARY_TOP_N = 3
 PRODUCER = "ops.scripts.mutation_proposal_runtime"
+ARTIFACT_FRESHNESS_FAILURE_TAXONOMY_PREFIX = "artifact_freshness_"
 SOURCE_COMMAND = (
     "python -m ops.scripts.mutation_proposal "
     "--vault . "
@@ -470,7 +471,11 @@ def _repo_health_artifact_freshness_failure_now_clean(vault: Path, source_run_id
 
 
 def _repair_decision_ended_as_clean_repo_health(vault: Path, decision: dict) -> bool:
-    if str(decision.get("failure_taxonomy", "")).strip() != "repo_health_blocked":
+    failure_taxonomy = str(decision.get("failure_taxonomy", "")).strip()
+    if (
+        failure_taxonomy != "repo_health_blocked"
+        and not failure_taxonomy.startswith(ARTIFACT_FRESHNESS_FAILURE_TAXONOMY_PREFIX)
+    ):
         return False
     source_run_id = str(decision.get("source_run_id", "")).strip()
     if not source_run_id:
