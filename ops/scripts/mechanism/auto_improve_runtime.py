@@ -108,6 +108,7 @@ DEFAULT_MUTATION_PROPOSAL_REPORT = "ops/reports/mutation-proposals.json"
 DEFAULT_MAINTENANCE_ACTION_PLAN = "tmp/goal-runtime-maintenance-action.json"
 MAINTENANCE_ACTION_PLAN_SCHEMA = "ops/schemas/goal-runtime-maintenance-action-plan.schema.json"
 REPEATED_BLOCKER_THRESHOLD = 2
+GENERIC_BLOCKING_REASONS = frozenset({"discarded"})
 REMEDIATION_BACKLOG_REPORT = "ops/reports/remediation-backlog.json"
 REPEAT_BACKLOG_ITEM_TYPES = frozenset(
     {
@@ -659,7 +660,8 @@ def _blocking_reason_counts_from_iterations(session: Mapping[str, Any]) -> dict[
         outcome = str(iteration.get("outcome", "")).strip()
         if not outcome or outcome in TERMINAL_SUCCESS_OUTCOMES:
             continue
-        counts[outcome] = counts.get(outcome, 0) + 1
+        reason = str(iteration.get("failure_taxonomy", "")).strip() or outcome
+        counts[reason] = counts.get(reason, 0) + 1
     return counts
 
 
@@ -675,6 +677,15 @@ def _normalize_blocking_reason_counts(value: object) -> dict[str, int]:
     return normalized
 
 
+def _should_prefer_reconstructed_blocking_counts(
+    existing_counts: Mapping[str, int],
+    reconstructed_counts: Mapping[str, int],
+) -> bool:
+    return bool(reconstructed_counts) and any(
+        reason in GENERIC_BLOCKING_REASONS for reason in existing_counts
+    ) and any(reason not in GENERIC_BLOCKING_REASONS for reason in reconstructed_counts)
+
+
 def _reconstructed_loop_state(session: dict, *, context: RuntimeContext) -> dict:
     state = _empty_loop_state(context)
     consecutive_failures = 0
@@ -687,13 +698,16 @@ def _reconstructed_loop_state(session: dict, *, context: RuntimeContext) -> dict
             consecutive_failures = 0
         elif outcome:
             consecutive_failures += 1
-            blocking_reason_counts[outcome] = blocking_reason_counts.get(outcome, 0) + 1
+            reason = str(iteration.get("failure_taxonomy", "")).strip() or outcome
+            blocking_reason_counts[reason] = blocking_reason_counts.get(reason, 0) + 1
+        else:
+            reason = ""
         state = {
             "consecutive_failures": consecutive_failures,
             "last_outcome": outcome,
             "last_decision": str(iteration.get("decision", "")).strip(),
             "last_run_id": str(iteration.get("run_id", "")).strip(),
-            "last_blocking_reason": "" if outcome in TERMINAL_SUCCESS_OUTCOMES else outcome,
+            "last_blocking_reason": "" if outcome in TERMINAL_SUCCESS_OUTCOMES else reason,
             "blocking_reason_counts": dict(blocking_reason_counts),
             "repeated_blocker_stop": False,
             "repeated_blocker_reason": "",
@@ -707,9 +721,24 @@ def _normalize_loop_state(session: dict, *, context: RuntimeContext) -> dict:
     existing = session.get("loop_state")
     if not isinstance(existing, dict):
         return _reconstructed_loop_state(session, context=context)
-    reconstructed_counts = _blocking_reason_counts_from_iterations(session)
+    reconstructed_state = _reconstructed_loop_state(session, context=context)
+    reconstructed_counts = _normalize_blocking_reason_counts(
+        reconstructed_state.get("blocking_reason_counts")
+    )
     existing_counts = _normalize_blocking_reason_counts(existing.get("blocking_reason_counts"))
-    blocking_reason_counts = existing_counts or reconstructed_counts
+    if _should_prefer_reconstructed_blocking_counts(existing_counts, reconstructed_counts):
+        blocking_reason_counts = reconstructed_counts
+        last_blocking_reason = str(reconstructed_state.get("last_blocking_reason", "")).strip()
+    else:
+        blocking_reason_counts = existing_counts or reconstructed_counts
+        last_blocking_reason = str(existing.get("last_blocking_reason", "")).strip()
+    repeated_blocker_reason = str(existing.get("repeated_blocker_reason", "")).strip()
+    if (
+        repeated_blocker_reason in GENERIC_BLOCKING_REASONS
+        and last_blocking_reason
+        and last_blocking_reason not in GENERIC_BLOCKING_REASONS
+    ):
+        repeated_blocker_reason = last_blocking_reason
     normalized = _empty_loop_state(context)
     normalized.update(
         {
@@ -720,12 +749,10 @@ def _normalize_loop_state(session: dict, *, context: RuntimeContext) -> dict:
             "last_outcome": str(existing.get("last_outcome", "")).strip(),
             "last_decision": str(existing.get("last_decision", "")).strip(),
             "last_run_id": str(existing.get("last_run_id", "")).strip(),
-            "last_blocking_reason": str(existing.get("last_blocking_reason", "")).strip(),
+            "last_blocking_reason": last_blocking_reason,
             "blocking_reason_counts": blocking_reason_counts,
             "repeated_blocker_stop": bool(existing.get("repeated_blocker_stop", False)),
-            "repeated_blocker_reason": str(
-                existing.get("repeated_blocker_reason", "")
-            ).strip(),
+            "repeated_blocker_reason": repeated_blocker_reason,
             "remediation_backlog_path": str(
                 existing.get("remediation_backlog_path", REMEDIATION_BACKLOG_REPORT)
             ).strip()

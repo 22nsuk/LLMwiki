@@ -563,11 +563,13 @@ def _update_session_loop_state(
     run_id: str,
     outcome: object,
     consecutive_failures: int,
+    failure_taxonomy: object = "",
     context: RuntimeContext,
 ) -> None:
     outcome_text = str(getattr(outcome, "outcome", "")).strip()
     decision_text = str(getattr(outcome, "decision", "")).strip()
     terminal_success = bool(getattr(outcome, "is_terminal_success", False))
+    blocking_reason = str(failure_taxonomy).strip() or outcome_text
     existing_state = session.get("loop_state")
     existing_state = existing_state if isinstance(existing_state, dict) else {}
     raw_counts = existing_state.get("blocking_reason_counts")
@@ -579,14 +581,14 @@ def _update_session_loop_state(
                 continue
             if isinstance(value, int) and not isinstance(value, bool):
                 blocking_reason_counts[reason] = max(0, value)
-    if outcome_text and not terminal_success:
-        blocking_reason_counts[outcome_text] = blocking_reason_counts.get(outcome_text, 0) + 1
+    if blocking_reason and not terminal_success:
+        blocking_reason_counts[blocking_reason] = blocking_reason_counts.get(blocking_reason, 0) + 1
     session["loop_state"] = {
         "consecutive_failures": max(0, consecutive_failures),
         "last_outcome": outcome_text,
         "last_decision": decision_text,
         "last_run_id": run_id,
-        "last_blocking_reason": "" if terminal_success else outcome_text,
+        "last_blocking_reason": "" if terminal_success else blocking_reason,
         "blocking_reason_counts": blocking_reason_counts,
         "repeated_blocker_stop": bool(existing_state.get("repeated_blocker_stop", False)),
         "repeated_blocker_reason": str(existing_state.get("repeated_blocker_reason", "")).strip(),
@@ -771,16 +773,17 @@ def persist_iteration_phase(
         ),
     )
     dependencies.write_run_artifact_fingerprint(vault, run_id, context=context)
-    session["iterations"].append(
-        execution.outcome.iteration_record(
-            index=iteration,
-            proposal_id=proposal["proposal_id"],
-            run_id=run_id,
-        )
-    )
     executor_report_rels = _iteration_executor_report_rels(vault, run_id, route_scaffold.roles)
     telemetry_payload = load_optional_json(vault / telemetry_rel)
     telemetry_failure_taxonomy = str(telemetry_payload.get("failure_taxonomy", "")).strip() if isinstance(telemetry_payload, dict) else ""
+    iteration_record = execution.outcome.iteration_record(
+        index=iteration,
+        proposal_id=proposal["proposal_id"],
+        run_id=run_id,
+    )
+    if telemetry_failure_taxonomy:
+        iteration_record["failure_taxonomy"] = telemetry_failure_taxonomy
+    session["iterations"].append(iteration_record)
     next_run_decision = build_next_run_decision(
         session_id=session_id,
         iteration=iteration,
@@ -803,6 +806,7 @@ def persist_iteration_phase(
         run_id=run_id,
         outcome=execution.outcome,
         consecutive_failures=consecutive_failures,
+        failure_taxonomy=telemetry_failure_taxonomy,
         context=context,
     )
     dependencies.write_session_report(vault, session, context=context)

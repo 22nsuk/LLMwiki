@@ -1161,6 +1161,68 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertEqual(refresh.call_count, 2)
             sleep.assert_not_called()
 
+    def test_reconstructed_loop_state_counts_specific_failure_taxonomy(self) -> None:
+        session = {
+            "iterations": [
+                {
+                    "run_id": "run-discard-specific",
+                    "outcome": "discarded",
+                    "decision": "DISCARD",
+                    "failure_taxonomy": "changed_files_manifest_scope",
+                }
+            ]
+        }
+
+        loop_state = auto_improve_runtime._reconstructed_loop_state(
+            session,
+            context=_incrementing_runtime_context(),
+        )
+
+        self.assertEqual(loop_state["last_outcome"], "discarded")
+        self.assertEqual(loop_state["last_blocking_reason"], "changed_files_manifest_scope")
+        self.assertEqual(
+            loop_state["blocking_reason_counts"],
+            {"changed_files_manifest_scope": 1},
+        )
+
+    def test_normalize_loop_state_replaces_stale_generic_discard_reason(self) -> None:
+        session = {
+            "iterations": [
+                {
+                    "run_id": "run-discard-specific",
+                    "outcome": "discarded",
+                    "decision": "DISCARD",
+                    "failure_taxonomy": "changed_files_manifest_scope",
+                }
+            ],
+            "loop_state": {
+                "consecutive_failures": 1,
+                "last_outcome": "discarded",
+                "last_decision": "DISCARD",
+                "last_run_id": "run-discard-specific",
+                "last_blocking_reason": "discarded",
+                "blocking_reason_counts": {"discarded": 1},
+                "repeated_blocker_stop": True,
+                "repeated_blocker_reason": "discarded",
+                "remediation_backlog_path": "ops/reports/remediation-backlog.json",
+                "updated_at": "2026-04-15T00:00:00Z",
+            },
+        }
+
+        loop_state = auto_improve_runtime._normalize_loop_state(
+            session,
+            context=_incrementing_runtime_context(),
+        )
+
+        self.assertEqual(loop_state["last_outcome"], "discarded")
+        self.assertEqual(loop_state["last_blocking_reason"], "changed_files_manifest_scope")
+        self.assertEqual(
+            loop_state["blocking_reason_counts"],
+            {"changed_files_manifest_scope": 1},
+        )
+        self.assertTrue(loop_state["repeated_blocker_stop"])
+        self.assertEqual(loop_state["repeated_blocker_reason"], "changed_files_manifest_scope")
+
     def test_run_auto_improve_session_blocks_learning_uncertain_without_flag(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -2188,6 +2250,103 @@ class AutoImproveRuntimeTests(unittest.TestCase):
             self.assertEqual(
                 session["loop_state"]["remediation_backlog_path"],
                 "ops/reports/remediation-backlog.json",
+            )
+
+    def test_run_auto_improve_session_stops_repeated_specific_discard_blocker(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            seed_subagent_profiles(vault, ["worker", "validator"])
+            proposal_a = mutation_proposal_report("ops/scripts/example.py")["proposals"][0]
+            proposal_b = {
+                **proposal_a,
+                "proposal_id": f"{proposal_a['proposal_id']}-second",
+                "source_candidate_id": "candidate-second",
+            }
+
+            def fake_refresh_reports(*_: object, **__: object) -> tuple[dict, dict]:
+                return {}, {"proposals": [proposal_a, proposal_b]}
+
+            def fake_run_mechanism_experiment(
+                vault_path: Path,
+                *,
+                run_id: str,
+                scaffold_only: bool,
+                **_: object,
+            ) -> dict:
+                if scaffold_only:
+                    _seed_scaffolded_run(vault_path, run_id)
+                    return {"run_id": run_id, "scaffold_only": True}
+                _write_successful_executor_reports(vault_path, run_id)
+                promotion_rel = f"runs/{run_id}/promotion-report.json"
+                (vault_path / promotion_rel).write_text(
+                    json.dumps(
+                        {
+                            "run_id": run_id,
+                            "decision": "DISCARD",
+                            "checks": [
+                                {"id": "candidate_eval_pass", "status": "PASS"},
+                                {"id": "eval_score_improves", "status": "WARN"},
+                                {"id": "lint_non_regression", "status": "PASS"},
+                                {
+                                    "id": "structural_complexity_non_regression",
+                                    "status": "PASS",
+                                },
+                                {"id": "tests_non_regression", "status": "PASS"},
+                                {"id": "changed_files_manifest_scope", "status": "FAIL"},
+                            ],
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    ),
+                    encoding="utf-8",
+                )
+                return {
+                    "run_id": run_id,
+                    "decision": "DISCARD",
+                    "promotion_report": promotion_rel,
+                    "finalized": True,
+                    "finalize_result": {"run_id": run_id},
+                    "repo_health": {"passed": True},
+                }
+
+            with (
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime._refresh_reports",
+                    side_effect=fake_refresh_reports,
+                ),
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime.run_mechanism_experiment",
+                    side_effect=fake_run_mechanism_experiment,
+                ),
+            ):
+                result = run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    session_id="auto-session-repeated-specific-discard",
+                    max_proposals=3,
+                    max_minutes=90,
+                    max_consecutive_failures=3,
+                    executor_name="codex_exec",
+                    allow_learning_uncertain=True,
+                )
+
+            session = json.loads((vault / result["session_report"]).read_text(encoding="utf-8"))
+            self.assertEqual(result["stop_reason"], "repeated_blocker_backlog_required")
+            self.assertEqual(len(session["iterations"]), 2)
+            self.assertEqual(
+                [item["failure_taxonomy"] for item in session["iterations"]],
+                ["changed_files_manifest_scope", "changed_files_manifest_scope"],
+            )
+            self.assertEqual(
+                session["loop_state"]["blocking_reason_counts"],
+                {"changed_files_manifest_scope": 2},
+            )
+            self.assertTrue(session["loop_state"]["repeated_blocker_stop"])
+            self.assertEqual(
+                session["loop_state"]["repeated_blocker_reason"],
+                "changed_files_manifest_scope",
             )
 
     def test_run_auto_improve_session_stops_when_repeat_backlog_is_open(self) -> None:

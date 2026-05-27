@@ -848,13 +848,25 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
             telemetry = json.loads(
                 (vault / "runs" / run_id / "run-telemetry.json").read_text(encoding="utf-8")
             )
+            iteration_record = session["iterations"][0]
             decision = session["next_run_decisions"][0]
             self.assertEqual(telemetry["failure_taxonomy"], "changed_files_manifest_scope")
+            self.assertEqual(iteration_record["outcome"], "discarded")
+            self.assertEqual(iteration_record["failure_taxonomy"], "changed_files_manifest_scope")
             self.assertEqual(decision["failure_taxonomy"], "changed_files_manifest_scope")
             self.assertEqual(decision["blocking_role"], "promotion_gate")
             self.assertEqual(
                 decision["target_proposal_id"],
                 "next_run_failure_repair__example-runtime__changed-files-manifest-scope",
+            )
+            self.assertEqual(session["loop_state"]["last_outcome"], "discarded")
+            self.assertEqual(
+                session["loop_state"]["last_blocking_reason"],
+                "changed_files_manifest_scope",
+            )
+            self.assertEqual(
+                session["loop_state"]["blocking_reason_counts"],
+                {"changed_files_manifest_scope": 1},
             )
 
     def test_write_iteration_telemetry_records_behavior_delta_digest_and_same_eval_reason(self) -> None:
