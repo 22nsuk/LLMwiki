@@ -132,6 +132,28 @@ class AutoImproveQueueRuntimeTests(unittest.TestCase):
         self.assertEqual(queue[0]["blocked_by"], [])
         self.assertEqual(proposals_report["proposals"][0]["blocked_by"], ["", "  "])
 
+    def test_queue_normalizes_identity_and_priority_without_mutating_source(self) -> None:
+        proposals_report = {
+            "proposals": [
+                {"proposal_id": "  chosen ", "priority": "12", "blocked_by": []},
+                {"proposal_id": "", "priority": 99, "blocked_by": []},
+                {"proposal_id": "fallback", "priority": "bad", "blocked_by": []},
+                {"proposal_id": " attempted ", "priority": 50, "blocked_by": []},
+            ]
+        }
+
+        queue = build_proposal_queue(
+            proposals_report,
+            attempted={"attempted"},
+            quarantined=set(),
+        )
+
+        self.assertEqual(
+            [(proposal["proposal_id"], proposal["priority"]) for proposal in queue],
+            [("chosen", 12), ("fallback", 0)],
+        )
+        self.assertEqual(proposals_report["proposals"][0]["proposal_id"], "  chosen ")
+
 
 if __name__ == "__main__":
     unittest.main()
