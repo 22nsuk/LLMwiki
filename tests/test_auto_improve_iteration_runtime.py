@@ -1117,6 +1117,62 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                 "equal_score_secondary_eligibility",
             )
 
+    def test_write_iteration_telemetry_falls_back_to_non_regression_blocker_without_decision_record(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-discard-evidence-legacy-status"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            promotion_rel = f"runs/{run_id}/promotion-report.json"
+            (vault / promotion_rel).write_text(
+                json.dumps(
+                    {
+                        "decision": "DISCARD",
+                        "checks": [
+                            {"id": "candidate_eval_pass", "status": "PASS"},
+                            {"id": "eval_score_improves", "status": "WARN"},
+                            {"id": "lint_non_regression", "status": "PASS"},
+                            {"id": "structural_complexity_non_regression", "status": "PASS"},
+                            {"id": "tests_non_regression", "status": "MAYBE"},
+                        ],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[f"runs/{run_id}/subagent-routing.worker.json"],
+                    roles=["worker"],
+                    phase_durations={"routing": 0.1, "experiment": 0.2},
+                    outcome="discarded",
+                    result={
+                        "decision": "DISCARD",
+                        "promotion_report": promotion_rel,
+                        "finalized": True,
+                        "finalize_result": {"run_id": run_id},
+                    },
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            evidence = payload["discard_non_regression_evidence"]
+            self.assertEqual(payload["failure_taxonomy"], "tests_non_regression")
+            self.assertEqual(evidence["blocking_check_ids"], ["tests_non_regression"])
+            self.assertEqual(evidence["non_regression_check_statuses"]["tests_non_regression"], "UNKNOWN")
+
     def test_write_iteration_telemetry_ignores_discard_evidence_when_outcome_is_not_discarded(
         self,
     ) -> None:

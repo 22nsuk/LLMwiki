@@ -423,12 +423,19 @@ def _blocking_promotion_check_ids(
     decision_record: dict[str, Any] | None,
 ) -> list[str]:
     failed_ids = sorted(check_id for check_id, status in statuses.items() if status == "FAIL")
-    if failed_ids or not isinstance(decision_record, dict):
+    if failed_ids:
         return failed_ids
-    evidence_refs = decision_record.get("evidence_refs")
-    if not isinstance(evidence_refs, list):
-        return []
-    return sorted(str(item).strip() for item in evidence_refs if str(item).strip())
+    if isinstance(decision_record, dict):
+        evidence_refs = decision_record.get("evidence_refs")
+        if isinstance(evidence_refs, list):
+            evidence_ids = sorted(str(item).strip() for item in evidence_refs if str(item).strip())
+            if evidence_ids:
+                return evidence_ids
+    return sorted(
+        check_id
+        for check_id, status in _non_regression_check_statuses(statuses).items()
+        if status in {"FAIL", "MISSING", "UNKNOWN"}
+    )
 
 
 def _non_regression_check_statuses(statuses: dict[str, str]) -> dict[str, str]:
