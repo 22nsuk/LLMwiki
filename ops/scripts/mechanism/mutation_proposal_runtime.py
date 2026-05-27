@@ -95,6 +95,7 @@ SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
 REPORT_SCHEMA_SAMPLES_TARGET = "tests/fixtures/report_schema_samples.json"
 REPORT_SCHEMA_SAMPLE_REGENERATION_TEST = "tests/test_report_schema_sample_regeneration.py"
 DEFAULT_AUTO_IMPROVE_SESSIONS_DIR = "ops/reports/auto-improve-sessions"
+SOURCE_SESSION_REPORT_DECISION_KEY = "_source_session_report"
 NEXT_RUN_REPAIR_BACKTICK_PATH_RE = re.compile(r"`((?:ops|tests)/[^`\s]+)`")
 NEXT_RUN_REPAIR_PLAIN_PATH_RE = re.compile(
     r"\b((?:ops|tests)/(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+\.(?:py|json|md))(?:[:]\d+)?"
@@ -338,11 +339,9 @@ def _load_next_run_decisions(
             continue
         if _session_report_loading_issue(vault / rel_path, session_report):
             continue
-        decisions.extend(
-            decision
-            for decision in normalize_next_run_decisions(session_report.get("next_run_decisions"))
-            if _session_report_fresh_for_observed_at(session_report, decision.get("observed_at"))
-        )
+        for decision in normalize_next_run_decisions(session_report.get("next_run_decisions")):
+            if _session_report_fresh_for_observed_at(session_report, decision.get("observed_at")):
+                decisions.append({**decision, SOURCE_SESSION_REPORT_DECISION_KEY: rel_path})
     return sorted(
         decisions,
         key=lambda item: (
@@ -1048,6 +1047,15 @@ def _next_run_repair_extra_scope(
         ],
         dedupe_preserve_order(must_change_tests),
     )
+
+
+def _source_session_report_targets(vault: Path, decision: dict) -> list[str]:
+    source_report = _safe_repo_relative_path(
+        decision.get(SOURCE_SESSION_REPORT_DECISION_KEY)
+    )
+    if not source_report:
+        return []
+    return current_repo_target_paths(vault, [source_report])
 
 
 def _proposal_blast_radius_score(
@@ -1839,6 +1847,12 @@ def _next_run_repair_proposal(
                 if str(target).strip()
             ],
         ),
+    )
+    supporting_targets = dedupe_preserve_order(
+        [
+            *supporting_targets,
+            *_source_session_report_targets(vault, decision),
+        ]
     )
     extra_supporting_targets, extra_must_change_tests = _next_run_repair_extra_scope(
         vault,

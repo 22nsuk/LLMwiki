@@ -2450,6 +2450,10 @@ class MutationProposalTest(unittest.TestCase):
                 "auto_improve_next_run_decision_candidate",
             )
             self.assertEqual(repair["run_ids"], ["auto-session-a-run-01-example-runtime"])
+            self.assertIn(
+                "ops/reports/auto-improve-sessions/session-a.json",
+                repair["supporting_targets"],
+            )
             self.assertEqual(repair["blocked_by"], [])
             self.assertEqual(proposal_report["summary"]["next_run_repair_proposals"], 1)
             self.assertEqual(
@@ -2566,6 +2570,7 @@ class MutationProposalTest(unittest.TestCase):
                     schema_target,
                     "ops/script-output-surfaces.json",
                     "tests/fixtures/report_schema_samples.json",
+                    "ops/reports/auto-improve-sessions/session-a.json",
                 ],
             )
             self.assertEqual(
@@ -2747,6 +2752,83 @@ class MutationProposalTest(unittest.TestCase):
 
             self.assertIn(diagnostic_target, repair["supporting_targets"])
             self.assertIn(diagnostic_test, repair["must_change_tests"])
+
+    def test_next_run_decision_keeps_source_session_report_with_diagnostic_ancestry(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_vault(vault)
+            primary_target = "ops/scripts/mechanism/example_runtime.py"
+            diagnostic_session = "ops/reports/auto-improve-sessions/prior-session.json"
+            source_session = "ops/reports/auto-improve-sessions/session-a.json"
+            (vault / primary_target).parent.mkdir(parents=True, exist_ok=True)
+            (vault / primary_target).write_text("VALUE = 1\n", encoding="utf-8")
+            (vault / "tests" / "test_example_runtime.py").write_text(
+                "def test_example_runtime():\n    assert True\n",
+                encoding="utf-8",
+            )
+            write_json(vault / diagnostic_session, {"next_run_decisions": []})
+            source_run_id = "auto-session-a-run-03-example-runtime"
+            provenance_report = vault / "runs" / source_run_id / "provenance-auditor-executor-report.json"
+            write_json(
+                provenance_report,
+                {
+                    "status": "fail",
+                    "diagnostics": {
+                        "notes": [
+                            f"Prior ancestry is recorded in `{diagnostic_session}`."
+                        ]
+                    },
+                },
+            )
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+            write_json(
+                vault / source_session,
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:structural",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 3,
+                            "source_run_id": source_run_id,
+                            "proposal_id": "next_run_failure_repair__example-runtime__validation-blocked",
+                            "source_candidate_id": "next-run-decision:prior:validation",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__example-runtime__structural-complexity-non-regression"
+                            ),
+                            "proposal_family": "next_run_failure_repair",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "structural_complexity_non_regression",
+                            "blocking_role": "promotion_gate",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "structural non-regression should remain bounded to exact source evidence",
+                            "quarantined_source_proposal": False,
+                            "primary_targets": [primary_target],
+                            "supporting_targets": ["ops/script-output-surfaces.json"],
+                            "must_change_tests": ["tests/test_example_runtime.py"],
+                            "evidence_paths": [
+                                f"runs/{source_run_id}/provenance-auditor-executor-report.json"
+                            ],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            repair = next(
+                proposal
+                for proposal in proposal_report["proposals"]
+                if proposal["failure_mode"] == "next_run_failure_repair"
+            )
+
+            self.assertIn(source_session, repair["supporting_targets"])
+            self.assertIn(diagnostic_session, repair["supporting_targets"])
 
     def test_consumed_next_run_decision_does_not_emit_repair_proposal(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
