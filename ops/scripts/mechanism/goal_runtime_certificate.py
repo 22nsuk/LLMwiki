@@ -28,6 +28,22 @@ SESSION_REQUIREMENTS: dict[str, Any] = {
     "minimum_successful_iteration_count": 1,
     "requires_success_then_followup": False,
     "requires_meaningful_maintenance": True,
+    "minimum_meaningful_maintenance_cycle_count": 1,
+    "allow_zero_maintenance_cycles_for_certificate": False,
+}
+DEFAULT_EXECUTION_POLICY: dict[str, Any] = {
+    "learning_uncertain": {
+        "allow_bounded_trial": True,
+        "requires_explicit_authorization": True,
+        "authorization_source": "codex_goal_contract",
+        "command_flag": "--allow-learning-uncertain",
+    },
+    "post_promote_maintenance": {
+        "minimum_meaningful_cycles": 1,
+        "allow_zero_cycles_for_certificate": False,
+        "completion_condition": "post_promote_observation",
+        "command_flag": "--post-promote-maintenance-cycles",
+    },
 }
 
 
@@ -44,6 +60,101 @@ def _list_text(value: object) -> list[str]:
 
 def _runtime_config(contract: Mapping[str, Any]) -> Mapping[str, Any]:
     return _mapping_value(contract, "runtime")
+
+
+def _positive_int(value: object, fallback: int) -> int:
+    if isinstance(value, int) and not isinstance(value, bool) and value >= 1:
+        return value
+    return fallback
+
+
+def execution_policy(contract: Mapping[str, Any]) -> dict[str, Any]:
+    policy = _mapping_value(contract, "execution_policy")
+    learning = _mapping_value(policy, "learning_uncertain")
+    maintenance = _mapping_value(policy, "post_promote_maintenance")
+    default_learning = _mapping_value(DEFAULT_EXECUTION_POLICY, "learning_uncertain")
+    default_maintenance = _mapping_value(DEFAULT_EXECUTION_POLICY, "post_promote_maintenance")
+    return {
+        "learning_uncertain": {
+            "allow_bounded_trial": bool(
+                learning.get(
+                    "allow_bounded_trial",
+                    default_learning.get("allow_bounded_trial"),
+                )
+            ),
+            "requires_explicit_authorization": bool(
+                learning.get(
+                    "requires_explicit_authorization",
+                    default_learning.get("requires_explicit_authorization"),
+                )
+            ),
+            "authorization_source": str(
+                learning.get(
+                    "authorization_source",
+                    default_learning.get("authorization_source"),
+                )
+            ).strip()
+            or str(default_learning.get("authorization_source", "")).strip(),
+            "command_flag": str(
+                learning.get("command_flag", default_learning.get("command_flag"))
+            ).strip()
+            or str(default_learning.get("command_flag", "")).strip(),
+        },
+        "post_promote_maintenance": {
+            "minimum_meaningful_cycles": _positive_int(
+                maintenance.get("minimum_meaningful_cycles"),
+                _positive_int(default_maintenance.get("minimum_meaningful_cycles"), 1),
+            ),
+            "allow_zero_cycles_for_certificate": bool(
+                maintenance.get(
+                    "allow_zero_cycles_for_certificate",
+                    default_maintenance.get("allow_zero_cycles_for_certificate"),
+                )
+            ),
+            "completion_condition": str(
+                maintenance.get(
+                    "completion_condition",
+                    default_maintenance.get("completion_condition"),
+                )
+            ).strip()
+            or str(default_maintenance.get("completion_condition", "")).strip(),
+            "command_flag": str(
+                maintenance.get(
+                    "command_flag",
+                    default_maintenance.get("command_flag"),
+                )
+            ).strip()
+            or str(default_maintenance.get("command_flag", "")).strip(),
+        },
+    }
+
+
+def learning_uncertain_policy(contract: Mapping[str, Any]) -> dict[str, Any]:
+    return dict(_mapping_value(execution_policy(contract), "learning_uncertain"))
+
+
+def post_promote_maintenance_policy(contract: Mapping[str, Any]) -> dict[str, Any]:
+    return dict(_mapping_value(execution_policy(contract), "post_promote_maintenance"))
+
+
+def session_requirements(contract: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    requirements = dict(SESSION_REQUIREMENTS)
+    if contract is not None:
+        maintenance = post_promote_maintenance_policy(contract)
+        minimum_cycles = _positive_int(
+            maintenance.get("minimum_meaningful_cycles"),
+            _positive_int(
+                requirements.get("minimum_meaningful_maintenance_cycle_count"),
+                1,
+            ),
+        )
+        allow_zero = bool(maintenance.get("allow_zero_cycles_for_certificate", False))
+        requirements["minimum_meaningful_maintenance_cycle_count"] = minimum_cycles
+        requirements["allow_zero_maintenance_cycles_for_certificate"] = allow_zero
+        requirements["requires_meaningful_maintenance"] = bool(
+            minimum_cycles > 0 and not allow_zero
+        )
+    return requirements
 
 
 def runtime_mode(contract: Mapping[str, Any], fallback: str = DEFAULT_RUNTIME_MODE) -> str:

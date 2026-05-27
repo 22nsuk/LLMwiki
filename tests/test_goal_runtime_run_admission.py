@@ -148,6 +148,20 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
             },
         )
         contract = {
+            "execution_policy": {
+                "learning_uncertain": {
+                    "allow_bounded_trial": True,
+                    "requires_explicit_authorization": True,
+                    "authorization_source": "codex_goal_contract",
+                    "command_flag": "--allow-learning-uncertain",
+                },
+                "post_promote_maintenance": {
+                    "minimum_meaningful_cycles": 1,
+                    "allow_zero_cycles_for_certificate": False,
+                    "completion_condition": "post_promote_observation",
+                    "command_flag": "--post-promote-maintenance-cycles",
+                },
+            },
             "goal_backend": {"process_persistent": True},
             "runtime": {"certificate_status": "verified"},
             "promotion_guard": {"runtime_certificate_verified": True},
@@ -192,12 +206,14 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         *,
         resume_session_id: str = "",
         maintenance_action_plan_path: str = "",
+        allow_learning_uncertain: bool = False,
     ) -> dict:
         return build_report(
             GoalRuntimeRunAdmissionRequest(
                 vault=self.vault,
                 resume_session_id=resume_session_id,
                 maintenance_action_plan_path=maintenance_action_plan_path,
+                allow_learning_uncertain=allow_learning_uncertain,
                 context=fixed_context(),
             )
         )
@@ -212,6 +228,70 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         self.assertFalse(report["decisions"]["should_pause_before_run"])
         self.assertEqual(report["summary"]["start_blocker_count"], 0)
         self.assertGreater(report["summary"]["promotion_blocker_count"], 0)
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_learning_uncertain_start_is_authorized_by_goal_contract(self) -> None:
+        readiness = json.loads((self.vault / "ops/reports/auto-improve-readiness.json").read_text(encoding="utf-8"))
+        readiness["learning_readiness"] = {
+            "status": "learning_uncertain",
+            "gate_effect": "review_required",
+        }
+        self._write_json("ops/reports/auto-improve-readiness.json", readiness)
+
+        report = self._build_report()
+
+        learning_check = next(
+            check for check in report["checks"] if check["id"] == "start_learning_uncertain_authorized"
+        )
+        self.assertEqual(learning_check["status"], "pass")
+        self.assertTrue(learning_check["observed"]["contract_authorized"])
+        self.assertFalse(learning_check["observed"]["allow_learning_uncertain"])
+        self.assertEqual(report["summary"]["start_blocker_count"], 0)
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_learning_uncertain_start_blocks_without_contract_or_override(self) -> None:
+        readiness = json.loads((self.vault / "ops/reports/auto-improve-readiness.json").read_text(encoding="utf-8"))
+        readiness["learning_readiness"] = {
+            "status": "learning_uncertain",
+            "gate_effect": "review_required",
+        }
+        self._write_json("ops/reports/auto-improve-readiness.json", readiness)
+        contract = json.loads((self.vault / "ops/reports/codex-goal-contract.json").read_text(encoding="utf-8"))
+        contract["execution_policy"]["learning_uncertain"]["allow_bounded_trial"] = False
+        self._write_json("ops/reports/codex-goal-contract.json", contract)
+
+        report = self._build_report()
+
+        self.assertEqual(report["status"], "fail")
+        self.assertFalse(report["decisions"]["can_start_goal_runtime"])
+        learning_check = next(
+            check for check in report["checks"] if check["id"] == "start_learning_uncertain_authorized"
+        )
+        self.assertEqual(learning_check["status"], "fail")
+        self.assertFalse(learning_check["observed"]["contract_authorized"])
+        self.assertFalse(learning_check["observed"]["allow_learning_uncertain"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_learning_uncertain_start_allows_explicit_override(self) -> None:
+        readiness = json.loads((self.vault / "ops/reports/auto-improve-readiness.json").read_text(encoding="utf-8"))
+        readiness["learning_readiness"] = {
+            "status": "learning_uncertain",
+            "gate_effect": "review_required",
+        }
+        self._write_json("ops/reports/auto-improve-readiness.json", readiness)
+        contract = json.loads((self.vault / "ops/reports/codex-goal-contract.json").read_text(encoding="utf-8"))
+        contract["execution_policy"]["learning_uncertain"]["allow_bounded_trial"] = False
+        self._write_json("ops/reports/codex-goal-contract.json", contract)
+
+        report = self._build_report(allow_learning_uncertain=True)
+
+        learning_check = next(
+            check for check in report["checks"] if check["id"] == "start_learning_uncertain_authorized"
+        )
+        self.assertEqual(learning_check["status"], "pass")
+        self.assertFalse(learning_check["observed"]["contract_authorized"])
+        self.assertTrue(learning_check["observed"]["allow_learning_uncertain"])
+        self.assertEqual(report["summary"]["start_blocker_count"], 0)
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_remediation_backlog_check_reads_schema_summary_counts(self) -> None:

@@ -124,6 +124,24 @@ class CodexGoalClientTests(unittest.TestCase):
         self.assertEqual(contract["runtime"]["mode"], "self_improvement_loop")
         self.assertEqual(contract["runtime"]["duration_seconds"], 21600)
         self.assertEqual(contract["runtime"]["certificate_status"], "unverified")
+        self.assertEqual(
+            contract["execution_policy"]["learning_uncertain"],
+            {
+                "allow_bounded_trial": True,
+                "requires_explicit_authorization": True,
+                "authorization_source": "codex_goal_contract",
+                "command_flag": "--allow-learning-uncertain",
+            },
+        )
+        self.assertEqual(
+            contract["execution_policy"]["post_promote_maintenance"],
+            {
+                "minimum_meaningful_cycles": 1,
+                "allow_zero_cycles_for_certificate": False,
+                "completion_condition": "post_promote_observation",
+                "command_flag": "--post-promote-maintenance-cycles",
+            },
+        )
         self.assertEqual(contract["promotion_guard"]["can_promote_result"], False)
         self.assertEqual(contract["promotion_guard"]["sustained_runtime_claimed"], False)
         self.assertEqual(set_goal(contract, vault=self.vault), contract)

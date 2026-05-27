@@ -171,6 +171,24 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         }
         session_path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
 
+    def _write_promoted_session_without_maintenance(self, run_id: str) -> None:
+        session_path = self.vault / "ops" / "reports" / "auto-improve-sessions" / f"{run_id}.json"
+        session_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "status": "complete",
+            "stop_reason": "proposal_budget_exhausted",
+            "iterations": [
+                {
+                    "index": 1,
+                    "status": "promoted",
+                    "outcome": "promoted",
+                    "decision": "PROMOTE",
+                    "run_id": f"{run_id}-run-01",
+                }
+            ],
+        }
+        session_path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
     def _write_completed_goal_status(self, *, completed_at: str) -> None:
         started_at = "2026-05-17T11:00:00Z"
         started = parse_iso_z(started_at)
@@ -239,6 +257,13 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         self.assertEqual(report["certificate"]["observed_elapsed_seconds"], 1800)
         self.assertEqual(report["certificate"]["max_runtime_seconds"], 3600)
         self.assertEqual(report["session_evidence"]["status"], "clean")
+        self.assertEqual(
+            report["session_evidence"]["minimum_meaningful_maintenance_cycle_count"],
+            1,
+        )
+        self.assertFalse(
+            report["session_evidence"]["allow_zero_maintenance_cycles_for_certificate"]
+        )
         self.assertEqual(report["command_observability"]["status"], "clean")
         self.assertEqual(report["diagnosis"]["certificate_claim_status"], "eligible")
         self.assertTrue(report["diagnosis"]["certifiable"])
@@ -250,6 +275,34 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         self.assertEqual(report["contract_update"]["certificate_status_after"], "verified")
         self.assertFalse(report["contract_update"]["applied"])
         self.assertEqual(get_goal(vault=self.vault)["runtime"]["certificate_status"], "unverified")
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_promoted_proposal_budget_session_without_maintenance_blocks_certificate(self) -> None:
+        self._seed_goal_contract()
+        self._seed_full_gate_reports()
+        self._write_completed_goal_status(completed_at="2026-05-17T11:30:00Z")
+        self._write_promoted_session_without_maintenance("20260517-loop")
+
+        report = build_certificate_report(
+            GoalRuntimeCertificateRequest(
+                vault=self.vault,
+                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.UTC)),
+            )
+        )
+
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["certificate"]["verification_status"], "blocked")
+        self.assertEqual(report["session_evidence"]["status"], "incomplete")
+        self.assertEqual(report["session_evidence"]["maintenance_status"], "missing")
+        self.assertTrue(report["session_evidence"]["requires_meaningful_maintenance"])
+        self.assertEqual(
+            report["session_evidence"]["minimum_meaningful_maintenance_cycle_count"],
+            1,
+        )
+        self.assertIn(
+            "auto-improve session lacks meaningful runtime maintenance evidence",
+            report["blockers"],
+        )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_apply_marks_contract_certificate_verified(self) -> None:

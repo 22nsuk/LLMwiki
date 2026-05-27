@@ -534,6 +534,9 @@ def _assert_successful_runtime_events_and_learning(case: unittest.TestCase, arti
         {
             "allow_learning_uncertain": True,
             "bounded_trial": True,
+            "authorization_source": "command_flag",
+            "contract_authorized": False,
+            "command_flag": "--allow-learning-uncertain",
         },
     )
     case.assertEqual(session["pre_run_readiness"]["learning_status"], "learning_uncertain")
@@ -1186,6 +1189,9 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 {
                     "allow_learning_uncertain": False,
                     "bounded_trial": False,
+                    "authorization_source": "",
+                    "contract_authorized": False,
+                    "command_flag": "",
                 },
             )
             self.assertEqual(session["pre_run_readiness"]["learning_gate_effect"], "review_required")
@@ -1263,7 +1269,97 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                 {
                     "allow_learning_uncertain": True,
                     "bounded_trial": True,
+                    "authorization_source": "command_flag",
+                    "contract_authorized": False,
+                    "command_flag": "--allow-learning-uncertain",
                 },
+            )
+            self.assertEqual(session["pre_run_readiness"]["learning_status"], "learning_uncertain")
+            self.assertEqual(session["queue_snapshot"], ["proposal-ready"])
+
+    def test_run_auto_improve_session_uses_goal_contract_learning_authorization(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_wrapper_vault(vault)
+            set_goal(sample_goal_contract(), vault=vault)
+            readiness_path = vault / "ops" / "reports" / "auto-improve-readiness.json"
+
+            def fake_complete(
+                vault_path: Path,
+                start: auto_improve_runtime.AutoImproveSessionStart,
+                state: auto_improve_runtime.AutoImproveLoopState,
+            ) -> dict[str, object]:
+                start.session["status"] = "complete"
+                start.session["stop_reason"] = state.stop_reason
+                auto_improve_runtime._write_session_report(
+                    vault_path,
+                    start.session,
+                    context=start.context,
+                )
+                return {
+                    "session_id": start.session_id,
+                    "session_report": start.session["path"],
+                    "routing_provenance_aggregate": (
+                        f"ops/reports/routing-provenance-aggregates/{start.session_id}.json"
+                    ),
+                    "promotion_decision_trends": "ops/reports/promotion-decision-trends.json",
+                    "outcome_metrics": "ops/reports/outcome-metrics.json",
+                    "iterations": len(start.session["iterations"]),
+                    "stop_reason": state.stop_reason,
+                    "run_ids": start.session["run_ids"],
+                }
+
+            with (
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime._refresh_reports",
+                    return_value=({}, {"proposals": []}),
+                ),
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime.build_readiness_report",
+                    return_value=_learning_review_required_report(),
+                ),
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime.write_readiness_report",
+                    return_value=readiness_path,
+                ),
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime._run_auto_improve_iteration",
+                    return_value=False,
+                ),
+                mock.patch(
+                    "ops.scripts.auto_improve_runtime._complete_auto_improve_session",
+                    side_effect=fake_complete,
+                ),
+            ):
+                result = run_auto_improve_session(
+                    vault,
+                    policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                    session_id="auto-session-contract-authorized",
+                    goal_contract_path="ops/reports/codex-goal-contract.json",
+                    max_proposals=1,
+                    max_minutes=30,
+                    max_consecutive_failures=1,
+                    executor_name="codex_exec",
+                )
+
+            session = json.loads((vault / result["session_report"]).read_text(encoding="utf-8"))
+            self.assertEqual(session["status"], "complete")
+            self.assertEqual(
+                session["learning_mode"],
+                {
+                    "allow_learning_uncertain": True,
+                    "bounded_trial": True,
+                    "authorization_source": "codex_goal_contract",
+                    "contract_authorized": True,
+                    "command_flag": "--allow-learning-uncertain",
+                },
+            )
+            self.assertEqual(
+                session["goal_contract"]["execution_policy"]["learning_uncertain"][
+                    "authorization_source"
+                ],
+                "codex_goal_contract",
             )
             self.assertEqual(session["pre_run_readiness"]["learning_status"], "learning_uncertain")
             self.assertEqual(session["queue_snapshot"], ["proposal-ready"])

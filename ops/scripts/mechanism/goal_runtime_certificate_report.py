@@ -27,9 +27,9 @@ from ops.scripts.runtime_context import RuntimeContext
 
 from .goal_runtime_certificate import (
     RUNTIME_MODES,
-    SESSION_REQUIREMENTS,
     evidence_statuses,
     runtime_duration_seconds,
+    session_requirements as contract_session_requirements,
 )
 from .goal_runtime_certificate import (
     runtime_mode as contract_runtime_mode,
@@ -557,8 +557,8 @@ def _has_success_then_followup(iterations: list[Mapping[str, Any]]) -> bool:
     return any(_successful_iteration(iteration) for iteration in iterations[:-1])
 
 
-def _session_requirement_summary() -> dict[str, Any]:
-    requirements = SESSION_REQUIREMENTS
+def _session_requirement_summary(contract: Mapping[str, Any]) -> dict[str, Any]:
+    requirements = contract_session_requirements(contract)
     accepted_stop_reasons = _list_text(requirements.get("accepted_stop_reasons"))
     return {
         "accepted_stop_reasons": accepted_stop_reasons,
@@ -568,6 +568,12 @@ def _session_requirement_summary() -> dict[str, Any]:
         ),
         "requires_success_then_followup": bool(requirements.get("requires_success_then_followup", False)),
         "requires_meaningful_maintenance": bool(requirements.get("requires_meaningful_maintenance", False)),
+        "minimum_meaningful_maintenance_cycle_count": _integer_value(
+            requirements.get("minimum_meaningful_maintenance_cycle_count")
+        ),
+        "allow_zero_maintenance_cycles_for_certificate": bool(
+            requirements.get("allow_zero_maintenance_cycles_for_certificate", False)
+        ),
     }
 
 
@@ -575,7 +581,12 @@ def _stop_reason_satisfies_maintenance_requirement(stop_reason: str) -> bool:
     return stop_reason != "queue_exhausted"
 
 
-def _empty_session_evidence(*, status: str, path: str) -> dict[str, Any]:
+def _empty_session_evidence(
+    *,
+    status: str,
+    path: str,
+    contract: Mapping[str, Any],
+) -> dict[str, Any]:
     return {
         "status": status,
         "path": path,
@@ -590,11 +601,15 @@ def _empty_session_evidence(*, status: str, path: str) -> dict[str, Any]:
         "expected_min_maintenance_cycle_count": 0,
         "maintenance_last_cycle_elapsed_seconds": 0,
         "maintenance_stop_reason": "",
-        **_session_requirement_summary(),
+        **_session_requirement_summary(contract),
     }
 
 
-def _meaningful_maintenance_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
+def _meaningful_maintenance_summary(
+    payload: Mapping[str, Any],
+    *,
+    minimum_meaningful_cycles: int,
+) -> dict[str, Any]:
     maintenance = _mapping_value(payload, "maintenance")
     cycles = maintenance.get("cycles")
     cycle_items = [item for item in cycles if isinstance(item, Mapping)] if isinstance(cycles, list) else []
@@ -656,13 +671,13 @@ def _meaningful_maintenance_summary(payload: Mapping[str, Any]) -> dict[str, Any
         maintenance_complete
         and stop_reason == "post_promote_cycle_limit_reached"
         and cycle_count >= expected_count
-        and meaningful_count >= 1
+        and meaningful_count >= minimum_meaningful_cycles
     )
     stable_queue_complete = (
         maintenance_complete
         and stop_reason == "stable_queue_snapshot"
         and cycle_count >= 2
-        and meaningful_count >= 1
+        and meaningful_count >= minimum_meaningful_cycles
     )
     complete = time_budget_complete or cycle_limit_complete or stable_queue_complete
     if not maintenance:
@@ -684,20 +699,26 @@ def _meaningful_maintenance_summary(payload: Mapping[str, Any]) -> dict[str, Any
 def _session_evidence(
     vault: Path,
     status_report: Mapping[str, Any],
+    contract: Mapping[str, Any],
 ) -> dict[str, Any]:
     rel_path = _session_report_rel_path(status_report)
     if not rel_path:
-        return _empty_session_evidence(status="missing", path="")
+        return _empty_session_evidence(status="missing", path="", contract=contract)
     payload = load_optional_json_object(vault / rel_path)
     if not payload:
-        return _empty_session_evidence(status="missing", path=rel_path)
+        return _empty_session_evidence(status="missing", path=rel_path, contract=contract)
     iterations = _session_iterations(payload)
     successful_count = sum(1 for iteration in iterations if _successful_iteration(iteration))
     has_success_then_followup = _has_success_then_followup(iterations)
     stop_reason = str(payload.get("stop_reason", "")).strip()
     session_status = str(payload.get("status", "")).strip()
-    session_requirements = _session_requirement_summary()
-    maintenance_summary = _meaningful_maintenance_summary(payload)
+    session_requirements = _session_requirement_summary(contract)
+    maintenance_summary = _meaningful_maintenance_summary(
+        payload,
+        minimum_meaningful_cycles=session_requirements[
+            "minimum_meaningful_maintenance_cycle_count"
+        ],
+    )
     requires_meaningful_maintenance = bool(
         session_requirements["requires_meaningful_maintenance"]
         and _stop_reason_satisfies_maintenance_requirement(stop_reason)
@@ -767,6 +788,14 @@ def _session_evidence_blockers(session_evidence: Mapping[str, Any]) -> list[str]
     if _bool_value(session_evidence.get("requires_meaningful_maintenance")):
         if str(session_evidence.get("maintenance_status", "")).strip() != "clean":
             blockers.append("auto-improve session lacks meaningful runtime maintenance evidence")
+        elif _integer_value(
+            session_evidence.get("meaningful_maintenance_cycle_count")
+        ) < _integer_value(
+            session_evidence.get("minimum_meaningful_maintenance_cycle_count")
+        ):
+            blockers.append(
+                "auto-improve session maintenance evidence is below contract minimum"
+            )
         elif (
             str(session_evidence.get("maintenance_stop_reason", "")).strip()
             != "stable_queue_snapshot"
@@ -925,9 +954,9 @@ def build_report(request: GoalRuntimeCertificateRequest) -> dict[str, Any]:
         "runner_command_audit_current": False,
     }
     session_evidence = (
-        _session_evidence(vault, status_report)
+        _session_evidence(vault, status_report, contract)
         if status_report
-        else _empty_session_evidence(status="missing", path="")
+        else _empty_session_evidence(status="missing", path="", contract=contract)
     )
     blockers: list[str] = []
     if already_verified:

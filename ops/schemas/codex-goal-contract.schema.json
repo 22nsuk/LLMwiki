@@ -12,6 +12,7 @@
     "non_goals",
     "allowed_roots",
     "budgets",
+    "execution_policy",
     "created_at",
     "created_by",
     "status",
@@ -61,6 +62,57 @@
         "max_consecutive_failures": { "type": "integer", "minimum": 1 },
         "heartbeat_interval_seconds": { "type": "integer", "minimum": 1 },
         "checkpoint_interval_seconds": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "execution_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["learning_uncertain", "post_promote_maintenance"],
+      "properties": {
+        "learning_uncertain": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "allow_bounded_trial",
+            "requires_explicit_authorization",
+            "authorization_source",
+            "command_flag"
+          ],
+          "properties": {
+            "allow_bounded_trial": { "type": "boolean" },
+            "requires_explicit_authorization": { "type": "boolean", "const": true },
+            "authorization_source": {
+              "type": "string",
+              "const": "codex_goal_contract"
+            },
+            "command_flag": {
+              "type": "string",
+              "const": "--allow-learning-uncertain"
+            }
+          }
+        },
+        "post_promote_maintenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "minimum_meaningful_cycles",
+            "allow_zero_cycles_for_certificate",
+            "completion_condition",
+            "command_flag"
+          ],
+          "properties": {
+            "minimum_meaningful_cycles": { "type": "integer", "minimum": 1 },
+            "allow_zero_cycles_for_certificate": { "type": "boolean", "const": false },
+            "completion_condition": {
+              "type": "string",
+              "const": "post_promote_observation"
+            },
+            "command_flag": {
+              "type": "string",
+              "const": "--post-promote-maintenance-cycles"
+            }
+          }
+        }
       }
     },
     "created_at": { "type": "string", "format": "date-time" },

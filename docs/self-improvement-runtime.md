@@ -36,6 +36,13 @@ keeps long soak maintenance opt-in. Set `GOAL_MAINTAIN_UNTIL_BUDGET=1` only
 when the goal explicitly needs soak evidence across the remaining
 `GOAL_MAX_MINUTES`.
 
+The file-backed goal contract records this as
+`execution_policy.post_promote_maintenance.minimum_meaningful_cycles=1` with
+`allow_zero_cycles_for_certificate=false`. `goal-runtime-certificate` therefore
+requires meaningful post-promote maintenance for a promoted
+`proposal_budget_exhausted` session; the exception is a terminal
+`queue_exhausted` session, where no runnable follow-up maintenance remains.
+
 Maintenance cycles are meaningful only when they establish a new post-promote
 observation or change queue/readiness state. If the same runnable queue snapshot
 repeats, the runtime stops the maintenance loop early and records a
@@ -89,6 +96,10 @@ Before a new run:
    `make goal-runtime-run-admission` or the narrower preflight targets it
    reports, such as `goal-runtime-quarantine-preflight`,
    `goal-runtime-local-evidence-refresh`, and `goal-runtime-fixed-point-check`.
+   If learning readiness is uncertain, admission/start requires
+   `GOAL_ALLOW_LEARNING_UNCERTAIN=1` or an active file-backed goal contract with
+   `execution_policy.learning_uncertain.allow_bounded_trial=true` and
+   `authorization_source=codex_goal_contract`.
 4. Inspect the previous failed run before starting the next one. If the previous
    run produced no candidate artifacts or is explicitly identified as a broken
    failure-evidence run, exclude it from active mechanism history with the

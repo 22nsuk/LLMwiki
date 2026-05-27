@@ -418,6 +418,20 @@ def build_auto_improve_goal_contract(
             "heartbeat_interval_seconds": heartbeat_interval_seconds,
             "checkpoint_interval_seconds": checkpoint_interval_seconds,
         },
+        "execution_policy": {
+            "learning_uncertain": {
+                "allow_bounded_trial": True,
+                "requires_explicit_authorization": True,
+                "authorization_source": "codex_goal_contract",
+                "command_flag": "--allow-learning-uncertain",
+            },
+            "post_promote_maintenance": {
+                "minimum_meaningful_cycles": 1,
+                "allow_zero_cycles_for_certificate": False,
+                "completion_condition": "post_promote_observation",
+                "command_flag": "--post-promote-maintenance-cycles",
+            },
+        },
         "created_at": created_at or _utc_now(),
         "created_by": created_by,
         "status": "active",

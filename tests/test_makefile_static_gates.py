@@ -3658,6 +3658,11 @@ class MakefileStaticGateTests(unittest.TestCase):
         _assert_target_depends_on(self, text, "auto-improve-goal-run", "goal-runtime-run-admission")
         _assert_target_depends_on(self, text, "auto-improve-goal-run", "auto-improve-goal-contract")
         _assert_target_depends_on(self, text, "auto-improve-goal-status", "auto-improve-goal-contract")
+        admission_block = _target_block(text, "goal-runtime-run-admission")
+        self.assertIn(
+            "$(if $(GOAL_ALLOW_LEARNING_UNCERTAIN),--allow-learning-uncertain,)",
+            admission_block,
+        )
         _assert_target_depends_on(self, text, "goal-runtime-run-admission-resume", "goal-runtime-run-admission")
         _assert_target_depends_on(
             self,

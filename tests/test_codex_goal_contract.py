@@ -35,6 +35,20 @@ def sample_goal_contract() -> dict[str, Any]:
             "heartbeat_interval_seconds": 300,
             "checkpoint_interval_seconds": 1800,
         },
+        "execution_policy": {
+            "learning_uncertain": {
+                "allow_bounded_trial": True,
+                "requires_explicit_authorization": True,
+                "authorization_source": "codex_goal_contract",
+                "command_flag": "--allow-learning-uncertain",
+            },
+            "post_promote_maintenance": {
+                "minimum_meaningful_cycles": 1,
+                "allow_zero_cycles_for_certificate": False,
+                "completion_condition": "post_promote_observation",
+                "command_flag": "--post-promote-maintenance-cycles",
+            },
+        },
         "created_at": "2026-05-17T00:00:00Z",
         "created_by": "codex",
         "status": "active",
@@ -140,6 +154,7 @@ class CodexGoalContractSchemaTests(unittest.TestCase):
             "non_goals",
             "allowed_roots",
             "budgets",
+            "execution_policy",
             "runtime",
             "goal_backend",
             "stop_conditions",
@@ -206,6 +221,16 @@ class CodexGoalContractSchemaTests(unittest.TestCase):
         )
 
         self.assertEqual(validate_with_schema(payload, self.schema), [])
+
+    def test_execution_policy_requires_learning_authority_and_maintenance(self) -> None:
+        payload = sample_goal_contract()
+        payload["execution_policy"]["learning_uncertain"]["requires_explicit_authorization"] = False
+        payload["execution_policy"]["post_promote_maintenance"]["minimum_meaningful_cycles"] = 0
+
+        errors = validate_with_schema(payload, self.schema)
+
+        self.assertTrue(any("requires_explicit_authorization" in error for error in errors), errors)
+        self.assertTrue(any("minimum_meaningful_cycles" in error for error in errors), errors)
 
 
 if __name__ == "__main__":

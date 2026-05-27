@@ -47,6 +47,12 @@ Budget limits:
 - heartbeat_interval_seconds: 300
 - checkpoint_interval_seconds: 1800
 
+Execution policy:
+- learning_uncertain.allow_bounded_trial: true
+- learning_uncertain.authorization_source: codex_goal_contract
+- post_promote_maintenance.minimum_meaningful_cycles: 1
+- post_promote_maintenance.allow_zero_cycles_for_certificate: false
+
 Allowed roots:
 - ops/
 - tests/
@@ -88,6 +94,7 @@ Run admission discipline:
 - If tracked canonical reports need refresh, run `make goal-runtime-run-admission-converge`, settle those generated changes, then rerun `make goal-runtime-run-admission`.
 - Treat `make goal-runtime-run-admission` as the tracked-clean final admission check: it refreshes transient cleanup/quarantine preflight and run-local evidence before reading promotion blockers.
 - Before starting or resuming a goal run, pass `make goal-runtime-run-admission` instead of relying on remembered cleanup steps.
+- If learning readiness is uncertain, start only when `GOAL_ALLOW_LEARNING_UNCERTAIN=1` or execution_policy.learning_uncertain authorizes a bounded trial.
 - Treat `tmp/goal-runtime-run-admission.json` as the start gate: dirty/stale worktree, fixed-point drift, or zero runnable proposals means pause and follow `recommended_next_action`.
 - A promotion-only attention result may still allow bounded repair work, but it never weakens the final promotion gate.
 
@@ -97,7 +104,7 @@ Resume discipline:
 - Keep native goal status aligned when possible, but never mark it complete before durable evidence clears blockers.
 - Treat the wall-clock duration as a maximum budget, not as proof by itself.
 - Stop with proposal_budget_exhausted or failure_budget_exhausted when those separate caps are reached.
-- Write heartbeat, checkpoint, status, readiness, source-package, public-check, and release evidence before certifying the loop.
+- Write heartbeat, checkpoint, status, readiness, source-package, public-check, release evidence, and post-promote maintenance evidence before certifying the loop.
 
 Generated artifact convergence:
 - After code or report-generator edits, do not use test failure -> patch -> full rerun as the auto-improve loop.

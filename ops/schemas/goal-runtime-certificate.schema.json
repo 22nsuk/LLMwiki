@@ -138,6 +138,8 @@
         "minimum_successful_iteration_count",
         "requires_success_then_followup",
         "requires_meaningful_maintenance",
+        "minimum_meaningful_maintenance_cycle_count",
+        "allow_zero_maintenance_cycles_for_certificate",
         "maintenance_status",
         "maintenance_cycle_count",
         "meaningful_maintenance_cycle_count",
@@ -162,6 +164,8 @@
         "minimum_successful_iteration_count": { "type": "integer", "minimum": 0 },
         "requires_success_then_followup": { "type": "boolean" },
         "requires_meaningful_maintenance": { "type": "boolean" },
+        "minimum_meaningful_maintenance_cycle_count": { "type": "integer", "minimum": 0 },
+        "allow_zero_maintenance_cycles_for_certificate": { "type": "boolean" },
         "maintenance_status": {
           "type": "string",
           "enum": ["clean", "incomplete", "missing"]

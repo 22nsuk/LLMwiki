@@ -53,6 +53,7 @@ class GoalRuntimeRunAdmissionRequest:
     runtime_certificate_report_path: str = DEFAULT_RUNTIME_CERTIFICATE_REPORT
     maintenance_action_plan_path: str = ""
     resume_session_id: str = ""
+    allow_learning_uncertain: bool = False
     context: RuntimeContext | None = None
 
 
@@ -465,6 +466,75 @@ def _readiness_execution_check(
     )
 
 
+def _contract_authorizes_learning_uncertain(contract: dict[str, Any]) -> bool:
+    execution_policy = _dict_field(contract, "execution_policy")
+    learning = _dict_field(execution_policy, "learning_uncertain")
+    return (
+        _as_bool(learning.get("allow_bounded_trial"))
+        and _as_bool(learning.get("requires_explicit_authorization"))
+        and str(learning.get("authorization_source", "")).strip()
+        == "codex_goal_contract"
+    )
+
+
+def _readiness_learning_uncertain_check(
+    readiness: dict[str, Any],
+    readiness_path: str,
+    *,
+    contract: dict[str, Any],
+    contract_path: str,
+    allow_learning_uncertain: bool,
+    resume_completion: dict[str, Any],
+) -> dict[str, Any]:
+    kind_status = _artifact_kind_check(readiness, "auto_improve_readiness_report")
+    learning = _dict_field(readiness, "learning_readiness")
+    learning_status = str(learning.get("status", "")).strip()
+    gate_effect = str(learning.get("gate_effect", "")).strip()
+    review_required = gate_effect == "review_required" or learning_status == "learning_uncertain"
+    contract_authorized = _contract_authorizes_learning_uncertain(contract)
+    resume_active = _as_bool(resume_completion.get("active"))
+    passed = resume_active or kind_status != "present" or not review_required or (
+        allow_learning_uncertain or contract_authorized
+    )
+    return _check(
+        check_id="start_learning_uncertain_authorized",
+        status="pass" if passed else "fail",
+        severity=START_BLOCKER_SEVERITY,
+        expected=(
+            {"resume_completion_session": "already promoted and proposal-budget exhausted"}
+            if resume_active
+            else {
+                "learning_readiness.gate_effect": "not review_required or explicitly authorized",
+                "execution_policy.learning_uncertain.authorization_source": "codex_goal_contract",
+            }
+        ),
+        observed={
+            "artifact_status": kind_status,
+            "learning_status": learning_status,
+            "learning_gate_effect": gate_effect,
+            "review_required": review_required,
+            "allow_learning_uncertain": allow_learning_uncertain,
+            "contract_authorized": contract_authorized,
+            "resume_completion": resume_completion,
+        },
+        reason=(
+            "resume may complete maintenance for an already-promoted session without a new learning trial"
+            if resume_active
+            else "learning-uncertain trial is explicitly authorized before start"
+            if passed
+            else "learning readiness requires review, and neither GOAL_ALLOW_LEARNING_UNCERTAIN nor the goal contract authorizes a bounded trial"
+        ),
+        next_action=(
+            "Proceed with resume; complete session maintenance evidence."
+            if resume_active
+            else "Proceed with run admission."
+            if passed
+            else "Set GOAL_ALLOW_LEARNING_UNCERTAIN=1 or refresh the file-backed goal contract with execution_policy.learning_uncertain authorization before starting the run."
+        ),
+        evidence_paths=[readiness_path, contract_path, str(resume_completion.get("session_report", "")).strip()],
+    )
+
+
 def _proposal_is_runnable(proposal: dict[str, Any]) -> bool:
     blocked_by = _list_strings(proposal.get("blocked_by"))
     blockers = _list_strings(proposal.get("blockers"))
@@ -848,6 +918,14 @@ def build_report(
             active_request.readiness_report_path,
             resume_completion=resume_completion,
         ),
+        _readiness_learning_uncertain_check(
+            readiness,
+            active_request.readiness_report_path,
+            contract=goal_contract,
+            contract_path=active_request.goal_contract_path,
+            allow_learning_uncertain=active_request.allow_learning_uncertain,
+            resume_completion=resume_completion,
+        ),
         *(
             [
                 _maintenance_action_plan_check(
@@ -960,6 +1038,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--runtime-certificate-report", default=DEFAULT_RUNTIME_CERTIFICATE_REPORT)
     parser.add_argument("--maintenance-action-plan", default="")
     parser.add_argument("--resume-session", default="")
+    parser.add_argument("--allow-learning-uncertain", action="store_true")
     parser.add_argument("--policy-path", default=None)
     parser.add_argument(
         "--strict",
@@ -989,6 +1068,7 @@ def main(argv: list[str] | None = None) -> int:
             runtime_certificate_report_path=args.runtime_certificate_report,
             maintenance_action_plan_path=args.maintenance_action_plan,
             resume_session_id=args.resume_session,
+            allow_learning_uncertain=args.allow_learning_uncertain,
         )
     )
     destination = write_report(vault, report, args.out)

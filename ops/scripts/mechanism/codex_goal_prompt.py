@@ -59,6 +59,9 @@ def _budget_value(budgets: Mapping[str, Any], key: str) -> int:
 def build_prompt_text(contract: Mapping[str, Any]) -> str:
     budgets = _mapping_value(contract, "budgets")
     runtime = _mapping_value(contract, "runtime")
+    execution_policy = _mapping_value(contract, "execution_policy")
+    learning_policy = _mapping_value(execution_policy, "learning_uncertain")
+    maintenance_policy = _mapping_value(execution_policy, "post_promote_maintenance")
     promotion_guard = _mapping_value(contract, "promotion_guard")
     goal_backend = _mapping_value(contract, "goal_backend")
     allowed_roots = _goal_path_items(contract.get("allowed_roots"))
@@ -87,6 +90,12 @@ def build_prompt_text(contract: Mapping[str, Any]) -> str:
         f"- max_consecutive_failures: {_budget_value(budgets, 'max_consecutive_failures')}",
         f"- heartbeat_interval_seconds: {_budget_value(budgets, 'heartbeat_interval_seconds')}",
         f"- checkpoint_interval_seconds: {_budget_value(budgets, 'checkpoint_interval_seconds')}",
+        "",
+        "Execution policy:",
+        f"- learning_uncertain.allow_bounded_trial: {str(bool(learning_policy.get('allow_bounded_trial', False))).lower()}",
+        f"- learning_uncertain.authorization_source: {str(learning_policy.get('authorization_source', '')).strip()}",
+        f"- post_promote_maintenance.minimum_meaningful_cycles: {_budget_value(maintenance_policy, 'minimum_meaningful_cycles')}",
+        f"- post_promote_maintenance.allow_zero_cycles_for_certificate: {str(bool(maintenance_policy.get('allow_zero_cycles_for_certificate', False))).lower()}",
         "",
         "Allowed roots:",
         *[f"- {path}" for path in allowed_roots],
@@ -140,6 +149,7 @@ def build_prompt_text(contract: Mapping[str, Any]) -> str:
             "- If tracked canonical reports need refresh, run `make goal-runtime-run-admission-converge`, settle those generated changes, then rerun `make goal-runtime-run-admission`.",
             "- Treat `make goal-runtime-run-admission` as the tracked-clean final admission check: it refreshes transient cleanup/quarantine preflight and run-local evidence before reading promotion blockers.",
             "- Before starting or resuming a goal run, pass `make goal-runtime-run-admission` instead of relying on remembered cleanup steps.",
+            "- If learning readiness is uncertain, start only when `GOAL_ALLOW_LEARNING_UNCERTAIN=1` or execution_policy.learning_uncertain authorizes a bounded trial.",
             "- Treat `tmp/goal-runtime-run-admission.json` as the start gate: dirty/stale worktree, fixed-point drift, or zero runnable proposals means pause and follow `recommended_next_action`.",
             "- A promotion-only attention result may still allow bounded repair work, but it never weakens the final promotion gate.",
             "",
@@ -149,7 +159,7 @@ def build_prompt_text(contract: Mapping[str, Any]) -> str:
             "- Keep native goal status aligned when possible, but never mark it complete before durable evidence clears blockers.",
             "- Treat the wall-clock duration as a maximum budget, not as proof by itself.",
             "- Stop with proposal_budget_exhausted or failure_budget_exhausted when those separate caps are reached.",
-            "- Write heartbeat, checkpoint, status, readiness, source-package, public-check, and release evidence before certifying the loop.",
+            "- Write heartbeat, checkpoint, status, readiness, source-package, public-check, release evidence, and post-promote maintenance evidence before certifying the loop.",
             "",
             "Generated artifact convergence:",
             "- After code or report-generator edits, do not use test failure -> patch -> full rerun as the auto-improve loop.",

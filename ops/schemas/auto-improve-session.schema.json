@@ -115,6 +115,45 @@
           "items": {
             "type": "string"
           }
+        },
+        "execution_policy": {
+          "type": "object",
+          "required": ["learning_uncertain", "post_promote_maintenance"],
+          "properties": {
+            "learning_uncertain": {
+              "type": "object",
+              "required": [
+                "allow_bounded_trial",
+                "requires_explicit_authorization",
+                "authorization_source",
+                "command_flag"
+              ],
+              "properties": {
+                "allow_bounded_trial": { "type": "boolean" },
+                "requires_explicit_authorization": { "type": "boolean" },
+                "authorization_source": { "type": "string" },
+                "command_flag": { "type": "string" }
+              },
+              "additionalProperties": false
+            },
+            "post_promote_maintenance": {
+              "type": "object",
+              "required": [
+                "minimum_meaningful_cycles",
+                "allow_zero_cycles_for_certificate",
+                "completion_condition",
+                "command_flag"
+              ],
+              "properties": {
+                "minimum_meaningful_cycles": { "type": "integer", "minimum": 1 },
+                "allow_zero_cycles_for_certificate": { "type": "boolean" },
+                "completion_condition": { "type": "string" },
+                "command_flag": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
@@ -905,6 +944,15 @@
         },
         "bounded_trial": {
           "type": "boolean"
+        },
+        "authorization_source": {
+          "type": "string"
+        },
+        "contract_authorized": {
+          "type": "boolean"
+        },
+        "command_flag": {
+          "type": "string"
         }
       },
       "additionalProperties": false

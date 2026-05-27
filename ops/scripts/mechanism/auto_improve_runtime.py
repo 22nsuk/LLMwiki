@@ -94,6 +94,10 @@ from .auto_improve_session_runtime import (
     increment_counter,
     normalize_session_report,
 )
+from .goal_runtime_certificate import (
+    learning_uncertain_policy,
+    post_promote_maintenance_policy,
+)
 from .mechanism_review_runtime import build_report as build_mechanism_review_report
 from .mutation_proposal_runtime import build_report as build_mutation_proposal_report
 from .run_mechanism_experiment_runtime import run_mechanism_experiment
@@ -448,6 +452,8 @@ def _goal_contract_snapshot(
     budgets = _mapping_value(contract, "budgets")
     runtime = _mapping_value(contract, "runtime")
     promotion_guard = _mapping_value(contract, "promotion_guard")
+    learning_policy = learning_uncertain_policy(contract)
+    maintenance_policy = post_promote_maintenance_policy(contract)
     max_wall_clock_seconds = _positive_contract_int(
         budgets,
         "max_wall_clock_seconds",
@@ -479,6 +485,10 @@ def _goal_contract_snapshot(
         ),
         "can_promote_result": bool(promotion_guard.get("can_promote_result", False)),
         "promotion_blockers": _list_text(promotion_guard.get("promotion_blockers")),
+        "execution_policy": {
+            "learning_uncertain": learning_policy,
+            "post_promote_maintenance": maintenance_policy,
+        },
     }
 
 
@@ -1047,6 +1057,23 @@ def _readiness_runnable_proposal_count(readiness_report: Mapping[str, Any]) -> i
     return _int_value(queue.get("runnable_proposal_count"))
 
 
+def _learning_uncertain_contract_authorization(session: Mapping[str, Any]) -> dict[str, object]:
+    goal_contract = _mapping_value(session, "goal_contract")
+    execution_policy = _mapping_value(goal_contract, "execution_policy")
+    learning_policy = _mapping_value(execution_policy, "learning_uncertain")
+    source = str(learning_policy.get("authorization_source", "")).strip()
+    allowed = (
+        bool(learning_policy.get("allow_bounded_trial", False))
+        and bool(learning_policy.get("requires_explicit_authorization", False))
+        and source == "codex_goal_contract"
+    )
+    return {
+        "allowed": allowed,
+        "authorization_source": source if allowed else "",
+        "command_flag": str(learning_policy.get("command_flag", "")).strip(),
+    }
+
+
 def _preflight_learning_gate(
     vault: Path,
     start: AutoImproveSessionStart,
@@ -1073,19 +1100,33 @@ def _preflight_learning_gate(
         proposals,
     )
     review_required = learning_review_required(readiness_report)
+    contract_authorization = _learning_uncertain_contract_authorization(start.session)
+    contract_authorized = bool(contract_authorization["allowed"])
+    effective_allow_learning_uncertain = bool(
+        allow_learning_uncertain or contract_authorized
+    )
+    authorization_source = (
+        "command_flag"
+        if allow_learning_uncertain
+        else str(contract_authorization["authorization_source"])
+    )
     start.session["status"] = "running"
     start.session["stop_reason"] = "running"
     start.session["queue_snapshot"] = runnable_proposal_ids
     start.session["learning_mode"] = {
-        "allow_learning_uncertain": allow_learning_uncertain,
-        "bounded_trial": bool(review_required and allow_learning_uncertain),
+        "allow_learning_uncertain": effective_allow_learning_uncertain,
+        "bounded_trial": bool(review_required and effective_allow_learning_uncertain),
+        "authorization_source": authorization_source,
+        "contract_authorized": contract_authorized,
+        "command_flag": str(contract_authorization["command_flag"])
+        or ("--allow-learning-uncertain" if allow_learning_uncertain else ""),
     }
     start.session["pre_run_readiness"] = _pre_run_readiness_snapshot(
         vault,
         readiness_report,
         readiness_destination,
     )
-    if review_required and not allow_learning_uncertain:
+    if review_required and not effective_allow_learning_uncertain:
         start.session["status"] = "blocked"
         start.session["stop_reason"] = "learning_review_required"
         _write_session_report(vault, start.session, context=start.context)
