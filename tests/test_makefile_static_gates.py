@@ -3477,7 +3477,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             ("GOAL_RUNTIME_RUN_ADMISSION_MAINTENANCE_ACTION_PLAN", ""),
             (
                 "GOAL_MAINTENANCE_ACTION_PLAN_OUT",
-                "tmp/goal-runtime-maintenance-action.json",
+                "$(GOAL_ACTIVE_STATE_DIR)/maintenance-action.json",
             ),
             (
                 "GOAL_RUNTIME_CLOSEOUT_PLAN_OUT",
