@@ -222,12 +222,41 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         report = self._build_report()
 
         self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["start_status"], "pass")
+        self.assertEqual(report["promotion_status"], "blocked")
+        self.assertEqual(report["admission_mode"], "bounded_repair_allowed")
         self.assertTrue(report["decisions"]["can_start_goal_runtime"])
         self.assertTrue(report["decisions"]["can_mutate_candidate"])
         self.assertFalse(report["decisions"]["can_promote_result_later"])
         self.assertFalse(report["decisions"]["should_pause_before_run"])
         self.assertEqual(report["summary"]["start_blocker_count"], 0)
         self.assertGreater(report["summary"]["promotion_blocker_count"], 0)
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_build_report_exposes_distinct_promotion_ready_statuses(self) -> None:
+        readiness = json.loads((self.vault / "ops/reports/auto-improve-readiness.json").read_text(encoding="utf-8"))
+        readiness["can_promote_result"] = True
+        readiness["promotion_blockers"] = []
+        self._write_json("ops/reports/auto-improve-readiness.json", readiness)
+        backlog = json.loads((self.vault / "ops/reports/remediation-backlog.json").read_text(encoding="utf-8"))
+        backlog["status"] = "pass"
+        backlog["summary"] = {
+            "open_total_count": 0,
+            "open_promotion_count": 0,
+            "open_repeat_count": 0,
+            "active_blocker_count": 0,
+        }
+        backlog["items"] = []
+        self._write_json("ops/reports/remediation-backlog.json", backlog)
+
+        report = self._build_report()
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["start_status"], "pass")
+        self.assertEqual(report["promotion_status"], "pass")
+        self.assertEqual(report["admission_mode"], "promotion_ready")
+        self.assertTrue(report["decisions"]["can_start_goal_runtime"])
+        self.assertTrue(report["decisions"]["can_promote_result_later"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_learning_uncertain_start_is_authorized_by_goal_contract(self) -> None:
@@ -263,6 +292,9 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         report = self._build_report()
 
         self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["start_status"], "fail")
+        self.assertEqual(report["promotion_status"], "blocked")
+        self.assertEqual(report["admission_mode"], "blocked")
         self.assertFalse(report["decisions"]["can_start_goal_runtime"])
         learning_check = next(
             check for check in report["checks"] if check["id"] == "start_learning_uncertain_authorized"
@@ -321,6 +353,9 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         report = self._build_report()
 
         self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["start_status"], "fail")
+        self.assertEqual(report["promotion_status"], "blocked")
+        self.assertEqual(report["admission_mode"], "blocked")
         self.assertFalse(report["decisions"]["can_start_goal_runtime"])
         cleanup_check = next(check for check in report["checks"] if check["id"] == "start_transient_cleanup_applied")
         self.assertEqual(cleanup_check["status"], "fail")
@@ -345,6 +380,9 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         report = self._build_report()
 
         self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["start_status"], "fail")
+        self.assertEqual(report["promotion_status"], "blocked")
+        self.assertEqual(report["admission_mode"], "blocked")
         self.assertFalse(report["decisions"]["can_start_goal_runtime"])
         quarantine_check = next(
             check for check in report["checks"] if check["id"] == "start_history_quarantine_preflight_clear"
@@ -386,6 +424,9 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         report = self._build_report()
 
         self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["start_status"], "fail")
+        self.assertEqual(report["promotion_status"], "blocked")
+        self.assertEqual(report["admission_mode"], "blocked")
         self.assertFalse(report["decisions"]["can_start_goal_runtime"])
         self.assertTrue(report["decisions"]["should_pause_before_run"])
         queue_check = next(check for check in report["checks"] if check["id"] == "start_runnable_proposal_queue")
@@ -438,6 +479,9 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         report = self._build_report(resume_session_id="auto-session-resume")
 
         self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["start_status"], "pass")
+        self.assertEqual(report["promotion_status"], "blocked")
+        self.assertEqual(report["admission_mode"], "bounded_repair_allowed")
         self.assertTrue(report["decisions"]["can_start_goal_runtime"])
         self.assertFalse(report["decisions"]["should_pause_before_run"])
         self.assertEqual(report["summary"]["start_blocker_count"], 0)
@@ -627,6 +671,9 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         report = self._build_report()
 
         self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["start_status"], "fail")
+        self.assertEqual(report["promotion_status"], "blocked")
+        self.assertEqual(report["admission_mode"], "blocked")
         self.assertFalse(report["decisions"]["can_start_goal_runtime"])
         worktree_check = next(check for check in report["checks"] if check["id"] == "start_worktree_promotable")
         self.assertEqual(worktree_check["status"], "fail")
@@ -641,6 +688,9 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         report = self._build_report()
 
         self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["start_status"], "pass")
+        self.assertEqual(report["promotion_status"], "blocked")
+        self.assertEqual(report["admission_mode"], "bounded_repair_allowed")
         self.assertTrue(report["decisions"]["can_start_goal_runtime"])
         self.assertFalse(report["decisions"]["can_promote_result_later"])
         authority_check = next(

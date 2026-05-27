@@ -95,8 +95,9 @@ Run admission discipline:
 - Treat `make goal-runtime-run-admission` as the tracked-clean final admission check: it refreshes transient cleanup/quarantine preflight and run-local evidence before reading promotion blockers.
 - Before starting or resuming a goal run, pass `make goal-runtime-run-admission` instead of relying on remembered cleanup steps.
 - If learning readiness is uncertain, start only when `GOAL_ALLOW_LEARNING_UNCERTAIN=1` or execution_policy.learning_uncertain authorizes a bounded trial.
-- Treat `tmp/goal-runtime-run-admission.json` as the start gate: dirty/stale worktree, fixed-point drift, or zero runnable proposals means pause and follow `recommended_next_action`.
-- A promotion-only attention result may still allow bounded repair work, but it never weakens the final promotion gate.
+- Treat `tmp/goal-runtime-run-admission.json` start_status/admission_mode as the start gate: start_status=fail or admission_mode=blocked means pause and follow `recommended_next_action`.
+- admission_mode=bounded_repair_allowed means the start gate is clear while promotion_status=blocked; run only bounded repair work and keep promotion banned.
+- Require promotion_status=pass and admission_mode=promotion_ready before promotion or completion claims.
 
 Resume discipline:
 - Keep the same contract digest across resume.

@@ -859,6 +859,22 @@ def _status(decisions: dict[str, bool]) -> str:
     return "pass"
 
 
+def _start_status(decisions: dict[str, bool]) -> str:
+    return "pass" if decisions["can_start_goal_runtime"] else "fail"
+
+
+def _promotion_status(decisions: dict[str, bool]) -> str:
+    return "pass" if decisions["can_promote_result_later"] else "blocked"
+
+
+def _admission_mode(decisions: dict[str, bool]) -> str:
+    if not decisions["can_start_goal_runtime"]:
+        return "blocked"
+    if not decisions["can_promote_result_later"]:
+        return "bounded_repair_allowed"
+    return "promotion_ready"
+
+
 def _recommended_next_action(checks: list[dict[str, Any]], decisions: dict[str, bool]) -> str:
     for check in checks:
         if check["severity"] == START_BLOCKER_SEVERITY and check["status"] != "pass":
@@ -1000,6 +1016,9 @@ def build_report(
         ),
         "vault": report_path(vault, vault),
         "status": _status(decisions),
+        "start_status": _start_status(decisions),
+        "promotion_status": _promotion_status(decisions),
+        "admission_mode": _admission_mode(decisions),
         "decisions": decisions,
         "summary": summary,
         "recommended_next_action": _recommended_next_action(checks, decisions),

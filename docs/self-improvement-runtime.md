@@ -96,6 +96,10 @@ Before a new run:
    `make goal-runtime-run-admission` or the narrower preflight targets it
    reports, such as `goal-runtime-quarantine-preflight`,
    `goal-runtime-local-evidence-refresh`, and `goal-runtime-fixed-point-check`.
+   The report separates the start and promotion gates: `start_status=pass`
+   means a run may start, `promotion_status=blocked` keeps promotion banned,
+   and `admission_mode=bounded_repair_allowed` means only bounded repair work is
+   allowed until promotion evidence converges.
    If learning readiness is uncertain, admission/start requires
    `GOAL_ALLOW_LEARNING_UNCERTAIN=1` or an active file-backed goal contract with
    `execution_policy.learning_uncertain.allow_bounded_trial=true` and
@@ -131,8 +135,11 @@ which keeps the budget-increase decision inspectable and admission-checkable.
 Do not start `make auto-improve-goal-run` while any of these remain unresolved:
 
 - quarantine preflight requires a history status repair
-- `auto-improve-readiness` has `can_execute=false` or `can_promote=false`
-- `goal-runtime-run-admission` reports strict blockers
+- `auto-improve-readiness` has `can_execute=false`
+- `goal-runtime-run-admission` has `start_status=fail` or
+  `admission_mode=blocked`
+- `goal-runtime-run-admission` has `promotion_status=blocked` and the intended
+  action is broader than bounded repair
 - the runtime certificate or closeout report is stale for the intended goal
   contract
 - the worktree contains unrelated source changes that would make promotion or

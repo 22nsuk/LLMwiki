@@ -19,6 +19,9 @@
     "currentness",
     "vault",
     "status",
+    "start_status",
+    "promotion_status",
+    "admission_mode",
     "decisions",
     "summary",
     "recommended_next_action",
@@ -61,6 +64,12 @@
     },
     "vault": { "type": "string" },
     "status": { "type": "string", "enum": ["pass", "attention", "fail"] },
+    "start_status": { "type": "string", "enum": ["pass", "fail"] },
+    "promotion_status": { "type": "string", "enum": ["pass", "blocked"] },
+    "admission_mode": {
+      "type": "string",
+      "enum": ["blocked", "bounded_repair_allowed", "promotion_ready"]
+    },
     "decisions": {
       "type": "object",
       "additionalProperties": false,
