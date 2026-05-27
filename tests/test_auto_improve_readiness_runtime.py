@@ -3007,7 +3007,14 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                 for item in remediation["minimum_evidence"]
             )
         )
+        self.assertTrue(
+            any(
+                "recent_log_overlap_queue_blocked__ target-rotation" in item
+                for item in remediation["minimum_evidence"]
+            )
+        )
         self.assertIn("make auto-improve-readiness", remediation["retry_condition"])
+        self.assertIn("queue_unblock target-rotation", remediation["retry_condition"])
         self.assertIn("none are runnable yet", report["next_action"])
         self.assertIn("recent_log_overlap", report["next_action"])
         checks = {check["id"]: check for check in report["checks"]}
@@ -3214,7 +3221,8 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
                 },
                 "proposals": [
                     {
-                        "proposal_id": "proposal-ready",
+                        "proposal_id": "recent_log_overlap_queue_blocked__auto-improve-readiness-constants-runtime",
+                        "failure_mode": "recent_log_overlap_queue_blocked",
                         "blocked_by": [],
                         "priority": 40,
                     },
@@ -3228,7 +3236,12 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(report["execution_readiness"]["runnable_proposal_count"], 1)
         self.assertTrue(report["queue"]["ready"])
         self.assertEqual(report["queue"]["runnable_proposal_count"], 1)
-        self.assertEqual(report["queue"]["runnable_proposal_ids"], ["proposal-ready"])
+        self.assertEqual(
+            report["queue"]["runnable_proposal_ids"],
+            [
+                "recent_log_overlap_queue_blocked__auto-improve-readiness-constants-runtime"
+            ],
+        )
         self.assertEqual(report["queue"]["blocked_proposal_count"], 1)
         self.assertEqual(
             report["queue"]["blocked_reason_counts"],

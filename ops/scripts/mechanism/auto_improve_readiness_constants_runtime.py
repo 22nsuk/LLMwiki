@@ -80,14 +80,11 @@ RECENT_LOG_OVERLAP_REMEDIATION = {
     "blocker_kind": "hard",
     "unblock_action_type": "chronology_advance_or_target_rotation",
     "minimum_evidence": [
-        "A refreshed mutation proposal report no longer lists recent_log_overlap in blocked_by for every emitted proposal.",
+        "A refreshed mutation proposal report emits a runnable recent_log_overlap_queue_blocked__ target-rotation proposal or no longer lists recent_log_overlap in blocked_by for every emitted proposal.",
         "auto-improve readiness reports queue.runnable_proposal_count greater than 0.",
-        "The recent overlapping target chronology has advanced, the max-age window has expired, or the proposal target set no longer overlaps the recent run log.",
+        "The recent overlapping target chronology has advanced, the max-age window has expired, or the runnable target-rotation proposal target set no longer overlaps the recent run log.",
     ],
-    "retry_condition": (
-        "Rerun make auto-improve-readiness after make refresh-generated-core observes a newer chronology "
-        "after the max-age window expires, or after a non-overlapping runnable proposal appears."
-    ),
+    "retry_condition": "Rerun make auto-improve-readiness after make refresh-generated-core observes a newer chronology after the max-age window expires, or after a non-overlapping runnable queue_unblock target-rotation proposal appears.",
 }
 RECENT_OUTCOME_REWORK_REMEDIATION = {
     "remediation_code": "stop_repeating_unresolved_queue_rotation",
