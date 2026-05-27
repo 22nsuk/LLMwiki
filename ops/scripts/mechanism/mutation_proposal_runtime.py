@@ -1702,11 +1702,10 @@ def _recent_log_overlap_queue_unblock_proposal(
     allowed_failure_modes = set(policy["mutation_proposal"]["allowed_failure_modes"])
     if RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE not in allowed_failure_modes:
         return None
-    if not available_proposals:
-        return None
-    if any(not proposal.blocked_by for proposal in available_proposals):
-        return None
-    if any(proposal.blocked_by != ["recent_log_overlap"] for proposal in available_proposals):
+    if not available_proposals or any(
+        not proposal.blocked_by or proposal.blocked_by != ["recent_log_overlap"]
+        for proposal in available_proposals
+    ):
         return None
 
     (

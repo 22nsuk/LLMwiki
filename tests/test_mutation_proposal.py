@@ -698,6 +698,24 @@ class MutationProposalTest(unittest.TestCase):
                 },
             )
 
+            limited_report = build_report(
+                vault,
+                policy,
+                policy_path,
+                max_proposals=1,
+                context=fixed_context(policy),
+            )
+            self.assertEqual(limited_report["summary"]["proposals_emitted"], 1)
+            self.assertEqual(limited_report["summary"]["blocked_proposals"], 0)
+            self.assertEqual(
+                limited_report["proposals"][0]["failure_mode"],
+                "recent_log_overlap_queue_blocked",
+            )
+            self.assertEqual(
+                limited_report["diagnostics"]["queue_selection"]["selected_runnable_count"],
+                1,
+            )
+
     def test_recent_log_overlap_rotation_uses_non_overlapping_secondary_target(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
