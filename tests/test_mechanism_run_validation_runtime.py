@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from ops.scripts.mechanism_run_validation_runtime import (
+    build_changed_files_primary_target_touched_check,
     build_changed_files_scope_gate_check,
     build_event_sequence_phase_checks,
     build_report_consistency_checks,
@@ -508,6 +509,37 @@ class MechanismRunValidationRuntimeTests(unittest.TestCase):
 
         self.assertEqual(check["status"], "FAIL")
         self.assertIn("!invalid-repo-path:../outside.py", check["detail"])
+
+    def test_primary_target_touch_discard_detail_names_scope_and_changed_files(self) -> None:
+        bundle = normalize_mechanism_artifact_bundle(
+            {
+                "baseline_eval_report": {},
+                "candidate_eval_report": {},
+                "baseline_lint_report": {},
+                "candidate_lint_report": {},
+                "baseline_mechanism_report": {},
+                "candidate_mechanism_report": {},
+                "changed_files_manifest_report": changed_files_manifest(
+                    "ops/scripts/example.py",
+                    changed_files=[
+                        {
+                            "path": "README.md",
+                            "change_type": "modified",
+                        }
+                    ],
+                ),
+                "run_ledger_report": run_ledger("ops/scripts/example.py"),
+            }
+        )
+
+        check = build_changed_files_primary_target_touched_check(
+            bundle,
+            primary_targets=["ops/scripts/example.py"],
+        )
+
+        self.assertEqual(check["status"], "FAIL")
+        self.assertIn("expected_primary_targets=['ops/scripts/example.py']", check["detail"])
+        self.assertIn("changed_files=['README.md']", check["detail"])
 
     def test_rule_registry_decision_flow_keeps_discard_before_hold(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

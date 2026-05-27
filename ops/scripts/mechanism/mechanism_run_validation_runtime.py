@@ -576,7 +576,11 @@ def build_changed_files_primary_target_touched_check(
         (
             "changed files touch primary targets: " + ", ".join(touched_targets)
             if touched_targets
-            else "changed files do not touch any primary target; test/report/generated-only changes require a scoped mechanism change"
+            else (
+                "changed files do not touch any primary target; "
+                f"expected_primary_targets={primary_targets}; changed_files={changed_paths}; "
+                "test/report/generated-only changes require a scoped mechanism change"
+            )
         ),
     )
 
