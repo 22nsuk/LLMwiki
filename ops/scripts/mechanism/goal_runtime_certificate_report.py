@@ -486,6 +486,9 @@ def _existing_verified_certificate(report: Mapping[str, Any]) -> bool:
 def _existing_verified_certificate_matches_request(
     report: Mapping[str, Any],
     request: GoalRuntimeCertificateRequest,
+    *,
+    current_source_revision: str,
+    current_source_tree_fingerprint: str,
 ) -> bool:
     if not _existing_verified_certificate(report):
         return False
@@ -494,6 +497,9 @@ def _existing_verified_certificate_matches_request(
     return (
         str(goal.get("contract_path", "")).strip() == request.goal_contract_path
         and str(run.get("status_report_path", "")).strip() == request.status_report_path
+        and str(report.get("source_revision", "")).strip() == current_source_revision
+        and str(report.get("source_tree_fingerprint", "")).strip()
+        == current_source_tree_fingerprint
     )
 
 
@@ -1032,25 +1038,33 @@ def build_report(request: GoalRuntimeCertificateRequest) -> dict[str, Any]:
     session_evidence_path = str(session_evidence.get("path", "")).strip()
     if session_evidence_path:
         file_inputs["auto_improve_session"] = session_evidence_path
+    envelope = build_canonical_report_envelope(
+        vault,
+        generated_at=generated_at,
+        artifact_kind="goal_runtime_certificate",
+        producer=PRODUCER,
+        source_command=SOURCE_COMMAND,
+        resolved_policy_path=resolved_policy_path,
+        schema_path=SCHEMA_PATH,
+        source_paths=SOURCE_PATHS,
+        file_inputs=file_inputs,
+        source_tree_excluded_files=(DEFAULT_OUT,),
+    )
     if blockers:
         existing_report = load_optional_json_object(vault / request.existing_report_path)
-        if _existing_verified_certificate_matches_request(existing_report, request):
+        if _existing_verified_certificate_matches_request(
+            existing_report,
+            request,
+            current_source_revision=str(envelope.get("source_revision", "")).strip(),
+            current_source_tree_fingerprint=str(
+                envelope.get("source_tree_fingerprint", "")
+            ).strip(),
+        ):
             return _preserved_verified_report(
                 existing_report=existing_report,
             )
     return {
-        **build_canonical_report_envelope(
-            vault,
-            generated_at=generated_at,
-            artifact_kind="goal_runtime_certificate",
-            producer=PRODUCER,
-            source_command=SOURCE_COMMAND,
-            resolved_policy_path=resolved_policy_path,
-            schema_path=SCHEMA_PATH,
-            source_paths=SOURCE_PATHS,
-            file_inputs=file_inputs,
-            source_tree_excluded_files=(DEFAULT_OUT,),
-        ),
+        **envelope,
         "vault": display_path(vault, vault),
         "goal": {
             "contract_path": request.goal_contract_path,

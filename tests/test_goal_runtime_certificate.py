@@ -526,6 +526,57 @@ class GoalRuntimeCertificateTests(unittest.TestCase):
         )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_stale_existing_verified_certificate_is_not_preserved(self) -> None:
+        self._seed_goal_contract()
+        self._seed_full_gate_reports()
+        self._write_completed_goal_status(completed_at="2026-05-17T11:30:00Z")
+        verified = build_certificate_report(
+            GoalRuntimeCertificateRequest(
+                vault=self.vault,
+                apply_update=True,
+                context=context_at(dt.datetime(2026, 5, 17, 12, 0, tzinfo=dt.UTC)),
+            )
+        )
+        existing_report = self.vault / "ops" / "reports" / "goal-runtime-certificate.json"
+        existing_report.parent.mkdir(parents=True, exist_ok=True)
+        existing_report.write_text(json.dumps(verified, ensure_ascii=False, indent=2), encoding="utf-8")
+        changed_source = self.vault / "ops" / "scripts" / "mechanism" / "goal_runtime_certificate.py"
+        changed_source.write_text(
+            f"{changed_source.read_text(encoding='utf-8')}\n# fixture source change\n",
+            encoding="utf-8",
+        )
+
+        set_goal(sample_goal_contract(), vault=self.vault)
+        current = build_goal_run_status_report(
+            GoalRunStatusRequest(
+                vault=self.vault,
+                run_id="new-default-trial",
+                status="blocked",
+                started_at="2026-05-17T12:10:00Z",
+                last_heartbeat_at="2026-05-17T12:15:00Z",
+                last_checkpoint_at="2026-05-17T12:15:00Z",
+                context=context_at(dt.datetime(2026, 5, 17, 12, 15, tzinfo=dt.UTC)),
+            )
+        )
+        write_goal_run_status_report(self.vault, current)
+        write_run_artifacts(self.vault, current, writer="ops.scripts.goal_run_status")
+
+        report = build_certificate_report(
+            GoalRuntimeCertificateRequest(
+                vault=self.vault,
+                context=context_at(dt.datetime(2026, 5, 17, 12, 30, tzinfo=dt.UTC)),
+            )
+        )
+
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["run"]["run_id"], "new-default-trial")
+        self.assertEqual(report["certificate"]["verification_status"], "blocked")
+        self.assertNotEqual(
+            report["source_tree_fingerprint"],
+            verified["source_tree_fingerprint"],
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_existing_verified_certificate_is_preserved_after_transient_evidence_cleanup(self) -> None:
         self._seed_goal_contract()
         self._seed_full_gate_reports()
