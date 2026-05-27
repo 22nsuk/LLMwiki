@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import datetime as dt
+import importlib.abc
 import json
 import os
+import runpy
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -81,6 +84,16 @@ def fixed_context() -> RuntimeContext:
         display_timezone=dt.UTC,
         clock=lambda: dt.datetime(2026, 4, 22, 4, 0, tzinfo=dt.UTC),
     )
+
+
+class _BlockFlatReadinessAlias(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname: str, path: object = None, target: object = None):
+        if fullname in {
+            "ops.scripts.auto_improve_readiness_runtime",
+            "ops.scripts.output_runtime",
+        }:
+            raise ModuleNotFoundError(f"blocked flat compatibility import: {fullname}")
+        return None
 
 
 class AutoImproveReadinessRuntimeTests(unittest.TestCase):
@@ -396,6 +409,28 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         )
         for rel_path in READINESS_SOURCE_PATHS:
             self.assertTrue((REPO_ROOT / rel_path).is_file(), rel_path)
+
+    def test_direct_script_fallback_uses_canonical_module_imports(self) -> None:
+        blocker = _BlockFlatReadinessAlias()
+        blocked_aliases = {
+            "ops.scripts.auto_improve_readiness_runtime",
+            "ops.scripts.output_runtime",
+        }
+        removed_modules = {
+            name: sys.modules.pop(name)
+            for name in blocked_aliases
+            if name in sys.modules
+        }
+        sys.meta_path.insert(0, blocker)
+        try:
+            namespace = runpy.run_path(
+                (REPO_ROOT / "ops/scripts/mechanism/auto_improve_readiness.py").as_posix()
+            )
+        finally:
+            sys.meta_path.remove(blocker)
+            sys.modules.update(removed_modules)
+
+        self.assertTrue(callable(namespace["main"]))
 
     def test_load_readiness_inputs_rejects_missing_artifact_envelope_on_disk_reports(
         self,

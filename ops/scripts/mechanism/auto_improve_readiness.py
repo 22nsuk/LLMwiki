@@ -7,16 +7,16 @@ from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from ops.scripts.auto_improve_readiness_runtime import (
+    from ops.scripts.core.output_runtime import display_path
+    from ops.scripts.mechanism.auto_improve_readiness_runtime import (
         READINESS_REPORT_REL_PATH,
         REMEDIATION_BACKLOG_REPORT_REL_PATH,
         build_readiness_report,
         readiness_exit_code,
         write_readiness_report,
     )
-    from ops.scripts.output_runtime import display_path
 else:
-    from ops.scripts.output_runtime import display_path
+    from ops.scripts.core.output_runtime import display_path
 
     from .auto_improve_readiness_runtime import (
         READINESS_REPORT_REL_PATH,
