@@ -17,10 +17,7 @@ from ops.scripts.output_runtime import display_path
 from ops.scripts.release.release_run_manifest import (
     DEFAULT_OUT as DEFAULT_RUN_MANIFEST,
 )
-from ops.scripts.release.release_run_manifest import (
-    _resolve,
-    git_commit,
-)
+from ops.scripts.release.release_run_manifest import _resolve
 from ops.scripts.release.release_sealed_run_manifest import (
     DEFAULT_OUT as DEFAULT_SEALED_RUN_MANIFEST,
 )
@@ -29,6 +26,7 @@ from ops.scripts.release.release_sealed_run_manifest import (
     _unique_failures,
 )
 from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.source_revision_runtime import resolve_source_revision
 from ops.scripts.source_tree_fingerprint_runtime import (
     producer_input_fingerprint,
     release_source_tree_fingerprint,
@@ -64,17 +62,22 @@ def _node(
     *,
     spec: NodeSpec,
     current_fingerprint: str,
+    current_revision: str,
 ) -> dict[str, Any]:
     identity = _json_identity(vault, spec.path)
     payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, spec.path))
     if diagnostics.get("status") != "ok":
         payload = {}
+    source_revision = str(payload.get("source_revision", "")).strip()
     issues: list[str] = []
     if identity["load_status"] != "ok":
         issues.append("not_loadable")
     if identity["artifact_kind"] != spec.expected_artifact_kind:
         issues.append("artifact_kind_mismatch")
-    if identity["source_tree_fingerprint"] != current_fingerprint:
+    if (
+        identity["source_tree_fingerprint"] != current_fingerprint
+        or source_revision != current_revision
+    ):
         issues.append("stale")
     if spec.require_pass and identity["status"] != "pass":
         issues.append("not_pass")
@@ -94,11 +97,15 @@ def _node(
         "artifact_kind": identity["artifact_kind"],
         "phase": phase,
         "status": identity["status"],
+        "source_revision": source_revision,
         "source_tree_fingerprint": identity["source_tree_fingerprint"],
         "input_fingerprint": identity["sha256"],
         "dependency_fingerprint": producer_input_fingerprint(payload),
         "currentness_status": "current"
-        if identity["source_tree_fingerprint"] == current_fingerprint
+        if (
+            identity["source_tree_fingerprint"] == current_fingerprint
+            and source_revision == current_revision
+        )
         else "stale",
         "can_reuse": not issues,
         "issues": issues,
@@ -118,12 +125,13 @@ def _blocker(
         "observed": (
             f"load_status={node['load_status']}; artifact_kind={node['artifact_kind']}; "
             f"phase={node['phase']}; status={node['status']}; "
+            f"source_revision={node['source_revision']}; "
             f"currentness={node['currentness_status']}; "
             f"issues={','.join(node['issues']) or 'none'}"
         ),
         "expected": (
             f"artifact_kind={node['expected_artifact_kind']}; status=pass; "
-            "source_tree_fingerprint=current"
+            "source_revision=current; source_tree_fingerprint=current"
         ),
         "summary": summary,
         "recommended_next_step": recommended_next_step,
@@ -202,6 +210,7 @@ def _plan_nodes(
     paths: dict[str, str],
     *,
     fingerprint: str,
+    revision: str,
 ) -> dict[str, dict[str, Any]]:
     specs = [
         NodeSpec(
@@ -268,7 +277,12 @@ def _plan_nodes(
         ),
     ]
     return {
-        spec.name: _node(vault, spec=spec, current_fingerprint=fingerprint)
+        spec.name: _node(
+            vault,
+            spec=spec,
+            current_fingerprint=fingerprint,
+            current_revision=revision,
+        )
         for spec in specs
     }
 
@@ -457,6 +471,7 @@ def build_plan(
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
     fingerprint = release_source_tree_fingerprint(vault)
+    commit = resolve_source_revision(vault).revision
     paths = {
         "run_manifest": run_manifest,
         "sealed_run_manifest": sealed_run_manifest,
@@ -465,7 +480,7 @@ def build_plan(
         "auto_promotion_preflight": auto_promotion_preflight,
         "auto_promotion_preseal": auto_promotion_preseal,
     }
-    nodes = _plan_nodes(vault, paths, fingerprint=fingerprint)
+    nodes = _plan_nodes(vault, paths, fingerprint=fingerprint, revision=commit)
     if stage == "sealed-run-ready":
         blockers, planned_actions = _sealed_run_ready_findings(nodes)
     else:
@@ -476,7 +491,7 @@ def build_plan(
         )
     metadata = {
         "generated_at": generated_at,
-        "commit": git_commit(vault),
+        "commit": commit,
         "fingerprint": fingerprint,
     }
     return _plan_payload(

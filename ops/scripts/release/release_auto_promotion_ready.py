@@ -25,10 +25,7 @@ from ops.scripts.release.auto_promotion_manifest_sections import (
 from ops.scripts.release.release_run_manifest import (
     DEFAULT_OUT as DEFAULT_RUN_MANIFEST,
 )
-from ops.scripts.release.release_run_manifest import (
-    _resolve,
-    git_commit,
-)
+from ops.scripts.release.release_run_manifest import _resolve
 from ops.scripts.release.release_sealed_run_manifest import (
     DEFAULT_OUT as DEFAULT_SEALED_RUN_MANIFEST,
 )
@@ -37,6 +34,7 @@ from ops.scripts.release.release_sealed_run_manifest import (
     _unique_failures,
 )
 from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.source_revision_runtime import resolve_source_revision
 from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 DEFAULT_OUT = "build/release/release-auto-promotion-ready-manifest.json"
@@ -87,6 +85,17 @@ def _load_report(vault: Path, path_value: str) -> tuple[dict[str, Any], dict[str
     return payload, diagnostics
 
 
+def _authority_identity(vault: Path, path_value: str) -> dict[str, Any]:
+    identity = _json_identity(vault, path_value)
+    payload, diagnostics = _load_report(vault, path_value)
+    if diagnostics.get("status") != "ok":
+        payload = {}
+    return {
+        **identity,
+        "source_revision": str(payload.get("source_revision", "")).strip(),
+    }
+
+
 def _operator_count_group(operator_summary: dict[str, Any], fields: tuple[str, ...]) -> dict[str, int]:
     accepted_risk = _dict(operator_summary.get("accepted_risk"))
     return {field: _int_value(accepted_risk.get(field, 0)) for field in fields}
@@ -129,6 +138,7 @@ def _auto_improve_diagnostics(
     auto_improve_readiness: dict[str, Any],
     *,
     current_fingerprint: str,
+    current_revision: str,
 ) -> dict[str, Any]:
     learning_claim_blockers = _list(auto_improve_readiness.get("learning_claim_blockers"))
     promotion_blockers = _list(auto_improve_readiness.get("promotion_blockers"))
@@ -140,10 +150,14 @@ def _auto_improve_diagnostics(
         auto_improve_readiness.get("diagnostics"),
     )
     report_fingerprint = str(auto_improve_readiness.get("source_tree_fingerprint", "")).strip()
+    source_revision = str(auto_improve_readiness.get("source_revision", "")).strip()
     can_execute_trial = bool(auto_improve_readiness.get("can_execute_trial", False))
     return {
+        "source_revision": source_revision,
         "source_tree_fingerprint": report_fingerprint,
-        "currentness_status": "current" if report_fingerprint == current_fingerprint else "stale",
+        "currentness_status": "current"
+        if report_fingerprint == current_fingerprint and source_revision == current_revision
+        else "stale",
         "can_execute_trial": can_execute_trial,
         "can_promote_result": bool(auto_improve_readiness.get("can_promote_result", False)),
         "stage3_can_promote_result": can_execute_trial and not stage3_promotion_blockers,
@@ -214,9 +228,12 @@ def _phase_evidence_requirements(
             checks[f"{input_key}_current"],
             f"{input_key}_stale",
             source,
-            "$.source_tree_fingerprint",
-            identity["source_tree_fingerprint"],
-            fingerprint,
+            "$.source_revision|$.source_tree_fingerprint",
+            (
+                f"source_revision={identity['source_revision']};"
+                f"source_tree_fingerprint={identity['source_tree_fingerprint']}"
+            ),
+            f"source_revision=current;source_tree_fingerprint={fingerprint}",
             f"Auto-promotion {phase} evidence does not describe the current source tree.",
             f"Run make release-auto-promotion-{phase} before release-run-ready.",
         ),
@@ -317,9 +334,12 @@ def _manifest_evidence_requirements(
                     checks[f"{input_key}_current"],
                     f"{input_key}_stale",
                     source,
-                    "$.source_tree_fingerprint",
-                    identity["source_tree_fingerprint"],
-                    fingerprint,
+                    "$.source_revision|$.source_tree_fingerprint",
+                    (
+                        f"source_revision={identity['source_revision']};"
+                        f"source_tree_fingerprint={identity['source_tree_fingerprint']}"
+                    ),
+                    f"source_revision=current;source_tree_fingerprint={fingerprint}",
                     f"{source.replace('_', ' ').capitalize()} does not describe the current source tree.",
                     next_step,
                 ),
@@ -466,9 +486,12 @@ def _auto_improve_requirements(
             checks["auto_improve_current"],
             "auto_improve_readiness_stale",
             "auto_improve_readiness_report",
-            "$.source_tree_fingerprint",
-            auto_improve["source_tree_fingerprint"],
-            fingerprint,
+            "$.source_revision|$.source_tree_fingerprint",
+            (
+                f"source_revision={auto_input['source_revision']};"
+                f"source_tree_fingerprint={auto_improve['source_tree_fingerprint']}"
+            ),
+            f"source_revision=current;source_tree_fingerprint={fingerprint}",
             "Auto-improve readiness does not describe the current source tree.",
             "Run make auto-improve-readiness-report-body.",
         ),
@@ -528,6 +551,7 @@ def _ready_checks(
     preflight: dict[str, Any],
     preseal: dict[str, Any],
     fingerprint: str,
+    revision: str,
 ) -> dict[str, bool]:
     preflight_goal_identity = _dict(preflight.get("goal_run_identity"))
     preseal_goal_identity = _dict(preseal.get("goal_run_identity"))
@@ -540,6 +564,7 @@ def _ready_checks(
         ),
         "auto_promotion_preflight_current": (
             inputs["auto_promotion_preflight"]["source_tree_fingerprint"] == fingerprint
+            and inputs["auto_promotion_preflight"]["source_revision"] == revision
         ),
         "auto_promotion_preflight_phase_ok": preflight["phase"] == "preflight",
         "auto_promotion_preflight_pass": preflight["status"] == "pass",
@@ -554,6 +579,7 @@ def _ready_checks(
         ),
         "auto_promotion_preseal_current": (
             inputs["auto_promotion_preseal"]["source_tree_fingerprint"] == fingerprint
+            and inputs["auto_promotion_preseal"]["source_revision"] == revision
         ),
         "auto_promotion_preseal_phase_ok": preseal["phase"] == "preseal",
         "auto_promotion_preseal_pass": preseal["status"] == "pass",
@@ -569,18 +595,25 @@ def _ready_checks(
         ),
         "run_manifest_load_ok": inputs["run_manifest"]["load_status"] == "ok",
         "run_manifest_artifact_kind_ok": inputs["run_manifest"]["artifact_kind"] == "release_run_manifest",
-        "run_manifest_current": inputs["run_manifest"]["source_tree_fingerprint"] == fingerprint,
+        "run_manifest_current": (
+            inputs["run_manifest"]["source_tree_fingerprint"] == fingerprint
+            and inputs["run_manifest"]["source_revision"] == revision
+        ),
         "run_manifest_pass": str(run_payload.get("status", "")).strip() == "pass",
         "sealed_run_manifest_load_ok": inputs["sealed_run_manifest"]["load_status"] == "ok",
         "sealed_run_manifest_artifact_kind_ok": (
             inputs["sealed_run_manifest"]["artifact_kind"] == "release_sealed_run_manifest"
         ),
-        "sealed_run_manifest_current": inputs["sealed_run_manifest"]["source_tree_fingerprint"] == fingerprint,
+        "sealed_run_manifest_current": (
+            inputs["sealed_run_manifest"]["source_tree_fingerprint"] == fingerprint
+            and inputs["sealed_run_manifest"]["source_revision"] == revision
+        ),
         "sealed_run_manifest_pass": str(sealed_payload.get("status", "")).strip() == "pass",
         "operator_summary_load_ok": inputs["operator_summary"]["load_status"] == "ok",
         "operator_summary_artifact_kind_ok": inputs["operator_summary"]["artifact_kind"] == "operator_release_summary",
         "operator_summary_current": str(inputs["operator_summary"]["source_tree_fingerprint"]).strip()
-        == fingerprint,
+        == fingerprint
+        and inputs["operator_summary"]["source_revision"] == revision,
         "operator_summary_pass": operator["status"] == "pass",
         "source_zip_policy_match": operator["source_zip_policy_status"] == "match",
         "tmp_json_clean": operator["tmp_json_policy_status"] == "clean",
@@ -596,7 +629,10 @@ def _ready_checks(
         "auto_improve_readiness_artifact_kind_ok": (
             inputs["auto_improve_readiness"]["artifact_kind"] == "auto_improve_readiness_report"
         ),
-        "auto_improve_current": auto_improve["currentness_status"] == "current",
+        "auto_improve_current": (
+            auto_improve["currentness_status"] == "current"
+            and inputs["auto_improve_readiness"]["source_revision"] == revision
+        ),
         "auto_improve_can_execute_trial": bool(auto_improve["can_execute_trial"]),
         "auto_improve_can_promote_result": bool(auto_improve["stage3_can_promote_result"]),
         "auto_improve_blockers_clear": (
@@ -721,14 +757,14 @@ def build_manifest(
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
     generated_at = runtime_context.isoformat_z()
     fingerprint = release_source_tree_fingerprint(vault)
-    commit = git_commit(vault)
+    commit = resolve_source_revision(vault).revision
     inputs = {
-        "run_manifest": _json_identity(vault, run_manifest),
-        "sealed_run_manifest": _json_identity(vault, sealed_run_manifest),
-        "operator_summary": _json_identity(vault, operator_summary),
-        "auto_improve_readiness": _json_identity(vault, auto_improve_readiness),
-        "auto_promotion_preflight": _json_identity(vault, auto_promotion_preflight),
-        "auto_promotion_preseal": _json_identity(vault, auto_promotion_preseal),
+        "run_manifest": _authority_identity(vault, run_manifest),
+        "sealed_run_manifest": _authority_identity(vault, sealed_run_manifest),
+        "operator_summary": _authority_identity(vault, operator_summary),
+        "auto_improve_readiness": _authority_identity(vault, auto_improve_readiness),
+        "auto_promotion_preflight": _authority_identity(vault, auto_promotion_preflight),
+        "auto_promotion_preseal": _authority_identity(vault, auto_promotion_preseal),
     }
     run_payload, _run_diagnostics = _load_report(vault, run_manifest)
     sealed_payload, _sealed_diagnostics = _load_report(vault, sealed_run_manifest)
@@ -738,7 +774,11 @@ def build_manifest(
     preseal_payload, _preseal_diagnostics_load = _load_report(vault, auto_promotion_preseal)
 
     operator = _operator_diagnostics(operator_payload)
-    auto_improve = _auto_improve_diagnostics(auto_payload, current_fingerprint=fingerprint)
+    auto_improve = _auto_improve_diagnostics(
+        auto_payload,
+        current_fingerprint=fingerprint,
+        current_revision=commit,
+    )
     preflight = _preflight_diagnostics(preflight_payload)
     preseal = _preflight_diagnostics(preseal_payload)
     checks = _ready_checks(
@@ -750,6 +790,7 @@ def build_manifest(
         preflight=preflight,
         preseal=preseal,
         fingerprint=fingerprint,
+        revision=commit,
     )
     requirements = _ready_requirements(
         checks,

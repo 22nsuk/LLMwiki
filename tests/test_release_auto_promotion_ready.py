@@ -11,6 +11,7 @@ from unittest.mock import patch
 import pytest
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.source_revision_runtime import SourceRevision
 
 from ops.scripts.release.release_auto_promotion_ready import (
     build_manifest,
@@ -50,6 +51,8 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
     def _write_json(self, rel_path: str, payload: dict[str, Any]) -> None:
         path = self.vault / rel_path
         path.parent.mkdir(parents=True, exist_ok=True)
+        if "source_tree_fingerprint" in payload:
+            payload.setdefault("source_revision", "abc123")
         path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def _operator_summary(self, **overrides: object) -> dict[str, Any]:
@@ -161,7 +164,10 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
         return patch.multiple(
             "ops.scripts.release.release_auto_promotion_ready",
             release_source_tree_fingerprint=lambda _vault: "fp-current",
-            git_commit=lambda _vault: "abc123",
+            resolve_source_revision=lambda _vault: SourceRevision(
+                revision="abc123",
+                status="git_head",
+            ),
         )
 
     def test_manifest_passes_when_all_low_cost_inputs_are_clean(self) -> None:
@@ -335,6 +341,76 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
         self.assertEqual(manifest["status"], "fail")
         self.assertIn("run_manifest_stale", manifest["failures"])
         self.assertIn("sealed_run_manifest_stale", manifest["failures"])
+
+    def test_stale_source_revision_blocks_auto_promotion(self) -> None:
+        self._write_inputs()
+        run = json.loads(
+            (self.vault / "build/release/release-run-manifest.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        run["source_revision"] = "old-revision"
+        self._write_json("build/release/release-run-manifest.json", run)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, context=fixed_context())
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertFalse(manifest["checks"]["run_manifest_current"])
+        self.assertIn("run_manifest_stale", manifest["failures"])
+        self.assertIn("source_revision=old-revision", manifest["blockers"][0]["observed"])
+
+    def test_auto_improve_diagnostics_mark_stale_revision_as_stale(self) -> None:
+        self._write_inputs()
+        readiness = json.loads(
+            (self.vault / "ops/reports/auto-improve-readiness.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        readiness["source_revision"] = "old-revision"
+        self._write_json("ops/reports/auto-improve-readiness.json", readiness)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, context=fixed_context())
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertFalse(manifest["checks"]["auto_improve_current"])
+        self.assertEqual(
+            manifest["diagnostics"]["auto_improve"]["currentness_status"],
+            "stale",
+        )
+        self.assertEqual(
+            manifest["diagnostics"]["auto_improve"]["source_revision"],
+            "old-revision",
+        )
+        self.assertIn("auto_improve_readiness_stale", manifest["failures"])
+
+    def test_source_package_without_git_revision_is_current_for_all_authorities(self) -> None:
+        self._write_inputs()
+        for rel_path in (
+            "build/release/release-run-manifest.json",
+            "build/release/release-sealed-run-manifest.json",
+            "build/release/operator-release-summary.json",
+            "build/release/release-auto-promotion-preflight.json",
+            "build/release/release-auto-promotion-preseal.json",
+            "ops/reports/auto-improve-readiness.json",
+        ):
+            payload = json.loads((self.vault / rel_path).read_text(encoding="utf-8"))
+            payload["source_revision"] = "source_package_without_git"
+            self._write_json(rel_path, payload)
+
+        with patch(
+            "ops.scripts.release.release_auto_promotion_ready.release_source_tree_fingerprint",
+            lambda _vault: "fp-current",
+        ):
+            manifest = build_manifest(self.vault, context=fixed_context())
+
+        self.assertEqual(manifest["status"], "pass")
+        self.assertTrue(manifest["checks"]["auto_improve_current"])
+        self.assertEqual(
+            manifest["diagnostics"]["auto_improve"]["source_revision"],
+            "source_package_without_git",
+        )
 
     def test_preflight_and_preseal_inputs_are_required_for_stage3(self) -> None:
         self._write_inputs()

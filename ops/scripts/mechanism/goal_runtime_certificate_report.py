@@ -29,10 +29,12 @@ from .goal_runtime_certificate import (
     RUNTIME_MODES,
     evidence_statuses,
     runtime_duration_seconds,
-    session_requirements as contract_session_requirements,
 )
 from .goal_runtime_certificate import (
     runtime_mode as contract_runtime_mode,
+)
+from .goal_runtime_certificate import (
+    session_requirements as contract_session_requirements,
 )
 
 DEFAULT_OUT = "ops/reports/goal-runtime-certificate.json"

@@ -135,6 +135,7 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
+            "source_revision",
             "source_tree_fingerprint",
             "currentness_status",
             "can_execute_trial",
@@ -148,6 +149,7 @@
             "clean_release_blocker_count"
           ],
           "properties": {
+            "source_revision": { "type": "string" },
             "source_tree_fingerprint": { "type": "string" },
             "currentness_status": { "type": "string", "enum": ["current", "stale"] },
             "can_execute_trial": { "type": "boolean" },
@@ -321,6 +323,7 @@
         "producer",
         "generated_at",
         "status",
+        "source_revision",
         "source_tree_fingerprint"
       ],
       "properties": {
@@ -333,6 +336,7 @@
         "producer": { "type": "string" },
         "generated_at": { "type": "string" },
         "status": { "type": "string" },
+        "source_revision": { "type": "string" },
         "source_tree_fingerprint": { "type": "string" }
       }
     },

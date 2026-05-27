@@ -11,6 +11,7 @@ from unittest.mock import patch
 import pytest
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.source_revision_runtime import SourceRevision
 
 from ops.scripts.release.release_evidence_planner import build_plan, write_plan
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
@@ -47,6 +48,8 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
     def _write_json(self, rel_path: str, payload: dict) -> None:
         path = self.vault / rel_path
         path.parent.mkdir(parents=True, exist_ok=True)
+        if "source_tree_fingerprint" in payload:
+            payload.setdefault("source_revision", "abc123")
         path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def _write_authorities(self) -> None:
@@ -123,7 +126,10 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         return patch.multiple(
             "ops.scripts.release.release_evidence_planner",
             release_source_tree_fingerprint=lambda _vault: "fp-current",
-            git_commit=lambda _vault: "abc123",
+            resolve_source_revision=lambda _vault: SourceRevision(
+                revision="abc123",
+                status="git_head",
+            ),
         )
 
     def test_auto_promotion_plan_reuses_lower_authorities_without_cascade(self) -> None:
@@ -159,6 +165,47 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
         self.assertIn("sealed_run_manifest_not_reusable", plan["failures"])
         self.assertEqual(plan["planned_actions"], [])
         self.assertIn("make release-sealed-run-ready", plan["blockers"][0]["recommended_next_step"])
+
+    def test_auto_promotion_plan_blocks_stale_revision_with_current_fingerprint(self) -> None:
+        self._write_authorities()
+        run = json.loads((self.vault / "build/release/release-run-manifest.json").read_text())
+        run["source_revision"] = "old-revision"
+        self._write_json("build/release/release-run-manifest.json", run)
+
+        with self._patch_current_repo():
+            plan = build_plan(self.vault, stage="auto-promotion-ready", context=fixed_context())
+
+        self.assertEqual(plan["plan_status"], "blocked")
+        self.assertIn("run_manifest_not_reusable", plan["failures"])
+        self.assertEqual(plan["nodes"]["run_manifest"]["currentness_status"], "stale")
+        self.assertIn("source_revision=old-revision", plan["blockers"][0]["observed"])
+
+    def test_source_package_without_git_revision_is_current_for_all_authorities(self) -> None:
+        self._write_authorities()
+        for rel_path in (
+            "build/release/release-run-manifest.json",
+            "build/release/release-sealed-run-manifest.json",
+            "build/release/operator-release-summary.json",
+            "build/release/release-auto-promotion-preflight.json",
+            "build/release/release-auto-promotion-preseal.json",
+            "ops/reports/auto-improve-readiness.json",
+        ):
+            payload = json.loads((self.vault / rel_path).read_text(encoding="utf-8"))
+            payload["source_revision"] = "source_package_without_git"
+            self._write_json(rel_path, payload)
+
+        with patch(
+            "ops.scripts.release.release_evidence_planner.release_source_tree_fingerprint",
+            lambda _vault: "fp-current",
+        ):
+            plan = build_plan(self.vault, stage="auto-promotion-ready", context=fixed_context())
+
+        self.assertEqual(plan["plan_status"], "ready")
+        self.assertTrue(plan["nodes"]["operator_summary"]["can_reuse"])
+        self.assertEqual(
+            plan["nodes"]["operator_summary"]["source_revision"],
+            "source_package_without_git",
+        )
 
     def test_auto_promotion_plan_requires_preflight_before_run_ready(self) -> None:
         self._write_authorities()

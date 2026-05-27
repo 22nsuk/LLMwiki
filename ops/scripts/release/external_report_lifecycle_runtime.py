@@ -1338,14 +1338,12 @@ def ruff_strict_preview_import_order_status(
     surface_text = "\n".join(
         _read_text_or_empty(vault / rel_path)
         for rel_path in (
-            "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
             "tools/ruff_strict_preview.py",
             "mk/static.mk",
         )
     )
     if (
-        "from .set_mechanism_run_history import (\n" in surface_text
-        and "RUFF_STRICT_PREVIEW_TARGETS" in surface_text
+        "RUFF_STRICT_PREVIEW_TARGETS" in surface_text
         and "--allowlist" not in surface_text
         and "tools/ruff_strict_preview.py" in surface_text
     ):

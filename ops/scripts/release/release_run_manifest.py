@@ -19,6 +19,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.source_revision_runtime import resolve_source_revision
     from ops.scripts.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
@@ -30,6 +31,7 @@ else:
     )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.source_revision_runtime import resolve_source_revision
     from ops.scripts.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
@@ -55,7 +57,7 @@ def _run_git(vault: Path, *args: str) -> str:
 
 
 def git_commit(vault: Path) -> str:
-    return _run_git(vault, "rev-parse", "HEAD")
+    return resolve_source_revision(vault).revision
 
 
 def git_clean(vault: Path) -> bool:

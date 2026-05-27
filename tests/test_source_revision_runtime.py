@@ -8,6 +8,7 @@ import pytest
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.source_revision_runtime import resolve_source_revision
 
+from ops.scripts.release.release_run_manifest import git_commit
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = pytest.mark.public
@@ -22,6 +23,14 @@ def test_source_revision_uses_typed_source_package_status_without_git() -> None:
 
         assert revision.revision == "source_package_without_git"
         assert revision.status == "source_package_without_git"
+
+
+def test_release_authority_git_commit_uses_typed_source_package_status_without_git() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+
+        assert git_commit(vault) == "source_package_without_git"
 
 
 def test_source_revision_uses_git_head_when_git_metadata_exists() -> None:
