@@ -1745,6 +1745,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) tmp-json-clean",
                 "ops.scripts.backfill_archived_run_artifacts",
                 "$(MAKE) generated-artifact-index",
+                "$(MAKE) release-authority-sealed-preflight",
                 "$(MAKE) artifact-freshness-refresh-check",
                 "$(MAKE) external-report-reference-manifest-release-check",
                 "$(MAKE) release-closeout-batch-manifest-promote",

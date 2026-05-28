@@ -283,6 +283,7 @@ release-auto-promotion-safe-cleanup:
 	$(MAKE) tmp-json-clean
 	$(PYTHON) -m ops.scripts.backfill_archived_run_artifacts --vault "$(VAULT)"
 	$(MAKE) generated-artifact-index
+	$(MAKE) release-authority-sealed-preflight
 	$(MAKE) artifact-freshness-refresh-check
 	@if [ -n "$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)" ]; then \
 		$(MAKE) external-report-reference-manifest-release-check EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)" EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"; \
