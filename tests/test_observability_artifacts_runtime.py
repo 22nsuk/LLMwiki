@@ -199,6 +199,37 @@ class ObservabilityArtifactsRuntimeTests(unittest.TestCase):
             self.assertEqual(timeout_entry["artifact_role"], "timeout_failure")
             self.assertEqual(timeout_entry["schema"], "ops/schemas/timeout-failure.schema.json")
 
+    def test_run_artifact_fingerprint_classifies_structural_complexity_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "run-structural-fingerprint"
+            run_dir = vault / "runs" / run_id
+            run_dir.mkdir(parents=True)
+            _write_json(
+                run_dir / "structural-complexity-budget.json",
+                {
+                    "$schema": "ops/schemas/structural-complexity-budget-report.schema.json",
+                    "artifact_kind": "structural_complexity_budget_report",
+                    "status": "pass",
+                },
+            )
+
+            rel_path = write_run_artifact_fingerprint(vault, run_id, context=fixed_context())
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            structural_entry = next(
+                item
+                for item in payload["artifacts"]
+                if item["path"] == f"runs/{run_id}/structural-complexity-budget.json"
+            )
+
+            self.assertEqual(structural_entry["artifact_role"], "structural_complexity_budget")
+            self.assertEqual(
+                structural_entry["schema"],
+                "ops/schemas/structural-complexity-budget-report.schema.json",
+            )
+
     def test_run_artifact_fingerprint_uses_bundled_schema_when_vault_schema_is_absent(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

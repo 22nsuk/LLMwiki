@@ -14,6 +14,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         build_atomic_text_updates,
     )
     from ops.scripts.policy_runtime import load_policy
+    from ops.scripts.observability_artifacts_runtime import write_run_artifact_fingerprint
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import (
         PROMOTION_REPORT_SCHEMA_PATH,
@@ -27,6 +28,7 @@ else:
         build_atomic_text_updates,
     )
     from ops.scripts.policy_runtime import load_policy
+    from ops.scripts.observability_artifacts_runtime import write_run_artifact_fingerprint
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import (
         PROMOTION_REPORT_SCHEMA_PATH,
@@ -159,12 +161,18 @@ def set_mechanism_run_history(
     )
     current_history = promotion_report.get("history", {})
     if current_history == target_history:
+        fingerprint_rel = write_run_artifact_fingerprint(
+            vault,
+            run_id,
+            context=runtime_context,
+        )
         return {
             "run_id": run_id,
             "status": status,
             "changed": False,
             "promotion_report": promotion_path.as_posix(),
             "run_ledger": ledger_path.as_posix(),
+            "run_artifact_fingerprint": fingerprint_rel,
         }
 
     promotion_report["history"] = target_history
@@ -204,6 +212,11 @@ def set_mechanism_run_history(
             run_ledger=run_ledger,
         )
     )
+    fingerprint_rel = write_run_artifact_fingerprint(
+        vault,
+        run_id,
+        context=runtime_context,
+    )
 
     return {
         "run_id": run_id,
@@ -211,6 +224,7 @@ def set_mechanism_run_history(
         "changed": True,
         "promotion_report": promotion_path.as_posix(),
         "run_ledger": ledger_path.as_posix(),
+        "run_artifact_fingerprint": fingerprint_rel,
     }
 
 

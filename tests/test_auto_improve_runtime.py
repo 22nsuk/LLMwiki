@@ -81,7 +81,7 @@ def _learning_review_required_report() -> dict[str, object]:
         },
         "learning_readiness": {
             "status": "learning_uncertain",
-            "gate_effect": "review_required",
+            "gate_effect": "operator_review_required",
             "can_run": True,
             "likely_to_learn": False,
             "metrics": {
@@ -540,7 +540,10 @@ def _assert_successful_runtime_events_and_learning(case: unittest.TestCase, arti
         },
     )
     case.assertEqual(session["pre_run_readiness"]["learning_status"], "learning_uncertain")
-    case.assertEqual(session["pre_run_readiness"]["learning_gate_effect"], "review_required")
+    case.assertEqual(
+        session["pre_run_readiness"]["learning_gate_effect"],
+        "operator_review_required",
+    )
     case.assertEqual(session["loop_state"]["consecutive_failures"], 0)
     case.assertEqual(session["loop_state"]["last_outcome"], "promoted")
     case.assertEqual(session["loop_state"]["last_decision"], "PROMOTE")
@@ -1278,7 +1281,10 @@ class AutoImproveRuntimeTests(unittest.TestCase):
                     "command_flag": "",
                 },
             )
-            self.assertEqual(session["pre_run_readiness"]["learning_gate_effect"], "review_required")
+            self.assertEqual(
+                session["pre_run_readiness"]["learning_gate_effect"],
+                "operator_review_required",
+            )
             self.assertEqual(session["queue_snapshot"], ["proposal-ready"])
 
     def test_run_auto_improve_session_marks_bounded_trial_when_override_is_set(self) -> None:

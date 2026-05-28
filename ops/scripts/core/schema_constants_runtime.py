@@ -147,12 +147,17 @@ ACCEPTED_RISK_VOCABULARY_SCHEMA_PATH = "ops/schemas/accepted-risk-vocabulary.sch
 ACCEPTED_RISK_VOCABULARY_SCHEMA_URI = "https://llmwiki/schemas/accepted-risk-vocabulary"
 LEARNING_READINESS_VOCABULARY_SCHEMA_PATH = "ops/schemas/learning-readiness-vocabulary.schema.json"
 LEARNING_READINESS_VOCABULARY_SCHEMA_URI = "https://llmwiki/schemas/learning-readiness-vocabulary"
+GATE_EFFECT_VOCABULARY_SCHEMA_PATH = "ops/schemas/gate-effect-vocabulary.schema.json"
+GATE_EFFECT_VOCABULARY_SCHEMA_URI = "https://llmwiki/schemas/gate-effect-vocabulary"
 RELEASE_AUTHORITY_VOCABULARY_SCHEMA_PATH = "ops/schemas/release-authority-vocabulary.schema.json"
 RELEASE_AUTHORITY_VOCABULARY_SCHEMA_URI = "https://llmwiki/schemas/release-authority-vocabulary"
 RELEASE_RISK_TAXONOMY_SCHEMA_PATH = "ops/schemas/release-risk-taxonomy.schema.json"
 RELEASE_RISK_TAXONOMY_MATRIX_SCHEMA_PATH = "ops/schemas/release-risk-taxonomy-matrix.schema.json"
 OPENVEX_DRAFT_SCHEMA_PATH = "ops/schemas/openvex-draft.schema.json"
 GENERATED_ARTIFACT_INDEX_SCHEMA_PATH = "ops/schemas/generated-artifact-index.schema.json"
+GENERATED_ARTIFACT_CONVERGENCE_SCHEMA_PATH = (
+    "ops/schemas/generated-artifact-convergence.schema.json"
+)
 ARCHIVE_EXECUTION_MANIFEST_SCHEMA_PATH = "ops/schemas/archive-execution-manifest.schema.json"
 ARTIFACT_FRESHNESS_REPORT_SCHEMA_PATH = "ops/schemas/artifact-freshness-report.schema.json"
 ARTIFACT_RELOCATION_AUDIT_SCHEMA_PATH = "ops/schemas/artifact-relocation-audit.schema.json"
@@ -163,6 +168,7 @@ LOCAL_SCHEMA_ALIASES = {
     CYCLONEDX_16_SCHEMA_URI: CYCLONEDX_16_SCHEMA_PATH,
     ACCEPTED_RISK_VOCABULARY_SCHEMA_URI: ACCEPTED_RISK_VOCABULARY_SCHEMA_PATH,
     LEARNING_READINESS_VOCABULARY_SCHEMA_URI: LEARNING_READINESS_VOCABULARY_SCHEMA_PATH,
+    GATE_EFFECT_VOCABULARY_SCHEMA_URI: GATE_EFFECT_VOCABULARY_SCHEMA_PATH,
     RELEASE_AUTHORITY_VOCABULARY_SCHEMA_URI: RELEASE_AUTHORITY_VOCABULARY_SCHEMA_PATH,
 }
 
@@ -181,6 +187,7 @@ PLANNING_GATE_OPTIONAL_ARTIFACT_SCHEMAS = {
     "shadow-apply-report.json": SHADOW_APPLY_REPORT_SCHEMA_PATH,
     "rollback-rehearsal-report.json": ROLLBACK_REHEARSAL_REPORT_SCHEMA_PATH,
     "behavior-delta.json": BEHAVIOR_DELTA_SCHEMA_PATH,
+    "structural-complexity-budget.json": STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH,
 }
 
 PLANNING_GATE_COMPLETED_MECHANISM_INPUT_SCHEMAS = {

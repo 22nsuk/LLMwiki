@@ -118,7 +118,7 @@ class ReleaseCleanBlockerLedgerTests(unittest.TestCase):
                     "source_path": "ops/reports/artifact-freshness-report.json",
                     "code": "artifact_freshness_attention",
                     "severity": "warn",
-                    "gate_effect": "accepted_risk",
+                    "gate_effect": "advisory",
                     "message": "artifact freshness has attention-level debt",
                     "required_evidence": ["rerun artifact-freshness"],
                     "risk_acceptance": {
@@ -157,7 +157,7 @@ class ReleaseCleanBlockerLedgerTests(unittest.TestCase):
                     "source_path": "ops/reports/generated-artifact-index.json",
                     "code": "generated_index_archive_advisory",
                     "severity": "warn",
-                    "gate_effect": "accepted_risk",
+                    "gate_effect": "advisory",
                     "message": "generated artifact index reports archive candidates as advisory release risk",
                     "required_evidence": ["rerun generated-artifact-index"],
                     "risk_acceptance": {
@@ -202,7 +202,7 @@ class ReleaseCleanBlockerLedgerTests(unittest.TestCase):
                     "source_path": "ops/reports/generated-artifact-index.json",
                     "code": "generated_index_archive_advisory",
                     "severity": "warn",
-                    "gate_effect": "accepted_risk",
+                    "gate_effect": "advisory",
                     "message": "generated artifact index reports archive candidates as advisory release risk",
                     "required_evidence": ["rerun generated-artifact-index"],
                     "risk_acceptance": {
@@ -237,7 +237,7 @@ class ReleaseCleanBlockerLedgerTests(unittest.TestCase):
                     "source_path": "external-reports/report-reference-manifest.json",
                     "code": "external_report_strict_unavailable",
                     "severity": "warn",
-                    "gate_effect": "accepted_risk",
+                    "gate_effect": "advisory",
                     "message": "strict external report release check is unavailable",
                     "required_evidence": ["run sealed external report release check"],
                     "risk_acceptance": {
@@ -277,7 +277,7 @@ class ReleaseCleanBlockerLedgerTests(unittest.TestCase):
                     "source_path": "ops/reports/auto-improve-readiness.json",
                     "code": "learning_blocked_by_review_required",
                     "severity": "warn",
-                    "gate_effect": "accepted_risk",
+                    "gate_effect": "advisory",
                     "message": "learning readiness still needs operator review",
                     "required_evidence": ["signoff"],
                     "risk_acceptance": {
@@ -317,7 +317,7 @@ class ReleaseCleanBlockerLedgerTests(unittest.TestCase):
                 "source_path": "ops/reports/auto-improve-readiness.json",
                 "code": "learning_blocked_by_execution_not_runnable",
                 "severity": "blocker",
-                "gate_effect": "shadow",
+                "gate_effect": "blocks_execution",
                 "message": "no runnable proposal is available",
                 "required_evidence": ["restore runnable proposal queue"],
                 "clean_lane_effect": "does_not_block_clean_lane",

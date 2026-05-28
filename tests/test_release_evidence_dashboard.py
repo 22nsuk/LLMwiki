@@ -477,7 +477,7 @@ class ReleaseEvidenceDashboardTests(unittest.TestCase):
                 "source_path": "external-reports/report-reference-manifest.json",
                 "code": "external_report_strict_unavailable",
                 "severity": "warn",
-                "gate_effect": "accepted_risk",
+                "gate_effect": "advisory",
                 "advisory_lifecycle_effect": "review_backlog",
                 "message": "strict external report release check is unavailable",
                 "required_evidence": ["run sealed external report release check"],

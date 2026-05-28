@@ -34,7 +34,7 @@ Quality checks:
 - avoid treating generated artifacts as proof if the generating contract changed
 - keep conclusions tied to the scoped change boundary
 - explicitly mark blocked checks and why they are blocked
-- when replaying Python checks in a prepared workspace, prefer `.venv/bin/python` over bare `python`
+- when replaying Python checks in a prepared workspace, use `.venv/bin/python` and do not fall back to bare `python -m pytest`
 - for pytest in read-only mode, use `PYTHONDONTWRITEBYTECODE=1` and `-p no:cacheprovider` to avoid bytecode/cache writes
 - do not modify repository source, policy, schema, docs, reports, or tests; only temporary/cache writes required by validation are allowed
 - during executor-role validation, do not fail solely because post-executor artifacts such as candidate assessments, changed-files manifest, behavior delta, or finalized promotion report have not been generated yet

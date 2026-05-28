@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from .codex_exec_executor import CodexExecError, execute_codex_exec_role
+from .executor_noop_runtime import executor_noop_mutation_failure_message
 from .policy_runtime import load_policy
 from .runtime_context import RuntimeContext
 
@@ -113,10 +114,18 @@ def _should_refresh_script_output_surfaces(
     return any(target.startswith(OPS_SCRIPTS_PREFIX) for target in changed_primary_targets)
 
 
+def _workspace_python(workspace_root: Path) -> str:
+    for rel_path in (".venv/bin/python", ".venv/Scripts/python.exe", ".venv/Scripts/python"):
+        python_path = workspace_root / rel_path
+        if python_path.exists():
+            return str(python_path)
+    return sys.executable
+
+
 def _refresh_script_output_surfaces(workspace_root: Path) -> None:
     completed = subprocess.run(
         [
-            sys.executable,
+            _workspace_python(workspace_root),
             "-m",
             "ops.scripts.script_output_surfaces",
             "--vault",
@@ -185,10 +194,8 @@ def run_executor_pipeline(
             primary_after_worker = _target_digest_snapshot(workspace_root, primary_targets)
             changed_primary_targets = _changed_targets(primary_before_worker, primary_after_worker)
             if not changed_primary_targets:
-                joined_targets = ", ".join(primary_targets)
                 raise ExecutorRuntimeExecutionError(
-                    "worker reported pass without modifying any declared primary target; "
-                    f"primary_targets=[{joined_targets}]"
+                    executor_noop_mutation_failure_message("worker", primary_targets)
                 )
             if _should_refresh_script_output_surfaces(
                 changed_primary_targets=changed_primary_targets,

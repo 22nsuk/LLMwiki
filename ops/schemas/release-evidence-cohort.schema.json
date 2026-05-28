@@ -736,11 +736,7 @@
           ]
         },
         "gate_effect": {
-          "type": "string",
-          "enum": [
-            "active",
-            "accepted_by_cohort_policy"
-          ]
+          "$ref": "https://llmwiki/schemas/gate-effect-vocabulary#/$defs/gate_effect"
         },
         "message": {
           "type": "string",

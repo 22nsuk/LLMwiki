@@ -289,6 +289,8 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
 
         self.assertEqual(manifest["status"], "fail")
         self.assertIn("operator_attention_open", manifest["failures"])
+        blocker = next(item for item in manifest["blockers"] if item["id"] == "operator_attention_open")
+        self.assertEqual(blocker["gate_effect"], "blocks_promotion")
 
     def test_operator_summary_load_and_kind_are_explicit_blockers(self) -> None:
         self._write_inputs()
@@ -604,6 +606,8 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
 
         self.assertEqual(manifest["status"], "fail")
         self.assertIn("accepted_risk_count_not_zero", manifest["failures"])
+        blocker = next(item for item in manifest["blockers"] if item["id"] == "accepted_risk_count_not_zero")
+        self.assertEqual(blocker["gate_effect"], "operator_review_required")
 
     def test_gate_attention_and_learning_claim_counts_are_separate_stage3_diagnostics(self) -> None:
         self._write_inputs()
@@ -634,6 +638,12 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
         )
         self.assertIn("gate_attention_count_not_zero", manifest["failures"])
         self.assertIn("learning_claim_blocking_family_count_not_zero", manifest["failures"])
+        blockers = {item["id"]: item for item in manifest["blockers"]}
+        self.assertEqual(blockers["gate_attention_count_not_zero"]["gate_effect"], "blocks_promotion")
+        self.assertEqual(
+            blockers["learning_claim_blocking_family_count_not_zero"]["gate_effect"],
+            "operator_review_required",
+        )
         self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
 
 

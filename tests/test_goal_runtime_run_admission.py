@@ -233,6 +233,175 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         self.assertGreater(report["summary"]["promotion_blocker_count"], 0)
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
+    def test_build_report_blocks_start_when_readiness_and_mutation_queue_are_stale(self) -> None:
+        mutation_report = {
+            "artifact_kind": "mutation_proposals_report",
+            "source_tree_fingerprint": "current-source",
+            "currentness": {"status": "current"},
+            "proposals": [{"proposal_id": "repair-current"}],
+            "diagnostics": {
+                "queue_selection": {
+                    "runnable_available_count": 1,
+                    "selected_runnable_count": 1,
+                    "blocked_available_count": 0,
+                    "blocked_reason_counts": [],
+                }
+            },
+        }
+        self._write_json("ops/reports/mutation-proposals.json", mutation_report)
+        readiness = {
+            "artifact_kind": "auto_improve_readiness_report",
+            "source_tree_fingerprint": "stale-source",
+            "currentness": {"status": "current"},
+            "input_fingerprints": {
+                "mutation_proposal_report": "0" * 64,
+            },
+            "execution_readiness": {
+                "can_run": True,
+                "runnable_proposal_count": 1,
+                "reasons": [],
+            },
+            "queue": {
+                "runnable_proposal_ids": ["repair-stale"],
+            },
+            "can_promote_result": False,
+            "promotion_blockers": [
+                {"id": "promotion_blocked_by_goal_runtime_certificate_incomplete"}
+            ],
+        }
+        self._write_json("ops/reports/auto-improve-readiness.json", readiness)
+
+        report = self._build_report()
+
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["start_status"], "fail")
+        self.assertEqual(report["admission_mode"], "blocked")
+        self.assertFalse(report["decisions"]["can_start_goal_runtime"])
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "start_readiness_mutation_proposal_current"
+        )
+        self.assertEqual(check["status"], "fail")
+        self.assertEqual(check["observed"]["mutation_source_tree_fingerprint"], "current-source")
+        self.assertEqual(check["observed"]["readiness_source_tree_fingerprint"], "stale-source")
+        self.assertEqual(check["observed"]["mutation_selected_runnable_proposal_ids"], ["repair-current"])
+        self.assertEqual(check["observed"]["readiness_runnable_proposal_ids"], ["repair-stale"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_build_report_blocks_start_for_over_budget_non_structural_proposal(self) -> None:
+        target = self.vault / "ops" / "scripts" / "mechanism" / "giant_runtime.py"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(
+            "\n".join(f"VALUE_{index} = {index}" for index in range(901)) + "\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            "ops/reports/mutation-proposals.json",
+            {
+                "artifact_kind": "mutation_proposals_report",
+                "proposals": [
+                    {
+                        "proposal_id": "regular-runtime-change",
+                        "primary_targets": [
+                            "ops/scripts/mechanism/giant_runtime.py",
+                        ],
+                        "supporting_targets": [],
+                    }
+                ],
+                "diagnostics": {
+                    "queue_selection": {
+                        "runnable_available_count": 1,
+                        "selected_runnable_count": 1,
+                        "blocked_available_count": 0,
+                        "blocked_reason_counts": [],
+                    }
+                },
+            },
+        )
+
+        report = self._build_report()
+
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["start_status"], "fail")
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "start_structural_complexity_budget_clear"
+        )
+        self.assertEqual(check["status"], "fail")
+        self.assertFalse(check["observed"]["structural_complexity_repair_allowed"])
+        self.assertEqual(
+            check["observed"]["over_budget_targets"][0]["path"],
+            "ops/scripts/mechanism/giant_runtime.py",
+        )
+        self.assertIn(
+            "nonempty_line_count_total",
+            check["observed"]["over_budget_targets"][0]["over_budget_metrics"],
+        )
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_build_report_allows_over_budget_target_for_explicit_structural_repair(self) -> None:
+        target = self.vault / "ops" / "scripts" / "mechanism" / "giant_runtime.py"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(
+            "\n".join(f"VALUE_{index} = {index}" for index in range(901)) + "\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            "ops/reports/mutation-proposals.json",
+            {
+                "artifact_kind": "mutation_proposals_report",
+                "proposals": [
+                    {
+                        "proposal_id": (
+                            "next_run_failure_repair__giant-runtime__"
+                            "structural-complexity-non-regression"
+                        ),
+                        "failure_mode": "next_run_failure_repair",
+                        "primary_targets": [
+                            "ops/scripts/mechanism/giant_runtime.py",
+                        ],
+                        "supporting_targets": [],
+                        "metrics_triggered": [
+                            "next_run_failure_repair",
+                            "structural_complexity_non_regression",
+                        ],
+                        "must_change_budget_signal": {
+                            "signal": (
+                                "auto_improve_session.next_run_decisions."
+                                "structural_complexity_non_regression"
+                            ),
+                            "expected_change": "resolved_or_superseded",
+                        },
+                    }
+                ],
+                "diagnostics": {
+                    "queue_selection": {
+                        "runnable_available_count": 1,
+                        "selected_runnable_count": 1,
+                        "blocked_available_count": 0,
+                        "blocked_reason_counts": [],
+                    }
+                },
+            },
+        )
+
+        report = self._build_report()
+
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["start_status"], "pass")
+        self.assertEqual(report["admission_mode"], "bounded_repair_allowed")
+        check = next(
+            item
+            for item in report["checks"]
+            if item["id"] == "start_structural_complexity_budget_clear"
+        )
+        self.assertEqual(check["status"], "pass")
+        self.assertTrue(check["observed"]["structural_complexity_repair_allowed"])
+        self.assertEqual(check["observed"]["status"], "attention")
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_build_report_exposes_distinct_promotion_ready_statuses(self) -> None:
         readiness = json.loads((self.vault / "ops/reports/auto-improve-readiness.json").read_text(encoding="utf-8"))
         readiness["can_promote_result"] = True
@@ -263,7 +432,7 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         readiness = json.loads((self.vault / "ops/reports/auto-improve-readiness.json").read_text(encoding="utf-8"))
         readiness["learning_readiness"] = {
             "status": "learning_uncertain",
-            "gate_effect": "review_required",
+            "gate_effect": "operator_review_required",
         }
         self._write_json("ops/reports/auto-improve-readiness.json", readiness)
 
@@ -273,6 +442,7 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
             check for check in report["checks"] if check["id"] == "start_learning_uncertain_authorized"
         )
         self.assertEqual(learning_check["status"], "pass")
+        self.assertEqual(learning_check["gate_effect"], "none")
         self.assertTrue(learning_check["observed"]["contract_authorized"])
         self.assertFalse(learning_check["observed"]["allow_learning_uncertain"])
         self.assertEqual(report["summary"]["start_blocker_count"], 0)
@@ -282,7 +452,7 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         readiness = json.loads((self.vault / "ops/reports/auto-improve-readiness.json").read_text(encoding="utf-8"))
         readiness["learning_readiness"] = {
             "status": "learning_uncertain",
-            "gate_effect": "review_required",
+            "gate_effect": "operator_review_required",
         }
         self._write_json("ops/reports/auto-improve-readiness.json", readiness)
         contract = json.loads((self.vault / "ops/reports/codex-goal-contract.json").read_text(encoding="utf-8"))
@@ -300,15 +470,40 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
             check for check in report["checks"] if check["id"] == "start_learning_uncertain_authorized"
         )
         self.assertEqual(learning_check["status"], "fail")
+        self.assertEqual(learning_check["gate_effect"], "operator_review_required")
         self.assertFalse(learning_check["observed"]["contract_authorized"])
         self.assertFalse(learning_check["observed"]["allow_learning_uncertain"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_learning_uncertain_legacy_gate_effect_is_canonicalized(self) -> None:
+        readiness = json.loads((self.vault / "ops/reports/auto-improve-readiness.json").read_text(encoding="utf-8"))
+        readiness["learning_readiness"] = {
+            "status": "learning_uncertain",
+            "gate_effect": "review_required",
+        }
+        self._write_json("ops/reports/auto-improve-readiness.json", readiness)
+        contract = json.loads((self.vault / "ops/reports/codex-goal-contract.json").read_text(encoding="utf-8"))
+        contract["execution_policy"]["learning_uncertain"]["allow_bounded_trial"] = False
+        self._write_json("ops/reports/codex-goal-contract.json", contract)
+
+        report = self._build_report()
+
+        learning_check = next(
+            check for check in report["checks"] if check["id"] == "start_learning_uncertain_authorized"
+        )
+        self.assertEqual(learning_check["status"], "fail")
+        self.assertEqual(learning_check["gate_effect"], "operator_review_required")
+        self.assertEqual(
+            learning_check["observed"]["learning_gate_effect"],
+            "operator_review_required",
+        )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_learning_uncertain_start_allows_explicit_override(self) -> None:
         readiness = json.loads((self.vault / "ops/reports/auto-improve-readiness.json").read_text(encoding="utf-8"))
         readiness["learning_readiness"] = {
             "status": "learning_uncertain",
-            "gate_effect": "review_required",
+            "gate_effect": "operator_review_required",
         }
         self._write_json("ops/reports/auto-improve-readiness.json", readiness)
         contract = json.loads((self.vault / "ops/reports/codex-goal-contract.json").read_text(encoding="utf-8"))
@@ -321,6 +516,7 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
             check for check in report["checks"] if check["id"] == "start_learning_uncertain_authorized"
         )
         self.assertEqual(learning_check["status"], "pass")
+        self.assertEqual(learning_check["gate_effect"], "none")
         self.assertFalse(learning_check["observed"]["contract_authorized"])
         self.assertTrue(learning_check["observed"]["allow_learning_uncertain"])
         self.assertEqual(report["summary"]["start_blocker_count"], 0)
@@ -431,6 +627,7 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         self.assertTrue(report["decisions"]["should_pause_before_run"])
         queue_check = next(check for check in report["checks"] if check["id"] == "start_runnable_proposal_queue")
         self.assertEqual(queue_check["status"], "fail")
+        self.assertEqual(queue_check["gate_effect"], "blocks_execution")
         self.assertIn("recent_log_overlap", json.dumps(queue_check["observed"]))
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
@@ -493,6 +690,8 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         execution_check = next(check for check in report["checks"] if check["id"] == "start_execution_readiness")
         self.assertEqual(queue_check["status"], "pass")
         self.assertEqual(execution_check["status"], "pass")
+        self.assertEqual(queue_check["gate_effect"], "none")
+        self.assertEqual(execution_check["gate_effect"], "none")
         self.assertTrue(queue_check["observed"]["resume_completion"]["active"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
@@ -660,7 +859,7 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
         self.assertFalse(plan_check["observed"]["selected_runnable"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
-    def test_build_report_blocks_start_from_dirty_worktree_guard(self) -> None:
+    def test_build_report_allows_bounded_start_but_blocks_promotion_from_dirty_worktree_guard(self) -> None:
         guard = json.loads((self.vault / "ops/reports/goal-worktree-guard.json").read_text(encoding="utf-8"))
         guard["status"] = "attention"
         guard["git"]["dirty_entry_count"] = 2
@@ -670,14 +869,17 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
 
         report = self._build_report()
 
-        self.assertEqual(report["status"], "fail")
-        self.assertEqual(report["start_status"], "fail")
+        self.assertEqual(report["status"], "attention")
+        self.assertEqual(report["start_status"], "pass")
         self.assertEqual(report["promotion_status"], "blocked")
-        self.assertEqual(report["admission_mode"], "blocked")
-        self.assertFalse(report["decisions"]["can_start_goal_runtime"])
-        worktree_check = next(check for check in report["checks"] if check["id"] == "start_worktree_promotable")
-        self.assertEqual(worktree_check["status"], "fail")
-        self.assertEqual(worktree_check["observed"]["dirty_entry_count"], 2)
+        self.assertEqual(report["admission_mode"], "bounded_repair_allowed")
+        self.assertTrue(report["decisions"]["can_start_goal_runtime"])
+        start_check = next(check for check in report["checks"] if check["id"] == "start_worktree_executable")
+        self.assertEqual(start_check["status"], "pass")
+        promotion_check = next(check for check in report["checks"] if check["id"] == "promotion_worktree_promotable")
+        self.assertEqual(promotion_check["status"], "attention")
+        self.assertEqual(promotion_check["gate_effect"], "blocks_promotion")
+        self.assertEqual(promotion_check["observed"]["dirty_entry_count"], 2)
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_build_report_blocks_promotion_when_goal_status_digest_is_stale(self) -> None:
@@ -697,5 +899,6 @@ class GoalRuntimeRunAdmissionTests(unittest.TestCase):
             check for check in report["checks"] if check["id"] == "promotion_durable_goal_authority_current"
         )
         self.assertEqual(authority_check["status"], "attention")
+        self.assertEqual(authority_check["gate_effect"], "blocks_promotion")
         self.assertFalse(authority_check["observed"]["goal_status_contract_digest_matches"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])

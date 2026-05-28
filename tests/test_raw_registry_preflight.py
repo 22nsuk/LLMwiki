@@ -10,7 +10,10 @@ import zipfile
 from pathlib import Path
 
 from ops.scripts.path_portability_runtime import infozip_c_locale_escape_path
-from ops.scripts.policy_runtime import load_policy, report_path
+from ops.scripts.raw_registry_export import (
+    build_current_raw_registry_export,
+    raw_registry_export_check,
+)
 from ops.scripts.raw_registry_preflight import (
     ALIAS_POLICY_VERSION,
     PATH_ALIAS_RESOLUTION_MODE,
@@ -19,12 +22,6 @@ from ops.scripts.raw_registry_preflight import (
     preflight,
     write_report,
     write_reproducibility_report,
-)
-from ops.scripts.raw_registry_runtime import (
-    parse_raw_registry_pages,
-    registry_entry_page_paths,
-    registry_summary_page_path,
-    write_raw_registry_export,
 )
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import (
@@ -410,20 +407,47 @@ Body
             self.assertEqual(error["detail"]["digest_source_path"], "raw/fake.pdf")
             self.assertEqual(error["detail"]["exported_content_sha256"], stale_digest)
 
+    def test_raw_registry_export_check_detects_stale_local_export(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            export, destination = build_current_raw_registry_export(vault)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(
+                json.dumps(export, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            passing_report = raw_registry_export_check(vault)
+            self.assertEqual(passing_report["status"], "pass")
+            self.assertEqual(passing_report["check_status"], "match")
+
+            stale_export = json.loads(destination.read_text(encoding="utf-8"))
+            stale_export["entries"][0]["content_sha256"] = hashlib.sha256(
+                b"old-bytes"
+            ).hexdigest()
+            destination.write_text(
+                json.dumps(stale_export, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            stale_report = raw_registry_export_check(vault)
+            self.assertEqual(stale_report["status"], "fail")
+            self.assertEqual(stale_report["check_status"], "mismatch")
+            self.assertEqual(stale_report["candidate"]["entry_count"], 1)
+            self.assertEqual(stale_report["stored"]["entry_count"], 1)
+
     def test_preflight_keeps_pass_result_after_full_zip_roundtrip_with_exported_registry(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
             seed_minimal_vault(vault)
 
-            policy, _ = load_policy(vault)
-            registry_contract = policy["registry_contract"]
-            entry_pages = registry_entry_page_paths(vault, registry_contract)
-            write_raw_registry_export(
-                vault / registry_contract["raw_registry_export"],
-                parse_raw_registry_pages(entry_pages),
-                report_path(vault, registry_summary_page_path(vault, registry_contract)),
-                [report_path(vault, page) for page in entry_pages],
+            export, destination = build_current_raw_registry_export(vault)
+            destination.write_text(
+                json.dumps(export, ensure_ascii=False, indent=2),
+                encoding="utf-8",
             )
 
             original_report = preflight(vault, context=fixed_context())

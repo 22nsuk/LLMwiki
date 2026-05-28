@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime as dt
 from pathlib import Path
 
+from ops.scripts.observability_artifacts_runtime import write_run_artifact_fingerprint
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 
@@ -92,6 +93,11 @@ def finalize_run(
             final_log_text=outputs.log_state.final_log_text,
         )
     )
+    fingerprint_rel = write_run_artifact_fingerprint(
+        vault,
+        run_id,
+        context=runtime_context,
+    )
 
     return {
         "run_id": run_id,
@@ -100,5 +106,6 @@ def finalize_run(
         "promotion_report": report_path(vault, promotion_path),
         "run_ledger": report_path(vault, ledger_path),
         "planning_validation": report_path(vault, planning_path),
+        "run_artifact_fingerprint": fingerprint_rel,
         "log_entry_ref": outputs.log_state.entry_ref,
     }

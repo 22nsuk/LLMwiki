@@ -290,8 +290,12 @@ def _build_completed_run_result(
         "routing_reports": resolution.routing_report_paths,
         "executor_reports": resolution.executor_report_paths,
         "changed_files_manifest": steps.repo_health.changed_files_manifest,
+        "structural_complexity_budget": steps.repo_health.structural_complexity_budget,
         "behavior_delta": steps.repo_health.behavior_delta,
         "workspace_preparation": steps.workspace_preparation,
+        "post_mutation_generated_artifact_convergence": (
+            steps.generated_artifact_convergence
+        ),
         "apply_mode": steps.workspace_apply.apply_mode,
         "apply_status": steps.workspace_apply.apply_status,
         "live_applied": steps.workspace_apply.live_applied,
@@ -311,6 +315,9 @@ def _build_completed_run_result(
             "timed_out": bool(steps.repo_health.result.get("timed_out", False)),
             "timeout_seconds": steps.repo_health.result.get("timeout_seconds", 0),
             "termination_reason": steps.repo_health.result.get("termination_reason", ""),
+            "structural_complexity_budget_status": (
+                steps.repo_health.structural_complexity_budget_status
+            ),
             "stdout": run_rel(run_id, "repo-health.stdout.txt"),
             "stderr": run_rel(run_id, "repo-health.stderr.txt"),
         },

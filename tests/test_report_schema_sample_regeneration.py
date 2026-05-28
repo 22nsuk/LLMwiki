@@ -46,7 +46,11 @@ class ReportSchemaSampleRegenerationTests(unittest.TestCase):
             ["learning_blocked_by_execution_not_runnable"],
         )
         self.assertEqual(sample["clean_release_blockers"], [])
-        self.assertIn(
+        self.assertEqual(
+            [blocker["id"] for blocker in sample["execution_blockers"]],
+            ["execution_blocked_by_no_runnable_proposal"],
+        )
+        self.assertNotIn(
             "execution_blocked_by_no_runnable_proposal",
             [blocker["id"] for blocker in sample["promotion_blockers"]],
         )

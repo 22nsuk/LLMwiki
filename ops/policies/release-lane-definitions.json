@@ -43,7 +43,13 @@
     "status_values": ["clean_pass", "conditional_pass", "blocked", "not_run"],
     "lane_values": ["clean", "conditional", "blocked"],
     "risk_acceptance_status": ["valid", "expired", "not_found"],
-    "gate_effect_values": ["pass", "fail", "accepted_risk", "attention", "warn"],
+    "gate_effect_values": [
+      "none",
+      "advisory",
+      "blocks_promotion",
+      "blocks_execution",
+      "operator_review_required"
+    ],
     "cohort_policy_values": ["strict_same_fingerprint", "allowed_divergence_with_explicit_risk"]
   },
   "risk_acceptance_schema": {

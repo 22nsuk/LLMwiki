@@ -5,7 +5,6 @@ import json
 import re
 from pathlib import Path
 
-from ops.scripts.output_runtime import write_output_text
 from ops.scripts.path_portability_runtime import infozip_c_locale_escape_path
 from ops.scripts.path_runtime import normalize_repo_path_text
 from ops.scripts.registry_exceptions_runtime import (
@@ -714,13 +713,3 @@ def build_raw_registry_export(entries: list[dict], summary_page: str, entry_page
         "entry_count": len(entries),
         "entries": exportable_registry_entries(entries),
     }
-
-
-def write_raw_registry_export(
-    out_path: Path,
-    entries: list[dict],
-    summary_page: str,
-    entry_pages: list[str],
-) -> None:
-    export = build_raw_registry_export(entries, summary_page, entry_pages)
-    write_output_text(out_path, json.dumps(export, ensure_ascii=False, indent=2))

@@ -22,6 +22,7 @@
     "mtime_source",
     "zip_metadata_path",
     "status",
+    "gate_effect",
     "recommended_next_action",
     "safe_to_backfill",
     "mtime_sensitive",
@@ -126,6 +127,9 @@
         "fail"
       ]
     },
+    "gate_effect": {
+      "$ref": "https://llmwiki/schemas/gate-effect-vocabulary#/$defs/gate_effect"
+    },
     "recommended_next_action": {
       "type": "string",
       "minLength": 1
@@ -157,7 +161,9 @@
         "stable_contract_debt_artifact_count",
         "stable_contract_debt_issue_count",
         "mtime_sensitive_attention_artifact_count",
-        "mtime_sensitive_attention_issue_count"
+        "mtime_sensitive_attention_issue_count",
+        "operational_attention_artifact_count",
+        "operational_attention_issue_count"
       ],
       "properties": {
         "artifact_count": {
@@ -424,6 +430,7 @@
         "owner_surface_counts",
         "safe_to_backfill_count",
         "mtime_sensitive_count",
+        "gate_effect",
         "recommended_next_action"
       ],
       "properties": {
@@ -449,6 +456,9 @@
         "mtime_sensitive_count": {
           "type": "integer",
           "minimum": 0
+        },
+        "gate_effect": {
+          "$ref": "https://llmwiki/schemas/gate-effect-vocabulary#/$defs/gate_effect"
         },
         "recommended_next_action": {
           "type": "string",
@@ -532,6 +542,7 @@
         "issue_count",
         "safe_to_backfill_count",
         "mtime_sensitive_count",
+        "gate_effect",
         "exit_condition",
         "recommended_next_action",
         "paths"
@@ -554,6 +565,9 @@
         "issue_count": { "type": "integer", "minimum": 0 },
         "safe_to_backfill_count": { "type": "integer", "minimum": 0 },
         "mtime_sensitive_count": { "type": "integer", "minimum": 0 },
+        "gate_effect": {
+          "$ref": "https://llmwiki/schemas/gate-effect-vocabulary#/$defs/gate_effect"
+        },
         "exit_condition": { "type": "string", "minLength": 1 },
         "recommended_next_action": { "type": "string", "minLength": 1 },
         "paths": {
@@ -572,6 +586,7 @@
         "owner_surface",
         "primary_issue",
         "issues",
+        "gate_effect",
         "safe_to_backfill",
         "mtime_sensitive"
       ],
@@ -583,6 +598,9 @@
           "type": "array",
           "minItems": 1,
           "items": { "type": "string", "minLength": 1 }
+        },
+        "gate_effect": {
+          "$ref": "https://llmwiki/schemas/gate-effect-vocabulary#/$defs/gate_effect"
         },
         "safe_to_backfill": { "type": "boolean" },
         "mtime_sensitive": { "type": "boolean" }
@@ -597,6 +615,7 @@
         "primary_issue",
         "issues",
         "recommended_next_action",
+        "gate_effect",
         "expected_debt_reduction",
         "safe_to_backfill",
         "mtime_sensitive"
@@ -625,6 +644,9 @@
         "recommended_next_action": {
           "type": "string",
           "minLength": 1
+        },
+        "gate_effect": {
+          "$ref": "https://llmwiki/schemas/gate-effect-vocabulary#/$defs/gate_effect"
         },
         "expected_debt_reduction": {
           "type": "integer",
@@ -663,6 +685,7 @@
         "safe_to_backfill",
         "recommended_next_action",
         "contract_issue_class",
+        "gate_effect",
         "stable_contract_issues",
         "mtime_sensitive_issues",
         "schema_contract",
@@ -742,6 +765,7 @@
           "enum": [
             "pass",
             "fail",
+            "historical_schema_drift",
             "missing_schema",
             "schema_unavailable",
             "not_applicable"
@@ -771,6 +795,9 @@
             "operational_attention",
             "artifact_unreadable"
           ]
+        },
+        "gate_effect": {
+          "$ref": "https://llmwiki/schemas/gate-effect-vocabulary#/$defs/gate_effect"
         },
         "stable_contract_issues": {
           "type": "array",

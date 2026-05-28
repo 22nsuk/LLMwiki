@@ -12,9 +12,21 @@ from ops.scripts.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     write_schema_backed_report,
 )
+from ops.scripts.gate_effect_vocabulary import (
+    GATE_EFFECT_BLOCKS_EXECUTION,
+    GATE_EFFECT_BLOCKS_PROMOTION,
+    GATE_EFFECT_NONE,
+    GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
+    canonical_gate_effect,
+)
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.structural_complexity_budget_runtime import (
+    DEFAULT_TARGET_PROFILES,
+    build_report as build_structural_complexity_budget_report,
+    touched_target_profiles,
+)
 
 DEFAULT_OUT = "tmp/goal-runtime-run-admission.json"
 DEFAULT_CLEANUP_REPORT = "tmp/goal-runtime-clean-transient.json"
@@ -34,6 +46,24 @@ SOURCE_COMMAND = "python -m ops.scripts.goal_runtime_run_admission --vault ."
 START_BLOCKER_SEVERITY = "block_start"
 PROMOTION_BLOCKER_SEVERITY = "block_promotion"
 MAINTENANCE_ACTION_RUNNER_ACTION = "resume_session_with_additional_proposal_budget"
+STRUCTURAL_COMPLEXITY_REPAIR_MARKERS = (
+    "structural_complexity",
+    "structural-complexity",
+    "complexity_non_regression",
+    "complexity-non-regression",
+    "function_budget",
+    "function-budget",
+)
+
+
+def _default_gate_effect(*, status: str, severity: str) -> str:
+    if status == "pass":
+        return GATE_EFFECT_NONE
+    if severity == START_BLOCKER_SEVERITY:
+        return GATE_EFFECT_BLOCKS_EXECUTION
+    if severity == PROMOTION_BLOCKER_SEVERITY:
+        return GATE_EFFECT_BLOCKS_PROMOTION
+    return GATE_EFFECT_NONE
 
 
 @dataclass(frozen=True)
@@ -96,6 +126,13 @@ def _list_field(payload: dict[str, Any], key: str) -> list[Any]:
 def _canonical_json_digest(payload: dict[str, Any]) -> str:
     data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
+
+
+def _artifact_file_sha256(vault: Path, rel_path: str) -> str:
+    try:
+        return hashlib.sha256((vault / rel_path).read_bytes()).hexdigest()
+    except OSError:
+        return ""
 
 
 def _blocker_ids(value: object, key: str = "id") -> list[str]:
@@ -171,11 +208,17 @@ def _check(
     reason: str,
     next_action: str,
     evidence_paths: list[str],
+    gate_effect: str | None = None,
 ) -> dict[str, Any]:
+    resolved_gate_effect = canonical_gate_effect(
+        gate_effect,
+        active_default=_default_gate_effect(status=status, severity=severity),
+    )
     return {
         "id": check_id,
         "status": status,
         "severity": severity,
+        "gate_effect": resolved_gate_effect,
         "expected": expected,
         "observed": observed,
         "reason": reason,
@@ -320,25 +363,17 @@ def _worktree_check(guard: dict[str, Any], path: str) -> dict[str, Any]:
     promotion_blockers = _list_strings(decisions.get("promotion_blockers"))
     passed = (
         kind_status == "present"
-        and status == "pass"
         and can_execute
-        and can_promote
-        and dirty_entry_count == 0
         and not fatal_blockers
-        and not promotion_blockers
     )
     return _check(
-        check_id="start_worktree_promotable",
+        check_id="start_worktree_executable",
         status="pass" if passed else "fail",
         severity=START_BLOCKER_SEVERITY,
         expected={
             "artifact_kind": "goal_worktree_guard",
-            "status": "pass",
             "can_execute_goal_runtime": True,
-            "can_promote_result": True,
-            "dirty_entry_count": 0,
             "fatal_blockers": [],
-            "promotion_blockers": [],
         },
         observed={
             "artifact_status": kind_status,
@@ -350,14 +385,65 @@ def _worktree_check(guard: dict[str, Any], path: str) -> dict[str, Any]:
             "promotion_blockers": promotion_blockers,
         },
         reason=(
-            "worktree guard is clean and promotable"
+            "worktree guard permits bounded goal-runtime execution"
             if passed
-            else "new mutation runs start only from a clean Git worktree that can later promote results"
+            else "new mutation runs start only from a recognized Git worktree without fatal execution blockers"
         ),
         next_action=(
             "Proceed with run admission."
             if passed
-            else "Commit, discard intentionally, or clean local changes, then rerun `make auto-improve-goal-preflight`."
+            else "Run `make auto-improve-goal-preflight` from a Git checkout and resolve fatal worktree blockers."
+        ),
+        evidence_paths=[path],
+    )
+
+
+def _worktree_promotion_check(guard: dict[str, Any], path: str) -> dict[str, Any]:
+    kind_status = _artifact_kind_check(guard, "goal_worktree_guard")
+    git = _dict_field(guard, "git")
+    decisions = _dict_field(guard, "decisions")
+    status = str(guard.get("status", "missing")).strip() or "missing"
+    dirty_entry_count = _as_int(git.get("dirty_entry_count"))
+    can_promote = _as_bool(decisions.get("can_promote_result"))
+    fatal_blockers = _list_strings(decisions.get("fatal_blockers"))
+    promotion_blockers = _list_strings(decisions.get("promotion_blockers"))
+    passed = (
+        kind_status == "present"
+        and status == "pass"
+        and can_promote
+        and dirty_entry_count == 0
+        and not fatal_blockers
+        and not promotion_blockers
+    )
+    return _check(
+        check_id="promotion_worktree_promotable",
+        status="pass" if passed else "attention",
+        severity=PROMOTION_BLOCKER_SEVERITY,
+        expected={
+            "artifact_kind": "goal_worktree_guard",
+            "status": "pass",
+            "can_promote_result": True,
+            "dirty_entry_count": 0,
+            "fatal_blockers": [],
+            "promotion_blockers": [],
+        },
+        observed={
+            "artifact_status": kind_status,
+            "status": status,
+            "can_promote_result": can_promote,
+            "dirty_entry_count": dirty_entry_count,
+            "fatal_blockers": fatal_blockers,
+            "promotion_blockers": promotion_blockers,
+        },
+        reason=(
+            "worktree guard is clean and promotable"
+            if passed
+            else "bounded repair may start, but promotion remains blocked until worktree guard is clean and promotable"
+        ),
+        next_action=(
+            "Proceed with promotion authority checks."
+            if passed
+            else "Commit, discard intentionally, or clean local changes, then rerun `make auto-improve-goal-preflight` before promotion."
         ),
         evidence_paths=[path],
     )
@@ -416,6 +502,292 @@ def _mutation_queue_check(
             else "Refresh `make refresh-generated-core`; if only recent_log_overlap remains, wait, rotate target, or emit a non-overlapping repair proposal before running."
         ),
         evidence_paths=[path, str(resume_completion.get("session_report", "")).strip()],
+    )
+
+
+def _currentness_status(payload: dict[str, Any]) -> str:
+    currentness = _dict_field(payload, "currentness")
+    return str(currentness.get("status", "")).strip()
+
+
+def _source_tree_fingerprint(payload: dict[str, Any]) -> str:
+    return str(payload.get("source_tree_fingerprint", "")).strip()
+
+
+def _selected_runnable_proposal_ids(mutation_proposals: dict[str, Any]) -> list[str]:
+    return [
+        str(proposal.get("proposal_id", "")).strip()
+        for proposal in _selected_runnable_proposals(mutation_proposals)
+        if str(proposal.get("proposal_id", "")).strip()
+    ]
+
+
+def _selected_runnable_proposals(mutation_proposals: dict[str, Any]) -> list[dict[str, Any]]:
+    proposals: list[dict[str, Any]] = []
+    for proposal in _list_field(mutation_proposals, "proposals"):
+        if isinstance(proposal, dict) and _proposal_is_runnable(proposal):
+            proposals.append(proposal)
+    return proposals
+
+
+def _readiness_runnable_proposal_ids(readiness: dict[str, Any]) -> list[str]:
+    queue = _dict_field(readiness, "queue")
+    return _list_strings(queue.get("runnable_proposal_ids"))
+
+
+def _readiness_mutation_proposal_currentness_check(
+    vault: Path,
+    mutation_proposals: dict[str, Any],
+    mutation_proposals_path: str,
+    readiness: dict[str, Any],
+    readiness_path: str,
+    *,
+    resume_completion: dict[str, Any],
+) -> dict[str, Any]:
+    resume_active = _as_bool(resume_completion.get("active"))
+    mutation_kind_status = _artifact_kind_check(
+        mutation_proposals,
+        "mutation_proposals_report",
+    )
+    readiness_kind_status = _artifact_kind_check(
+        readiness,
+        "auto_improve_readiness_report",
+    )
+    mutation_currentness = _currentness_status(mutation_proposals)
+    readiness_currentness = _currentness_status(readiness)
+    mutation_fingerprint = _source_tree_fingerprint(mutation_proposals)
+    readiness_fingerprint = _source_tree_fingerprint(readiness)
+    readiness_input_digest = str(
+        _dict_field(readiness, "input_fingerprints").get(
+            "mutation_proposal_report",
+            "",
+        )
+    ).strip()
+    observed_mutation_digest = _artifact_file_sha256(vault, mutation_proposals_path)
+    mutation_selected_ids = _selected_runnable_proposal_ids(mutation_proposals)
+    readiness_runnable_ids = _readiness_runnable_proposal_ids(readiness)
+
+    has_canonical_currentness = bool(mutation_currentness or readiness_currentness)
+    has_source_fingerprints = bool(mutation_fingerprint or readiness_fingerprint)
+    has_digest_binding = bool(readiness_input_digest)
+    has_queue_binding = bool(readiness_runnable_ids)
+    currentness_passed = (
+        not has_canonical_currentness
+        or (mutation_currentness == "current" and readiness_currentness == "current")
+    )
+    fingerprint_passed = (
+        not has_source_fingerprints
+        or (
+            bool(mutation_fingerprint)
+            and mutation_fingerprint == readiness_fingerprint
+        )
+    )
+    digest_passed = (
+        not has_digest_binding
+        or readiness_input_digest == observed_mutation_digest
+    )
+    queue_passed = (
+        not has_queue_binding
+        or mutation_selected_ids == readiness_runnable_ids
+    )
+    passed = resume_active or (
+        mutation_kind_status == "present"
+        and readiness_kind_status == "present"
+        and currentness_passed
+        and fingerprint_passed
+        and digest_passed
+        and queue_passed
+    )
+    return _check(
+        check_id="start_readiness_mutation_proposal_current",
+        status="pass" if passed else "fail",
+        severity=START_BLOCKER_SEVERITY,
+        expected=(
+            {"resume_completion_session": "already promoted and proposal-budget exhausted"}
+            if resume_active
+            else {
+                "mutation_proposals_artifact": "present",
+                "readiness_artifact": "present",
+                "currentness": "current when declared",
+                "source_tree_fingerprint": "matching when declared",
+                "readiness.input_fingerprints.mutation_proposal_report": (
+                    "current mutation proposal digest when declared"
+                ),
+                "readiness.queue.runnable_proposal_ids": (
+                    "selected runnable mutation proposal ids when declared"
+                ),
+            }
+        ),
+        observed={
+            "mutation_proposals_artifact": mutation_kind_status,
+            "readiness_artifact": readiness_kind_status,
+            "mutation_currentness": mutation_currentness,
+            "readiness_currentness": readiness_currentness,
+            "mutation_source_tree_fingerprint": mutation_fingerprint,
+            "readiness_source_tree_fingerprint": readiness_fingerprint,
+            "readiness_input_digest": readiness_input_digest,
+            "observed_mutation_digest": observed_mutation_digest,
+            "mutation_selected_runnable_proposal_ids": mutation_selected_ids,
+            "readiness_runnable_proposal_ids": readiness_runnable_ids,
+            "resume_completion": resume_completion,
+        },
+        reason=(
+            "resume is completing maintenance for an already-promoted proposal-budget-exhausted session"
+            if resume_active
+            else "readiness was generated from the current runnable mutation proposal queue"
+            if passed
+            else "run admission requires readiness and mutation proposal evidence to describe the same current runnable queue"
+        ),
+        next_action=(
+            "Proceed with resume; no new proposal selection is required."
+            if resume_active
+            else "Run `make goal-runtime-between-run-settle` or `make refresh-generated-core auto-improve-readiness`, then rerun admission."
+            if not passed
+            else "Proceed with run admission."
+        ),
+        evidence_paths=[
+            mutation_proposals_path,
+            readiness_path,
+            str(resume_completion.get("session_report", "")).strip(),
+        ],
+    )
+
+
+def _proposal_target_paths(proposal: dict[str, Any]) -> list[str]:
+    return list(
+        dict.fromkeys(
+            [
+                *_list_strings(proposal.get("primary_targets")),
+                *_list_strings(proposal.get("supporting_targets")),
+            ]
+        )
+    )
+
+
+def _proposal_declares_structural_complexity_repair(proposal: dict[str, Any]) -> bool:
+    fields = [
+        proposal.get("proposal_id", ""),
+        proposal.get("failure_mode", ""),
+        proposal.get("single_mechanism_scope", ""),
+        proposal.get("change_hypothesis", ""),
+        proposal.get("expected_binary_signal", ""),
+        *_list_strings(proposal.get("metrics_triggered")),
+    ]
+    budget_signal = _dict_field(proposal, "must_change_budget_signal")
+    fields.extend(str(value) for value in budget_signal.values())
+    text = "\n".join(str(field).lower() for field in fields)
+    return any(marker in text for marker in STRUCTURAL_COMPLEXITY_REPAIR_MARKERS)
+
+
+def _structural_complexity_budget_start_check(
+    vault: Path,
+    mutation_proposals: dict[str, Any],
+    mutation_proposals_path: str,
+    *,
+    context: RuntimeContext,
+    resume_completion: dict[str, Any],
+) -> dict[str, Any]:
+    resume_active = _as_bool(resume_completion.get("active"))
+    selected = _selected_runnable_proposals(mutation_proposals)
+    selected_ids = [
+        str(proposal.get("proposal_id", "")).strip()
+        for proposal in selected
+        if str(proposal.get("proposal_id", "")).strip()
+    ]
+    target_paths = list(
+        dict.fromkeys(
+            path
+            for proposal in selected
+            for path in _proposal_target_paths(proposal)
+            if path
+        )
+    )
+    structural_repair_allowed = any(
+        _proposal_declares_structural_complexity_repair(proposal)
+        for proposal in selected
+    )
+    report_status = "not_applicable"
+    target_count = 0
+    attention_count = 0
+    failure_count = 0
+    over_budget_targets: list[dict[str, Any]] = []
+    error = ""
+    if target_paths:
+        try:
+            budget_report = build_structural_complexity_budget_report(
+                vault,
+                context=context,
+                target_profiles=touched_target_profiles(
+                    DEFAULT_TARGET_PROFILES,
+                    target_paths,
+                ),
+            )
+            report_status = str(budget_report.get("status", "")).strip()
+            summary = _dict_field(budget_report, "summary")
+            target_count = _as_int(summary.get("target_count"))
+            attention_count = _as_int(summary.get("targets_with_attention_count"))
+            failure_count = _as_int(summary.get("targets_with_failure_count"))
+            over_budget_targets = [
+                {
+                    "path": str(target.get("path", "")).strip(),
+                    "status": str(target.get("status", "")).strip(),
+                    "over_budget_metrics": _list_strings(target.get("over_budget_metrics")),
+                    "function_budget_candidate_count": _as_int(
+                        target.get("function_budget_candidate_count")
+                    ),
+                }
+                for target in _list_field(budget_report, "targets")
+                if str(target.get("status", "")).strip() in {"warn", "fail"}
+            ]
+        except (OSError, TypeError, ValueError) as exc:
+            report_status = "fail"
+            error = str(exc)
+    passed = resume_active or not target_paths or (
+        report_status == "pass" or structural_repair_allowed
+    )
+    return _check(
+        check_id="start_structural_complexity_budget_clear",
+        status="pass" if passed else "fail",
+        severity=START_BLOCKER_SEVERITY,
+        expected=(
+            {"resume_completion_session": "already promoted and proposal-budget exhausted"}
+            if resume_active
+            else {
+                "selected_proposal_targets": "under touched structural complexity budget",
+                "structural_complexity_repair": "allowed to run as bounded repair",
+            }
+        ),
+        observed={
+            "selected_proposal_ids": selected_ids,
+            "target_paths": target_paths,
+            "structural_complexity_repair_allowed": structural_repair_allowed,
+            "status": report_status,
+            "target_count": target_count,
+            "targets_with_attention_count": attention_count,
+            "targets_with_failure_count": failure_count,
+            "over_budget_targets": over_budget_targets,
+            "error": error,
+            "resume_completion": resume_completion,
+        },
+        reason=(
+            "resume is completing maintenance for an already-promoted proposal-budget-exhausted session"
+            if resume_active
+            else "no selected proposal targets require an early structural budget check"
+            if not target_paths
+            else "selected proposal is an explicit bounded structural complexity repair"
+            if structural_repair_allowed and report_status != "pass"
+            else "selected proposal targets are within touched structural complexity budget"
+            if passed
+            else "selected proposal touches over-budget runtime surface without being scoped as a structural complexity repair"
+        ),
+        next_action=(
+            "Proceed with resume; no new proposal selection is required."
+            if resume_active
+            else "Proceed with run admission."
+            if passed
+            else "Split the selected work into a structural complexity repair or choose a smaller target slice, then rerun admission."
+        ),
+        evidence_paths=[mutation_proposals_path],
     )
 
 
@@ -489,8 +861,21 @@ def _readiness_learning_uncertain_check(
     kind_status = _artifact_kind_check(readiness, "auto_improve_readiness_report")
     learning = _dict_field(readiness, "learning_readiness")
     learning_status = str(learning.get("status", "")).strip()
-    gate_effect = str(learning.get("gate_effect", "")).strip()
-    review_required = gate_effect == "review_required" or learning_status == "learning_uncertain"
+    raw_gate_effect = str(learning.get("gate_effect", "")).strip()
+    gate_effect = (
+        canonical_gate_effect(
+            raw_gate_effect,
+            active_default=GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
+        )
+        if raw_gate_effect
+        else GATE_EFFECT_OPERATOR_REVIEW_REQUIRED
+        if learning_status == "learning_uncertain"
+        else GATE_EFFECT_NONE
+    )
+    review_required = (
+        gate_effect == GATE_EFFECT_OPERATOR_REVIEW_REQUIRED
+        or learning_status == "learning_uncertain"
+    )
     contract_authorized = _contract_authorizes_learning_uncertain(contract)
     resume_active = _as_bool(resume_completion.get("active"))
     passed = resume_active or kind_status != "present" or not review_required or (
@@ -504,7 +889,7 @@ def _readiness_learning_uncertain_check(
             {"resume_completion_session": "already promoted and proposal-budget exhausted"}
             if resume_active
             else {
-                "learning_readiness.gate_effect": "not review_required or explicitly authorized",
+                "learning_readiness.gate_effect": "not operator_review_required or explicitly authorized",
                 "execution_policy.learning_uncertain.authorization_source": "codex_goal_contract",
             }
         ),
@@ -532,6 +917,7 @@ def _readiness_learning_uncertain_check(
             else "Set GOAL_ALLOW_LEARNING_UNCERTAIN=1 or refresh the file-backed goal contract with execution_policy.learning_uncertain authorization before starting the run."
         ),
         evidence_paths=[readiness_path, contract_path, str(resume_completion.get("session_report", "")).strip()],
+        gate_effect=GATE_EFFECT_NONE if passed else GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
     )
 
 
@@ -929,6 +1315,21 @@ def build_report(
             active_request.mutation_proposals_report_path,
             resume_completion=resume_completion,
         ),
+        _readiness_mutation_proposal_currentness_check(
+            vault,
+            mutation_proposals,
+            active_request.mutation_proposals_report_path,
+            readiness,
+            active_request.readiness_report_path,
+            resume_completion=resume_completion,
+        ),
+        _structural_complexity_budget_start_check(
+            vault,
+            mutation_proposals,
+            active_request.mutation_proposals_report_path,
+            context=context,
+            resume_completion=resume_completion,
+        ),
         _readiness_execution_check(
             readiness,
             active_request.readiness_report_path,
@@ -958,6 +1359,7 @@ def build_report(
             else []
         ),
         _readiness_promotion_check(readiness, active_request.readiness_report_path),
+        _worktree_promotion_check(guard, active_request.goal_worktree_guard_report_path),
         _remediation_backlog_check(remediation_backlog, active_request.remediation_backlog_report_path),
         _durable_goal_authority_check(
             contract=goal_contract,

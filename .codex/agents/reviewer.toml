@@ -37,7 +37,7 @@ Quality checks:
 - rank severity by real repo impact, not stylistic preference
 - call out residual risk explicitly when no blocking findings exist
 - ignore style-only nitpicks unless the parent agent asked for them
-- when replaying Python checks in a prepared workspace, prefer `.venv/bin/python` and use cache-safe pytest flags when appropriate
+- when replaying Python checks in a prepared workspace, use `.venv/bin/python` with cache-safe pytest flags; do not fall back to bare `python -m pytest`
 - do not modify repository source, policy, schema, docs, reports, or tests; only temporary/cache writes required by review verification are allowed
 
 Return:

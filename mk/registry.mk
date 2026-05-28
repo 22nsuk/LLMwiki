@@ -6,6 +6,7 @@ RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_OUT ?= ops/reports/raw-registry-cross-envi
 RAW_REGISTRY_PREFLIGHT_CHECK_OUT ?= tmp/raw-registry-preflight-report-check.json
 RAW_REGISTRY_PREFLIGHT_REPRODUCIBILITY_CHECK_OUT ?= tmp/raw-registry-preflight-reproducibility-check.json
 RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_CHECK_OUT ?= tmp/raw-registry-cross-environment-matrix-check.json
+RAW_REGISTRY_EXPORT_CHECK_OUT ?= tmp/raw-registry-export-check.json
 RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_LINUX_OUT ?= ops/reports/raw-registry-cross-environment-matrix-linux-c-utf8.json
 RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_WINDOWS_OUT ?= ops/reports/raw-registry-cross-environment-matrix-windows-utf8.json
 RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_MACOS_OUT ?= ops/reports/raw-registry-cross-environment-matrix-macos-utf8.json
@@ -17,7 +18,7 @@ RAW_INTAKE_ROUTE_PROPOSAL_OUT ?= tmp/raw-intake-route-proposal-report.json
 RAW_INTAKE_SOURCE_QUALITY_OUT ?= tmp/raw-intake-source-quality-report.json
 RAW_INTAKE_ABSORPTION_CLOSEOUT_OUT ?= tmp/raw-intake-absorption-closeout-report.json
 
-.PHONY: registry-preflight registry-preflight-check raw-registry-cross-environment-matrix raw-registry-cross-environment-profile-matrices raw-registry-cross-environment-evidence-bundle raw-registry-cross-environment-evidence-bundle-check raw-intake-route-proposal raw-intake-source-quality raw-intake-absorption-closeout raw-registry-export manifest sanitize-runs 
+.PHONY: registry-preflight registry-preflight-check raw-registry-cross-environment-matrix raw-registry-cross-environment-profile-matrices raw-registry-cross-environment-evidence-bundle raw-registry-cross-environment-evidence-bundle-check raw-intake-route-proposal raw-intake-source-quality raw-intake-absorption-closeout raw-registry-export raw-registry-export-check manifest sanitize-runs
 
 registry-preflight:
 	$(PYTHON) -m ops.scripts.raw_registry_preflight --vault "$(VAULT)" --out "$(RAW_REGISTRY_PREFLIGHT_OUT)" --reproducibility-out "$(RAW_REGISTRY_PREFLIGHT_REPRODUCIBILITY_OUT)"
@@ -26,6 +27,7 @@ registry-preflight:
 registry-preflight-check:
 	$(PYTHON) -m ops.scripts.raw_registry_preflight --vault "$(VAULT)" --out "$(RAW_REGISTRY_PREFLIGHT_CHECK_OUT)" --reproducibility-out "$(RAW_REGISTRY_PREFLIGHT_REPRODUCIBILITY_CHECK_OUT)"
 	$(PYTHON) -m ops.scripts.raw_registry_cross_environment_matrix --vault "$(VAULT)" --stored-report "$(RAW_REGISTRY_PREFLIGHT_CHECK_OUT)" --out "$(RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_CHECK_OUT)" --require-live
+	$(MAKE) raw-registry-export-check
 
 raw-registry-cross-environment-matrix:
 	$(PYTHON) -m ops.scripts.raw_registry_cross_environment_matrix --vault "$(VAULT)" --stored-report "$(RAW_REGISTRY_PREFLIGHT_OUT)" --out "$(RAW_REGISTRY_CROSS_ENVIRONMENT_MATRIX_OUT)"
@@ -52,6 +54,9 @@ raw-intake-absorption-closeout:
 	$(PYTHON) -m ops.scripts.raw_intake_route_proposal --vault "$(VAULT)" --matrix "$(RAW_INTAKE_ABSORPTION_MATRIX)" --out "$(RAW_INTAKE_ABSORPTION_CLOSEOUT_OUT)" --mode absorption_closeout --fail-on-fail
 raw-registry-export:
 	$(PYTHON) -m ops.scripts.raw_registry_export --vault "$(VAULT)" --out "$(RAW_REGISTRY_OUT)"
+
+raw-registry-export-check:
+	$(PYTHON) -m ops.scripts.raw_registry_export --vault "$(VAULT)" --out "$(RAW_REGISTRY_OUT)" --check --check-out "$(RAW_REGISTRY_EXPORT_CHECK_OUT)"
 
 manifest:
 	$(PYTHON) -m ops.scripts.wiki_manifest --vault "$(VAULT)" --out "$(MANIFEST_OUT)"

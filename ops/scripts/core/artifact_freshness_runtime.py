@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import fnmatch
 import hashlib
 import json
 import sys
@@ -16,6 +15,27 @@ from typing import Any, TextIO
 from .artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     write_schema_backed_report,
+)
+from .artifact_freshness_debt_runtime import (
+    MTIME_SENSITIVE_ISSUES,
+    OPERATIONAL_ATTENTION_ISSUES,
+    ROOT_EPHEMERAL_PATTERNS,
+    STABLE_CONTRACT_ISSUES,
+    artifact_freshness_gate_effect,
+    artifact_freshness_status,
+    artifact_record_gate_effect,
+    contract_issue_class,
+    debt_queues,
+    is_historical_schema_drift,
+    is_run_local_artifact,
+    matching_issues,
+    mtime_drift_is_advisory_only,
+    owner_surface,
+    owner_surface_rollup,
+    recommended_next_action,
+    report_next_action,
+    top_debt,
+    top_debt_files,
 )
 from .output_runtime import display_path
 from .policy_runtime import load_policy, report_path
@@ -34,12 +54,6 @@ DEFAULT_OUT = "ops/reports/artifact-freshness-report.json"
 PRODUCER = "ops.scripts.artifact_freshness_runtime"
 SOURCE_COMMAND = "python -m ops.scripts.artifact_freshness_runtime"
 ARTIFACT_ENVELOPE_SCHEMA_PATH = "ops/schemas/artifact-envelope.schema.json"
-ROOT_EPHEMERAL_PATTERNS = [
-    "pytest_*.log",
-    "pytest_*.xml",
-    "pytest_*_output.txt",
-    "pytest_*_requested*.txt",
-]
 JSON_ARTIFACT_GLOBS = [
     "ops/reports/**/*.json",
     "ops/operator/**/*.json",
@@ -73,44 +87,13 @@ ENVELOPE_REQUIRED_FIELDS = [
     "encoding",
     "currentness",
 ]
-TOP_DEBT_LIMIT = 10
-TOP_DEBT_FILE_LIMIT = 10
-DEBT_QUEUE_PATH_LIMIT = 20
-OWNER_SURFACE_PREFIXES = (
-    ("ops/reports/", "ops_reports"),
-    ("ops/operator/", "operator_reports"),
-    ("runs/", "runs"),
-    ("external-reports/", "external_reports"),
-)
 EMBEDDED_ARTIFACT_ENVELOPE_PROPERTY = "urn:openai:artifact-envelope"
-STABLE_CONTRACT_ISSUES = (
-    "missing_artifact_envelope",
-    "unknown_currentness",
-    "missing_schema",
-    "schema_validation_failed",
-    "schema_unavailable",
-)
-MTIME_SENSITIVE_ISSUES = (
-    "generated_at_older_than_file_mtime",
-)
-TEST_TARGET_FINGERPRINT_ISSUES = (
-    "test_target_fingerprint_mismatch",
-    "test_target_missing",
-)
-SOURCE_TREE_FINGERPRINT_ISSUES = (
-    "source_tree_fingerprint_mismatch",
-    "source_tree_fingerprint_unknown",
-)
-OPERATIONAL_ATTENTION_ISSUES = TEST_TARGET_FINGERPRINT_ISSUES + SOURCE_TREE_FINGERPRINT_ISSUES
 MTIME_SOURCES = (
     "filesystem",
     "zip_info",
     "embedded_currentness",
 )
 PROGRESS_FORMATS = ("none", "jsonl")
-ADVISORY_ONLY_MTIME_DRIFT_PATHS = {
-    "ops/reports/generated-artifact-index.json",
-}
 SCHEMALESS_HISTORICAL_BOOTSTRAP_REPORTS = {
     "ops/reports/eval-initial-2026-04-12.json",
     "ops/reports/lint-initial-2026-04-12.json",
@@ -732,15 +715,6 @@ def _test_target_fingerprint_issues(vault: Path, payload: dict[str, Any]) -> lis
     return issues
 
 
-def _owner_surface(rel_path: str) -> str:
-    for prefix, surface in OWNER_SURFACE_PREFIXES:
-        if rel_path.startswith(prefix):
-            return surface
-    if any(fnmatch.fnmatch(rel_path, pattern) for pattern in ROOT_EPHEMERAL_PATTERNS):
-        return "root_ephemeral"
-    return "repo_root"
-
-
 def _requires_source_tree_fingerprint_check(rel_path: str) -> bool:
     if not rel_path.startswith("ops/reports/"):
         return False
@@ -936,6 +910,19 @@ def _schema_contract(
                 "reason": "artifact declares a schema but current payload fails validation",
                 "recommended_next_action": "regenerate_artifact_from_current_schema",
             }
+        if is_historical_schema_drift(
+            rel_path=rel_path,
+            schema_validation_status=schema_validation_status,
+        ):
+            return {
+                "status": "invalid",
+                "classification": "historical_run_schema_drift",
+                "reason": (
+                    "run-local artifact is retained as historical audit evidence "
+                    "but predates the current schema contract"
+                ),
+                "recommended_next_action": "archive_or_classify_historical_run_artifact",
+            }
         if schema_validation_status == "schema_unavailable":
             return {
                 "status": "unavailable",
@@ -998,58 +985,6 @@ def _schema_contract(
         "reason": "JSON artifact lacks a declared schema or noncanonical classification",
         "recommended_next_action": "add_schema_or_exclude_noncanonical_json",
     }
-
-
-def _recommended_next_action(issues: list[str], schema_validation_status: str) -> str:
-    if any(issue.startswith(("read_failed", "utf8_decode_failed", "json_decode_failed")) for issue in issues):
-        return "repair_or_remove_unreadable_artifact"
-    if schema_validation_status == "fail":
-        return "regenerate_artifact_from_current_schema"
-    if "missing_artifact_envelope" in issues:
-        return "backfill_artifact_envelope"
-    if "missing_schema" in issues or schema_validation_status == "schema_unavailable":
-        return "add_schema_or_exclude_noncanonical_json"
-    if _matching_issues(issues, TEST_TARGET_FINGERPRINT_ISSUES):
-        return "regenerate_test_execution_summary"
-    if "source_tree_fingerprint_mismatch" in issues:
-        return "regenerate_canonical_report"
-    if "source_tree_fingerprint_unknown" in issues:
-        return "regenerate_canonical_report_with_source_tree_fingerprint"
-    if "generated_at_older_than_file_mtime" in issues:
-        return "regenerate_artifact_or_refresh_timestamp"
-    if "missing_generated_at" in issues:
-        return "backfill_generated_at_or_mark_legacy_noncanonical"
-    if "unknown_currentness" in issues:
-        return "backfill_currentness_metadata"
-    return "none"
-
-
-def _matching_issues(issues: list[str], prefixes: tuple[str, ...]) -> list[str]:
-    return sorted(issue for issue in issues if issue.startswith(prefixes))
-
-
-def _mtime_drift_is_advisory_only(rel_path: str) -> bool:
-    return rel_path in ADVISORY_ONLY_MTIME_DRIFT_PATHS
-
-
-def _contract_issue_class(
-    *,
-    issues: list[str],
-    stable_contract_issues: list[str],
-    mtime_sensitive_issues: list[str],
-    schema_validation_status: str,
-) -> str:
-    if any(issue.startswith(("read_failed", "utf8_decode_failed", "json_decode_failed")) for issue in issues):
-        return "artifact_unreadable"
-    if schema_validation_status == "fail":
-        return "stable_contract_failure"
-    if stable_contract_issues:
-        return "stable_contract_debt"
-    if mtime_sensitive_issues:
-        return "mtime_sensitive_attention"
-    if issues:
-        return "operational_attention"
-    return "clean"
 
 
 def _safe_to_backfill(
@@ -1208,6 +1143,7 @@ def _artifact_record_mtime_state(
 
 def _artifact_record_schema_state(
     vault: Path,
+    rel_path: str,
     payload: dict[str, Any],
     *,
     noncanonical_archive: bool,
@@ -1224,6 +1160,8 @@ def _artifact_record_schema_state(
         )
         if schema_validation_status == "fail":
             issues.append("schema_validation_failed")
+            if is_run_local_artifact(rel_path):
+                schema_validation_status = "historical_schema_drift"
         elif schema_validation_status == "schema_unavailable":
             issues.append("schema_unavailable")
     return schema_validation_status, schema_validation_errors, issues
@@ -1262,12 +1200,13 @@ def _json_artifact_record(
         mtime_source=mtime_source,
         zip_mtimes=zip_mtimes,
     )
-    if mtime_status == "stale" and not _mtime_drift_is_advisory_only(rel_path):
+    if mtime_status == "stale" and not mtime_drift_is_advisory_only(rel_path):
         issues.append("generated_at_older_than_file_mtime")
     if not noncanonical_archive:
         issues.extend(_test_target_fingerprint_issues(vault, normalized_payload))
     schema_validation_status, schema_validation_errors, schema_issues = _artifact_record_schema_state(
         vault,
+        rel_path,
         payload,
         noncanonical_archive=noncanonical_archive,
         freshness_context=freshness_context,
@@ -1297,12 +1236,12 @@ def _json_artifact_record(
     ) and source_tree_fingerprint_status != "stale"
     mtime_sensitive = mtime_status == "stale"
     issues = sorted(set(issues))
-    stable_contract_issues = _matching_issues(issues, STABLE_CONTRACT_ISSUES)
-    mtime_sensitive_issues = sorted(set(mtime_sensitive_issues + _matching_issues(issues, MTIME_SENSITIVE_ISSUES)))
+    stable_contract_issues = matching_issues(issues, STABLE_CONTRACT_ISSUES)
+    mtime_sensitive_issues = sorted(set(mtime_sensitive_issues + matching_issues(issues, MTIME_SENSITIVE_ISSUES)))
 
     return {
         "path": rel_path,
-        "owner_surface": _owner_surface(rel_path),
+        "owner_surface": owner_surface(rel_path),
         "artifact_kind": str(normalized_payload.get("artifact_kind", "json_artifact")).strip() or "json_artifact",
         "utf8_ok": utf8_ok,
         "json_ok": json_ok,
@@ -1322,12 +1261,19 @@ def _json_artifact_record(
         "schema_validation_status": schema_validation_status,
         "schema_validation_errors": schema_validation_errors,
         "safe_to_backfill": safe_to_backfill,
-        "recommended_next_action": _recommended_next_action(issues, schema_validation_status),
-        "contract_issue_class": _contract_issue_class(
+        "recommended_next_action": recommended_next_action(issues, schema_validation_status),
+        "contract_issue_class": contract_issue_class(
+            rel_path=rel_path,
             issues=issues,
             stable_contract_issues=stable_contract_issues,
             mtime_sensitive_issues=mtime_sensitive_issues,
             schema_validation_status=schema_validation_status,
+        ),
+        "gate_effect": artifact_record_gate_effect(
+            rel_path=rel_path,
+            issues=issues,
+            stable_contract_issues=stable_contract_issues,
+            mtime_sensitive_issues=mtime_sensitive_issues,
         ),
         "stable_contract_issues": stable_contract_issues,
         "mtime_sensitive_issues": mtime_sensitive_issues,
@@ -1338,327 +1284,6 @@ def _json_artifact_record(
         ),
         "issues": issues,
     }
-
-
-def _status(
-    *,
-    root_ephemeral_count: int,
-    non_utf8_count: int,
-    missing_envelope_count: int,
-    missing_schema_count: int,
-    stale_count: int,
-    unknown_currentness_count: int,
-    schema_invalid_count: int,
-    schema_unavailable_count: int,
-) -> str:
-    if root_ephemeral_count or non_utf8_count or schema_invalid_count:
-        return "fail"
-    if missing_envelope_count or missing_schema_count or stale_count or unknown_currentness_count or schema_unavailable_count:
-        return "attention"
-    return "pass"
-
-
-def _issue_action(issue: str) -> str:
-    return _recommended_next_action([issue], "fail" if issue == "schema_validation_failed" else "pass")
-
-
-def _issue_priority(issue: str) -> int:
-    ordered = {
-        "root_ephemeral_artifact": 0,
-        "utf8_decode_failed": 1,
-        "read_failed": 1,
-        "json_decode_failed": 2,
-        "json_root_not_object": 2,
-        "schema_validation_failed": 3,
-        "missing_artifact_envelope": 4,
-        "missing_schema": 5,
-        "schema_unavailable": 6,
-        "source_tree_fingerprint_mismatch": 7,
-        "source_tree_fingerprint_unknown": 7,
-        "generated_at_older_than_file_mtime": 7,
-        "test_target_fingerprint_mismatch": 7,
-        "test_target_missing": 7,
-        "unknown_currentness": 8,
-        "missing_generated_at": 9,
-    }
-    for prefix, priority in ordered.items():
-        if issue.startswith(prefix):
-            return priority
-    return 100
-
-
-def _primary_issue(issues: list[str]) -> str:
-    return min(issues, key=lambda issue: (_issue_priority(issue), issue)) if issues else "none"
-
-
-def _top_debt(
-    artifact_records: list[dict[str, Any]],
-    root_ephemeral: list[dict[str, str]],
-    non_utf8: list[dict[str, str]],
-) -> list[dict[str, Any]]:
-    by_issue: dict[str, dict[str, Any]] = {}
-
-    def add(issue: str, owner_surface: str, *, safe_to_backfill: bool, mtime_sensitive: bool) -> None:
-        item = by_issue.setdefault(
-            issue,
-            {
-                "issue": issue,
-                "count": 0,
-                "owner_surface_counts": {},
-                "safe_to_backfill_count": 0,
-                "mtime_sensitive_count": 0,
-                "recommended_next_action": _issue_action(issue),
-            },
-        )
-        item["count"] += 1
-        item["owner_surface_counts"][owner_surface] = item["owner_surface_counts"].get(owner_surface, 0) + 1
-        if safe_to_backfill:
-            item["safe_to_backfill_count"] += 1
-        if mtime_sensitive:
-            item["mtime_sensitive_count"] += 1
-
-    for record in artifact_records:
-        for issue in record["issues"]:
-            add(
-                issue,
-                record["owner_surface"],
-                safe_to_backfill=bool(record["safe_to_backfill"]),
-                mtime_sensitive=bool(record["mtime_sensitive"]),
-            )
-    for item in root_ephemeral:
-        add("root_ephemeral_artifact", _owner_surface(item["path"]), safe_to_backfill=False, mtime_sensitive=False)
-    for item in non_utf8:
-        add(item["issue"], _owner_surface(item["path"]), safe_to_backfill=False, mtime_sensitive=False)
-
-    return sorted(
-        by_issue.values(),
-        key=lambda item: (-item["count"], item["issue"]),
-    )[:TOP_DEBT_LIMIT]
-
-
-def _top_debt_files(
-    artifact_records: list[dict[str, Any]],
-    root_ephemeral: list[dict[str, str]],
-    non_utf8: list[dict[str, str]],
-) -> list[dict[str, Any]]:
-    items: list[dict[str, Any]] = []
-    for record in artifact_records:
-        issues = list(record["issues"])
-        if not issues:
-            continue
-        primary_issue = _primary_issue(issues)
-        items.append(
-            {
-                "path": record["path"],
-                "owner_surface": record["owner_surface"],
-                "primary_issue": primary_issue,
-                "issues": issues,
-                "recommended_next_action": record["recommended_next_action"],
-                "expected_debt_reduction": len(issues),
-                "safe_to_backfill": bool(record["safe_to_backfill"]),
-                "mtime_sensitive": bool(record["mtime_sensitive"]),
-            }
-        )
-    for item in root_ephemeral:
-        items.append(
-            {
-                "path": item["path"],
-                "owner_surface": _owner_surface(item["path"]),
-                "primary_issue": "root_ephemeral_artifact",
-                "issues": ["root_ephemeral_artifact"],
-                "recommended_next_action": "remove_root_ephemeral_artifact",
-                "expected_debt_reduction": 1,
-                "safe_to_backfill": False,
-                "mtime_sensitive": False,
-            }
-        )
-    for item in non_utf8:
-        items.append(
-            {
-                "path": item["path"],
-                "owner_surface": _owner_surface(item["path"]),
-                "primary_issue": item["issue"],
-                "issues": [item["issue"]],
-                "recommended_next_action": "repair_non_utf8_artifact",
-                "expected_debt_reduction": 1,
-                "safe_to_backfill": False,
-                "mtime_sensitive": False,
-            }
-        )
-    return sorted(
-        items,
-        key=lambda item: (
-            _issue_priority(str(item["primary_issue"])),
-            not bool(item["safe_to_backfill"]),
-            bool(item["mtime_sensitive"]),
-            -int(item["expected_debt_reduction"]),
-            str(item["owner_surface"]),
-            str(item["path"]),
-        ),
-    )[:TOP_DEBT_FILE_LIMIT]
-
-
-def _owner_surface_rollup(artifact_records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    surfaces: dict[str, dict[str, Any]] = {}
-    for record in artifact_records:
-        surface = record["owner_surface"]
-        item = surfaces.setdefault(
-            surface,
-            {
-                "surface": surface,
-                "artifact_count": 0,
-                "issue_count": 0,
-                "safe_to_backfill_count": 0,
-                "mtime_sensitive_count": 0,
-                "recommended_next_action": "none",
-            },
-        )
-        item["artifact_count"] += 1
-        item["issue_count"] += len(record["issues"])
-        if record["safe_to_backfill"]:
-            item["safe_to_backfill_count"] += 1
-        if record["mtime_sensitive"]:
-            item["mtime_sensitive_count"] += 1
-        if item["recommended_next_action"] == "none" and record["recommended_next_action"] != "none":
-            item["recommended_next_action"] = record["recommended_next_action"]
-    return sorted(surfaces.values(), key=lambda item: (-item["issue_count"], item["surface"]))
-
-
-def _debt_queue_path(record: dict[str, Any], issues: list[str]) -> dict[str, Any]:
-    return {
-        "path": record["path"],
-        "owner_surface": record["owner_surface"],
-        "primary_issue": _primary_issue(issues),
-        "issues": issues,
-        "safe_to_backfill": bool(record["safe_to_backfill"]),
-        "mtime_sensitive": bool(record["mtime_sensitive"]),
-    }
-
-
-def _debt_queue(
-    *,
-    queue_id: str,
-    records: list[dict[str, Any]],
-    issue_selector: str,
-    exit_condition: str,
-    recommended_next_action: str,
-) -> dict[str, Any]:
-    paths: list[dict[str, Any]] = []
-    for record in records:
-        if issue_selector == "stable":
-            issues = list(record["stable_contract_issues"])
-        elif issue_selector == "mtime":
-            issues = list(record["mtime_sensitive_issues"])
-        else:
-            issues = list(record["issues"])
-        if not issues:
-            continue
-        paths.append(_debt_queue_path(record, issues))
-    paths = sorted(paths, key=lambda item: (str(item["owner_surface"]), str(item["path"])))
-    issue_count = sum(len(item["issues"]) for item in paths)
-    return {
-        "queue": queue_id,
-        "status": "open" if paths else "complete",
-        "item_count": len(paths),
-        "issue_count": issue_count,
-        "safe_to_backfill_count": sum(1 for item in paths if item["safe_to_backfill"]),
-        "mtime_sensitive_count": sum(1 for item in paths if item["mtime_sensitive"]),
-        "exit_condition": exit_condition,
-        "recommended_next_action": recommended_next_action if paths else "none",
-        "paths": paths[:DEBT_QUEUE_PATH_LIMIT],
-    }
-
-
-def _debt_queues(artifact_records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    runs_historical = [
-        record
-        for record in artifact_records
-        if record["owner_surface"] == "runs" and record["stable_contract_issues"]
-    ]
-    ops_reports = [
-        record
-        for record in artifact_records
-        if record["owner_surface"] == "ops_reports" and record["stable_contract_issues"]
-    ]
-    operator_reports = [
-        record
-        for record in artifact_records
-        if record["owner_surface"] == "operator_reports" and record["stable_contract_issues"]
-    ]
-    mtime_sensitive = [
-        record
-        for record in artifact_records
-        if record["mtime_sensitive_issues"]
-    ]
-    return [
-        _debt_queue(
-            queue_id="runs_historical_archive",
-            records=runs_historical,
-            issue_selector="stable",
-            exit_condition=(
-                "Run-local historical JSON artifacts are archived, classified as noncanonical, "
-                "or gain schema-backed artifact envelope/currentness metadata."
-            ),
-            recommended_next_action="archive_or_classify_historical_run_artifacts",
-        ),
-        _debt_queue(
-            queue_id="ops_reports_producer_refresh",
-            records=ops_reports,
-            issue_selector="stable",
-            exit_condition=(
-                "Ops report producers emit schema-backed current artifacts, or legacy reports move "
-                "to an archive namespace with explicit retention metadata."
-            ),
-            recommended_next_action="refresh_ops_report_producers",
-        ),
-        _debt_queue(
-            queue_id="operator_reports_producer_refresh",
-            records=operator_reports,
-            issue_selector="stable",
-            exit_condition=(
-                "Operator reports emit schema-backed current artifacts, or move to an archive namespace "
-                "with explicit retention metadata."
-            ),
-            recommended_next_action="refresh_operator_report_producers",
-        ),
-        _debt_queue(
-            queue_id="mtime_sensitive_regeneration",
-            records=mtime_sensitive,
-            issue_selector="mtime",
-            exit_condition=(
-                "Mtime-sensitive artifacts are regenerated so generated_at and test target fingerprints "
-                "match the current source tree, or are marked archived with archive retention."
-            ),
-            recommended_next_action="regenerate_mtime_sensitive_artifacts",
-        ),
-    ]
-
-
-def _report_next_action(
-    *,
-    root_ephemeral_count: int,
-    non_utf8_count: int,
-    schema_invalid_count: int,
-    missing_envelope_count: int,
-    missing_schema_count: int,
-    stale_count: int,
-    unknown_currentness_count: int,
-) -> str:
-    if root_ephemeral_count:
-        return "remove_root_ephemeral_artifacts"
-    if non_utf8_count:
-        return "repair_non_utf8_artifacts"
-    if schema_invalid_count:
-        return "regenerate_schema_invalid_artifacts"
-    if missing_envelope_count:
-        return "backfill_artifact_envelopes"
-    if missing_schema_count:
-        return "add_missing_artifact_schemas"
-    if stale_count:
-        return "regenerate_stale_artifacts"
-    if unknown_currentness_count:
-        return "backfill_currentness_metadata"
-    return "none"
 
 
 def _collect_artifact_freshness_scan_inputs(
@@ -1785,10 +1410,10 @@ def _summarize_artifact_freshness_counts(
         operational_attention_artifact_count=sum(
             1
             for record in artifact_records
-            if _matching_issues(record["issues"], OPERATIONAL_ATTENTION_ISSUES)
+            if matching_issues(record["issues"], OPERATIONAL_ATTENTION_ISSUES)
         ),
         operational_attention_issue_count=sum(
-            len(_matching_issues(record["issues"], OPERATIONAL_ATTENTION_ISSUES))
+            len(matching_issues(record["issues"], OPERATIONAL_ATTENTION_ISSUES))
             for record in artifact_records
         ),
     )
@@ -1830,7 +1455,7 @@ def _assemble_artifact_freshness_payload(
     source_command: str,
     mtime_source: str,
 ) -> dict[str, Any]:
-    report_status = _status(
+    report_status = artifact_freshness_status(
         root_ephemeral_count=len(scan_inputs.root_ephemeral),
         non_utf8_count=len(scan_inputs.non_utf8),
         missing_envelope_count=counts.missing_envelope_count,
@@ -1849,7 +1474,10 @@ def _assemble_artifact_freshness_payload(
         source_command=source_command,
         resolved_policy_path=scan_inputs.resolved_policy_path,
         schema_path=ARTIFACT_FRESHNESS_REPORT_SCHEMA_PATH,
-        source_paths=["ops/scripts/artifact_freshness_runtime.py"],
+        source_paths=[
+            "ops/scripts/artifact_freshness_runtime.py",
+            "ops/scripts/artifact_freshness_debt_runtime.py",
+        ],
         file_inputs=(
             {"zip_metadata": scan_inputs.resolved_zip_metadata_path}
             if scan_inputs.resolved_zip_metadata_path is not None
@@ -1874,7 +1502,12 @@ def _assemble_artifact_freshness_payload(
             else ""
         ),
         "status": report_status,
-        "recommended_next_action": _report_next_action(
+        "gate_effect": artifact_freshness_gate_effect(
+            root_ephemeral=scan_inputs.root_ephemeral,
+            non_utf8=scan_inputs.non_utf8,
+            artifact_records=scan_inputs.artifact_records,
+        ),
+        "recommended_next_action": report_next_action(
             root_ephemeral_count=len(scan_inputs.root_ephemeral),
             non_utf8_count=len(scan_inputs.non_utf8),
             schema_invalid_count=counts.schema_invalid_count,
@@ -1888,18 +1521,18 @@ def _assemble_artifact_freshness_payload(
         and not scan_inputs.non_utf8,
         "mtime_sensitive": counts.mtime_sensitive_count > 0,
         "summary": _artifact_freshness_summary_payload(scan_inputs, counts),
-        "top_debt": _top_debt(
+        "top_debt": top_debt(
             scan_inputs.artifact_records,
             scan_inputs.root_ephemeral,
             scan_inputs.non_utf8,
         ),
-        "top_debt_files": _top_debt_files(
+        "top_debt_files": top_debt_files(
             scan_inputs.artifact_records,
             scan_inputs.root_ephemeral,
             scan_inputs.non_utf8,
         ),
-        "debt_queues": _debt_queues(scan_inputs.artifact_records),
-        "owner_surface": _owner_surface_rollup(scan_inputs.artifact_records),
+        "debt_queues": debt_queues(scan_inputs.artifact_records),
+        "owner_surface": owner_surface_rollup(scan_inputs.artifact_records),
         "phase_timings": scan_inputs.phase_timings,
         "root_ephemeral_patterns": ROOT_EPHEMERAL_PATTERNS,
         "root_ephemeral_artifacts": scan_inputs.root_ephemeral,

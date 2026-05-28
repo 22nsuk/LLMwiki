@@ -1181,7 +1181,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
                         "id": "learning_blocked_by_review_required",
                         "accepted_risk": False,
                         "severity": "blocker",
-                        "gate_effect": "review_required",
+                        "gate_effect": "operator_review_required",
                         "reason": "learning readiness still requires review",
                         "required_evidence": ["learning_readiness.likely_to_learn must be true"],
                     }
@@ -1225,7 +1225,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
                         "id": "learning_blocked_by_review_required",
                         "accepted_risk": False,
                         "severity": "blocker",
-                        "gate_effect": "review_required",
+                        "gate_effect": "operator_review_required",
                         "reason": "learning readiness still requires review",
                         "required_evidence": ["learning_readiness.likely_to_learn must be true"],
                     }
@@ -1269,7 +1269,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
                         "status": "open",
                         "severity": "blocker",
                         "accepted_risk": False,
-                        "gate_effect": "active",
+                        "gate_effect": "blocks_execution",
                         "source_status": "warn",
                         "reason": "no runnable proposal is available",
                         "signal_ids": [],
@@ -1325,7 +1325,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
                         "status": "open",
                         "severity": "blocker",
                         "accepted_risk": False,
-                        "gate_effect": "active",
+                        "gate_effect": "blocks_promotion",
                         "source_status": "fail",
                         "reason": f"{blocker_id} fixture",
                         "signal_ids": [],
@@ -1370,7 +1370,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
                         "id": "learning_blocked_by_review_required",
                         "accepted_risk": False,
                         "severity": "blocker",
-                        "gate_effect": "review_required",
+                        "gate_effect": "operator_review_required",
                         "reason": "learning readiness still requires review",
                         "required_evidence": ["learning_readiness.likely_to_learn must be true"],
                     }
@@ -1400,7 +1400,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
         self.assertEqual(report["learning_readiness_signoff"]["linked_blocker_id"], "learning_blocked_by_review_required")
         accepted = {item["code"]: item for item in report["accepted_risks"]}
         self.assertIn("learning_blocked_by_review_required", accepted)
-        self.assertEqual(accepted["learning_blocked_by_review_required"]["gate_effect"], "accepted_risk")
+        self.assertEqual(accepted["learning_blocked_by_review_required"]["gate_effect"], "advisory")
         self.assertEqual(accepted["learning_blocked_by_review_required"]["clean_lane_effect"], "does_not_block_clean_lane")
         self.assertEqual(accepted["learning_blocked_by_review_required"]["learning_lane_effect"], "blocks_learning_claim")
         self.assertIn("operator@example.test", accepted["learning_blocked_by_review_required"]["message"])
@@ -1424,7 +1424,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
                         "id": "learning_blocked_by_review_required",
                         "accepted_risk": False,
                         "severity": "blocker",
-                        "gate_effect": "review_required",
+                        "gate_effect": "operator_review_required",
                         "reason": "learning readiness still requires review",
                         "required_evidence": ["learning_readiness.likely_to_learn must be true"],
                     }
@@ -1480,7 +1480,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
                         "id": "other_learning_blocker",
                         "accepted_risk": False,
                         "severity": "blocker",
-                        "gate_effect": "review_required",
+                        "gate_effect": "operator_review_required",
                         "reason": "different blocker must not be accepted by learning readiness signoff",
                         "required_evidence": ["separate evidence required"],
                     }
@@ -1521,7 +1521,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
                         "id": "new_unclassified_learning_risk",
                         "accepted_risk": True,
                         "severity": "warn",
-                        "gate_effect": "accepted_risk",
+                        "gate_effect": "advisory",
                         "reason": "fixture risk not yet classified in taxonomy",
                         "required_evidence": ["taxonomy entry required"],
                     }
@@ -1559,7 +1559,7 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
                         "id": "learning_blocked_by_review_required",
                         "accepted_risk": False,
                         "severity": "blocker",
-                        "gate_effect": "review_required",
+                        "gate_effect": "operator_review_required",
                         "reason": "learning readiness still requires review",
                         "required_evidence": ["learning_readiness.likely_to_learn must be true"],
                     }

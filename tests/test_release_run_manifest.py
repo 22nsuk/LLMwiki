@@ -212,6 +212,32 @@ class ReleaseRunManifestTests(unittest.TestCase):
         self.assertEqual(manifest["remote_sync"]["ahead"], 1)
         self.assertNotIn("remote_not_in_sync", manifest["failures"])
 
+    def test_manifest_fails_when_ignored_tracked_files_are_present(self) -> None:
+        self._write_run_inputs()
+
+        with patch.multiple(
+            "ops.scripts.release.release_run_manifest",
+            release_source_tree_fingerprint=lambda _vault: "fp-current",
+            git_commit=lambda _vault: "abc123",
+            git_clean=lambda _vault: True,
+            remote_sync=lambda _vault: {
+                "status": "pass",
+                "upstream": "origin/main",
+                "ahead": 0,
+                "behind": 0,
+            },
+            ignored_tracked_file_count=lambda _vault: 2,
+        ):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertEqual(manifest["ignored_tracked_file_count"], 2)
+        self.assertIn("ignored_tracked_files_present", manifest["failures"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -149,13 +149,24 @@ def write_experiment_telemetry(
     }
     if isinstance(result.get("workspace_preparation"), dict):
         payload["workspace_preparation"] = result["workspace_preparation"]
+    if isinstance(result.get("post_mutation_generated_artifact_convergence"), dict):
+        payload["post_mutation_generated_artifact_convergence"] = result[
+            "post_mutation_generated_artifact_convergence"
+        ]
     if isinstance(result.get("decision_record"), dict):
         payload["decision_record"] = result["decision_record"]
+    if isinstance(result.get("failure_taxonomy"), str) and result["failure_taxonomy"].strip():
+        payload["failure_taxonomy"] = result["failure_taxonomy"]
     timeout_failure_artifacts = _timeout_failure_artifacts(vault, run_id)
     if timeout_failure_artifacts:
         payload["timeout_failure_artifacts"] = timeout_failure_artifacts
     if isinstance(result.get("behavior_delta"), str) and result["behavior_delta"].strip():
         payload["behavior_delta"] = result["behavior_delta"]
+    if (
+        isinstance(result.get("structural_complexity_budget"), str)
+        and result["structural_complexity_budget"].strip()
+    ):
+        payload["structural_complexity_budget"] = result["structural_complexity_budget"]
     if isinstance(result.get("apply_mode"), str) and result["apply_mode"].strip():
         payload["apply_mode"] = result["apply_mode"]
     if isinstance(result.get("apply_status"), str) and result["apply_status"].strip():

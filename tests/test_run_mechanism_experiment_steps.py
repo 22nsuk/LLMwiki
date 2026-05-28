@@ -10,6 +10,9 @@ from unittest import mock
 
 from ops.scripts.command_runtime import TimedProcessResult
 from ops.scripts.mechanism_run_promotion_runtime import _finalize_step
+from ops.scripts.mechanism_run_repo_health_step_runtime import (
+    StructuralComplexityBudgetStepResult,
+)
 from ops.scripts.mechanism_run_scaffold_resolution_runtime import (
     ExperimentInputRequest,
     _resolve_experiment_inputs,
@@ -298,6 +301,14 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
                 ),
                 mock.patch.object(
                     mechanism_run_workspace_runtime,
+                    "write_structural_complexity_budget_artifact",
+                    return_value=StructuralComplexityBudgetStepResult(
+                        report_path="runs/run-steps/structural-complexity-budget.json",
+                        status="pass",
+                    ),
+                ),
+                mock.patch.object(
+                    mechanism_run_workspace_runtime,
                     "_write_behavior_delta_artifact",
                     return_value="runs/run-steps/behavior-delta.json",
                 ),
@@ -313,6 +324,10 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
 
             self.assertFalse(result.passed)
             self.assertEqual(result.changed_files_manifest, "runs/run-steps/changed-files-manifest.json")
+            self.assertEqual(
+                result.structural_complexity_budget,
+                "runs/run-steps/structural-complexity-budget.json",
+            )
             self.assertEqual(result.behavior_delta, "runs/run-steps/behavior-delta.json")
             self.assertEqual(result.result["returncode"], 1)
             self.assertEqual(append_event.call_args.kwargs["decision"], "repo_health_fail")
@@ -448,6 +463,16 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
                 ),
                 mock.patch.object(
                     mechanism_run_workspace_runtime,
+                    "write_structural_complexity_budget_artifact",
+                    return_value=StructuralComplexityBudgetStepResult(
+                        report_path=(
+                            "runs/run-steps-timeout/structural-complexity-budget.json"
+                        ),
+                        status="pass",
+                    ),
+                ),
+                mock.patch.object(
+                    mechanism_run_workspace_runtime,
                     "_write_behavior_delta_artifact",
                     return_value="runs/run-steps-timeout/behavior-delta.json",
                 ),
@@ -472,6 +497,10 @@ class RunMechanismExperimentStepTests(unittest.TestCase):
             self.assertEqual(
                 timeout_failure["artifacts"]["changed_files_manifest"],
                 "runs/run-steps-timeout/changed-files-manifest.json",
+            )
+            self.assertEqual(
+                timeout_failure["artifacts"]["structural_complexity_budget"],
+                "runs/run-steps-timeout/structural-complexity-budget.json",
             )
             self.assertEqual(
                 timeout_failure["artifacts"]["behavior_delta"],

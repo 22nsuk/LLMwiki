@@ -64,6 +64,7 @@
             "baseline_captured",
             "mutation_applied",
             "mutation_failed",
+            "generated_artifact_convergence_checked",
             "candidate_captured",
             "scope_frozen",
             "subagent_routed",

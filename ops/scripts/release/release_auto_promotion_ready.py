@@ -12,6 +12,11 @@ from ops.scripts.artifact_io_runtime import (
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
+from ops.scripts.gate_effect_vocabulary import (
+    GATE_EFFECT_BLOCKS_EXECUTION,
+    GATE_EFFECT_BLOCKS_PROMOTION,
+    GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
+)
 from ops.scripts.output_runtime import display_path
 from ops.scripts.release.auto_promotion_learning_runtime import (
     ALLOWED_LEARNING_REVALIDATION_STATUSES,
@@ -437,6 +442,11 @@ def _operator_zero_count_requirements(operator: dict[str, Any]) -> list[Requirem
         ("gate_attention", "Resolve gate attention before unattended promotion."),
         ("learning_claim", "Resolve or renew learning claim evidence before unattended promotion."),
     ):
+        gate_effect = (
+            GATE_EFFECT_BLOCKS_PROMOTION
+            if group == "gate_attention"
+            else GATE_EFFECT_OPERATOR_REVIEW_REQUIRED
+        )
         for field, count in operator[group].items():
             requirements.append(
                 RequirementSpec(
@@ -448,6 +458,7 @@ def _operator_zero_count_requirements(operator: dict[str, Any]) -> list[Requirem
                     "0",
                     f"{field} must be zero for unattended promotion.",
                     next_step,
+                    gate_effect,
                 )
             )
     return requirements
@@ -504,6 +515,7 @@ def _auto_improve_requirements(
             "true",
             "Auto-improve lane cannot execute a trial.",
             "Refresh auto-improve readiness and resolve execution blockers.",
+            GATE_EFFECT_BLOCKS_EXECUTION,
         ),
         RequirementSpec(
             checks["auto_improve_can_promote_result"],

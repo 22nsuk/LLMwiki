@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki/schemas/gate-effect-vocabulary",
+  "title": "Gate Effect Vocabulary",
+  "$defs": {
+    "gate_effect": {
+      "type": "string",
+      "enum": [
+        "none",
+        "advisory",
+        "blocks_promotion",
+        "blocks_execution",
+        "operator_review_required"
+      ]
+    }
+  }
+}

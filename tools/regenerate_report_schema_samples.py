@@ -34,6 +34,8 @@ from tests.test_supply_chain_provenance import (
 FIXTURE_PATH = REPO_ROOT / "tests" / "fixtures" / "report_schema_samples.json"
 OPENVEX_SAMPLE_ID = "urn:uuid:12345678-1234-4234-9234-123456789abd"
 CYCLONEDX_SAMPLE_SERIAL_NUMBER = "urn:uuid:12345678-1234-4234-9234-123456789abc"
+ARTIFACT_FRESHNESS_REPORT_PATH = "ops/reports/artifact-freshness-report.json"
+ARTIFACT_FRESHNESS_SCHEMA_PATH = "ops/schemas/artifact-freshness-report.schema.json"
 READINESS_SAMPLE_REPORT_SPECS = {
     "ops/reports/outcome-metrics.json": (
         "ops/schemas/outcome-metrics.schema.json",
@@ -47,8 +49,8 @@ READINESS_SAMPLE_REPORT_SPECS = {
         "ops/schemas/mutation-proposals.schema.json",
         "mutation_proposals_report",
     ),
-    "ops/reports/artifact-freshness-report.json": (
-        "ops/schemas/artifact-freshness-report.schema.json",
+    ARTIFACT_FRESHNESS_REPORT_PATH: (
+        ARTIFACT_FRESHNESS_SCHEMA_PATH,
         "artifact_freshness_report",
     ),
     "ops/reports/test-execution-summary.json": (
@@ -169,6 +171,77 @@ def build_openvex_schema_sample(cyclonedx_sample: dict | None = None) -> dict:
         )
 
 
+def _artifact_freshness_zero_summary() -> dict[str, int]:
+    return {
+        "artifact_count": 0,
+        "json_artifact_count": 0,
+        "scanned_text_artifact_count": 0,
+        "stale_artifact_count": 0,
+        "mtime_sensitive_artifact_count": 0,
+        "root_ephemeral_artifact_count": 0,
+        "run_log_placeholder_count": 0,
+        "unknown_currentness_artifact_count": 0,
+        "non_utf8_text_artifact_count": 0,
+        "missing_schema_count": 0,
+        "missing_artifact_envelope_count": 0,
+        "schema_invalid_artifact_count": 0,
+        "schema_unavailable_artifact_count": 0,
+        "safe_to_backfill_artifact_count": 0,
+        "stable_contract_debt_artifact_count": 0,
+        "stable_contract_debt_issue_count": 0,
+        "mtime_sensitive_attention_artifact_count": 0,
+        "mtime_sensitive_attention_issue_count": 0,
+        "operational_attention_artifact_count": 0,
+        "operational_attention_issue_count": 0,
+    }
+
+
+def build_artifact_freshness_schema_sample_for_vault(vault: Path) -> dict:
+    policy, resolved_policy_path = load_policy(vault, "ops/policies/wiki-maintainer-policy.yaml")
+    return {
+        **build_canonical_report_envelope(
+            vault,
+            generated_at=fixed_context().isoformat_z(),
+            artifact_kind="artifact_freshness_report",
+            producer="ops.scripts.artifact_freshness_runtime",
+            source_command="python -m ops.scripts.artifact_freshness_runtime --vault .",
+            resolved_policy_path=resolved_policy_path,
+            schema_path=ARTIFACT_FRESHNESS_SCHEMA_PATH,
+            source_paths=[],
+        ),
+        "vault": ".",
+        "policy": {
+            "path": report_path(vault, resolved_policy_path),
+            "version": policy["version"],
+        },
+        "mtime_source": "embedded_currentness",
+        "zip_metadata_path": "",
+        "status": "pass",
+        "gate_effect": "none",
+        "recommended_next_action": "No artifact freshness debt detected.",
+        "safe_to_backfill": False,
+        "mtime_sensitive": False,
+        "summary": _artifact_freshness_zero_summary(),
+        "top_debt": [],
+        "top_debt_files": [],
+        "debt_queues": [],
+        "owner_surface": [],
+        "root_ephemeral_patterns": [],
+        "root_ephemeral_artifacts": [],
+        "run_log_placeholders": [],
+        "non_utf8_text_artifacts": [],
+        "artifact_records": [],
+    }
+
+
+def build_artifact_freshness_schema_sample() -> dict:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        seed_minimal_vault(vault)
+        return build_artifact_freshness_schema_sample_for_vault(vault)
+
+
 def _write_readiness_sample_report(vault: Path, relative_path: str, payload: dict) -> None:
     policy, resolved_policy_path = load_policy(vault, "ops/policies/wiki-maintainer-policy.yaml")
     schema_path, artifact_kind = READINESS_SAMPLE_REPORT_SPECS[relative_path]
@@ -243,17 +316,12 @@ def _write_goal_worktree_guard_sample_report(vault: Path) -> None:
 
 
 def _seed_readiness_release_contract_reports(vault: Path) -> None:
-    _write_readiness_sample_report(
-        vault,
-        "ops/reports/artifact-freshness-report.json",
-        {
-            "status": "pass",
-            "summary": {
-                "schema_invalid_artifact_count": 0,
-                "stable_contract_debt_issue_count": 0,
-            },
-            "artifact_records": [],
-        },
+    artifact_freshness = build_artifact_freshness_schema_sample_for_vault(vault)
+    artifact_path = vault / ARTIFACT_FRESHNESS_REPORT_PATH
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        json.dumps(artifact_freshness, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
     )
     _write_readiness_sample_report(
         vault,
@@ -419,6 +487,7 @@ def regenerate_report_schema_samples(
 ) -> dict:
     payload = load_report_schema_samples(fixture_path)
     payload.update(build_supply_chain_schema_samples())
+    payload["artifact_freshness_report"] = build_artifact_freshness_schema_sample()
     payload["auto_improve_readiness_report"] = build_auto_improve_readiness_schema_sample()
     if include_openvex:
         payload["openvex_draft"] = build_openvex_schema_sample(payload["cyclonedx_bom"])
@@ -433,6 +502,7 @@ def candidate_report_schema_samples(
 ) -> dict:
     payload = load_report_schema_samples(fixture_path)
     payload.update(build_supply_chain_schema_samples())
+    payload["artifact_freshness_report"] = build_artifact_freshness_schema_sample()
     payload["auto_improve_readiness_report"] = build_auto_improve_readiness_schema_sample()
     if include_openvex:
         payload["openvex_draft"] = build_openvex_schema_sample(payload["cyclonedx_bom"])

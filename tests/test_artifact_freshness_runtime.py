@@ -236,6 +236,8 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
 
             self.assertIn("generated_at_older_than_file_mtime", record["issues"])
             self.assertEqual(record["recommended_next_action"], "regenerate_artifact_or_refresh_timestamp")
+            self.assertEqual(record["gate_effect"], "blocks_promotion")
+            self.assertEqual(report["gate_effect"], "blocks_promotion")
             self.assertTrue(record["mtime_sensitive"])
 
     def test_test_target_fingerprint_mismatch_counts_as_operational_attention(self) -> None:
@@ -283,6 +285,8 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertEqual(report["summary"]["operational_attention_artifact_count"], 1)
             self.assertEqual(report["summary"]["operational_attention_issue_count"], 2)
             self.assertIn("source_tree_fingerprint_mismatch", record["issues"])
+            self.assertEqual(record["gate_effect"], "blocks_promotion")
+            self.assertEqual(report["gate_effect"], "blocks_promotion")
 
     def test_generated_artifact_index_mtime_drift_is_advisory_not_canonical_debt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -307,8 +311,10 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertNotIn("generated_at_older_than_file_mtime", record["issues"])
             self.assertEqual(record["issues"], [])
             self.assertEqual(record["contract_issue_class"], "mtime_sensitive_attention")
+            self.assertEqual(record["gate_effect"], "advisory")
             self.assertEqual(record["recommended_next_action"], "none")
             self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["gate_effect"], "advisory")
             self.assertEqual(report["recommended_next_action"], "none")
             self.assertEqual(report["summary"]["stale_artifact_count"], 0)
             self.assertEqual(report["summary"]["mtime_sensitive_artifact_count"], 1)
@@ -776,10 +782,13 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
 
             self.assertEqual(validate_with_schema(report, schema), [])
             self.assertEqual(report["status"], "attention")
+            self.assertEqual(report["recommended_next_action"], "regenerate_stale_artifacts")
             self.assertEqual(record["declared_currentness_status"], "current")
             self.assertEqual(record["source_tree_fingerprint_status"], "stale")
             self.assertEqual(record["currentness_status"], "stale")
             self.assertIn("source_tree_fingerprint_mismatch", record["issues"])
+            self.assertEqual(record["gate_effect"], "blocks_promotion")
+            self.assertEqual(report["gate_effect"], "blocks_promotion")
             self.assertFalse(record["safe_to_backfill"])
             self.assertEqual(record["recommended_next_action"], "regenerate_canonical_report")
 
@@ -966,9 +975,76 @@ class ArtifactFreshnessRuntimeTests(unittest.TestCase):
             self.assertEqual(report["summary"]["schema_invalid_artifact_count"], 1)
             self.assertEqual(report["recommended_next_action"], "regenerate_schema_invalid_artifacts")
             self.assertEqual(record["schema_validation_status"], "fail")
+            self.assertEqual(record["gate_effect"], "blocks_execution")
+            self.assertEqual(report["gate_effect"], "blocks_execution")
             self.assertFalse(record["safe_to_backfill"])
             self.assertIn("schema_validation_failed", record["issues"])
             self.assertTrue(any("expected string" in error for error in record["schema_validation_errors"]))
+
+    def test_historical_run_schema_drift_is_advisory_contract_debt(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            (vault / "ops" / "schemas" / "example.schema.json").write_text(
+                json.dumps(
+                    {
+                        "$schema": "https://json-schema.org/draft/2020-12/schema",
+                        "type": "object",
+                        "required": ["answer"],
+                        "properties": {"answer": {"type": "string"}},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            run_report = vault / "runs" / "legacy-run" / "repo-health-artifact-freshness-report-check.json"
+            run_report.parent.mkdir(parents=True, exist_ok=True)
+            run_report.write_text(
+                json.dumps(
+                    {
+                        "$schema": "ops/schemas/example.schema.json",
+                        "artifact_kind": "artifact_freshness_report",
+                        "generated_at": "2026-04-24T12:00:00Z",
+                        "producer": "ops.scripts.artifact_freshness_runtime",
+                        "source_command": "make artifact-freshness-check",
+                        "source_revision": "unknown",
+                        "source_tree_fingerprint": "historical",
+                        "input_fingerprints": {"policy": "historical"},
+                        "schema_version": 1,
+                        "artifact_status": "current",
+                        "retention_policy": "canonical_report",
+                        "encoding": "utf-8",
+                        "currentness": {
+                            "status": "current",
+                            "checked_at": "2026-04-24T12:00:00Z",
+                        },
+                        "answer": 1,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            report = build_report(vault, context=fixed_context(), mtime_source="embedded_currentness")
+            schema = load_schema(REPORT_SCHEMA_PATH)
+            record = next(
+                item
+                for item in report["artifact_records"]
+                if item["path"].endswith("repo-health-artifact-freshness-report-check.json")
+            )
+            schema_debt = next(item for item in report["top_debt"] if item["issue"] == "schema_validation_failed")
+            queues = {item["queue"]: item for item in report["debt_queues"]}
+
+            self.assertEqual(validate_with_schema(report, schema), [])
+            self.assertEqual(report["summary"]["schema_invalid_artifact_count"], 0)
+            self.assertEqual(record["schema_validation_status"], "historical_schema_drift")
+            self.assertEqual(record["schema_contract"]["classification"], "historical_run_schema_drift")
+            self.assertEqual(record["contract_issue_class"], "stable_contract_debt")
+            self.assertEqual(record["gate_effect"], "advisory")
+            self.assertEqual(schema_debt["gate_effect"], "advisory")
+            self.assertEqual(schema_debt["recommended_next_action"], "archive_or_classify_historical_run_artifact")
+            self.assertEqual(queues["runs_historical_archive"]["gate_effect"], "advisory")
+            self.assertEqual(report["gate_effect"], "advisory")
+            self.assertIn(report["status"], {"pass", "attention"})
 
     def test_report_normalizes_missing_generated_at_action(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

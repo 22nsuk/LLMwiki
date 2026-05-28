@@ -113,6 +113,11 @@ LOCAL_ONLY_PRIVATE_DEINDEX_PREFIXES = (
     "wiki/",
 )
 LOCAL_ONLY_PRIVATE_DEINDEX_CATEGORY = "local_only_private_deindex"
+LOCAL_ONLY_PRIVATE_INVENTORY_PATHS = (
+    "ops/manifest.json",
+    "ops/raw-registry.json",
+)
+LOCAL_ONLY_PRIVATE_INVENTORY_CATEGORY = "local_only_private_inventory"
 
 
 @dataclass(frozen=True)
@@ -242,6 +247,31 @@ def git_status_entries(vault: Path) -> list[StatusEntry]:
     return list(deduped.values())
 
 
+def tracked_ignored_local_only_inventory_paths(vault: Path) -> list[str]:
+    result = _run_git(
+        vault,
+        [
+            "ls-files",
+            "-ci",
+            "--exclude-standard",
+            "--",
+            *LOCAL_ONLY_PRIVATE_INVENTORY_PATHS,
+        ],
+    )
+    if result.returncode != 0:
+        return []
+    paths = [
+        _normalize_repo_path(line)
+        for line in result.stdout.splitlines()
+        if line.strip()
+    ]
+    return sorted(
+        path
+        for path in paths
+        if path in LOCAL_ONLY_PRIVATE_INVENTORY_PATHS
+    )
+
+
 def _normalize_repo_path(path: str) -> str:
     normalized = Path(path).as_posix()
     if normalized in ("", "."):
@@ -268,6 +298,8 @@ def classify_path(path: str) -> str:
         return "generated_canonical"
     if normalized in LOCAL_SOURCE_CONTRACT_FILES:
         return "local_source_contract"
+    if normalized in LOCAL_ONLY_PRIVATE_INVENTORY_PATHS:
+        return LOCAL_ONLY_PRIVATE_INVENTORY_CATEGORY
     if _matches_prefix_or_root(normalized, PRIVATE_OR_TRANSIENT_PREFIXES):
         return "unexpected"
     if normalized in PUBLIC_SOURCE_FILES or _matches_prefix_or_root(normalized, PUBLIC_SOURCE_PREFIXES):
@@ -487,6 +519,8 @@ def _base_report(vault: Path, entries: list[StatusEntry], preexisting_paths: set
         "entries": entry_payloads,
         "counts": dict(sorted(counts.items())),
         "diagnostics": _release_source_ready_diagnostics(vault),
+        "local_only_private_inventory_paths": list(LOCAL_ONLY_PRIVATE_INVENTORY_PATHS),
+        "tracked_ignored_local_only_inventory_paths": tracked_ignored_local_only_inventory_paths(vault),
         "durable_private_ignored_status_prefixes": list(
             DURABLE_PRIVATE_IGNORED_STATUS_PREFIXES
         ),
@@ -590,6 +624,23 @@ def run_commit(
     report["dry_run"] = dry_run
     report["amend"] = amend
 
+    tracked_ignored_inventory_paths = [
+        str(path)
+        for path in report.get("tracked_ignored_local_only_inventory_paths", [])
+        if str(path)
+    ]
+    if tracked_ignored_inventory_paths:
+        report["status"] = "blocked"
+        report["reason"] = "tracked_ignored_local_only_inventory_paths"
+        _write_report(out_path, report)
+        print(
+            "release-source-ready-commit refused: tracked ignored local-only inventory paths are present",
+            file=sys.stderr,
+        )
+        for path in tracked_ignored_inventory_paths:
+            print(path, file=sys.stderr)
+        return 1
+
     if pre_status and not amend:
         expected_head = str(pre_status.get("head_before", "")).strip()
         current_head = _head(vault)
@@ -628,6 +679,11 @@ def run_commit(
             return 1
 
     unexpected = [item for item in report["entries"] if item["category"] == "unexpected"]
+    local_only_inventory = [
+        item
+        for item in report["entries"]
+        if item["category"] == LOCAL_ONLY_PRIVATE_INVENTORY_CATEGORY
+    ]
     late_source_contract = [
         item
         for item in report["entries"]
@@ -651,6 +707,20 @@ def run_commit(
         _write_report(out_path, report)
         print("release-source-ready-commit refused: unexpected dirty paths are present", file=sys.stderr)
         for item in unexpected:
+            print(item["path"], file=sys.stderr)
+        return 1
+    if local_only_inventory:
+        report["status"] = "blocked"
+        report["reason"] = "local_only_private_inventory_changes"
+        report["local_only_private_inventory_dirty_paths"] = [
+            item["path"] for item in local_only_inventory
+        ]
+        _write_report(out_path, report)
+        print(
+            "release-source-ready-commit refused: local-only inventory paths are dirty",
+            file=sys.stderr,
+        )
+        for item in local_only_inventory:
             print(item["path"], file=sys.stderr)
         return 1
     if late_source_contract:

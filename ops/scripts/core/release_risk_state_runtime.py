@@ -3,6 +3,11 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import Any
 
+from ops.scripts.gate_effect_vocabulary import (
+    GATE_EFFECT_BLOCKS_PROMOTION,
+    canonical_gate_effect,
+)
+
 
 def release_risk_identity(
     risk: dict[str, Any],
@@ -95,7 +100,10 @@ def release_blocker_entry(
         "source": str(risk.get("source", "")).strip(),
         "source_path": str(risk.get("source_path", "")).strip(),
         "severity": str(risk.get("severity", "")).strip(),
-        "gate_effect": str(risk.get("gate_effect", "")).strip(),
+        "gate_effect": canonical_gate_effect(
+            risk.get("gate_effect"),
+            active_default=GATE_EFFECT_BLOCKS_PROMOTION,
+        ),
         **effects,
         "message": str(risk.get("message", "")).strip(),
         "required_evidence": required_evidence,

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ops.scripts.gate_effect_vocabulary import GATE_EFFECT_BLOCKS_PROMOTION
+
 from .auto_improve_readiness_constants_runtime import (
     GOAL_WORKTREE_GUARD_REPORT_REL_PATH,
 )
@@ -113,7 +115,7 @@ def _goal_worktree_guard_promotion_blockers(
             "status": "open",
             "severity": "blocker",
             "accepted_risk": False,
-            "gate_effect": "active",
+            "gate_effect": GATE_EFFECT_BLOCKS_PROMOTION,
             "source_status": source_status,
             "reason": (
                 "goal worktree guard is not promotable: "

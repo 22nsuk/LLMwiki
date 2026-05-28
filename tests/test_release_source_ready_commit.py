@@ -65,6 +65,8 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertEqual(classify_path("AGENTS.local.md"), "local_source_contract")
         self.assertEqual(classify_path("docs"), "public_source")
         self.assertEqual(classify_path("docs/development.md"), "public_source")
+        self.assertEqual(classify_path("ops/manifest.json"), "local_only_private_inventory")
+        self.assertEqual(classify_path("ops/raw-registry.json"), "local_only_private_inventory")
         self.assertEqual(classify_path("ops/operator/operator-release-summary.json"), "unexpected")
         self.assertEqual(classify_path("github/workflows/ci.yml"), "unexpected")
 
@@ -276,6 +278,77 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertEqual(report["status"], "blocked")
         self.assertEqual(report["reason"], "unexpected_dirty_paths")
         self.assertEqual(report["unexpected_paths"], ["private"])
+
+    def test_rejects_clean_tracked_ignored_local_only_inventory(self) -> None:
+        (self.vault / "ops" / "raw-registry.json").write_text(
+            '{"entries": []}\n',
+            encoding="utf-8",
+        )
+        _git(self.vault, "add", "-f", "ops/raw-registry.json")
+        _git(self.vault, "commit", "-m", "track ignored local inventory")
+
+        rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-source-ready-commit.json",
+                "--message",
+                "release: ready",
+            ]
+        )
+
+        self.assertEqual(rc, 1)
+        self.assertEqual(_git(self.vault, "status", "--short"), "")
+        report = json.loads(
+            (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(report["status"], "blocked")
+        self.assertEqual(report["reason"], "tracked_ignored_local_only_inventory_paths")
+        self.assertEqual(
+            report["tracked_ignored_local_only_inventory_paths"],
+            ["ops/raw-registry.json"],
+        )
+
+    def test_rejects_dirty_tracked_ignored_local_only_inventory(self) -> None:
+        (self.vault / "ops" / "manifest.json").write_text(
+            '{"files": []}\n',
+            encoding="utf-8",
+        )
+        _git(self.vault, "add", "-f", "ops/manifest.json")
+        _git(self.vault, "commit", "-m", "track ignored manifest")
+        (self.vault / "ops" / "manifest.json").write_text(
+            '{"files": ["changed"]}\n',
+            encoding="utf-8",
+        )
+
+        rc = main(
+            [
+                "--vault",
+                str(self.vault),
+                "--out",
+                "tmp/release-source-ready-commit.json",
+                "--message",
+                "release: ready",
+            ]
+        )
+
+        self.assertEqual(rc, 1)
+        self.assertIn("ops/manifest.json", _git(self.vault, "status", "--short"))
+        report = json.loads(
+            (self.vault / "tmp" / "release-source-ready-commit.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(report["status"], "blocked")
+        self.assertEqual(report["reason"], "tracked_ignored_local_only_inventory_paths")
+        self.assertEqual(
+            report["tracked_ignored_local_only_inventory_paths"],
+            ["ops/manifest.json"],
+        )
+        categories = {entry["path"]: entry["category"] for entry in report["entries"]}
+        self.assertEqual(
+            categories["ops/manifest.json"],
+            "local_only_private_inventory",
+        )
 
     def test_allows_ignored_external_reports_as_local_only_evidence(self) -> None:
         (self.vault / "external-reports").mkdir()

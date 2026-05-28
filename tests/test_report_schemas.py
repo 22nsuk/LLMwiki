@@ -30,6 +30,9 @@ pytestmark = pytest.mark.report_contract
 MUTATION_PROPOSAL_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "mutation-proposals.schema.json"
 PROPOSAL_SCOPE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "proposal-scope.schema.json"
 RUN_TELEMETRY_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "run-telemetry.schema.json"
+GENERATED_ARTIFACT_CONVERGENCE_SCHEMA_PATH = (
+    REPO_ROOT / "ops" / "schemas" / "generated-artifact-convergence.schema.json"
+)
 RUN_ARTIFACT_FINGERPRINT_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "run-artifact-fingerprint.schema.json"
 TIMEOUT_FAILURE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "timeout-failure.schema.json"
 SHADOW_APPLY_REPORT_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "shadow-apply-report.schema.json"
@@ -37,6 +40,7 @@ ROLLBACK_REHEARSAL_REPORT_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "rollbac
 BEHAVIOR_DELTA_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "behavior-delta.schema.json"
 AUTO_IMPROVE_SESSION_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "auto-improve-session.schema.json"
 AUTO_IMPROVE_READINESS_REPORT_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "auto-improve-readiness-report.schema.json"
+ARTIFACT_FRESHNESS_REPORT_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "artifact-freshness-report.schema.json"
 RUNTIME_EVENT_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "runtime-event.schema.json"
 PROMOTION_DECISION_TRENDS_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "promotion-decision-trends.schema.json"
 ROUTING_PROVENANCE_AGGREGATE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "routing-provenance-aggregate.schema.json"
@@ -69,6 +73,9 @@ class ReportSchemaContractTest(unittest.TestCase):
             "mutation_proposal": load_schema(MUTATION_PROPOSAL_SCHEMA_PATH),
             "proposal_scope": load_schema(PROPOSAL_SCOPE_SCHEMA_PATH),
             "run_telemetry": load_schema(RUN_TELEMETRY_SCHEMA_PATH),
+            "generated_artifact_convergence": load_schema(
+                GENERATED_ARTIFACT_CONVERGENCE_SCHEMA_PATH
+            ),
             "run_artifact_fingerprint": load_schema(RUN_ARTIFACT_FINGERPRINT_SCHEMA_PATH),
             "timeout_failure": load_schema(TIMEOUT_FAILURE_SCHEMA_PATH),
             "shadow_apply_report": load_schema(SHADOW_APPLY_REPORT_SCHEMA_PATH),
@@ -76,6 +83,7 @@ class ReportSchemaContractTest(unittest.TestCase):
             "behavior_delta": load_schema(BEHAVIOR_DELTA_SCHEMA_PATH),
             "auto_improve_session": load_schema(AUTO_IMPROVE_SESSION_SCHEMA_PATH),
             "auto_improve_readiness_report": load_schema(AUTO_IMPROVE_READINESS_REPORT_SCHEMA_PATH),
+            "artifact_freshness_report": load_schema(ARTIFACT_FRESHNESS_REPORT_SCHEMA_PATH),
             "runtime_event": load_schema(RUNTIME_EVENT_SCHEMA_PATH),
             "promotion_decision_trends": load_schema(PROMOTION_DECISION_TRENDS_SCHEMA_PATH),
             "routing_provenance_aggregate": load_schema(ROUTING_PROVENANCE_AGGREGATE_SCHEMA_PATH),
@@ -266,6 +274,18 @@ class ReportSchemaContractTest(unittest.TestCase):
             validate_with_schema(invalid_decision, schema),
         )
 
+    def test_sample_generated_artifact_convergence_report_validates_and_requires_phase(self) -> None:
+        report = self.samples["generated_artifact_convergence"]
+        schema = self.schemas["generated_artifact_convergence"]
+        self.assertEqual(validate_with_schema(report, schema), [])
+
+        missing_phase = copy.deepcopy(report)
+        missing_phase.pop("phase", None)
+        self.assertIn(
+            "$: missing required property 'phase'",
+            validate_with_schema(missing_phase, schema),
+        )
+
     def test_run_telemetry_discard_evidence_requires_path_when_source_is_pathlike(
         self,
     ) -> None:
@@ -321,6 +341,20 @@ class ReportSchemaContractTest(unittest.TestCase):
             validate_with_schema(missing_execution, schema),
         )
 
+        missing_execution_status = copy.deepcopy(report)
+        missing_execution_status.pop("execution_status", None)
+        self.assertIn(
+            "$: missing required property 'execution_status'",
+            validate_with_schema(missing_execution_status, schema),
+        )
+
+        missing_promotion_status = copy.deepcopy(report)
+        missing_promotion_status.pop("promotion_status", None)
+        self.assertIn(
+            "$: missing required property 'promotion_status'",
+            validate_with_schema(missing_promotion_status, schema),
+        )
+
         missing_diagnostics = copy.deepcopy(report)
         missing_diagnostics.pop("diagnostics", None)
         self.assertIn(
@@ -343,6 +377,13 @@ class ReportSchemaContractTest(unittest.TestCase):
         self.assertIn(
             "$: missing required property 'learning_claim_blockers'",
             validate_with_schema(missing_learning_claim_blockers, schema),
+        )
+
+        missing_execution_blockers = copy.deepcopy(report)
+        missing_execution_blockers.pop("execution_blockers", None)
+        self.assertIn(
+            "$: missing required property 'execution_blockers'",
+            validate_with_schema(missing_execution_blockers, schema),
         )
 
         missing_promotion_blockers = copy.deepcopy(report)
@@ -437,6 +478,29 @@ class ReportSchemaContractTest(unittest.TestCase):
             "$.diagnostics: unexpected property 'learnability_shadow_gate'",
             validate_with_schema(legacy_shadow_gate, schema),
         )
+
+    def test_sample_artifact_freshness_report_validates_and_rejects_legacy_gate_effects(self) -> None:
+        report = self.samples["artifact_freshness_report"]
+        schema = self.schemas["artifact_freshness_report"]
+        self.assertEqual(validate_with_schema(report, schema), [])
+        self.assert_artifact_envelope_contract(report, schema)
+        self.assertEqual(report["gate_effect"], "none")
+
+        missing_gate_effect = copy.deepcopy(report)
+        missing_gate_effect.pop("gate_effect", None)
+        self.assertIn(
+            "$: missing required property 'gate_effect'",
+            validate_with_schema(missing_gate_effect, schema),
+        )
+
+        for legacy_gate_effect in ("active", "review_required", "shadow"):
+            invalid = copy.deepcopy(report)
+            invalid["gate_effect"] = legacy_gate_effect
+            errors = validate_with_schema(invalid, schema)
+            self.assertTrue(
+                any(error.startswith("$.gate_effect: expected one of ") for error in errors),
+                errors,
+            )
 
     def test_sample_runtime_event_validates_and_requires_linking_fields(self) -> None:
         report = self.samples["runtime_event"]

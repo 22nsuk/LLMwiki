@@ -20,6 +20,11 @@ from ops.scripts.artifact_io_runtime import (
     write_schema_backed_report,
 )
 from ops.scripts.core.release_currentness_state_runtime import currentness_field
+from ops.scripts.gate_effect_vocabulary import (
+    GATE_EFFECT_ADVISORY,
+    GATE_EFFECT_BLOCKS_PROMOTION,
+    canonical_gate_effect,
+)
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
@@ -206,7 +211,7 @@ def _issue(
     code: str,
     message: str,
     severity: str = "blocker",
-    gate_effect: str = "active",
+    gate_effect: str = GATE_EFFECT_BLOCKS_PROMOTION,
     required_evidence: list[str] | None = None,
 ) -> dict[str, Any]:
     return {
@@ -214,7 +219,10 @@ def _issue(
         "source_path": source_path,
         "code": code,
         "severity": severity,
-        "gate_effect": gate_effect,
+        "gate_effect": canonical_gate_effect(
+            gate_effect,
+            active_default=GATE_EFFECT_BLOCKS_PROMOTION,
+        ),
         "message": message,
         "required_evidence": required_evidence or [],
     }
@@ -234,7 +242,7 @@ def _expires_after(generated_at: str, *, days: int) -> str:
 def _accepted_cohort_risk(issue: dict[str, Any], *, generated_at: str) -> dict[str, Any]:
     accepted = dict(issue)
     accepted["severity"] = "warn"
-    accepted["gate_effect"] = "accepted_by_cohort_policy"
+    accepted["gate_effect"] = GATE_EFFECT_ADVISORY
     code = str(issue.get("code", "")).strip()
     if code == "cohort_modified_after_generated_at":
         revalidation_condition = "Regenerate affected reports and rerun release-evidence-cohort before release."

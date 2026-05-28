@@ -101,6 +101,34 @@ class BootstrapPreflightTests(unittest.TestCase):
             ["workspace_virtualenv_codex_shadow"],
         )
 
+    def test_goal_runtime_report_requires_workspace_virtualenv_python(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            outer_codex = Path(temp_dir) / "outer-bin" / "codex"
+            outer_codex.parent.mkdir()
+            outer_codex.write_text("#!/bin/sh\n", encoding="utf-8")
+            outer_codex.chmod(0o755)
+
+            with mock.patch.dict(os.environ, {"PATH": str(outer_codex.parent)}):
+                report = build_report(
+                    vault=vault,
+                    include_dev=True,
+                    environment_class="goal-runtime",
+                    python_version=(3, 12, 1),
+                    module_available=_module_available(set()),
+                )
+
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["environment"]["executor_tooling"]["status"], "fail")
+        self.assertEqual(
+            report["summary"]["executor_tooling_failures"],
+            ["workspace_virtualenv_python_missing"],
+        )
+        self.assertFalse(report["environment"]["install_attempted"])
+        self.assertIn("make goal-runtime-python-preflight", report["guidance"])
+
     def test_goal_runtime_report_allows_outer_codex_when_workspace_virtualenv_is_on_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

@@ -14,6 +14,7 @@ from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
 from tests.cli_test_runtime import invoke_cli_main
+from tests.minimal_vault_runtime import seed_minimal_vault as seed_minimal_raw_registry_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = REPO_ROOT / "ops" / "policies" / "wiki-maintainer-policy.yaml"
@@ -481,6 +482,8 @@ class MutationProposalTest(unittest.TestCase):
                 {
                     "available_proposal_count": 3,
                     "selected_proposal_count": 3,
+                    "selection_mode": "standard",
+                    "repair_priority_suppressed_count": 0,
                     "runnable_available_count": 2,
                     "blocked_available_count": 1,
                     "selected_runnable_count": 2,
@@ -605,6 +608,8 @@ class MutationProposalTest(unittest.TestCase):
                 {
                     "available_proposal_count": 3,
                     "selected_proposal_count": 1,
+                    "selection_mode": "standard",
+                    "repair_priority_suppressed_count": 0,
                     "runnable_available_count": 2,
                     "blocked_available_count": 1,
                     "selected_runnable_count": 1,
@@ -648,6 +653,8 @@ class MutationProposalTest(unittest.TestCase):
                 {
                     "available_proposal_count": 4,
                     "selected_proposal_count": 4,
+                    "selection_mode": "standard",
+                    "repair_priority_suppressed_count": 0,
                     "runnable_available_count": 1,
                     "blocked_available_count": 3,
                     "selected_runnable_count": 1,
@@ -745,6 +752,8 @@ class MutationProposalTest(unittest.TestCase):
                 {
                     "available_proposal_count": 4,
                     "selected_proposal_count": 4,
+                    "selection_mode": "standard",
+                    "repair_priority_suppressed_count": 0,
                     "runnable_available_count": 1,
                     "blocked_available_count": 3,
                     "selected_runnable_count": 1,
@@ -969,6 +978,8 @@ class MutationProposalTest(unittest.TestCase):
                 {
                     "available_proposal_count": 4,
                     "selected_proposal_count": 4,
+                    "selection_mode": "standard",
+                    "repair_priority_suppressed_count": 0,
                     "runnable_available_count": 0,
                     "blocked_available_count": 4,
                     "selected_runnable_count": 0,
@@ -1058,6 +1069,8 @@ class MutationProposalTest(unittest.TestCase):
                 {
                     "available_proposal_count": 4,
                     "selected_proposal_count": 4,
+                    "selection_mode": "standard",
+                    "repair_priority_suppressed_count": 0,
                     "runnable_available_count": 1,
                     "blocked_available_count": 3,
                     "selected_runnable_count": 1,
@@ -1212,6 +1225,8 @@ class MutationProposalTest(unittest.TestCase):
                 {
                     "available_proposal_count": 4,
                     "selected_proposal_count": 4,
+                    "selection_mode": "standard",
+                    "repair_priority_suppressed_count": 0,
                     "runnable_available_count": 1,
                     "blocked_available_count": 3,
                     "selected_runnable_count": 1,
@@ -1297,6 +1312,8 @@ class MutationProposalTest(unittest.TestCase):
                 {
                     "available_proposal_count": 4,
                     "selected_proposal_count": 4,
+                    "selection_mode": "standard",
+                    "repair_priority_suppressed_count": 0,
                     "runnable_available_count": 1,
                     "blocked_available_count": 3,
                     "selected_runnable_count": 1,
@@ -1406,6 +1423,8 @@ class MutationProposalTest(unittest.TestCase):
                 {
                     "available_proposal_count": 4,
                     "selected_proposal_count": 4,
+                    "selection_mode": "standard",
+                    "repair_priority_suppressed_count": 0,
                     "runnable_available_count": 1,
                     "blocked_available_count": 3,
                     "selected_runnable_count": 1,
@@ -2474,6 +2493,16 @@ class MutationProposalTest(unittest.TestCase):
                 1,
             )
             self.assertEqual(
+                proposal_report["diagnostics"]["queue_selection"]["selection_mode"],
+                "carry_forward_repair_only",
+            )
+            self.assertGreater(
+                proposal_report["diagnostics"]["queue_selection"][
+                    "repair_priority_suppressed_count"
+                ],
+                0,
+            )
+            self.assertEqual(
                 proposal_report["diagnostics"]["next_run_decision_queue"],
                 {
                     "session_reports_scanned": 1,
@@ -3436,6 +3465,463 @@ class MutationProposalTest(unittest.TestCase):
                     "selected_target_proposal_ids"
                 ],
                 [],
+            )
+
+    def test_clean_raw_registry_export_suppresses_stale_next_run_repair(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_raw_registry_vault(vault)
+            seed_vault(vault)
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+
+            from ops.scripts.raw_registry_export import build_current_raw_registry_export
+
+            export, destination = build_current_raw_registry_export(vault)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(
+                json.dumps(export, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            source_run_id = "auto-session-a-run-01-raw-registry"
+            run_dir = vault / "runs" / source_run_id
+            run_dir.mkdir(parents=True, exist_ok=True)
+            write_json(
+                run_dir / "validator-last-message.json",
+                {
+                    "diagnostics": {
+                        "notes": [
+                            "raw_registry_content_sha256_mismatch was observed in `ops/raw-registry.json`."
+                        ]
+                    }
+                },
+            )
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:raw-registry",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": source_run_id,
+                            "proposal_id": "next_run_failure_repair__registry-runtime__validation-blocked",
+                            "source_candidate_id": "next-run-decision:prior-validation",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__registry-runtime__validation-blocked"
+                            ),
+                            "proposal_family": "next_run_failure_repair",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "validation_blocked",
+                            "blocking_role": "validator",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "raw-registry stale export should be repaired only while it still reproduces",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [
+                                "ops/scripts/registry/raw_registry_runtime.py"
+                            ],
+                            "supporting_targets": [
+                                "ops/raw-registry.json",
+                                "ops/reports/raw-registry-preflight-report.json",
+                            ],
+                            "must_change_tests": ["tests/test_raw_registry_runtime.py"],
+                            "evidence_paths": [
+                                f"runs/{source_run_id}/validator-last-message.json"
+                            ],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+
+            self.assertEqual(proposal_report["summary"]["next_run_repair_proposals"], 0)
+            self.assertEqual(
+                proposal_report["diagnostics"]["next_run_decision_queue"][
+                    "open_carry_forward_decisions"
+                ],
+                0,
+            )
+
+    def test_clean_raw_registry_evidence_suppresses_review_blocked_preflight_repair(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_raw_registry_vault(vault)
+            seed_vault(vault)
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+
+            from ops.scripts.raw_registry_export import build_current_raw_registry_export
+
+            export, destination = build_current_raw_registry_export(vault)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(
+                json.dumps(export, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            source_run_id = "auto-session-a-run-01-generated-preflight"
+            run_dir = vault / "runs" / source_run_id
+            run_dir.mkdir(parents=True, exist_ok=True)
+            write_json(
+                run_dir / "reviewer-last-message.json",
+                {
+                    "diagnostics": {
+                        "notes": [
+                            "Finding HIGH: `ops/reports/raw-registry-preflight-report.json` "
+                            "was stale after the worker patch, but live raw-registry export "
+                            "and preflight both passed."
+                        ]
+                    }
+                },
+            )
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:generated-preflight",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": source_run_id,
+                            "proposal_id": "next_run_failure_repair__runtime__validation-blocked",
+                            "source_candidate_id": "next-run-decision:prior-validation",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__runtime__review-blocked"
+                            ),
+                            "proposal_family": "next_run_failure_repair",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "review_blocked",
+                            "blocking_role": "reviewer",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "generated raw-registry preflight evidence was stale",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [
+                                "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+                            ],
+                            "supporting_targets": [
+                                "ops/reports/raw-registry-preflight-report.json",
+                                "ops/scripts/registry/raw_registry_preflight.py",
+                            ],
+                            "must_change_tests": ["tests/test_raw_registry_preflight.py"],
+                            "evidence_paths": [
+                                f"runs/{source_run_id}/reviewer-last-message.json"
+                            ],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+
+            self.assertEqual(proposal_report["summary"]["next_run_repair_proposals"], 0)
+            self.assertEqual(
+                proposal_report["diagnostics"]["next_run_decision_queue"][
+                    "open_carry_forward_decisions"
+                ],
+                0,
+            )
+
+    def test_clean_raw_registry_evidence_does_not_suppress_unrelated_review_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_raw_registry_vault(vault)
+            seed_vault(vault)
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+
+            from ops.scripts.raw_registry_export import build_current_raw_registry_export
+
+            export, destination = build_current_raw_registry_export(vault)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(
+                json.dumps(export, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            target = vault / "ops" / "scripts" / "mechanism" / "example_runtime.py"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("def subject():\n    return 'review'\n", encoding="utf-8")
+
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:generic-review",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": "auto-session-a-run-01-generic-review",
+                            "proposal_id": "next_run_failure_repair__example-runtime__review-blocked",
+                            "source_candidate_id": "next-run-decision:prior-review",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__example-runtime__review-blocked"
+                            ),
+                            "proposal_family": "next_run_failure_repair",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "review_blocked",
+                            "blocking_role": "reviewer",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "reviewer found an unrelated runtime behavior regression",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [
+                                "ops/scripts/mechanism/example_runtime.py"
+                            ],
+                            "supporting_targets": [],
+                            "must_change_tests": ["tests/test_example.py"],
+                            "evidence_paths": [],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            repair_proposals = [
+                proposal
+                for proposal in proposal_report["proposals"]
+                if proposal["failure_mode"] == "next_run_failure_repair"
+            ]
+
+            self.assertEqual(proposal_report["summary"]["next_run_repair_proposals"], 1)
+            self.assertEqual(
+                proposal_report["diagnostics"]["next_run_decision_queue"][
+                    "open_carry_forward_decisions"
+                ],
+                1,
+            )
+            self.assertEqual(len(repair_proposals), 1)
+            self.assertEqual(
+                repair_proposals[0]["proposal_id"],
+                "next_run_failure_repair__example-runtime__review-blocked",
+            )
+
+    def test_clean_export_with_unclean_live_raw_registry_preflight_keeps_repair_open(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_raw_registry_vault(vault)
+            seed_vault(vault)
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+
+            from ops.scripts.raw_registry_export import build_current_raw_registry_export
+
+            export, destination = build_current_raw_registry_export(vault)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(
+                json.dumps(export, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            (vault / "raw" / "unregistered.md").write_text("not registered\n", encoding="utf-8")
+
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:preflight-unclean",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": "auto-session-a-run-01-preflight-unclean",
+                            "proposal_id": "next_run_failure_repair__registry-runtime__review-blocked",
+                            "source_candidate_id": "next-run-decision:prior-review",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__registry-runtime__review-blocked"
+                            ),
+                            "proposal_family": "next_run_failure_repair",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "review_blocked",
+                            "blocking_role": "reviewer",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "raw-registry preflight report remains stale",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [
+                                "ops/scripts/registry/raw_registry_preflight.py"
+                            ],
+                            "supporting_targets": [
+                                "ops/reports/raw-registry-preflight-report.json"
+                            ],
+                            "must_change_tests": ["tests/test_raw_registry_preflight.py"],
+                            "evidence_paths": [],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+
+            self.assertEqual(proposal_report["summary"]["next_run_repair_proposals"], 1)
+            self.assertEqual(
+                proposal_report["diagnostics"]["next_run_decision_queue"][
+                    "open_carry_forward_decisions"
+                ],
+                1,
+            )
+
+    def test_stale_raw_registry_export_keeps_next_run_repair_open(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_raw_registry_vault(vault)
+            seed_vault(vault)
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+
+            from ops.scripts.raw_registry_export import build_current_raw_registry_export
+
+            export, destination = build_current_raw_registry_export(vault)
+            export["entries"][0]["content_sha256"] = "0" * 64
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(
+                json.dumps(export, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            source_run_id = "auto-session-a-run-01-raw-registry"
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:raw-registry",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": source_run_id,
+                            "proposal_id": "next_run_failure_repair__registry-runtime__validation-blocked",
+                            "source_candidate_id": "next-run-decision:prior-validation",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__registry-runtime__validation-blocked"
+                            ),
+                            "proposal_family": "next_run_failure_repair",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "validation_blocked",
+                            "blocking_role": "validator",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "raw-registry stale export should remain repairable",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": [
+                                "ops/scripts/registry/raw_registry_runtime.py"
+                            ],
+                            "supporting_targets": ["ops/raw-registry.json"],
+                            "must_change_tests": ["tests/test_raw_registry_runtime.py"],
+                            "evidence_paths": [],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            repair_proposals = [
+                proposal
+                for proposal in proposal_report["proposals"]
+                if proposal["failure_mode"] == "next_run_failure_repair"
+            ]
+
+            self.assertEqual(len(repair_proposals), 1)
+            self.assertEqual(
+                repair_proposals[0]["proposal_id"],
+                "next_run_failure_repair__registry-runtime__validation-blocked",
+            )
+            self.assertNotIn(
+                "ops/raw-registry.json",
+                repair_proposals[0]["supporting_targets"],
+            )
+
+    def test_raw_registry_export_repair_demotes_local_cache_primary_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_raw_registry_vault(vault)
+            seed_vault(vault)
+            write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
+
+            from ops.scripts.raw_registry_export import build_current_raw_registry_export
+
+            export, destination = build_current_raw_registry_export(vault)
+            export["entries"][0]["content_sha256"] = "0" * 64
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(
+                json.dumps(export, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            write_json(
+                vault / "ops" / "reports" / "auto-improve-sessions" / "session-a.json",
+                {
+                    "next_run_decisions": [
+                        {
+                            "decision_id": "next-run-decision:run-a:raw-registry-cache",
+                            "observed_at": "2026-04-14T02:00:00Z",
+                            "session_id": "auto-session-a",
+                            "iteration": 1,
+                            "source_run_id": "auto-session-a-run-01-raw-registry",
+                            "proposal_id": "next_run_failure_repair__raw-registry__validation-blocked",
+                            "source_candidate_id": "next-run-decision:prior-validation",
+                            "target_proposal_id": (
+                                "next_run_failure_repair__raw-registry__validation-blocked"
+                            ),
+                            "proposal_family": "next_run_failure_repair",
+                            "proposal_tier": "supporting",
+                            "failure_taxonomy": "validation_blocked",
+                            "blocking_role": "validator",
+                            "decision": "carry_forward",
+                            "next_run_action": "repair_failure",
+                            "status": "open",
+                            "reason": "raw-registry stale export should repair the producer, not the cache",
+                            "quarantined_source_proposal": True,
+                            "primary_targets": ["ops/raw-registry.json"],
+                            "supporting_targets": [
+                                "ops/raw-registry.json",
+                                "ops/reports/raw-registry-preflight-report.json",
+                            ],
+                            "must_change_tests": [],
+                            "evidence_paths": [],
+                        }
+                    ]
+                },
+            )
+            (vault / "system" / "system-log.md").write_text("# System Log\n", encoding="utf-8")
+
+            policy, policy_path = load_policy(vault)
+            proposal_report = build_report(vault, policy, policy_path, context=fixed_context(policy))
+            repair_proposals = [
+                proposal
+                for proposal in proposal_report["proposals"]
+                if proposal["failure_mode"] == "next_run_failure_repair"
+            ]
+
+            self.assertEqual(len(repair_proposals), 1)
+            repair = repair_proposals[0]
+            self.assertEqual(
+                repair["primary_targets"],
+                ["ops/scripts/registry/raw_registry_export.py"],
+            )
+            self.assertNotIn("ops/raw-registry.json", repair["primary_targets"])
+            self.assertNotIn("ops/raw-registry.json", repair["supporting_targets"])
+            self.assertIn(
+                "ops/scripts/registry/raw_registry_preflight.py",
+                repair["supporting_targets"],
+            )
+            self.assertIn(
+                "tests/test_raw_registry_preflight.py",
+                repair["must_change_tests"],
             )
 
     def test_candidate_fingerprint_repo_health_schema_debt_stays_open(self) -> None:

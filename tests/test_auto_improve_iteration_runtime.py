@@ -223,6 +223,9 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                         "test_files": ["tests/test_example.py"],
                         "workspace_preparation": existing_workspace_preparation,
                         "behavior_delta": f"runs/{run_id}/behavior-delta.json",
+                        "structural_complexity_budget": (
+                            f"runs/{run_id}/structural-complexity-budget.json"
+                        ),
                         "apply_mode": "live",
                         "apply_status": "live_applied",
                         "live_applied": True,
@@ -287,6 +290,10 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                 f"runs/{run_id}/rollback-rehearsal-report.json",
             )
             self.assertEqual(payload["behavior_delta"], f"runs/{run_id}/behavior-delta.json")
+            self.assertEqual(
+                payload["structural_complexity_budget"],
+                f"runs/{run_id}/structural-complexity-budget.json",
+            )
             self.assertEqual(payload["phase_durations"], {"routing": 0.2, "experiment": 0.5})
 
     def test_write_iteration_telemetry_merges_nested_timeout_fields_from_result(self) -> None:
@@ -367,6 +374,7 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                 "mutation-command.stderr.txt",
                 "repo-health.stderr.txt",
                 "repo-health-artifact-freshness-report-check.json",
+                "structural-complexity-budget.json",
             ):
                 (run_dir / name).write_text(f"{name}\n", encoding="utf-8")
 
@@ -394,8 +402,41 @@ class AutoImproveIterationRuntimeTests(unittest.TestCase):
                     f"runs/{run_id}/mutation-command.stderr.txt",
                     f"runs/{run_id}/repo-health.stderr.txt",
                     f"runs/{run_id}/repo-health-artifact-freshness-report-check.json",
+                    f"runs/{run_id}/structural-complexity-budget.json",
                 ],
             )
+
+    def test_write_iteration_telemetry_preserves_specific_repo_health_failure_taxonomy(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            run_id = "auto-session-run-structural-budget"
+            (vault / "runs" / run_id).mkdir(parents=True)
+
+            rel_path = write_iteration_telemetry(
+                request=IterationTelemetryRequest(
+                    vault=vault,
+                    run_id=run_id,
+                    session_id="auto-session",
+                    proposal={"proposal_id": "proposal-1"},
+                    scope_freeze_rel=f"runs/{run_id}/scope-freeze.json",
+                    routing_report_rels=[f"runs/{run_id}/subagent-routing.worker.json"],
+                    roles=["worker"],
+                    phase_durations={"routing": 0.1, "experiment": 0.2},
+                    outcome="repo_health_blocked",
+                    result={
+                        "decision": "SKIPPED",
+                        "failure_taxonomy": "structural_complexity_non_regression",
+                        "finalized": False,
+                        "finalize_result": {},
+                    },
+                    context=_context(),
+                )
+            )
+
+            payload = json.loads((vault / rel_path).read_text(encoding="utf-8"))
+            self.assertEqual(payload["failure_taxonomy"], "structural_complexity_non_regression")
 
     def test_write_iteration_telemetry_omits_stale_pre_promotion_logs_for_hold(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

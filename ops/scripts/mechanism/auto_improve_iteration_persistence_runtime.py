@@ -19,6 +19,7 @@ from .auto_improve_iteration_telemetry_runtime import (
     iteration_same_eval_contract,
     iteration_same_eval_reason,
 )
+from .failure_taxonomy_runtime import failure_taxonomy_from_iteration
 from .auto_improve_next_run_decision_runtime import build_next_run_decision
 from .auto_improve_outcome_runtime import role_report_path
 from .auto_improve_route_scaffold_runtime import RouteScaffoldPhaseResult
@@ -66,8 +67,9 @@ PRESERVED_RUN_TELEMETRY_FIELDS = frozenset(
     {
         "metadata",
         "primary_targets", "supporting_targets", "test_files",
-        "workspace_preparation", "apply_mode", "apply_status",
+        "workspace_preparation", "structural_complexity_budget", "apply_mode", "apply_status",
         "live_applied", "shadow_apply_report", "rollback_rehearsal_report",
+        "post_mutation_generated_artifact_convergence",
     }
 )
 PRE_PROMOTION_FAILURE_ARTIFACT_OUTCOMES = frozenset(
@@ -79,6 +81,7 @@ PRE_PROMOTION_FAILURE_LOG_NAMES = (
     "repo-health.stdout.txt",
     "repo-health.stderr.txt",
     "repo-health-artifact-freshness-report-check.json",
+    "structural-complexity-budget.json",
 )
 DISCARD_NON_REGRESSION_CHECK_IDS = (
     "candidate_eval_pass",
@@ -88,11 +91,6 @@ DISCARD_NON_REGRESSION_CHECK_IDS = (
     "tests_non_regression",
 )
 PROMOTION_CHECK_STATUS_VALUES = frozenset({"PASS", "WARN", "FAIL"})
-GENERIC_PROMOTION_FAILURE_TAXONOMIES = frozenset({"discarded"})
-LEGACY_PROMOTION_REASON_CODES = frozenset(
-    {"", "legacy_promotion_report", "unknown", "none"}
-)
-
 @dataclass(frozen=True)
 class PersistIterationPhaseResult:
     consecutive_failures: int
@@ -534,29 +532,6 @@ def _preserve_existing_telemetry_fields(payload: dict[str, Any], existing_report
             payload[field] = existing_report[field]
 
 
-def _specific_failure_taxonomy(
-    outcome: str,
-    *,
-    decision_record: dict[str, Any] | None,
-    discard_evidence: dict[str, Any] | None,
-) -> str:
-    outcome_text = str(outcome).strip()
-    if outcome_text == "promoted":
-        return ""
-    if outcome_text not in GENERIC_PROMOTION_FAILURE_TAXONOMIES:
-        return outcome_text
-    blocking_check_ids = []
-    if isinstance(discard_evidence, dict):
-        blocking_check_ids = [str(item).strip() for item in discard_evidence.get("blocking_check_ids", []) if str(item).strip()]
-    if isinstance(decision_record, dict):
-        reason_code = str(decision_record.get("reason_code", "")).strip()
-        if reason_code and reason_code not in LEGACY_PROMOTION_REASON_CODES and (not blocking_check_ids or reason_code in blocking_check_ids):
-            return reason_code
-    if blocking_check_ids:
-        return blocking_check_ids[0]
-    return outcome_text
-
-
 def _update_session_loop_state(
     session: dict[str, Any],
     *,
@@ -652,10 +627,11 @@ def write_iteration_telemetry(
     )
     if discard_evidence is not None:
         payload["discard_non_regression_evidence"] = discard_evidence
-    payload["failure_taxonomy"] = _specific_failure_taxonomy(
+    payload["failure_taxonomy"] = failure_taxonomy_from_iteration(
         request.outcome,
         decision_record=decision_record,
         discard_evidence=discard_evidence,
+        result_failure_taxonomy=str((request.result or {}).get("failure_taxonomy", "")).strip(),
     )
     command_timeouts = _iteration_command_timeouts(request.vault, request.run_id, request.result)
     if command_timeouts is not None:

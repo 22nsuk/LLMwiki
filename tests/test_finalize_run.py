@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
 import tempfile
 import unittest
@@ -75,6 +76,9 @@ class FinalizeRunTests(unittest.TestCase):
             promotion_report = json.loads((run_dir / "promotion-report.json").read_text(encoding="utf-8"))
             run_ledger = json.loads((run_dir / "run-ledger.json").read_text(encoding="utf-8"))
             planning_validation = json.loads((run_dir / "planning-validation.json").read_text(encoding="utf-8"))
+            fingerprint = json.loads(
+                (run_dir / "run-artifact-fingerprint.json").read_text(encoding="utf-8")
+            )
             system_log = (vault / "system" / "system-log.md").read_text(encoding="utf-8")
 
             self.assertEqual(result["decision"], "PROMOTE")
@@ -87,6 +91,26 @@ class FinalizeRunTests(unittest.TestCase):
             self.assertEqual(finalized_event["decision_event"]["decision"], "PROMOTE")
             self.assertEqual(finalized_event["decision_event"]["ledger_event_type"], "finalized")
             self.assertEqual(planning_validation["status"], "PASS")
+            self.assertEqual(
+                result["run_artifact_fingerprint"],
+                "runs/run-finalize/run-artifact-fingerprint.json",
+            )
+            fingerprint_by_path = {
+                item["path"]: item["sha256"]
+                for item in fingerprint["artifacts"]
+            }
+            self.assertEqual(
+                fingerprint_by_path["runs/run-finalize/promotion-report.json"],
+                hashlib.sha256((run_dir / "promotion-report.json").read_bytes()).hexdigest(),
+            )
+            self.assertEqual(
+                fingerprint_by_path["runs/run-finalize/run-ledger.json"],
+                hashlib.sha256((run_dir / "run-ledger.json").read_bytes()).hexdigest(),
+            )
+            self.assertEqual(
+                fingerprint_by_path["runs/run-finalize/planning-validation.json"],
+                hashlib.sha256((run_dir / "planning-validation.json").read_bytes()).hexdigest(),
+            )
             self.assertEqual(
                 planning_validation["next_action"],
                 "Use this finalized run as future history input for mechanism_review and mutation_proposal.",

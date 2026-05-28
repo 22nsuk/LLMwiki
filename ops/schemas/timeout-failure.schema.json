@@ -138,6 +138,9 @@
         "changed_files_manifest": {
           "type": "string"
         },
+        "structural_complexity_budget": {
+          "type": "string"
+        },
         "behavior_delta": {
           "type": "string"
         },

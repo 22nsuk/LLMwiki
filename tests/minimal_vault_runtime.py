@@ -135,6 +135,10 @@ SCHEMA_PATHS = {
     "cyclonedx-1.6.schema.json": REPO_ROOT / "ops" / "schemas" / "cyclonedx-1.6.schema.json",
     "openvex-draft.schema.json": REPO_ROOT / "ops" / "schemas" / "openvex-draft.schema.json",
     "generated-artifact-index.schema.json": REPO_ROOT / "ops" / "schemas" / "generated-artifact-index.schema.json",
+    "generated-artifact-convergence.schema.json": REPO_ROOT
+    / "ops"
+    / "schemas"
+    / "generated-artifact-convergence.schema.json",
     "archive-execution-manifest.schema.json": REPO_ROOT
     / "ops"
     / "schemas"

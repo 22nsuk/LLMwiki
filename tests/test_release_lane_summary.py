@@ -243,7 +243,7 @@ class ReleaseLaneSummaryTests(unittest.TestCase):
                     "source_path": "ops/reports/auto-improve-readiness.json",
                     "code": "learning_blocked_by_execution_not_runnable",
                     "severity": "blocker",
-                    "gate_effect": "shadow",
+                    "gate_effect": "blocks_execution",
                     "message": "no runnable proposal is available",
                     "required_evidence": ["restore runnable proposal queue"],
                     "clean_lane_effect": "does_not_block_clean_lane",

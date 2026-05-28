@@ -38,6 +38,7 @@ from .mechanism_run_promotion_runtime import (
     _finalize_step,
     _record_promotion_step,
 )
+from .mechanism_run_ledger_runtime import append_ledger_event
 from .mechanism_run_scaffold_resolution_runtime import _resolve_experiment_inputs
 from .mechanism_run_scaffold_runtime import (
     _build_scaffold_only_result,
@@ -54,6 +55,9 @@ from .mechanism_run_workspace_runtime import (
     _run_command,
     _snapshot_repo_file_digests,
     _write_changed_files_manifest,
+)
+from .post_mutation_generated_artifact_convergence_runtime import (
+    run_post_mutation_generated_artifact_convergence,
 )
 
 __all__ = [
@@ -145,6 +149,7 @@ class RunMechanismExperimentRequest:
 class _WorkspaceExperimentResult:
     workspace_preparation: dict
     mutation_step: CommandStepResult
+    generated_artifact_convergence: dict[str, Any]
     candidate_artifacts: dict
     repo_health: RepoHealthStepResult
     promotion: PromotionStepResult
@@ -225,6 +230,7 @@ def _run_mechanism_experiment_request(
         candidate_artifacts=result.candidate_artifacts,
         steps=CompletedRunSteps(
             mutation_step=result.mutation_step,
+            generated_artifact_convergence=result.generated_artifact_convergence,
             repo_health=result.repo_health,
             promotion=result.promotion,
             finalize_step=result.finalize_step,
@@ -244,6 +250,36 @@ def _resolve_apply_mode(
     if apply_mode not in {"canary_only", "live"}:
         raise RunMechanismExperimentUsageError(f"unsupported apply mode: {apply_mode}")
     return apply_mode
+
+
+def _record_post_mutation_generated_artifact_convergence(
+    vault: Path,
+    *,
+    run_id: str,
+    resolution: Any,
+    workspace_vault: Path,
+) -> dict[str, Any]:
+    selected_targets = [*resolution.primary_targets, *resolution.supporting_targets]
+    summary = run_post_mutation_generated_artifact_convergence(
+        vault,
+        workspace_vault,
+        run_id=run_id,
+        policy_path_text=resolution.policy_path_text,
+        selected_targets=selected_targets,
+        context=resolution.context,
+    )
+    append_ledger_event(
+        vault,
+        run_id,
+        event_type="generated_artifact_convergence_checked",
+        summary=(
+            "Checked post-mutation generated artifact convergence before candidate capture."
+        ),
+        artifacts=[summary["artifact"], *summary["artifacts"]],
+        decision=summary["status"],
+        context=resolution.context,
+    )
+    return summary
 
 
 def _run_workspace_experiment_phase(
@@ -274,6 +310,12 @@ def _run_workspace_experiment_phase(
             workspace_vault,
             run_id=request.run_id,
             resolution=resolution,
+        )
+        generated_artifact_convergence = _record_post_mutation_generated_artifact_convergence(
+            vault,
+            run_id=request.run_id,
+            resolution=resolution,
+            workspace_vault=workspace_vault,
         )
         with tempfile.TemporaryDirectory(
             prefix=f"{request.run_id}-candidate-report-workspace-"
@@ -310,6 +352,7 @@ def _run_workspace_experiment_phase(
                 baseline_artifacts=baseline_artifacts,
                 candidate_artifacts=candidate_artifacts,
                 workspace_preparation=workspace.telemetry,
+                generated_artifact_convergence=generated_artifact_convergence,
                 repo_health=repo_health,
             )
 
@@ -356,6 +399,7 @@ def _run_workspace_experiment_phase(
         return _WorkspaceExperimentResult(
             workspace_preparation=workspace.telemetry,
             mutation_step=mutation_step,
+            generated_artifact_convergence=generated_artifact_convergence,
             candidate_artifacts=candidate_artifacts,
             repo_health=repo_health,
             promotion=promotion,

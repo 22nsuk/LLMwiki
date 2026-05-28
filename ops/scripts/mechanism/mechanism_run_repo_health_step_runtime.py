@@ -4,6 +4,14 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from ops.scripts.schema_constants_runtime import STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH
+from ops.scripts.structural_complexity_budget_runtime import (
+    DEFAULT_TARGET_PROFILES,
+    build_report as build_structural_complexity_budget_report,
+    target_paths_from_changed_files_manifest,
+    touched_target_profiles,
+)
+
 from .mechanism_run_common_runtime import (
     CommandExecutionDependencies,
     CommandExecutionRequest,
@@ -12,11 +20,19 @@ from .mechanism_run_common_runtime import (
     execute_command_step,
     require_prepared_command,
     write_command_timeout_failure,
+    write_json,
 )
 
 REPO_HEALTH_DIAGNOSTIC_ARTIFACTS = {
     "tmp/artifact-freshness-report-check.json": "repo-health-artifact-freshness-report-check.json",
 }
+STRUCTURAL_COMPLEXITY_BUDGET_RUN_ARTIFACT = "structural-complexity-budget.json"
+
+
+@dataclass(frozen=True)
+class StructuralComplexityBudgetStepResult:
+    report_path: str
+    status: str
 
 
 @dataclass(frozen=True)
@@ -27,6 +43,7 @@ class RepoHealthStepDependencies:
     write_timeout_failure_artifact: Callable[..., str]
     append_ledger_event: Callable[..., None]
     write_changed_files_manifest: Callable[..., str]
+    write_structural_complexity_budget_artifact: Callable[..., StructuralComplexityBudgetStepResult]
     write_behavior_delta_artifact: Callable[..., str]
     sanitize_path_text: Callable[..., str]
 
@@ -60,6 +77,63 @@ def _copy_repo_health_diagnostic_artifacts(
         destination.write_bytes(source.read_bytes())
         copied.append(f"runs/{run_id}/{destination_name}")
     return copied
+
+
+def write_structural_complexity_budget_artifact(
+    vault: Path,
+    workspace_vault: Path,
+    *,
+    run_id: str,
+    resolution: ExperimentResolution,
+    changed_files_manifest: str,
+) -> StructuralComplexityBudgetStepResult:
+    target_paths = target_paths_from_changed_files_manifest(vault, changed_files_manifest)
+    report = build_structural_complexity_budget_report(
+        workspace_vault,
+        policy_path=resolution.policy_path_text,
+        context=resolution.context,
+        target_profiles=touched_target_profiles(DEFAULT_TARGET_PROFILES, target_paths),
+    )
+    rel_path = f"runs/{run_id}/{STRUCTURAL_COMPLEXITY_BUDGET_RUN_ARTIFACT}"
+    write_json(vault, rel_path, report, STRUCTURAL_COMPLEXITY_BUDGET_REPORT_SCHEMA_PATH)
+    return StructuralComplexityBudgetStepResult(
+        report_path=rel_path,
+        status=str(report.get("status", "")).strip(),
+    )
+
+
+def _repo_health_decision(
+    *,
+    repo_health_passed: bool,
+    repo_health_timed_out: bool,
+    structural_complexity_budget_status: str,
+) -> str:
+    if repo_health_timed_out:
+        return "repo_health_timeout"
+    if not repo_health_passed:
+        return "repo_health_fail"
+    if structural_complexity_budget_status != "pass":
+        return "structural_complexity_non_regression"
+    return "repo_health_pass"
+
+
+def _repo_health_summary(
+    *,
+    repo_health_passed: bool,
+    repo_health_timed_out: bool,
+    structural_complexity_budget_status: str,
+) -> str:
+    if repo_health_timed_out:
+        return "Repo health command timed out before promotion evaluation."
+    if not repo_health_passed:
+        return "Repo health command failed; promotion evaluation was skipped."
+    if structural_complexity_budget_status != "pass":
+        observed_status = structural_complexity_budget_status or "unknown"
+        return (
+            "Structural complexity budget reported "
+            f"{observed_status} after repo health passed; promotion evaluation was skipped."
+        )
+    return "Repo health command and post-worker structural complexity budget passed before promotion evaluation."
 
 
 def repo_health_step(
@@ -100,6 +174,13 @@ def repo_health_step(
         diff_model=diff_model,
         context=resolution.context,
     )
+    structural_complexity_budget = dependencies.write_structural_complexity_budget_artifact(
+        vault,
+        workspace_vault,
+        run_id=run_id,
+        resolution=resolution,
+        changed_files_manifest=changed_files_manifest,
+    )
     behavior_delta = dependencies.write_behavior_delta_artifact(
         vault,
         workspace_vault,
@@ -109,6 +190,9 @@ def repo_health_step(
     )
     repo_health_passed = command_execution.result["returncode"] == 0
     repo_health_timed_out = bool(command_execution.result.get("timed_out"))
+    structural_complexity_budget_status = structural_complexity_budget.status
+    structural_complexity_budget_passed = structural_complexity_budget_status == "pass"
+    passed = repo_health_passed and structural_complexity_budget_passed
     timeout_failure_rel = ""
     if repo_health_timed_out:
         timeout_failure_rel = write_command_timeout_failure(
@@ -119,6 +203,7 @@ def repo_health_step(
             context=resolution.context,
             artifacts={
                 "changed_files_manifest": changed_files_manifest,
+                "structural_complexity_budget": structural_complexity_budget.report_path,
                 "behavior_delta": behavior_delta,
             },
             note=(
@@ -131,34 +216,33 @@ def repo_health_step(
         vault,
         run_id,
         event_type="repo_health_checked",
-        summary=(
-            "Repo health command timed out before promotion evaluation."
-            if repo_health_timed_out
-            else (
-                "Repo health command passed before promotion evaluation."
-                if repo_health_passed
-                else "Repo health command failed; promotion evaluation was skipped."
-            )
+        summary=_repo_health_summary(
+            repo_health_passed=repo_health_passed,
+            repo_health_timed_out=repo_health_timed_out,
+            structural_complexity_budget_status=structural_complexity_budget_status,
         ),
         artifacts=[
             *command_execution.logs,
             *diagnostic_artifacts,
             changed_files_manifest,
+            structural_complexity_budget.report_path,
             behavior_delta,
             *([timeout_failure_rel] if timeout_failure_rel else []),
         ],
-        decision=(
-            "repo_health_timeout"
-            if repo_health_timed_out
-            else ("repo_health_pass" if repo_health_passed else "repo_health_fail")
+        decision=_repo_health_decision(
+            repo_health_passed=repo_health_passed,
+            repo_health_timed_out=repo_health_timed_out,
+            structural_complexity_budget_status=structural_complexity_budget_status,
         ),
         context=resolution.context,
-        status="running" if repo_health_passed else "blocked",
+        status="running" if passed else "blocked",
     )
     return RepoHealthStepResult(
         result=command_execution.result,
         logs=command_execution.logs,
         changed_files_manifest=changed_files_manifest,
+        structural_complexity_budget=structural_complexity_budget.report_path,
+        structural_complexity_budget_status=structural_complexity_budget_status,
         behavior_delta=behavior_delta,
-        passed=repo_health_passed,
+        passed=passed,
     )

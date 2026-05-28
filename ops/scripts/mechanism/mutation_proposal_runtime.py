@@ -29,15 +29,9 @@ from ops.scripts.schema_runtime import (
     load_schema_with_vault_override,
     validate_with_schema,
 )
-from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 from .auto_improve_next_run_decision_runtime import (
-    CARRY_FORWARD_DECISION,
     NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE,
-    NEXT_RUN_FAILURE_REPAIR_FAMILY,
-    NEXT_RUN_FAILURE_REPAIR_SOURCE_CANDIDATE_TYPE,
-    OPEN_DECISION_STATUS,
-    next_run_failure_repair_proposal_id,
     normalize_next_run_decisions,
 )
 from .auto_improve_readiness_runtime import (
@@ -50,6 +44,16 @@ from .mechanism_candidate_registry_runtime import (
     MECHANISM_CANDIDATE_REGISTRY,
     proposal_fields_for_candidate,
 )
+from .noop_repair_classifier_runtime import (
+    run_has_noop_mutation_failure,
+)
+from .next_run_repair_queue_runtime import (
+    SOURCE_SESSION_REPORT_DECISION_KEY,
+    NextRunRepairProposalDependencies,
+    next_run_decision_queue_diagnostics,
+    next_run_repair_proposal_models,
+    safe_repo_relative_path,
+)
 
 MECHANISM_REVIEW_SCHEMA = MECHANISM_REVIEW_SCHEMA_PATH
 MUTATION_PROPOSAL_SCHEMA = MUTATION_PROPOSAL_SCHEMA_PATH
@@ -58,7 +62,6 @@ DEFAULT_OUTCOME_METRICS_REPORT = "ops/reports/outcome-metrics.json"
 DEFAULT_SYSTEM_LOG = "system/system-log.md"
 QUEUE_PRESSURE_SUMMARY_TOP_N = 3
 PRODUCER = "ops.scripts.mutation_proposal_runtime"
-ARTIFACT_FRESHNESS_FAILURE_TAXONOMY_PREFIX = "artifact_freshness_"
 SOURCE_COMMAND = (
     "python -m ops.scripts.mutation_proposal "
     "--vault . "
@@ -74,7 +77,6 @@ RECENT_LOG_OVERLAP_UNBLOCK_SOURCE_CANDIDATE_TYPE = (
     "mechanism_recent_log_overlap_queue_unblock_candidate"
 )
 RECENT_LOG_OVERLAP_UNBLOCK_FAMILY = "queue_unblock"
-NOOP_MUTATION_FAILURE_MARKER = "reported pass without modifying any declared primary target"
 RECENT_LOG_OVERLAP_UNBLOCK_PREFERRED_TARGETS = [
     "ops/scripts/mechanism/mutation_proposal_runtime.py",
     "ops/scripts/mechanism/mechanism_run_validation_runtime.py",
@@ -97,11 +99,6 @@ SCRIPT_OUTPUT_SURFACES_TARGET = "ops/script-output-surfaces.json"
 REPORT_SCHEMA_SAMPLES_TARGET = "tests/fixtures/report_schema_samples.json"
 REPORT_SCHEMA_SAMPLE_REGENERATION_TEST = "tests/test_report_schema_sample_regeneration.py"
 DEFAULT_AUTO_IMPROVE_SESSIONS_DIR = "ops/reports/auto-improve-sessions"
-SOURCE_SESSION_REPORT_DECISION_KEY = "_source_session_report"
-NEXT_RUN_REPAIR_BACKTICK_PATH_RE = re.compile(r"`((?:ops|tests)/[^`\s]+)`")
-NEXT_RUN_REPAIR_PLAIN_PATH_RE = re.compile(
-    r"\b((?:ops|tests)/(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+\.(?:py|json|md))(?:[:]\d+)?"
-)
 
 
 @dataclass(frozen=True)
@@ -206,6 +203,8 @@ class MutationProposal:
 class QueueSelectionDiagnostics:
     available_proposal_count: int
     selected_proposal_count: int
+    selection_mode: str
+    repair_priority_suppressed_count: int
     runnable_available_count: int
     blocked_available_count: int
     selected_runnable_count: int
@@ -216,6 +215,8 @@ class QueueSelectionDiagnostics:
         return {
             "available_proposal_count": self.available_proposal_count,
             "selected_proposal_count": self.selected_proposal_count,
+            "selection_mode": self.selection_mode,
+            "repair_priority_suppressed_count": self.repair_priority_suppressed_count,
             "runnable_available_count": self.runnable_available_count,
             "blocked_available_count": self.blocked_available_count,
             "selected_runnable_count": self.selected_runnable_count,
@@ -390,187 +391,6 @@ def _load_consumed_next_run_decision_ids(
             ):
                 consumed.add(source_candidate_id)
     return sorted(consumed)
-
-
-def _is_next_run_failure_repair_source(decision: dict) -> bool:
-    if str(decision.get("proposal_family", "")).strip() != NEXT_RUN_FAILURE_REPAIR_FAMILY:
-        return False
-    source_proposal_id = str(decision.get("proposal_id", "")).strip()
-    return source_proposal_id.startswith(f"{NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE}__")
-
-
-def _repair_decision_ended_as_noop_mutation_failure(vault: Path, decision: dict) -> bool:
-    proposal_family = str(decision.get("proposal_family", "")).strip()
-    if not (
-        _is_next_run_failure_repair_source(decision)
-        or proposal_family == RECENT_LOG_OVERLAP_UNBLOCK_FAMILY
-    ):
-        return False
-    if str(decision.get("failure_taxonomy", "")).strip() != "mutation_failed":
-        return False
-    source_run_id = str(decision.get("source_run_id", "")).strip()
-    if not source_run_id:
-        return False
-    return _run_has_noop_mutation_failure(vault, source_run_id)
-
-
-def _run_has_noop_mutation_failure(vault: Path, source_run_id: str) -> bool:
-    stderr_path = vault / "runs" / source_run_id / "mutation-command.stderr.txt"
-    try:
-        stderr_text = stderr_path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return False
-    return NOOP_MUTATION_FAILURE_MARKER in stderr_text
-
-
-def _artifact_validates_against_declared_schema(vault: Path, rel_path: str) -> bool:
-    path = vault / rel_path
-    try:
-        payload = _read_json(path)
-    except (OSError, json.JSONDecodeError):
-        return False
-    schema_path = str(payload.get("$schema", "")).strip()
-    if not schema_path:
-        return False
-    try:
-        schema = load_schema_with_vault_override(vault, schema_path)
-    except (OSError, json.JSONDecodeError, ValueError):
-        return False
-    return not validate_with_schema(payload, schema)
-
-
-def _repo_health_artifact_freshness_failure_now_clean(vault: Path, source_run_id: str) -> bool:
-    report_path = vault / "runs" / source_run_id / "repo-health-artifact-freshness-report-check.json"
-    try:
-        report = _read_json(report_path)
-    except (OSError, json.JSONDecodeError):
-        return False
-    if str(report.get("status", "")).strip() != "fail":
-        return False
-    observed_source_tree_fingerprint = str(report.get("source_tree_fingerprint", "")).strip()
-    if (
-        observed_source_tree_fingerprint
-        and observed_source_tree_fingerprint != release_source_tree_fingerprint(vault)
-    ):
-        return False
-    top_debt_files = report.get("top_debt_files", [])
-    if not isinstance(top_debt_files, list):
-        return False
-    schema_invalid_files = [
-        str(item.get("path", "")).strip()
-        for item in top_debt_files
-        if isinstance(item, dict)
-        and "schema_validation_failed" in {
-            str(issue).strip() for issue in item.get("issues", [])
-        }
-        and str(item.get("path", "")).strip()
-    ]
-    if not schema_invalid_files:
-        return False
-    return all(_artifact_validates_against_declared_schema(vault, path) for path in schema_invalid_files)
-
-
-def _repair_decision_ended_as_clean_repo_health(vault: Path, decision: dict) -> bool:
-    failure_taxonomy = str(decision.get("failure_taxonomy", "")).strip()
-    if (
-        failure_taxonomy != "repo_health_blocked"
-        and not failure_taxonomy.startswith(ARTIFACT_FRESHNESS_FAILURE_TAXONOMY_PREFIX)
-    ):
-        return False
-    source_run_id = str(decision.get("source_run_id", "")).strip()
-    if not source_run_id:
-        return False
-    return _repo_health_artifact_freshness_failure_now_clean(vault, source_run_id)
-
-
-def _queue_unblock_decision_superseded_by_current_rotation(
-    decision: dict,
-    current_proposal_ids: set[str],
-) -> bool:
-    if str(decision.get("failure_taxonomy", "")).strip() != "mutation_failed":
-        return False
-    if str(decision.get("proposal_family", "")).strip() != RECENT_LOG_OVERLAP_UNBLOCK_FAMILY:
-        return False
-    source_proposal_id = str(decision.get("proposal_id", "")).strip()
-    if not source_proposal_id.startswith(f"{RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE}__"):
-        return False
-    if source_proposal_id in current_proposal_ids:
-        return False
-    return any(
-        proposal_id.startswith(f"{RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE}__")
-        for proposal_id in current_proposal_ids
-    )
-
-
-def _open_carry_forward_decisions(
-    next_run_decisions: list[dict],
-    *,
-    vault: Path | None = None,
-    consumed_decision_ids: set[str] | None = None,
-    current_proposal_ids: set[str] | None = None,
-) -> list[dict]:
-    latest_by_target: dict[str, dict] = {}
-    consumed_decision_ids = consumed_decision_ids or set()
-    current_proposal_ids = current_proposal_ids or set()
-    for decision in next_run_decisions:
-        if str(decision.get("decision", "")).strip() != CARRY_FORWARD_DECISION:
-            continue
-        if str(decision.get("status", "")).strip() != OPEN_DECISION_STATUS:
-            continue
-        target_proposal_id = str(decision.get("target_proposal_id", "")).strip()
-        if not target_proposal_id:
-            primary_targets = [
-                str(target).strip()
-                for target in decision.get("primary_targets", [])
-                if str(target).strip()
-            ]
-            failure_taxonomy = str(decision.get("failure_taxonomy", "")).strip()
-            if not primary_targets or not failure_taxonomy:
-                continue
-            target_proposal_id = next_run_failure_repair_proposal_id(
-                primary_targets,
-                failure_taxonomy,
-            )
-        latest_by_target[target_proposal_id] = {**decision, "target_proposal_id": target_proposal_id}
-
-    open_decisions: list[dict] = []
-    for decision in latest_by_target.values():
-        decision_id = str(decision.get("decision_id", "")).strip()
-        if decision_id and decision_id in consumed_decision_ids:
-            continue
-        if vault is not None and _repair_decision_ended_as_noop_mutation_failure(vault, decision):
-            continue
-        if vault is not None and _repair_decision_ended_as_clean_repo_health(vault, decision):
-            continue
-        if _queue_unblock_decision_superseded_by_current_rotation(
-            decision,
-            current_proposal_ids,
-        ):
-            continue
-        open_decisions.append(decision)
-    return sorted(
-        open_decisions,
-        key=lambda item: (
-            str(item.get("observed_at", "")),
-            str(item.get("target_proposal_id", "")),
-        ),
-        reverse=True,
-    )
-
-
-def _safe_repo_relative_path(value: object) -> str | None:
-    if not isinstance(value, str):
-        return None
-    normalized = normalize_repo_path_text(value)
-    if (
-        normalized is None
-        or normalized == "."
-        or normalized == ".."
-        or normalized.startswith("../")
-        or normalized.startswith("/")
-    ):
-        return None
-    return normalized
 
 
 def _parse_log_heading_timestamp(heading: str) -> tuple[int, int, int, int, int] | None:
@@ -935,139 +755,6 @@ def _with_generated_supporting_targets(
         seen.add(target)
         ordered.append(target)
     return ordered
-
-
-def _changed_manifest_extra_scope(
-    vault: Path,
-    source_run_id: str,
-) -> tuple[list[str], list[str]]:
-    manifest_path = vault / "runs" / source_run_id / "changed-files-manifest.json"
-    if not manifest_path.is_file():
-        return [], []
-    try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return [], []
-    declared = manifest.get("declared_targets")
-    declared = declared if isinstance(declared, dict) else {}
-    declared_paths = set(
-        current_repo_target_paths(
-            vault,
-            [
-                *[str(path) for path in declared.get("primary_targets", [])],
-                *[str(path) for path in declared.get("supporting_targets", [])],
-                *[str(path) for path in declared.get("test_files", [])],
-            ],
-        )
-    )
-    supporting_targets: list[str] = []
-    must_change_tests: list[str] = []
-    files = manifest.get("files")
-    if not isinstance(files, list):
-        return [], []
-    for item in files:
-        if not isinstance(item, dict):
-            continue
-        normalized_path = normalize_repo_path_text(item.get("path"))
-        if normalized_path is None or normalized_path in declared_paths:
-            continue
-        if normalized_path.startswith("tests/") and normalized_path.endswith(".py"):
-            must_change_tests.append(normalized_path)
-        elif normalized_path.startswith("ops/") and (vault / normalized_path).is_file():
-            supporting_targets.append(normalized_path)
-    return dedupe_preserve_order(supporting_targets), _must_change_test_paths(
-        vault,
-        must_change_tests,
-    )
-
-
-def _evidence_report_paths(vault: Path, evidence_paths: list[str]) -> list[Path]:
-    resolved: list[Path] = []
-    for evidence_path in evidence_paths:
-        normalized_path = normalize_repo_path_text(evidence_path)
-        if normalized_path is None:
-            continue
-        path = vault / normalized_path
-        if path.is_file() and path.suffix == ".json":
-            resolved.append(path)
-    return resolved
-
-
-def _diagnostic_note_extra_scope(
-    vault: Path,
-    evidence_paths: list[str],
-) -> tuple[list[str], list[str]]:
-    supporting_targets: list[str] = []
-    must_change_tests: list[str] = []
-    for evidence_report_path in _evidence_report_paths(vault, evidence_paths):
-        try:
-            report = json.loads(evidence_report_path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            continue
-        diagnostics = report.get("diagnostics")
-        if not isinstance(diagnostics, dict):
-            continue
-        notes = diagnostics.get("notes")
-        if not isinstance(notes, list):
-            continue
-        for note in notes:
-            note_text = str(note)
-            note_paths = [
-                *NEXT_RUN_REPAIR_BACKTICK_PATH_RE.findall(note_text),
-                *NEXT_RUN_REPAIR_PLAIN_PATH_RE.findall(note_text),
-            ]
-            for match in note_paths:
-                normalized_path = normalize_repo_path_text(match)
-                if normalized_path is None or not (vault / normalized_path).is_file():
-                    continue
-                if normalized_path.startswith("tests/") and normalized_path.endswith(".py"):
-                    must_change_tests.append(normalized_path)
-                elif normalized_path.startswith("ops/"):
-                    supporting_targets.append(normalized_path)
-    return dedupe_preserve_order(supporting_targets), _must_change_test_paths(
-        vault,
-        must_change_tests,
-    )
-
-
-def _next_run_repair_extra_scope(
-    vault: Path,
-    *,
-    decision: dict,
-    source_run_id: str,
-    failure_taxonomy: str,
-    evidence_paths: list[str],
-) -> tuple[list[str], list[str]]:
-    supporting_targets: list[str] = []
-    must_change_tests: list[str] = []
-    if failure_taxonomy == "changed_files_manifest_scope":
-        manifest_supporting, manifest_tests = _changed_manifest_extra_scope(vault, source_run_id)
-        supporting_targets.extend(manifest_supporting)
-        must_change_tests.extend(manifest_tests)
-    diagnostic_supporting, diagnostic_tests = _diagnostic_note_extra_scope(vault, evidence_paths)
-    supporting_targets.extend(diagnostic_supporting)
-    must_change_tests.extend(diagnostic_tests)
-    original_primary = current_repo_target_paths(
-        vault,
-        [str(target) for target in decision.get("primary_targets", [])],
-    )
-    return (
-        [
-            path
-            for path in dedupe_preserve_order(supporting_targets)
-            if path not in original_primary
-        ],
-        dedupe_preserve_order(must_change_tests),
-    )
-
-
-def _source_session_report_targets(vault: Path, decision: dict) -> list[str]:
-    source_report = _safe_repo_relative_path(
-        decision.get(SOURCE_SESSION_REPORT_DECISION_KEY)
-    )
-    if not source_report:
-        return []
-    return current_repo_target_paths(vault, [source_report])
 
 
 def _proposal_blast_radius_score(
@@ -1482,7 +1169,7 @@ def _promotion_report_history_resolved(
     vault: Path,
     attempt: dict,
 ) -> bool:
-    report_rel_path = _safe_repo_relative_path(attempt.get("promotion_report"))
+    report_rel_path = safe_repo_relative_path(attempt.get("promotion_report"))
     if report_rel_path is None:
         return False
 
@@ -1511,7 +1198,7 @@ def _promotion_report_history_resolved(
     if (
         history_status in RESOLVED_PROMOTION_HISTORY_STATUSES
         and proposal_id.startswith(f"{RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE}__")
-        and _run_has_noop_mutation_failure(vault, source_run_id)
+        and run_has_noop_mutation_failure(vault, source_run_id)
     ):
         return False
     return history_status in RESOLVED_PROMOTION_HISTORY_STATUSES
@@ -1826,174 +1513,18 @@ def _next_run_repair_priority_breakdown() -> PriorityBreakdown:
     )
 
 
-def _next_run_repair_proposal(
-    vault: Path,
-    policy: dict,
-    decision: dict,
-) -> MutationProposal | None:
-    allowed_failure_modes = set(policy["mutation_proposal"]["allowed_failure_modes"])
-    if NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE not in allowed_failure_modes:
-        return None
-
-    primary_targets = current_repo_target_paths(
-        vault,
-        [str(target).strip() for target in decision.get("primary_targets", []) if str(target).strip()],
+def _next_run_repair_dependencies() -> NextRunRepairProposalDependencies:
+    return NextRunRepairProposalDependencies(
+        with_generated_supporting_targets=_with_generated_supporting_targets,
+        must_change_test_paths=_must_change_test_paths,
+        generated_must_change_tests=_generated_must_change_tests,
+        resolve_must_change_tests=_resolve_must_change_tests,
+        proposal_blast_radius_score=_proposal_blast_radius_score,
+        must_not_expand_apply_roots=_must_not_expand_apply_roots,
+        required_artifacts=_required_artifacts,
+        proposal_factory=MutationProposal,
+        priority_breakdown_factory=_next_run_repair_priority_breakdown,
     )
-    if not primary_targets:
-        return None
-    failure_taxonomy = str(decision.get("failure_taxonomy", "")).strip()
-    source_run_id = str(decision.get("source_run_id", "")).strip()
-    evidence_paths = [
-        str(path).strip()
-        for path in decision.get("evidence_paths", [])
-        if str(path).strip()
-    ]
-    supporting_targets = _with_generated_supporting_targets(
-        vault,
-        primary_targets=primary_targets,
-        supporting_targets=current_repo_target_paths(
-            vault,
-            [
-                str(target).strip()
-                for target in decision.get("supporting_targets", [])
-                if str(target).strip()
-            ],
-        ),
-    )
-    supporting_targets = dedupe_preserve_order(
-        [
-            *supporting_targets,
-            *_source_session_report_targets(vault, decision),
-        ]
-    )
-    extra_supporting_targets, extra_must_change_tests = _next_run_repair_extra_scope(
-        vault,
-        decision=decision,
-        source_run_id=source_run_id,
-        failure_taxonomy=failure_taxonomy,
-        evidence_paths=evidence_paths,
-    )
-    supporting_targets = _with_generated_supporting_targets(
-        vault,
-        primary_targets=primary_targets,
-        supporting_targets=dedupe_preserve_order(
-            [*supporting_targets, *extra_supporting_targets]
-        ),
-    )
-    must_change_tests = _must_change_test_paths(
-        vault,
-        current_repo_target_paths(
-            vault,
-            [str(target).strip() for target in decision.get("must_change_tests", []) if str(target).strip()],
-        ),
-    )
-    must_change_tests = dedupe_preserve_order(
-        [
-            *must_change_tests,
-            *extra_must_change_tests,
-            *_generated_must_change_tests(vault, [*primary_targets, *supporting_targets]),
-        ]
-    )
-    if not must_change_tests:
-        must_change_tests = _resolve_must_change_tests(
-            vault,
-            policy,
-            primary_targets=primary_targets,
-            supporting_targets=supporting_targets,
-        )
-
-    target_proposal_id = str(decision.get("target_proposal_id", "")).strip()
-    proposal_id = target_proposal_id or next_run_failure_repair_proposal_id(
-        primary_targets,
-        failure_taxonomy,
-    )
-    blocking_role = str(decision.get("blocking_role", "")).strip()
-    role_fragment = f" from {blocking_role}" if blocking_role else ""
-    source_proposal_id = str(decision.get("proposal_id", "")).strip()
-    scoped_targets = ", ".join(f"`{target}`" for target in primary_targets)
-    evidence_fragment = ", ".join(f"`{path}`" for path in evidence_paths[:3])
-    if len(evidence_paths) > 3:
-        evidence_fragment += f", +{len(evidence_paths) - 3} more"
-    if not evidence_fragment:
-        evidence_fragment = f"`runs/{source_run_id}/run-telemetry.json`"
-
-    pseudo_candidate = {
-        "candidate_id": proposal_id,
-        "primary_targets": primary_targets,
-        "supporting_targets": supporting_targets,
-        "tier": str(decision.get("proposal_tier", "supporting")).strip() or "supporting",
-    }
-    priority_breakdown = _next_run_repair_priority_breakdown()
-    return MutationProposal(
-        proposal_id=proposal_id,
-        source_candidate_id=str(decision.get("decision_id", "")).strip() or proposal_id,
-        source_candidate_type=NEXT_RUN_FAILURE_REPAIR_SOURCE_CANDIDATE_TYPE,
-        family=NEXT_RUN_FAILURE_REPAIR_FAMILY,
-        tier="supporting",
-        priority=priority_breakdown.final_priority,
-        primary_targets=primary_targets,
-        supporting_targets=supporting_targets,
-        metrics_triggered=[NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE, failure_taxonomy],
-        run_ids=[source_run_id or "next-run-decision"],
-        failure_mode=NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE,
-        single_mechanism_scope=(
-            f"repair the `{failure_taxonomy}` failure{role_fragment} on {scoped_targets}; "
-            "keep the next mutation bounded to the failed run evidence and do not resume unrelated queue work first"
-        ),
-        change_hypothesis=(
-            f"If the next run addresses `{failure_taxonomy}` from `{source_run_id}` before broad discovery, "
-            "the same target set can reach a finalized outcome or expose a narrower follow-up reason."
-        ),
-        expected_binary_signal=(
-            f"the next auto-improve attempt for `{source_proposal_id or proposal_id}` no longer records "
-            f"`{failure_taxonomy}` as its failure_taxonomy"
-        ),
-        blast_radius_score=_proposal_blast_radius_score(
-            pseudo_candidate,
-            must_change_tests=must_change_tests,
-        ),
-        must_change_tests=must_change_tests,
-        must_change_budget_signal={
-            "signal": f"auto_improve_session.next_run_decisions.{failure_taxonomy}",
-            "expected_change": "resolved_or_superseded",
-        },
-        must_not_expand_apply_roots=_must_not_expand_apply_roots(
-            vault,
-            policy,
-            proposal_targets=[*primary_targets, *supporting_targets],
-            must_change_tests=must_change_tests,
-        ),
-        must_not_increase_untyped_surface=True,
-        required_artifacts=_required_artifacts(),
-        blocked_by=[],
-        why_now=(
-            f"`{source_run_id}` failed with `{failure_taxonomy}` and the session decision marked it "
-            f"carry_forward. Evidence: {evidence_fragment}."
-        ),
-        priority_breakdown=priority_breakdown,
-        recent_log_overlap_matches=[],
-    )
-
-
-def _next_run_repair_proposal_models(
-    vault: Path,
-    policy: dict,
-    next_run_decisions: list[dict],
-    *,
-    consumed_decision_ids: set[str],
-    current_proposal_ids: set[str],
-) -> list[MutationProposal]:
-    models: list[MutationProposal] = []
-    for decision in _open_carry_forward_decisions(
-        next_run_decisions,
-        vault=vault,
-        consumed_decision_ids=consumed_decision_ids,
-        current_proposal_ids=current_proposal_ids,
-    ):
-        proposal = _next_run_repair_proposal(vault, policy, decision)
-        if proposal is not None:
-            models.append(proposal)
-    return models
 
 
 def _proposal_from_candidate(
@@ -2122,9 +1653,25 @@ def _queue_selection_diagnostics(
     available_proposals: list[dict],
     selected_proposals: list[dict],
 ) -> dict:
+    repair_available = [
+        proposal
+        for proposal in available_proposals
+        if proposal.get("failure_mode") == NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE
+    ]
+    repair_priority_suppressed_count = (
+        sum(
+            1
+            for proposal in available_proposals
+            if proposal.get("failure_mode") != NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE
+        )
+        if repair_available
+        else 0
+    )
     return QueueSelectionDiagnostics(
         available_proposal_count=len(available_proposals),
         selected_proposal_count=len(selected_proposals),
+        selection_mode="carry_forward_repair_only" if repair_available else "standard",
+        repair_priority_suppressed_count=repair_priority_suppressed_count,
         runnable_available_count=sum(
             1 for proposal in available_proposals if not proposal.get("blocked_by")
         ),
@@ -2229,56 +1776,6 @@ def _family_session_calibration_diagnostics(
         "proposal_count": len(proposals),
         "blocked_proposal_count": sum(1 for proposal in proposals if proposal.get("blocked_by")),
         "by_family": by_family,
-    }
-
-
-def _next_run_decision_queue_diagnostics(
-    next_run_decisions: list[dict],
-    proposals: list[dict],
-    *,
-    vault: Path,
-    session_report_paths: list[str],
-    consumed_decision_ids: set[str],
-) -> dict:
-    current_proposal_ids = {
-        str(proposal.get("proposal_id", "")).strip()
-        for proposal in proposals
-        if str(proposal.get("failure_mode", "")).strip()
-        != NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE
-        and str(proposal.get("proposal_id", "")).strip()
-    }
-    open_carry_forward = _open_carry_forward_decisions(
-        next_run_decisions,
-        vault=vault,
-        consumed_decision_ids=consumed_decision_ids,
-        current_proposal_ids=current_proposal_ids,
-    )
-    repair_proposals = [
-        proposal
-        for proposal in proposals
-        if proposal.get("failure_mode") == NEXT_RUN_FAILURE_REPAIR_FAILURE_MODE
-    ]
-    decision_counts: dict[str, int] = {}
-    action_counts: dict[str, int] = {}
-    for decision in next_run_decisions:
-        decision_name = str(decision.get("decision", "")).strip()
-        action_name = str(decision.get("next_run_action", "")).strip()
-        if decision_name:
-            decision_counts[decision_name] = decision_counts.get(decision_name, 0) + 1
-        if action_name:
-            action_counts[action_name] = action_counts.get(action_name, 0) + 1
-    return {
-        "session_reports_scanned": len(session_report_paths),
-        "decisions_considered": len(next_run_decisions),
-        "open_carry_forward_decisions": len(open_carry_forward),
-        "repair_proposals_emitted": len(repair_proposals),
-        "decision_counts": decision_counts,
-        "action_counts": action_counts,
-        "selected_target_proposal_ids": [
-            str(proposal.get("proposal_id", "")).strip()
-            for proposal in repair_proposals
-            if str(proposal.get("proposal_id", "")).strip()
-        ],
     }
 
 
@@ -2657,12 +2154,15 @@ def _proposal_models_from_candidates(
         proposal.proposal_id for proposal in available_proposal_models if proposal.proposal_id
     }
     available_proposal_models.extend(
-        _next_run_repair_proposal_models(
+        next_run_repair_proposal_models(
             vault,
             effective_policy,
             next_run_decisions,
             consumed_decision_ids=set(consumed_next_run_decision_ids),
             current_proposal_ids=current_proposal_ids,
+            dependencies=_next_run_repair_dependencies(),
+            recent_log_overlap_unblock_failure_mode=RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE,
+            recent_log_overlap_unblock_family=RECENT_LOG_OVERLAP_UNBLOCK_FAMILY,
         )
     )
     return available_proposal_models, skipped_candidates
@@ -2762,12 +2262,14 @@ def _assemble_mutation_diagnostics(
         inputs.mechanism_review_report,
         proposal_assembly.proposals,
     )
-    next_run_decision_queue = _next_run_decision_queue_diagnostics(
+    next_run_decision_queue = next_run_decision_queue_diagnostics(
         inputs.next_run_decisions,
         proposal_assembly.proposals,
         vault=vault,
         session_report_paths=inputs.auto_improve_session_report_paths,
         consumed_decision_ids=set(inputs.consumed_next_run_decision_ids),
+        recent_log_overlap_unblock_failure_mode=RECENT_LOG_OVERLAP_UNBLOCK_FAILURE_MODE,
+        recent_log_overlap_unblock_family=RECENT_LOG_OVERLAP_UNBLOCK_FAMILY,
     )
     source_evidence_gaps = _source_evidence_gaps(
         inputs.mechanism_review_report,
@@ -2841,6 +2343,7 @@ def _mutation_report_payload(
                 "ops/scripts/mechanism/mutation_proposal_runtime.py",
                 "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
                 "ops/scripts/mechanism/current_target_path_runtime.py",
+                "ops/scripts/mechanism/next_run_repair_queue_runtime.py",
             ],
             file_inputs={
                 "mechanism_review_report": report_path(vault, inputs.mechanism_review_path),

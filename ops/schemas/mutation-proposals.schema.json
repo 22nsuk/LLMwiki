@@ -441,6 +441,8 @@
           "required": [
             "available_proposal_count",
             "selected_proposal_count",
+            "selection_mode",
+            "repair_priority_suppressed_count",
             "runnable_available_count",
             "blocked_available_count",
             "selected_runnable_count",
@@ -453,6 +455,17 @@
               "minimum": 0
             },
             "selected_proposal_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "selection_mode": {
+              "type": "string",
+              "enum": [
+                "standard",
+                "carry_forward_repair_only"
+              ]
+            },
+            "repair_priority_suppressed_count": {
               "type": "integer",
               "minimum": 0
             },

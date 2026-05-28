@@ -8,6 +8,7 @@ from ops.scripts.core.release_authority_state_runtime import (
     release_status_v2_view,
     release_status_v2_view_with_readiness_fallback,
 )
+from ops.scripts.gate_effect_vocabulary import GATE_EFFECT_BLOCKS_PROMOTION
 from ops.scripts.release_authority_vocabulary import (
     REASON_MACHINE_RELEASE_NOT_ALLOWED,
     REASON_RELEASE_AUTHORITY_NOT_CLEAN_PASS,
@@ -697,7 +698,7 @@ def _release_gate_promotion_blockers(
                 "status": "open",
                 "severity": "blocker",
                 "accepted_risk": False,
-                "gate_effect": "active",
+                "gate_effect": GATE_EFFECT_BLOCKS_PROMOTION,
                 "source_status": status,
                 "reason": (
                     f"{scope} release gate is not pass: "
@@ -773,7 +774,7 @@ def _release_authority_preflight_promotion_blockers(
             "status": "open",
             "severity": "blocker",
             "accepted_risk": False,
-            "gate_effect": "active",
+            "gate_effect": GATE_EFFECT_BLOCKS_PROMOTION,
             "source_status": source_status,
             "reason": (
                 "release authority sealed preflight is not clean: "
@@ -896,7 +897,7 @@ def _artifact_contract_promotion_blockers(
             "status": "open",
             "severity": "blocker",
             "accepted_risk": False,
-            "gate_effect": "active",
+            "gate_effect": GATE_EFFECT_BLOCKS_PROMOTION,
             "source_status": "fail",
             "reason": reason,
             "signal_ids": signal_ids,

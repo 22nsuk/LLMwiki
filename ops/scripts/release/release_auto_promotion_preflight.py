@@ -12,6 +12,10 @@ from ops.scripts.artifact_io_runtime import (
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
+from ops.scripts.gate_effect_vocabulary import (
+    GATE_EFFECT_BLOCKS_EXECUTION,
+    GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
+)
 from ops.scripts.output_runtime import display_path
 from ops.scripts.release.auto_promotion_learning_runtime import (
     ALLOWED_LEARNING_REVALIDATION_STATUSES,
@@ -295,6 +299,7 @@ def _auto_improve_requirements(
             "true",
             "The auto-improve lane cannot execute a trial.",
             "Refresh auto-improve readiness and resolve execution blockers.",
+            GATE_EFFECT_BLOCKS_EXECUTION,
         ),
         RequirementSpec(
             checks["auto_improve_stage3_promotion_blockers_clear"],
@@ -315,6 +320,7 @@ def _auto_improve_requirements(
             "0",
             "Learning-claim blockers are still open for unattended promotion.",
             "Resolve or renew learning readiness before running expensive release stages.",
+            GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
         ),
         RequirementSpec(
             checks["auto_improve_clean_release_blockers_clear"],
@@ -473,6 +479,7 @@ def _preseal_phase_requirements(
             "release_blocking=0; advisory accepted risks may remain diagnostic",
             "Closeout has accepted-risk families that still block the clean release lane.",
             "Resolve clean-lane blocking release risks before sealing.",
+            GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
         ),
         RequirementSpec(
             checks["closeout_gate_attention_clean"],

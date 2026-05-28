@@ -8,6 +8,12 @@ from ops.scripts.artifact_freshness_runtime import (
     build_canonical_report_envelope,
     canonical_report_loading_issue,
 )
+from ops.scripts.gate_effect_vocabulary import (
+    GATE_EFFECT_BLOCKS_EXECUTION,
+    GATE_EFFECT_BLOCKS_PROMOTION,
+    GATE_EFFECT_NONE,
+    GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
+)
 from ops.scripts.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object,
@@ -180,7 +186,9 @@ def readiness_exit_code(report: dict[str, Any]) -> int:
 def learning_review_required(report: dict[str, Any]) -> bool:
     learning = report.get("learning_readiness")
     return bool(
-        isinstance(learning, dict) and learning.get("gate_effect") == "review_required"
+        isinstance(learning, dict)
+        and learning.get("gate_effect")
+        in {GATE_EFFECT_OPERATOR_REVIEW_REQUIRED, "review_required"}
     )
 
 
@@ -565,7 +573,7 @@ def assess_execution_readiness(inputs: ReadinessInputs) -> ExecutionReadinessAss
         reasons.append("mutation proposal generation emitted zero runnable proposals")
     return ExecutionReadinessAssessment(
         status="pass" if inputs.queue_ready else "warn",
-        gate_effect="active",
+        gate_effect=GATE_EFFECT_NONE if inputs.queue_ready else GATE_EFFECT_BLOCKS_EXECUTION,
         can_run=inputs.queue_ready,
         reasons=reasons,
         runnable_proposal_count=len(inputs.runnable_proposal_ids),
@@ -662,7 +670,7 @@ def _remediation_backlog_promotion_blockers(
             "status": "open",
             "severity": "blocker",
             "accepted_risk": False,
-            "gate_effect": "active",
+            "gate_effect": GATE_EFFECT_BLOCKS_PROMOTION,
             "source_status": str(summary.get("source_status", "")).strip() or "open",
             "reason": (
                 "remediation backlog is not clear for promotion: "
@@ -684,7 +692,6 @@ def _remediation_backlog_promotion_blockers(
 
 def _readiness_promotion_blockers(
     inputs: ReadinessInputs,
-    execution: ExecutionReadinessAssessment,
     learning: LearningReadinessAssessment,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     learning_claim_blockers = [
@@ -699,7 +706,6 @@ def _readiness_promotion_blockers(
             != SIGNOFF_SUPPORTED_LEARNING_BLOCKER_ID
         ]
     promotion_blockers = [
-        *_execution_blockers(execution),
         *learning_promotion_blockers,
         *_release_gate_promotion_blockers(
             inputs.selected_contract_summary,
@@ -725,6 +731,14 @@ def _readiness_promotion_blockers(
         ),
     ]
     return learning_claim_blockers, promotion_blockers
+
+
+def _execution_status(execution: ExecutionReadinessAssessment) -> str:
+    return "pass" if execution.can_run else "blocked"
+
+
+def _promotion_status(promotion_blockers: list[dict[str, Any]]) -> str:
+    return "blocked" if promotion_blockers else "pass"
 
 
 def _readiness_inputs_payload(*, remediation_backlog_path: str) -> dict[str, str]:
@@ -831,13 +845,13 @@ def render_readiness_report(
         inputs.blocked_proposal_count,
         inputs.seed_runs,
     )
+    execution_blockers = _execution_blockers(execution)
     learning_claim_blockers, promotion_blockers = _readiness_promotion_blockers(
         inputs,
-        execution,
         learning,
     )
     can_execute_trial = execution.can_run
-    can_promote_result = can_execute_trial and not promotion_blockers
+    can_promote_result = not promotion_blockers
     return {
         **build_canonical_report_envelope(
             vault,
@@ -879,10 +893,13 @@ def render_readiness_report(
             "path": report_path(vault, inputs.resolved_policy_path),
             "version": inputs.policy["version"],
         },
+        "execution_status": _execution_status(execution),
+        "promotion_status": _promotion_status(promotion_blockers),
         "can_execute_trial": can_execute_trial,
         "can_promote_result": can_promote_result,
         "execution_readiness": execution.to_wire(),
         "learning_readiness": learning.to_wire(),
+        "execution_blockers": execution_blockers,
         "learning_claim_blockers": learning_claim_blockers,
         "promotion_blockers": promotion_blockers,
         "clean_release_blockers": [],

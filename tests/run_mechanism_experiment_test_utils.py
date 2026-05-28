@@ -534,6 +534,8 @@ def mutation_proposal_report(primary_target: str) -> dict:
             "queue_selection": {
                 "available_proposal_count": 1,
                 "selected_proposal_count": 1,
+                "selection_mode": "standard",
+                "repair_priority_suppressed_count": 0,
                 "runnable_available_count": 1,
                 "blocked_available_count": 0,
                 "selected_runnable_count": 1,

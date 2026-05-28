@@ -73,7 +73,7 @@ def test_release_blocker_entry_normalizes_acceptance_and_advisory_fields() -> No
             "source_path": "ops/reports/release-closeout-summary.json",
             "code": "needs_review",
             "severity": "warn",
-            "gate_effect": "accepted_risk",
+            "gate_effect": "advisory",
             "message": "Needs review.",
             "required_evidence": ["Rerun release closeout."],
             "risk_acceptance": {
@@ -88,6 +88,7 @@ def test_release_blocker_entry_normalizes_acceptance_and_advisory_fields() -> No
     )
 
     assert entry["id"] == "release-closeout:needs_review"
+    assert entry["gate_effect"] == "advisory"
     assert entry["clean_lane_effect"] == "blocks_clean_lane"
     assert entry["closure_action"] == "Rerun release closeout."
     assert entry["advisory_lifecycle_status"] == "active"

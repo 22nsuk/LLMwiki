@@ -5,6 +5,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import time
 import tomllib
 from dataclasses import dataclass
@@ -42,6 +43,12 @@ NON_WORKER_INTEGRITY_IGNORE_NAMES = {
     ".vscode",
 }
 NON_WORKER_INTEGRITY_IGNORE_SUFFIXES = {".pyc", ".pyo"}
+NON_WORKER_PROJECT_CHECK_MODULES = (
+    ("pytest", "pytest"),
+    ("jsonschema", "jsonschema"),
+    ("yaml", "PyYAML"),
+)
+PROJECT_CHECK_LANE = "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider"
 _CODEX_USAGE_LIMIT_RE = re.compile(
     r"(usage limit|try again at|upgrade to pro)",
     flags=re.IGNORECASE,
@@ -105,7 +112,37 @@ class ExecutorResultPayload(TypedDict):
 class ExecutorDiagnosticsPayload(TypedDict):
     routing_report: str
     scope_freeze: str
+    dependency_preflight: "ExecutorDependencyPreflightPayload"
     notes: list[str]
+
+
+class ExecutorDependencyCommandPayload(TypedDict):
+    argv: list[str]
+    project_check_lane: str
+
+
+class ExecutorDependencyPythonPayload(TypedDict):
+    path: str
+    executable: str
+    version: str
+    exists: bool
+
+
+class ExecutorDependencyModulePayload(TypedDict):
+    import_name: str
+    package: str
+    status: str
+    version: str
+    detail: str
+
+
+class ExecutorDependencyPreflightPayload(TypedDict):
+    role_requires_project_check: bool
+    status: str
+    command: ExecutorDependencyCommandPayload
+    python: ExecutorDependencyPythonPayload
+    required_modules: list[ExecutorDependencyModulePayload]
+    returncode: int
 
 
 ExecutorReportPayload = TypedDict(
@@ -141,6 +178,28 @@ class _ExecutionSummary:
     timed_out: bool
     timeout_seconds: int
     termination_reason: str
+
+
+@dataclass(frozen=True)
+class _SyntheticCompleted:
+    returncode: int
+    stdout: str
+    stderr: str
+    timed_out: bool
+    timeout_seconds: int
+    termination_reason: str
+    launch_succeeded: bool
+    signal_sent: str
+    final_state_observed: str
+    stdout_received: bool
+    stderr_received: bool
+    heartbeat_count: int
+    heartbeat_interval_seconds: int
+    quiet_seconds: int
+    last_stdout_at: str
+    last_stderr_at: str
+    last_artifact_touch_at: str
+    observation_mode: str
 
 
 def _codex_usage_limit_note(stderr: str) -> str:
@@ -412,6 +471,87 @@ def _apply_non_worker_integrity_guard(
     )
 
 
+def _dependency_module_payloads(
+    status: str,
+    *,
+    detail: str = "",
+) -> list[ExecutorDependencyModulePayload]:
+    return [
+        {
+            "import_name": module,
+            "package": package,
+            "status": status,
+            "version": "",
+            "detail": detail,
+        }
+        for module, package in NON_WORKER_PROJECT_CHECK_MODULES
+    ]
+
+
+def _dependency_preflight_command_payload(python_display: str) -> ExecutorDependencyCommandPayload:
+    argv = [python_display, "-c", "<project-dependency-preflight>"] if python_display else []
+    return {
+        "argv": argv,
+        "project_check_lane": PROJECT_CHECK_LANE,
+    }
+
+
+def _dependency_preflight_payload(
+    *,
+    role_requires_project_check: bool,
+    status: str,
+    python_path: str,
+    python_executable: str,
+    python_version: str,
+    python_exists: bool,
+    required_modules: list[ExecutorDependencyModulePayload],
+    returncode: int,
+) -> ExecutorDependencyPreflightPayload:
+    return {
+        "role_requires_project_check": role_requires_project_check,
+        "status": status,
+        "command": _dependency_preflight_command_payload(python_path),
+        "python": {
+            "path": python_path,
+            "executable": python_executable,
+            "version": python_version,
+            "exists": python_exists,
+        },
+        "required_modules": required_modules,
+        "returncode": returncode,
+    }
+
+
+def _dependency_preflight_template(
+    role: str,
+    workspace_root: Path,
+    roots: list[Path],
+) -> ExecutorDependencyPreflightPayload:
+    if role == "worker":
+        return _dependency_preflight_payload(
+            role_requires_project_check=False,
+            status="not_required",
+            python_path="",
+            python_executable="",
+            python_version="",
+            python_exists=False,
+            required_modules=_dependency_module_payloads("not_checked"),
+            returncode=0,
+        )
+    python_path = workspace_root / ".venv" / "bin" / "python"
+    python_display = _sanitize_path_text(str(python_path), roots=roots)
+    return _dependency_preflight_payload(
+        role_requires_project_check=True,
+        status="not_checked",
+        python_path=python_display,
+        python_executable="",
+        python_version="",
+        python_exists=python_path.exists(),
+        required_modules=_dependency_module_payloads("not_checked"),
+        returncode=0,
+    )
+
+
 def _materialize_prompt(request: PromptMaterializationRequest) -> Path:
     prompt_path = request.artifact_root / request.artifacts.prompt_rel
     sandbox_mode = request.routing_report["routing_decision"]["sandbox_mode"]
@@ -465,6 +605,11 @@ def _materialize_prompt(request: PromptMaterializationRequest) -> Path:
         "diagnostics": {
             "routing_report": request.routing_report_rel,
             "scope_freeze": request.scope_freeze_rel,
+            "dependency_preflight": _dependency_preflight_template(
+                request.role,
+                request.workspace_root,
+                sanitize_roots,
+            ),
             "notes": []
         }
     }
@@ -492,9 +637,10 @@ Repository write boundary:
 - do not rewrite unrelated files or expand scope.
 
 Execution environment guidance:
-- For Python project checks, use workspace-local `.venv/bin/python` when it exists; avoid bare `python` when a repo virtualenv is available.
-- In reviewer, validator, and auditor roles, set `PYTHONDONTWRITEBYTECODE=1` and pass pytest `-p no:cacheprovider` when cache writes are not part of the check.
-- If dependencies are genuinely absent and setup would write to the workspace, report the exact blocked command and the missing dependency surface.
+- Required Python project check lane uses workspace-local `.venv/bin/python`: `{PROJECT_CHECK_LANE} ...`.
+- Do not run bare `python -m pytest` when `.venv/bin/python` is present.
+- In reviewer, validator, and auditor roles, keep pytest cache-safe with `PYTHONDONTWRITEBYTECODE=1` and `-p no:cacheprovider`.
+- If dependencies are genuinely absent, report the exact blocked `.venv/bin/python` command and missing dependency surface; do not use network dependency setup as a fallback unless the parent task explicitly asks for environment bootstrap.
 
 Repository-required local skills:
 - If `AGENTS.md` or `AGENTS.local.md` names a required skill that is absent from the system-provided available skills list, check for a local skill body at `$CODEX_HOME/skills/<skill>/SKILL.md` or `~/.codex/skills/<skill>/SKILL.md`.
@@ -677,6 +823,7 @@ def _build_executor_report(
     sanitized_argv: list[str],
     completed: object,
     summary: _ExecutionSummary,
+    dependency_preflight: ExecutorDependencyPreflightPayload,
     context: RuntimeContext,
 ) -> ExecutorReportPayload:
     return {
@@ -714,6 +861,7 @@ def _build_executor_report(
         "diagnostics": {
             "routing_report": routing_report_rel,
             "scope_freeze": scope_freeze_rel,
+            "dependency_preflight": dependency_preflight,
             "notes": summary.notes,
         },
     }
@@ -910,11 +1058,18 @@ def build_execution_request(
 
 
 def _workspace_virtualenv_bin(workspace_root: Path) -> Path | None:
+    python_path = _workspace_virtualenv_python(workspace_root)
+    if python_path is None:
+        return None
+    return python_path.parent
+
+
+def _workspace_virtualenv_python(workspace_root: Path) -> Path | None:
     venv_root = workspace_root / ".venv"
     for rel_path in ("bin/python", "Scripts/python.exe", "Scripts/python"):
         python_path = venv_root / rel_path
         if python_path.exists():
-            return python_path.parent
+            return python_path
     return None
 
 
@@ -969,6 +1124,258 @@ def _execution_env(workspace_root: Path) -> dict[str, str] | None:
     return env
 
 
+def _project_dependency_check_script() -> str:
+    module_pairs = repr(list(NON_WORKER_PROJECT_CHECK_MODULES))
+    return (
+        "import importlib, importlib.metadata, json, sys\n"
+        f"module_pairs = {module_pairs}\n"
+        "payload = {\n"
+        "    'python': {'executable': sys.executable, 'version': sys.version.split()[0]},\n"
+        "    'modules': [],\n"
+        "}\n"
+        "failed = False\n"
+        "for module, package in module_pairs:\n"
+        "    item = {'import_name': module, 'package': package, 'status': 'available', 'version': '', 'detail': ''}\n"
+        "    try:\n"
+        "        importlib.import_module(module)\n"
+        "    except Exception as exc:\n"
+        "        failed = True\n"
+        "        item['status'] = 'missing'\n"
+        "        item['detail'] = f'{type(exc).__name__}: {exc}'\n"
+        "    else:\n"
+        "        try:\n"
+        "            item['version'] = importlib.metadata.version(package)\n"
+        "        except importlib.metadata.PackageNotFoundError:\n"
+        "            item['version'] = 'unknown'\n"
+        "    payload['modules'].append(item)\n"
+        "print(json.dumps(payload, sort_keys=True))\n"
+        "sys.exit(1 if failed else 0)\n"
+    )
+
+
+def _dependency_preflight_from_probe(
+    request: _ExecutionRequest,
+    *,
+    python_path: Path,
+    completed: subprocess.CompletedProcess[str],
+) -> ExecutorDependencyPreflightPayload:
+    roots = [request.artifact_root, request.workspace_root]
+    python_display = _sanitize_path_text(str(python_path), roots=roots)
+    stdout = (completed.stdout or "").strip()
+    stderr = (completed.stderr or "").strip()
+    probe: dict[str, Any] = {}
+    if stdout:
+        try:
+            loaded = json.loads(stdout)
+        except json.JSONDecodeError:
+            loaded = None
+        if isinstance(loaded, dict):
+            probe = loaded
+    python_info = probe.get("python", {}) if isinstance(probe.get("python"), dict) else {}
+    modules_by_name = {
+        str(item.get("import_name", "")).strip(): item
+        for item in probe.get("modules", [])
+        if isinstance(item, dict)
+    } if isinstance(probe.get("modules"), list) else {}
+    unstructured_detail = ""
+    if not probe and (stdout or stderr):
+        unstructured_detail = _sanitize_path_text(
+            "\n".join(item for item in (stdout, stderr) if item),
+            roots=roots,
+        )
+    required_modules: list[ExecutorDependencyModulePayload] = []
+    for module, package in NON_WORKER_PROJECT_CHECK_MODULES:
+        item = modules_by_name.get(module)
+        if item is None:
+            required_modules.append(
+                {
+                    "import_name": module,
+                    "package": package,
+                    "status": "unknown" if completed.returncode == 0 else "missing",
+                    "version": "",
+                    "detail": unstructured_detail,
+                }
+            )
+            continue
+        required_modules.append(
+            {
+                "import_name": module,
+                "package": package,
+                "status": str(item.get("status", "unknown")).strip() or "unknown",
+                "version": str(item.get("version", "")).strip(),
+                "detail": _sanitize_path_text(
+                    str(item.get("detail", "")).strip(),
+                    roots=roots,
+                ),
+            }
+        )
+    return _dependency_preflight_payload(
+        role_requires_project_check=True,
+        status="pass" if completed.returncode == 0 else "fail",
+        python_path=python_display,
+        python_executable=_sanitize_path_text(
+            str(python_info.get("executable", "")).strip(),
+            roots=roots,
+        ),
+        python_version=str(python_info.get("version", "")).strip(),
+        python_exists=True,
+        required_modules=required_modules,
+        returncode=int(completed.returncode),
+    )
+
+
+def _dependency_preflight_failure_summary(
+    request: _ExecutionRequest,
+    preflight: ExecutorDependencyPreflightPayload,
+) -> _ExecutionSummary | None:
+    if preflight.get("status") != "fail":
+        return None
+    python_display = str(preflight.get("python", {}).get("path", "")).strip()
+    required = ", ".join(package for _module, package in NON_WORKER_PROJECT_CHECK_MODULES)
+    module_details = []
+    for item in preflight.get("required_modules", []):
+        if not isinstance(item, dict) or str(item.get("status", "")).strip() == "available":
+            continue
+        package = str(item.get("package", "")).strip()
+        module = str(item.get("import_name", "")).strip()
+        detail = str(item.get("detail", "")).strip()
+        if detail:
+            module_details.append(f"{package} ({module}): {detail}")
+    note = (
+        f"executor dependency preflight blocked {request.role}: "
+        f"{python_display} could not import required project check modules ({required})"
+    )
+    if module_details:
+        note = f"{note}; {'; '.join(module_details)}"
+    return _ExecutionSummary(
+        status="fail",
+        decision="blocked",
+        notes=[note],
+        timed_out=False,
+        timeout_seconds=request.timeout_seconds,
+        termination_reason="completed",
+    )
+
+
+def _non_worker_dependency_preflight(
+    request: _ExecutionRequest,
+) -> tuple[ExecutorDependencyPreflightPayload, _ExecutionSummary | None]:
+    roots = [request.artifact_root, request.workspace_root]
+    if request.role == "worker":
+        return (
+            _dependency_preflight_template(request.role, request.workspace_root, roots),
+            None,
+        )
+    python_path = _workspace_virtualenv_python(request.workspace_root)
+    if python_path is None:
+        missing_python = request.workspace_root / ".venv" / "bin" / "python"
+        python_display = _sanitize_path_text(str(missing_python), roots=roots)
+        preflight = _dependency_preflight_payload(
+            role_requires_project_check=True,
+            status="fail",
+            python_path=python_display,
+            python_executable="",
+            python_version="",
+            python_exists=False,
+            required_modules=_dependency_module_payloads(
+                "not_checked",
+                detail="missing workspace virtualenv python",
+            ),
+            returncode=127,
+        )
+        return (
+            preflight,
+            _ExecutionSummary(
+                status="fail",
+                decision="blocked",
+                notes=[
+                    (
+                        f"executor dependency preflight blocked {request.role}: "
+                        "missing workspace virtualenv python at .venv/bin/python; "
+                        "run make dev-install and ensure the mechanism workspace links repo .venv "
+                        "before reviewer/validator/auditor execution"
+                    )
+                ],
+                timed_out=False,
+                timeout_seconds=request.timeout_seconds,
+                termination_reason="completed",
+            ),
+        )
+
+    env = _execution_env(request.workspace_root) or dict(os.environ)
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    command = [str(python_path), "-c", _project_dependency_check_script()]
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=request.workspace_root,
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        detail = _sanitize_path_text(str(exc), roots=roots)
+        python_display = _sanitize_path_text(str(python_path), roots=roots)
+        preflight = _dependency_preflight_payload(
+            role_requires_project_check=True,
+            status="fail",
+            python_path=python_display,
+            python_executable="",
+            python_version="",
+            python_exists=True,
+            required_modules=_dependency_module_payloads("unknown", detail=detail),
+            returncode=1,
+        )
+        return (
+            preflight,
+            _ExecutionSummary(
+                status="fail",
+                decision="blocked",
+                notes=[
+                    (
+                        f"executor dependency preflight blocked {request.role}: "
+                        f"{python_display} could not execute required project dependency check; "
+                        f"{detail}"
+                    )
+                ],
+                timed_out=False,
+                timeout_seconds=request.timeout_seconds,
+                termination_reason="completed",
+            ),
+        )
+    preflight = _dependency_preflight_from_probe(
+        request,
+        python_path=python_path,
+        completed=completed,
+    )
+    return preflight, _dependency_preflight_failure_summary(request, preflight)
+
+
+def _synthetic_preflight_completed(request: _ExecutionRequest) -> _SyntheticCompleted:
+    return _SyntheticCompleted(
+        returncode=1,
+        stdout="",
+        stderr="",
+        timed_out=False,
+        timeout_seconds=request.timeout_seconds,
+        termination_reason="completed",
+        launch_succeeded=False,
+        signal_sent="none",
+        final_state_observed="preflight_blocked",
+        stdout_received=False,
+        stderr_received=False,
+        heartbeat_count=0,
+        heartbeat_interval_seconds=0,
+        quiet_seconds=0,
+        last_stdout_at="",
+        last_stderr_at="",
+        last_artifact_touch_at="",
+        observation_mode="communicate",
+    )
+
+
 def launch_execution(request: _ExecutionRequest) -> object:
     return run_with_timeout(
         request.argv,
@@ -1007,6 +1414,7 @@ def persist_execution_outcome(
     request: _ExecutionRequest,
     completed: object,
     summary: _ExecutionSummary,
+    dependency_preflight: ExecutorDependencyPreflightPayload,
     started_at: float,
     context: RuntimeContext,
 ) -> ExecutorReportPayload:
@@ -1020,6 +1428,7 @@ def persist_execution_outcome(
         sanitized_argv=request.sanitized_argv,
         completed=completed,
         summary=summary,
+        dependency_preflight=dependency_preflight,
         context=context,
     )
     timeout_failure_rel = _attach_timeout_failure(
@@ -1081,6 +1490,23 @@ def execute_codex_exec_role(
         context=context,
         timeout_seconds=timeout_seconds,
     )
+    dependency_preflight, preflight_summary = _non_worker_dependency_preflight(request)
+    if preflight_summary is not None:
+        preflight_completed = _synthetic_preflight_completed(request)
+        _persist_executor_streams(
+            artifact_root=request.artifact_root,
+            artifacts=request.artifacts,
+            completed=preflight_completed,
+            sanitize_roots=[request.artifact_root, request.workspace_root],
+        )
+        return persist_execution_outcome(
+            request=request,
+            completed=preflight_completed,
+            summary=preflight_summary,
+            dependency_preflight=dependency_preflight,
+            started_at=started_at,
+            context=context,
+        )
     integrity_before = (
         _workspace_integrity_digests(request.workspace_root, run_id=request.run_id)
         if role != "worker"
@@ -1108,6 +1534,7 @@ def execute_codex_exec_role(
         request=request,
         completed=completed,
         summary=summary,
+        dependency_preflight=dependency_preflight,
         started_at=started_at,
         context=context,
     )

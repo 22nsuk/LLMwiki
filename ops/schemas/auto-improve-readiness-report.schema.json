@@ -19,10 +19,13 @@
     "encoding",
     "currentness",
     "policy",
+    "execution_status",
+    "promotion_status",
     "can_execute_trial",
     "can_promote_result",
     "execution_readiness",
     "learning_readiness",
+    "execution_blockers",
     "learning_claim_blockers",
     "promotion_blockers",
     "clean_release_blockers",
@@ -144,6 +147,20 @@
     "execution_readiness": {
       "$ref": "#/$defs/execution_readiness"
     },
+    "execution_status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "blocked"
+      ]
+    },
+    "promotion_status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "blocked"
+      ]
+    },
     "can_execute_trial": {
       "type": "boolean"
     },
@@ -152,6 +169,12 @@
     },
     "learning_readiness": {
       "$ref": "#/$defs/learning_readiness"
+    },
+    "execution_blockers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/readiness_blocker"
+      }
     },
     "learning_claim_blockers": {
       "type": "array",
@@ -614,10 +637,7 @@
           ]
         },
         "gate_effect": {
-          "type": "string",
-          "enum": [
-            "active"
-          ]
+          "$ref": "https://llmwiki/schemas/gate-effect-vocabulary#/$defs/gate_effect"
         },
         "can_run": {
           "type": "boolean"
@@ -658,12 +678,7 @@
           "$ref": "https://llmwiki/schemas/learning-readiness-vocabulary#/$defs/learning_status"
         },
         "gate_effect": {
-          "type": "string",
-          "enum": [
-            "shadow",
-            "review_required",
-            "active"
-          ]
+          "$ref": "https://llmwiki/schemas/gate-effect-vocabulary#/$defs/gate_effect"
         },
         "can_run": {
           "type": "boolean"
@@ -968,12 +983,7 @@
           "type": "boolean"
         },
         "gate_effect": {
-          "type": "string",
-          "enum": [
-            "shadow",
-            "review_required",
-            "active"
-          ]
+          "$ref": "https://llmwiki/schemas/gate-effect-vocabulary#/$defs/gate_effect"
         },
         "source_status": {
           "$ref": "https://llmwiki/schemas/learning-readiness-vocabulary#/$defs/readiness_blocker_source_status"

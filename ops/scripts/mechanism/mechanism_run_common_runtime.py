@@ -107,6 +107,8 @@ class RepoHealthStepResult:
     result: dict
     logs: list[str]
     changed_files_manifest: str
+    structural_complexity_budget: str
+    structural_complexity_budget_status: str
     behavior_delta: str
     passed: bool
 
@@ -142,6 +144,7 @@ class WorkspaceApplyResult:
 @dataclass(frozen=True)
 class CompletedRunSteps:
     mutation_step: CommandStepResult
+    generated_artifact_convergence: dict
     repo_health: RepoHealthStepResult
     promotion: PromotionStepResult
     finalize_step: FinalizeStepResult

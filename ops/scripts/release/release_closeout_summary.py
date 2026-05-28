@@ -22,6 +22,13 @@ from ops.scripts.core.release_currentness_state_runtime import (
     components_match_current_source_tree,
     currentness_field,
 )
+from ops.scripts.gate_effect_vocabulary import (
+    GATE_EFFECT_ADVISORY,
+    GATE_EFFECT_BLOCKS_EXECUTION,
+    GATE_EFFECT_BLOCKS_PROMOTION,
+    GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
+    canonical_gate_effect,
+)
 from ops.scripts.core.release_risk_state_runtime import release_risk_identity
 from ops.scripts.learning_readiness_vocabulary import (
     LEARNING_REVIEW_REQUIRED_BLOCKER_ID,
@@ -374,7 +381,7 @@ def _issue(
     code: str,
     message: str,
     severity: str = "blocker",
-    gate_effect: str = "active",
+    gate_effect: str = GATE_EFFECT_BLOCKS_PROMOTION,
     required_evidence: list[str] | None = None,
 ) -> dict[str, Any]:
     return {
@@ -382,7 +389,10 @@ def _issue(
         "source_path": source_path,
         "code": code,
         "severity": severity,
-        "gate_effect": gate_effect,
+        "gate_effect": canonical_gate_effect(
+            gate_effect,
+            active_default=GATE_EFFECT_BLOCKS_PROMOTION,
+        ),
         "message": message,
         "required_evidence": required_evidence or [],
     }
@@ -757,7 +767,7 @@ def _evaluate_status_component(
                 source_path=spec.path,
                 code=accepted_code,
                 severity="warn",
-                gate_effect="accepted_risk",
+                gate_effect=GATE_EFFECT_ADVISORY,
                 message=accepted_message,
             )
         ], f"{spec.name} status={status}"
@@ -791,6 +801,7 @@ def _evaluate_auto_improve(
                 source=spec.name,
                 source_path=spec.path,
                 code="auto_improve_execution_not_ready",
+                gate_effect=GATE_EFFECT_BLOCKS_EXECUTION,
                 message="auto-improve execution_readiness.can_run is false.",
                 required_evidence=[
                     "Regenerate auto-improve readiness after the runnable proposal queue is non-empty."
@@ -835,7 +846,10 @@ def _evaluate_auto_improve(
                 source_path=spec.path,
                 code=code,
                 severity=str(item.get("severity", "blocker")).strip() or "blocker",
-                gate_effect=str(item.get("gate_effect", "active")).strip() or "active",
+                gate_effect=canonical_gate_effect(
+                    item.get("gate_effect"),
+                    active_default=GATE_EFFECT_BLOCKS_PROMOTION,
+                ),
                 message=message,
                 required_evidence=[
                     str(evidence)
@@ -844,7 +858,7 @@ def _evaluate_auto_improve(
                 ],
             )
             if bool(item.get("accepted_risk")):
-                issue["gate_effect"] = "accepted_risk"
+                issue["gate_effect"] = GATE_EFFECT_ADVISORY
                 accepted_risks.append(issue)
             else:
                 blockers.append(issue)
@@ -949,7 +963,7 @@ def _evaluate_test_summary(
                     source_path=spec.path,
                     code="test_deselection_accepted_risk",
                     severity="warn",
-                    gate_effect="accepted_risk",
+                    gate_effect=GATE_EFFECT_ADVISORY,
                     message=f"{nodeid} is temporarily deselected by structured policy.",
                     required_evidence=[
                         f"Deselection policy: {policy_ref}",
@@ -1145,7 +1159,7 @@ def _evaluate_external_report_reference_manifest(
                 source_path=spec.path,
                 code="external_report_strict_unavailable",
                 severity="warn",
-                gate_effect="accepted_risk",
+                gate_effect=GATE_EFFECT_ADVISORY,
                 message=(
                     "strict external report release check is unavailable because no current "
                     "distribution ZIP was provided in this non-sealed closeout"
@@ -1254,7 +1268,7 @@ def _evaluate_artifact_freshness_source(
                     source_path=spec.path,
                     code="artifact_freshness_stable_contract_debt_advisory",
                     severity="warn",
-                    gate_effect="accepted_risk",
+                    gate_effect=GATE_EFFECT_ADVISORY,
                     message=(
                         "artifact freshness has stable contract debt only; current release evidence "
                         "has no operational freshness blocker."
@@ -1267,7 +1281,7 @@ def _evaluate_artifact_freshness_source(
                 source_path=spec.path,
                 code="artifact_freshness_attention",
                 severity="warn",
-                gate_effect="accepted_risk",
+                gate_effect=GATE_EFFECT_ADVISORY,
                 message="artifact freshness has attention-level debt but no fail-level freshness blocker.",
             )
         ], f"{spec.name} status={status}"
@@ -1398,7 +1412,7 @@ def _source_tree_coherence(
                 source_path="ops/reports/release-closeout-summary.json",
                 code="source_tree_coherence_attention",
                 severity="warn",
-                gate_effect="accepted_risk",
+                gate_effect=GATE_EFFECT_ADVISORY,
                 message=(
                     "release closeout component evidence does not form a single strict source-tree cohort."
                 ),
@@ -1456,7 +1470,7 @@ def _apply_learning_signoff(
             continue
         accepted = dict(blocker)
         accepted["severity"] = "warn"
-        accepted["gate_effect"] = "accepted_risk"
+        accepted["gate_effect"] = GATE_EFFECT_ADVISORY
         accepted["message"] = (
             f"{accepted['message']} Accepted by {learning_signoff['accepted_by']} "
             f"until {learning_signoff['expires_at']}; owner={learning_signoff['risk_owner']}."
@@ -1526,7 +1540,7 @@ def _finalize_accepted_risks(
         blocker = dict(accepted)
         blocker.pop("risk_acceptance", None)
         blocker["severity"] = "blocker"
-        blocker["gate_effect"] = "active"
+        blocker["gate_effect"] = GATE_EFFECT_OPERATOR_REVIEW_REQUIRED
         blocker["message"] = f"{blocker['message']} Accepted risk metadata is missing or expired."
         evidence = list(blocker.get("required_evidence", []))
         evidence.append("Refresh or replace the risk acceptance metadata before release closeout.")

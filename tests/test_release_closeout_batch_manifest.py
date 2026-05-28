@@ -367,7 +367,7 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
             "source": "external_report_reference_manifest",
             "source_path": "external-reports/report-reference-manifest.json",
             "code": "external_report_strict_unavailable",
-            "gate_effect": "accepted_risk",
+            "gate_effect": "advisory",
             "advisory_lifecycle_effect": "review_backlog",
         }
         self._write_closeout_summary(
@@ -458,14 +458,14 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
             "source": "external_report_reference_manifest",
             "source_path": "external-reports/report-reference-manifest.json",
             "code": "external_report_strict_unavailable",
-            "gate_effect": "accepted_risk",
+            "gate_effect": "advisory",
             "advisory_lifecycle_effect": "review_backlog",
         }
         active_risk = {
             "source": "artifact_freshness",
             "source_path": "ops/reports/artifact-freshness-report.json",
             "code": "artifact_freshness_attention",
-            "gate_effect": "accepted_risk",
+            "gate_effect": "advisory",
             "advisory_lifecycle_effect": "review_backlog",
         }
         self._write_closeout_summary(

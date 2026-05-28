@@ -207,6 +207,7 @@
         "field_path",
         "observed",
         "expected",
+        "gate_effect",
         "summary",
         "recommended_next_step"
       ],
@@ -216,6 +217,9 @@
         "field_path": { "type": "string", "minLength": 1 },
         "observed": { "type": "string" },
         "expected": { "type": "string" },
+        "gate_effect": {
+          "$ref": "https://llmwiki/schemas/gate-effect-vocabulary#/$defs/gate_effect"
+        },
         "summary": { "type": "string", "minLength": 1 },
         "recommended_next_step": { "type": "string", "minLength": 1 }
       }

@@ -174,6 +174,7 @@ goal-runtime-pre-run-cleanup:
 	$(MAKE) artifact-freshness-refresh-check
 
 goal-runtime-between-run-settle: goal-runtime-lock-check goal-runtime-python-preflight
+	$(MAKE) refresh-generated-core
 	$(MAKE) goal-runtime-pre-run-cleanup
 	$(MAKE) goal-runtime-publish-local-evidence
 	$(MAKE) goal-runtime-fixed-point-check

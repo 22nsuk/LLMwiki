@@ -148,6 +148,7 @@
         "id",
         "status",
         "severity",
+        "gate_effect",
         "expected",
         "observed",
         "reason",
@@ -158,6 +159,9 @@
         "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_]*$" },
         "status": { "type": "string", "enum": ["pass", "attention", "fail"] },
         "severity": { "type": "string", "enum": ["block_start", "block_promotion"] },
+        "gate_effect": {
+          "$ref": "https://llmwiki/schemas/gate-effect-vocabulary#/$defs/gate_effect"
+        },
         "expected": {},
         "observed": {},
         "reason": { "type": "string", "minLength": 1 },

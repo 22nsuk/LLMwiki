@@ -5,6 +5,11 @@ from pathlib import Path
 from typing import Any
 
 from ops.scripts.artifact_io_runtime import load_optional_json_object
+from ops.scripts.gate_effect_vocabulary import (
+    GATE_EFFECT_BLOCKS_EXECUTION,
+    GATE_EFFECT_NONE,
+    GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
+)
 from ops.scripts.learning_readiness_vocabulary import (
     LEARNING_EXECUTION_NOT_RUNNABLE_BLOCKER_ID,
     LEARNING_STATUS_LIKELY,
@@ -708,10 +713,10 @@ def _learning_readiness_assessment(
     )
     likely_to_learn = queue_ready and not shadow_signals
     status = LEARNING_STATUS_LIKELY if likely_to_learn else LEARNING_STATUS_UNCERTAIN
-    gate_effect = "active" if likely_to_learn else "review_required"
+    gate_effect = GATE_EFFECT_NONE if likely_to_learn else GATE_EFFECT_OPERATOR_REVIEW_REQUIRED
     if not queue_ready:
         status = LEARNING_STATUS_NOT_RUNNABLE
-        gate_effect = "shadow"
+        gate_effect = GATE_EFFECT_BLOCKS_EXECUTION
     likely_reason = (
         "runnable queue has enough outcome/session evidence and no shadow learning warnings"
         if likely_to_learn

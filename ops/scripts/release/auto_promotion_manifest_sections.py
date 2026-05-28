@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from ops.scripts.gate_effect_vocabulary import GATE_EFFECT_BLOCKS_PROMOTION
+
 
 @dataclass(frozen=True)
 class RequirementSpec:
@@ -14,6 +16,7 @@ class RequirementSpec:
     expected: str
     summary: str
     recommended_next_step: str
+    gate_effect: str = GATE_EFFECT_BLOCKS_PROMOTION
 
 
 def blocker_from_requirement(spec: RequirementSpec) -> dict[str, Any]:
@@ -23,6 +26,7 @@ def blocker_from_requirement(spec: RequirementSpec) -> dict[str, Any]:
         "field_path": spec.field_path,
         "observed": str(spec.observed),
         "expected": spec.expected,
+        "gate_effect": spec.gate_effect,
         "summary": spec.summary,
         "recommended_next_step": spec.recommended_next_step,
     }

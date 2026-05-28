@@ -92,6 +92,9 @@
     "workspace_preparation": {
       "$ref": "#/$defs/workspace_preparation"
     },
+    "post_mutation_generated_artifact_convergence": {
+      "$ref": "#/$defs/generated_artifact_convergence_summary"
+    },
     "failure_taxonomy": {
       "type": "string"
     },
@@ -125,6 +128,9 @@
       "type": "string"
     },
     "behavior_delta_digest": {
+      "type": "string"
+    },
+    "structural_complexity_budget": {
       "type": "string"
     },
     "same_eval_reason": {
@@ -383,6 +389,50 @@
           "additionalProperties": {
             "type": "number",
             "minimum": 0
+          }
+        }
+      }
+    },
+    "generated_artifact_convergence_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact",
+        "phase",
+        "status",
+        "refreshed_targets",
+        "artifacts"
+      ],
+      "properties": {
+        "artifact": {
+          "type": "string",
+          "minLength": 1
+        },
+        "phase": {
+          "type": "string",
+          "enum": [
+            "post_mutation_generated_artifact_convergence"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "noop",
+            "refreshed"
+          ]
+        },
+        "refreshed_targets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
           }
         }
       }

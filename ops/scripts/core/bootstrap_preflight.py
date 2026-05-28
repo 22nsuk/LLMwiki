@@ -167,6 +167,8 @@ def _executor_tooling(vault: Path, *, environment_class: str) -> dict[str, Any]:
     workspace_shadowing = _path_matches_any(codex_on_path, workspace_codex_paths)
     failures: list[str] = []
     if environment_class == "goal-runtime":
+        if venv_bin is None:
+            failures.append("workspace_virtualenv_python_missing")
         if not codex_outside_workspace_virtualenv and workspace_codex_paths:
             failures.append("workspace_virtualenv_codex_shadow")
         elif not codex_outside_workspace_virtualenv:
@@ -245,7 +247,12 @@ def build_report(
         str(item) for item in executor_tooling.get("failures", []) if str(item).strip()
     ]
     status = "pass" if python_ok and not missing and not executor_tooling_failures else "fail"
-    if executor_tooling_failures:
+    if "workspace_virtualenv_python_missing" in executor_tooling_failures:
+        guidance = (
+            "Run make dev-install, then rerun make goal-runtime-python-preflight "
+            "before goal-runtime execution."
+        )
+    elif executor_tooling_failures:
         guidance = (
             "Expose the operator Codex CLI outside the repository virtualenv and remove "
             "repo-local .venv/bin/codex shims before running goal-runtime execution."

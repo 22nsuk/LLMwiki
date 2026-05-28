@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -66,8 +67,15 @@ class SetMechanismRunHistoryTests(unittest.TestCase):
 
             promotion_report = json.loads((run_dir / "promotion-report.json").read_text(encoding="utf-8"))
             run_ledger = json.loads((run_dir / "run-ledger.json").read_text(encoding="utf-8"))
+            fingerprint = json.loads(
+                (run_dir / "run-artifact-fingerprint.json").read_text(encoding="utf-8")
+            )
 
             self.assertTrue(result["changed"])
+            self.assertEqual(
+                result["run_artifact_fingerprint"],
+                "runs/run-history-status/run-artifact-fingerprint.json",
+            )
             self.assertEqual(promotion_report["history"]["status"], "archived")
             self.assertEqual(
                 promotion_report["history"]["reason"],
@@ -77,6 +85,18 @@ class SetMechanismRunHistoryTests(unittest.TestCase):
             self.assertEqual(promotion_report["history"]["ts"], "2026-04-15T00:00:00Z")
             self.assertEqual(run_ledger["events"][-1]["type"], "history_status_updated")
             self.assertEqual(run_ledger["events"][-1]["decision"], "archived")
+            fingerprint_by_path = {
+                item["path"]: item["sha256"]
+                for item in fingerprint["artifacts"]
+            }
+            self.assertEqual(
+                fingerprint_by_path["runs/run-history-status/promotion-report.json"],
+                hashlib.sha256((run_dir / "promotion-report.json").read_bytes()).hexdigest(),
+            )
+            self.assertEqual(
+                fingerprint_by_path["runs/run-history-status/run-ledger.json"],
+                hashlib.sha256((run_dir / "run-ledger.json").read_bytes()).hexdigest(),
+            )
 
     def test_set_mechanism_run_history_requires_reason_for_non_active_status(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

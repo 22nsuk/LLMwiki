@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Wiki Generated Artifact Convergence Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "run_id",
+    "generated_at",
+    "phase",
+    "status",
+    "selected_targets",
+    "refreshed_targets",
+    "artifacts",
+    "summary",
+    "details"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "enum": [
+        "ops/schemas/generated-artifact-convergence.schema.json"
+      ]
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "phase": {
+      "type": "string",
+      "enum": [
+        "post_mutation_generated_artifact_convergence"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "noop",
+        "refreshed"
+      ]
+    },
+    "selected_targets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "refreshed_targets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selected_target_count",
+        "refreshed_target_count",
+        "artifact_count"
+      ],
+      "properties": {
+        "selected_target_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "refreshed_target_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "artifact_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "details": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "target",
+          "status",
+          "artifacts",
+          "reproducibility_status",
+          "reproducibility_diff_status"
+        ],
+        "properties": {
+          "target": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "reproducibility_status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reproducibility_diff_status": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

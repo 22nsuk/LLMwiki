@@ -285,6 +285,12 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
 
         self.assertEqual(manifest["status"], "fail")
         self.assertIn("auto_improve_independent_promotion_blockers_open", manifest["failures"])
+        blocker = next(
+            item
+            for item in manifest["blockers"]
+            if item["id"] == "auto_improve_independent_promotion_blockers_open"
+        )
+        self.assertEqual(blocker["gate_effect"], "blocks_promotion")
 
     def test_preflight_requires_verified_goal_run_identity(self) -> None:
         self._write_common_inputs()
@@ -342,6 +348,12 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
         self.assertEqual(manifest["status"], "fail")
         self.assertFalse(manifest["checks"]["closeout_accepted_risk_clean"])
         self.assertIn("closeout_accepted_risk_not_clean", manifest["failures"])
+        blocker = next(
+            item
+            for item in manifest["blockers"]
+            if item["id"] == "closeout_accepted_risk_not_clean"
+        )
+        self.assertEqual(blocker["gate_effect"], "operator_review_required")
 
         closeout["summary"]["accepted_risk_instance_count"] = 0
         closeout["summary"]["release_blocking_risk_family_count"] = 0
@@ -356,6 +368,12 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
         self.assertFalse(manifest["checks"]["closeout_gate_attention_clean"])
         self.assertNotIn("closeout_accepted_risk_not_clean", manifest["failures"])
         self.assertIn("closeout_gate_attention_not_clean", manifest["failures"])
+        blocker = next(
+            item
+            for item in manifest["blockers"]
+            if item["id"] == "closeout_gate_attention_not_clean"
+        )
+        self.assertEqual(blocker["gate_effect"], "blocks_promotion")
 
     def test_preseal_requires_closeout_source_tree_coherence(self) -> None:
         self._write_common_inputs()

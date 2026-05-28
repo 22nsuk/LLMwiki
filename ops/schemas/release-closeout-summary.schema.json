@@ -1126,13 +1126,7 @@
           "minLength": 1
         },
         "gate_effect": {
-          "type": "string",
-          "enum": [
-            "active",
-            "accepted_risk",
-            "review_required",
-            "shadow"
-          ]
+          "$ref": "https://llmwiki/schemas/gate-effect-vocabulary#/$defs/gate_effect"
         },
         "clean_lane_effect": {
           "type": "string",

@@ -3748,6 +3748,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
             "goal-runtime-between-run-settle",
             (
+                "$(MAKE) refresh-generated-core",
                 "$(MAKE) goal-runtime-pre-run-cleanup",
                 "$(MAKE) goal-runtime-publish-local-evidence",
                 "$(MAKE) goal-runtime-fixed-point-check",

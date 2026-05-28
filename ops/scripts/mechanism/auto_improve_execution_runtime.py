@@ -5,6 +5,13 @@ import sys
 from pathlib import Path
 
 
+def _project_python_for_mutation_command(artifact_root: Path) -> str:
+    for rel_path in (".venv/bin/python", ".venv/Scripts/python.exe", ".venv/Scripts/python"):
+        if (artifact_root / rel_path).exists():
+            return rel_path
+    return sys.executable
+
+
 def mutation_command(
     *,
     artifact_root: Path,
@@ -16,11 +23,13 @@ def mutation_command(
     policy_path: str,
 ) -> str:
     parts = [
-        shlex.quote(sys.executable),
+        shlex.quote(_project_python_for_mutation_command(artifact_root)),
         "-m",
         "ops.scripts.core.executor",
         "--vault",
         shlex.quote(str(artifact_root)),
+        "--workspace-root",
+        ".",
         "--run-id",
         shlex.quote(run_id),
         "--policy-path",

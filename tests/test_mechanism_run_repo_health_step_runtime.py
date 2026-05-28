@@ -13,6 +13,7 @@ from ops.scripts.mechanism_run_common_runtime import (
 )
 from ops.scripts.mechanism_run_repo_health_step_runtime import (
     RepoHealthStepDependencies,
+    StructuralComplexityBudgetStepResult,
     repo_health_step,
 )
 from ops.scripts.runtime_context import RuntimeContext
@@ -46,6 +47,13 @@ def _resolution(*, include_check_command: bool = True) -> ExperimentResolution:
     )
 
 
+def _structural_budget_pass() -> StructuralComplexityBudgetStepResult:
+    return StructuralComplexityBudgetStepResult(
+        report_path="runs/run-steps/structural-complexity-budget.json",
+        status="pass",
+    )
+
+
 class MechanismRunRepoHealthStepRuntimeTests(unittest.TestCase):
     def test_repo_health_step_requires_prepared_command(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir, self.assertRaisesRegex(
@@ -65,6 +73,7 @@ class MechanismRunRepoHealthStepRuntimeTests(unittest.TestCase):
                     write_timeout_failure_artifact=mock.Mock(),
                     append_ledger_event=mock.Mock(),
                     write_changed_files_manifest=mock.Mock(),
+                    write_structural_complexity_budget_artifact=mock.Mock(),
                     write_behavior_delta_artifact=mock.Mock(),
                     sanitize_path_text=mock.Mock(),
                 ),
@@ -103,6 +112,9 @@ class MechanismRunRepoHealthStepRuntimeTests(unittest.TestCase):
                 write_changed_files_manifest=mock.Mock(
                     return_value="runs/run-steps/changed-files-manifest.json"
                 ),
+                write_structural_complexity_budget_artifact=mock.Mock(
+                    return_value=_structural_budget_pass()
+                ),
                 write_behavior_delta_artifact=mock.Mock(
                     return_value="runs/run-steps/behavior-delta.json"
                 ),
@@ -129,6 +141,10 @@ class MechanismRunRepoHealthStepRuntimeTests(unittest.TestCase):
             "runs/run-steps/changed-files-manifest.json",
         )
         self.assertEqual(result.behavior_delta, "runs/run-steps/behavior-delta.json")
+        self.assertEqual(
+            result.structural_complexity_budget,
+            "runs/run-steps/structural-complexity-budget.json",
+        )
         self.assertEqual(
             dependencies.append_ledger_event.call_args.kwargs["decision"],
             "repo_health_timeout",
@@ -166,6 +182,9 @@ class MechanismRunRepoHealthStepRuntimeTests(unittest.TestCase):
                 write_changed_files_manifest=mock.Mock(
                     return_value="runs/run-steps/changed-files-manifest.json"
                 ),
+                write_structural_complexity_budget_artifact=mock.Mock(
+                    return_value=_structural_budget_pass()
+                ),
                 write_behavior_delta_artifact=mock.Mock(
                     return_value="runs/run-steps/behavior-delta.json"
                 ),
@@ -188,9 +207,71 @@ class MechanismRunRepoHealthStepRuntimeTests(unittest.TestCase):
 
         self.assertTrue(result.passed)
         self.assertEqual(result.result["stdout"], "stdout.txt")
+        self.assertEqual(result.structural_complexity_budget_status, "pass")
         self.assertEqual(
             dependencies.append_ledger_event.call_args.kwargs["decision"],
             "repo_health_pass",
+        )
+        dependencies.write_timeout_failure_artifact.assert_not_called()
+
+    def test_repo_health_step_blocks_promotion_on_structural_complexity_attention(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            workspace = Path(temp_dir) / "workspace"
+            vault.mkdir()
+            workspace.mkdir()
+            dependencies = RepoHealthStepDependencies(
+                command_argv=mock.Mock(return_value=["python", "-m", "pytest", "-q"]),
+                run_command=mock.Mock(
+                    return_value={
+                        "command": "python -m pytest -q",
+                        "argv": ["python", "-m", "pytest", "-q"],
+                        "returncode": 0,
+                        "stdout": "repo health ok\n",
+                        "stderr": "",
+                    }
+                ),
+                write_command_logs=mock.Mock(
+                    return_value=[
+                        "runs/run-steps/repo-health.stdout.txt",
+                        "runs/run-steps/repo-health.stderr.txt",
+                    ]
+                ),
+                write_timeout_failure_artifact=mock.Mock(),
+                append_ledger_event=mock.Mock(),
+                write_changed_files_manifest=mock.Mock(
+                    return_value="runs/run-steps/changed-files-manifest.json"
+                ),
+                write_structural_complexity_budget_artifact=mock.Mock(
+                    return_value=StructuralComplexityBudgetStepResult(
+                        report_path="runs/run-steps/structural-complexity-budget.json",
+                        status="attention",
+                    )
+                ),
+                write_behavior_delta_artifact=mock.Mock(
+                    return_value="runs/run-steps/behavior-delta.json"
+                ),
+                sanitize_path_text=mock.Mock(side_effect=lambda text, *, roots: text),
+            )
+
+            result = repo_health_step(
+                vault,
+                workspace,
+                run_id="run-steps",
+                resolution=_resolution(),
+                baseline_file_digests={},
+                dependencies=dependencies,
+            )
+
+        self.assertFalse(result.passed)
+        self.assertEqual(result.structural_complexity_budget_status, "attention")
+        self.assertEqual(
+            dependencies.append_ledger_event.call_args.kwargs["decision"],
+            "structural_complexity_non_regression",
+        )
+        self.assertIn(
+            "runs/run-steps/structural-complexity-budget.json",
+            dependencies.append_ledger_event.call_args.kwargs["artifacts"],
         )
         dependencies.write_timeout_failure_artifact.assert_not_called()
 
@@ -224,6 +305,9 @@ class MechanismRunRepoHealthStepRuntimeTests(unittest.TestCase):
                 append_ledger_event=mock.Mock(),
                 write_changed_files_manifest=mock.Mock(
                     return_value="runs/run-steps/changed-files-manifest.json"
+                ),
+                write_structural_complexity_budget_artifact=mock.Mock(
+                    return_value=_structural_budget_pass()
                 ),
                 write_behavior_delta_artifact=mock.Mock(
                     return_value="runs/run-steps/behavior-delta.json"

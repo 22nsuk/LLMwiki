@@ -50,6 +50,7 @@ from .mechanism_run_mutation_step_runtime import (
 from .mechanism_run_repo_health_step_runtime import (
     RepoHealthStepDependencies,
     repo_health_step,
+    write_structural_complexity_budget_artifact,
 )
 from .mechanism_run_scaffold_resolution_runtime import _command_argv
 from .planning_gate_validate import validate_run_dir
@@ -692,6 +693,7 @@ def _repo_health_step(
             write_timeout_failure_artifact=write_timeout_failure_artifact,
             append_ledger_event=append_ledger_event,
             write_changed_files_manifest=_write_changed_files_manifest,
+            write_structural_complexity_budget_artifact=write_structural_complexity_budget_artifact,
             write_behavior_delta_artifact=_write_behavior_delta_artifact,
             sanitize_path_text=sanitize_path_text,
         ),
@@ -707,9 +709,18 @@ def _build_repo_health_blocked_result(
     baseline_artifacts: dict,
     candidate_artifacts: dict,
     workspace_preparation: dict,
+    generated_artifact_convergence: dict,
     repo_health: RepoHealthStepResult,
 ) -> dict:
     planning_gate = validate_run_dir(vault, scaffold.run_dir, context=resolution.context)
+    failure_taxonomy = (
+        "structural_complexity_non_regression"
+        if (
+            repo_health.result["returncode"] == 0
+            and repo_health.structural_complexity_budget_status != "pass"
+        )
+        else "repo_health_blocked"
+    )
     result = {
         "run_id": run_id,
         "run_dir": report_path(vault, scaffold.run_dir),
@@ -720,14 +731,18 @@ def _build_repo_health_blocked_result(
         "routing_reports": resolution.routing_report_paths,
         "executor_reports": resolution.executor_report_paths,
         "changed_files_manifest": repo_health.changed_files_manifest,
+        "structural_complexity_budget": repo_health.structural_complexity_budget,
         "behavior_delta": repo_health.behavior_delta,
         "workspace_preparation": workspace_preparation,
+        "post_mutation_generated_artifact_convergence": generated_artifact_convergence,
+        "failure_taxonomy": failure_taxonomy,
         "repo_health": {
             "passed": False,
             "returncode": repo_health.result["returncode"],
             "timed_out": bool(repo_health.result.get("timed_out", False)),
             "timeout_seconds": repo_health.result.get("timeout_seconds", 0),
             "termination_reason": repo_health.result.get("termination_reason", ""),
+            "structural_complexity_budget_status": repo_health.structural_complexity_budget_status,
             "stdout": run_rel(run_id, "repo-health.stdout.txt"),
             "stderr": run_rel(run_id, "repo-health.stderr.txt"),
         },

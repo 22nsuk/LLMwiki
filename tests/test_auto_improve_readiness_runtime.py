@@ -628,6 +628,8 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(validate_with_schema(persisted, envelope_schema), [])
         self.assertEqual(persisted["execution_readiness"]["status"], "pass")
         self.assertTrue(persisted["execution_readiness"]["can_run"])
+        self.assertEqual(persisted["execution_status"], "pass")
+        self.assertEqual(persisted["promotion_status"], "pass")
         self.assertTrue(persisted["can_execute_trial"])
         self.assertTrue(persisted["can_promote_result"])
         self.assertTrue(readiness_can_run(persisted))
@@ -644,10 +646,11 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             persisted["diagnostics"]["loop_health_summary"]["gate_effect"], "none"
         )
         self.assertEqual(persisted["learning_readiness"]["status"], "learning_likely")
-        self.assertEqual(persisted["learning_readiness"]["gate_effect"], "active")
+        self.assertEqual(persisted["learning_readiness"]["gate_effect"], "none")
         self.assertTrue(persisted["learning_readiness"]["can_run"])
         self.assertTrue(persisted["learning_readiness"]["likely_to_learn"])
         self.assertEqual(persisted["learning_readiness"]["signals"], [])
+        self.assertEqual(persisted["execution_blockers"], [])
         self.assertEqual(persisted["learning_claim_blockers"], [])
         self.assertEqual(persisted["promotion_blockers"], [])
         self.assertEqual(persisted["clean_release_blockers"], [])
@@ -1833,7 +1836,10 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(report["execution_readiness"]["status"], "pass")
         self.assertTrue(report["queue"]["ready"])
         self.assertEqual(report["learning_readiness"]["status"], "learning_uncertain")
-        self.assertEqual(report["learning_readiness"]["gate_effect"], "review_required")
+        self.assertEqual(
+            report["learning_readiness"]["gate_effect"],
+            "operator_review_required",
+        )
         self.assertTrue(report["can_execute_trial"])
         self.assertFalse(report["can_promote_result"])
         self.assertTrue(readiness_can_run(report))
@@ -1902,7 +1908,10 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(learning_claim_blocker["status"], "open")
         self.assertEqual(learning_claim_blocker["severity"], "blocker")
         self.assertFalse(learning_claim_blocker["accepted_risk"])
-        self.assertEqual(learning_claim_blocker["gate_effect"], "review_required")
+        self.assertEqual(
+            learning_claim_blocker["gate_effect"],
+            "operator_review_required",
+        )
         self.assertEqual(learning_claim_blocker["source_status"], "learning_uncertain")
         self.assertSetEqual(set(learning_claim_blocker["signal_ids"]), signal_ids)
         self.assertIn(
@@ -1985,7 +1994,10 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
 
         self.assertTrue(report["can_execute_trial"])
         self.assertTrue(report["can_promote_result"])
-        self.assertEqual(report["learning_readiness"]["gate_effect"], "review_required")
+        self.assertEqual(
+            report["learning_readiness"]["gate_effect"],
+            "operator_review_required",
+        )
         self.assertEqual(
             [item["id"] for item in report["learning_claim_blockers"]],
             ["learning_blocked_by_review_required"],
@@ -2322,7 +2334,10 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         self.assertEqual(report["execution_readiness"]["status"], "pass")
         self.assertTrue(report["queue"]["ready"])
         self.assertEqual(report["learning_readiness"]["status"], "learning_uncertain")
-        self.assertEqual(report["learning_readiness"]["gate_effect"], "review_required")
+        self.assertEqual(
+            report["learning_readiness"]["gate_effect"],
+            "operator_review_required",
+        )
         self.assertTrue(report["learning_readiness"]["can_run"])
         self.assertFalse(report["learning_readiness"]["likely_to_learn"])
         self.assertEqual(
@@ -2789,9 +2804,16 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         report = build_readiness_report(self.vault, context=fixed_context())
 
         self.assertEqual(report["execution_readiness"]["status"], "warn")
+        self.assertEqual(report["execution_status"], "blocked")
         self.assertFalse(report["can_execute_trial"])
         self.assertFalse(report["can_promote_result"])
         self.assertTrue(
+            any(
+                item["scope"] == "execution_readiness"
+                for item in report["execution_blockers"]
+            )
+        )
+        self.assertFalse(
             any(
                 item["scope"] == "execution_readiness"
                 for item in report["promotion_blockers"]
@@ -2897,6 +2919,7 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
         report = build_readiness_report(self.vault, context=fixed_context())
 
         self.assertEqual(report["learning_readiness"]["status"], "not_runnable")
+        self.assertEqual(report["execution_status"], "blocked")
         self.assertFalse(report["can_execute_trial"])
         self.assertFalse(report["can_promote_result"])
         self.assertEqual(len(report["learning_claim_blockers"]), 1)
@@ -2904,7 +2927,10 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             report["learning_claim_blockers"][0]["id"],
             "learning_blocked_by_execution_not_runnable",
         )
-        self.assertEqual(report["learning_claim_blockers"][0]["gate_effect"], "shadow")
+        self.assertEqual(
+            report["learning_claim_blockers"][0]["gate_effect"],
+            "blocks_execution",
+        )
         self.assertEqual(
             report["learning_claim_blockers"][0]["source_status"], "not_runnable"
         )
@@ -2917,6 +2943,12 @@ class AutoImproveReadinessRuntimeTests(unittest.TestCase):
             " ".join(report["learning_claim_blockers"][0]["required_evidence"]),
         )
         self.assertTrue(
+            any(
+                item["id"] == "execution_blocked_by_no_runnable_proposal"
+                for item in report["execution_blockers"]
+            )
+        )
+        self.assertFalse(
             any(
                 item["id"] == "execution_blocked_by_no_runnable_proposal"
                 for item in report["promotion_blockers"]
