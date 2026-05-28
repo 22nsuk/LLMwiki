@@ -14,7 +14,6 @@ from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
 from ops.scripts.release.release_goal_run_identity_guard import (
     build_report,
-    read_effective_run_id_from_report,
     write_report,
 )
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
@@ -112,9 +111,12 @@ class ReleaseGoalRunIdentityGuardTests(unittest.TestCase):
             )
 
         self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["binding_status"], "bound")
+        self.assertEqual(report["verification_status"], "verified")
         self.assertEqual(report["effective_run_id"], "promote-run")
         self.assertEqual(report["selection_mode"], "explicit")
         self.assertEqual(report["blockers"], [])
+        self.assertEqual(report["verification_blockers"], [])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
         report_path = write_report(
             self.vault,
@@ -122,12 +124,6 @@ class ReleaseGoalRunIdentityGuardTests(unittest.TestCase):
             "build/release/release-auto-promotion-goal-run-identity.json",
         )
         self.assertTrue(report_path.exists())
-        effective_run_id, error = read_effective_run_id_from_report(
-            self.vault,
-            "build/release/release-auto-promotion-goal-run-identity.json",
-        )
-        self.assertEqual(error, "")
-        self.assertEqual(effective_run_id, "promote-run")
 
     def test_release_gate_pending_goal_status_can_select_completed_certified_run(self) -> None:
         self._write_identity_inputs()
@@ -170,8 +166,10 @@ class ReleaseGoalRunIdentityGuardTests(unittest.TestCase):
                 context=fixed_context(),
             )
 
-        self.assertEqual(report["status"], "fail")
-        self.assertIn("goal_run_status_not_promotable", report["failures"])
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["binding_status"], "bound")
+        self.assertEqual(report["verification_status"], "blocked")
+        self.assertIn("goal_run_status_not_promotable", report["verification_failures"])
 
     def test_makefile_default_goal_run_id_infers_verified_promoted_evidence(self) -> None:
         self._write_identity_inputs(run_id="promote-run")
@@ -185,6 +183,8 @@ class ReleaseGoalRunIdentityGuardTests(unittest.TestCase):
             )
 
         self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["binding_status"], "bound")
+        self.assertEqual(report["verification_status"], "verified")
         self.assertEqual(report["requested_run_id"], "auto-improve-trial")
         self.assertEqual(report["effective_run_id"], "promote-run")
         self.assertEqual(report["inferred_run_id"], "promote-run")
@@ -205,6 +205,7 @@ class ReleaseGoalRunIdentityGuardTests(unittest.TestCase):
             )
 
         self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["binding_status"], "invalid")
         self.assertIn("goal_run_id_file_default", report["failures"])
 
     def test_explicit_goal_run_id_must_match_inferred_verified_evidence(self) -> None:
@@ -220,7 +221,7 @@ class ReleaseGoalRunIdentityGuardTests(unittest.TestCase):
 
         self.assertEqual(report["status"], "fail")
         self.assertIn("explicit_goal_run_id_mismatch", report["failures"])
-        self.assertIn("goal_run_status_run_id_mismatch", report["failures"])
+        self.assertIn("goal_run_status_run_id_mismatch", report["verification_failures"])
 
     def test_mismatched_status_or_certificate_run_id_is_blocked(self) -> None:
         self._write_identity_inputs(run_id="promote-run")
@@ -241,7 +242,50 @@ class ReleaseGoalRunIdentityGuardTests(unittest.TestCase):
             )
 
         self.assertEqual(report["status"], "fail")
-        self.assertIn("goal_runtime_certificate_run_id_mismatch", report["failures"])
+        self.assertIn(
+            "explicit_goal_run_id_current_certificate_mismatch",
+            report["failures"],
+        )
+        self.assertIn(
+            "goal_runtime_certificate_run_id_mismatch",
+            report["verification_failures"],
+        )
+
+    def test_explicit_goal_run_id_without_verified_evidence_remains_bootstrap_safe(self) -> None:
+        with self._patch_current_repo():
+            report = build_report(
+                self.vault,
+                goal_run_id="first-release-run",
+                goal_run_id_origin="command line",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["binding_status"], "bound")
+        self.assertEqual(report["verification_status"], "blocked")
+        self.assertEqual(report["effective_run_id"], "first-release-run")
+        self.assertEqual(report["failures"], [])
+        self.assertIn("goal_run_status_not_loadable", report["verification_failures"])
+        self.assertIn("goal_runtime_certificate_not_loadable", report["verification_failures"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_makefile_default_without_verified_evidence_is_unresolved_not_failed(self) -> None:
+        with self._patch_current_repo():
+            report = build_report(
+                self.vault,
+                goal_run_id="auto-improve-trial",
+                goal_run_id_origin="file",
+                context=fixed_context(),
+            )
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["binding_status"], "unresolved")
+        self.assertEqual(report["verification_status"], "pending")
+        self.assertEqual(report["effective_run_id"], "")
+        self.assertEqual(report["failures"], [])
+        self.assertIn("goal_run_id_unresolved", report["verification_failures"])
+        self.assertIn("goal_run_status_not_loadable", report["verification_failures"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
 
 if __name__ == "__main__":

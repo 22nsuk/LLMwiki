@@ -56,7 +56,9 @@
         "operator_summary",
         "auto_improve_readiness",
         "auto_promotion_preflight",
-        "auto_promotion_preseal"
+        "auto_promotion_preseal",
+        "goal_run_status",
+        "goal_runtime_certificate"
       ],
       "properties": {
         "run_manifest": { "$ref": "#/$defs/report_identity" },
@@ -64,13 +66,15 @@
         "operator_summary": { "$ref": "#/$defs/report_identity" },
         "auto_improve_readiness": { "$ref": "#/$defs/report_identity" },
         "auto_promotion_preflight": { "$ref": "#/$defs/report_identity" },
-        "auto_promotion_preseal": { "$ref": "#/$defs/report_identity" }
+        "auto_promotion_preseal": { "$ref": "#/$defs/report_identity" },
+        "goal_run_status": { "$ref": "#/$defs/report_identity" },
+        "goal_runtime_certificate": { "$ref": "#/$defs/report_identity" }
       }
     },
     "diagnostics": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["preflight", "preseal", "operator", "auto_improve"],
+      "required": ["preflight", "preseal", "operator", "auto_improve", "goal_runtime"],
       "properties": {
         "preflight": { "$ref": "#/$defs/auto_promotion_phase_diagnostic" },
         "preseal": { "$ref": "#/$defs/auto_promotion_phase_diagnostic" },
@@ -162,7 +166,8 @@
             "release_gate_diagnostic_promotion_blocker_count": { "type": "integer", "minimum": 0 },
             "clean_release_blocker_count": { "type": "integer", "minimum": 0 }
           }
-        }
+        },
+        "goal_runtime": { "$ref": "#/$defs/goal_runtime_diagnostics" }
       }
     },
     "checks": {
@@ -184,6 +189,18 @@
         "auto_promotion_preseal_goal_run_identity_present",
         "auto_promotion_preseal_goal_run_identity_pass",
         "auto_promotion_goal_run_identity_match",
+        "goal_run_status_load_ok",
+        "goal_run_status_artifact_kind_ok",
+        "goal_run_status_current",
+        "goal_run_status_run_id_match",
+        "goal_run_status_completed",
+        "goal_run_status_report_accepted",
+        "goal_runtime_certificate_load_ok",
+        "goal_runtime_certificate_artifact_kind_ok",
+        "goal_runtime_certificate_current",
+        "goal_runtime_certificate_run_id_match",
+        "goal_runtime_certificate_completed",
+        "goal_runtime_certificate_verified",
         "run_manifest_pass",
         "run_manifest_load_ok",
         "run_manifest_artifact_kind_ok",
@@ -228,6 +245,18 @@
         "auto_promotion_preseal_goal_run_identity_present": { "type": "boolean" },
         "auto_promotion_preseal_goal_run_identity_pass": { "type": "boolean" },
         "auto_promotion_goal_run_identity_match": { "type": "boolean" },
+        "goal_run_status_load_ok": { "type": "boolean" },
+        "goal_run_status_artifact_kind_ok": { "type": "boolean" },
+        "goal_run_status_current": { "type": "boolean" },
+        "goal_run_status_run_id_match": { "type": "boolean" },
+        "goal_run_status_completed": { "type": "boolean" },
+        "goal_run_status_report_accepted": { "type": "boolean" },
+        "goal_runtime_certificate_load_ok": { "type": "boolean" },
+        "goal_runtime_certificate_artifact_kind_ok": { "type": "boolean" },
+        "goal_runtime_certificate_current": { "type": "boolean" },
+        "goal_runtime_certificate_run_id_match": { "type": "boolean" },
+        "goal_runtime_certificate_completed": { "type": "boolean" },
+        "goal_runtime_certificate_verified": { "type": "boolean" },
         "run_manifest_pass": { "type": "boolean" },
         "run_manifest_load_ok": { "type": "boolean" },
         "run_manifest_artifact_kind_ok": { "type": "boolean" },
@@ -293,21 +322,81 @@
       "additionalProperties": false,
       "required": [
         "status",
+        "binding_status",
+        "verification_status",
         "requested_run_id",
         "effective_run_id",
         "inferred_run_id",
         "selection_mode",
         "goal_run_id_origin",
-        "failure_count"
+        "failure_count",
+        "verification_failure_count"
       ],
       "properties": {
         "status": { "type": "string" },
+        "binding_status": { "type": "string" },
+        "verification_status": { "type": "string" },
         "requested_run_id": { "type": "string" },
         "effective_run_id": { "type": "string" },
         "inferred_run_id": { "type": "string" },
         "selection_mode": { "type": "string" },
         "goal_run_id_origin": { "type": "string" },
-        "failure_count": { "type": "integer", "minimum": 0 }
+        "failure_count": { "type": "integer", "minimum": 0 },
+        "verification_failure_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "goal_runtime_diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selected_run_id",
+        "preflight_run_id",
+        "preseal_run_id",
+        "status",
+        "certificate"
+      ],
+      "properties": {
+        "selected_run_id": { "type": "string" },
+        "preflight_run_id": { "type": "string" },
+        "preseal_run_id": { "type": "string" },
+        "status": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "run_id",
+            "run_status",
+            "promotion_status",
+            "can_promote_result"
+          ],
+          "properties": {
+            "status": { "type": "string" },
+            "run_id": { "type": "string" },
+            "run_status": { "type": "string" },
+            "promotion_status": { "type": "string" },
+            "can_promote_result": { "type": "boolean" }
+          }
+        },
+        "certificate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "run_id",
+            "run_status",
+            "verification_status",
+            "eligible",
+            "already_verified"
+          ],
+          "properties": {
+            "status": { "type": "string" },
+            "run_id": { "type": "string" },
+            "run_status": { "type": "string" },
+            "verification_status": { "type": "string" },
+            "eligible": { "type": "boolean" },
+            "already_verified": { "type": "boolean" }
+          }
+        }
       }
     },
     "report_identity": {

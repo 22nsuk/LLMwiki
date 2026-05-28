@@ -19,6 +19,8 @@
     "encoding",
     "currentness",
     "status",
+    "binding_status",
+    "verification_status",
     "requested_run_id",
     "effective_run_id",
     "inferred_run_id",
@@ -29,7 +31,9 @@
     "observed",
     "checks",
     "blockers",
-    "failures"
+    "verification_blockers",
+    "failures",
+    "verification_failures"
   ],
   "properties": {
     "$schema": { "type": "string", "const": "ops/schemas/release-goal-run-identity.schema.json" },
@@ -49,6 +53,8 @@
     "encoding": { "type": "string", "const": "utf-8" },
     "currentness": { "$ref": "#/$defs/currentness" },
     "status": { "type": "string", "enum": ["pass", "fail"] },
+    "binding_status": { "type": "string", "enum": ["bound", "unresolved", "invalid"] },
+    "verification_status": { "type": "string", "enum": ["verified", "pending", "blocked"] },
     "requested_run_id": { "type": "string" },
     "effective_run_id": { "type": "string" },
     "inferred_run_id": { "type": "string" },
@@ -120,6 +126,8 @@
         "goal_run_id_not_file_default",
         "inferred_goal_run_id_verified",
         "explicit_goal_run_id_matches_inferred",
+        "explicit_goal_run_id_matches_current_status",
+        "explicit_goal_run_id_matches_current_certificate",
         "goal_run_status_load_ok",
         "goal_run_status_artifact_kind_ok",
         "goal_run_status_current",
@@ -138,6 +146,8 @@
         "goal_run_id_not_file_default": { "type": "boolean" },
         "inferred_goal_run_id_verified": { "type": "boolean" },
         "explicit_goal_run_id_matches_inferred": { "type": "boolean" },
+        "explicit_goal_run_id_matches_current_status": { "type": "boolean" },
+        "explicit_goal_run_id_matches_current_certificate": { "type": "boolean" },
         "goal_run_status_load_ok": { "type": "boolean" },
         "goal_run_status_artifact_kind_ok": { "type": "boolean" },
         "goal_run_status_current": { "type": "boolean" },
@@ -154,7 +164,16 @@
       "type": "array",
       "items": { "$ref": "#/$defs/blocker" }
     },
+    "verification_blockers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/blocker" }
+    },
     "failures": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "verification_failures": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 },
       "uniqueItems": true

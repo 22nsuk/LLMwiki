@@ -50,6 +50,8 @@ DEFAULT_OPERATOR_SUMMARY = "build/release/operator-release-summary.json"
 DEFAULT_AUTO_IMPROVE_READINESS = "ops/reports/auto-improve-readiness.json"
 DEFAULT_AUTO_PROMOTION_PREFLIGHT = "build/release/release-auto-promotion-preflight.json"
 DEFAULT_AUTO_PROMOTION_PRESEAL = "build/release/release-auto-promotion-preseal.json"
+DEFAULT_GOAL_RUN_STATUS = "ops/reports/goal-run-status.json"
+DEFAULT_GOAL_RUNTIME_CERTIFICATE = "ops/reports/goal-runtime-certificate.json"
 STRICT_ZERO_ACCEPTED_RISK_FIELDS = (
     "accepted_risk_count",
     "release_accepted_risk_count",
@@ -80,6 +82,14 @@ def _int_value(value: Any) -> int:
     if isinstance(value, str) and value.strip().isdigit():
         return int(value.strip())
     return 0
+
+
+def _bool_value(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "pass", "allowed"}
+    return False
 
 
 def _load_report(vault: Path, path_value: str) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -185,13 +195,75 @@ def _preflight_diagnostics(payload: dict[str, Any]) -> dict[str, Any]:
         "blocker_count": len(_list(payload.get("blockers"))),
         "goal_run_identity": {
             "status": str(goal_run_identity.get("status", "")).strip(),
+            "binding_status": str(goal_run_identity.get("binding_status", "")).strip(),
+            "verification_status": str(
+                goal_run_identity.get("verification_status", "")
+            ).strip(),
             "requested_run_id": str(goal_run_identity.get("requested_run_id", "")).strip(),
             "effective_run_id": str(goal_run_identity.get("effective_run_id", "")).strip(),
             "inferred_run_id": str(goal_run_identity.get("inferred_run_id", "")).strip(),
             "selection_mode": str(goal_run_identity.get("selection_mode", "")).strip(),
             "goal_run_id_origin": str(goal_run_identity.get("goal_run_id_origin", "")).strip(),
             "failure_count": _int_value(goal_run_identity.get("failure_count", 0)),
+            "verification_failure_count": _int_value(
+                goal_run_identity.get("verification_failure_count", 0)
+            ),
         },
+    }
+
+
+def _goal_run_status_diagnostics(payload: dict[str, Any]) -> dict[str, Any]:
+    run = _dict(payload.get("run"))
+    health = _dict(payload.get("health"))
+    return {
+        "status": str(payload.get("status", "")).strip(),
+        "run_id": str(run.get("run_id", "")).strip(),
+        "run_status": str(run.get("status", "")).strip(),
+        "promotion_status": str(health.get("promotion_status", "")).strip(),
+        "can_promote_result": _bool_value(health.get("can_promote_result", False)),
+    }
+
+
+def _goal_runtime_certificate_diagnostics(payload: dict[str, Any]) -> dict[str, Any]:
+    certificate = _dict(payload.get("certificate"))
+    run = _dict(payload.get("run"))
+    return {
+        "status": str(payload.get("status", "")).strip(),
+        "run_id": str(run.get("run_id", "")).strip(),
+        "run_status": str(run.get("run_status", "")).strip(),
+        "verification_status": str(certificate.get("verification_status", "")).strip(),
+        "eligible": _bool_value(certificate.get("eligible", False)),
+        "already_verified": _bool_value(certificate.get("already_verified", False)),
+    }
+
+
+def _selected_goal_run_id(preflight: dict[str, Any], preseal: dict[str, Any]) -> str:
+    preflight_goal_identity = _dict(preflight.get("goal_run_identity"))
+    preseal_goal_identity = _dict(preseal.get("goal_run_identity"))
+    preflight_goal_run_id = str(preflight_goal_identity.get("effective_run_id", "")).strip()
+    preseal_goal_run_id = str(preseal_goal_identity.get("effective_run_id", "")).strip()
+    if preflight_goal_run_id and preflight_goal_run_id == preseal_goal_run_id:
+        return preflight_goal_run_id
+    return ""
+
+
+def _goal_runtime_diagnostics(
+    *,
+    preflight: dict[str, Any],
+    preseal: dict[str, Any],
+    goal_run_status: dict[str, Any],
+    goal_runtime_certificate: dict[str, Any],
+) -> dict[str, Any]:
+    preflight_goal_identity = _dict(preflight.get("goal_run_identity"))
+    preseal_goal_identity = _dict(preseal.get("goal_run_identity"))
+    preflight_goal_run_id = str(preflight_goal_identity.get("effective_run_id", "")).strip()
+    preseal_goal_run_id = str(preseal_goal_identity.get("effective_run_id", "")).strip()
+    return {
+        "selected_run_id": _selected_goal_run_id(preflight, preseal),
+        "preflight_run_id": preflight_goal_run_id,
+        "preseal_run_id": preseal_goal_run_id,
+        "status": goal_run_status,
+        "certificate": goal_runtime_certificate,
     }
 
 
@@ -283,7 +355,7 @@ def _phase_evidence_requirements(
             ),
             "status=pass; failures=0",
             f"Auto-promotion {phase} goal-run identity evidence is not passing.",
-            "Regenerate it after make release-auto-promotion-goal-run-id-guard passes.",
+            f"Regenerate make release-auto-promotion-{phase} after fixing GOAL_RUN_ID binding.",
         ),
     ]
 
@@ -562,6 +634,8 @@ def _ready_checks(
     auto_improve: dict[str, Any],
     preflight: dict[str, Any],
     preseal: dict[str, Any],
+    goal_run_status: dict[str, Any],
+    goal_runtime_certificate: dict[str, Any],
     fingerprint: str,
     revision: str,
 ) -> dict[str, bool]:
@@ -569,6 +643,7 @@ def _ready_checks(
     preseal_goal_identity = _dict(preseal.get("goal_run_identity"))
     preflight_goal_run_id = str(preflight_goal_identity.get("effective_run_id", "")).strip()
     preseal_goal_run_id = str(preseal_goal_identity.get("effective_run_id", "")).strip()
+    selected_goal_run_id = _selected_goal_run_id(preflight, preseal)
     return {
         "auto_promotion_preflight_load_ok": inputs["auto_promotion_preflight"]["load_status"] == "ok",
         "auto_promotion_preflight_artifact_kind_ok": (
@@ -604,6 +679,42 @@ def _ready_checks(
             bool(preflight_goal_run_id)
             and bool(preseal_goal_run_id)
             and preflight_goal_run_id == preseal_goal_run_id
+        ),
+        "goal_run_status_load_ok": inputs["goal_run_status"]["load_status"] == "ok",
+        "goal_run_status_artifact_kind_ok": (
+            inputs["goal_run_status"]["artifact_kind"] == "goal_run_status"
+        ),
+        "goal_run_status_current": (
+            inputs["goal_run_status"]["source_tree_fingerprint"] == fingerprint
+            and inputs["goal_run_status"]["source_revision"] == revision
+        ),
+        "goal_run_status_run_id_match": (
+            bool(selected_goal_run_id)
+            and goal_run_status["run_id"] == selected_goal_run_id
+        ),
+        "goal_run_status_completed": goal_run_status["run_status"] == "completed",
+        "goal_run_status_report_accepted": goal_run_status["status"] in {"pass", "attention"},
+        "goal_runtime_certificate_load_ok": (
+            inputs["goal_runtime_certificate"]["load_status"] == "ok"
+        ),
+        "goal_runtime_certificate_artifact_kind_ok": (
+            inputs["goal_runtime_certificate"]["artifact_kind"] == "goal_runtime_certificate"
+        ),
+        "goal_runtime_certificate_current": (
+            inputs["goal_runtime_certificate"]["source_tree_fingerprint"] == fingerprint
+            and inputs["goal_runtime_certificate"]["source_revision"] == revision
+        ),
+        "goal_runtime_certificate_run_id_match": (
+            bool(selected_goal_run_id)
+            and goal_runtime_certificate["run_id"] == selected_goal_run_id
+        ),
+        "goal_runtime_certificate_completed": (
+            goal_runtime_certificate["run_status"] == "completed"
+        ),
+        "goal_runtime_certificate_verified": (
+            goal_runtime_certificate["status"] == "pass"
+            and goal_runtime_certificate["verification_status"] in {"eligible", "already_verified"}
+            and bool(goal_runtime_certificate["eligible"])
         ),
         "run_manifest_load_ok": inputs["run_manifest"]["load_status"] == "ok",
         "run_manifest_artifact_kind_ok": inputs["run_manifest"]["artifact_kind"] == "release_run_manifest",
@@ -665,6 +776,8 @@ def _ready_requirements(
     auto_improve: dict[str, Any],
     preflight: dict[str, Any],
     preseal: dict[str, Any],
+    goal_run_status: dict[str, Any],
+    goal_runtime_certificate: dict[str, Any],
     fingerprint: str,
 ) -> list[RequirementSpec]:
     preflight_goal_run_id = str(_dict(preflight.get("goal_run_identity")).get("effective_run_id", "")).strip()
@@ -698,6 +811,15 @@ def _ready_requirements(
             "Auto-promotion preflight and preseal were generated for different goal runs.",
             "Regenerate preflight and preseal with the same explicit GOAL_RUN_ID.",
         ),
+        *_goal_runtime_verification_requirements(
+            checks,
+            inputs,
+            preflight=preflight,
+            preseal=preseal,
+            goal_run_status=goal_run_status,
+            goal_runtime_certificate=goal_runtime_certificate,
+            fingerprint=fingerprint,
+        ),
         *_manifest_evidence_requirements(
             checks,
             inputs,
@@ -715,6 +837,153 @@ def _ready_requirements(
             inputs,
             auto_improve,
             fingerprint=fingerprint,
+        ),
+    ]
+
+
+def _goal_runtime_verification_requirements(
+    checks: dict[str, bool],
+    inputs: dict[str, dict[str, Any]],
+    *,
+    preflight: dict[str, Any],
+    preseal: dict[str, Any],
+    goal_run_status: dict[str, Any],
+    goal_runtime_certificate: dict[str, Any],
+    fingerprint: str,
+) -> list[RequirementSpec]:
+    selected_goal_run_id = _selected_goal_run_id(preflight, preseal)
+    status_input = inputs["goal_run_status"]
+    certificate_input = inputs["goal_runtime_certificate"]
+    return [
+        RequirementSpec(
+            checks["goal_run_status_load_ok"],
+            "goal_run_status_not_loadable",
+            "goal_run_status",
+            "$.load_status",
+            status_input["load_status"],
+            "ok",
+            "Goal-run status evidence is missing or invalid.",
+            "Publish goal-run status for the selected run before unattended promotion.",
+        ),
+        RequirementSpec(
+            checks["goal_run_status_artifact_kind_ok"],
+            "goal_run_status_artifact_kind_invalid",
+            "goal_run_status",
+            "$.artifact_kind",
+            status_input["artifact_kind"],
+            "goal_run_status",
+            "Goal-run status evidence has an unexpected artifact kind.",
+            "Regenerate goal-run status evidence for the selected run.",
+        ),
+        RequirementSpec(
+            checks["goal_run_status_current"],
+            "goal_run_status_stale",
+            "goal_run_status",
+            "$.source_revision|$.source_tree_fingerprint",
+            (
+                f"source_revision={status_input['source_revision']};"
+                f"source_tree_fingerprint={status_input['source_tree_fingerprint']}"
+            ),
+            f"source_revision=current;source_tree_fingerprint={fingerprint}",
+            "Goal-run status evidence does not describe the current source tree.",
+            "Refresh goal-run status evidence for the current source tree.",
+        ),
+        RequirementSpec(
+            checks["goal_run_status_run_id_match"],
+            "goal_run_status_run_id_mismatch",
+            "goal_run_status",
+            "$.run.run_id",
+            goal_run_status["run_id"],
+            selected_goal_run_id,
+            "Goal-run status does not match the selected release goal run.",
+            "Publish status evidence for the GOAL_RUN_ID bound by preflight and preseal.",
+        ),
+        RequirementSpec(
+            checks["goal_run_status_completed"],
+            "goal_run_status_not_completed",
+            "goal_run_status",
+            "$.run.status",
+            goal_run_status["run_status"],
+            "completed",
+            "The selected goal run is not completed.",
+            "Complete the selected goal run before claiming unattended promotion readiness.",
+        ),
+        RequirementSpec(
+            checks["goal_run_status_report_accepted"],
+            "goal_run_status_report_not_accepted",
+            "goal_run_status",
+            "$.status",
+            goal_run_status["status"],
+            "pass or attention",
+            "Goal-run status report is not an accepted completed-run diagnostic.",
+            "Regenerate goal-run status for the completed selected run.",
+        ),
+        RequirementSpec(
+            checks["goal_runtime_certificate_load_ok"],
+            "goal_runtime_certificate_not_loadable",
+            "goal_runtime_certificate",
+            "$.load_status",
+            certificate_input["load_status"],
+            "ok",
+            "Goal-runtime certificate evidence is missing or invalid.",
+            "Run make goal-runtime-certificate for the selected completed run.",
+        ),
+        RequirementSpec(
+            checks["goal_runtime_certificate_artifact_kind_ok"],
+            "goal_runtime_certificate_artifact_kind_invalid",
+            "goal_runtime_certificate",
+            "$.artifact_kind",
+            certificate_input["artifact_kind"],
+            "goal_runtime_certificate",
+            "Goal-runtime certificate evidence has an unexpected artifact kind.",
+            "Regenerate goal-runtime certificate evidence.",
+        ),
+        RequirementSpec(
+            checks["goal_runtime_certificate_current"],
+            "goal_runtime_certificate_stale",
+            "goal_runtime_certificate",
+            "$.source_revision|$.source_tree_fingerprint",
+            (
+                f"source_revision={certificate_input['source_revision']};"
+                f"source_tree_fingerprint={certificate_input['source_tree_fingerprint']}"
+            ),
+            f"source_revision=current;source_tree_fingerprint={fingerprint}",
+            "Goal-runtime certificate evidence does not describe the current source tree.",
+            "Refresh the goal-runtime certificate for the current source tree.",
+        ),
+        RequirementSpec(
+            checks["goal_runtime_certificate_run_id_match"],
+            "goal_runtime_certificate_run_id_mismatch",
+            "goal_runtime_certificate",
+            "$.run.run_id",
+            goal_runtime_certificate["run_id"],
+            selected_goal_run_id,
+            "Goal-runtime certificate does not match the selected release goal run.",
+            "Regenerate the certificate for the GOAL_RUN_ID bound by preflight and preseal.",
+        ),
+        RequirementSpec(
+            checks["goal_runtime_certificate_completed"],
+            "goal_runtime_certificate_run_not_completed",
+            "goal_runtime_certificate",
+            "$.run.run_status",
+            goal_runtime_certificate["run_status"],
+            "completed",
+            "Goal-runtime certificate does not describe a completed run.",
+            "Regenerate the certificate after the selected goal run completes.",
+        ),
+        RequirementSpec(
+            checks["goal_runtime_certificate_verified"],
+            "goal_runtime_certificate_not_verified",
+            "goal_runtime_certificate",
+            "$.status|$.certificate.verification_status|$.certificate.eligible",
+            (
+                f"status={goal_runtime_certificate['status']};"
+                f"verification_status={goal_runtime_certificate['verification_status']};"
+                f"eligible={goal_runtime_certificate['eligible']}"
+            ),
+            "status=pass; verification_status in eligible,already_verified; eligible=true",
+            "The selected goal run does not have verified certificate evidence.",
+            "Run make goal-runtime-certificate after a certifiable completed goal run exists.",
         ),
     ]
 
@@ -764,6 +1033,8 @@ def build_manifest(
     auto_improve_readiness: str = DEFAULT_AUTO_IMPROVE_READINESS,
     auto_promotion_preflight: str = DEFAULT_AUTO_PROMOTION_PREFLIGHT,
     auto_promotion_preseal: str = DEFAULT_AUTO_PROMOTION_PRESEAL,
+    goal_run_status: str = DEFAULT_GOAL_RUN_STATUS,
+    goal_runtime_certificate: str = DEFAULT_GOAL_RUNTIME_CERTIFICATE,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
@@ -777,6 +1048,8 @@ def build_manifest(
         "auto_improve_readiness": _authority_identity(vault, auto_improve_readiness),
         "auto_promotion_preflight": _authority_identity(vault, auto_promotion_preflight),
         "auto_promotion_preseal": _authority_identity(vault, auto_promotion_preseal),
+        "goal_run_status": _authority_identity(vault, goal_run_status),
+        "goal_runtime_certificate": _authority_identity(vault, goal_runtime_certificate),
     }
     run_payload, _run_diagnostics = _load_report(vault, run_manifest)
     sealed_payload, _sealed_diagnostics = _load_report(vault, sealed_run_manifest)
@@ -784,6 +1057,11 @@ def build_manifest(
     auto_payload, _auto_diagnostics_load = _load_report(vault, auto_improve_readiness)
     preflight_payload, _preflight_diagnostics_load = _load_report(vault, auto_promotion_preflight)
     preseal_payload, _preseal_diagnostics_load = _load_report(vault, auto_promotion_preseal)
+    goal_run_status_payload, _goal_status_diagnostics_load = _load_report(vault, goal_run_status)
+    goal_runtime_certificate_payload, _goal_certificate_diagnostics_load = _load_report(
+        vault,
+        goal_runtime_certificate,
+    )
 
     operator = _operator_diagnostics(operator_payload)
     auto_improve = _auto_improve_diagnostics(
@@ -793,6 +1071,8 @@ def build_manifest(
     )
     preflight = _preflight_diagnostics(preflight_payload)
     preseal = _preflight_diagnostics(preseal_payload)
+    goal_status = _goal_run_status_diagnostics(goal_run_status_payload)
+    goal_certificate = _goal_runtime_certificate_diagnostics(goal_runtime_certificate_payload)
     checks = _ready_checks(
         inputs,
         run_payload=run_payload,
@@ -801,6 +1081,8 @@ def build_manifest(
         auto_improve=auto_improve,
         preflight=preflight,
         preseal=preseal,
+        goal_run_status=goal_status,
+        goal_runtime_certificate=goal_certificate,
         fingerprint=fingerprint,
         revision=commit,
     )
@@ -813,6 +1095,8 @@ def build_manifest(
         auto_improve=auto_improve,
         preflight=preflight,
         preseal=preseal,
+        goal_run_status=goal_status,
+        goal_runtime_certificate=goal_certificate,
         fingerprint=fingerprint,
     )
     blockers: list[dict[str, Any]] = []
@@ -824,6 +1108,12 @@ def build_manifest(
         "preseal": preseal,
         "operator": operator,
         "auto_improve": auto_improve,
+        "goal_runtime": _goal_runtime_diagnostics(
+            preflight=preflight,
+            preseal=preseal,
+            goal_run_status=goal_status,
+            goal_runtime_certificate=goal_certificate,
+        ),
     }
     return _ready_manifest_payload(
         generated_at=generated_at,
@@ -861,6 +1151,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--auto-improve-readiness", default=DEFAULT_AUTO_IMPROVE_READINESS)
     parser.add_argument("--auto-promotion-preflight", default=DEFAULT_AUTO_PROMOTION_PREFLIGHT)
     parser.add_argument("--auto-promotion-preseal", default=DEFAULT_AUTO_PROMOTION_PRESEAL)
+    parser.add_argument("--goal-run-status", default=DEFAULT_GOAL_RUN_STATUS)
+    parser.add_argument("--goal-runtime-certificate", default=DEFAULT_GOAL_RUNTIME_CERTIFICATE)
     return parser.parse_args(argv)
 
 
@@ -875,6 +1167,8 @@ def main(argv: list[str] | None = None) -> int:
         auto_improve_readiness=args.auto_improve_readiness,
         auto_promotion_preflight=args.auto_promotion_preflight,
         auto_promotion_preseal=args.auto_promotion_preseal,
+        goal_run_status=args.goal_run_status,
+        goal_runtime_certificate=args.goal_runtime_certificate,
     )
     path = write_manifest(vault, manifest, args.out)
     print(display_path(vault, path))

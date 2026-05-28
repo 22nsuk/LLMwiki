@@ -40,6 +40,8 @@ DEFAULT_OPERATOR_SUMMARY = "build/release/operator-release-summary.json"
 DEFAULT_AUTO_IMPROVE_READINESS = "ops/reports/auto-improve-readiness.json"
 DEFAULT_AUTO_PROMOTION_PREFLIGHT = "build/release/release-auto-promotion-preflight.json"
 DEFAULT_AUTO_PROMOTION_PRESEAL = "build/release/release-auto-promotion-preseal.json"
+DEFAULT_GOAL_RUN_STATUS = "ops/reports/goal-run-status.json"
+DEFAULT_GOAL_RUNTIME_CERTIFICATE = "ops/reports/goal-runtime-certificate.json"
 
 STAGES = {"sealed-run-ready", "auto-promotion-ready"}
 
@@ -101,6 +103,7 @@ def _node(
         "source_tree_fingerprint": identity["source_tree_fingerprint"],
         "input_fingerprint": identity["sha256"],
         "dependency_fingerprint": producer_input_fingerprint(payload),
+        "verification_status": "",
         "currentness_status": "current"
         if (
             identity["source_tree_fingerprint"] == current_fingerprint
@@ -205,6 +208,77 @@ def _operator_attention_blocker(
     }
 
 
+def _goal_run_status_node(
+    vault: Path,
+    path: str,
+    *,
+    current_fingerprint: str,
+    current_revision: str,
+) -> dict[str, Any]:
+    node = _node(
+        vault,
+        spec=NodeSpec(
+            "goal_run_status",
+            path,
+            "goal_run_status",
+            "release-auto-promotion-ready",
+            "cheap",
+            "release-auto-promotion-ready-check",
+            "auto-improve-goal-status",
+            False,
+        ),
+        current_fingerprint=current_fingerprint,
+        current_revision=current_revision,
+    )
+    payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, path))
+    if diagnostics.get("status") != "ok":
+        payload = {}
+    run = payload.get("run")
+    run = run if isinstance(run, dict) else {}
+    node["verification_status"] = str(run.get("status", "")).strip()
+    if node["verification_status"] != "completed":
+        node["can_reuse"] = False
+        if "not_verified" not in node["issues"]:
+            node["issues"].append("not_verified")
+    return node
+
+
+def _goal_runtime_certificate_node(
+    vault: Path,
+    path: str,
+    *,
+    current_fingerprint: str,
+    current_revision: str,
+) -> dict[str, Any]:
+    node = _node(
+        vault,
+        spec=NodeSpec(
+            "goal_runtime_certificate",
+            path,
+            "goal_runtime_certificate",
+            "release-auto-promotion-ready",
+            "cheap",
+            "release-auto-promotion-ready-check",
+            "goal-runtime-certificate",
+            True,
+        ),
+        current_fingerprint=current_fingerprint,
+        current_revision=current_revision,
+    )
+    payload, diagnostics = load_optional_json_object_with_diagnostics(_resolve(vault, path))
+    if diagnostics.get("status") != "ok":
+        payload = {}
+    certificate = payload.get("certificate")
+    certificate = certificate if isinstance(certificate, dict) else {}
+    eligible = certificate.get("eligible", False)
+    node["verification_status"] = str(certificate.get("verification_status", "")).strip()
+    if not (node["verification_status"] in {"eligible", "already_verified"} and eligible is True):
+        node["can_reuse"] = False
+        if "not_verified" not in node["issues"]:
+            node["issues"].append("not_verified")
+    return node
+
+
 def _plan_nodes(
     vault: Path,
     paths: dict[str, str],
@@ -276,7 +350,7 @@ def _plan_nodes(
             False,
         ),
     ]
-    return {
+    nodes = {
         spec.name: _node(
             vault,
             spec=spec,
@@ -285,6 +359,19 @@ def _plan_nodes(
         )
         for spec in specs
     }
+    nodes["goal_run_status"] = _goal_run_status_node(
+        vault,
+        paths["goal_run_status"],
+        current_fingerprint=fingerprint,
+        current_revision=revision,
+    )
+    nodes["goal_runtime_certificate"] = _goal_runtime_certificate_node(
+        vault,
+        paths["goal_runtime_certificate"],
+        current_fingerprint=fingerprint,
+        current_revision=revision,
+    )
+    return nodes
 
 
 def _sealed_run_ready_findings(
@@ -403,6 +490,24 @@ def _auto_promotion_ready_blockers(
                 "or make release-auto-promotion-operator-summary if sealed sidecars are already current."
             ),
         ),
+        (
+            "goal_run_status",
+            "goal_run_status_not_reusable",
+            "Completed goal-run status evidence is missing, stale, invalid, or not completed.",
+            (
+                "Publish current completed goal-run status evidence for the selected run id, "
+                "then rerun the planner."
+            ),
+        ),
+        (
+            "goal_runtime_certificate",
+            "goal_runtime_certificate_not_reusable",
+            "Verified goal-runtime certificate evidence is missing, stale, invalid, or not verified.",
+            (
+                "Run make goal-runtime-certificate for the selected completed run, "
+                "then rerun the planner."
+            ),
+        ),
     ]
     for node_key, blocker_id, summary, next_step in blocker_specs:
         if not nodes[node_key]["can_reuse"]:
@@ -464,6 +569,8 @@ def build_plan(
     auto_improve_readiness: str = DEFAULT_AUTO_IMPROVE_READINESS,
     auto_promotion_preflight: str = DEFAULT_AUTO_PROMOTION_PREFLIGHT,
     auto_promotion_preseal: str = DEFAULT_AUTO_PROMOTION_PRESEAL,
+    goal_run_status: str = DEFAULT_GOAL_RUN_STATUS,
+    goal_runtime_certificate: str = DEFAULT_GOAL_RUNTIME_CERTIFICATE,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
     if stage not in STAGES:
@@ -479,6 +586,8 @@ def build_plan(
         "auto_improve_readiness": auto_improve_readiness,
         "auto_promotion_preflight": auto_promotion_preflight,
         "auto_promotion_preseal": auto_promotion_preseal,
+        "goal_run_status": goal_run_status,
+        "goal_runtime_certificate": goal_runtime_certificate,
     }
     nodes = _plan_nodes(vault, paths, fingerprint=fingerprint, revision=commit)
     if stage == "sealed-run-ready":
@@ -528,6 +637,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--auto-improve-readiness", default=DEFAULT_AUTO_IMPROVE_READINESS)
     parser.add_argument("--auto-promotion-preflight", default=DEFAULT_AUTO_PROMOTION_PREFLIGHT)
     parser.add_argument("--auto-promotion-preseal", default=DEFAULT_AUTO_PROMOTION_PRESEAL)
+    parser.add_argument("--goal-run-status", default=DEFAULT_GOAL_RUN_STATUS)
+    parser.add_argument("--goal-runtime-certificate", default=DEFAULT_GOAL_RUNTIME_CERTIFICATE)
     return parser.parse_args(argv)
 
 
@@ -543,6 +654,8 @@ def main(argv: list[str] | None = None) -> int:
         auto_improve_readiness=args.auto_improve_readiness,
         auto_promotion_preflight=args.auto_promotion_preflight,
         auto_promotion_preseal=args.auto_promotion_preseal,
+        goal_run_status=args.goal_run_status,
+        goal_runtime_certificate=args.goal_runtime_certificate,
     )
     path = write_plan(vault, plan, args.out)
     print(display_path(vault, path))

@@ -113,14 +113,18 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
                 "phase": "preflight",
                 "goal_run_identity": {
                     "status": "pass",
+                    "binding_status": "bound",
+                    "verification_status": "verified",
                     "requested_run_id": "auto-improve-trial",
                     "effective_run_id": "promote-run",
                     "inferred_run_id": "promote-run",
                     "selection_mode": "inferred_from_verified_evidence",
                     "goal_run_id_origin": "file",
                     "failure_count": 0,
+                    "verification_failure_count": 0,
                 },
                 "blockers": [],
+                "final_promotion_blockers": [],
             },
         )
         self._write_json(
@@ -134,14 +138,56 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
                 "phase": "preseal",
                 "goal_run_identity": {
                     "status": "pass",
+                    "binding_status": "bound",
+                    "verification_status": "verified",
                     "requested_run_id": "auto-improve-trial",
                     "effective_run_id": "promote-run",
                     "inferred_run_id": "promote-run",
                     "selection_mode": "inferred_from_verified_evidence",
                     "goal_run_id_origin": "file",
                     "failure_count": 0,
+                    "verification_failure_count": 0,
                 },
                 "blockers": [],
+                "final_promotion_blockers": [],
+            },
+        )
+        self._write_json(
+            "ops/reports/goal-run-status.json",
+            {
+                "artifact_kind": "goal_run_status",
+                "producer": "tests.goal_run_status",
+                "generated_at": "2026-05-23T12:00:00Z",
+                "source_tree_fingerprint": "fp-current",
+                "status": "pass",
+                "run": {
+                    "run_id": "promote-run",
+                    "status": "completed",
+                    "runtime_mode": "self_improvement_loop",
+                },
+                "health": {
+                    "promotion_status": "allowed",
+                    "can_promote_result": True,
+                },
+            },
+        )
+        self._write_json(
+            "ops/reports/goal-runtime-certificate.json",
+            {
+                "artifact_kind": "goal_runtime_certificate",
+                "producer": "tests.goal_runtime_certificate",
+                "generated_at": "2026-05-23T12:00:00Z",
+                "source_tree_fingerprint": "fp-current",
+                "status": "pass",
+                "certificate": {
+                    "verification_status": "eligible",
+                    "eligible": True,
+                    "already_verified": False,
+                },
+                "run": {
+                    "run_id": "promote-run",
+                    "run_status": "completed",
+                },
             },
         )
         self._write_json(
@@ -183,6 +229,8 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
         self.assertTrue(manifest["checks"]["auto_promotion_preflight_pass"])
         self.assertTrue(manifest["checks"]["auto_promotion_preseal_pass"])
         self.assertTrue(manifest["checks"]["auto_promotion_goal_run_identity_match"])
+        self.assertTrue(manifest["checks"]["goal_runtime_certificate_verified"])
+        self.assertEqual(manifest["diagnostics"]["goal_runtime"]["selected_run_id"], "promote-run")
         self.assertEqual(
             manifest["diagnostics"]["preflight"]["goal_run_identity"]["effective_run_id"],
             "promote-run",
@@ -395,6 +443,8 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
             "build/release/operator-release-summary.json",
             "build/release/release-auto-promotion-preflight.json",
             "build/release/release-auto-promotion-preseal.json",
+            "ops/reports/goal-run-status.json",
+            "ops/reports/goal-runtime-certificate.json",
             "ops/reports/auto-improve-readiness.json",
         ):
             payload = json.loads((self.vault / rel_path).read_text(encoding="utf-8"))
@@ -454,6 +504,99 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
         self.assertEqual(manifest["status"], "fail")
         self.assertFalse(manifest["checks"]["auto_promotion_goal_run_identity_match"])
         self.assertIn("auto_promotion_goal_run_identity_mismatch", manifest["failures"])
+
+    def test_final_ready_requires_selected_goal_run_id_even_when_preflight_passed(self) -> None:
+        self._write_inputs()
+        for rel_path in (
+            "build/release/release-auto-promotion-preflight.json",
+            "build/release/release-auto-promotion-preseal.json",
+        ):
+            payload = json.loads((self.vault / rel_path).read_text(encoding="utf-8"))
+            payload["goal_run_identity"]["binding_status"] = "unresolved"
+            payload["goal_run_identity"]["verification_status"] = "pending"
+            payload["goal_run_identity"]["effective_run_id"] = ""
+            payload["goal_run_identity"]["inferred_run_id"] = ""
+            payload["goal_run_identity"]["selection_mode"] = "unresolved"
+            payload["goal_run_identity"]["verification_failure_count"] = 1
+            payload["final_promotion_blockers"] = [
+                {
+                    "id": "goal_run_id_unresolved",
+                    "source": "make|goal_run_status|goal_runtime_certificate",
+                    "field_path": "GOAL_RUN_ID|$.run.run_id",
+                    "observed": "requested=auto-improve-trial; origin=file",
+                    "expected": "explicit GOAL_RUN_ID or matching verified promoted run evidence",
+                    "gate_effect": "blocks_promotion",
+                    "summary": "Release auto-promotion could not resolve the goal run id.",
+                    "recommended_next_step": "Rerun with GOAL_RUN_ID=<goal-run-id>.",
+                }
+            ]
+            self._write_json(rel_path, payload)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, context=fixed_context())
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertFalse(manifest["unattended_promotion_allowed"])
+        self.assertIn("auto_promotion_preflight_goal_run_identity_missing", manifest["failures"])
+        self.assertIn("auto_promotion_preseal_goal_run_identity_missing", manifest["failures"])
+        self.assertFalse(manifest["checks"]["goal_runtime_certificate_run_id_match"])
+
+    def test_final_ready_requires_verified_goal_runtime_certificate(self) -> None:
+        self._write_inputs()
+        (self.vault / "ops/reports/goal-runtime-certificate.json").unlink()
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, context=fixed_context())
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertFalse(manifest["unattended_promotion_allowed"])
+        self.assertFalse(manifest["checks"]["goal_runtime_certificate_load_ok"])
+        self.assertIn("goal_runtime_certificate_not_loadable", manifest["failures"])
+
+        self._write_json(
+            "ops/reports/goal-runtime-certificate.json",
+            {
+                "artifact_kind": "goal_runtime_certificate",
+                "producer": "tests.goal_runtime_certificate",
+                "generated_at": "2026-05-23T12:00:00Z",
+                "source_tree_fingerprint": "fp-current",
+                "status": "attention",
+                "certificate": {
+                    "verification_status": "blocked",
+                    "eligible": False,
+                    "already_verified": False,
+                },
+                "run": {
+                    "run_id": "promote-run",
+                    "run_status": "completed",
+                },
+            },
+        )
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, context=fixed_context())
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertFalse(manifest["checks"]["goal_runtime_certificate_verified"])
+        self.assertIn("goal_runtime_certificate_not_verified", manifest["failures"])
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+
+    def test_final_ready_requires_certificate_for_selected_goal_run_id(self) -> None:
+        self._write_inputs()
+        certificate = json.loads(
+            (self.vault / "ops/reports/goal-runtime-certificate.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        certificate["run"]["run_id"] = "other-run"
+        self._write_json("ops/reports/goal-runtime-certificate.json", certificate)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, context=fixed_context())
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertFalse(manifest["checks"]["goal_runtime_certificate_run_id_match"])
+        self.assertIn("goal_runtime_certificate_run_id_mismatch", manifest["failures"])
 
     def test_learning_revalidation_due_blocks_auto_promotion(self) -> None:
         self._write_inputs()

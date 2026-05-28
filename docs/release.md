@@ -36,21 +36,24 @@ surface comparison; this document owns release evidence and staged authority.
 - `make release-sealed-run-ready-check`: revalidate existing sealed evidence
   without rerunning tests or rebuilding the package.
 - `make release-auto-promotion-ready-plan`: inspect preflight, runnable,
-  preseal, sealed, operator, and auto-improve evidence and write the cost-aware
-  action plan for the promotion verdict.
-- `make release-auto-promotion-goal-run-id-guard`: verify that
-  `GOAL_RUN_ID` was selected explicitly or infer it from matching current
-  global `goal-run-status` plus `goal-runtime-certificate` evidence. Explicit
-  values must match the inferred promoted evidence. The Makefile default
+  preseal, sealed, operator, auto-improve, goal-run status, and goal-runtime
+  certificate evidence and write the cost-aware action plan for the promotion
+  verdict.
+- `make release-auto-promotion-goal-run-id-guard`: resolve the release
+  goal-run binding and record final verification diagnostics. Explicit
+  `GOAL_RUN_ID` values are accepted when they do not contradict current
+  goal-run evidence; omitted values may still be inferred from matching current
+  verified `goal-run-status` plus `goal-runtime-certificate` evidence. Missing
+  or unverified certificate evidence is recorded as a final promotion blocker,
+  not as a preflight bootstrap blocker. The Makefile default
   `auto-improve-trial` is only tolerated as an unselected input; it is blocked
   if it would become the effective release auto-promotion run id.
 - `make release-auto-promotion-preflight`: refresh cheap unattended-promotion
   blockers before spending full run-ready cycles. It first runs the goal-run id
-  guard, injects the guard's effective run id into the body target, then
-  refresh-checks fast smoke and run-local goal evidence, refreshes the selected
-  report-contract summary for changed test fingerprints, then runs artifact
-  freshness and checks remediation, learning revalidation, and auto-improve
-  readiness without building or sealing release artifacts.
+  guard, refresh-checks fast smoke, refreshes the selected report-contract
+  summary for changed test fingerprints, then runs artifact freshness and checks
+  remediation, learning revalidation, and auto-improve readiness without
+  building release artifacts, sealing, or creating runtime-trial evidence.
 - `make release-auto-promotion-safe-cleanup`: normalize safe generated
   evidence before preseal. It removes stale goal-runtime transients, cleans tmp
   JSON candidates, backfills schema-backed historical run artifacts, refreshes
@@ -60,8 +63,8 @@ surface comparison; this document owns release evidence and staged authority.
 - `make release-auto-promotion-preseal`: refresh clean closeout, strict
   same-fingerprint cohort, remediation, learning, and auto-improve diagnostics
   after run-ready and before sealing. It refreshes cheap cohort inputs such as
-  bootstrap, registry, fast smoke, run-local goal evidence, generated index,
-  artifact freshness, and external report references through the safe cleanup
+  bootstrap, registry, fast smoke, generated index, artifact freshness, and
+  external report references through the safe cleanup
   lane, but it only checks run-ready's full release-smoke and full-suite
   evidence for currentness instead of rerunning them.
 - `make release-auto-promotion-operator-summary`: manual fallback to refresh the
@@ -69,8 +72,9 @@ surface comparison; this document owns release evidence and staged authority.
   sealed sidecars are already current.
 - `make release-auto-promotion-ready`: low-cost promotion check that reads the
   current runnable and sealed manifests, reuses the sealed operator summary
-  diagnostic, and decides unattended promotion. It never cascades into the lower
-  runnable or sealing stages.
+  diagnostic, directly verifies current goal-run status plus goal-runtime
+  certificate evidence, and decides unattended promotion. It never cascades into
+  the lower runnable or sealing stages.
 - `make release-auto-promotion-ready-check`: revalidate the existing
   auto-promotion manifest inputs without recomputing expensive evidence.
 - `make release-converge`: mutating evidence convergence for release reports.
@@ -101,16 +105,17 @@ surface comparison; this document owns release evidence and staged authority.
    or pushes automatically.
 2. If unattended promotion is the intended outcome, run
    `make release-auto-promotion-preflight` before the expensive runnable stage.
-   You may pass `GOAL_RUN_ID=<promoted-run-id>` explicitly, but if it is omitted
-   the goal-run id guard infers the effective id from current matching global
-   run/certificate evidence and passes that id into run-local evidence refresh.
-   Any explicit mismatch with the verified evidence fails before the body runs.
+   You may pass `GOAL_RUN_ID=<goal-run-id>` explicitly, but if it is omitted the
+   goal-run id guard can infer the effective id from current matching global
+   run/certificate evidence. Missing verified runtime evidence is carried as a
+   final promotion blocker; it does not stop this diagnostic bridge from
+   proving cheaper release blockers.
 3. Run `make release-run-ready`.
 4. If unattended promotion is the intended outcome, run
    `make release-auto-promotion-preseal` before sealing. As with preflight, an
-   explicit `GOAL_RUN_ID=<promoted-run-id>` is allowed but the guard can infer
-   the effective id from verified global evidence and inject it into the body
-   target. This includes `make release-auto-promotion-goal-run-id-guard` and
+   explicit `GOAL_RUN_ID=<goal-run-id>` is allowed but the guard can infer the
+   effective id from verified global evidence. This includes
+   `make release-auto-promotion-goal-run-id-guard` and
    `make release-auto-promotion-safe-cleanup`; run the safe cleanup target
    directly only when you need to settle safe generated evidence before retrying
    preseal.
@@ -122,7 +127,8 @@ surface comparison; this document owns release evidence and staged authority.
 6. Run `make release-auto-promotion-ready` when unattended promotion must be
    evaluated. Its planner reuses current passing preflight, run, preseal, and
    sealed authority evidence, reports minimal next actions for missing or stale
-   lower evidence, and then reuses the sealed operator summary diagnostic before
+   lower evidence, and then reuses the sealed operator summary diagnostic and
+   current verified goal-runtime certificate evidence before
    writing the auto-promotion authority manifest.
 
 `release-auto-promotion-ready` intentionally avoids rerunning full pytest,
@@ -169,16 +175,23 @@ Before starting:
 - Do not run `make auto-improve-goal-run` as part of release closeout unless the
   operator explicitly requests a runtime trial. Release authority normally reads
   existing goal/runtime diagnostics; it does not create new mechanism runs.
+  If `auto-improve-readiness` recommends `make auto-improve-goal-run` while you
+  are in this release closeout runbook, treat that as a separate evidence
+  production path, not as the next release target. The release-owned blocker is
+  still missing or stale verified goal-run/certificate evidence.
 - Treat `ops/reports/`, `ops/operator/`, `build/release/`, `runs/`, and `tmp/`
   as generated evidence surfaces. Refresh them through Make/script targets, not
   by hand editing JSON.
 
 Recommended closeout sequence:
 
-1. Run `make release-auto-promotion-preflight GOAL_RUN_ID=<promoted-run-id>` for
-   cheap blockers. Stop here if the goal-run id guard, learning revalidation,
-   remediation backlog, worktree, auto-improve readiness, or fast smoke
-   currentness fails.
+1. Run `make release-auto-promotion-preflight GOAL_RUN_ID=<goal-run-id>` for
+   cheap blockers when a run id is known, or omit `GOAL_RUN_ID` to let the
+   binding resolver infer it from verified current evidence. Stop here if the
+   goal-run binding is unsafe, learning revalidation, remediation backlog,
+   worktree, auto-improve readiness, or fast smoke currentness fails. Missing
+   verified runtime certificate evidence is carried forward as a final
+   promotion blocker instead of forcing a runtime trial inside release closeout.
 2. Run `make release-run-ready` only after preflight passes. This is the
    expensive runnable authority stage and is the owner of full-suite test
    evidence for the current fingerprint.
@@ -192,7 +205,7 @@ Recommended closeout sequence:
    Stage 3 reuse.
 5. Run `make release-auto-promotion-ready` as the final readback authority. It
    should reuse the current lower-stage evidence rather than rerunning tests,
-   rebuilding the package, or resealing.
+   rebuilding the package, resealing, or creating runtime-trial evidence.
    If its planner reports operator accepted-risk or gate-attention counts, rerun
    `make release-auto-promotion-preseal` and then `make release-sealed-run-ready`
    so the sealed operator summary is regenerated from current source evidence.
@@ -204,6 +217,8 @@ Completion is proven only by
 - `auto_promotion_status=allowed`
 - `unattended_promotion_allowed=true`
 - empty `blockers`
+- current `goal-run-status` and verified `goal-runtime-certificate` evidence for
+  the same selected run id
 - source revision and source tree fingerprint matching the intended commit
 
 If a lower stage fails, fix the owning lower-stage evidence first. Stage 3 should
@@ -225,8 +240,9 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   readiness for Stage 3 reuse. It remains diagnostic input and is not included in
   `release-sealed-run-manifest.json` as sealed package authority.
 - `build/release/release-auto-promotion-ready-manifest.json` is unattended
-  promotion authority. Operator summary and learning diagnostics are read here,
-  not exposed as `payload_status` inside the run manifest.
+  promotion authority. Operator summary, learning diagnostics, goal-run status,
+  and goal-runtime certificate evidence are read here, not exposed as
+  `payload_status` inside the run manifest.
 - `build/release/release-auto-promotion-preflight.json` and
   `build/release/release-auto-promotion-preseal.json` are diagnostic bridges for
   auto-promotion intent. They keep Stage 3-only blockers visible before the
@@ -235,8 +251,10 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   before run-ready; preseal additionally requires clean closeout, no
   clean-lane-blocking accepted-risk family, gate-attention clean,
   source-tree-coherence pass, and a strict same-fingerprint evidence cohort
-  before sealing. Advisory lifecycle backlog can remain visible at preseal
-  without forcing another run-ready cycle.
+  before sealing. Goal-runtime certificate blockers are preserved as final
+  promotion blockers for Stage 3 instead of blocking bootstrap diagnostics.
+  Advisory lifecycle backlog can remain visible at preseal without forcing
+  another run-ready cycle.
 - `build/release/release-*-plan.json` files are execution plans, not release
   authority. They decide which evidence can be reused and which minimal Make
   target should run next; the authority verdict still belongs to the staged

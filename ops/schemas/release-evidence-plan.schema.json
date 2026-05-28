@@ -55,7 +55,9 @@
         "auto_promotion_preseal",
         "sealed_run_manifest",
         "operator_summary",
-        "auto_improve_readiness"
+        "auto_improve_readiness",
+        "goal_run_status",
+        "goal_runtime_certificate"
       ],
       "properties": {
         "run_manifest": { "$ref": "#/$defs/node" },
@@ -63,7 +65,9 @@
         "auto_promotion_preseal": { "$ref": "#/$defs/node" },
         "sealed_run_manifest": { "$ref": "#/$defs/node" },
         "operator_summary": { "$ref": "#/$defs/node" },
-        "auto_improve_readiness": { "$ref": "#/$defs/node" }
+        "auto_improve_readiness": { "$ref": "#/$defs/node" },
+        "goal_run_status": { "$ref": "#/$defs/node" },
+        "goal_runtime_certificate": { "$ref": "#/$defs/node" }
       }
     },
     "planned_actions": {
@@ -110,6 +114,7 @@
         "source_tree_fingerprint",
         "input_fingerprint",
         "dependency_fingerprint",
+        "verification_status",
         "currentness_status",
         "can_reuse",
         "issues"
@@ -131,6 +136,7 @@
         "source_tree_fingerprint": { "type": "string" },
         "input_fingerprint": { "type": "string" },
         "dependency_fingerprint": { "type": "string" },
+        "verification_status": { "type": "string" },
         "currentness_status": { "type": "string", "enum": ["current", "stale"] },
         "can_reuse": { "type": "boolean" },
         "issues": {
@@ -142,7 +148,8 @@
               "artifact_kind_mismatch",
               "stale",
               "not_pass",
-              "phase_mismatch"
+              "phase_mismatch",
+              "not_verified"
             ]
           },
           "uniqueItems": true

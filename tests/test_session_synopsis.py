@@ -346,6 +346,38 @@ class SessionSynopsisTests(unittest.TestCase):
             self.assertIn("promotion_blocked_by_goal_worktree_guard_failure", blocker_ids)
             self.assertNotIn("promotion_blocked_by_remediation_backlog_open", blocker_ids)
 
+    def test_stale_goal_status_blockers_do_not_reopen_active_backlog_items(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_synopsis_inputs(vault)
+            write_json(
+                vault,
+                "ops/reports/auto-improve-readiness.json",
+                {
+                    "can_promote_result": False,
+                    "next_action": "Trial only; do not promote.",
+                    "promotion_blockers": [],
+                    "fallback": {"seed_runs": []},
+                },
+            )
+            goal_status = json.loads(
+                (vault / "ops/reports/goal-run-status.json").read_text(encoding="utf-8")
+            )
+            goal_status["source_tree_fingerprint"] = "stale-fingerprint"
+            goal_status["blockers"] = [
+                "git_worktree_dirty",
+                "self-improvement loop certificate incomplete",
+            ]
+            write_json(vault, "ops/reports/goal-run-status.json", goal_status)
+
+            report = build_report(vault, context=fixed_context())
+            blocker_ids = {blocker["id"] for blocker in report["recent_blockers"]}
+
+            self.assertNotIn("goal_status_git_worktree_dirty", blocker_ids)
+            self.assertNotIn("goal_status_self_improvement_loop_certificate_incomplete", blocker_ids)
+
     def test_completed_terminal_queue_suppresses_finalization_only_blockers(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

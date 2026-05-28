@@ -121,6 +121,31 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
                 "can_promote_result": False,
             },
         )
+        self._write_json(
+            "ops/reports/goal-run-status.json",
+            {
+                "artifact_kind": "goal_run_status",
+                "producer": "tests.goal",
+                "generated_at": "2026-05-23T12:00:00Z",
+                "source_tree_fingerprint": "fp-current",
+                "input_fingerprints": {"goal": "jkl"},
+                "status": "attention",
+                "run": {"run_id": "goal-live", "status": "completed"},
+            },
+        )
+        self._write_json(
+            "ops/reports/goal-runtime-certificate.json",
+            {
+                "artifact_kind": "goal_runtime_certificate",
+                "producer": "tests.certificate",
+                "generated_at": "2026-05-23T12:00:00Z",
+                "source_tree_fingerprint": "fp-current",
+                "input_fingerprints": {"certificate": "mno"},
+                "status": "pass",
+                "run": {"run_id": "goal-live", "run_status": "completed"},
+                "certificate": {"verification_status": "eligible", "eligible": True},
+            },
+        )
 
     def _patch_current_repo(self) -> Any:
         return patch.multiple(
@@ -189,6 +214,8 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
             "build/release/release-auto-promotion-preflight.json",
             "build/release/release-auto-promotion-preseal.json",
             "ops/reports/auto-improve-readiness.json",
+            "ops/reports/goal-run-status.json",
+            "ops/reports/goal-runtime-certificate.json",
         ):
             payload = json.loads((self.vault / rel_path).read_text(encoding="utf-8"))
             payload["source_revision"] = "source_package_without_git"
@@ -206,6 +233,25 @@ class ReleaseEvidencePlannerTests(unittest.TestCase):
             plan["nodes"]["operator_summary"]["source_revision"],
             "source_package_without_git",
         )
+
+    def test_auto_promotion_plan_blocks_missing_goal_runtime_evidence(self) -> None:
+        self._write_authorities()
+        certificate = json.loads(
+            (self.vault / "ops/reports/goal-runtime-certificate.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        certificate["status"] = "attention"
+        certificate["certificate"] = {"verification_status": "blocked", "eligible": False}
+        self._write_json("ops/reports/goal-runtime-certificate.json", certificate)
+
+        with self._patch_current_repo():
+            plan = build_plan(self.vault, stage="auto-promotion-ready", context=fixed_context())
+
+        self.assertEqual(plan["plan_status"], "blocked")
+        self.assertIn("goal_runtime_certificate_not_reusable", plan["failures"])
+        self.assertIn("not_verified", plan["nodes"]["goal_runtime_certificate"]["issues"])
+        self.assertIn("goal-runtime-certificate", plan["blockers"][-1]["recommended_next_step"])
 
     def test_auto_promotion_plan_requires_preflight_before_run_ready(self) -> None:
         self._write_authorities()

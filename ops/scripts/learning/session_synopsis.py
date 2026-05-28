@@ -14,6 +14,7 @@ from ops.scripts.artifact_io_runtime import (
 from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
+from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 DEFAULT_OUT = "ops/reports/session-synopsis.json"
 PRODUCER = "ops.scripts.session_synopsis"
@@ -210,6 +211,13 @@ def _completed_self_improvement_terminal_queue(
     )
 
 
+def _goal_run_status_is_current_for_blockers(vault: Path, status_report: dict[str, Any]) -> bool:
+    fingerprint = str(status_report.get("source_tree_fingerprint", "")).strip()
+    if not fingerprint:
+        return True
+    return fingerprint == release_source_tree_fingerprint(vault)
+
+
 def _learning_claim_gate_active(activation: dict[str, Any]) -> bool:
     summary = activation.get("summary")
     summary = summary if isinstance(summary, dict) else {}
@@ -301,6 +309,7 @@ def _recent_blockers(vault: Path, inputs: dict[str, dict[str, Any]]) -> list[dic
     activation = inputs["learning_claim_activation"]
     goal_status = inputs["goal_run_status"]
     goal_runtime_certificate = _goal_runtime_certificate(goal_status)
+    goal_status_current = _goal_run_status_is_current_for_blockers(vault, goal_status)
     terminal_queue_completed = _completed_self_improvement_terminal_queue(vault, goal_status)
     goal_status_suppressed_ids = set[str]()
     readiness_suppressed_ids = set[str]()
@@ -329,13 +338,14 @@ def _recent_blockers(vault: Path, inputs: dict[str, dict[str, Any]]) -> list[dic
                 "repair_target": str(blocker.get("recommended_next_step", "")).strip(),
             }
         )
-    blockers.extend(
-        _goal_status_blockers(
-            goal_status,
-            goal_runtime_certificate,
-            suppressed_blocker_ids=readiness_blocker_ids | goal_status_suppressed_ids,
+    if goal_status_current:
+        blockers.extend(
+            _goal_status_blockers(
+                goal_status,
+                goal_runtime_certificate,
+                suppressed_blocker_ids=readiness_blocker_ids | goal_status_suppressed_ids,
+            )
         )
-    )
     blockers.extend(readiness_blockers)
     if _learning_claim_gate_active(activation):
         for predicate in _dict_list(activation.get("blocked_predicates")):

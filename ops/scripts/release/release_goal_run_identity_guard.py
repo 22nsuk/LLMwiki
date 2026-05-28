@@ -42,6 +42,12 @@ EXPLICIT_GOAL_RUN_ID_ORIGINS = {
 INFERRED_SELECTION_MODE = "inferred_from_verified_evidence"
 EXPLICIT_SELECTION_MODE = "explicit"
 UNRESOLVED_SELECTION_MODE = "unresolved"
+BINDING_BOUND = "bound"
+BINDING_UNRESOLVED = "unresolved"
+BINDING_INVALID = "invalid"
+VERIFICATION_VERIFIED = "verified"
+VERIFICATION_PENDING = "pending"
+VERIFICATION_BLOCKED = "blocked"
 
 
 def _dict(payload: Any) -> dict[str, Any]:
@@ -236,6 +242,20 @@ def _goal_checks(
     inferred_run_id = str(observed["inferred_run_id"])
     origin = str(observed["goal_run_id_origin"])
     explicit_run_id = requested_run_id if origin in EXPLICIT_GOAL_RUN_ID_ORIGINS else ""
+    current_status_run_id = (
+        observed["goal_run_status_run_id"]
+        if inputs["goal_run_status"]["load_status"] == "ok"
+        and inputs["goal_run_status"]["artifact_kind"] == "goal_run_status"
+        and _identity_current(inputs["goal_run_status"], fingerprint)
+        else ""
+    )
+    current_certificate_run_id = (
+        observed["goal_runtime_certificate_run_id"]
+        if inputs["goal_runtime_certificate"]["load_status"] == "ok"
+        and inputs["goal_runtime_certificate"]["artifact_kind"] == "goal_runtime_certificate"
+        and _identity_current(inputs["goal_runtime_certificate"], fingerprint)
+        else ""
+    )
     return {
         "goal_run_id_explicit": bool(explicit_run_id),
         "goal_run_id_inferred": bool(inferred_run_id) and not explicit_run_id,
@@ -248,6 +268,14 @@ def _goal_checks(
         "inferred_goal_run_id_verified": bool(inferred_run_id),
         "explicit_goal_run_id_matches_inferred": not (
             explicit_run_id and inferred_run_id and explicit_run_id != inferred_run_id
+        ),
+        "explicit_goal_run_id_matches_current_status": not (
+            explicit_run_id and current_status_run_id and explicit_run_id != current_status_run_id
+        ),
+        "explicit_goal_run_id_matches_current_certificate": not (
+            explicit_run_id
+            and current_certificate_run_id
+            and explicit_run_id != current_certificate_run_id
         ),
         "goal_run_status_load_ok": inputs["goal_run_status"]["load_status"] == "ok",
         "goal_run_status_artifact_kind_ok": (
@@ -277,35 +305,18 @@ def _goal_checks(
     }
 
 
-def _goal_run_requirements(
+def _goal_binding_requirements(
     checks: dict[str, bool],
-    inputs: dict[str, dict[str, Any]],
     observed: dict[str, Any],
     *,
     default_goal_run_id: str,
-    fingerprint: str,
 ) -> list[RequirementSpec]:
     requested_run_id = str(observed["requested_run_id"])
     origin = str(observed["goal_run_id_origin"])
     effective_run_id = str(observed["effective_run_id"])
     inferred_run_id = str(observed["inferred_run_id"])
     explicit_run_id = requested_run_id if origin in EXPLICIT_GOAL_RUN_ID_ORIGINS else ""
-    status_run_id = str(observed["goal_run_status_run_id"])
-    certificate_run_id = str(observed["goal_runtime_certificate_run_id"])
     return [
-        RequirementSpec(
-            checks["goal_run_id_resolved"],
-            "goal_run_id_unresolved",
-            "make|goal_run_status|goal_runtime_certificate",
-            "GOAL_RUN_ID|$.run.run_id",
-            (
-                f"requested={requested_run_id}; origin={origin};"
-                f"status_run_id={status_run_id}; certificate_run_id={certificate_run_id}"
-            ),
-            "explicit GOAL_RUN_ID or matching verified promoted run evidence",
-            "Release auto-promotion could not resolve the goal run id.",
-            "Rerun with GOAL_RUN_ID=<promoted-run-id> or publish matching verified run evidence.",
-        ),
         RequirementSpec(
             checks["goal_run_id_not_file_default"],
             "goal_run_id_file_default",
@@ -325,6 +336,58 @@ def _goal_run_requirements(
             "explicit GOAL_RUN_ID matches verified promoted run evidence",
             "The explicit GOAL_RUN_ID does not match the verified promoted run evidence.",
             "Use the verified promoted run id or republish the intended run evidence.",
+        ),
+        RequirementSpec(
+            checks["explicit_goal_run_id_matches_current_status"],
+            "explicit_goal_run_id_current_status_mismatch",
+            "make|goal_run_status",
+            "GOAL_RUN_ID|$.run.run_id",
+            f"explicit={explicit_run_id}; status_run_id={observed['goal_run_status_run_id']}",
+            "explicit GOAL_RUN_ID matches current goal-run status evidence when present",
+            "The explicit GOAL_RUN_ID contradicts current goal-run status evidence.",
+            "Use the current goal-run status run id or refresh status evidence for the intended run.",
+        ),
+        RequirementSpec(
+            checks["explicit_goal_run_id_matches_current_certificate"],
+            "explicit_goal_run_id_current_certificate_mismatch",
+            "make|goal_runtime_certificate",
+            "GOAL_RUN_ID|$.run.run_id",
+            (
+                f"explicit={explicit_run_id};"
+                f"certificate_run_id={observed['goal_runtime_certificate_run_id']}"
+            ),
+            "explicit GOAL_RUN_ID matches current certificate evidence when present",
+            "The explicit GOAL_RUN_ID contradicts current goal-runtime certificate evidence.",
+            "Use the current certificate run id or regenerate the certificate for the intended run.",
+        ),
+    ]
+
+
+def _goal_run_requirements(
+    checks: dict[str, bool],
+    inputs: dict[str, dict[str, Any]],
+    observed: dict[str, Any],
+    *,
+    fingerprint: str,
+) -> list[RequirementSpec]:
+    requested_run_id = str(observed["requested_run_id"])
+    origin = str(observed["goal_run_id_origin"])
+    effective_run_id = str(observed["effective_run_id"])
+    status_run_id = str(observed["goal_run_status_run_id"])
+    certificate_run_id = str(observed["goal_runtime_certificate_run_id"])
+    return [
+        RequirementSpec(
+            checks["goal_run_id_resolved"],
+            "goal_run_id_unresolved",
+            "make|goal_run_status|goal_runtime_certificate",
+            "GOAL_RUN_ID|$.run.run_id",
+            (
+                f"requested={requested_run_id}; origin={origin};"
+                f"status_run_id={status_run_id}; certificate_run_id={certificate_run_id}"
+            ),
+            "explicit GOAL_RUN_ID or matching verified promoted run evidence",
+            "Release auto-promotion could not resolve the goal run id.",
+            "Rerun with GOAL_RUN_ID=<goal-run-id> or publish matching verified run evidence.",
         ),
         *_goal_run_status_requirements(checks, inputs, observed, effective_run_id, fingerprint),
         *_goal_runtime_certificate_requirements(
@@ -470,13 +533,36 @@ def _goal_runtime_certificate_requirements(
     ]
 
 
+def _binding_status(observed: dict[str, Any], blockers: list[dict[str, Any]]) -> str:
+    if blockers:
+        return BINDING_INVALID
+    if str(observed["effective_run_id"]).strip():
+        return BINDING_BOUND
+    return BINDING_UNRESOLVED
+
+
+def _verification_status(
+    verification_blockers: list[dict[str, Any]],
+    observed: dict[str, Any],
+) -> str:
+    if not verification_blockers:
+        return VERIFICATION_VERIFIED
+    if not str(observed["effective_run_id"]).strip():
+        return VERIFICATION_PENDING
+    return VERIFICATION_BLOCKED
+
+
 def _goal_report_payload(
     metadata: dict[str, Any],
     observed: dict[str, Any],
     checks: dict[str, bool],
     blockers: list[dict[str, Any]],
+    verification_blockers: list[dict[str, Any]],
 ) -> dict[str, Any]:
     status = "pass" if not blockers else "fail"
+    verification_failures = _unique_failures(
+        [str(blocker["id"]) for blocker in verification_blockers]
+    )
     return {
         "$schema": SCHEMA_PATH,
         "artifact_kind": "release_goal_run_identity",
@@ -492,6 +578,8 @@ def _goal_report_payload(
         "encoding": "utf-8",
         "currentness": {"status": "current", "checked_at": metadata["generated_at"]},
         "status": status,
+        "binding_status": _binding_status(observed, blockers),
+        "verification_status": _verification_status(verification_blockers, observed),
         "requested_run_id": observed["requested_run_id"],
         "effective_run_id": observed["effective_run_id"],
         "inferred_run_id": observed["inferred_run_id"],
@@ -502,7 +590,9 @@ def _goal_report_payload(
         "observed": observed,
         "checks": checks,
         "blockers": blockers,
+        "verification_blockers": verification_blockers,
         "failures": _unique_failures([str(blocker["id"]) for blocker in blockers]),
+        "verification_failures": verification_failures,
     }
 
 
@@ -543,15 +633,21 @@ def build_report(
         default_goal_run_id=default_goal_run_id,
         fingerprint=fingerprint,
     )
-    requirements = _goal_run_requirements(
+    binding_requirements = _goal_binding_requirements(
+        checks,
+        observed,
+        default_goal_run_id=default_goal_run_id,
+    )
+    verification_requirements = _goal_run_requirements(
         checks,
         inputs,
         observed,
-        default_goal_run_id=default_goal_run_id,
         fingerprint=fingerprint,
     )
     blockers: list[dict[str, Any]] = []
-    append_requirement_blockers(blockers, requirements)
+    append_requirement_blockers(blockers, binding_requirements)
+    verification_blockers: list[dict[str, Any]] = []
+    append_requirement_blockers(verification_blockers, verification_requirements)
     metadata = {
         "generated_at": generated_at,
         "commit": commit,
@@ -559,7 +655,7 @@ def build_report(
         "default_goal_run_id": default_goal_run_id,
         "inputs": inputs,
     }
-    return _goal_report_payload(metadata, observed, checks, blockers)
+    return _goal_report_payload(metadata, observed, checks, blockers, verification_blockers)
 
 
 def write_report(vault: Path, report: dict[str, Any], out_path: str | None) -> Path:
@@ -575,21 +671,6 @@ def write_report(vault: Path, report: dict[str, Any], out_path: str | None) -> P
     )
 
 
-def read_effective_run_id_from_report(vault: Path, report_path: str) -> tuple[str, str]:
-    payload, diagnostics = _load_report(vault, report_path)
-    if diagnostics.get("status") != "ok":
-        return "", f"could not load release goal-run identity report: {diagnostics.get('status')}"
-    if payload.get("artifact_kind") != "release_goal_run_identity":
-        return "", "release goal-run identity report has an unexpected artifact kind"
-    if payload.get("status") != "pass":
-        failures = ",".join(str(item) for item in payload.get("failures", []))
-        return "", f"release goal-run identity report is not passing: {failures}"
-    effective_run_id = str(payload.get("effective_run_id", "")).strip()
-    if not effective_run_id:
-        return "", "release goal-run identity report does not contain effective_run_id"
-    return effective_run_id, ""
-
-
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Verify release auto-promotion goal-run identity.")
     parser.add_argument("--vault", default=".")
@@ -599,7 +680,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--default-goal-run-id", default=DEFAULT_DEV_GOAL_RUN_ID)
     parser.add_argument("--goal-run-status", default=DEFAULT_GOAL_RUN_STATUS)
     parser.add_argument("--goal-runtime-certificate", default=DEFAULT_GOAL_RUNTIME_CERTIFICATE)
-    parser.add_argument("--print-effective-run-id-from-report")
     parser.add_argument("--check", action="store_true")
     return parser.parse_args(argv)
 
@@ -607,15 +687,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
-    if args.print_effective_run_id_from_report:
-        effective_run_id, error = read_effective_run_id_from_report(
-            vault, args.print_effective_run_id_from_report
-        )
-        if error:
-            print(error, file=sys.stderr)
-            return 1
-        print(effective_run_id)
-        return 0
     report = build_report(
         vault,
         goal_run_id=args.goal_run_id,
@@ -628,7 +699,10 @@ def main(argv: list[str] | None = None) -> int:
     print(display_path(vault, path))
     if args.check:
         print(f"release_goal_run_identity_status={report['status']}")
-    return 0 if report["status"] == "pass" else 1
+        print(f"release_goal_run_verification_status={report['verification_status']}")
+    if report["status"] != "pass":
+        return 1
+    return 0
 
 
 if __name__ == "__main__":  # pragma: no cover - module entrypoint

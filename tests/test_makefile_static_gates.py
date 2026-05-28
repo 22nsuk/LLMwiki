@@ -1698,13 +1698,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             text, "release-auto-promotion-goal-run-id-guard"
         )
         auto_promotion_preflight_block = _target_block(text, "release-auto-promotion-preflight")
-        auto_promotion_preflight_resolved_block = _target_block(
-            text, "release-auto-promotion-preflight-resolved"
-        )
         auto_promotion_preseal_block = _target_block(text, "release-auto-promotion-preseal")
-        auto_promotion_preseal_resolved_block = _target_block(
-            text, "release-auto-promotion-preseal-resolved"
-        )
         self.assertIn(
             "ops.scripts.release_goal_run_identity_guard",
             auto_promotion_goal_identity_block,
@@ -1713,48 +1707,29 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn('--goal-run-id-origin "$(origin GOAL_RUN_ID)"', auto_promotion_goal_identity_block)
         self.assertIn("$(MAKE) release-auto-promotion-goal-run-id-guard", auto_promotion_preflight_block)
         self.assertIn("$(MAKE) release-auto-promotion-goal-run-id-guard", auto_promotion_preseal_block)
-        self.assertIn("--print-effective-run-id-from-report", auto_promotion_preflight_block)
-        self.assertIn("--print-effective-run-id-from-report", auto_promotion_preseal_block)
-        self.assertIn("auto-inferred-goal-run-id", auto_promotion_preflight_block)
-        self.assertIn("auto-inferred-goal-run-id", auto_promotion_preseal_block)
         self.assertIn(
-            '$(MAKE) release-auto-promotion-preflight-resolved GOAL_RUN_ID="$$effective_goal_run_id"',
+            "ops.scripts.release_auto_promotion_preflight",
+            auto_promotion_preflight_block,
+        )
+        self.assertIn("--phase preflight", auto_promotion_preflight_block)
+        self.assertIn("$(MAKE) remediation-backlog", auto_promotion_preflight_block)
+        self.assertIn(
+            "$(MAKE) learning-readiness-signoff-revalidation",
             auto_promotion_preflight_block,
         )
         self.assertIn(
-            '$(MAKE) release-auto-promotion-preseal-resolved GOAL_RUN_ID="$$effective_goal_run_id"',
-            auto_promotion_preseal_block,
-        )
-        self.assertIn(
-            "ops.scripts.release_auto_promotion_preflight",
-            auto_promotion_preflight_resolved_block,
-        )
-        self.assertIn("--phase preflight", auto_promotion_preflight_resolved_block)
-        self.assertIn("$(MAKE) remediation-backlog", auto_promotion_preflight_resolved_block)
-        self.assertIn(
-            "$(MAKE) learning-readiness-signoff-revalidation",
-            auto_promotion_preflight_resolved_block,
-        )
-        self.assertIn(
             "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
-            auto_promotion_preflight_resolved_block,
+            auto_promotion_preflight_block,
         )
         self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preseal"),
+            _recipe_lines(text, "release-auto-promotion-preseal")[:10],
             [
                 "$(MAKE) release-auto-promotion-goal-run-id-guard",
-                'if [ -n "$(findstring n,$(firstword $(MAKEFLAGS)))" ]; then if [ "$(origin GOAL_RUN_ID)" = "file" ]; then effective_goal_run_id="auto-inferred-goal-run-id"; else effective_goal_run_id="$(GOAL_RUN_ID)"; fi; else effective_goal_run_id="$$( $(PYTHON) -m ops.scripts.release_goal_run_identity_guard --vault "$(VAULT)" --print-effective-run-id-from-report "$(RELEASE_AUTO_PROMOTION_GOAL_RUN_IDENTITY_OUT)" )"; fi && $(MAKE) release-auto-promotion-preseal-resolved GOAL_RUN_ID="$$effective_goal_run_id"',
-            ],
-        )
-        self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preseal-resolved")[:10],
-            [
                 "$(MAKE) release-run-ready-check",
                 "$(MAKE) bootstrap-preflight",
                 "$(MAKE) registry-preflight",
                 "$(MAKE) release-smoke-full-current-check",
                 "$(MAKE) release-smoke-fast-refresh-check",
-                "$(MAKE) goal-runtime-local-evidence-converge",
                 "$(MAKE) release-auto-promotion-safe-cleanup",
                 "$(MAKE) learning-readiness-signoff-revalidation",
                 '$(MAKE) release-evidence-cohort-preseal-refresh RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"',
@@ -1783,19 +1758,12 @@ class MakefileStaticGateTests(unittest.TestCase):
             "$(PYTHON) -m pytest",
             "$(MAKE) generated-artifact-converge",
         ):
-            self.assertNotIn(expensive_writer, auto_promotion_preseal_resolved_block)
+            self.assertNotIn(expensive_writer, auto_promotion_preseal_block)
         self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preflight"),
+            _recipe_lines(text, "release-auto-promotion-preflight")[:8],
             [
                 "$(MAKE) release-auto-promotion-goal-run-id-guard",
-                'if [ -n "$(findstring n,$(firstword $(MAKEFLAGS)))" ]; then if [ "$(origin GOAL_RUN_ID)" = "file" ]; then effective_goal_run_id="auto-inferred-goal-run-id"; else effective_goal_run_id="$(GOAL_RUN_ID)"; fi; else effective_goal_run_id="$$( $(PYTHON) -m ops.scripts.release_goal_run_identity_guard --vault "$(VAULT)" --print-effective-run-id-from-report "$(RELEASE_AUTO_PROMOTION_GOAL_RUN_IDENTITY_OUT)" )"; fi && $(MAKE) release-auto-promotion-preflight-resolved GOAL_RUN_ID="$$effective_goal_run_id"',
-            ],
-        )
-        self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preflight-resolved")[:8],
-            [
                 "$(MAKE) release-smoke-fast-refresh-check",
-                "$(MAKE) goal-runtime-local-evidence-converge",
                 "$(MAKE) test-execution-summary-report-contract",
                 "$(MAKE) artifact-freshness-refresh-check",
                 "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
@@ -1806,33 +1774,33 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn(
             '--remediation-backlog "$(REMEDIATION_BACKLOG_OUT)"',
-            auto_promotion_preflight_resolved_block,
+            auto_promotion_preflight_block,
         )
         self.assertIn(
             '--learning-revalidation "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT)"',
-            auto_promotion_preflight_resolved_block,
+            auto_promotion_preflight_block,
         )
         self.assertIn(
             '--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"',
-            auto_promotion_preflight_resolved_block,
+            auto_promotion_preflight_block,
         )
         self.assertIn(
             '--evidence-cohort "$(RELEASE_EVIDENCE_COHORT_OUT)"',
-            auto_promotion_preflight_resolved_block,
+            auto_promotion_preflight_block,
         )
-        self.assertIn("ops.scripts.release_auto_promotion_preflight", auto_promotion_preseal_resolved_block)
-        self.assertIn("--phase preseal", auto_promotion_preseal_resolved_block)
-        self.assertIn("$(MAKE) release-run-ready-check", auto_promotion_preseal_resolved_block)
-        self.assertIn("$(MAKE) release-closeout-summary-report", auto_promotion_preseal_resolved_block)
+        self.assertIn("ops.scripts.release_auto_promotion_preflight", auto_promotion_preseal_block)
+        self.assertIn("--phase preseal", auto_promotion_preseal_block)
+        self.assertIn("$(MAKE) release-run-ready-check", auto_promotion_preseal_block)
+        self.assertIn("$(MAKE) release-closeout-summary-report", auto_promotion_preseal_block)
         self.assertIn(
             "$(MAKE) release-evidence-cohort-preseal-refresh",
-            auto_promotion_preseal_resolved_block,
+            auto_promotion_preseal_block,
         )
         self.assertIn(
             "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
-            auto_promotion_preseal_resolved_block,
+            auto_promotion_preseal_block,
         )
-        preseal_recipe = _recipe_lines(text, "release-auto-promotion-preseal-resolved")
+        preseal_recipe = _recipe_lines(text, "release-auto-promotion-preseal")
         self.assertEqual(preseal_recipe.count("$(MAKE) release-closeout-summary-report"), 1)
         preseal_refresh_line = (
             '$(MAKE) release-evidence-cohort-preseal-refresh '
@@ -1858,19 +1826,19 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn(
             '--remediation-backlog "$(REMEDIATION_BACKLOG_OUT)"',
-            auto_promotion_preseal_resolved_block,
+            auto_promotion_preseal_block,
         )
         self.assertIn(
             '--learning-revalidation "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT)"',
-            auto_promotion_preseal_resolved_block,
+            auto_promotion_preseal_block,
         )
         self.assertIn(
             '--closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)"',
-            auto_promotion_preseal_resolved_block,
+            auto_promotion_preseal_block,
         )
         self.assertIn(
             '--evidence-cohort "$(RELEASE_EVIDENCE_COHORT_OUT)"',
-            auto_promotion_preseal_resolved_block,
+            auto_promotion_preseal_block,
         )
         self.assertIn("ops.scripts.release_auto_promotion_ready", _target_block(text, "release-auto-promotion-ready"))
         auto_promotion_block = _target_block(text, "release-auto-promotion-ready")
@@ -1878,6 +1846,8 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertNotIn("$(MAKE) release-auto-promotion-operator-summary", auto_promotion_block)
         self.assertIn('--run-manifest "$(RELEASE_RUN_MANIFEST_OUT)"', auto_promotion_block)
         self.assertIn('--sealed-run-manifest "$(RELEASE_SEALED_RUN_MANIFEST_OUT)"', auto_promotion_block)
+        self.assertIn('--goal-run-status "$(GOAL_RUN_STATUS_OUT)"', auto_promotion_block)
+        self.assertIn('--goal-runtime-certificate "$(GOAL_RUNTIME_CERTIFICATE_OUT)"', auto_promotion_block)
         self.assertIn(
             '--auto-promotion-preflight "$(RELEASE_AUTO_PROMOTION_PREFLIGHT_OUT)"',
             auto_promotion_block,
@@ -1892,6 +1862,39 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertNotIn("$(MAKE) release-auto-promotion-preflight", auto_promotion_block)
         self.assertNotIn("$(MAKE) release-auto-promotion-preseal", auto_promotion_block)
         self.assertNotIn("$(MAKE) release-sealed-run-ready-check", auto_promotion_block)
+        for release_target in (
+            "release-auto-promotion-goal-run-id-guard",
+            "release-auto-promotion-preflight",
+            "release-auto-promotion-preflight-check",
+            "release-auto-promotion-safe-cleanup",
+            "release-auto-promotion-preseal",
+            "release-auto-promotion-preseal-check",
+            "release-auto-promotion-ready-plan",
+            "release-auto-promotion-operator-summary",
+            "release-auto-promotion-ready",
+            "release-auto-promotion-ready-check",
+        ):
+            seen: set[str] = set()
+            stack = [release_target]
+            while stack:
+                target = stack.pop()
+                if target in seen:
+                    continue
+                seen.add(target)
+                block = _target_block(text, target)
+                for forbidden in (
+                    "auto-improve-goal-run",
+                    "goal_runtime_runner",
+                    "$(GOAL_RUN_COMMAND)",
+                ):
+                    self.assertNotIn(
+                        forbidden,
+                        block,
+                        f"{release_target} must not create runtime-trial evidence via {target}",
+                    )
+                for line in _recipe_lines(text, target):
+                    for match in re.finditer(r"\$\(MAKE\)\s+([A-Za-z0-9_.-]+)", line):
+                        stack.append(match.group(1))
         auto_promotion_plan_block = _target_block(text, "release-auto-promotion-ready-plan")
         self.assertIn("ops.scripts.release_evidence_planner", auto_promotion_plan_block)
         self.assertIn("--stage auto-promotion-ready", auto_promotion_plan_block)

@@ -174,6 +174,8 @@ def _goal_run_identity_diagnostics(payload: dict[str, Any]) -> dict[str, Any]:
     observed = _dict(payload.get("observed"))
     return {
         "status": str(payload.get("status", "")).strip(),
+        "binding_status": str(payload.get("binding_status", "")).strip(),
+        "verification_status": str(payload.get("verification_status", "")).strip(),
         "requested_run_id": str(payload.get("requested_run_id", "")).strip(),
         "effective_run_id": str(payload.get("effective_run_id", "")).strip(),
         "inferred_run_id": str(payload.get("inferred_run_id", "")).strip(),
@@ -184,7 +186,21 @@ def _goal_run_identity_diagnostics(payload: dict[str, Any]) -> dict[str, Any]:
             observed.get("goal_runtime_certificate_run_id", "")
         ).strip(),
         "failure_count": len(_list(payload.get("failures"))),
+        "verification_failure_count": len(_list(payload.get("verification_failures"))),
+        "verification_failures": [
+            str(item) for item in _list(payload.get("verification_failures"))
+        ],
     }
+
+
+def _goal_run_identity_final_promotion_blockers(
+    payload: dict[str, Any],
+) -> list[dict[str, Any]]:
+    return [
+        dict(item)
+        for item in (_dict(candidate) for candidate in _list(payload.get("verification_blockers")))
+        if item
+    ]
 
 
 def _identity_current(identity: dict[str, Any], fingerprint: str) -> bool:
@@ -236,18 +252,8 @@ def _goal_run_identity_requirements(
             "$.status|$.failures",
             f"status={identity['status']}; failures={identity['failure_count']}",
             "status=pass; failures=0",
-            "The selected GOAL_RUN_ID is not verified release auto-promotion evidence.",
-            "Use an explicit GOAL_RUN_ID that matches the promoted run status and certificate.",
-        ),
-        RequirementSpec(
-            checks["goal_run_identity_effective_run_id_present"],
-            "goal_run_identity_missing_effective_run_id",
-            "goal_run_identity",
-            "$.effective_run_id",
-            identity["effective_run_id"],
-            "non-empty run id",
-            "Goal-run identity evidence does not name the selected run.",
-            "Rerun with GOAL_RUN_ID=<promoted-run-id>.",
+            "The selected GOAL_RUN_ID binding is unsafe for release auto-promotion.",
+            "Use an explicit GOAL_RUN_ID that does not contradict current goal-run evidence.",
         ),
     ]
 
@@ -672,6 +678,7 @@ def _preflight_manifest_payload(
     diagnostics: dict[str, Any],
     checks: dict[str, bool],
     blockers: list[dict[str, Any]],
+    final_promotion_blockers: list[dict[str, Any]],
 ) -> dict[str, Any]:
     return {
         "$schema": SCHEMA_PATH,
@@ -694,6 +701,7 @@ def _preflight_manifest_payload(
         "diagnostics": diagnostics,
         "checks": checks,
         "blockers": blockers,
+        "final_promotion_blockers": final_promotion_blockers,
         "failures": _unique_failures([str(blocker["id"]) for blocker in blockers]),
     }
 
@@ -737,6 +745,9 @@ def build_manifest(
     closeout = _closeout_diagnostics(closeout_payload)
     cohort = _cohort_diagnostics(cohort_payload)
     identity = _goal_run_identity_diagnostics(goal_identity_payload)
+    final_promotion_blockers = _goal_run_identity_final_promotion_blockers(
+        goal_identity_payload
+    )
     checks = _preflight_checks(
         inputs,
         phase=phase,
@@ -783,6 +794,7 @@ def build_manifest(
         diagnostics=diagnostics,
         checks=checks,
         blockers=blockers,
+        final_promotion_blockers=final_promotion_blockers,
     )
 
 

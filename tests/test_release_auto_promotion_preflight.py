@@ -61,6 +61,8 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
                 "generated_at": "2026-05-23T12:00:00Z",
                 "source_tree_fingerprint": "fp-current",
                 "status": "pass",
+                "binding_status": "bound",
+                "verification_status": "verified",
                 "requested_run_id": "auto-improve-trial",
                 "effective_run_id": "promote-run",
                 "inferred_run_id": "promote-run",
@@ -74,7 +76,9 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
                     "goal_run_status_run_id": "promote-run",
                     "goal_runtime_certificate_run_id": "promote-run",
                 },
+                "verification_blockers": [],
                 "failures": [],
+                "verification_failures": [],
             },
         )
         self._write_json(
@@ -171,6 +175,7 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
         self.assertEqual(manifest["status"], "pass")
         self.assertEqual(manifest["phase"], "preflight")
         self.assertEqual(manifest["blockers"], [])
+        self.assertEqual(manifest["final_promotion_blockers"], [])
         self.assertTrue(manifest["checks"]["auto_improve_stage3_promotion_blockers_clear"])
         self.assertEqual(manifest["goal_run_identity"]["effective_run_id"], "promote-run")
         self.assertTrue(manifest["checks"]["goal_run_identity_pass"])
@@ -292,23 +297,98 @@ class ReleaseAutoPromotionPreflightTests(unittest.TestCase):
         )
         self.assertEqual(blocker["gate_effect"], "blocks_promotion")
 
-    def test_preflight_requires_verified_goal_run_identity(self) -> None:
+    def test_preflight_defers_unverified_goal_run_identity_to_final_promotion(self) -> None:
         self._write_common_inputs()
         identity = json.loads(
             (
                 self.vault / "build/release/release-auto-promotion-goal-run-identity.json"
             ).read_text(encoding="utf-8")
         )
-        identity["status"] = "fail"
-        identity["failures"] = ["goal_run_id_not_explicit"]
+        identity["verification_status"] = "blocked"
+        identity["verification_blockers"] = [
+            {
+                "id": "goal_runtime_certificate_not_verified",
+                "source": "goal_runtime_certificate",
+                "field_path": "$.status|$.certificate.verification_status|$.certificate.eligible",
+                "observed": "status=attention;verification_status=blocked;eligible=False",
+                "expected": (
+                    "status=pass; verification_status in eligible,already_verified; "
+                    "eligible=true"
+                ),
+                "gate_effect": "blocks_promotion",
+                "summary": "The selected goal run does not have verified certificate evidence.",
+                "recommended_next_step": (
+                    "Run make goal-runtime-certificate after the promoted run is complete."
+                ),
+            }
+        ]
+        identity["verification_failures"] = ["goal_runtime_certificate_not_verified"]
         self._write_json("build/release/release-auto-promotion-goal-run-identity.json", identity)
 
         with self._patch_current_repo():
             manifest = build_manifest(self.vault, phase="preflight", context=fixed_context())
 
-        self.assertEqual(manifest["status"], "fail")
-        self.assertFalse(manifest["checks"]["goal_run_identity_pass"])
-        self.assertIn("goal_run_identity_not_pass", manifest["failures"])
+        self.assertEqual(manifest["status"], "pass")
+        self.assertTrue(manifest["checks"]["goal_run_identity_pass"])
+        self.assertEqual(manifest["failures"], [])
+        self.assertEqual(
+            manifest["diagnostics"]["goal_run_identity"]["verification_status"],
+            "blocked",
+        )
+        self.assertEqual(
+            manifest["diagnostics"]["goal_run_identity"]["verification_failure_count"],
+            1,
+        )
+        self.assertEqual(
+            [item["id"] for item in manifest["final_promotion_blockers"]],
+            ["goal_runtime_certificate_not_verified"],
+        )
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+
+    def test_preflight_bootstraps_without_existing_promoted_goal_run(self) -> None:
+        self._write_common_inputs()
+        identity = json.loads(
+            (
+                self.vault / "build/release/release-auto-promotion-goal-run-identity.json"
+            ).read_text(encoding="utf-8")
+        )
+        identity["binding_status"] = "unresolved"
+        identity["verification_status"] = "pending"
+        identity["effective_run_id"] = ""
+        identity["inferred_run_id"] = ""
+        identity["selection_mode"] = "unresolved"
+        identity["observed"]["effective_run_id"] = ""
+        identity["observed"]["inferred_run_id"] = ""
+        identity["observed"]["goal_run_status_run_id"] = ""
+        identity["observed"]["goal_runtime_certificate_run_id"] = ""
+        identity["verification_blockers"] = [
+            {
+                "id": "goal_run_id_unresolved",
+                "source": "make|goal_run_status|goal_runtime_certificate",
+                "field_path": "GOAL_RUN_ID|$.run.run_id",
+                "observed": "requested=auto-improve-trial; origin=file",
+                "expected": "explicit GOAL_RUN_ID or matching verified promoted run evidence",
+                "gate_effect": "blocks_promotion",
+                "summary": "Release auto-promotion could not resolve the goal run id.",
+                "recommended_next_step": (
+                    "Rerun with GOAL_RUN_ID=<goal-run-id> or publish matching verified run evidence."
+                ),
+            }
+        ]
+        identity["verification_failures"] = ["goal_run_id_unresolved"]
+        self._write_json("build/release/release-auto-promotion-goal-run-identity.json", identity)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, phase="preflight", context=fixed_context())
+
+        self.assertEqual(manifest["status"], "pass")
+        self.assertFalse(manifest["checks"]["goal_run_identity_effective_run_id_present"])
+        self.assertEqual(manifest["diagnostics"]["goal_run_identity"]["binding_status"], "unresolved")
+        self.assertEqual(
+            [item["id"] for item in manifest["final_promotion_blockers"]],
+            ["goal_run_id_unresolved"],
+        )
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
 
     def test_preseal_requires_clean_closeout_and_strict_cohort(self) -> None:
         self._write_common_inputs()
