@@ -306,6 +306,8 @@ release-auto-promotion-preseal:
 	$(MAKE) learning-readiness-signoff-revalidation
 	$(MAKE) release-evidence-cohort-preseal-refresh RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"
 	$(MAKE) release-closeout-summary-report
+	$(MAKE) artifact-freshness-refresh-check
+	$(MAKE) release-closeout-summary-report
 	$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"
 	$(MAKE) release-evidence-dashboard-report
 	$(MAKE) release-lane-summary

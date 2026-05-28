@@ -1802,7 +1802,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             auto_promotion_preseal_block,
         )
         preseal_recipe = _recipe_lines(text, "release-auto-promotion-preseal")
-        self.assertEqual(preseal_recipe.count("$(MAKE) release-closeout-summary-report"), 1)
+        self.assertEqual(preseal_recipe.count("$(MAKE) release-closeout-summary-report"), 2)
         preseal_refresh_line = (
             '$(MAKE) release-evidence-cohort-preseal-refresh '
             'RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"'
@@ -1814,6 +1814,20 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertLess(
             preseal_recipe.index(preseal_refresh_line),
             preseal_recipe.index(strict_cohort_line),
+        )
+        self.assertLess(
+            preseal_recipe.index("$(MAKE) artifact-freshness-refresh-check"),
+            preseal_recipe.index(strict_cohort_line),
+        )
+        preseal_freshness_index = preseal_recipe.index(
+            "$(MAKE) artifact-freshness-refresh-check"
+        )
+        self.assertLess(
+            preseal_freshness_index,
+            preseal_recipe.index(
+                "$(MAKE) release-closeout-summary-report",
+                preseal_freshness_index,
+            ),
         )
         self.assertLess(
             preseal_recipe.index("$(MAKE) release-clean-blocker-ledger"),
