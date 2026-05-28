@@ -150,6 +150,12 @@
         "type": "object"
       }
     },
+    "watchlist": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
     "stats": {
       "type": "object"
     }

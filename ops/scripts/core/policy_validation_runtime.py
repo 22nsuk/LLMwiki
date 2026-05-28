@@ -532,12 +532,69 @@ def _validate_strict_warning_budget_policy(policy: dict) -> None:
             )
 
 
+def _validate_raw_registry_shard_policy_contract(policy: dict) -> None:
+    registry_contract = policy["registry_contract"]
+    shard_pages = _string_registry(
+        registry_contract["raw_registry_shard_pages"],
+        "registry_contract.raw_registry_shard_pages",
+    )
+    shard_page_set = set(shard_pages)
+
+    entry_page_corpus = _registry_keys(
+        registry_contract["raw_registry_entry_page_corpus"],
+        "registry_contract.raw_registry_entry_page_corpus",
+    )
+    _require_registry_exact(
+        entry_page_corpus,
+        shard_page_set,
+        path="registry_contract.raw_registry_entry_page_corpus",
+    )
+
+    special_required_sections = policy["page_shape"]["special_page_required_sections"]
+    missing_required_sections = sorted(shard_page_set - set(special_required_sections))
+    if missing_required_sections:
+        raise ValueError(
+            "page_shape.special_page_required_sections must define every raw registry "
+            f"shard page; missing={missing_required_sections}"
+        )
+
+    special_pages = policy["frontmatter_contract"]["special_pages"]
+    missing_special_pages = sorted(shard_page_set - set(special_pages))
+    if missing_special_pages:
+        raise ValueError(
+            "frontmatter_contract.special_pages must define every raw registry shard "
+            f"page; missing={missing_special_pages}"
+        )
+
+    expected_frontmatter = {
+        "page_type": "registry-shard",
+        "corpus": "system",
+        "special_role": "raw-registry-shard",
+    }
+    for shard_page in shard_pages:
+        frontmatter_rule = special_pages[shard_page]
+        required = frontmatter_rule.get("required", [])
+        if "special_role" not in required:
+            raise ValueError(
+                "frontmatter_contract.special_pages raw registry shard rules must "
+                f"require special_role: {shard_page}"
+            )
+        expected = frontmatter_rule.get("expected", {})
+        for key, expected_value in expected_frontmatter.items():
+            if expected.get(key) != expected_value:
+                raise ValueError(
+                    "frontmatter_contract.special_pages raw registry shard rules must "
+                    f"expect {key}={expected_value}: {shard_page}"
+                )
+
+
 POLICY_SAFETY_INVARIANT_RULES: tuple[PolicyInvariantRule, ...] = (
     PolicyInvariantRule("required_runtime_paths", "Required runtime policy paths have expected types.", _validate_required_runtime_paths),
     PolicyInvariantRule("complexity_policy_contract", "Complexity scoring and dimensions stay supported.", _validate_complexity_policy),
     PolicyInvariantRule("subagent_safety_contract", "Subagent ladder and sandboxes stay supported.", _validate_subagent_safety_policy),
     PolicyInvariantRule("auto_improve_safety_contract", "Auto-improve timeout, roots, class, and workspace policy stay safe.", _validate_auto_improve_safety_policy),
     PolicyInvariantRule("strict_warning_budget_contract", "Strict warning-budget profiles reference supported sources and warning types.", _validate_strict_warning_budget_policy),
+    PolicyInvariantRule("raw_registry_shard_policy_contract", "Raw registry shard policy surfaces stay aligned.", _validate_raw_registry_shard_policy_contract),
     PolicyInvariantRule(
         "runtime_defaults_contract",
         "Runtime timezone, archive root, and zip normalization stay deterministic.",

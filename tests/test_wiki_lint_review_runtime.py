@@ -13,6 +13,7 @@ from ops.scripts.wiki_lint_review_runtime import (
     content_promotion_candidates,
     content_quality_advisory_candidates,
     source_route_advisory_candidates,
+    source_route_subtype_advisory_candidates,
     synthesis_analysis_template_candidates,
     synthesis_follow_up_split_candidates,
     wiki_synthesis_multi_question_candidates,
@@ -84,6 +85,18 @@ matters
 ## Source trace
 - `raw/fake.pdf`
 """
+
+
+def valid_system_source(stem: str) -> str:
+    return valid_source(stem).replace(
+        'corpus: "wiki"\n',
+        'corpus: "system"\n',
+        1,
+    ).replace(
+        '  - "corpus/wiki"\n',
+        '  - "corpus/system"\n',
+        1,
+    )
 
 
 def valid_concept(stem: str) -> str:
@@ -1139,6 +1152,154 @@ class WikiLintReviewRuntimeTest(unittest.TestCase):
 
             self.assertEqual(candidates, [])
 
+    def test_source_route_advisory_skips_system_sources_outside_policy_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_open_question_smoke_vault(vault)
+            source = vault / "wiki" / "source--fake.md"
+            source.write_text(
+                source.read_text(encoding="utf-8").replace(
+                    "domain: \"fake\"\n",
+                    (
+                        "domain: \"fake\"\n"
+                        "primary_concept: \"concept--theme\"\n"
+                        "primary_lens: \"route source by concept before headline\"\n"
+                        "authority_class: \"supporting_evidence\"\n"
+                        "route_decision: \"absorb_existing_concept\"\n"
+                    ),
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            write_page(
+                vault / "system" / "source--system-route.md",
+                valid_system_source("source--system-route"),
+            )
+
+            policy, _ = load_policy(vault)
+            snapshot = build_wiki_runtime_snapshot(vault, registry_contract=policy["registry_contract"])
+            candidates = source_route_advisory_candidates(
+                vault,
+                snapshot.pages,
+                snapshot.frontmatters,
+                policy["frontmatter_contract"],
+            )
+
+            self.assertEqual(candidates, [])
+
+    def test_source_route_subtype_advisory_flags_body_marker_without_frontmatter(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_open_question_smoke_vault(vault)
+            source = vault / "wiki" / "source--fake.md"
+            source.write_text(
+                source.read_text(encoding="utf-8").replace(
+                    "## Limitations / caveats\n",
+                    "## Limitations / caveats\n- route subtype: `sequencing-bargain`\n",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+
+            policy, _ = load_policy(vault)
+            snapshot = build_wiki_runtime_snapshot(vault, registry_contract=policy["registry_contract"])
+            candidates = source_route_subtype_advisory_candidates(
+                vault,
+                snapshot.pages,
+                snapshot.frontmatters,
+                policy["frontmatter_contract"],
+            )
+
+            self.assertEqual(len(candidates), 1)
+            candidate = candidates[0]
+            self.assertEqual(candidate["type"], "source_route_subtype_advisory")
+            self.assertEqual(candidate["value"]["body_marker_missing_frontmatter_count"], 1)
+            self.assertEqual(candidate["value"]["invalid_subtype_value_count"], 0)
+
+    def test_source_route_subtype_advisory_flags_invalid_frontmatter_value(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_open_question_smoke_vault(vault)
+            source = vault / "wiki" / "source--fake.md"
+            source.write_text(
+                source.read_text(encoding="utf-8").replace(
+                    "domain: \"fake\"\n",
+                    "domain: \"fake\"\nroute_subtype: \"Sequencing Bargain\"\n",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+
+            policy, _ = load_policy(vault)
+            snapshot = build_wiki_runtime_snapshot(vault, registry_contract=policy["registry_contract"])
+            candidate = source_route_subtype_advisory_candidates(
+                vault,
+                snapshot.pages,
+                snapshot.frontmatters,
+                policy["frontmatter_contract"],
+            )[0]
+
+            self.assertEqual(candidate["value"]["body_marker_missing_frontmatter_count"], 0)
+            self.assertEqual(candidate["value"]["invalid_subtype_value_count"], 1)
+
+    def test_source_route_subtype_advisory_skips_valid_optional_subtype(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_open_question_smoke_vault(vault)
+            source = vault / "wiki" / "source--fake.md"
+            source.write_text(
+                source.read_text(encoding="utf-8").replace(
+                    "domain: \"fake\"\n",
+                    "domain: \"fake\"\nroute_subtype: \"sequencing-bargain\"\n",
+                    1,
+                ).replace(
+                    "## Limitations / caveats\n",
+                    "## Limitations / caveats\n- route subtype: `sequencing-bargain`\n",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+
+            policy, _ = load_policy(vault)
+            snapshot = build_wiki_runtime_snapshot(vault, registry_contract=policy["registry_contract"])
+            candidates = source_route_subtype_advisory_candidates(
+                vault,
+                snapshot.pages,
+                snapshot.frontmatters,
+                policy["frontmatter_contract"],
+            )
+
+            self.assertEqual(candidates, [])
+
+    def test_source_route_subtype_advisory_skips_system_sources_outside_policy_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_open_question_smoke_vault(vault)
+            write_page(
+                vault / "system" / "source--system-route.md",
+                valid_system_source("source--system-route").replace(
+                    "## Limitations / caveats\n",
+                    "## Limitations / caveats\n- route subtype: `system-route`\n",
+                    1,
+                ),
+            )
+
+            policy, _ = load_policy(vault)
+            snapshot = build_wiki_runtime_snapshot(vault, registry_contract=policy["registry_contract"])
+            candidates = source_route_subtype_advisory_candidates(
+                vault,
+                snapshot.pages,
+                snapshot.frontmatters,
+                policy["frontmatter_contract"],
+            )
+
+            self.assertEqual(candidates, [])
+
     def test_lint_wires_analysis_template_review_candidate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -1169,6 +1330,52 @@ class WikiLintReviewRuntimeTest(unittest.TestCase):
             )
 
             self.assertEqual(candidate["page"], "wiki/source--*.md")
+
+    def test_lint_wires_source_route_subtype_advisory_review_candidate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_open_question_smoke_vault(vault)
+            source = vault / "wiki" / "source--fake.md"
+            source.write_text(
+                source.read_text(encoding="utf-8").replace(
+                    "## Limitations / caveats\n",
+                    "## Limitations / caveats\n- route subtype: `sequencing-bargain`\n",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+
+            candidate = next(
+                item
+                for item in lint(vault)["review_candidates"]
+                if item["type"] == "source_route_subtype_advisory"
+            )
+
+            self.assertEqual(candidate["page"], "wiki/source--*.md")
+
+    def test_lint_routes_broad_synthesis_watch_candidate_to_watchlist(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_broad_synthesis_vault(vault, include_boundary_sections=True)
+
+            report = lint(vault)
+            review_candidate_types = {
+                item["type"]
+                for item in report["review_candidates"]
+            }
+            watchlist_types = {
+                item["type"]
+                for item in report["watchlist"]
+            }
+
+            self.assertNotIn(
+                "wiki_synthesis_multi_question_watch_candidate",
+                review_candidate_types,
+            )
+            self.assertIn("wiki_synthesis_multi_question_watch_candidate", watchlist_types)
+            self.assertEqual(report["stats"]["watchlist_count"], 1)
 
     def test_lint_wires_content_quality_advisory_review_candidate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

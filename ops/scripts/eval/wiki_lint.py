@@ -51,6 +51,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         content_quality_advisory_candidates,
         research_source_anchor_candidates,
         source_route_advisory_candidates,
+        source_route_subtype_advisory_candidates,
         synthesis_analysis_template_candidates,
         synthesis_follow_up_split_candidates,
         wiki_synthesis_multi_question_candidates,
@@ -97,6 +98,7 @@ else:
         content_quality_advisory_candidates,
         research_source_anchor_candidates,
         source_route_advisory_candidates,
+        source_route_subtype_advisory_candidates,
         synthesis_analysis_template_candidates,
         synthesis_follow_up_split_candidates,
         wiki_synthesis_multi_question_candidates,
@@ -156,6 +158,7 @@ class _LintAccumulator:
     errors: list[dict]
     warnings: list[dict]
     review_candidates: list[dict]
+    watchlist: list[dict]
     link_inbound: dict[str, int]
     page_links: dict[str, set[str]]
     related_links: dict[str, set[str]]
@@ -168,6 +171,7 @@ class _LintAccumulator:
             errors=[],
             warnings=[],
             review_candidates=[],
+            watchlist=[],
             link_inbound={name: 0 for name in pages},
             page_links={},
             related_links={},
@@ -179,6 +183,9 @@ class _LintAccumulator:
 PRODUCER = "ops.scripts.wiki_lint"
 SOURCE_COMMAND = "python -m ops.scripts.wiki_lint"
 DEFAULT_OUT = "ops/reports/wiki-lint-report.json"
+WATCHLIST_REVIEW_CANDIDATE_TYPES = {
+    "wiki_synthesis_multi_question_watch_candidate",
+}
 
 
 def _source_command(release_archive_profile: bool) -> str:
@@ -240,6 +247,14 @@ def add_issue(issue: dict, severity: str, errors: list, warnings: list) -> None:
         warnings.append(issue)
         return
     raise ValueError(f"unsupported lint severity: {severity}")
+
+
+def _record_review_items(acc: _LintAccumulator, items: list[dict]) -> None:
+    for item in items:
+        if item.get("type") in WATCHLIST_REVIEW_CANDIDATE_TYPES:
+            acc.watchlist.append(item)
+        else:
+            acc.review_candidates.append(item)
 
 
 def _emit_duplicate_stem_issues(
@@ -329,7 +344,7 @@ def _lint_pages(
         acc.page_links[stem] = page_result.page_links
         acc.related_links[stem] = page_result.related_links
         acc.evidence_links[stem] = page_result.evidence_links
-        acc.review_candidates.extend(page_result.review_candidates)
+        _record_review_items(acc, page_result.review_candidates)
         for issue, severity in page_result.issues:
             add_issue(issue, severity, acc.errors, acc.warnings)
 
@@ -388,7 +403,7 @@ def _run_registry_and_review_passes(
     )
     acc.errors.extend(registry_result["errors"])
     acc.warnings.extend(registry_result["warnings"])
-    acc.review_candidates.extend(registry_result["review_candidates"])
+    _record_review_items(acc, registry_result["review_candidates"])
 
     eval_coverage_report = build_eval_coverage_report(
         vault,
@@ -397,22 +412,25 @@ def _run_registry_and_review_passes(
         snapshot=runtime_context.runtime_snapshot,
         context=context,
     )
-    acc.review_candidates.extend(eval_coverage_report["review_candidates"])
-    acc.review_candidates.extend(
+    _record_review_items(acc, eval_coverage_report["review_candidates"])
+    _record_review_items(
+        acc,
         synthesis_analysis_template_candidates(
             vault,
             pages,
             config.refactor_triggers,
-        )
+        ),
     )
-    acc.review_candidates.extend(
+    _record_review_items(
+        acc,
         synthesis_follow_up_split_candidates(
             vault,
             pages,
             config.refactor_triggers,
-        )
+        ),
     )
-    acc.review_candidates.extend(
+    _record_review_items(
+        acc,
         content_promotion_candidates(
             vault,
             pages,
@@ -421,18 +439,20 @@ def _run_registry_and_review_passes(
             registry_result["registry_entries"],
             config.refactor_triggers,
             config.content_promotion_review,
-        )
+        ),
     )
-    acc.review_candidates.extend(
+    _record_review_items(
+        acc,
         wiki_synthesis_multi_question_candidates(
             vault,
             pages,
             acc.evidence_links,
             config.content_promotion_review,
             config.refactor_triggers,
-        )
+        ),
     )
-    acc.review_candidates.extend(
+    _record_review_items(
+        acc,
         research_source_anchor_candidates(
             vault,
             pages,
@@ -440,47 +460,61 @@ def _run_registry_and_review_passes(
             acc.frontmatters,
             config.refactor_triggers,
             config.content_promotion_review,
-        )
+        ),
     )
-    acc.review_candidates.extend(
+    _record_review_items(
+        acc,
         active_source_missing_concept_candidates(
             vault,
             pages,
             acc.related_links,
             acc.frontmatters,
-        )
+        ),
     )
-    acc.review_candidates.extend(
+    _record_review_items(
+        acc,
         concept_carryover_continuity_candidates(
             vault,
             pages,
             acc.related_links,
             config.refactor_triggers,
-        )
+        ),
     )
-    acc.review_candidates.extend(
+    _record_review_items(
+        acc,
         concept_taxonomy_advisory_candidates(
             vault,
             pages,
             acc.frontmatters,
             config.frontmatter_contract,
-        )
+        ),
     )
-    acc.review_candidates.extend(
+    _record_review_items(
+        acc,
         content_quality_advisory_candidates(
             vault,
             pages,
             acc.frontmatters,
             config.frontmatter_contract,
-        )
+        ),
     )
-    acc.review_candidates.extend(
+    _record_review_items(
+        acc,
         source_route_advisory_candidates(
             vault,
             pages,
             acc.frontmatters,
             config.frontmatter_contract,
-        )
+        ),
+    )
+    _record_review_items(
+        acc,
+        source_route_subtype_advisory_candidates(
+            vault,
+            pages,
+            acc.frontmatters,
+            config.frontmatter_contract,
+        ),
     )
     return registry_result
 
@@ -490,11 +524,12 @@ def _run_python_function_budget_pass(
     config: _LintPolicyConfig,
     acc: _LintAccumulator,
 ) -> None:
-    acc.review_candidates.extend(
+    _record_review_items(
+        acc,
         python_function_budget_candidates(
             runtime_context.vault,
             config.python_function_review,
-        )
+        ),
     )
 
 
@@ -595,11 +630,13 @@ def _build_lint_report(
         "errors": acc.errors,
         "warnings": acc.warnings,
         "review_candidates": acc.review_candidates,
+        "watchlist": acc.watchlist,
         "stats": {
             "page_count": len(pages),
             "error_count": len(acc.errors),
             "warning_count": len(acc.warnings),
             "review_candidate_count": len(acc.review_candidates),
+            "watchlist_count": len(acc.watchlist),
         },
     }
 

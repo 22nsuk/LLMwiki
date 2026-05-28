@@ -295,6 +295,9 @@
             "route_decision": {
               "type": "string"
             },
+            "route_subtype": {
+              "type": "string"
+            },
             "created": {
               "type": "string"
             },
@@ -423,6 +426,12 @@
                     "type": "string"
                   }
                 },
+                "applies_to_corpora": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
                 "recommended_fields": {
                   "type": "array",
                   "items": {
@@ -440,6 +449,18 @@
                   "items": {
                     "type": "string"
                   }
+                },
+                "optional_subtype_field": {
+                  "type": "string"
+                },
+                "body_subtype_markers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "subtype_value_pattern": {
+                  "type": "string"
                 },
                 "severity": {
                   "type": "string"

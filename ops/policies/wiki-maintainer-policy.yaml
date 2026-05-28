@@ -163,6 +163,37 @@ page_shape:
       - Registered raw sources
       - Related pages
       - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-05-29.md:
+      - Summary
+      - Child registry shards
+      - Compaction notes
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-05-29-ai-technology-health.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-market-fx.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-domestic-policy.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-05-29-geopolitics-middle-east.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
+    system/system-raw-registry/wiki/raw-intake-2026-05-29-physical-defense-domain-seeds.md:
+      - Summary
+      - Registered raw sources
+      - Related pages
+      - Source trace
     system/system-raw-registry/system.md:
       - Summary
       - Registered raw sources
@@ -237,6 +268,7 @@ frontmatter_contract:
     primary_lens: string
     authority_class: string
     route_decision: string
+    route_subtype: string
     created: string
     updated: string
     canonical: boolean
@@ -272,6 +304,8 @@ frontmatter_contract:
       enabled: true
       applies_to_page_types:
         - source
+      applies_to_corpora:
+        - wiki
       recommended_fields:
         - primary_concept
         - primary_lens
@@ -291,6 +325,10 @@ frontmatter_contract:
         - create_new_concept
         - create_new_synthesis
         - keep_source_only_seed
+      optional_subtype_field: route_subtype
+      body_subtype_markers:
+        - "route subtype:"
+      subtype_value_pattern: "^[a-z0-9][a-z0-9/_-]*$"
       severity: review_candidate
       rollout: "advisory_before_required"
       rationale: "Surface source routing metadata migration debt without turning legacy source pages into fail gates."
@@ -501,6 +539,62 @@ frontmatter_contract:
         corpus: system
         special_role: raw-registry-shard
     system/system-raw-registry/wiki/middle-east-energy-intake-2026-04-21.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-05-25.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-05-26.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-05-29.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-05-29-ai-technology-health.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-market-fx.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-domestic-policy.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-05-29-geopolitics-middle-east.md:
+      required:
+        - special_role
+      expected:
+        page_type: registry-shard
+        corpus: system
+        special_role: raw-registry-shard
+    system/system-raw-registry/wiki/raw-intake-2026-05-29-physical-defense-domain-seeds.md:
       required:
         - special_role
       expected:
@@ -1462,6 +1556,12 @@ registry_contract:
     - system/system-raw-registry/wiki/middle-east-followups.md
     - system/system-raw-registry/wiki/raw-intake-2026-05-25.md
     - system/system-raw-registry/wiki/raw-intake-2026-05-26.md
+    - system/system-raw-registry/wiki/raw-intake-2026-05-29.md
+    - system/system-raw-registry/wiki/raw-intake-2026-05-29-ai-technology-health.md
+    - system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-market-fx.md
+    - system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-domestic-policy.md
+    - system/system-raw-registry/wiki/raw-intake-2026-05-29-geopolitics-middle-east.md
+    - system/system-raw-registry/wiki/raw-intake-2026-05-29-physical-defense-domain-seeds.md
     - system/system-raw-registry/system.md
   raw_registry_shard_by_corpus:
     wiki: system/system-raw-registry/wiki.md
@@ -1489,6 +1589,12 @@ registry_contract:
     system/system-raw-registry/wiki/middle-east-followups.md: wiki
     system/system-raw-registry/wiki/raw-intake-2026-05-25.md: wiki
     system/system-raw-registry/wiki/raw-intake-2026-05-26.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-05-29.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-05-29-ai-technology-health.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-market-fx.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-domestic-policy.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-05-29-geopolitics-middle-east.md: wiki
+    system/system-raw-registry/wiki/raw-intake-2026-05-29-physical-defense-domain-seeds.md: wiki
     system/system-raw-registry/system.md: system
   raw_registry_export: ops/raw-registry.json
   corpus_roots:

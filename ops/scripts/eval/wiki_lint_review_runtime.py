@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -467,6 +468,44 @@ def content_quality_advisory_candidates(
     ]
 
 
+def _source_route_page_glob(advisory: dict) -> str:
+    corpora = [
+        str(corpus).strip()
+        for corpus in advisory.get("applies_to_corpora", ["wiki"])
+        if str(corpus).strip()
+    ]
+    if not corpora:
+        corpora = ["wiki"]
+    if len(corpora) == 1:
+        return f"{corpora[0]}/source--*.md"
+    return "{" + ",".join(sorted(corpora)) + "}/source--*.md"
+
+
+def _source_route_page_in_scope(
+    vault: Path,
+    path: Path,
+    frontmatter: dict,
+    advisory: dict,
+) -> bool:
+    applies_to = set(advisory.get("applies_to_page_types", ["source"]))
+    if frontmatter.get("page_type") not in applies_to:
+        return False
+
+    applies_to_corpora = {
+        str(corpus).strip()
+        for corpus in advisory.get("applies_to_corpora", ["wiki"])
+        if str(corpus).strip()
+    }
+    if not applies_to_corpora:
+        applies_to_corpora = {"wiki"}
+    corpus = str(frontmatter.get("corpus", "")).strip()
+    if corpus not in applies_to_corpora:
+        return False
+
+    relative_path = report_path(vault, path)
+    return relative_path.startswith(f"{corpus}/source--")
+
+
 def source_route_advisory_candidates(
     vault: Path,
     pages: dict[str, Path],
@@ -480,7 +519,6 @@ def source_route_advisory_candidates(
     if not advisory.get("enabled", False):
         return []
 
-    applies_to = set(advisory.get("applies_to_page_types", ["source"]))
     recommended_fields = list(advisory.get("recommended_fields", []))
     allowed_authority_classes = list(advisory.get("allowed_authority_classes", []))
     allowed_route_decisions = list(advisory.get("allowed_route_decisions", []))
@@ -489,11 +527,9 @@ def source_route_advisory_candidates(
 
     for stem, path in sorted(pages.items()):
         relative_path = report_path(vault, path)
-        if not relative_path.startswith("wiki/source--"):
-            continue
 
         frontmatter = frontmatters.get(stem) or {}
-        if frontmatter.get("page_type") not in applies_to:
+        if not _source_route_page_in_scope(vault, path, frontmatter, advisory):
             continue
 
         missing_fields = [field for field in recommended_fields if field not in frontmatter]
@@ -541,7 +577,7 @@ def source_route_advisory_candidates(
     return [
         {
             "type": "source_route_frontmatter_advisory",
-            "page": "wiki/source--*.md",
+            "page": _source_route_page_glob(advisory),
             "value": {
                 "missing_field_page_count": len(pages_with_missing_fields),
                 "invalid_value_count": len(pages_with_invalid_values),
@@ -551,6 +587,14 @@ def source_route_advisory_candidates(
                 "invalid_value_count": 0,
             },
             "recommended_fields": recommended_fields,
+            "applies_to_corpora": sorted(
+                {
+                    str(corpus).strip()
+                    for corpus in advisory.get("applies_to_corpora", ["wiki"])
+                    if str(corpus).strip()
+                }
+                or {"wiki"}
+            ),
             "allowed_authority_classes": allowed_authority_classes,
             "allowed_route_decisions": allowed_route_decisions,
             "pages_with_missing_fields": pages_with_missing_fields,
@@ -561,6 +605,118 @@ def source_route_advisory_candidates(
                 "seed promotion decisions"
             ),
             "suggested_action": "backfill_source_route_frontmatter_during_source_template_rollout",
+        }
+    ]
+
+
+def source_route_subtype_advisory_candidates(
+    vault: Path,
+    pages: dict[str, Path],
+    frontmatters: dict[str, dict | None],
+    frontmatter_contract: dict,
+) -> list[dict]:
+    advisory = (
+        frontmatter_contract.get("metadata_review", {})
+        .get("source_route_advisory", {})
+    )
+    if not advisory.get("enabled", False):
+        return []
+
+    subtype_field = str(advisory.get("optional_subtype_field", "")).strip()
+    if not subtype_field:
+        return []
+
+    body_markers = [str(marker) for marker in advisory.get("body_subtype_markers", [])]
+    subtype_value_pattern = str(advisory.get("subtype_value_pattern", "")).strip()
+    subtype_pattern = re.compile(subtype_value_pattern) if subtype_value_pattern else None
+
+    pages_with_body_marker_missing_frontmatter: list[dict] = []
+    pages_with_invalid_subtype_values: list[dict] = []
+
+    for stem, path in sorted(pages.items()):
+        relative_path = report_path(vault, path)
+
+        frontmatter = frontmatters.get(stem) or {}
+        if not _source_route_page_in_scope(vault, path, frontmatter, advisory):
+            continue
+
+        text = load_text(path)
+        matching_markers = [marker for marker in body_markers if marker in text]
+        if matching_markers and subtype_field not in frontmatter:
+            pages_with_body_marker_missing_frontmatter.append(
+                {
+                    "page": relative_path,
+                    "body_markers": matching_markers,
+                    "missing_field": subtype_field,
+                }
+            )
+
+        if subtype_field not in frontmatter:
+            continue
+
+        route_subtype = frontmatter.get(subtype_field)
+        if not isinstance(route_subtype, str) or not route_subtype.strip():
+            pages_with_invalid_subtype_values.append(
+                {
+                    "page": relative_path,
+                    "field": subtype_field,
+                    "actual": route_subtype,
+                    "expected": "non-empty string",
+                }
+            )
+            continue
+
+        if subtype_pattern and not subtype_pattern.fullmatch(route_subtype):
+            pages_with_invalid_subtype_values.append(
+                {
+                    "page": relative_path,
+                    "field": subtype_field,
+                    "actual": route_subtype,
+                    "expected_pattern": subtype_value_pattern,
+                }
+            )
+
+    if (
+        not pages_with_body_marker_missing_frontmatter
+        and not pages_with_invalid_subtype_values
+    ):
+        return []
+
+    return [
+        {
+            "type": "source_route_subtype_advisory",
+            "page": _source_route_page_glob(advisory),
+            "value": {
+                "body_marker_missing_frontmatter_count": len(
+                    pages_with_body_marker_missing_frontmatter
+                ),
+                "invalid_subtype_value_count": len(pages_with_invalid_subtype_values),
+            },
+            "threshold": {
+                "body_marker_missing_frontmatter_count": 0,
+                "invalid_subtype_value_count": 0,
+            },
+            "optional_subtype_field": subtype_field,
+            "applies_to_corpora": sorted(
+                {
+                    str(corpus).strip()
+                    for corpus in advisory.get("applies_to_corpora", ["wiki"])
+                    if str(corpus).strip()
+                }
+                or {"wiki"}
+            ),
+            "body_subtype_markers": body_markers,
+            "subtype_value_pattern": subtype_value_pattern,
+            "pages_with_body_marker_missing_frontmatter": (
+                pages_with_body_marker_missing_frontmatter
+            ),
+            "pages_with_invalid_subtype_values": pages_with_invalid_subtype_values,
+            "reason": (
+                "route_subtype is optional, but source pages that already declare a route "
+                "subtype in prose should mirror it in frontmatter so route-family "
+                "compaction and future split review can filter the subroute reliably"
+            ),
+            "suggested_action": "mirror_source_route_subtype_body_markers_into_frontmatter",
         }
     ]
 

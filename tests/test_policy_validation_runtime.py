@@ -37,6 +37,7 @@ class PolicyValidationRuntimeTests(unittest.TestCase):
                 "subagent_safety_contract",
                 "auto_improve_safety_contract",
                 "strict_warning_budget_contract",
+                "raw_registry_shard_policy_contract",
                 "runtime_defaults_contract",
             ],
         )
@@ -124,3 +125,27 @@ class PolicyValidationRuntimeTests(unittest.TestCase):
             "reviewer_score_bands references values outside",
         ):
             validate_policy_registry_references(policy)
+
+    def test_raw_registry_shard_policy_contract_requires_frontmatter_special_page(self) -> None:
+        policy = deepcopy(_load_live_policy())
+        shard_page = policy["registry_contract"]["raw_registry_shard_pages"][0]
+        policy["frontmatter_contract"]["special_pages"].pop(shard_page)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "frontmatter_contract.special_pages must define every raw registry shard page",
+        ):
+            validate_policy_safety_invariants(policy)
+
+    def test_raw_registry_shard_policy_contract_rejects_wrong_special_page_shape(self) -> None:
+        policy = deepcopy(_load_live_policy())
+        shard_page = policy["registry_contract"]["raw_registry_shard_pages"][0]
+        policy["frontmatter_contract"]["special_pages"][shard_page]["expected"][
+            "page_type"
+        ] = "registry"
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "raw registry shard rules must expect page_type=registry-shard",
+        ):
+            validate_policy_safety_invariants(policy)

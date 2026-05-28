@@ -122,10 +122,12 @@
     "errors": [],
     "warnings": [],
     "review_candidates": [],
+    "watchlist": [],
     "stats": {
       "error_count": 0,
       "warning_count": 0,
-      "review_candidate_count": 0
+      "review_candidate_count": 0,
+      "watchlist_count": 0
     }
   },
   "warning_budget": {

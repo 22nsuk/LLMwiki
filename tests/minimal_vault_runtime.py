@@ -332,6 +332,27 @@ def live_registry_wiki_family_shard_pages() -> list[str]:
     ]
 
 
+def live_registry_child_shard_pages(relative_path: str) -> list[str]:
+    parent_stem = Path(relative_path).with_suffix("").as_posix()
+    child_prefix = f"{parent_stem}-"
+    return [
+        path
+        for path in live_registry_wiki_family_shard_pages()
+        if path.startswith(child_prefix) and path != relative_path
+    ]
+
+
+def registry_family_shard_required_sections(relative_path: str) -> list[str]:
+    policy = live_policy()
+    special_pages = policy["page_shape"]["special_page_required_sections"]
+    return list(
+        special_pages.get(
+            relative_path,
+            ["Summary", "Registered raw sources", "Related pages", "Source trace"],
+        )
+    )
+
+
 def system_wikilink(relative_path: str) -> str:
     if relative_path.startswith("system/"):
         relative_path = relative_path[len("system/") :]
@@ -345,9 +366,49 @@ def bullet_wikilinks(relative_paths: Sequence[str]) -> str:
     return "\n".join(items)
 
 
+def _registry_family_shard_section(
+    heading: str,
+    relative_path: str,
+    source_trace_ref: str,
+) -> str:
+    stem = Path(relative_path).stem
+    if heading == "Summary":
+        child_count = len(live_registry_child_shard_pages(relative_path))
+        return "\n".join(
+            [
+                "- parent corpus router: [[system-raw-registry/wiki]]",
+                f"- topic family: `{stem}`",
+                "- registered entries: `0`",
+                f"- child registry shards: `{child_count}`",
+            ]
+        )
+    if heading == "Registered raw sources":
+        return "- none currently"
+    if heading == "Child registry shards":
+        child_links = bullet_wikilinks(live_registry_child_shard_pages(relative_path))
+        return child_links or "- none currently"
+    if heading == "Compaction notes":
+        return "- no compaction needed for the minimal vault fixture shard."
+    if heading == "Related pages":
+        return "\n".join(
+            [
+                "- [[system-raw-registry]]",
+                "- [[system-raw-registry/wiki]]",
+                "- [[index]]",
+            ]
+        )
+    if heading == "Source trace":
+        return f"- `{source_trace_ref}`"
+    return "- not represented in the minimal vault fixture."
+
+
 def build_registry_family_shard_page(relative_path: str, source_trace_ref: str) -> str:
     stem = Path(relative_path).stem
     pretty_stem = " ".join(part.upper() if len(part) <= 3 else part.title() for part in stem.split("-"))
+    sections = "\n\n".join(
+        f"## {heading}\n{_registry_family_shard_section(heading, relative_path, source_trace_ref)}"
+        for heading in registry_family_shard_required_sections(relative_path)
+    )
     return f"""---
 title: "Wiki Raw Registry Family Shard {pretty_stem}"
 page_type: "registry-shard"
@@ -363,20 +424,7 @@ tags:
 
 # {system_wikilink(relative_path)}
 
-## Summary
-- parent corpus router: [[system-raw-registry/wiki]]
-- topic family: `{stem}`
-- registered entries: `0`
-
-## Registered raw sources
-- none currently
-
-## Related pages
-- [[system-raw-registry]]
-- [[system-raw-registry/wiki]]
-- [[index]]
-## Source trace
-- `{source_trace_ref}`
+{sections}
 """
 
 
