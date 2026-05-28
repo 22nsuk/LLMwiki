@@ -81,6 +81,7 @@ class GoalRuntimeCleanTransientTests(unittest.TestCase):
             "ops/reports/goal-audit-log.jsonl",
             "ops/reports/runtime-events/auto-improve-session/active.jsonl",
             "ops/reports/runtime-events/observability-artifacts/active.jsonl",
+            "build/source-package-check/extract/LLMwiki/raw/private.md",
             "runs/goal-active/state/auto-improve-goal-session-result.json",
             "runs/goal-old/state/status.md",
             "tmp/source-package-check/extract/file.txt",
@@ -103,8 +104,9 @@ class GoalRuntimeCleanTransientTests(unittest.TestCase):
 
         self.assertEqual(report["status"], "attention")
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
-        self.assertEqual(report["summary"]["would_remove_count"], 9)
+        self.assertEqual(report["summary"]["would_remove_count"], 10)
         paths = {item["path"] for item in report["cleanup_candidates"]}
+        self.assertIn("build/source-package-check", paths)
         self.assertIn("ops/reports/goal-status.md", paths)
         self.assertIn("runs/goal-active/state/auto-improve-goal-session-result.json", paths)
         self.assertIn("runs/goal-old", paths)
@@ -121,7 +123,8 @@ class GoalRuntimeCleanTransientTests(unittest.TestCase):
         )
 
         self.assertEqual(report["status"], "pass")
-        self.assertEqual(report["summary"]["removed_count"], 9)
+        self.assertEqual(report["summary"]["removed_count"], 10)
+        self.assertFalse((self.vault / "build/source-package-check").exists())
         self.assertFalse((self.vault / "ops/reports/goal-status.md").exists())
         self.assertFalse(
             (self.vault / "runs/goal-active/state/auto-improve-goal-session-result.json").exists()

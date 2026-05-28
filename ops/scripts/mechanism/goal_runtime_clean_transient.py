@@ -28,6 +28,7 @@ OBSOLETE_TRACKED_GOAL_SURFACES = {
     "ops/reports/goal-audit-log.jsonl": "legacy audit log is superseded by run-local audit-log.jsonl",
 }
 STALE_TMP_TREES = (
+    "build/source-package-check",
     "tmp/source-package-check",
     "tmp/source-package-clean-extract",
     "tmp/release-source-package-check",
