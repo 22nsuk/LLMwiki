@@ -20,7 +20,8 @@ surface comparison; this document owns release evidence and staged authority.
 - `make release-run-ready`: one command to verify the current committed tree,
   emit canonical report-contract and full-suite test summaries, run public check,
   refresh/reuse current full release-smoke evidence, run package build and
-  source-package smoke, then write the runnable release-run manifest.
+  source-package smoke, then write the runnable release-run manifest. It removes
+  any older auto-promotion-ready manifest before refreshing runnable authority.
 - `make release-run-ready-check`: revalidate the existing manifest against the
   current HEAD, source fingerprint, source ZIP, and source-package smoke report.
 - `make release-sealed-run-ready-plan`: inspect runnable authority evidence and
@@ -32,7 +33,8 @@ surface comparison; this document owns release evidence and staged authority.
   attestation, run the sealed rehearsal check, and write the sealed-run
   manifest. It requires current passing runnable evidence and does not rerun the
   runnable stage. The operator summary is generated for Stage 3 reuse, but it is
-  not part of the sealed-run authority sidecar set.
+  not part of the sealed-run authority sidecar set. It also removes any older
+  auto-promotion-ready manifest before refreshing sealed authority.
 - `make release-sealed-run-ready-check`: revalidate existing sealed evidence
   without rerunning tests or rebuilding the package.
 - `make release-auto-promotion-ready-plan`: inspect preflight, runnable,
@@ -50,26 +52,36 @@ surface comparison; this document owns release evidence and staged authority.
   if it would become the effective release auto-promotion run id.
 - `make release-auto-promotion-preflight`: refresh cheap unattended-promotion
   blockers before spending full run-ready cycles. It first runs the goal-run id
-  guard, refresh-checks fast smoke, refreshes the selected report-contract
-  summary for changed test fingerprints, then runs artifact freshness and checks
-  remediation, learning revalidation, and auto-improve readiness without
-  building release artifacts, sealing, or creating runtime-trial evidence.
+  guard, refreshes cheap generated prerequisites such as queue-input reports and
+  the external-report action matrix, refresh-checks fast smoke, refreshes the
+  selected report-contract summary for changed test fingerprints, then runs
+  artifact freshness and checks remediation, learning revalidation, and
+  auto-improve readiness without building release artifacts, sealing, or
+  creating runtime-trial evidence. It removes any older final ready manifest
+  before writing new preflight evidence.
 - `make release-auto-promotion-safe-cleanup`: normalize safe generated
   evidence before preseal. It removes stale goal-runtime transients, cleans tmp
   JSON candidates, backfills schema-backed historical run artifacts, refreshes
   generated-artifact index and artifact freshness, refreshes external report
   reference diagnostics, and rewrites the closeout summary from those current
   inputs.
+- `make generated-artifact-retention-clean`: dry-run a retention-aware cleanup
+  of regenerated local residue. Pass `GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY=1`
+  only when you intentionally want to remove allowlisted ignored residue such as
+  source-package extracts and local tool caches; current release authority,
+  private corpus roots, and run provenance are retained.
 - `make release-auto-promotion-preseal`: refresh clean closeout, strict
   same-fingerprint cohort, remediation, learning, and auto-improve diagnostics
   after run-ready and before sealing. It refreshes cheap cohort inputs such as
   bootstrap, registry, fast smoke, generated index, artifact freshness, and
   external report references through the safe cleanup
   lane, but it only checks run-ready's full release-smoke and full-suite
-  evidence for currentness instead of rerunning them.
+  evidence for currentness instead of rerunning them. It removes any older final
+  ready manifest before writing new preseal evidence.
 - `make release-auto-promotion-operator-summary`: manual fallback to refresh the
   cheap build-local operator diagnostics used by the promotion verdict when
-  sealed sidecars are already current.
+  sealed sidecars are already current. It invalidates the final ready manifest
+  because the operator diagnostic is a Stage 3 input.
 - `make release-auto-promotion-ready`: low-cost promotion check that reads the
   current runnable and sealed manifests, reuses the sealed operator summary
   diagnostic, directly verifies current goal-run status plus goal-runtime

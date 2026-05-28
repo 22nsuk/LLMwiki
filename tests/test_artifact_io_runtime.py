@@ -348,6 +348,139 @@ class ArtifactIoRuntimeTests(unittest.TestCase):
 
             self.assertEqual(json.loads(destination.read_text(encoding="utf-8"))["status"], "pass")
 
+    def test_promote_schema_validated_json_can_preserve_semantic_noop_destination(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            schema_path = root / "schema.json"
+            schema_path.write_text(
+                json.dumps(
+                    {
+                        "type": "object",
+                        "required": [
+                            "$schema",
+                            "artifact_kind",
+                            "producer",
+                            "generated_at",
+                            "source_revision",
+                            "source_tree_fingerprint",
+                            "input_fingerprints",
+                            "currentness",
+                            "surfaces",
+                        ],
+                        "additionalProperties": False,
+                        "properties": {
+                            "$schema": {"const": "schema.json"},
+                            "artifact_kind": {"const": "script_output_surfaces"},
+                            "producer": {"const": "ops.scripts.script_output_surfaces"},
+                            "generated_at": {"type": "string"},
+                            "source_revision": {"type": "string"},
+                            "source_tree_fingerprint": {"type": "string"},
+                            "input_fingerprints": {"type": "object"},
+                            "currentness": {"type": "object"},
+                            "surfaces": {"type": "array"},
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            destination = root / "canonical.json"
+            existing = {
+                "$schema": "schema.json",
+                "artifact_kind": "script_output_surfaces",
+                "producer": "ops.scripts.script_output_surfaces",
+                "generated_at": "2026-05-28T00:00:00Z",
+                "source_revision": "old",
+                "source_tree_fingerprint": "old-fp",
+                "input_fingerprints": {"source": "old"},
+                "currentness": {"status": "current", "checked_at": "2026-05-28T00:00:00Z"},
+                "surfaces": [{"path": "ops/scripts/example.py"}],
+            }
+            destination.write_text(json.dumps(existing, indent=2) + "\n", encoding="utf-8")
+            before_text = destination.read_text(encoding="utf-8")
+            candidate = root / "candidate.json"
+            candidate.write_text(
+                json.dumps(
+                    {
+                        **existing,
+                        "generated_at": "2026-05-29T00:00:00Z",
+                        "source_revision": "new",
+                        "source_tree_fingerprint": "new-fp",
+                        "input_fingerprints": {"source": "new"},
+                        "currentness": {
+                            "status": "current",
+                            "checked_at": "2026-05-29T00:00:00Z",
+                        },
+                    },
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            promoted = promote_schema_validated_json(
+                root,
+                candidate_path=candidate,
+                destination_path=destination,
+                expected_artifact_kind="script_output_surfaces",
+                expected_producer="ops.scripts.script_output_surfaces",
+                context="candidate promotion failed",
+                preserve_existing_on_semantic_match=True,
+            )
+
+            self.assertEqual(promoted, destination)
+            self.assertEqual(destination.read_text(encoding="utf-8"), before_text)
+
+    def test_promote_schema_validated_json_replaces_invalid_semantic_noop_destination(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            schema_path = root / "schema.json"
+            schema_path.write_text(
+                json.dumps(
+                    {
+                        "type": "object",
+                        "required": ["$schema", "generated_at", "surfaces"],
+                        "additionalProperties": False,
+                        "properties": {
+                            "$schema": {"const": "schema.json"},
+                            "generated_at": {"type": "string"},
+                            "surfaces": {"type": "array"},
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            destination = root / "canonical.json"
+            destination.write_text(
+                json.dumps({"$schema": "schema.json", "surfaces": []}) + "\n",
+                encoding="utf-8",
+            )
+            candidate = root / "candidate.json"
+            candidate.write_text(
+                json.dumps(
+                    {
+                        "$schema": "schema.json",
+                        "generated_at": "2026-05-29T00:00:00Z",
+                        "surfaces": [],
+                    },
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            promote_schema_validated_json(
+                root,
+                candidate_path=candidate,
+                destination_path=destination,
+                context="candidate promotion failed",
+                preserve_existing_on_semantic_match=True,
+            )
+
+            self.assertEqual(
+                json.loads(destination.read_text(encoding="utf-8"))["generated_at"],
+                "2026-05-29T00:00:00Z",
+            )
+
     def test_serialized_json_can_add_trailing_newline(self) -> None:
         self.assertEqual(serialized_json({"ok": True}, trailing_newline=True)[-1], "\n")
 

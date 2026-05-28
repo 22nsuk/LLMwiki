@@ -17,6 +17,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--schema")
     parser.add_argument("--expected-artifact-kind")
     parser.add_argument("--expected-producer")
+    parser.add_argument(
+        "--preserve-existing-on-semantic-match",
+        action="store_true",
+        help=(
+            "Keep the existing destination file when the candidate differs only "
+            "by volatile canonical envelope fields."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -33,6 +41,7 @@ def main(argv: list[str] | None = None) -> int:
         expected_artifact_kind=args.expected_artifact_kind,
         expected_producer=args.expected_producer,
         context=f"canonical artifact promotion failed for {display_path(vault, destination)}",
+        preserve_existing_on_semantic_match=args.preserve_existing_on_semantic_match,
     )
     print(display_path(vault, promoted))
     return 0

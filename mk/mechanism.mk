@@ -200,7 +200,7 @@ goal-runtime-closeout-candidate-converge:
 	$(MAKE) goal-runtime-closeout-candidate-artifact-freshness
 
 goal-runtime-closeout-publish-script-output-surfaces:
-	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_RUNTIME_CLOSEOUT_SCRIPT_OUTPUT_SURFACES_OUT)" --out "$(SCRIPT_OUTPUT_SURFACES_OUT)" --schema ops/schemas/script-output-surfaces.schema.json --expected-artifact-kind script_output_surfaces --expected-producer ops.scripts.script_output_surfaces
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GOAL_RUNTIME_CLOSEOUT_SCRIPT_OUTPUT_SURFACES_OUT)" --out "$(SCRIPT_OUTPUT_SURFACES_OUT)" --schema ops/schemas/script-output-surfaces.schema.json --expected-artifact-kind script_output_surfaces --expected-producer ops.scripts.script_output_surfaces --preserve-existing-on-semantic-match
 
 goal-runtime-closeout-publish:
 	$(MAKE) goal-runtime-closeout-publish-script-output-surfaces

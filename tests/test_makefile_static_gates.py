@@ -738,6 +738,7 @@ def _assert_refresh_generated_split_targets(case: unittest.TestCase, text: str) 
         "refresh-generated-core",
         "refresh-generated-observability",
         "generated-artifact-converge",
+        "generated-artifact-retention-clean",
         "script-output-surfaces",
         "function-budget-refactor-proposals",
         "outcome-provenance-gate-policy",
@@ -757,6 +758,8 @@ def _assert_observability_output_variables(case: unittest.TestCase, text: str) -
         "EXTERNAL_REPORT_ACTION_MATRIX_OUT ?= ops/reports/external-report-action-matrix.json",
         "SCRIPT_OUTPUT_SURFACES_OUT ?= ops/script-output-surfaces.json",
         "SCRIPT_OUTPUT_SURFACES_CANDIDATE_OUT ?= tmp/script-output-surfaces.candidate.json",
+        "GENERATED_ARTIFACT_RETENTION_CLEAN_OUT ?= tmp/generated-artifact-retention-clean.json",
+        "GENERATED_ARTIFACT_RETENTION_CLEAN_APPLY ?=",
         "CLEAN_FIXTURE_REGENERATION_GUARD_OUT ?= tmp/clean-fixture-regeneration-guard.json",
         "MAKE_TARGET_INVENTORY_OUT ?= tmp/make-target-inventory.json",
         "WORKFLOW_DEPENDENCY_PLANNER_OUT ?= ops/reports/workflow-dependency-planner.json",
@@ -777,6 +780,12 @@ def _assert_script_surface_and_inventory_targets(case: unittest.TestCase, text: 
         script_output_block,
     )
     case.assertIn("ops.scripts.canonical_artifact_promote", script_output_block)
+    case.assertIn("--preserve-existing-on-semantic-match", script_output_block)
+    retention_clean_block = _target_block(text, "generated-artifact-retention-clean")
+    case.assertIn("generated-artifact-retention-clean", _target_block(text, ".PHONY"))
+    case.assertIn("ops.scripts.generated_artifact_retention_clean", retention_clean_block)
+    case.assertIn('--out "$(GENERATED_ARTIFACT_RETENTION_CLEAN_OUT)"', retention_clean_block)
+    case.assertIn("--apply", retention_clean_block)
     guard_block = _target_block(text, "clean-fixture-regeneration-guard")
     case.assertIn("clean-fixture-regeneration-guard", _target_block(text, ".PHONY"))
     case.assertIn(
@@ -1699,6 +1708,29 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         auto_promotion_preflight_block = _target_block(text, "release-auto-promotion-preflight")
         auto_promotion_preseal_block = _target_block(text, "release-auto-promotion-preseal")
+        auto_promotion_ready_invalidate_block = _target_block(
+            text, "release-auto-promotion-ready-invalidate"
+        )
+        self.assertIn(
+            "release-auto-promotion-ready-invalidate",
+            _target_block(text, ".PHONY"),
+        )
+        self.assertIn(
+            'rm -f "$(RELEASE_AUTO_PROMOTION_READY_MANIFEST_OUT)"',
+            auto_promotion_ready_invalidate_block,
+        )
+        for target in (
+            "release-run-ready",
+            "release-sealed-run-ready",
+            "release-auto-promotion-preflight",
+            "release-auto-promotion-preseal",
+            "release-auto-promotion-operator-summary",
+        ):
+            with self.subTest(target=target):
+                self.assertIn(
+                    "$(MAKE) release-auto-promotion-ready-invalidate",
+                    _target_block(text, target),
+                )
         self.assertIn(
             "ops.scripts.release_goal_run_identity_guard",
             auto_promotion_goal_identity_block,
@@ -1707,6 +1739,15 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn('--goal-run-id-origin "$(origin GOAL_RUN_ID)"', auto_promotion_goal_identity_block)
         self.assertIn("$(MAKE) release-auto-promotion-goal-run-id-guard", auto_promotion_preflight_block)
         self.assertIn("$(MAKE) release-auto-promotion-goal-run-id-guard", auto_promotion_preseal_block)
+        self.assertIn("release-auto-promotion-preflight-prerequisites", _target_block(text, ".PHONY"))
+        self.assertEqual(
+            _recipe_lines(text, "release-auto-promotion-preflight-prerequisites"),
+            [
+                "$(MAKE) refresh-generated-core",
+                "$(MAKE) external-report-action-matrix",
+                "$(MAKE) generated-artifact-index",
+            ],
+        )
         self.assertIn(
             "ops.scripts.release_auto_promotion_preflight",
             auto_promotion_preflight_block,
@@ -1724,6 +1765,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertEqual(
             _recipe_lines(text, "release-auto-promotion-preseal")[:10],
             [
+                "$(MAKE) release-auto-promotion-ready-invalidate",
                 "$(MAKE) release-auto-promotion-goal-run-id-guard",
                 "$(MAKE) release-run-ready-check",
                 "$(MAKE) bootstrap-preflight",
@@ -1733,7 +1775,6 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-auto-promotion-safe-cleanup",
                 "$(MAKE) learning-readiness-signoff-revalidation",
                 '$(MAKE) release-evidence-cohort-preseal-refresh RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"',
-                "$(MAKE) release-closeout-summary-report",
             ],
         )
         _assert_recipe_contains_tokens(
@@ -1763,14 +1804,14 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertEqual(
             _recipe_lines(text, "release-auto-promotion-preflight")[:8],
             [
+                "$(MAKE) release-auto-promotion-ready-invalidate",
                 "$(MAKE) release-auto-promotion-goal-run-id-guard",
+                "$(MAKE) release-auto-promotion-preflight-prerequisites",
                 "$(MAKE) release-smoke-fast-refresh-check",
                 "$(MAKE) test-execution-summary-report-contract",
                 "$(MAKE) artifact-freshness-refresh-check",
                 "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
                 "$(MAKE) learning-readiness-signoff-revalidation",
-                "$(MAKE) remediation-backlog",
-                "$(MAKE) auto-improve-readiness-report-body",
             ],
         )
         self.assertIn(
@@ -4103,6 +4144,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "ops.scripts.canonical_artifact_promote",
                 "--candidate \"$(GOAL_RUNTIME_CLOSEOUT_SCRIPT_OUTPUT_SURFACES_OUT)\"",
                 "--out \"$(SCRIPT_OUTPUT_SURFACES_OUT)\"",
+                "--preserve-existing-on-semantic-match",
             ),
         )
         _assert_recipe_contains_tokens(

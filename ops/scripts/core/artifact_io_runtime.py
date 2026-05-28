@@ -12,6 +12,16 @@ from typing import Any
 from .output_runtime import display_path, resolve_repo_output_path, write_output_text
 from .schema_runtime import load_schema_with_vault_override, validate_or_raise
 
+SEMANTIC_NOOP_ENVELOPE_FIELDS = frozenset(
+    {
+        "generated_at",
+        "source_revision",
+        "source_tree_fingerprint",
+        "input_fingerprints",
+        "currentness",
+    }
+)
+
 
 @dataclass(frozen=True)
 class SchemaBackedReportWriteRequest:
@@ -319,6 +329,8 @@ def promote_schema_validated_json(
     expected_producer: str | None = None,
     context: str,
     trailing_newline: bool = True,
+    preserve_existing_on_semantic_match: bool = False,
+    semantic_ignore_fields: frozenset[str] = SEMANTIC_NOOP_ENVELOPE_FIELDS,
 ) -> Path:
     payload = read_json_object(candidate_path, context=candidate_path.as_posix())
     resolved_schema_path = schema_path_from_payload(payload, override=schema_path)
@@ -333,6 +345,23 @@ def promote_schema_validated_json(
             f"expected {expected_producer!r}"
         )
     schema = load_schema_with_vault_override(vault, resolved_schema_path)
+    validate_or_raise(payload, schema, context=context, path="$")
+    if preserve_existing_on_semantic_match and destination_path.is_file():
+        try:
+            existing_payload = read_json_object(destination_path, context=destination_path.as_posix())
+            validate_or_raise(
+                existing_payload,
+                schema,
+                context=f"existing artifact validation failed for {destination_path.as_posix()}",
+                path="$",
+            )
+        except (OSError, json.JSONDecodeError, ValueError):
+            existing_payload = {}
+        if _semantic_payload(payload, semantic_ignore_fields) == _semantic_payload(
+            existing_payload,
+            semantic_ignore_fields,
+        ):
+            return destination_path
     return write_schema_validated_json(
         destination_path,
         payload,
@@ -340,6 +369,10 @@ def promote_schema_validated_json(
         context=context,
         trailing_newline=trailing_newline,
     )
+
+
+def _semantic_payload(payload: dict[str, Any], ignored_fields: frozenset[str]) -> dict[str, Any]:
+    return {key: value for key, value in payload.items() if key not in ignored_fields}
 
 
 def write_vault_schema_validated_json(
