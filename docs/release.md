@@ -74,8 +74,10 @@ surface comparison; this document owns release evidence and staged authority.
   same-fingerprint cohort, remediation, learning, and auto-improve diagnostics
   after run-ready and before sealing. It refreshes cheap cohort inputs such as
   bootstrap, registry, fast smoke, generated index, artifact freshness, and
-  external report references through the safe cleanup
-  lane, but it only checks run-ready's full release-smoke and full-suite
+  external report references through the safe cleanup lane, then refreshes
+  auto-improve readiness after those sealed-batch inputs settle so strict
+  cohort checks do not read stale release-gate blockers. It only checks
+  run-ready's full release-smoke and full-suite
   evidence for currentness instead of rerunning them. It removes any older final
   ready manifest before writing new preseal evidence.
 - `make release-auto-promotion-operator-summary`: manual fallback to refresh the

@@ -314,6 +314,9 @@ release-auto-promotion-preseal:
 	$(MAKE) release-smoke-fast-refresh-check
 	$(MAKE) release-auto-promotion-safe-cleanup
 	$(MAKE) learning-readiness-signoff-revalidation
+	$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1
+	$(MAKE) remediation-backlog
+	$(MAKE) auto-improve-readiness-report-body
 	$(MAKE) release-evidence-cohort-preseal-refresh RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"
 	$(MAKE) release-closeout-summary-report
 	$(MAKE) artifact-freshness-refresh-check
@@ -322,9 +325,6 @@ release-auto-promotion-preseal:
 	$(MAKE) release-evidence-dashboard-report
 	$(MAKE) release-lane-summary
 	$(MAKE) release-clean-blocker-ledger
-	$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1
-	$(MAKE) remediation-backlog
-	$(MAKE) auto-improve-readiness-report-body
 	$(MAKE) tmp-json-clean
 	$(PYTHON) -m ops.scripts.release_auto_promotion_preflight --vault "$(VAULT)" --phase preseal --out "$(RELEASE_AUTO_PROMOTION_PRESEAL_OUT)" --auto-improve-readiness "$(AUTO_IMPROVE_READINESS_OUT)" --remediation-backlog "$(REMEDIATION_BACKLOG_OUT)" --learning-revalidation "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT)" --closeout-summary "$(RELEASE_CLOSEOUT_SUMMARY_OUT)" --evidence-cohort "$(RELEASE_EVIDENCE_COHORT_OUT)" --goal-run-identity "$(RELEASE_AUTO_PROMOTION_GOAL_RUN_IDENTITY_OUT)"
 

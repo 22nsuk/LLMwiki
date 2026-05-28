@@ -1763,7 +1763,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             auto_promotion_preflight_block,
         )
         self.assertEqual(
-            _recipe_lines(text, "release-auto-promotion-preseal")[:10],
+            _recipe_lines(text, "release-auto-promotion-preseal")[:13],
             [
                 "$(MAKE) release-auto-promotion-ready-invalidate",
                 "$(MAKE) release-auto-promotion-goal-run-id-guard",
@@ -1774,6 +1774,9 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) release-smoke-fast-refresh-check",
                 "$(MAKE) release-auto-promotion-safe-cleanup",
                 "$(MAKE) learning-readiness-signoff-revalidation",
+                "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1",
+                "$(MAKE) remediation-backlog",
+                "$(MAKE) auto-improve-readiness-report-body",
                 '$(MAKE) release-evidence-cohort-preseal-refresh RELEASE_EVIDENCE_COHORT_ZIP_METADATA="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"',
             ],
         )
@@ -1871,14 +1874,18 @@ class MakefileStaticGateTests(unittest.TestCase):
             ),
         )
         self.assertLess(
-            preseal_recipe.index("$(MAKE) release-clean-blocker-ledger"),
-            preseal_recipe.index("$(MAKE) remediation-backlog"),
-        )
-        self.assertLess(
             preseal_recipe.index(
                 "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1"
             ),
             preseal_recipe.index("$(MAKE) remediation-backlog"),
+        )
+        self.assertLess(
+            preseal_recipe.index("$(MAKE) remediation-backlog"),
+            preseal_recipe.index(strict_cohort_line),
+        )
+        self.assertGreater(
+            preseal_recipe.index("$(MAKE) release-clean-blocker-ledger"),
+            preseal_recipe.index(strict_cohort_line),
         )
         self.assertIn(
             '--remediation-backlog "$(REMEDIATION_BACKLOG_OUT)"',
