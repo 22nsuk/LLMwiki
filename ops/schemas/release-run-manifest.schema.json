@@ -19,6 +19,8 @@
     "encoding",
     "currentness",
     "status",
+    "release_authority_status",
+    "machine_release_allowed",
     "expected_source_tree_fingerprint",
     "final_source_tree_fingerprint",
     "git_commit",
@@ -42,7 +44,7 @@
       "type": "object",
       "additionalProperties": { "type": "string" }
     },
-    "schema_version": { "type": "integer", "const": 3 },
+    "schema_version": { "type": "integer", "const": 4 },
     "artifact_status": { "type": "string", "const": "current" },
     "retention_policy": { "type": "string", "const": "release_sidecar_authority" },
     "encoding": { "type": "string", "const": "utf-8" },
@@ -56,6 +58,8 @@
       }
     },
     "status": { "type": "string", "enum": ["pass", "fail"] },
+    "release_authority_status": { "type": "string" },
+    "machine_release_allowed": { "type": "boolean" },
     "expected_source_tree_fingerprint": { "type": "string", "minLength": 1 },
     "final_source_tree_fingerprint": { "type": "string", "minLength": 1 },
     "git_commit": { "type": "string" },

@@ -92,6 +92,23 @@ def _bool_value(value: Any) -> bool:
     return False
 
 
+def _run_manifest_authority_pass(payload: dict[str, Any]) -> bool:
+    authority_status = str(payload.get("release_authority_status", "")).strip()
+    if authority_status and authority_status != "unknown":
+        machine_allowed = payload.get("machine_release_allowed")
+        if isinstance(machine_allowed, bool):
+            return authority_status == "clean_pass" and machine_allowed
+        return authority_status == "clean_pass"
+    return str(payload.get("status", "")).strip() == "pass"
+
+
+def _sealed_manifest_authority_pass(payload: dict[str, Any]) -> bool:
+    sealed_status = str(payload.get("sealed_release_status", "")).strip()
+    if sealed_status and sealed_status != "unknown":
+        return sealed_status == "sealed_clean_pass"
+    return str(payload.get("status", "")).strip() == "pass"
+
+
 def _load_report(vault: Path, path_value: str) -> tuple[dict[str, Any], dict[str, Any]]:
     path = _resolve(vault, path_value)
     payload, diagnostics = load_optional_json_object_with_diagnostics(path)
@@ -385,6 +402,22 @@ def _manifest_evidence_requirements(
     )
     for input_key, source, artifact_kind, next_step in manifest_specs:
         identity = inputs[input_key]
+        payload = payloads[input_key]
+        if input_key == "run_manifest":
+            observed_status = (
+                f"release_authority_status={payload.get('release_authority_status', 'unknown')};"
+                f"machine_release_allowed={payload.get('machine_release_allowed', False)}"
+            )
+            expected_status = "release_authority_status=clean_pass; machine_release_allowed=true"
+            field_path = "$.release_authority_status|$.machine_release_allowed"
+        elif input_key == "sealed_run_manifest":
+            observed_status = f"sealed_release_status={payload.get('sealed_release_status', 'unknown')}"
+            expected_status = "sealed_release_status=sealed_clean_pass"
+            field_path = "$.sealed_release_status"
+        else:
+            observed_status = payload.get("status", "")
+            expected_status = "pass"
+            field_path = "$.status"
         specs.extend(
             [
                 RequirementSpec(
@@ -426,9 +459,9 @@ def _manifest_evidence_requirements(
                     if input_key != "operator_summary"
                     else "operator_attention_open",
                     source,
-                    "$.status",
-                    payloads[input_key].get("status", ""),
-                    "pass",
+                    field_path,
+                    observed_status,
+                    expected_status,
                     f"{source.replace('_', ' ').capitalize()} is not passing.",
                     next_step,
                 ),
@@ -722,7 +755,7 @@ def _ready_checks(
             inputs["run_manifest"]["source_tree_fingerprint"] == fingerprint
             and inputs["run_manifest"]["source_revision"] == revision
         ),
-        "run_manifest_pass": str(run_payload.get("status", "")).strip() == "pass",
+        "run_manifest_pass": _run_manifest_authority_pass(run_payload),
         "sealed_run_manifest_load_ok": inputs["sealed_run_manifest"]["load_status"] == "ok",
         "sealed_run_manifest_artifact_kind_ok": (
             inputs["sealed_run_manifest"]["artifact_kind"] == "release_sealed_run_manifest"
@@ -731,7 +764,7 @@ def _ready_checks(
             inputs["sealed_run_manifest"]["source_tree_fingerprint"] == fingerprint
             and inputs["sealed_run_manifest"]["source_revision"] == revision
         ),
-        "sealed_run_manifest_pass": str(sealed_payload.get("status", "")).strip() == "pass",
+        "sealed_run_manifest_pass": _sealed_manifest_authority_pass(sealed_payload),
         "operator_summary_load_ok": inputs["operator_summary"]["load_status"] == "ok",
         "operator_summary_artifact_kind_ok": inputs["operator_summary"]["artifact_kind"] == "operator_release_summary",
         "operator_summary_current": str(inputs["operator_summary"]["source_tree_fingerprint"]).strip()

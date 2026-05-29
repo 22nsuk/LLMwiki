@@ -12,6 +12,9 @@ from ops.scripts.artifact_io_runtime import (
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
+from ops.scripts.core.release_authority_state_runtime import (
+    release_status_v2_view_with_readiness_fallback,
+)
 from ops.scripts.output_runtime import display_path
 from ops.scripts.release.release_run_manifest import (
     DEFAULT_DISTRIBUTION_ZIP,
@@ -72,6 +75,17 @@ def _unique_failures(failures: list[str]) -> list[str]:
     return result
 
 
+def _sealed_authority_axes(vault: Path, batch_manifest: str) -> dict[str, Any]:
+    path = _resolve(vault, batch_manifest)
+    payload, diagnostics = load_optional_json_object_with_diagnostics(path)
+    if diagnostics.get("status") != "ok" or not isinstance(payload, dict):
+        return {"sealed_release_status": "unknown"}
+    status_view = release_status_v2_view_with_readiness_fallback(payload)
+    return {
+        "sealed_release_status": str(status_view.get("sealed_release_status", "unknown")).strip(),
+    }
+
+
 def _run_manifest_expected_zip_sha(run_manifest: dict[str, Any]) -> str:
     distribution_zip = run_manifest.get("distribution_zip")
     if isinstance(distribution_zip, dict):
@@ -118,6 +132,7 @@ def build_manifest(
         "post_seal_attestation": _json_identity(vault, post_seal_attestation),
         "sealed_rehearsal_check": _json_identity(vault, sealed_rehearsal_check),
     }
+    sealed_axes = _sealed_authority_axes(vault, batch_manifest)
     run_fingerprint = _run_manifest_fingerprint(run_payload)
     run_zip_sha = _run_manifest_expected_zip_sha(run_payload)
     checks = {
@@ -159,12 +174,13 @@ def build_manifest(
         "source_revision": commit,
         "source_tree_fingerprint": fingerprint,
         "input_fingerprints": input_fingerprints,
-        "schema_version": 1,
+        "schema_version": 2,
         "artifact_status": "current",
         "retention_policy": "release_sidecar_authority",
         "encoding": "utf-8",
         "currentness": {"status": "current", "checked_at": generated_at},
         "status": status,
+        "sealed_release_status": sealed_axes["sealed_release_status"],
         "sealed_package_authority": "sealed" if status == "pass" else "blocked",
         "run_manifest": run_identity,
         "source_zip": source_zip_identity,

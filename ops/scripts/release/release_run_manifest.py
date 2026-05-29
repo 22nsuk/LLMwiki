@@ -17,6 +17,9 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
+    from ops.scripts.core.release_authority_state_runtime import (
+        release_status_v2_view_with_readiness_fallback,
+    )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.source_revision_runtime import resolve_source_revision
@@ -28,6 +31,9 @@ else:
         SchemaBackedReportWriteRequest,
         load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
+    )
+    from ops.scripts.core.release_authority_state_runtime import (
+        release_status_v2_view_with_readiness_fallback,
     )
     from ops.scripts.output_runtime import display_path
     from ops.scripts.runtime_context import RuntimeContext
@@ -43,6 +49,7 @@ PRODUCER = "ops.scripts.release_run_manifest"
 SOURCE_COMMAND = "python -m ops.scripts.release_run_manifest --vault ."
 DEFAULT_DISTRIBUTION_ZIP = "build/release/LLMwiki-source.zip"
 DEFAULT_SOURCE_PACKAGE_SMOKE = "build/source-package-smoke/source-package-smoke.json"
+DEFAULT_CLOSEOUT_SUMMARY = "ops/reports/release-closeout-summary.json"
 
 
 def _run_git(vault: Path, *args: str) -> str:
@@ -139,6 +146,21 @@ def _unique_failures(failures: list[str]) -> list[str]:
     return result
 
 
+def _closeout_authority_axes(vault: Path, closeout_summary: str) -> dict[str, Any]:
+    path = _resolve(vault, closeout_summary)
+    payload, diagnostics = load_optional_json_object_with_diagnostics(path)
+    if diagnostics.get("status") != "ok" or not isinstance(payload, dict):
+        return {
+            "release_authority_status": "unknown",
+            "machine_release_allowed": False,
+        }
+    status_view = release_status_v2_view_with_readiness_fallback(payload)
+    return {
+        "release_authority_status": str(status_view.get("release_authority_status", "unknown")).strip(),
+        "machine_release_allowed": bool(payload.get("machine_release_allowed", False)),
+    }
+
+
 def build_manifest(
     vault: Path,
     *,
@@ -146,6 +168,7 @@ def build_manifest(
     steps: list[dict[str, Any]] | None = None,
     distribution_zip: str = DEFAULT_DISTRIBUTION_ZIP,
     source_package_smoke: str = DEFAULT_SOURCE_PACKAGE_SMOKE,
+    closeout_summary: str = DEFAULT_CLOSEOUT_SUMMARY,
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
@@ -158,6 +181,7 @@ def build_manifest(
     step_rows = list(steps or [])
     zip_identity = _file_identity(vault, distribution_zip)
     smoke = _source_package_smoke(vault, source_package_smoke)
+    authority_axes = _closeout_authority_axes(vault, closeout_summary)
     failures: list[str] = []
     if expected_source_tree_fingerprint != final_fingerprint:
         failures.append("source_tree_fingerprint_drift")
@@ -187,12 +211,14 @@ def build_manifest(
             "distribution_zip": zip_identity["sha256"],
             "source_package_smoke": smoke["sha256"],
         },
-        "schema_version": 3,
+        "schema_version": 4,
         "artifact_status": "current",
         "retention_policy": "release_sidecar_authority",
         "encoding": "utf-8",
         "currentness": {"status": "current", "checked_at": generated_at},
         "status": status,
+        "release_authority_status": authority_axes["release_authority_status"],
+        "machine_release_allowed": authority_axes["machine_release_allowed"],
         "expected_source_tree_fingerprint": expected_source_tree_fingerprint,
         "final_source_tree_fingerprint": final_fingerprint,
         "git_commit": commit,
@@ -247,6 +273,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--distribution-zip", default=DEFAULT_DISTRIBUTION_ZIP)
     parser.add_argument("--source-package-smoke", default=DEFAULT_SOURCE_PACKAGE_SMOKE)
+    parser.add_argument("--closeout-summary", default=DEFAULT_CLOSEOUT_SUMMARY)
     parser.add_argument("--print-distribution-zip", action="store_true")
     return parser.parse_args(argv)
 
@@ -276,6 +303,7 @@ def main(argv: list[str] | None = None) -> int:
         steps=steps,
         distribution_zip=args.distribution_zip,
         source_package_smoke=args.source_package_smoke,
+        closeout_summary=args.closeout_summary,
     )
     path = write_manifest(vault, manifest, args.out)
     print(display_path(vault, path))

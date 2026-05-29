@@ -235,6 +235,14 @@ Completion is proven only by
   the same selected run id
 - source revision and source tree fingerprint matching the intended commit
 
+Release authority is decided by v2 status axes, not the legacy top-level
+`status` field. Consumers must read `release_authority_status`,
+`machine_release_allowed`, and `sealed_release_status` as the primary
+authority. The top-level `status=pass` remains a strict clean plus sealed
+compatibility alias for old readers only; `status=pass` without
+`release_authority_status=clean_pass` and `machine_release_allowed=true`
+means `conditional_pass` with machine release blocked.
+
 If a lower stage fails, fix the owning lower-stage evidence first. Stage 3 should
 not compensate for stale run-ready evidence, stale sealed evidence, mixed
 fingerprints, accepted risk, gate attention, or learning blockers.
