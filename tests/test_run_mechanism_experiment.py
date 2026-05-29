@@ -9,11 +9,11 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
-from ops.scripts.run_mechanism_experiment_runtime import (
-    run_mechanism_experiment,
-)
 from ops.scripts.post_mutation_generated_artifact_convergence_runtime import (
     converge_post_mutation_generated_artifacts,
+)
+from ops.scripts.run_mechanism_experiment_runtime import (
+    run_mechanism_experiment,
 )
 from ops.scripts.runtime_context import RuntimeContext
 

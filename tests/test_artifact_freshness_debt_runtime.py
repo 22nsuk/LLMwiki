@@ -16,11 +16,13 @@ from ops.scripts.artifact_freshness_debt_runtime import (
 
 class ArtifactFreshnessDebtRuntimeTests(unittest.TestCase):
     def test_run_local_schema_validation_failed_stays_advisory_contract_debt(self) -> None:
+        issues: list[str] = ["schema_validation_failed"]
+        stable_contract_issues: list[str] = ["schema_validation_failed"]
         record = {
             "path": "runs/run-1/repo-health-artifact-freshness-report-check.json",
             "owner_surface": "runs",
-            "issues": ["schema_validation_failed"],
-            "stable_contract_issues": ["schema_validation_failed"],
+            "issues": issues,
+            "stable_contract_issues": stable_contract_issues,
             "mtime_sensitive_issues": [],
             "safe_to_backfill": False,
             "mtime_sensitive": False,
@@ -30,8 +32,8 @@ class ArtifactFreshnessDebtRuntimeTests(unittest.TestCase):
         self.assertEqual(
             contract_issue_class(
                 rel_path=str(record["path"]),
-                issues=list(record["issues"]),
-                stable_contract_issues=list(record["stable_contract_issues"]),
+                issues=list(issues),
+                stable_contract_issues=list(stable_contract_issues),
                 mtime_sensitive_issues=[],
                 schema_validation_status="historical_schema_drift",
             ),
@@ -40,8 +42,8 @@ class ArtifactFreshnessDebtRuntimeTests(unittest.TestCase):
         self.assertEqual(
             artifact_record_gate_effect(
                 rel_path=str(record["path"]),
-                issues=list(record["issues"]),
-                stable_contract_issues=list(record["stable_contract_issues"]),
+                issues=list(issues),
+                stable_contract_issues=list(stable_contract_issues),
                 mtime_sensitive_issues=[],
             ),
             "advisory",

@@ -9,7 +9,10 @@ from typing import Any
 
 from ops.scripts.path_runtime import normalize_repo_path_text
 from ops.scripts.proposal_scope_runtime import dedupe_preserve_order
-from ops.scripts.schema_runtime import load_schema_with_vault_override, validate_with_schema
+from ops.scripts.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_with_schema,
+)
 from ops.scripts.source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 from .auto_improve_next_run_decision_runtime import (
@@ -21,7 +24,9 @@ from .auto_improve_next_run_decision_runtime import (
     next_run_failure_repair_proposal_id,
 )
 from .current_target_path_runtime import current_repo_target_paths
-from .noop_repair_classifier_runtime import repair_decision_ended_as_noop_mutation_failure
+from .noop_repair_classifier_runtime import (
+    repair_decision_ended_as_noop_mutation_failure,
+)
 
 ARTIFACT_FRESHNESS_FAILURE_TAXONOMY_PREFIX = "artifact_freshness_"
 RAW_REGISTRY_REPAIR_EVIDENCE_MARKERS = (

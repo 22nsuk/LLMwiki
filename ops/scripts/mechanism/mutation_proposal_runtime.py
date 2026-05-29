@@ -44,15 +44,15 @@ from .mechanism_candidate_registry_runtime import (
     MECHANISM_CANDIDATE_REGISTRY,
     proposal_fields_for_candidate,
 )
-from .noop_repair_classifier_runtime import (
-    run_has_noop_mutation_failure,
-)
 from .next_run_repair_queue_runtime import (
     SOURCE_SESSION_REPORT_DECISION_KEY,
     NextRunRepairProposalDependencies,
     next_run_decision_queue_diagnostics,
     next_run_repair_proposal_models,
     safe_repo_relative_path,
+)
+from .noop_repair_classifier_runtime import (
+    run_has_noop_mutation_failure,
 )
 
 MECHANISM_REVIEW_SCHEMA = MECHANISM_REVIEW_SCHEMA_PATH

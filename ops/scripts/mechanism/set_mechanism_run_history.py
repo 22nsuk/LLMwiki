@@ -13,8 +13,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         atomic_multi_write,
         build_atomic_text_updates,
     )
+    from ops.scripts.observability_artifacts_runtime import (
+        write_run_artifact_fingerprint,
+    )
     from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.observability_artifacts_runtime import write_run_artifact_fingerprint
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import (
         PROMOTION_REPORT_SCHEMA_PATH,
@@ -27,8 +29,10 @@ else:
         atomic_multi_write,
         build_atomic_text_updates,
     )
+    from ops.scripts.observability_artifacts_runtime import (
+        write_run_artifact_fingerprint,
+    )
     from ops.scripts.policy_runtime import load_policy
-    from ops.scripts.observability_artifacts_runtime import write_run_artifact_fingerprint
     from ops.scripts.runtime_context import RuntimeContext
     from ops.scripts.schema_constants_runtime import (
         PROMOTION_REPORT_SCHEMA_PATH,

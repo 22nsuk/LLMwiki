@@ -24,8 +24,10 @@ from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.structural_complexity_budget_runtime import (
     DEFAULT_TARGET_PROFILES,
-    build_report as build_structural_complexity_budget_report,
     touched_target_profiles,
+)
+from ops.scripts.structural_complexity_budget_runtime import (
+    build_report as build_structural_complexity_budget_report,
 )
 
 DEFAULT_OUT = "tmp/goal-runtime-run-admission.json"

@@ -12,8 +12,8 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.learning.learning_readiness_signoff import (  # noqa: PLC0415
         ARTIFACT_KIND,
         SIGNOFF_REPORT_REL_PATH,
-        LearningReadinessSignoffRequest,
         SUPPORTED_BLOCKER_ID,
+        LearningReadinessSignoffRequest,
         build_signoff_report,
         write_signoff_report,
     )
@@ -26,8 +26,8 @@ else:
     from .learning_readiness_signoff import (
         ARTIFACT_KIND,
         SIGNOFF_REPORT_REL_PATH,
-        LearningReadinessSignoffRequest,
         SUPPORTED_BLOCKER_ID,
+        LearningReadinessSignoffRequest,
         build_signoff_report,
         write_signoff_report,
     )

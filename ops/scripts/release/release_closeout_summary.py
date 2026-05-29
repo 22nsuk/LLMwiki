@@ -22,6 +22,7 @@ from ops.scripts.core.release_currentness_state_runtime import (
     components_match_current_source_tree,
     currentness_field,
 )
+from ops.scripts.core.release_risk_state_runtime import release_risk_identity
 from ops.scripts.gate_effect_vocabulary import (
     GATE_EFFECT_ADVISORY,
     GATE_EFFECT_BLOCKS_EXECUTION,
@@ -29,7 +30,6 @@ from ops.scripts.gate_effect_vocabulary import (
     GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
     canonical_gate_effect,
 )
-from ops.scripts.core.release_risk_state_runtime import release_risk_identity
 from ops.scripts.learning_readiness_vocabulary import (
     LEARNING_REVIEW_REQUIRED_BLOCKER_ID,
     LEARNING_STATUS_LIKELY,

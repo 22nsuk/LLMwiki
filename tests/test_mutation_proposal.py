@@ -14,7 +14,9 @@ from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_runtime import load_schema, validate_with_schema
 
 from tests.cli_test_runtime import invoke_cli_main
-from tests.minimal_vault_runtime import seed_minimal_vault as seed_minimal_raw_registry_vault
+from tests.minimal_vault_runtime import (
+    seed_minimal_vault as seed_minimal_raw_registry_vault,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = REPO_ROOT / "ops" / "policies" / "wiki-maintainer-policy.yaml"
@@ -3474,7 +3476,9 @@ class MutationProposalTest(unittest.TestCase):
             seed_vault(vault)
             write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
 
-            from ops.scripts.raw_registry_export import build_current_raw_registry_export
+            from ops.scripts.raw_registry_export import (
+                build_current_raw_registry_export,
+            )
 
             export, destination = build_current_raw_registry_export(vault)
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -3555,7 +3559,9 @@ class MutationProposalTest(unittest.TestCase):
             seed_vault(vault)
             write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
 
-            from ops.scripts.raw_registry_export import build_current_raw_registry_export
+            from ops.scripts.raw_registry_export import (
+                build_current_raw_registry_export,
+            )
 
             export, destination = build_current_raw_registry_export(vault)
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -3638,7 +3644,9 @@ class MutationProposalTest(unittest.TestCase):
             seed_vault(vault)
             write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
 
-            from ops.scripts.raw_registry_export import build_current_raw_registry_export
+            from ops.scripts.raw_registry_export import (
+                build_current_raw_registry_export,
+            )
 
             export, destination = build_current_raw_registry_export(vault)
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -3714,7 +3722,9 @@ class MutationProposalTest(unittest.TestCase):
             seed_vault(vault)
             write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
 
-            from ops.scripts.raw_registry_export import build_current_raw_registry_export
+            from ops.scripts.raw_registry_export import (
+                build_current_raw_registry_export,
+            )
 
             export, destination = build_current_raw_registry_export(vault)
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -3780,7 +3790,9 @@ class MutationProposalTest(unittest.TestCase):
             seed_vault(vault)
             write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
 
-            from ops.scripts.raw_registry_export import build_current_raw_registry_export
+            from ops.scripts.raw_registry_export import (
+                build_current_raw_registry_export,
+            )
 
             export, destination = build_current_raw_registry_export(vault)
             export["entries"][0]["content_sha256"] = "0" * 64
@@ -3852,7 +3864,9 @@ class MutationProposalTest(unittest.TestCase):
             seed_vault(vault)
             write_json(vault / "ops" / "reports" / "mechanism-review-candidates.json", mechanism_review_report())
 
-            from ops.scripts.raw_registry_export import build_current_raw_registry_export
+            from ops.scripts.raw_registry_export import (
+                build_current_raw_registry_export,
+            )
 
             export, destination = build_current_raw_registry_export(vault)
             export["entries"][0]["content_sha256"] = "0" * 64

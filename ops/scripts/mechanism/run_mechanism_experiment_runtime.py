@@ -31,6 +31,7 @@ from .mechanism_run_common_runtime import (
     RunMechanismExperimentWriteError,
     WorkspaceApplyResult,
 )
+from .mechanism_run_ledger_runtime import append_ledger_event
 from .mechanism_run_promotion_runtime import (
     _build_completed_run_result,
     _build_promotion_report,
@@ -38,7 +39,6 @@ from .mechanism_run_promotion_runtime import (
     _finalize_step,
     _record_promotion_step,
 )
-from .mechanism_run_ledger_runtime import append_ledger_event
 from .mechanism_run_scaffold_resolution_runtime import _resolve_experiment_inputs
 from .mechanism_run_scaffold_runtime import (
     _build_scaffold_only_result,

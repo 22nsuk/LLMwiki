@@ -19,11 +19,11 @@ from .auto_improve_iteration_telemetry_runtime import (
     iteration_same_eval_contract,
     iteration_same_eval_reason,
 )
-from .failure_taxonomy_runtime import failure_taxonomy_from_iteration
 from .auto_improve_next_run_decision_runtime import build_next_run_decision
 from .auto_improve_outcome_runtime import role_report_path
 from .auto_improve_route_scaffold_runtime import RouteScaffoldPhaseResult
 from .auto_improve_session_runtime import load_optional_json
+from .failure_taxonomy_runtime import failure_taxonomy_from_iteration
 
 ITERATION_TELEMETRY_WRITTEN_FIELDS = frozenset(
     {

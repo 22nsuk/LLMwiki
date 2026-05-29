@@ -35,6 +35,7 @@ else:
     )
     from ops.scripts.output_runtime import display_path, write_output_text
     from ops.scripts.policy_runtime import load_policy
+    from ops.scripts.registry_exceptions_runtime import RawRegistryRuntimeError
     from ops.scripts.schema_constants_runtime import RAW_REGISTRY_EXPORT_SCHEMA_PATH
 
     from .raw_registry_runtime import (
@@ -45,7 +46,6 @@ else:
         registry_entry_page_paths,
         registry_summary_page_path,
     )
-    from ops.scripts.registry_exceptions_runtime import RawRegistryRuntimeError
 
 DEFAULT_POLICY = "ops/policies/wiki-maintainer-policy.yaml"
 

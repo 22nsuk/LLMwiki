@@ -112,7 +112,7 @@ class ExecutorResultPayload(TypedDict):
 class ExecutorDiagnosticsPayload(TypedDict):
     routing_report: str
     scope_freeze: str
-    dependency_preflight: "ExecutorDependencyPreflightPayload"
+    dependency_preflight: ExecutorDependencyPreflightPayload
     notes: list[str]
 
 

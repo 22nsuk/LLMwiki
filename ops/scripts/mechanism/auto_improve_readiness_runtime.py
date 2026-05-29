@@ -8,17 +8,17 @@ from ops.scripts.artifact_freshness_runtime import (
     build_canonical_report_envelope,
     canonical_report_loading_issue,
 )
-from ops.scripts.gate_effect_vocabulary import (
-    GATE_EFFECT_BLOCKS_EXECUTION,
-    GATE_EFFECT_BLOCKS_PROMOTION,
-    GATE_EFFECT_NONE,
-    GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
-)
 from ops.scripts.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object,
     read_json_object,
     write_schema_backed_report,
+)
+from ops.scripts.gate_effect_vocabulary import (
+    GATE_EFFECT_BLOCKS_EXECUTION,
+    GATE_EFFECT_BLOCKS_PROMOTION,
+    GATE_EFFECT_NONE,
+    GATE_EFFECT_OPERATOR_REVIEW_REQUIRED,
 )
 from ops.scripts.learning_readiness_signoff_state import (
     SIGNOFF_REPORT_REL_PATH,

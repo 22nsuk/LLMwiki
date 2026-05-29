@@ -6,7 +6,6 @@ import unittest
 from pathlib import Path
 
 import pytest
-
 from ops.scripts.generated_artifact_retention_clean import build_report
 
 pytestmark = pytest.mark.report_contract

@@ -12,10 +12,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TextIO
 
-from .artifact_io_runtime import (
-    SchemaBackedReportWriteRequest,
-    write_schema_backed_report,
-)
 from .artifact_freshness_debt_runtime import (
     MTIME_SENSITIVE_ISSUES,
     OPERATIONAL_ATTENTION_ISSUES,
@@ -36,6 +32,10 @@ from .artifact_freshness_debt_runtime import (
     report_next_action,
     top_debt,
     top_debt_files,
+)
+from .artifact_io_runtime import (
+    SchemaBackedReportWriteRequest,
+    write_schema_backed_report,
 )
 from .output_runtime import display_path
 from .policy_runtime import load_policy, report_path
