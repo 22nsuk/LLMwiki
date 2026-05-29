@@ -176,6 +176,20 @@ def classify_interpreter_path(vault: Path, executable: str) -> str:
     return "external_absolute"
 
 
+def semantic_command(command: list[str]) -> list[str]:
+    if not command:
+        return []
+    idx = 0
+    while idx < len(command):
+        token = command[idx]
+        if token == "-m" and idx + 1 < len(command):
+            return command[idx:]
+        if "pytest" in Path(token).name:
+            return command[idx:]
+        idx += 1
+    return command[1:] if len(command) > 1 else command
+
+
 def _pytest_version() -> str:
     try:
         return importlib.metadata.version("pytest")
@@ -249,6 +263,19 @@ def _tail_text(text: str, max_lines: int = TAIL_LINE_COUNT) -> str:
 
 def _display_command(vault: Path, command: list[str]) -> str:
     return shlex.join([sanitize_report_text(vault, item) for item in command])
+
+
+def _semantic_command_text(vault: Path, command: list[str]) -> str:
+    return shlex.join([sanitize_report_text(vault, item) for item in semantic_command(command)])
+
+
+def _toolchain_fingerprint(execution_environment: dict[str, Any]) -> str:
+    python_version = str(execution_environment.get("python_version", "")).strip()
+    pytest_version = str(execution_environment.get("pytest_version", "")).strip()
+    plugin_policy = execution_environment.get("plugin_autoload_policy", {})
+    autoload_disabled = bool(plugin_policy.get("autoload_disabled"))
+    raw = f"python={python_version}|pytest={pytest_version}|plugin_autoload_disabled={autoload_disabled}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
 
 def parse_pytest_counts(*streams: str) -> dict[str, int]:
@@ -1284,6 +1311,8 @@ def _render_test_execution_summary(inputs: TestExecutionRenderInputs) -> dict[st
         **observations.coverage,
         "status": observations.status,
         "command": _display_command(vault, request.command),
+        "semantic_command": _semantic_command_text(vault, request.command),
+        "toolchain_fingerprint": _toolchain_fingerprint(observations.execution_environment),
         "returncode": request.result.returncode,
         "timed_out": request.result.timed_out,
         "timeout_seconds": request.result.timeout_seconds,
@@ -1469,6 +1498,16 @@ def reusable_summary_is_current(
     if not isinstance(existing_lifecycle, dict):
         existing_lifecycle = {}
     current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
+    current_execution_environment = build_execution_environment(vault, command)
+    current_toolchain_fingerprint = _toolchain_fingerprint(current_execution_environment)
+    existing_execution_environment = existing.get("execution_environment")
+    if not isinstance(existing_execution_environment, dict):
+        existing_execution_environment = {}
+    existing_toolchain_fingerprint = _toolchain_fingerprint(existing_execution_environment)
+    existing_semantic_command = str(existing.get("semantic_command") or "").strip()
+    if not existing_semantic_command:
+        existing_semantic_command = str(existing.get("command") or "").strip()
+    current_semantic_command = _semantic_command_text(vault, command)
     return (
         existing.get("artifact_kind") == "test_execution_summary"
         and existing.get("status") == "pass"
@@ -1476,7 +1515,8 @@ def reusable_summary_is_current(
         and existing_lifecycle.get("status") == "pass"
         and current_lifecycle.get("status") == "pass"
         and existing.get("suite") == suite
-        and existing.get("command") == _display_command(vault, command)
+        and existing_semantic_command == current_semantic_command
+        and existing_toolchain_fingerprint == current_toolchain_fingerprint
         and _test_target_fingerprints_match(
             existing.get("test_target_fingerprints"),
             current_target_fingerprints,
@@ -1882,6 +1922,8 @@ def build_aggregate_report(
         **coverage,
         "status": status,
         "command": command,
+        "semantic_command": command,
+        "toolchain_fingerprint": _toolchain_fingerprint(execution_environment),
         "returncode": 0 if status == "pass" else 1,
         "timed_out": any(bool(shard.get("timed_out")) for shard in shards),
         "timeout_seconds": max([int(shard.get("timeout_seconds", 1) or 1) for shard in shards] or [1]),

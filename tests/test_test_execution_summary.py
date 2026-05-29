@@ -24,6 +24,7 @@ from ops.scripts.test_execution_summary import (
     parse_pytest_counts,
     resolve_pytest_target_paths,
     reusable_summary_is_current,
+    semantic_command,
 )
 from ops.scripts.test_execution_summary import (
     main as summary_main,
@@ -293,6 +294,30 @@ class TestExecutionSummaryTest(unittest.TestCase):
                 "repo_virtualenv",
             )
             self.assertEqual(classify_interpreter_path(vault, "/opt/venv/bin/python"), "external_virtualenv")
+
+    def test_semantic_command_strips_interpreter_prefix(self) -> None:
+        self.assertEqual(
+            semantic_command(["python", "-m", "pytest", "tests/test_sample.py"]),
+            ["-m", "pytest", "tests/test_sample.py"],
+        )
+        self.assertEqual(
+            semantic_command([".venv/bin/python", "-m", "pytest", "-q"]),
+            ["-m", "pytest", "-q"],
+        )
+        self.assertEqual(
+            semantic_command(["/opt/venv/bin/python3", "-m", "pytest"]),
+            ["-m", "pytest"],
+        )
+        self.assertEqual(
+            semantic_command(["pytest", "tests/test_sample.py"]),
+            ["pytest", "tests/test_sample.py"],
+        )
+        self.assertEqual(
+            semantic_command(["python3", "pytest", "tests/test_sample.py"]),
+            ["pytest", "tests/test_sample.py"],
+        )
+        self.assertEqual(semantic_command([]), [])
+        self.assertEqual(semantic_command(["python"]), ["python"])
 
     def test_resolve_pytest_target_paths_expands_files_directories_and_node_ids(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

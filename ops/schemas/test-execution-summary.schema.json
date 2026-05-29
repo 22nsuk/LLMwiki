@@ -26,6 +26,8 @@
     "full_suite_evidence",
     "status",
     "command",
+    "semantic_command",
+    "toolchain_fingerprint",
     "returncode",
     "timed_out",
     "timeout_seconds",
@@ -191,6 +193,14 @@
       ]
     },
     "command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "semantic_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "toolchain_fingerprint": {
       "type": "string",
       "minLength": 1
     },
