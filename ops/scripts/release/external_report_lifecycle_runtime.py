@@ -2475,6 +2475,25 @@ IMPLEMENTED_ARTIFACT_ACTIONS = {
     ),
 }
 
+SPRINT_PRIORITIES: dict[str, str] = {
+    "source_package_distribution_binding": "P0",
+    "full_suite_evidence_currentness": "P0",
+    "promotion_truth_ladder": "P0",
+    "goal_execution_runtime_certificate": "P0",
+    "artifact_freshness_performance_observability": "P0",
+    "maintainability_hotspot_refactor_backlog": "P0",
+    "release_evidence_bundle_and_attestation": "P1",
+    "goal_contract_schema": "P1",
+    "codex_goal_adapter": "P1",
+    "codex_goal_prompt_generator": "P1",
+    "auto_improve_goal_contract_input": "P1",
+    "goal_run_status_audit_resume": "P1",
+    "goal_executor_backoff_observability": "P1",
+    "function_budget_proposal_adapter": "P1",
+    "supply_chain_external_verification": "P2",
+    "outcome_provenance_gate_policy": "P2",
+}
+
 
 def _collect_action_evidence(
     vault: Path, action: dict[str, Any]

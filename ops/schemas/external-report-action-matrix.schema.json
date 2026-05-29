@@ -75,7 +75,8 @@
         "unmatched_active_report_count",
         "reference_manifest_alignment_status",
         "reference_manifest_missing_active_report_count",
-        "reference_manifest_stale_reference_count"
+        "reference_manifest_stale_reference_count",
+        "sprint_backlog"
       ],
       "properties": {
         "active_report_count": { "type": "integer", "minimum": 0 },
@@ -91,7 +92,17 @@
           "enum": ["current", "drift", "missing_manifest", "unreadable_manifest"]
         },
         "reference_manifest_missing_active_report_count": { "type": "integer", "minimum": 0 },
-        "reference_manifest_stale_reference_count": { "type": "integer", "minimum": 0 }
+        "reference_manifest_stale_reference_count": { "type": "integer", "minimum": 0 },
+        "sprint_backlog": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["P0", "P1", "P2"],
+          "properties": {
+            "P0": { "type": "integer", "minimum": 0 },
+            "P1": { "type": "integer", "minimum": 0 },
+            "P2": { "type": "integer", "minimum": 0 }
+          }
+        }
       }
     },
     "reference_manifest_alignment": {
@@ -245,6 +256,7 @@
           "items": { "type": "string", "minLength": 1 }
         },
         "recommended_target": { "type": "string", "minLength": 1 },
+        "sprint_priority": { "type": "string", "enum": ["P0", "P1", "P2"] },
         "evidence": {
           "type": "array",
           "items": { "$ref": "#/$defs/action_evidence" }

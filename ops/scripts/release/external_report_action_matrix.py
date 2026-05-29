@@ -19,6 +19,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.external_report_lifecycle_runtime import (  # noqa: PLC0415
         ACTION_CATALOG,
         REFERENCE_MANIFEST,
+        SPRINT_PRIORITIES,
         active_report_paths,
         archived_report_count,
         reference_manifest_alignment,
@@ -41,6 +42,7 @@ else:
     from .external_report_lifecycle_runtime import (
         ACTION_CATALOG,
         REFERENCE_MANIFEST,
+        SPRINT_PRIORITIES,
         active_report_paths,
         archived_report_count,
         reference_manifest_alignment,
@@ -63,17 +65,20 @@ def _action_items(vault: Path, coverage: list[dict[str, Any]]) -> list[dict[str,
     action_items: list[dict[str, Any]] = []
     for action in ACTION_CATALOG:
         status, evidence = status_from_evidence(vault, action)
-        action_items.append(
-            {
-                "action_id": action["action_id"],
-                "priority": action["priority"],
-                "theme": action["theme"],
-                "current_status": status,
-                "source_report_paths": sorted(set(source_by_action[str(action["action_id"])])),
-                "recommended_target": action["recommended_target"],
-                "evidence": evidence,
-            }
-        )
+        action_id = str(action["action_id"])
+        sprint_priority = SPRINT_PRIORITIES.get(action_id)
+        item = {
+            "action_id": action_id,
+            "priority": action["priority"],
+            "theme": action["theme"],
+            "current_status": status,
+            "source_report_paths": sorted(set(source_by_action[action_id])),
+            "recommended_target": action["recommended_target"],
+            "evidence": evidence,
+        }
+        if sprint_priority:
+            item["sprint_priority"] = sprint_priority
+        action_items.append(item)
     return action_items
 
 
@@ -89,9 +94,13 @@ def _summary(
     manifest_alignment: dict[str, Any],
 ) -> dict[str, Any]:
     status_counts: dict[str, int] = {}
+    sprint_backlog: dict[str, int] = {"P0": 0, "P1": 0, "P2": 0}
     for action in actions:
         status = str(action["current_status"])
         status_counts[status] = status_counts.get(status, 0) + 1
+        sprint_priority = action.get("sprint_priority")
+        if sprint_priority and sprint_priority in sprint_backlog:
+            sprint_backlog[sprint_priority] += 1
     return {
         "active_report_count": len(coverage),
         "archived_report_count": archived_report_count,
@@ -108,6 +117,7 @@ def _summary(
             manifest_alignment["missing_active_report_paths"]
         ),
         "reference_manifest_stale_reference_count": len(manifest_alignment["stale_reference_paths"]),
+        "sprint_backlog": sprint_backlog,
     }
 
 
