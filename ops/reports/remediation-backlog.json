@@ -1,0 +1,178 @@
+{
+  "$schema": "ops/schemas/remediation-backlog.schema.json",
+  "artifact_kind": "remediation_backlog",
+  "generated_at": "2026-05-29T05:03:37Z",
+  "producer": "ops.scripts.remediation_backlog",
+  "source_command": "python -m ops.scripts.remediation_backlog --vault .",
+  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
+  "source_tree_fingerprint": "c887a62d8b455fd73b297c05119f294e1925a22d9f5c715a84e838afc812e174",
+  "input_fingerprints": {
+    "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+    "schema": "858409ae0ffecac12c1193ab5813129bae0174a7fde861c952bc99f45c9f82ca",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "20228252037e9e82e8c9af47672cce08ed64b927c83f1443b01d2ad7ab7b3930",
+    "goal_runtime_certificate": "e646c4404ac2ef8b647a5b08c3b45222be8fa3aab464eb3741bdc5ba80c9f5d1",
+    "goal_worktree_guard": "fe44801375055f6a44cca80417f0d36536207d6fb219169f397d57cc9d378940",
+    "learning_claim_activation": "07404298f6b4a27395c758178cdbc7259f639c4fb66552716fdc97818faa094d",
+    "learning_readiness_signoff": "c8b8f7594634b66d561975ba5aa910cb58cb0f7582f99c557764adffdffc6798",
+    "mutation_proposals": "3a71e7d8eadbee9d34f41413db26769e3829337f5cf09bdc88f1542431ee6139",
+    "release_auto_promotion_ready_manifest": "missing",
+    "self_improvement_negative_lessons": "fba743d67bf963ea152fb1f6f182dc1c0450dbe26322634b16fa6395b59a9f7e",
+    "session_synopsis": "35ec2d46a1cbf9e1c912fed7381f0ff0b56af55d836783c8384ab7f746c0a45e",
+    "status_overrides": "c673eb33f62451ecfbe960669e3795fcd816f2e1cdaa69aeb5c211efd91416d0",
+    "auto_improve_sessions": "a8f1c7c5ea811a1ce5f23e0558e657321a0e4810a1df6bbef3db8912d4be2e1c"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-29T05:03:37Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "pass",
+  "summary": {
+    "backlog_item_count": 6,
+    "repeated_blocker_count": 4,
+    "active_blocker_count": 2,
+    "open_total_count": 0,
+    "open_promotion_count": 0,
+    "open_repeat_count": 0,
+    "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
+    "next_action": "No remediation backlog items detected."
+  },
+  "items": [
+    {
+      "item_id": "active_blocker_promotion_blocked_by_goal_worktree_guard_failure",
+      "blocker_id": "promotion_blocked_by_goal_worktree_guard_failure",
+      "source": "auto_improve_readiness.promotion_blockers",
+      "item_type": "active_blocker",
+      "status": "deferred",
+      "severity": "blocks_promotion",
+      "occurrence_count": 1,
+      "evidence_paths": [
+        "ops/reports/auto-improve-readiness.json",
+        "ops/reports/goal-worktree-guard.json",
+        "ops/reports/session-synopsis.json"
+      ],
+      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness.",
+      "next_action": "Deferred as a duplicate promotion-backlog item: ops/reports/goal-worktree-guard.json remains the authoritative live gate and still blocks promotion while the worktree is dirty."
+    },
+    {
+      "item_id": "active_blocker_promotion_blocked_by_release_batch_manifest_failure",
+      "blocker_id": "promotion_blocked_by_release_batch_manifest_failure",
+      "source": "auto_improve_readiness.promotion_blockers",
+      "item_type": "active_blocker",
+      "status": "deferred",
+      "severity": "blocks_promotion",
+      "occurrence_count": 1,
+      "evidence_paths": [
+        "ops/reports/auto-improve-readiness.json",
+        "ops/reports/release-closeout-batch-manifest.json",
+        "ops/reports/session-synopsis.json"
+      ],
+      "repair_target": "Seal the release batch manifest, then rerun make auto-improve-readiness.",
+      "next_action": "Deferred as a duplicate promotion-backlog item: release-closeout-batch-manifest remains the authoritative sealed-distribution gate and still blocks promotion until a bound distribution ZIP is provided."
+    },
+    {
+      "item_id": "auto_session_repeated_blocker_active_report_self_improve_certificate_rerun4_review_blocked",
+      "blocker_id": "review_blocked",
+      "source": "auto_improve_session.loop_state",
+      "item_type": "repeated_auto_improve_blocker",
+      "status": "closed",
+      "severity": "blocks_repeat",
+      "occurrence_count": 2,
+      "evidence_paths": [
+        "external-reports/archive/llmwiki_self_improvement_review_report_20260522.md",
+        "external-reports/report-reference-manifest.json",
+        "ops/reports/auto-improve-sessions/active-report-self-improve-certificate-rerun4.json",
+        "ops/reports/external-report-action-matrix.json"
+      ],
+      "repair_target": "Resolve repeated auto-improve blocker 'review_blocked'.",
+      "next_action": "Closed by the active external-report review: the 2026-05-22 self-improvement report is archived and its matrix actions are all implemented, so this review-blocked repeat shape is no longer actionable."
+    },
+    {
+      "item_id": "auto_session_repeated_blocker_active_report_self_improve_certificate_rerun_mutation_failed",
+      "blocker_id": "mutation_failed",
+      "source": "auto_improve_session.loop_state",
+      "item_type": "repeated_auto_improve_blocker",
+      "status": "closed",
+      "severity": "blocks_repeat",
+      "occurrence_count": 2,
+      "evidence_paths": [
+        "ops/reports/auto-improve-sessions/active-report-self-improve-certificate-rerun.json",
+        "ops/reports/external-report-action-matrix.json",
+        "ops/reports/function-budget-refactor-proposals.json",
+        "ops/reports/public-check-summary.json",
+        "ops/reports/sigstore-bundle-verification.json",
+        "ops/scripts/release/external_report_lifecycle_runtime.py"
+      ],
+      "repair_target": "Resolve repeated auto-improve blocker 'mutation_failed'.",
+      "next_action": "Closed by implemented report-lifecycle and strategy predicates: repo-boundary, maintainability-backlog, and external-verification evidence now resolve the mutation failure that kept the active report partial."
+    },
+    {
+      "item_id": "negative_lesson_discard_equal_score_secondary_eligibility",
+      "blocker_id": "discard_equal_score_secondary_eligibility",
+      "source": "self_improvement_negative_lessons.lessons",
+      "item_type": "repeated_negative_lesson",
+      "status": "closed",
+      "severity": "blocks_repeat",
+      "occurrence_count": 12,
+      "evidence_paths": [
+        "ops/reports/external-report-action-matrix.json",
+        "ops/scripts/release/external_report_lifecycle_runtime.py",
+        "runs/active-report-self-improve-certificate-rerun-run-02-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+        "runs/active-report-self-improve-certificate-run-02-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+        "runs/auto-improve-queue-rotation-runtime-20260525-run-01-auto-improve-queue-runtime/run-telemetry.json",
+        "runs/auto-improve-release-ready-20260526-run-08-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+        "runs/auto-improve-trial-9-run-01-mechanism-run-validation-runtime/run-telemetry.json",
+        "runs/auto-improve-trial-run-01-mechanism-run-validation-runtime/run-telemetry.json",
+        "runs/external-report-reconcile-20260527-run-01-run-02-mutation-proposal-runtime/run-telemetry.json",
+        "runs/external-report-reconcile-20260527-run-03-run-01-auto-improve-readiness/run-telemetry.json",
+        "runs/external-report-reconcile-20260527-run-08-run-01-auto-improve-queue-runtime/run-telemetry.json",
+        "runs/external-report-reconcile-20260527-run-10-run-01-auto-improve-readiness-constants-runtime/run-telemetry.json",
+        "runs/service-state-split-20260528-run-01-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+        "runs/service-state-split-20260528-run-12-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+        "tests/test_external_report_action_matrix.py"
+      ],
+      "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=equal_score_secondary_eligibility.",
+      "next_action": "Closed by changing the evidence predicates instead of rerunning the same shape: the active-report strategy actions now require canonical repo-boundary, maintainability-backlog, and supply-chain verification evidence before implementation is credited."
+    },
+    {
+      "item_id": "negative_lesson_hold_legacy_promotion_report",
+      "blocker_id": "hold_legacy_promotion_report",
+      "source": "self_improvement_negative_lessons.lessons",
+      "item_type": "repeated_negative_lesson",
+      "status": "closed",
+      "severity": "blocks_repeat",
+      "occurrence_count": 2,
+      "evidence_paths": [
+        "docs/release.md",
+        "ops/schemas/release-auto-promotion-ready-manifest.schema.json",
+        "ops/scripts/release/release_auto_promotion_ready.py",
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+        "runs/auto-improve-trial-3-run-01-mutation-proposal-runtime/run-telemetry.json",
+        "tests/test_release_auto_promotion_ready.py"
+      ],
+      "repair_target": "Change the mechanism or evidence predicate before rerunning another HOLD attempt with same_eval_reason_code=legacy_promotion_report.",
+      "next_action": "Closed by replacing the legacy promotion-report HOLD shape with staged release-auto-promotion authority predicates; final unattended promotion still requires the current release-auto-promotion-ready manifest to pass."
+    }
+  ],
+  "inputs": {
+    "self_improvement_negative_lessons": "ops/reports/self-improvement-negative-lessons.json",
+    "session_synopsis": "ops/reports/session-synopsis.json",
+    "learning_claim_activation": "ops/reports/learning_claim_activation_report.json",
+    "auto_improve_sessions": "ops/reports/auto-improve-sessions",
+    "goal_runtime_certificate": "ops/reports/goal-runtime-certificate.json",
+    "goal_worktree_guard": "ops/reports/goal-worktree-guard.json",
+    "mutation_proposals": "ops/reports/mutation-proposals.json",
+    "release_auto_promotion_ready_manifest": "build/release/release-auto-promotion-ready-manifest.json",
+    "learning_readiness_signoff": "ops/reports/learning-readiness-signoff.json",
+    "status_overrides": "ops/policies/remediation-backlog-status-overrides.json"
+  }
+}

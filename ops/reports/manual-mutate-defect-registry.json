@@ -1,0 +1,135 @@
+{
+  "$schema": "ops/schemas/manual-mutate-defect-registry.schema.json",
+  "artifact_kind": "manual_mutate_defect_registry",
+  "generated_at": "2026-05-29T07:15:00Z",
+  "producer": "ops.scripts.manual_mutate_defect_registry",
+  "source_command": "python -m ops.scripts.manual_mutate_defect_registry",
+  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
+  "source_tree_fingerprint": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+  "input_fingerprints": {
+    "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+    "schema": "5aa37bb776f4459c05d34323a1270cdbbfb51cfb2d2e12387ff652ad3abc031d",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "c3b8193fc104d23b8047050299fe6a0c7a90cd0aa4d16a00332c66ce3f97c070",
+    "manual_mutate_scripts": "31d6caa7a99986939c35e7e21d451d7dadd598cc2ed51107dc69b8ac0e2e4de3"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-29T07:15:00Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "pass",
+  "summary": {
+    "manual_mutate_script_count": 3,
+    "registered_defect_count": 3,
+    "fixed_defect_count": 3,
+    "covered_regression_count": 3,
+    "unresolved_or_uncovered_count": 0
+  },
+  "defects": [
+    {
+      "defect_id": "decision_record_promotion_report_absorption_gap",
+      "script_path": "tools/manual_mutate_auto_improve_decision_record_fallback.py",
+      "script_sha256": "3dc03ff77ad2effa1f5c8e43276c3fdcd67f57b0608a29b3f63dbee16bc0cb7b",
+      "defect_class": "decision_provenance_loss",
+      "target_paths": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "canonical_fix_status": "fixed",
+      "regression_status": "covered",
+      "canonical_fix_refs": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py::_iteration_decision_record",
+        "ops/scripts/core/promotion_decision_registry_runtime.py::decision_record_from_report"
+      ],
+      "regression_tests": [
+        "tests/test_auto_improve_iteration_runtime.py::test_write_iteration_telemetry_recovers_decision_record_from_promotion_report_path"
+      ],
+      "evidence": [
+        {
+          "path": "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
+          "present_markers": [
+            "def _iteration_decision_record(",
+            "decision_record_from_report",
+            "promotion_report"
+          ],
+          "missing_markers": []
+        }
+      ],
+      "notes": "Recover decision_record from explicit promotion_report payload/path or runs/<run-id>/promotion-report.json."
+    },
+    {
+      "defect_id": "run_telemetry_existing_report_helper_indirection",
+      "script_path": "tools/manual_mutate_auto_improve_existing_telemetry_inline.py",
+      "script_sha256": "111f2eaee5bfac1361da7855c21945c08bc305ca157f929dbf09627a0bac26db",
+      "defect_class": "telemetry_merge_simplification",
+      "target_paths": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "canonical_fix_status": "fixed",
+      "regression_status": "covered",
+      "canonical_fix_refs": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py::write_iteration_telemetry"
+      ],
+      "regression_tests": [
+        "tests/test_auto_improve_iteration_runtime.py::test_write_iteration_telemetry_preserves_existing_workspace_apply_fields"
+      ],
+      "evidence": [
+        {
+          "path": "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
+          "present_markers": [
+            "loaded_existing_report = load_optional_json(",
+            "existing_report = loaded_existing_report if isinstance(loaded_existing_report, dict) else {}"
+          ],
+          "missing_markers": []
+        },
+        {
+          "path": "tests/test_auto_improve_iteration_runtime.py",
+          "present_markers": [
+            "self.assertNotIn(\"_existing_run_telemetry\", runtime_source)"
+          ],
+          "missing_markers": []
+        }
+      ],
+      "notes": "Inline existing run-telemetry loading in write_iteration_telemetry and keep a focused regression assertion that the helper indirection stays removed."
+    },
+    {
+      "defect_id": "run_telemetry_timeout_merge_loss",
+      "script_path": "tools/manual_mutate_auto_improve_timeout_telemetry.py",
+      "script_sha256": "0136b82e295f33cfe7c26695d238174ffed6bae17d62a6321cb7b4d211c061c4",
+      "defect_class": "timeout_telemetry_loss",
+      "target_paths": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "canonical_fix_status": "fixed",
+      "regression_status": "covered",
+      "canonical_fix_refs": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py::_iteration_command_timeouts",
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py::_iteration_timeout_failure_artifacts"
+      ],
+      "regression_tests": [
+        "tests/test_auto_improve_iteration_runtime.py::test_write_iteration_telemetry_merges_nested_timeout_fields_from_result"
+      ],
+      "evidence": [
+        {
+          "path": "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py",
+          "present_markers": [
+            "def _iteration_command_timeouts(vault: Path, run_id: str, result: dict | None)",
+            "result.get(\"command_timeouts\", {})",
+            "def _iteration_timeout_failure_artifacts(vault: Path, run_id: str, result: dict | None)",
+            "result.get(\"timeout_failure_artifacts\", [])"
+          ],
+          "missing_markers": []
+        }
+      ],
+      "notes": "Merge timeout fields from nested result.command_timeouts, top-level timeout result fields, existing telemetry, and run artifacts."
+    }
+  ]
+}

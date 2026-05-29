@@ -1619,6 +1619,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("$(MAKE) sync-public-policy", converge_all_block)
         self.assertIn("$(MAKE) public-check-all", converge_all_block)
         self.assertIn("$(MAKE) release-converge-post", converge_all_block)
+        self.assertIn("head-aligned-evidence-converge", _target_block(text, ".PHONY"))
         self.assertIn(
             "RELEASE_SOURCE_READY_COMMIT_MESSAGE ?= release: converge source-ready surfaces",
             text,
@@ -1663,6 +1664,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             "$(MAKE) release-source-ready-final-guard-amend",
         ):
             self.assertNotIn(writer, ready_post_verify_block)
+
         self.assertIn("$(MAKE) release-source-ready-prepare", ready_block)
         self.assertIn("$(MAKE) release-source-ready-commit", ready_block)
         self.assertIn("$(MAKE) release-source-ready-post-verify", ready_block)
@@ -2086,6 +2088,48 @@ class MakefileStaticGateTests(unittest.TestCase):
             _target_block(text, "release-closeout-summary"),
         )
 
+    def test_head_aligned_evidence_converge_refreshes_late_release_evidence_surfaces(
+        self,
+    ) -> None:
+        text = _makefile_text()
+
+        self.assertIn("head-aligned-evidence-converge", _target_block(text, ".PHONY"))
+        self.assertEqual(
+            _recipe_lines(text, "head-aligned-evidence-converge"),
+            [
+                "$(MAKE) release-evidence-converge",
+                "$(MAKE) release-smoke-fast-refresh-check",
+                "$(MAKE) auto-improve-goal-status",
+                "$(MAKE) goal-worktree-guard",
+                "$(MAKE) goal-runtime-certificate",
+                "$(MAKE) learning-readiness-signoff-refresh",
+                "$(MAKE) test-execution-summary-report-contract",
+                "$(MAKE) test-execution-summary-full-current-or-refresh",
+                "$(MAKE) sync-public-policy",
+                "$(MAKE) public-check-summary",
+                "$(MAKE) release-authority-sealed-preflight",
+                "$(MAKE) generated-artifact-converge",
+                "$(MAKE) learning-readiness-signoff-revalidation",
+                "$(MAKE) release-closeout-summary-report",
+                "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
+                "$(MAKE) auto-improve-readiness-report-body",
+                "$(MAKE) release-evidence-dashboard-report",
+                "$(MAKE) release-lane-summary",
+                "$(MAKE) release-clean-blocker-ledger",
+                "$(MAKE) release-closeout-fixed-point",
+                "$(MAKE) generated-artifact-converge",
+                "$(MAKE) learning-readiness-signoff-revalidation",
+                "$(MAKE) release-closeout-summary-report",
+                "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
+                "$(MAKE) auto-improve-readiness-report-body",
+                "$(MAKE) release-evidence-dashboard-report",
+                "$(MAKE) release-lane-summary",
+                "$(MAKE) release-clean-blocker-ledger",
+                "$(MAKE) tmp-json-clean",
+                "$(MAKE) release-closeout-finality-verify",
+            ],
+        )
+
     def test_release_closeout_summary_report_target_is_write_only(self) -> None:
         text = _makefile_text()
 
@@ -2139,6 +2183,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         text = _makefile_text()
 
         self.assertIn("learning-readiness-signoff", _target_block(text, ".PHONY"))
+        self.assertIn("learning-readiness-signoff-refresh", _target_block(text, ".PHONY"))
         self.assertIn("learning-readiness-signoff-check", _target_block(text, ".PHONY"))
         self.assertIn(
             "learning-readiness-signoff-revalidation", _target_block(text, ".PHONY")
@@ -2152,6 +2197,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertIn(
             "LEARNING_READINESS_SIGNOFF_OUT ?= ops/reports/learning-readiness-signoff.json",
+            text,
+        )
+        self.assertIn(
+            "LEARNING_READINESS_SIGNOFF_REUSE_FROM ?= $(LEARNING_READINESS_SIGNOFF_OUT)",
             text,
         )
         self.assertIn(
@@ -2189,6 +2238,14 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn(
             '--rollback-trigger "$(LEARNING_READINESS_SIGNOFF_ROLLBACK_TRIGGER)"', block
         )
+        refresh_block = _target_block(text, "learning-readiness-signoff-refresh")
+        self.assertIn("ops.scripts.learning_readiness_signoff_refresh", refresh_block)
+        self.assertIn(
+            '--reuse-from "$(LEARNING_READINESS_SIGNOFF_REUSE_FROM)"',
+            refresh_block,
+        )
+        self.assertIn('--out "$(LEARNING_READINESS_SIGNOFF_OUT)"', refresh_block)
+        self.assertNotIn("--accepted-by", refresh_block)
         self.assertIn(
             "tmp/learning-readiness-signoff-check-release-closeout-summary.json",
             _target_block(text, "learning-readiness-signoff-check"),

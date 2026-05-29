@@ -1,0 +1,440 @@
+{
+  "$schema": "ops/schemas/learning-claim-unlock-review.schema.json",
+  "artifact_kind": "learning_claim_unlock_review",
+  "generated_at": "2026-05-29T05:03:34Z",
+  "producer": "ops.scripts.learning_claim_unlock_review",
+  "source_command": "python -m ops.scripts.learning_claim_unlock_review --vault .",
+  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
+  "source_tree_fingerprint": "c887a62d8b455fd73b297c05119f294e1925a22d9f5c715a84e838afc812e174",
+  "input_fingerprints": {
+    "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+    "schema": "cd80b9607a6fc5bc8ffc579e219a131f7e53ad5ccff551f08e409f55fb80b9c1",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "db527a1e01fd6fd29c2c0de9819fca008a799937b2b4cbe24989d2736553bdc1",
+    "auto_improve_readiness": "7a9e1da83aa943916da32196e35fe8df0051a8210a1038e27d7aadb76a6650f5",
+    "learning_claim_evidence_bundle": "c23b9035af1def520410060581e60d2ef7ab06f306f26545a26acdfb0d08ab62",
+    "approved_by": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "auto_policy_path": "3f45ad5440c4c08a2eb1578032fc6a9cc18a7805617282c0ebf01507c224d3b4",
+    "blocking_blocker_ids": "bbffdeb2708a75a1855d308c338d3e3ff6905eeac99482c36af5652e8a20f2e4",
+    "blocking_signal_ids": "a09999b9d923eba3889607229711eb4cfcf0c798a41b5e83a1175d409da6deb1",
+    "confirmed_policy_path": "7a5bf75deba862ce20f09c5bacfb73b21debca9abd9917002f104de90be9a510",
+    "evidence_bundle_path": "1e20a8a0389b4be330c122401a83c74021f13d466bf7db3d29c3c391e2ee388d",
+    "machine_policy_decision": "20cd938a2ea64f612b3523bc9219130c6fc66cd09b394ea38437488c0b8898b2",
+    "reviewed_at": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-29T05:03:34Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "review_status": "required",
+  "approved": false,
+  "approval_mode": "none",
+  "reviewed_by": "",
+  "reviewed_at": "",
+  "decision_reason": "Typed same-eval coverage may be full, but learning claim unlock remains inappropriate until an operator approves release dashboard, readiness, strict-secondary axes, and behavior-delta provenance after remaining readiness signals close.",
+  "source_paths": [
+    "ops/reports/release-evidence-dashboard.json",
+    "ops/reports/auto-improve-readiness.json",
+    "ops/reports/learning-claim-evidence-bundle.json",
+    "runs/**/run-telemetry.json",
+    "external-reports/report-reference-manifest.json"
+  ],
+  "blocking_signal_ids": [
+    "recent_hold_moving_average",
+    "high_rework",
+    "defect_escape_proxy"
+  ],
+  "blocking_blocker_ids": [
+    "learning_blocked_by_review_required"
+  ],
+  "improvement_claim_status": "revoked",
+  "evidence_cohort_status": "revoked",
+  "learning_claim_blocker_status": "blocked",
+  "claim_wording_allowed": false,
+  "claim_wording_policy_status": "blocked",
+  "machine_policy_decision": {
+    "enabled": true,
+    "policy_path": "ops/policies/learning-claim-auto-unlock.json",
+    "policy_version": 1,
+    "decision": "rejected",
+    "evidence_bundle_digest": "6326b0ac981595cb28a56c76d5a26593b39f795d678004e0898b368b2cf053e6",
+    "bundle_path": "ops/reports/learning-claim-evidence-bundle.json",
+    "bundle_sha256": "6326b0ac981595cb28a56c76d5a26593b39f795d678004e0898b368b2cf053e6",
+    "current_bundle_sha256": "6326b0ac981595cb28a56c76d5a26593b39f795d678004e0898b368b2cf053e6",
+    "bundle_status": "revoked",
+    "bundle_fingerprint_match_status": "match",
+    "revocation_status": "revoked",
+    "claim_level": "none",
+    "claim_scope": "bounded_learning_likely_auto_improve_readiness",
+    "bounded_learning_claim_allowed": false,
+    "confirmed_learning_improvement_allowed": false,
+    "improvement_claim_status": "revoked",
+    "confirmed_learning_improvement_status": "revoked",
+    "evidence_cohort_status": "revoked",
+    "learning_claim_blocker_status": "blocked",
+    "claim_wording_allowed": false,
+    "claim_wording_policy_status": "blocked",
+    "confirmed_policy_path": "ops/policies/learning-claim-confirmed-improvement.json",
+    "confirmed_policy_version": 1,
+    "confirmed_evidence_cohort_path": "ops/reports/learning-confirmed-evidence-cohort.json",
+    "confirmed_evidence_cohort_sha256": "5cff9e287b2cbc61e23815d4bf8dcf82d01b4391101ff1c9c70a01e1dddf1e97",
+    "current_confirmed_evidence_cohort_sha256": "5cff9e287b2cbc61e23815d4bf8dcf82d01b4391101ff1c9c70a01e1dddf1e97",
+    "confirmed_evidence_cohort_status": "revoked",
+    "confirmed_evidence_cohort_fingerprint_match_status": "match",
+    "confirmed_evidence_summary": {
+      "evidence_cohort_status": "revoked",
+      "confirmed_evidence_status": "revoked",
+      "valid_run_count": 2,
+      "min_required_run_count": 3,
+      "eligible_family_count": 0,
+      "selected_valid_run_ids": [],
+      "blocking_predicate_ids": [
+        "confirmed_evidence_bundle_active",
+        "repeated_same_family_evidence"
+      ],
+      "rejected_run_count": 3,
+      "rejected_run_diagnostics": [
+        {
+          "run_id": "run-20260507-auto-improve-iteration-persistence-typed-same-eval",
+          "decision": "DISCARD",
+          "families": [
+            "contract_regression_signals"
+          ],
+          "status": "fail",
+          "reasons": [
+            "decision=DISCARD",
+            "behavior delta before/after evidence missing"
+          ],
+          "missing_artifacts": []
+        },
+        {
+          "run_id": "service-state-split-20260528-run-01-run-01-auto-improve-iteration-persistence-runtime",
+          "decision": "DISCARD",
+          "families": [
+            "contract_regression_signals"
+          ],
+          "status": "fail",
+          "reasons": [
+            "decision=DISCARD"
+          ],
+          "missing_artifacts": []
+        },
+        {
+          "run_id": "service-state-split-20260528-run-12-run-01-auto-improve-iteration-persistence-runtime",
+          "decision": "DISCARD",
+          "families": [
+            "contract_regression_signals"
+          ],
+          "status": "fail",
+          "reasons": [
+            "decision=DISCARD"
+          ],
+          "missing_artifacts": []
+        }
+      ],
+      "legacy_reconstruction_summary": {
+        "status": "pass",
+        "reconstruction_needed_count": 3,
+        "reconstructed_run_count": 3,
+        "blocked_run_count": 0,
+        "run_diagnostics": [
+          {
+            "run_id": "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
+            "families": [
+              "contract_regression_signals"
+            ],
+            "reconstruction_status": "not_needed",
+            "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+            "reconstruction_reasons": [],
+            "secondary_axis_evidence_source": "telemetry_field",
+            "secondary_axis_evidence_detail": "",
+            "parsed_secondary_axes": [
+              "complexity"
+            ]
+          },
+          {
+            "run_id": "run-20260507-auto-improve-iteration-persistence-discard-path",
+            "families": [
+              "contract_regression_signals"
+            ],
+            "reconstruction_status": "reconstructed",
+            "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+            "reconstruction_reasons": [
+              "telemetry behavior_delta_digest missing or invalid",
+              "telemetry strict secondary improvement fields missing or incomplete"
+            ],
+            "secondary_axis_evidence_source": "legacy_reconstruction_artifact",
+            "secondary_axis_evidence_detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=true, selected_any_improvement=true",
+            "parsed_secondary_axes": [
+              "lint",
+              "complexity",
+              "tests"
+            ]
+          },
+          {
+            "run_id": "run-20260507-auto-improve-iteration-persistence-typed-same-eval",
+            "families": [
+              "contract_regression_signals"
+            ],
+            "reconstruction_status": "not_needed",
+            "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+            "reconstruction_reasons": [],
+            "secondary_axis_evidence_source": "telemetry_field",
+            "secondary_axis_evidence_detail": "",
+            "parsed_secondary_axes": [
+              "typed_same_eval_contract",
+              "behavior_delta_digest"
+            ]
+          },
+          {
+            "run_id": "service-state-split-20260528-run-01-run-01-auto-improve-iteration-persistence-runtime",
+            "families": [
+              "contract_regression_signals"
+            ],
+            "reconstruction_status": "reconstructed",
+            "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+            "reconstruction_reasons": [
+              "telemetry behavior_delta_digest mismatches behavior-delta artifact",
+              "telemetry strict secondary improvement fields missing or incomplete"
+            ],
+            "secondary_axis_evidence_source": "legacy_reconstruction_artifact",
+            "secondary_axis_evidence_detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=false, selected_any_improvement=true",
+            "parsed_secondary_axes": [
+              "lint",
+              "complexity",
+              "tests"
+            ]
+          },
+          {
+            "run_id": "service-state-split-20260528-run-12-run-01-auto-improve-iteration-persistence-runtime",
+            "families": [
+              "contract_regression_signals"
+            ],
+            "reconstruction_status": "reconstructed",
+            "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+            "reconstruction_reasons": [
+              "telemetry behavior_delta_digest mismatches behavior-delta artifact",
+              "telemetry strict secondary improvement fields missing or incomplete"
+            ],
+            "secondary_axis_evidence_source": "legacy_reconstruction_artifact",
+            "secondary_axis_evidence_detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=false, selected_any_improvement=true",
+            "parsed_secondary_axes": [
+              "lint",
+              "complexity",
+              "tests"
+            ]
+          }
+        ]
+      }
+    },
+    "confirmed_predicate_results": [
+      {
+        "id": "evidence_bundle_active",
+        "status": "fail",
+        "source_path": "ops/reports/learning-claim-evidence-bundle.json",
+        "required_condition": "learning_claim_evidence_bundle.revocation_status == active",
+        "observed_value": "revocation_status=revoked",
+        "summary": "Confirmed claims require a non-stale, non-revoked evidence bundle."
+      },
+      {
+        "id": "confirmed_evidence_bundle_active",
+        "status": "fail",
+        "source_path": "ops/reports/learning-claim-evidence-bundle.json",
+        "required_condition": "learning_claim_evidence_bundle.revocation_status == active",
+        "observed_value": "revocation_status=revoked",
+        "summary": "Confirmed evidence cohort must bind an active learning claim evidence bundle."
+      },
+      {
+        "id": "repeated_same_family_evidence",
+        "status": "fail",
+        "source_path": "ops/reports/learning-confirmed-evidence-cohort.json",
+        "required_condition": "same proposal family valid before/after behavior-delta evidence count >= 3 and eligible family count >= 1",
+        "observed_value": "eligible_family_count=0; family_count=1; max_valid_run_count=2",
+        "summary": "Confirmed learning improvement requires repeated same-family before/after evidence."
+      },
+      {
+        "id": "behavior_delta_artifact_digest_readback",
+        "status": "pass",
+        "source_path": "ops/reports/learning-claim-evidence-bundle.json",
+        "required_condition": "behavior_delta_artifact_readback.status == pass",
+        "observed_value": "status=pass",
+        "summary": "Confirmed learning improvement requires behavior-delta artifact digest readback."
+      },
+      {
+        "id": "full_suite_pass",
+        "status": "pass",
+        "source_path": "ops/reports/test-execution-summary-full.json",
+        "required_condition": "test_execution_summary_full.status == pass",
+        "observed_value": "status=pass",
+        "summary": "Full test suite must pass before confirmed improvement opens."
+      },
+      {
+        "id": "public_check_pass",
+        "status": "fail",
+        "source_path": "ops/reports/public-check-summary.json",
+        "required_condition": "public_check_summary.status == pass",
+        "observed_value": "status=missing",
+        "summary": "Public mirror check must pass before confirmed improvement opens."
+      },
+      {
+        "id": "rollback_revalidation_clean",
+        "status": "pass",
+        "source_path": "ops/reports/learning-readiness-signoff-revalidation.json",
+        "required_condition": "learning_readiness_signoff_revalidation.status == pass",
+        "observed_value": "status=pass",
+        "summary": "Rollback/revalidation evidence must be clean."
+      },
+      {
+        "id": "learning_claim_blocker_absence",
+        "status": "fail",
+        "source_path": "ops/reports/release-clean-blocker-ledger.json",
+        "required_condition": "release_clean_blocker_ledger.learning_claim_blockers == []",
+        "observed_value": "learning_claim_blocker_count=1",
+        "summary": "No accepted learning risk or learning-claim blocker may remain."
+      }
+    ],
+    "predicate_results": [
+      {
+        "id": "learning_claim_evidence_bundle_active",
+        "status": "fail",
+        "source_path": "ops/reports/learning-claim-evidence-bundle.json",
+        "required_condition": "learning_claim_evidence_bundle.revocation_status == active",
+        "observed_value": "bundle_status=revoked; fingerprint_match=match; revocation_status=revoked",
+        "summary": "Automatic approval is valid only for the current evidence bundle digest."
+      },
+      {
+        "id": "auto_improve_can_execute_trial",
+        "status": "pass",
+        "source_path": "ops/reports/auto-improve-readiness.json",
+        "required_condition": "auto_improve_readiness.can_execute_trial == true",
+        "observed_value": "can_execute_trial=True",
+        "summary": "Auto-improve execution trial is runnable."
+      },
+      {
+        "id": "auto_improve_can_promote_result",
+        "status": "fail",
+        "source_path": "ops/reports/auto-improve-readiness.json",
+        "required_condition": "auto_improve_readiness.can_promote_result == true",
+        "observed_value": "can_promote_result=False",
+        "summary": "Auto-improve result promotion gate is clean."
+      },
+      {
+        "id": "learning_readiness_likely",
+        "status": "fail",
+        "source_path": "ops/reports/auto-improve-readiness.json",
+        "required_condition": "learning_readiness.status == learning_likely and likely_to_learn == true",
+        "observed_value": "status=learning_uncertain; likely_to_learn=False",
+        "summary": "Learning readiness is in the narrow machine-claimable state."
+      },
+      {
+        "id": "learning_readiness_no_blockers",
+        "status": "fail",
+        "source_path": "ops/reports/auto-improve-readiness.json",
+        "required_condition": "learning_readiness.signals == [] and learning_claim_blockers == []",
+        "observed_value": "learning_readiness.signals=recent_hold_moving_average,high_rework,defect_escape_proxy; learning_claim_blockers=learning_blocked_by_review_required",
+        "summary": "Learning readiness exposes no blocking learning claim signals."
+      },
+      {
+        "id": "runnable_proposal_queue_present",
+        "status": "pass",
+        "source_path": "ops/reports/auto-improve-readiness.json",
+        "required_condition": "queue.ready == true and runnable_proposal_count >= 1",
+        "observed_value": "queue.ready=True; runnable_proposal_count=1",
+        "summary": "Runnable proposal queue has at least one candidate."
+      },
+      {
+        "id": "same_eval_run_count_minimum",
+        "status": "fail",
+        "source_path": "ops/reports/auto-improve-readiness.json",
+        "required_condition": "learning_readiness.metrics.same_eval_run_count >= 2",
+        "observed_value": "same_eval_run_count=0",
+        "summary": "Same-eval evidence has enough repeated comparable runs."
+      },
+      {
+        "id": "same_eval_reason_coverage_full",
+        "status": "fail",
+        "source_path": "ops/reports/auto-improve-readiness.json",
+        "required_condition": "same_eval_reason_code_coverage_ratio >= 1.0",
+        "observed_value": "same_eval_reason_code_coverage_ratio=0.0",
+        "summary": "Same-eval reason codes are complete."
+      },
+      {
+        "id": "strict_secondary_coverage_full",
+        "status": "fail",
+        "source_path": "ops/reports/auto-improve-readiness.json",
+        "required_condition": "strict_secondary_improvement_coverage_ratio >= 1.0",
+        "observed_value": "strict_secondary_improvement_coverage_ratio=0.0",
+        "summary": "Strict-secondary improvement coverage is complete."
+      },
+      {
+        "id": "behavior_delta_digest_coverage_full",
+        "status": "fail",
+        "source_path": "ops/reports/auto-improve-readiness.json",
+        "required_condition": "behavior_delta_digest_coverage_ratio >= 1.0",
+        "observed_value": "behavior_delta_digest_coverage_ratio=0.0",
+        "summary": "Behavior-delta digest coverage is complete."
+      },
+      {
+        "id": "rework_and_escape_budget_clean",
+        "status": "fail",
+        "source_path": "ops/reports/auto-improve-readiness.json",
+        "required_condition": "rework_count <= 0 and defect_escape_pair_count <= 0",
+        "observed_value": "rework_count=60; defect_escape_pair_count=19",
+        "summary": "Shadow learning risk budget is clean for automatic narrow claim unlock."
+      }
+    ]
+  },
+  "review_items": [
+    {
+      "id": "release_evidence_dashboard",
+      "status": "pending",
+      "source_path": "ops/reports/release-evidence-dashboard.json",
+      "required_condition": "release_evidence_dashboard.reviewed_by_operator == true",
+      "observed_value": "reviewed=false",
+      "requires_human_review": true,
+      "summary": "Operator must review the release evidence dashboard learning-claim guard and placeholder audit."
+    },
+    {
+      "id": "auto_improve_readiness",
+      "status": "fail",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "required_condition": "auto_improve_readiness.learning_readiness.signals == [] and auto_improve_readiness.learning_claim_blockers == []",
+      "observed_value": "learning_readiness.signals=recent_hold_moving_average,high_rework,defect_escape_proxy; learning_claim_blockers=learning_blocked_by_review_required",
+      "requires_human_review": false,
+      "summary": "Current readiness still reports learning claim blockers: recent_hold_moving_average, high_rework, defect_escape_proxy, learning_blocked_by_review_required"
+    },
+    {
+      "id": "strict_secondary_axes",
+      "status": "pending",
+      "source_path": "runs/**/run-telemetry.json",
+      "required_condition": "strict_secondary_axes.reviewed_by_operator == true",
+      "observed_value": "reviewed=false",
+      "requires_human_review": true,
+      "summary": "Operator must review strict-secondary improvement axes against promotion artifacts."
+    },
+    {
+      "id": "behavior_delta_provenance",
+      "status": "pending",
+      "source_path": "runs/**/run-telemetry.json",
+      "required_condition": "behavior_delta_digest_provenance.reviewed_by_operator == true",
+      "observed_value": "reviewed=false",
+      "requires_human_review": true,
+      "summary": "Operator must review behavior_delta_digest provenance before unlock."
+    }
+  ],
+  "required_followup": [
+    "Close or explicitly review remaining auto_improve_readiness learning signals.",
+    "Close any open auto_improve_readiness learning release blockers.",
+    "Rebuild release evidence dashboard and auto-improve readiness after readiness signals change.",
+    "Approve all learning claim unlock review items only after the refreshed evidence is reviewed."
+  ]
+}

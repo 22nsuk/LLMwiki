@@ -14,6 +14,10 @@ from ops.scripts.learning_readiness_signoff import (
     build_signoff_report,
     write_signoff_report,
 )
+from ops.scripts.learning_readiness_signoff_refresh import (
+    REFRESH_SOURCE_COMMAND,
+    build_refreshed_signoff_report,
+)
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import LEARNING_READINESS_SIGNOFF_SCHEMA_PATH
 from ops.scripts.schema_runtime import (
@@ -121,6 +125,59 @@ class LearningReadinessSignoffTests(unittest.TestCase):
         self.assertEqual(template["artifact_status"], "template_only")
         self.assertEqual(template["retention_policy"], "template")
         self.assertEqual(template["currentness"]["status"], "unknown")
+
+    def test_refresh_reuses_existing_acceptance_metadata_with_new_currentness(self) -> None:
+        original = build_signoff_report(
+            self.vault,
+            LearningReadinessSignoffRequest(
+                accepted_by="operator-requested-via-codex-20260526",
+                accepted_at="2026-04-29T08:30:00Z",
+                expires_at="2026-05-13T08:30:00Z",
+                risk_owner="runtime-maintainer",
+                revalidation_condition="rerun release evidence closeout before release",
+                rollback_trigger="learning telemetry regresses",
+                notes="carry forward accepted-risk review until expiry",
+            ),
+            context=fixed_context(),
+        )
+        write_signoff_report(self.vault, original)
+
+        refresh_context = RuntimeContext(
+            display_timezone=dt.UTC,
+            clock=lambda: dt.datetime(2026, 5, 2, 9, 15, tzinfo=dt.UTC),
+        )
+        refreshed = build_refreshed_signoff_report(
+            self.vault,
+            context=refresh_context,
+        )
+
+        schema = load_schema_with_vault_override(self.vault, LEARNING_READINESS_SIGNOFF_SCHEMA_PATH)
+        self.assertEqual(validate_with_schema(refreshed, schema), [])
+        self.assertEqual(refreshed["accepted_by"], original["accepted_by"])
+        self.assertEqual(refreshed["accepted_at"], original["accepted_at"])
+        self.assertEqual(refreshed["expires_at"], original["expires_at"])
+        self.assertEqual(refreshed["risk_owner"], original["risk_owner"])
+        self.assertEqual(
+            refreshed["revalidation_condition"],
+            original["revalidation_condition"],
+        )
+        self.assertEqual(refreshed["rollback_trigger"], original["rollback_trigger"])
+        self.assertEqual(refreshed["notes"], original["notes"])
+        self.assertEqual(refreshed["generated_at"], "2026-05-02T09:15:00Z")
+        self.assertEqual(
+            refreshed["currentness"],
+            {"status": "current", "checked_at": "2026-05-02T09:15:00Z"},
+        )
+        self.assertEqual(refreshed["source_command"], REFRESH_SOURCE_COMMAND)
+
+    def test_refresh_rejects_non_signoff_reuse_payload(self) -> None:
+        (self.vault / SIGNOFF_REPORT_REL_PATH).write_text(
+            json.dumps({"artifact_kind": "other_artifact"}),
+            encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(ValueError, "artifact_kind=learning_readiness_signoff"):
+            build_refreshed_signoff_report(self.vault)
 
 
 if __name__ == "__main__":

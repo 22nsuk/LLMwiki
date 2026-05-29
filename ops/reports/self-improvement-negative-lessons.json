@@ -1,0 +1,267 @@
+{
+  "$schema": "ops/schemas/self-improvement-negative-lessons.schema.json",
+  "artifact_kind": "self_improvement_negative_lessons",
+  "generated_at": "2026-05-29T05:03:36Z",
+  "producer": "ops.scripts.self_improvement_negative_lessons",
+  "source_command": "python -m ops.scripts.self_improvement_negative_lessons --vault .",
+  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
+  "source_tree_fingerprint": "c887a62d8b455fd73b297c05119f294e1925a22d9f5c715a84e838afc812e174",
+  "input_fingerprints": {
+    "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+    "schema": "47b79b46ef1a89257481eb0fa0b41f96e2765bb833dd8fe9b2f718d71cf470e2",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "9fe8501d398c6284f8e9ddf9f8c96a69a2bc6011cc5fd323fac4e544e5df700d",
+    "learning_claim_activation": "07404298f6b4a27395c758178cdbc7259f639c4fb66552716fdc97818faa094d",
+    "session_synopsis": "35ec2d46a1cbf9e1c912fed7381f0ff0b56af55d836783c8384ab7f746c0a45e"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-29T05:03:36Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "attention",
+  "mode": "advisory",
+  "gate_effect": "blocks_repeat_only",
+  "summary": {
+    "lesson_count": 6,
+    "backlog_candidate_count": 2,
+    "source_activation_status": "pass",
+    "next_action": "Promote backlog candidates to remediation-backlog before rerunning the same blocker pattern."
+  },
+  "lessons": [
+    {
+      "lesson_id": "discard_behavior_delta_before_after_evidence_missing",
+      "source": "learning_claim_activation.negative_learning_ledger+session_synopsis",
+      "decisions": [
+        "DISCARD"
+      ],
+      "run_ids": [
+        "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+      ],
+      "occurrence_count": 1,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Repair the rejected confirmed-evidence run before using it as learning proof.",
+      "evidence_digests": [
+        {
+          "path": "ops/reports/learning-delta-scoreboard.json",
+          "exists": true,
+          "sha256": "6e742a3fc03aaed910121d5775e9f1392248d9c37844c13189db1cfd98882e67",
+          "status": "present"
+        }
+      ],
+      "repeat_policy": "do_not_repeat_until_repaired",
+      "backlog_candidate": false
+    },
+    {
+      "lesson_id": "discard_behavior_delta_digest_added",
+      "source": "learning_claim_activation.negative_learning_ledger+session_synopsis",
+      "decisions": [
+        "DISCARD"
+      ],
+      "run_ids": [
+        "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+      ],
+      "occurrence_count": 1,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=behavior_delta_digest_added.",
+      "evidence_digests": [
+        {
+          "path": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/run-telemetry.json",
+          "exists": true,
+          "sha256": "9048eb29f9df2973099c992e7d5f5f920d21fbc05f258ce3625499e5dd26e7a6",
+          "status": "present"
+        }
+      ],
+      "repeat_policy": "do_not_repeat_until_repaired",
+      "backlog_candidate": false
+    },
+    {
+      "lesson_id": "discard_changed_files_manifest_scope",
+      "source": "learning_claim_activation.negative_learning_ledger+session_synopsis",
+      "decisions": [
+        "DISCARD"
+      ],
+      "run_ids": [
+        "active-report-self-improve-certificate-rerun6-run-01-auto-improve-iteration-persistence-runtime"
+      ],
+      "occurrence_count": 1,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=changed_files_manifest_scope.",
+      "evidence_digests": [
+        {
+          "path": "runs/active-report-self-improve-certificate-rerun6-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+          "exists": true,
+          "sha256": "8690a3decb53389650c1672e479f27135608a6bf4d801ebc459309ea9df146c3",
+          "status": "present"
+        }
+      ],
+      "repeat_policy": "do_not_repeat_until_repaired",
+      "backlog_candidate": false
+    },
+    {
+      "lesson_id": "discard_equal_score_secondary_eligibility",
+      "source": "learning_claim_activation.negative_learning_ledger+session_synopsis",
+      "decisions": [
+        "DISCARD"
+      ],
+      "run_ids": [
+        "active-report-self-improve-certificate-rerun-run-02-auto-improve-iteration-persistence-runtime",
+        "active-report-self-improve-certificate-run-02-auto-improve-iteration-persistence-runtime",
+        "auto-improve-queue-rotation-runtime-20260525-run-01-auto-improve-queue-runtime",
+        "auto-improve-release-ready-20260526-run-08-run-01-auto-improve-iteration-persistence-runtime",
+        "auto-improve-trial-9-run-01-mechanism-run-validation-runtime",
+        "auto-improve-trial-run-01-mechanism-run-validation-runtime",
+        "external-report-reconcile-20260527-run-01-run-02-mutation-proposal-runtime",
+        "external-report-reconcile-20260527-run-03-run-01-auto-improve-readiness",
+        "external-report-reconcile-20260527-run-08-run-01-auto-improve-queue-runtime",
+        "external-report-reconcile-20260527-run-10-run-01-auto-improve-readiness-constants-runtime",
+        "service-state-split-20260528-run-01-run-01-auto-improve-iteration-persistence-runtime",
+        "service-state-split-20260528-run-12-run-01-auto-improve-iteration-persistence-runtime"
+      ],
+      "occurrence_count": 12,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=equal_score_secondary_eligibility.",
+      "evidence_digests": [
+        {
+          "path": "runs/active-report-self-improve-certificate-rerun-run-02-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+          "exists": true,
+          "sha256": "374cc9e18168dcff5721cac02b333a4c200be8df4e5d71228cf7bf7c28e6c45c",
+          "status": "present"
+        },
+        {
+          "path": "runs/active-report-self-improve-certificate-run-02-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+          "exists": true,
+          "sha256": "dc0715c7b75c091c27e2acf9c84dafffc181174d695d05a06a7a8800d99f20e6",
+          "status": "present"
+        },
+        {
+          "path": "runs/auto-improve-queue-rotation-runtime-20260525-run-01-auto-improve-queue-runtime/run-telemetry.json",
+          "exists": true,
+          "sha256": "26a8eda99b89d3a1fc9f1b2a89ca50a378d1e2a96686591896523c325a54d0a0",
+          "status": "present"
+        },
+        {
+          "path": "runs/auto-improve-release-ready-20260526-run-08-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+          "exists": true,
+          "sha256": "7e53d2e74782bae2582f6e04c07fbca95234bf814079d31fcc3b94080895d1af",
+          "status": "present"
+        },
+        {
+          "path": "runs/auto-improve-trial-9-run-01-mechanism-run-validation-runtime/run-telemetry.json",
+          "exists": true,
+          "sha256": "5753ca3379aaf7a5e675955314463c3833838f007d711929de7b214f3803951e",
+          "status": "present"
+        },
+        {
+          "path": "runs/auto-improve-trial-run-01-mechanism-run-validation-runtime/run-telemetry.json",
+          "exists": true,
+          "sha256": "2ce65cdfc6d706ab777e3bd78631a158a842c126a62d8d2b9ba0960cd521fa49",
+          "status": "present"
+        },
+        {
+          "path": "runs/external-report-reconcile-20260527-run-01-run-02-mutation-proposal-runtime/run-telemetry.json",
+          "exists": true,
+          "sha256": "acf8673a4e58fa59af13e1476865e4b63fa7c2a5c4f1b6c72964c3d1cf0bc578",
+          "status": "present"
+        },
+        {
+          "path": "runs/external-report-reconcile-20260527-run-03-run-01-auto-improve-readiness/run-telemetry.json",
+          "exists": true,
+          "sha256": "0a556c3f03c5806d952deb4b6348cf89e279ad82286a5ccea2ce0998d928a2a8",
+          "status": "present"
+        },
+        {
+          "path": "runs/external-report-reconcile-20260527-run-08-run-01-auto-improve-queue-runtime/run-telemetry.json",
+          "exists": true,
+          "sha256": "abe3ba3e1fcc2c69b698e2e38804b157efb6d859ee2fa20e630637e7ff8dd601",
+          "status": "present"
+        },
+        {
+          "path": "runs/external-report-reconcile-20260527-run-10-run-01-auto-improve-readiness-constants-runtime/run-telemetry.json",
+          "exists": true,
+          "sha256": "d8c54b59a9b2abe0de3d81a40f38933876827696751997e8964e0f85e72b8679",
+          "status": "present"
+        },
+        {
+          "path": "runs/service-state-split-20260528-run-01-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+          "exists": true,
+          "sha256": "9ac42ec1d80ac575289279d1abfedae394526360829234bfe427b31fc92ecc96",
+          "status": "present"
+        },
+        {
+          "path": "runs/service-state-split-20260528-run-12-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+          "exists": true,
+          "sha256": "d374ffc5043d944c70a0ed081f1fe8c83a5de20ad3af9e1a48ba988974a16356",
+          "status": "present"
+        }
+      ],
+      "repeat_policy": "do_not_repeat_until_repaired",
+      "backlog_candidate": true
+    },
+    {
+      "lesson_id": "discard_telemetry_discoverability_improved",
+      "source": "learning_claim_activation.negative_learning_ledger+session_synopsis",
+      "decisions": [
+        "DISCARD"
+      ],
+      "run_ids": [
+        "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp"
+      ],
+      "occurrence_count": 1,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=telemetry_discoverability_improved.",
+      "evidence_digests": [
+        {
+          "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/run-telemetry.json",
+          "exists": true,
+          "sha256": "370f77f245e56c0572e6542a94c5dbf3257f9d533d78da70f01507d83a8007d4",
+          "status": "present"
+        }
+      ],
+      "repeat_policy": "do_not_repeat_until_repaired",
+      "backlog_candidate": false
+    },
+    {
+      "lesson_id": "hold_legacy_promotion_report",
+      "source": "learning_claim_activation.negative_learning_ledger",
+      "decisions": [
+        "HOLD"
+      ],
+      "run_ids": [
+        "active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime",
+        "auto-improve-trial-3-run-01-mutation-proposal-runtime"
+      ],
+      "occurrence_count": 2,
+      "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+      "repair_target": "Change the mechanism or evidence predicate before rerunning another HOLD attempt with same_eval_reason_code=legacy_promotion_report.",
+      "evidence_digests": [
+        {
+          "path": "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+          "exists": true,
+          "sha256": "b6d062ba640f790dab855801cc08e903db6f37c6d66b9756e235fab090b50252",
+          "status": "present"
+        },
+        {
+          "path": "runs/auto-improve-trial-3-run-01-mutation-proposal-runtime/run-telemetry.json",
+          "exists": true,
+          "sha256": "8878a9e39621f74ebdffcd32aa4a9957aa2570a6fbdd7cc05d0d2d7dfc5fcf29",
+          "status": "present"
+        }
+      ],
+      "repeat_policy": "do_not_repeat_until_repaired",
+      "backlog_candidate": true
+    }
+  ],
+  "inputs": {
+    "learning_claim_activation": "ops/reports/learning_claim_activation_report.json",
+    "session_synopsis": "ops/reports/session-synopsis.json"
+  }
+}

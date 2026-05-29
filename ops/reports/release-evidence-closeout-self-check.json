@@ -1,0 +1,179 @@
+{
+  "$schema": "ops/schemas/release-evidence-closeout-self-check.schema.json",
+  "artifact_kind": "release_evidence_closeout_self_check",
+  "generated_at": "2026-05-29T07:15:00Z",
+  "producer": "ops.scripts.release_evidence_closeout_self_check",
+  "source_command": "python -m ops.scripts.release_evidence_closeout_self_check --vault . --batch-manifest ops/reports/release-closeout-batch-manifest.json --evidence-cohort ops/reports/release-evidence-cohort.json --out ops/reports/release-evidence-closeout-self-check.json",
+  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
+  "source_tree_fingerprint": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+  "input_fingerprints": {
+    "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+    "schema": "d1eb9164774040413e38ef9e454e402fc3cc307575df565f3e31eba96f33127a",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "446cec4fa8a22c9eca6e02b44c75b1effd463505e4b67b2520bc93042d677fab",
+    "batch_manifest": "466a33e4dbfc5fc5208ed523b2ae2f93cb205546bdf65854b724376805db5f09",
+    "evidence_cohort": "1cdc41a720c80583675ed8dd79303a73d296a4578c03721e388f4b693ba9c863",
+    "batch_manifest_load_status": "2689367b205c16ce32ed4200942b8b8b1e262dfc70d9bc9fbc77c49699a4f1df",
+    "evidence_cohort_load_status": "2689367b205c16ce32ed4200942b8b8b1e262dfc70d9bc9fbc77c49699a4f1df"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-29T07:15:00Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": {
+    "result": "pass",
+    "summary": "Closeout self-check snapshot captured",
+    "missing_required_watch_paths": []
+  },
+  "closeout_inputs": {
+    "batch_manifest_path": "ops/reports/release-closeout-batch-manifest.json",
+    "evidence_cohort_path": "ops/reports/release-evidence-cohort.json",
+    "batch_manifest_fingerprint": "466a33e4dbfc5fc5208ed523b2ae2f93cb205546bdf65854b724376805db5f09",
+    "evidence_cohort_fingerprint": "1cdc41a720c80583675ed8dd79303a73d296a4578c03721e388f4b693ba9c863"
+  },
+  "closeout_snapshot": {
+    "batch_manifest_component_count": 14,
+    "cohort_component_count": 10,
+    "batch_manifest_input_digest": "2eadcd5739d062bb64d4b7d5420e2b90cd39b80a51fb986a731d5256b35525ca",
+    "cohort_input_digest": "041719db61fd62c158fa955acd8fb9c5339cd25044715bdb77134aea06154b74",
+    "clean_lane_contract_status": "fail",
+    "release_readiness_summary": {
+      "artifact_count": 14,
+      "present_count": 14,
+      "current_count": 14,
+      "required_count": 14,
+      "required_present_count": 14,
+      "required_current_count": 14
+    }
+  },
+  "batch_artifact_digest_watch": {
+    "status": "match",
+    "artifact_count": 14,
+    "match_count": 14,
+    "mismatch_count": 0,
+    "missing_artifact_count": 0,
+    "artifacts": [
+      {
+        "path": "ops/reports/release-smoke-report.json",
+        "expected_digest": "f78344c81f31b7404ecfac3d7043f5e1991c6ebbf03e0db8c8ba06c5e9a292df",
+        "actual_digest": "f78344c81f31b7404ecfac3d7043f5e1991c6ebbf03e0db8c8ba06c5e9a292df",
+        "status": "match"
+      },
+      {
+        "path": "ops/reports/source-package-clean-extract.json",
+        "expected_digest": "e365df55934207c561d26e66a37d8d9b62939530a73d9f7f64b57e2171616796",
+        "actual_digest": "e365df55934207c561d26e66a37d8d9b62939530a73d9f7f64b57e2171616796",
+        "status": "match"
+      },
+      {
+        "path": "external-reports/report-reference-manifest.json",
+        "expected_digest": "07d3e676df0a717bc3d10b289584adeacb4672af4657d618cf80f335317617f8",
+        "actual_digest": "07d3e676df0a717bc3d10b289584adeacb4672af4657d618cf80f335317617f8",
+        "status": "match"
+      },
+      {
+        "path": "ops/reports/generated-artifact-index.json",
+        "expected_digest": "f3b74601f26c4ecdbeab35ae51e03c38542b3840351311bc2154be91657674c5",
+        "actual_digest": "f3b74601f26c4ecdbeab35ae51e03c38542b3840351311bc2154be91657674c5",
+        "status": "match"
+      },
+      {
+        "path": "ops/reports/artifact-freshness-report.json",
+        "expected_digest": "633847d623eddd3973d0bea6d3052b4c8346890b3054d446de2f98d5dc391d1a",
+        "actual_digest": "633847d623eddd3973d0bea6d3052b4c8346890b3054d446de2f98d5dc391d1a",
+        "status": "match"
+      },
+      {
+        "path": "ops/reports/test-execution-summary.json",
+        "expected_digest": "8e9985beaeea06ceaedad8a71bd9fca317135f7b2973a77f1d2207ad299836b4",
+        "actual_digest": "8e9985beaeea06ceaedad8a71bd9fca317135f7b2973a77f1d2207ad299836b4",
+        "status": "match"
+      },
+      {
+        "path": "ops/reports/test-execution-summary-full.json",
+        "expected_digest": "5ec3d8edc9c081ab1cc8bf2c9f4f1c5e674e382cd5cd7b7b9ce1d34ef7a3bc8e",
+        "actual_digest": "5ec3d8edc9c081ab1cc8bf2c9f4f1c5e674e382cd5cd7b7b9ce1d34ef7a3bc8e",
+        "status": "match"
+      },
+      {
+        "path": "ops/reports/release-closeout-summary.json",
+        "expected_digest": "0360ee51b43dab2203c1797cb55d57b64cae301acf641b398de01cc34e9e56b5",
+        "actual_digest": "0360ee51b43dab2203c1797cb55d57b64cae301acf641b398de01cc34e9e56b5",
+        "status": "match"
+      },
+      {
+        "path": "ops/reports/learning-readiness-signoff-revalidation.json",
+        "expected_digest": "2dc122c053b87a451985d0cd77c88acd6eec02c77825f2b5043a6cbbb0ee254d",
+        "actual_digest": "2dc122c053b87a451985d0cd77c88acd6eec02c77825f2b5043a6cbbb0ee254d",
+        "status": "match"
+      },
+      {
+        "path": "ops/reports/learning-delta-scoreboard.json",
+        "expected_digest": "6e742a3fc03aaed910121d5775e9f1392248d9c37844c13189db1cfd98882e67",
+        "actual_digest": "6e742a3fc03aaed910121d5775e9f1392248d9c37844c13189db1cfd98882e67",
+        "status": "match"
+      },
+      {
+        "path": "ops/reports/release-evidence-cohort.json",
+        "expected_digest": "1cdc41a720c80583675ed8dd79303a73d296a4578c03721e388f4b693ba9c863",
+        "actual_digest": "1cdc41a720c80583675ed8dd79303a73d296a4578c03721e388f4b693ba9c863",
+        "status": "match"
+      },
+      {
+        "path": "ops/reports/release-evidence-dashboard.json",
+        "expected_digest": "f9ec7bd2ce7411f9756aee0694382b702a2cc7748c0c26897bc23c4f8919acb0",
+        "actual_digest": "f9ec7bd2ce7411f9756aee0694382b702a2cc7748c0c26897bc23c4f8919acb0",
+        "status": "match"
+      },
+      {
+        "path": "ops/reports/release-lane-summary.json",
+        "expected_digest": "75578ce4f290ad8d411e3e540337cd5297e292eb244ea4a1dbf217d7d909ab9a",
+        "actual_digest": "75578ce4f290ad8d411e3e540337cd5297e292eb244ea4a1dbf217d7d909ab9a",
+        "status": "match"
+      },
+      {
+        "path": "ops/reports/release-clean-blocker-ledger.json",
+        "expected_digest": "eab74c0d4e64c87ba9d480fa644d5312ccc1abe86fd09f399f282c86f309e25d",
+        "actual_digest": "eab74c0d4e64c87ba9d480fa644d5312ccc1abe86fd09f399f282c86f309e25d",
+        "status": "match"
+      }
+    ],
+    "summary": "batch artifact digest watch status=match; artifact_count=14; mismatch_count=0; missing_artifact_count=0"
+  },
+  "drift_watch_list": [
+    {
+      "field_path": "batch_manifest.release_authority_status",
+      "snapshot_value": "conditional_pass",
+      "check_description": "Release authority status snapshot at closeout"
+    },
+    {
+      "field_path": "batch_manifest.sealed_release_status",
+      "snapshot_value": "unsealed_distribution_not_provided",
+      "check_description": "Distribution and artifact sealing status snapshot at closeout"
+    },
+    {
+      "field_path": "batch_manifest.distribution_package.status",
+      "snapshot_value": "not_provided",
+      "check_description": "Distribution package materialization status at closeout"
+    },
+    {
+      "field_path": "cohort.clean_lane_contract.status",
+      "snapshot_value": "fail",
+      "check_description": "Clean lane contract status at closeout"
+    },
+    {
+      "field_path": "cohort.summary.accepted_risk_family_count",
+      "snapshot_value": 1,
+      "check_description": "Accepted risk family count at closeout"
+    }
+  ]
+}

@@ -1,0 +1,382 @@
+{
+  "$schema": "ops/schemas/learning-confirmed-legacy-reconstruction.schema.json",
+  "artifact_kind": "learning_confirmed_legacy_reconstruction",
+  "generated_at": "2026-05-29T05:03:33Z",
+  "producer": "ops.scripts.learning_confirmed_legacy_reconstruction",
+  "source_command": "python -m ops.scripts.learning_confirmed_legacy_reconstruction --vault .",
+  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
+  "source_tree_fingerprint": "c887a62d8b455fd73b297c05119f294e1925a22d9f5c715a84e838afc812e174",
+  "input_fingerprints": {
+    "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+    "schema": "45cc51f7ddecbdabfa861b5bcea8d3b4427120a3a0b72c35d75ca4f3cdcad319",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "c0b42ff0d7cd5298761784108ee21037b0bfd0fe8ce5237aa84c970b4bb39e75",
+    "legacy_reconstruction_inputs": "425c2da8244b6ab531d76e1f0a378ffa1286f029d8fd5076e0cea6988ef50901"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-29T05:03:33Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "pass",
+  "summary": {
+    "reconstruction_sha256": "a533560787354a98dda0fc48bdc52c680456f410ee2b3f577420d380ccbb55bc",
+    "run_count": 5,
+    "reconstruction_needed_count": 3,
+    "reconstructed_run_count": 3,
+    "not_needed_run_count": 2,
+    "blocked_run_count": 0,
+    "historical_telemetry_mutation": false,
+    "operator_reconstruction_diagnostics": [
+      {
+        "run_id": "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
+        "families": [
+          "contract_regression_signals"
+        ],
+        "reconstruction_status": "not_needed",
+        "reconstruction_needed": false,
+        "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+        "reconstruction_reasons": [],
+        "parsed_secondary_axes": [
+          "lint",
+          "complexity",
+          "tests"
+        ],
+        "parsed_secondary_axis_evidence": {
+          "source": "promotion_report_check_detail",
+          "check_id": "equal_score_secondary_eligibility",
+          "detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=true, selected_any_improvement=true",
+          "strict_signal": true,
+          "axes": [
+            "lint",
+            "complexity",
+            "tests"
+          ]
+        }
+      },
+      {
+        "run_id": "run-20260507-auto-improve-iteration-persistence-discard-path",
+        "families": [
+          "contract_regression_signals"
+        ],
+        "reconstruction_status": "reconstructed",
+        "reconstruction_needed": true,
+        "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+        "reconstruction_reasons": [
+          "telemetry behavior_delta_digest missing or invalid",
+          "telemetry strict secondary improvement fields missing or incomplete"
+        ],
+        "parsed_secondary_axes": [
+          "lint",
+          "complexity",
+          "tests"
+        ],
+        "parsed_secondary_axis_evidence": {
+          "source": "promotion_report_check_detail",
+          "check_id": "equal_score_secondary_eligibility",
+          "detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=true, selected_any_improvement=true",
+          "strict_signal": true,
+          "axes": [
+            "lint",
+            "complexity",
+            "tests"
+          ]
+        }
+      },
+      {
+        "run_id": "run-20260507-auto-improve-iteration-persistence-typed-same-eval",
+        "families": [
+          "contract_regression_signals"
+        ],
+        "reconstruction_status": "not_needed",
+        "reconstruction_needed": false,
+        "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+        "reconstruction_reasons": [],
+        "parsed_secondary_axes": [
+          "lint",
+          "complexity",
+          "tests"
+        ],
+        "parsed_secondary_axis_evidence": {
+          "source": "promotion_report_check_detail",
+          "check_id": "equal_score_secondary_eligibility",
+          "detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=true, selected_any_improvement=false",
+          "strict_signal": false,
+          "axes": [
+            "lint",
+            "complexity",
+            "tests"
+          ]
+        }
+      },
+      {
+        "run_id": "service-state-split-20260528-run-01-run-01-auto-improve-iteration-persistence-runtime",
+        "families": [
+          "contract_regression_signals"
+        ],
+        "reconstruction_status": "reconstructed",
+        "reconstruction_needed": true,
+        "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+        "reconstruction_reasons": [
+          "telemetry behavior_delta_digest mismatches behavior-delta artifact",
+          "telemetry strict secondary improvement fields missing or incomplete"
+        ],
+        "parsed_secondary_axes": [
+          "lint",
+          "complexity",
+          "tests"
+        ],
+        "parsed_secondary_axis_evidence": {
+          "source": "promotion_report_check_detail",
+          "check_id": "equal_score_secondary_eligibility",
+          "detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=false, selected_any_improvement=true",
+          "strict_signal": true,
+          "axes": [
+            "lint",
+            "complexity",
+            "tests"
+          ]
+        }
+      },
+      {
+        "run_id": "service-state-split-20260528-run-12-run-01-auto-improve-iteration-persistence-runtime",
+        "families": [
+          "contract_regression_signals"
+        ],
+        "reconstruction_status": "reconstructed",
+        "reconstruction_needed": true,
+        "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+        "reconstruction_reasons": [
+          "telemetry behavior_delta_digest mismatches behavior-delta artifact",
+          "telemetry strict secondary improvement fields missing or incomplete"
+        ],
+        "parsed_secondary_axes": [
+          "lint",
+          "complexity",
+          "tests"
+        ],
+        "parsed_secondary_axis_evidence": {
+          "source": "promotion_report_check_detail",
+          "check_id": "equal_score_secondary_eligibility",
+          "detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=false, selected_any_improvement=true",
+          "strict_signal": true,
+          "axes": [
+            "lint",
+            "complexity",
+            "tests"
+          ]
+        }
+      }
+    ],
+    "operator_summary": "legacy_reconstruction_runs=5; needed=3; reconstructed=3; blocked=0"
+  },
+  "reconstruction_identity": {
+    "digest_algorithm": "sha256",
+    "payload_version": 1,
+    "reconstruction_digest": "a533560787354a98dda0fc48bdc52c680456f410ee2b3f577420d380ccbb55bc"
+  },
+  "run_reconstructions": [
+    {
+      "run_id": "run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement",
+      "families": [
+        "contract_regression_signals"
+      ],
+      "telemetry_path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/run-telemetry.json",
+      "telemetry_sha256": "d8f5101d691c70b8acd20a42333860a46eb76b62f348b8b147ca9cb6750fd605",
+      "promotion_report_path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/promotion-report.json",
+      "promotion_report_sha256": "c0c80ccf35241e9fef7c845b45566816e929f734469dc2ccebef239a550dba3b",
+      "behavior_delta_path": "runs/run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement/behavior-delta.json",
+      "behavior_delta_artifact_exists": true,
+      "behavior_delta_artifact_sha256": "514097d562a83a47866da20e7707687cabe31968d32e435484851f7cc63b902b",
+      "telemetry_behavior_delta_digest": "514097d562a83a47866da20e7707687cabe31968d32e435484851f7cc63b902b",
+      "telemetry_behavior_delta_digest_valid": true,
+      "digest_reconstruction_needed": false,
+      "secondary_reconstruction_needed": false,
+      "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+      "parsed_strict_secondary_improvement_present": true,
+      "parsed_secondary_axes": [
+        "lint",
+        "complexity",
+        "tests"
+      ],
+      "parsed_secondary_axis_evidence": {
+        "source": "promotion_report_check_detail",
+        "check_id": "equal_score_secondary_eligibility",
+        "detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=true, selected_any_improvement=true",
+        "strict_signal": true,
+        "axes": [
+          "lint",
+          "complexity",
+          "tests"
+        ]
+      },
+      "reconstruction_status": "not_needed",
+      "reasons": []
+    },
+    {
+      "run_id": "run-20260507-auto-improve-iteration-persistence-discard-path",
+      "families": [
+        "contract_regression_signals"
+      ],
+      "telemetry_path": "runs/run-20260507-auto-improve-iteration-persistence-discard-path/run-telemetry.json",
+      "telemetry_sha256": "c66a1fb1b615e5b4b2bc5461341e31f302a46e6bfcbb5d4227b16ad8c6d5af21",
+      "promotion_report_path": "runs/run-20260507-auto-improve-iteration-persistence-discard-path/promotion-report.json",
+      "promotion_report_sha256": "468f04ffbfd54564caae74e32c7ac161d76c89c459b66f623dfcda9435c6539d",
+      "behavior_delta_path": "runs/run-20260507-auto-improve-iteration-persistence-discard-path/behavior-delta.json",
+      "behavior_delta_artifact_exists": true,
+      "behavior_delta_artifact_sha256": "8a01cb3873cfbf4037ad5f4a06f67762902e7770df7f5c982af696175dd019dc",
+      "telemetry_behavior_delta_digest": "",
+      "telemetry_behavior_delta_digest_valid": false,
+      "digest_reconstruction_needed": true,
+      "secondary_reconstruction_needed": true,
+      "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+      "parsed_strict_secondary_improvement_present": true,
+      "parsed_secondary_axes": [
+        "lint",
+        "complexity",
+        "tests"
+      ],
+      "parsed_secondary_axis_evidence": {
+        "source": "promotion_report_check_detail",
+        "check_id": "equal_score_secondary_eligibility",
+        "detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=true, selected_any_improvement=true",
+        "strict_signal": true,
+        "axes": [
+          "lint",
+          "complexity",
+          "tests"
+        ]
+      },
+      "reconstruction_status": "reconstructed",
+      "reasons": [
+        "telemetry behavior_delta_digest missing or invalid",
+        "telemetry strict secondary improvement fields missing or incomplete"
+      ]
+    },
+    {
+      "run_id": "run-20260507-auto-improve-iteration-persistence-typed-same-eval",
+      "families": [
+        "contract_regression_signals"
+      ],
+      "telemetry_path": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/run-telemetry.json",
+      "telemetry_sha256": "9048eb29f9df2973099c992e7d5f5f920d21fbc05f258ce3625499e5dd26e7a6",
+      "promotion_report_path": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/promotion-report.json",
+      "promotion_report_sha256": "70684eff29b18e82e9ffe57b924dc18f8f48ee93961a589ada1987ff74b7c215",
+      "behavior_delta_path": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/behavior-delta.json",
+      "behavior_delta_artifact_exists": true,
+      "behavior_delta_artifact_sha256": "297e3886f43ccf40b0ad8a0a5b3eb3fd3a5564834809eac2ec5e7f9db88f1478",
+      "telemetry_behavior_delta_digest": "297e3886f43ccf40b0ad8a0a5b3eb3fd3a5564834809eac2ec5e7f9db88f1478",
+      "telemetry_behavior_delta_digest_valid": true,
+      "digest_reconstruction_needed": false,
+      "secondary_reconstruction_needed": false,
+      "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+      "parsed_strict_secondary_improvement_present": false,
+      "parsed_secondary_axes": [
+        "lint",
+        "complexity",
+        "tests"
+      ],
+      "parsed_secondary_axis_evidence": {
+        "source": "promotion_report_check_detail",
+        "check_id": "equal_score_secondary_eligibility",
+        "detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=true, selected_any_improvement=false",
+        "strict_signal": false,
+        "axes": [
+          "lint",
+          "complexity",
+          "tests"
+        ]
+      },
+      "reconstruction_status": "not_needed",
+      "reasons": []
+    },
+    {
+      "run_id": "service-state-split-20260528-run-01-run-01-auto-improve-iteration-persistence-runtime",
+      "families": [
+        "contract_regression_signals"
+      ],
+      "telemetry_path": "runs/service-state-split-20260528-run-01-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+      "telemetry_sha256": "9ac42ec1d80ac575289279d1abfedae394526360829234bfe427b31fc92ecc96",
+      "promotion_report_path": "runs/service-state-split-20260528-run-01-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json",
+      "promotion_report_sha256": "5fa3998a4843ccf0e26cd49db1374f403024e45783ffb05790cbe090a1794672",
+      "behavior_delta_path": "runs/service-state-split-20260528-run-01-run-01-auto-improve-iteration-persistence-runtime/behavior-delta.json",
+      "behavior_delta_artifact_exists": true,
+      "behavior_delta_artifact_sha256": "2e7910f805f9b7c86d66955281b6526e69dc50d0980b36158b0226bb13ac9fec",
+      "telemetry_behavior_delta_digest": "f6a308a8c468c789e53d6fc5617f95e9bd9d101c640792d78e7f947a90abbe69",
+      "telemetry_behavior_delta_digest_valid": true,
+      "digest_reconstruction_needed": true,
+      "secondary_reconstruction_needed": true,
+      "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+      "parsed_strict_secondary_improvement_present": true,
+      "parsed_secondary_axes": [
+        "lint",
+        "complexity",
+        "tests"
+      ],
+      "parsed_secondary_axis_evidence": {
+        "source": "promotion_report_check_detail",
+        "check_id": "equal_score_secondary_eligibility",
+        "detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=false, selected_any_improvement=true",
+        "strict_signal": true,
+        "axes": [
+          "lint",
+          "complexity",
+          "tests"
+        ]
+      },
+      "reconstruction_status": "reconstructed",
+      "reasons": [
+        "telemetry behavior_delta_digest mismatches behavior-delta artifact",
+        "telemetry strict secondary improvement fields missing or incomplete"
+      ]
+    },
+    {
+      "run_id": "service-state-split-20260528-run-12-run-01-auto-improve-iteration-persistence-runtime",
+      "families": [
+        "contract_regression_signals"
+      ],
+      "telemetry_path": "runs/service-state-split-20260528-run-12-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+      "telemetry_sha256": "d374ffc5043d944c70a0ed081f1fe8c83a5de20ad3af9e1a48ba988974a16356",
+      "promotion_report_path": "runs/service-state-split-20260528-run-12-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json",
+      "promotion_report_sha256": "8f9bc17a3e07effa82f183c8dc44515491005738e0c0f295a27e412730d12c26",
+      "behavior_delta_path": "runs/service-state-split-20260528-run-12-run-01-auto-improve-iteration-persistence-runtime/behavior-delta.json",
+      "behavior_delta_artifact_exists": true,
+      "behavior_delta_artifact_sha256": "ff4fd6ace0401b4e14e17351b0252ace38fcfdfcd1030ff54870e643bee87a97",
+      "telemetry_behavior_delta_digest": "8d4796cafbd7ea464abc4e14f871a55ae1fbafac146eb990d359299814937721",
+      "telemetry_behavior_delta_digest_valid": true,
+      "digest_reconstruction_needed": true,
+      "secondary_reconstruction_needed": true,
+      "selection_reason": "selected_from_mechanism_review_candidates_for_active_same_eval_family; families=contract_regression_signals",
+      "parsed_strict_secondary_improvement_present": true,
+      "parsed_secondary_axes": [
+        "lint",
+        "complexity",
+        "tests"
+      ],
+      "parsed_secondary_axis_evidence": {
+        "source": "promotion_report_check_detail",
+        "check_id": "equal_score_secondary_eligibility",
+        "detail": "allowed=true, score_equal=true, selected_axes=['lint', 'complexity', 'tests'], selected_non_regression=false, selected_any_improvement=true",
+        "strict_signal": true,
+        "axes": [
+          "lint",
+          "complexity",
+          "tests"
+        ]
+      },
+      "reconstruction_status": "reconstructed",
+      "reasons": [
+        "telemetry behavior_delta_digest mismatches behavior-delta artifact",
+        "telemetry strict secondary improvement fields missing or incomplete"
+      ]
+    }
+  ]
+}

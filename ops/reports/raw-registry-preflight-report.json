@@ -1,0 +1,121 @@
+{
+  "$schema": "ops/schemas/raw-registry-preflight-report.schema.json",
+  "artifact_kind": "raw_registry_preflight_report",
+  "generated_at": "2026-05-29T07:00:57Z",
+  "producer": "ops.scripts.raw_registry_preflight",
+  "source_command": "python -m ops.scripts.raw_registry_preflight --vault .",
+  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
+  "source_tree_fingerprint": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+  "input_fingerprints": {
+    "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+    "schema": "27a2dbc3dbb66d6dc0ec6fead8aad5a81f79e21bc9cff2c9eabb7af84541c082",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "799849c741ba3136988d846c98cf3ce3e36ef36d7d25803772652d502ffa008a",
+    "raw_inventory": "6533eae0f3f4392385986aa91f1548bc6c9192689b5aab6f5d79c8cec979ed58",
+    "raw_registry_entry_pages": "2d26ad4285cbcbbfcc2a1cfe902ea1942acb1622e2d3a776578bf242b85d9b87",
+    "alias_policy_version": "f84a1152c3b12acd19d7baba4f383e0635d5a55e717f350f830f8b68bc1fd5cf",
+    "environment_fingerprint": "9b3f0cf3aa3c8c6ce255d926d8a710da0e619ac305beeaec7b7b27ce2a1f2cbe",
+    "metric_semantics": "0cdae93d083db401de4b476d0f212d1551c5620ac6d9b76e4a60809311db60c0",
+    "path_alias_resolution_mode": "0c0672a78f9a4cea3c7f3323a7e8b508c6072d8e56bf7ebab0fa8586b644bb7e"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-29T07:00:57Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "summary_page": "system/system-raw-registry.md",
+  "entry_pages": [
+    "system/system-raw-registry/wiki.md",
+    "system/system-raw-registry/wiki/ai-capability.md",
+    "system/system-raw-registry/wiki/ai-capability-governance-intake-2026-04-21.md",
+    "system/system-raw-registry/wiki/ai-compute-control.md",
+    "system/system-raw-registry/wiki/ai-infra-compute-intake-2026-04-21.md",
+    "system/system-raw-registry/wiki/ai-execution.md",
+    "system/system-raw-registry/wiki/coffee.md",
+    "system/system-raw-registry/wiki/defense-statecraft-intake-2026-04-21.md",
+    "system/system-raw-registry/wiki/early-root-intake-2026-04-12-16.md",
+    "system/system-raw-registry/wiki/europe-tech-sovereignty.md",
+    "system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-1.md",
+    "system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-2.md",
+    "system/system-raw-registry/wiki/global-markets-misc-intake-2026-04-21-3.md",
+    "system/system-raw-registry/wiki/global-policy-and-market-seeds.md",
+    "system/system-raw-registry/wiki/health-and-science-intake-2026-04-21.md",
+    "system/system-raw-registry/wiki/korea-fx.md",
+    "system/system-raw-registry/wiki/korea-macro-domestic-intake-2026-04-21.md",
+    "system/system-raw-registry/wiki/middle-east.md",
+    "system/system-raw-registry/wiki/middle-east-energy-intake-2026-04-21.md",
+    "system/system-raw-registry/wiki/middle-east-followups.md",
+    "system/system-raw-registry/wiki/raw-intake-2026-05-25.md",
+    "system/system-raw-registry/wiki/raw-intake-2026-05-26.md",
+    "system/system-raw-registry/wiki/raw-intake-2026-05-29.md",
+    "system/system-raw-registry/wiki/raw-intake-2026-05-29-ai-technology-health.md",
+    "system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-market-fx.md",
+    "system/system-raw-registry/wiki/raw-intake-2026-05-29-korea-domestic-policy.md",
+    "system/system-raw-registry/wiki/raw-intake-2026-05-29-geopolitics-middle-east.md",
+    "system/system-raw-registry/wiki/raw-intake-2026-05-29-physical-defense-domain-seeds.md",
+    "system/system-raw-registry/system.md"
+  ],
+  "status": "pass",
+  "extraction_tool": "python_zipfile_with_infozip_c_locale_path_budget",
+  "locale": "C.UTF-8",
+  "path_alias_resolution_mode": "canonical_storage_path_then_manual_exported_environment_aliases_then_unique_content_sha256",
+  "alias_policy_version": "raw_registry_alias_resolution_v1",
+  "environment_fingerprint": {
+    "algorithm": "sha256-json-v1",
+    "value": "7c6fa1b195093da32c57c74585201c5114d18b05695c77bddfd91c3f15d7a2ac",
+    "inputs": {
+      "alias_policy_version": "raw_registry_alias_resolution_v1",
+      "extraction_tool": "python_zipfile_with_infozip_c_locale_path_budget",
+      "filesystem_encoding": "utf-8",
+      "filesystem_errors": "surrogateescape",
+      "locale": "C.UTF-8",
+      "os_name": "posix",
+      "path_alias_resolution_mode": "canonical_storage_path_then_manual_exported_environment_aliases_then_unique_content_sha256",
+      "path_list_separator": ":",
+      "path_separator": "/",
+      "platform_system": "Linux",
+      "posix_escape_expanded_component_byte_limit": "255",
+      "preferred_encoding": "UTF-8"
+    }
+  },
+  "metric_semantics": {
+    "entry_count": {
+      "scope": "registry_entries",
+      "description": "Parsed raw registry entries after inventory enrichment."
+    },
+    "error_count": {
+      "scope": "diagnostics",
+      "description": "Number of preflight diagnostics emitted with fail severity."
+    },
+    "warning_count": {
+      "scope": "diagnostics",
+      "description": "Number of preflight diagnostics emitted with warn severity."
+    },
+    "path_alias_match_count": {
+      "scope": "entries_with_missing_canonical_storage_path",
+      "description": "Entries whose canonical storage_path was absent but a manual, exported, or deterministic environment alias existed on disk."
+    },
+    "content_hash_fallback_count": {
+      "scope": "entries_with_missing_canonical_storage_path_and_aliases",
+      "description": "Entries whose path locators were absent but exactly one raw inventory file matched the entry content_sha256."
+    }
+  },
+  "unsupported_environment": false,
+  "errors": [],
+  "warnings": [],
+  "stats": {
+    "entry_count": 619,
+    "error_count": 0,
+    "warning_count": 0,
+    "path_alias_match_count": 0,
+    "content_hash_fallback_count": 0
+  }
+}

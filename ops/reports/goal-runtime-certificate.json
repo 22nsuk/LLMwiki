@@ -1,0 +1,225 @@
+{
+  "$schema": "ops/schemas/goal-runtime-certificate.schema.json",
+  "artifact_kind": "goal_runtime_certificate",
+  "generated_at": "2026-05-29T06:54:01Z",
+  "producer": "ops.scripts.goal_runtime_certificate_report",
+  "source_command": "python -m ops.scripts.goal_runtime_certificate_report --vault .",
+  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
+  "source_tree_fingerprint": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+  "input_fingerprints": {
+    "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+    "schema": "a295be1f8891d18a6cf0ad0a441f6d4307649d78ee09edc13580d5692d8995a3",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "d586de57a76096c90d43203422e60a21d4550a88c30cf0d2259e1571aff65c9e",
+    "auto_improve_session": "1ab2f5cf7818dd9164ffa641235e394731c7a19d7720232dfda58f0107390e23",
+    "goal_contract": "181e620875562c7628ad181af514c2ad418c44a1f8580104792dcbea7efa2231",
+    "goal_run_status": "6a94b3dbe27ed411deea1288c72e562d6b7043d0fd2e0f1854d8027b30633882",
+    "run_audit_log": "9c6ba7296ada7ff1018840375895b6be8f80a6da3dce06c8fa6fd60ba09b9068",
+    "run_resume_metadata": "5c74ed46426f5b05542f66ad13e09ee97a50b4ec886f7b0d2f06f626c03928aa",
+    "run_status_markdown": "d3c9fa15b4ccaafa5460153c1bf67ad82be5255e9b6a04a67d2015ddabd99cdb"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-29T06:54:01Z"
+  },
+  "vault": ".",
+  "goal": {
+    "contract_path": "runs/goal-auto-improve-trial/state/codex-goal-contract.json",
+    "contract_id": "auto-improve-goal",
+    "contract_sha256_before": "b5c75f630db2fca1f6ada28d8129d67a87aefadd68109953d113a7d95200c237",
+    "contract_sha256_after": "b5c75f630db2fca1f6ada28d8129d67a87aefadd68109953d113a7d95200c237"
+  },
+  "certificate": {
+    "target_runtime_mode": "self_improvement_loop",
+    "verification_status": "blocked",
+    "max_runtime_seconds": 21600,
+    "observed_elapsed_seconds": 0,
+    "already_verified": false,
+    "eligible": false
+  },
+  "run": {
+    "status_report_path": "runs/goal-auto-improve-trial/state/goal-run-status.json",
+    "run_id": "auto-improve-trial",
+    "run_status": "blocked",
+    "run_runtime_mode": "self_improvement_loop",
+    "started_at": "2026-05-29T06:54:00Z",
+    "completed_at": ""
+  },
+  "run_artifacts": {
+    "status": "clean",
+    "checks": [
+      {
+        "artifact": "status_markdown_path",
+        "path": "runs/goal-auto-improve-trial/state/status.md",
+        "status": "present"
+      },
+      {
+        "artifact": "resume_metadata_path",
+        "path": "runs/goal-auto-improve-trial/state/resume-metadata.json",
+        "status": "present"
+      },
+      {
+        "artifact": "audit_log_path",
+        "path": "runs/goal-auto-improve-trial/state/audit-log.jsonl",
+        "status": "present"
+      },
+      {
+        "artifact": "status_markdown_current",
+        "path": "runs/goal-auto-improve-trial/state/status.md",
+        "status": "pass"
+      },
+      {
+        "artifact": "resume_metadata_current",
+        "path": "runs/goal-auto-improve-trial/state/resume-metadata.json",
+        "status": "pass"
+      },
+      {
+        "artifact": "audit_log_current",
+        "path": "runs/goal-auto-improve-trial/state/audit-log.jsonl",
+        "status": "pass"
+      },
+      {
+        "artifact": "audit_log_command_observability_current",
+        "path": "runs/goal-auto-improve-trial/state/audit-log.jsonl",
+        "status": "pass"
+      }
+    ],
+    "audit_event_count": 1,
+    "runner_command_audit_current": false
+  },
+  "session_evidence": {
+    "status": "incomplete",
+    "path": "ops/reports/auto-improve-sessions/auto-improve-trial.json",
+    "session_status": "complete",
+    "stop_reason": "failure_budget_exhausted",
+    "iteration_count": 1,
+    "successful_iteration_count": 0,
+    "has_success_then_followup": false,
+    "maintenance_status": "missing",
+    "maintenance_cycle_count": 0,
+    "meaningful_maintenance_cycle_count": 0,
+    "expected_min_maintenance_cycle_count": 0,
+    "maintenance_last_cycle_elapsed_seconds": 0,
+    "maintenance_stop_reason": "",
+    "accepted_stop_reasons": [
+      "time_budget_exhausted",
+      "proposal_budget_exhausted",
+      "queue_exhausted"
+    ],
+    "minimum_iteration_count": 1,
+    "minimum_successful_iteration_count": 1,
+    "requires_success_then_followup": false,
+    "requires_meaningful_maintenance": true,
+    "minimum_meaningful_maintenance_cycle_count": 1,
+    "allow_zero_maintenance_cycles_for_certificate": false
+  },
+  "command_observability": {
+    "mode": "",
+    "heartbeat_count": 0,
+    "expected_min_heartbeat_count": 0,
+    "timeout_seconds": 0,
+    "last_command_returncode": -1,
+    "last_command_timed_out": false,
+    "last_command_termination_reason": "",
+    "last_command_heartbeat_at": "",
+    "runner_audit_current": false,
+    "status": "incomplete"
+  },
+  "evidence_paths": [
+    {
+      "evidence_id": "auto_improve_readiness",
+      "path": "ops/reports/auto-improve-readiness.json",
+      "status": "present"
+    },
+    {
+      "evidence_id": "goal_run_status",
+      "path": "runs/goal-auto-improve-trial/state/goal-run-status.json",
+      "status": "present",
+      "report_status": "attention"
+    },
+    {
+      "evidence_id": "session_synopsis",
+      "path": "ops/reports/session-synopsis.json",
+      "status": "present",
+      "report_status": "attention"
+    },
+    {
+      "evidence_id": "remediation_backlog",
+      "path": "ops/reports/remediation-backlog.json",
+      "status": "present",
+      "report_status": "pass"
+    },
+    {
+      "evidence_id": "source_package_clean_extract",
+      "path": "ops/reports/source-package-clean-extract.json",
+      "status": "present",
+      "report_status": "pass"
+    },
+    {
+      "evidence_id": "public_check_summary",
+      "path": "ops/reports/public-check-summary.json",
+      "status": "present",
+      "report_status": "pass"
+    },
+    {
+      "evidence_id": "release_authority",
+      "path": "ops/reports/release-closeout-summary.json",
+      "status": "present",
+      "report_status": "pass"
+    },
+    {
+      "evidence_id": "goal_worktree_guard",
+      "path": "ops/reports/goal-worktree-guard.json",
+      "status": "present",
+      "report_status": "attention"
+    }
+  ],
+  "diagnosis": {
+    "claim_type": "sustained_self_improvement_loop_certificate",
+    "certificate_claim_status": "not_yet_certifiable",
+    "report_status_meaning": "status=attention means the certificate report was generated but current evidence does not yet verify a sustained self-improvement loop claim.",
+    "current_scope": {
+      "status_report_path": "runs/goal-auto-improve-trial/state/goal-run-status.json",
+      "run_id": "auto-improve-trial",
+      "run_status": "blocked",
+      "runtime_mode": "self_improvement_loop",
+      "session_evidence_path": "ops/reports/auto-improve-sessions/auto-improve-trial.json"
+    },
+    "mechanism_promote_evidence_policy": {
+      "mechanism_promote_sufficient_for_certificate": false,
+      "role": "A PROMOTE mechanism run can satisfy the successful-iteration part of matching auto-improve session evidence, but it does not replace the completed goal-run status, runner command heartbeat/audit, promotion guard, and full-gate evidence."
+    },
+    "primary_blocker_categories": [
+      "runtime_run",
+      "session_evidence",
+      "command_observability"
+    ],
+    "certifiable": false
+  },
+  "contract_update": {
+    "apply_requested": false,
+    "apply_allowed": false,
+    "applied": false,
+    "certificate_status_before": "unverified",
+    "certificate_status_after": "unverified",
+    "runtime_certificate_verified_before": false,
+    "runtime_certificate_verified_after": false
+  },
+  "blockers": [
+    "goal run is not completed",
+    "auto-improve session stop reason is not accepted for runtime certificate",
+    "auto-improve session has no successful improvement iteration",
+    "auto-improve session lacks meaningful runtime maintenance evidence",
+    "goal run command heartbeat is not current",
+    "goal run command observation mode is not process_heartbeat",
+    "goal run command audit was not written by goal runtime runner",
+    "goal run command timeout is missing",
+    "goal run command returncode is not zero",
+    "goal run command termination reason is not completed"
+  ],
+  "status": "attention"
+}

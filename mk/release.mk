@@ -122,6 +122,7 @@ RELEASE_EVIDENCE_COHORT_POLICY ?= allowed_divergence_with_explicit_risk
 RELEASE_EVIDENCE_COHORT_PROVENANCE_MODE ?= embedded_currentness
 RELEASE_EVIDENCE_COHORT_ZIP_METADATA ?=
 LEARNING_READINESS_SIGNOFF_OUT ?= ops/reports/learning-readiness-signoff.json
+LEARNING_READINESS_SIGNOFF_REUSE_FROM ?= $(LEARNING_READINESS_SIGNOFF_OUT)
 LEARNING_READINESS_SIGNOFF_ACCEPTED_BY ?=
 LEARNING_READINESS_SIGNOFF_EXPIRY_DAYS ?= 14
 LEARNING_READINESS_SIGNOFF_RISK_OWNER ?= runtime-maintainer
@@ -156,7 +157,7 @@ SELF_IMPROVEMENT_NEGATIVE_LESSONS_CANDIDATE_OUT ?= tmp/self-improvement-negative
 REMEDIATION_BACKLOG_OUT ?= ops/reports/remediation-backlog.json
 REMEDIATION_BACKLOG_CANDIDATE_OUT ?= tmp/remediation-backlog.candidate.json
 
-.PHONY: release-run-ready release-run-ready-check release-sealed-run-ready release-sealed-run-ready-plan release-sealed-run-ready-check release-auto-promotion-goal-run-id-guard release-auto-promotion-preflight release-auto-promotion-preflight-prerequisites release-auto-promotion-preflight-check release-auto-promotion-safe-cleanup release-auto-promotion-preseal release-auto-promotion-preseal-check release-auto-promotion-ready release-auto-promotion-ready-plan release-auto-promotion-ready-invalidate release-auto-promotion-operator-summary release-auto-promotion-ready-check release-preflight-current release-test-current release-public-current release-package-current release-source-package-smoke release-source-package-clean-extract release-seal-current release-evidence-converge release-evidence-converge-lane-guard release-evidence-converge-phase-1 release-evidence-converge-phase-2 release-evidence-converge-phase-3 release-finality-resettle release-verify-current release-sealed-verify release-evidence-closeout release-evidence-closeout-lane-guard release-distribution-zip release-distribution-zip-lane-guard release-source-package-check release-evidence-closeout-sealed release-evidence-closeout-sealed-core-sidecars release-evidence-closeout-sealed-sidecars release-sealed-post-seal-attestation release-evidence-closeout-sealed-check release-evidence-closeout-sealed-dry-run release-evidence-closeout-sealed-dry-run-check release-authority-sealed-preflight release-evidence-refresh-fast release-builder-full release-builder-full-lane-guard release-smoke release-smoke-lane-guard release-smoke-full release-smoke-full-reuse release-smoke-full-current-check release-smoke-fast release-smoke-fast-current-check release-smoke-fast-refresh-check release-closeout-summary release-closeout-summary-report release-closeout-summary-conditional release-clean-lane-evidence-review release-evidence-cohort release-evidence-cohort-preseal-refresh release-evidence-cohort-check learning-readiness-signoff learning-readiness-signoff-check learning-readiness-signoff-revalidation learning-readiness-signoff-revalidation-check release-evidence-dashboard release-evidence-dashboard-report release-lane-summary release-clean-blocker-ledger operator-release-summary learning-readiness-signoff-template learning-confirmed-legacy-reconstruction learning-claim-evidence-bundle learning-confirmed-evidence-cohort learning-claim-unlock-review learning-delta-scoreboard learning-claim-activation-report session-synopsis self-improvement-negative-lessons remediation-backlog review-archive external-report-reference-manifest external-report-reference-manifest-strict external-report-reference-manifest-release-check external-report-reference-manifest-settle external-report-action-matrix external-report-lifecycle-refresh release-worktree-clean-check release-converge-preflight release-converge-post release-converge release-converge-all-surfaces release-source-ready-snapshot release-source-ready-prepare release-source-ready-commit release-source-ready-post-verify release-source-ready-status release-source-ready release-check-preflight-converge release-check-core release-check-post-check release-check-post-converge release-check release-check-all-surfaces release-check-finalized release-conditional release-clean release-provenance-clean release-sbom-clean release-closeout-fixed-point release-closeout-post-check-finalizer-dry-run release-closeout-post-check-finalizer-ci-artifact release-closeout-fixed-point-cost-trend release-closeout-finality-attestation release-closeout-finality-verify release-closeout-batch-manifest-promote release-closeout-batch-manifest-replay-verify release-closeout-batch-manifest-verify release-audit-pack release-post-seal-attestation release-evidence-closeout-self-check
+.PHONY: release-run-ready release-run-ready-check release-sealed-run-ready release-sealed-run-ready-plan release-sealed-run-ready-check release-auto-promotion-goal-run-id-guard release-auto-promotion-preflight release-auto-promotion-preflight-prerequisites release-auto-promotion-preflight-check release-auto-promotion-safe-cleanup release-auto-promotion-preseal release-auto-promotion-preseal-check release-auto-promotion-ready release-auto-promotion-ready-plan release-auto-promotion-ready-invalidate release-auto-promotion-operator-summary release-auto-promotion-ready-check release-preflight-current release-test-current release-public-current release-package-current release-source-package-smoke release-source-package-clean-extract release-seal-current release-evidence-converge release-evidence-converge-lane-guard release-evidence-converge-phase-1 release-evidence-converge-phase-2 release-evidence-converge-phase-3 release-finality-resettle release-verify-current release-sealed-verify release-evidence-closeout release-evidence-closeout-lane-guard release-distribution-zip release-distribution-zip-lane-guard release-source-package-check release-evidence-closeout-sealed release-evidence-closeout-sealed-core-sidecars release-evidence-closeout-sealed-sidecars release-sealed-post-seal-attestation release-evidence-closeout-sealed-check release-evidence-closeout-sealed-dry-run release-evidence-closeout-sealed-dry-run-check release-authority-sealed-preflight release-evidence-refresh-fast release-builder-full release-builder-full-lane-guard release-smoke release-smoke-lane-guard release-smoke-full release-smoke-full-reuse release-smoke-full-current-check release-smoke-fast release-smoke-fast-current-check release-smoke-fast-refresh-check release-closeout-summary release-closeout-summary-report release-closeout-summary-conditional release-clean-lane-evidence-review release-evidence-cohort release-evidence-cohort-preseal-refresh release-evidence-cohort-check learning-readiness-signoff learning-readiness-signoff-refresh learning-readiness-signoff-check learning-readiness-signoff-revalidation learning-readiness-signoff-revalidation-check release-evidence-dashboard release-evidence-dashboard-report release-lane-summary release-clean-blocker-ledger operator-release-summary learning-readiness-signoff-template learning-confirmed-legacy-reconstruction learning-claim-evidence-bundle learning-confirmed-evidence-cohort learning-claim-unlock-review learning-delta-scoreboard learning-claim-activation-report session-synopsis self-improvement-negative-lessons remediation-backlog review-archive external-report-reference-manifest external-report-reference-manifest-strict external-report-reference-manifest-release-check external-report-reference-manifest-settle external-report-action-matrix external-report-lifecycle-refresh release-worktree-clean-check release-converge-preflight release-converge-post release-converge release-converge-all-surfaces head-aligned-evidence-converge release-source-ready-snapshot release-source-ready-prepare release-source-ready-commit release-source-ready-post-verify release-source-ready-status release-source-ready release-check-preflight-converge release-check-core release-check-post-check release-check-post-converge release-check release-check-all-surfaces release-check-finalized release-conditional release-clean release-provenance-clean release-sbom-clean release-closeout-fixed-point release-closeout-post-check-finalizer-dry-run release-closeout-post-check-finalizer-ci-artifact release-closeout-fixed-point-cost-trend release-closeout-finality-attestation release-closeout-finality-verify release-closeout-batch-manifest-promote release-closeout-batch-manifest-replay-verify release-closeout-batch-manifest-verify release-audit-pack release-post-seal-attestation release-evidence-closeout-self-check
 .PHONY: release-authority-inventory
 
 release-authority-inventory:
@@ -503,6 +504,9 @@ release-evidence-cohort-check:
 learning-readiness-signoff:
 	$(PYTHON) -m ops.scripts.learning_readiness_signoff --vault "$(VAULT)" --out "$(LEARNING_READINESS_SIGNOFF_OUT)" --accepted-by "$(LEARNING_READINESS_SIGNOFF_ACCEPTED_BY)" --expiry-days "$(LEARNING_READINESS_SIGNOFF_EXPIRY_DAYS)" --risk-owner "$(LEARNING_READINESS_SIGNOFF_RISK_OWNER)" --revalidation-condition "$(LEARNING_READINESS_SIGNOFF_REVALIDATION_CONDITION)" --rollback-trigger "$(LEARNING_READINESS_SIGNOFF_ROLLBACK_TRIGGER)" $(if $(LEARNING_READINESS_SIGNOFF_NOTES),--notes "$(LEARNING_READINESS_SIGNOFF_NOTES)",)
 
+learning-readiness-signoff-refresh:
+	$(PYTHON) -m ops.scripts.learning_readiness_signoff_refresh --vault "$(VAULT)" --reuse-from "$(LEARNING_READINESS_SIGNOFF_REUSE_FROM)" --out "$(LEARNING_READINESS_SIGNOFF_OUT)"
+
 learning-readiness-signoff-check:
 	$(PYTHON) -m ops.scripts.release_closeout_summary --vault "$(VAULT)" --out tmp/learning-readiness-signoff-check-release-closeout-summary.json --profile "$(RELEASE_CLOSEOUT_PROFILE)" --no-fail
 
@@ -625,6 +629,38 @@ release-converge-all-surfaces:
 	$(MAKE) sync-public-policy
 	$(MAKE) public-check-all
 	$(MAKE) release-converge-post
+
+head-aligned-evidence-converge:
+	$(MAKE) release-evidence-converge
+	$(MAKE) release-smoke-fast-refresh-check
+	$(MAKE) auto-improve-goal-status
+	$(MAKE) goal-worktree-guard
+	$(MAKE) goal-runtime-certificate
+	$(MAKE) learning-readiness-signoff-refresh
+	$(MAKE) test-execution-summary-report-contract
+	$(MAKE) test-execution-summary-full-current-or-refresh
+	$(MAKE) sync-public-policy
+	$(MAKE) public-check-summary
+	$(MAKE) release-authority-sealed-preflight
+	$(MAKE) generated-artifact-converge
+	$(MAKE) learning-readiness-signoff-revalidation
+	$(MAKE) release-closeout-summary-report
+	$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint
+	$(MAKE) auto-improve-readiness-report-body
+	$(MAKE) release-evidence-dashboard-report
+	$(MAKE) release-lane-summary
+	$(MAKE) release-clean-blocker-ledger
+	$(MAKE) release-closeout-fixed-point
+	$(MAKE) generated-artifact-converge
+	$(MAKE) learning-readiness-signoff-revalidation
+	$(MAKE) release-closeout-summary-report
+	$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint
+	$(MAKE) auto-improve-readiness-report-body
+	$(MAKE) release-evidence-dashboard-report
+	$(MAKE) release-lane-summary
+	$(MAKE) release-clean-blocker-ledger
+	$(MAKE) tmp-json-clean
+	$(MAKE) release-closeout-finality-verify
 
 release-source-ready-snapshot:
 	$(PYTHON) -m ops.scripts.release_source_ready_commit --vault "$(VAULT)" --out "$(RELEASE_SOURCE_READY_PRE_STATUS_OUT)" --snapshot-only

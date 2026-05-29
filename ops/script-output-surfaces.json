@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/script-output-surfaces.schema.json",
   "artifact_kind": "script_output_surfaces",
-  "generated_at": "2026-05-28T13:27:42Z",
+  "generated_at": "2026-05-29T04:02:24Z",
   "producer": "ops.scripts.script_output_surfaces",
   "source_command": "python -m ops.scripts.script_output_surfaces --vault . --out ops/script-output-surfaces.json",
-  "source_revision": "e9e974060293657409c2119a495379a601d485cf",
-  "source_tree_fingerprint": "53c6a990d529a3bada3da67622dcc0409b96be9c5b40970c93e80f1d5c4da6ba",
+  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
+  "source_tree_fingerprint": "adebe21e5157c24a22c9e398da8305d3dadd47b9dc774b739acb38bac2ce472a",
   "input_fingerprints": {
-    "policy": "a6d3475d6d52c580b5889ac030ade89ba4f72964a6888c188caeb5ec8b80d6a3",
+    "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
     "schema": "02cee320f449f8666c341a0a389855f3ef5ac34bddcdf4c2767b5d4b384a9722",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "73cafcb788bc134c301b099d44809c9e3a5e1a08d857615b0f5d8fafabce5d2f",
-    "ops_scripts": "1620621ecf5930b132e1a43d7f76aba4c9fe53bd3f9a37864821c9571c134f20",
+    "ops_scripts": "253bec819a2eaf3a3d2e3efb99027ffe78617e414518bf630f3a2c2fa0150ce7",
     "classification_values": "0ba4b7fd8868f9c9d070bea6d90c2cee76e2b9c8089223c413c8e898794923f4"
   },
   "schema_version": 1,
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-28T13:27:42Z"
+    "checked_at": "2026-05-29T04:02:24Z"
   },
   "version": 1,
   "description": "Generated inventory for ops/scripts output path surfaces. Tests compare this registry with the live AST-derived inventory.",
@@ -1111,6 +1111,17 @@
     },
     {
       "path": "ops/scripts/learning/learning_readiness_signoff.py",
+      "classification": "repo_artifact",
+      "output_options": [
+        "--out"
+      ],
+      "references_resolve_output_path": false,
+      "references_resolve_repo_output_path": false,
+      "direct_fallback_eligible": true,
+      "reason": "output option writes a repo-scoped artifact without the permissive resolver"
+    },
+    {
+      "path": "ops/scripts/learning/learning_readiness_signoff_refresh.py",
       "classification": "repo_artifact",
       "output_options": [
         "--out"

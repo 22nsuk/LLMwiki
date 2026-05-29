@@ -81,6 +81,7 @@ llm-wiki-release-workflow-order-guard = "ops.scripts.release.release_workflow_or
 llm-wiki-review-archive = "ops.scripts.release.review_archive:main"
 llm-wiki-run-mechanism-experiment = "ops.scripts.mechanism.run_mechanism_experiment:main"
 llm-wiki-sanitize-run-artifacts = "ops.scripts.core.sanitize_run_artifacts:main"
+llm-wiki-learning-readiness-signoff-refresh = "ops.scripts.learning.learning_readiness_signoff_refresh:main"
 llm-wiki-sbom-export-mapping = "ops.scripts.supply_chain.sbom_export_mapping:main"
 llm-wiki-security-advisories = "ops.scripts.supply_chain.security_advisories:main"
 llm-wiki-sigstore-bundle = "ops.scripts.supply_chain.sigstore_bundle:main"

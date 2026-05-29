@@ -1,0 +1,305 @@
+{
+  "$schema": "ops/schemas/release-smoke-report.schema.json",
+  "artifact_kind": "release_smoke_report",
+  "generated_at": "2026-05-29T07:03:38Z",
+  "producer": "ops.scripts.release_smoke",
+  "source_command": "python -m ops.scripts.release.release_smoke --vault . --profile fast",
+  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
+  "source_tree_fingerprint": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+  "input_fingerprints": {
+    "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+    "schema": "1dff9a809a13ac57a2b078a674351eb866ca42d24634902a2b1b4861a4ad82f4",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "68c7519bab37bf76ce674c97da93392d503f18fc877095120a362adb7606f1b7"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-29T07:03:38Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "profile": "fast",
+  "status": "pass",
+  "archive_path": "<tmp>/LLMwiki-release-smoke.zip",
+  "archive_file": {
+    "path": "<tmp>/LLMwiki-release-smoke.zip",
+    "exists": true,
+    "size_bytes": 2085070,
+    "sha256": "aa7c89cce0329700cbc22197aeefaaad5345b9568ce17864dd53a63e8e5f5a7f"
+  },
+  "archive_class": {
+    "name": "release_smoke_zip",
+    "format": "zip",
+    "compression": "ZIP_DEFLATED",
+    "root_prefix": "LLMwiki",
+    "member_path_template": "LLMwiki/<manifest path>",
+    "path_encoding": "utf-8",
+    "zip_create_system": 3,
+    "manifest_exclusion_policy": {
+      "name": "release_manifest_exclusions",
+      "excluded_prefixes": [
+        "ops/reports/",
+        "ops/operator/",
+        "external-reports/",
+        "raw/",
+        "wiki/",
+        "system/",
+        "review/",
+        "runs/",
+        "tmp/",
+        "build/",
+        "dist/",
+        ".venv/",
+        ".venv-",
+        ".coverage"
+      ],
+      "excluded_files": [
+        "ops/manifest.json",
+        "ops/raw-registry.json",
+        "ops/script-output-surfaces.json"
+      ],
+      "excluded_cache_dirs": [
+        ".cache",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+        "__pycache__"
+      ],
+      "excluded_dev_hidden_dirs": [
+        ".eggs",
+        ".git",
+        ".hypothesis",
+        ".idea",
+        ".nox",
+        ".obsidian",
+        ".tox",
+        ".venv",
+        ".vscode"
+      ],
+      "excluded_suffixes": [
+        ".pyc",
+        ".pyo",
+        ":Zone.Identifier"
+      ],
+      "excluded_egg_info_dirs": true
+    }
+  },
+  "archive_budget": {
+    "pass": true,
+    "zip_path_byte_budget": {
+      "limit_bytes": 65535,
+      "max_bytes": 85,
+      "status": "pass"
+    },
+    "zip_component_byte_budget": {
+      "limit_bytes": 255,
+      "max_bytes": 58,
+      "status": "pass"
+    },
+    "posix_escape_expanded_filename_budget": {
+      "limit_bytes": 255,
+      "max_bytes": 58,
+      "status": "pass"
+    },
+    "blocking_budget_fail_count": 0,
+    "platform_warning_count": 0,
+    "platform_path_diagnostics": {
+      "status": "pass",
+      "blocker_count": 0,
+      "warning_count": 0,
+      "diagnostics": [
+        {
+          "id": "zip_path_byte_budget",
+          "status": "pass",
+          "severity": "blocker"
+        },
+        {
+          "id": "zip_component_byte_budget",
+          "status": "pass",
+          "severity": "blocker"
+        },
+        {
+          "id": "infozip_c_locale_escape_filename_budget",
+          "status": "pass",
+          "severity": "warn"
+        }
+      ]
+    },
+    "top_offenders": [
+      {
+        "path": "ops/schemas/raw-registry-cross-environment-evidence-bundle.schema.json",
+        "archive_path": "LLMwiki/ops/schemas/raw-registry-cross-environment-evidence-bundle.schema.json",
+        "size_bytes": 6909,
+        "zip_path_bytes": 78,
+        "zip_component_bytes": 58,
+        "python_unicode_escape_filename_bytes": 58,
+        "posix_escape_expanded_filename_bytes": 58,
+        "infozip_c_locale_escape_filename_bytes": 58,
+        "max_budget_ratio": 0.22745098039215686
+      },
+      {
+        "path": "tests/test_auto_improve_readiness_release_authority_runtime.py",
+        "archive_path": "LLMwiki/tests/test_auto_improve_readiness_release_authority_runtime.py",
+        "size_bytes": 12058,
+        "zip_path_bytes": 70,
+        "zip_component_bytes": 56,
+        "python_unicode_escape_filename_bytes": 56,
+        "posix_escape_expanded_filename_bytes": 56,
+        "infozip_c_locale_escape_filename_bytes": 56,
+        "max_budget_ratio": 0.2196078431372549
+      },
+      {
+        "path": "ops/scripts/mechanism/mechanism_review_outcome_metrics_calibration_runtime.py",
+        "archive_path": "LLMwiki/ops/scripts/mechanism/mechanism_review_outcome_metrics_calibration_runtime.py",
+        "size_bytes": 29583,
+        "zip_path_bytes": 85,
+        "zip_component_bytes": 55,
+        "python_unicode_escape_filename_bytes": 55,
+        "posix_escape_expanded_filename_bytes": 55,
+        "infozip_c_locale_escape_filename_bytes": 55,
+        "max_budget_ratio": 0.21568627450980393
+      },
+      {
+        "path": "ops/scripts/mechanism/post_mutation_generated_artifact_convergence_runtime.py",
+        "archive_path": "LLMwiki/ops/scripts/mechanism/post_mutation_generated_artifact_convergence_runtime.py",
+        "size_bytes": 9221,
+        "zip_path_bytes": 85,
+        "zip_component_bytes": 55,
+        "python_unicode_escape_filename_bytes": 55,
+        "posix_escape_expanded_filename_bytes": 55,
+        "infozip_c_locale_escape_filename_bytes": 55,
+        "max_budget_ratio": 0.21568627450980393
+      },
+      {
+        "path": "tools/manual_mutate_auto_improve_existing_telemetry_inline.py",
+        "archive_path": "LLMwiki/tools/manual_mutate_auto_improve_existing_telemetry_inline.py",
+        "size_bytes": 2012,
+        "zip_path_bytes": 69,
+        "zip_component_bytes": 55,
+        "python_unicode_escape_filename_bytes": 55,
+        "posix_escape_expanded_filename_bytes": 55,
+        "infozip_c_locale_escape_filename_bytes": 55,
+        "max_budget_ratio": 0.21568627450980393
+      },
+      {
+        "path": "tests/test_raw_registry_cross_environment_evidence_bundle.py",
+        "archive_path": "LLMwiki/tests/test_raw_registry_cross_environment_evidence_bundle.py",
+        "size_bytes": 10793,
+        "zip_path_bytes": 68,
+        "zip_component_bytes": 54,
+        "python_unicode_escape_filename_bytes": 54,
+        "posix_escape_expanded_filename_bytes": 54,
+        "infozip_c_locale_escape_filename_bytes": 54,
+        "max_budget_ratio": 0.21176470588235294
+      },
+      {
+        "path": "tools/manual_mutate_auto_improve_decision_record_fallback.py",
+        "archive_path": "LLMwiki/tools/manual_mutate_auto_improve_decision_record_fallback.py",
+        "size_bytes": 7836,
+        "zip_path_bytes": 68,
+        "zip_component_bytes": 54,
+        "python_unicode_escape_filename_bytes": 54,
+        "posix_escape_expanded_filename_bytes": 54,
+        "infozip_c_locale_escape_filename_bytes": 54,
+        "max_budget_ratio": 0.21176470588235294
+      },
+      {
+        "path": "ops/schemas/learning-confirmed-legacy-reconstruction.schema.json",
+        "archive_path": "LLMwiki/ops/schemas/learning-confirmed-legacy-reconstruction.schema.json",
+        "size_bytes": 8080,
+        "zip_path_bytes": 72,
+        "zip_component_bytes": 52,
+        "python_unicode_escape_filename_bytes": 52,
+        "posix_escape_expanded_filename_bytes": 52,
+        "infozip_c_locale_escape_filename_bytes": 52,
+        "max_budget_ratio": 0.20392156862745098
+      },
+      {
+        "path": "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
+        "archive_path": "LLMwiki/ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
+        "size_bytes": 39551,
+        "zip_path_bytes": 81,
+        "zip_component_bytes": 51,
+        "python_unicode_escape_filename_bytes": 51,
+        "posix_escape_expanded_filename_bytes": 51,
+        "infozip_c_locale_escape_filename_bytes": 51,
+        "max_budget_ratio": 0.2
+      },
+      {
+        "path": "ops/schemas/learning-readiness-signoff-revalidation.schema.json",
+        "archive_path": "LLMwiki/ops/schemas/learning-readiness-signoff-revalidation.schema.json",
+        "size_bytes": 13074,
+        "zip_path_bytes": 71,
+        "zip_component_bytes": 51,
+        "python_unicode_escape_filename_bytes": 51,
+        "posix_escape_expanded_filename_bytes": 51,
+        "infozip_c_locale_escape_filename_bytes": 51,
+        "max_budget_ratio": 0.2
+      }
+    ]
+  },
+  "archive_reproducibility": {
+    "status": "pass",
+    "run_count": 2,
+    "first_archive_sha256": "aa7c89cce0329700cbc22197aeefaaad5345b9568ce17864dd53a63e8e5f5a7f",
+    "second_archive_sha256": "aa7c89cce0329700cbc22197aeefaaad5345b9568ce17864dd53a63e8e5f5a7f",
+    "same_archive_sha256": true,
+    "first_source_manifest_digest": "1ea31cdd8ad41fd3af44b66bd2d15179fffa2c821155321f150255d6bb13d364",
+    "second_source_manifest_digest": "1ea31cdd8ad41fd3af44b66bd2d15179fffa2c821155321f150255d6bb13d364",
+    "same_source_manifest_digest": true,
+    "summary": "archive_reproducibility=pass; same_archive_sha256=true; same_source_manifest_digest=true"
+  },
+  "archive_self_description": {
+    "path": "release-archive-self-description.json",
+    "archive_root_name": "LLMwiki",
+    "archive_member_path": "LLMwiki/release-archive-self-description.json",
+    "sha256": "66bf3055b42316d3263128bb5cf91cb7bccca0d243bb4c10dc8154b1816c0020",
+    "size_bytes": 4541,
+    "profile": "fast",
+    "source_manifest_digest": "67fb240d265926b67bc459afc6c43a9e7568270030a4d25506d8d58ec7618e6e",
+    "source_manifest_file_count": 807,
+    "tmp_included": false,
+    "external_reports_included": false,
+    "evidence_linkage_phase": "pre_seal_package_build_snapshot",
+    "post_seal_authority": "build/release/release-sealed-run-manifest.json",
+    "evidence_linked_artifact_count": 9
+  },
+  "extracted_vault": "<tmp>/unpacked/LLMwiki",
+  "packed_file_count": 808,
+  "manifest_comparison": {
+    "pass": true,
+    "expected_file_count": 808,
+    "extracted_file_count": 808,
+    "missing_paths": [],
+    "unexpected_paths": [],
+    "sha_mismatches": [],
+    "size_mismatches": []
+  },
+  "commands": [],
+  "output_parent_preflight": {
+    "status": "pass",
+    "checks": [
+      {
+        "name": "archive",
+        "path": "<tmp>/LLMwiki-release-smoke.zip",
+        "parent": "<tmp>",
+        "status": "pass",
+        "reason": "parent writable"
+      },
+      {
+        "name": "report",
+        "path": "ops/reports/release-smoke-report-fast.json",
+        "parent": "ops/reports",
+        "status": "pass",
+        "reason": "parent writable"
+      }
+    ]
+  }
+}

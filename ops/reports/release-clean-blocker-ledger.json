@@ -1,0 +1,270 @@
+{
+  "$schema": "ops/schemas/release-clean-blocker-ledger.schema.json",
+  "artifact_kind": "release_clean_blocker_ledger",
+  "generated_at": "2026-05-29T07:15:00Z",
+  "producer": "ops.scripts.release_clean_blocker_ledger",
+  "source_command": "python -m ops.scripts.release_clean_blocker_ledger --vault . --out ops/reports/release-clean-blocker-ledger.json",
+  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
+  "source_tree_fingerprint": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+  "input_fingerprints": {
+    "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+    "schema": "8e24bbcc25ad8407ad65380e6f724746235665ec900519e37d587aad1805ddb3",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "e3f5b3ee8c549b621bf9daa68be087e5fee56a062518c04d47c73ef79f93b680",
+    "learning_delta_scoreboard": "6e742a3fc03aaed910121d5775e9f1392248d9c37844c13189db1cfd98882e67",
+    "release_closeout_summary": "0360ee51b43dab2203c1797cb55d57b64cae301acf641b398de01cc34e9e56b5",
+    "release_evidence_cohort": "1cdc41a720c80583675ed8dd79303a73d296a4578c03721e388f4b693ba9c863",
+    "release_lane_summary": "75578ce4f290ad8d411e3e540337cd5297e292eb244ea4a1dbf217d7d909ab9a",
+    "release_risk_taxonomy": "fab10795ac1344ec2edd656dc16b7d2280fc2d94007f5565ad4e5ada159232f6",
+    "current_source_tree_fingerprint": "20418dbc6730376f56ff2f374b4e0ee507eb8d3336f8ecce15e4386436d51edf"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-29T07:15:00Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "attention",
+  "summary": {
+    "advisory_backlog_status": "active",
+    "advisory_backlog_active_count": 1,
+    "advisory_backlog_expired_count": 0,
+    "advisory_backlog_missing_lifecycle_count": 0,
+    "blocker_count": 1,
+    "source_clean_blocker_count": 1,
+    "auto_improve_blocker_count": 2,
+    "accepted_risk_family_count": 2,
+    "accepted_risk_instance_count": 2,
+    "clean_lane_blocking_family_count": 1,
+    "learning_claim_blocking_family_count": 2,
+    "advisory_lifecycle_family_count": 1,
+    "clean_lane_status": "fail",
+    "conditional_lane_status": "pass",
+    "auto_improve_lane_status": "blocked",
+    "machine_release_status": "blocked",
+    "operator_release_status": "allowed",
+    "release_authority_status": "conditional_pass",
+    "sealed_release_status": "unsealed_distribution_not_provided",
+    "learning_claim_guard_status": "pass",
+    "learning_claim_allowed": false,
+    "same_eval_reason_coverage_status": "not_applicable",
+    "strict_secondary_improvement_coverage_status": "not_applicable",
+    "behavior_delta_digest_coverage_status": "not_applicable",
+    "placeholder_audit_status": "pass"
+  },
+  "learning_claim_guard": {
+    "path": "ops/reports/learning-delta-scoreboard.json",
+    "load_status": "ok",
+    "status": "pass",
+    "claims_learning_improved": false,
+    "learning_claim_allowed": false,
+    "same_eval_run_count": 0,
+    "telemetry_coverage_status": "not_applicable",
+    "same_eval_reason_coverage_status": "not_applicable",
+    "strict_secondary_improvement_coverage_status": "not_applicable",
+    "behavior_delta_digest_coverage_status": "not_applicable",
+    "placeholder_audit_status": "pass",
+    "placeholder_count": 0,
+    "reason": "bounded learning-likely claims require full same-eval reason/digest coverage, placeholder-free external reports, an active evidence bundle, and explicit unlock review; confirmed learning-improvement claims require the stricter confirmed-improvement lane"
+  },
+  "clean_lane_contract": {
+    "status": "fail",
+    "failed_conditions": [
+      "zero_accepted_risk_family",
+      "release_closeout_clean"
+    ]
+  },
+  "blockers": [
+    {
+      "id": "artifact_freshness:artifact_freshness_attention",
+      "code": "artifact_freshness_attention",
+      "source": "artifact_freshness",
+      "source_path": "ops/reports/artifact-freshness-report.json",
+      "severity": "warn",
+      "gate_effect": "advisory",
+      "clean_lane_effect": "blocks_clean_lane",
+      "conditional_lane_effect": "operator_review_required",
+      "learning_lane_effect": "not_applicable",
+      "advisory_lifecycle_effect": "not_applicable",
+      "message": "artifact freshness has attention-level debt but no fail-level freshness blocker.",
+      "required_evidence": [],
+      "risk_owner": "runtime-maintainer",
+      "expires_at": "2026-06-05T07:15:00Z",
+      "acceptance_source": "ops/scripts/release_closeout_summary.py",
+      "closure_action": "Rerun artifact-freshness before the next release closeout.",
+      "rollback_trigger": "Treat artifact freshness attention as a blocker if it becomes fail-level debt.",
+      "lifecycle_status": "not_applicable",
+      "lifecycle_issues": [],
+      "seconds_until_expiry": null
+    }
+  ],
+  "source_clean_blockers": [
+    {
+      "id": "artifact_freshness:artifact_freshness_attention",
+      "code": "artifact_freshness_attention",
+      "source": "artifact_freshness",
+      "source_path": "ops/reports/artifact-freshness-report.json",
+      "severity": "warn",
+      "gate_effect": "advisory",
+      "clean_lane_effect": "blocks_clean_lane",
+      "conditional_lane_effect": "operator_review_required",
+      "learning_lane_effect": "not_applicable",
+      "advisory_lifecycle_effect": "not_applicable",
+      "message": "artifact freshness has attention-level debt but no fail-level freshness blocker.",
+      "required_evidence": [],
+      "risk_owner": "runtime-maintainer",
+      "expires_at": "2026-06-05T07:15:00Z",
+      "acceptance_source": "ops/scripts/release_closeout_summary.py",
+      "closure_action": "Rerun artifact-freshness before the next release closeout.",
+      "rollback_trigger": "Treat artifact freshness attention as a blocker if it becomes fail-level debt.",
+      "lifecycle_status": "not_applicable",
+      "lifecycle_issues": [],
+      "seconds_until_expiry": null
+    }
+  ],
+  "auto_improve_blockers": [
+    {
+      "id": "auto_improve_readiness:promotion_blocked_by_goal_worktree_guard_failure",
+      "code": "promotion_blocked_by_goal_worktree_guard_failure",
+      "source": "auto_improve_readiness",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "severity": "blocker",
+      "gate_effect": "blocks_promotion",
+      "clean_lane_effect": "does_not_block_clean_lane",
+      "conditional_lane_effect": "operator_review_required",
+      "learning_lane_effect": "blocks_learning_claim",
+      "advisory_lifecycle_effect": "not_applicable",
+      "message": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=8",
+      "required_evidence": [
+        "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
+        "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
+        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal."
+      ],
+      "risk_owner": "",
+      "expires_at": "",
+      "acceptance_source": "",
+      "closure_action": "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
+      "rollback_trigger": "",
+      "lifecycle_status": "not_applicable",
+      "lifecycle_issues": [],
+      "seconds_until_expiry": null
+    },
+    {
+      "id": "auto_improve_readiness:promotion_blocked_by_release_batch_manifest_failure",
+      "code": "promotion_blocked_by_release_batch_manifest_failure",
+      "source": "auto_improve_readiness",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "severity": "blocker",
+      "gate_effect": "blocks_promotion",
+      "clean_lane_effect": "does_not_block_clean_lane",
+      "conditional_lane_effect": "operator_review_required",
+      "learning_lane_effect": "blocks_learning_claim",
+      "advisory_lifecycle_effect": "not_applicable",
+      "message": "release_closeout_batch_manifest release gate is not pass: release closeout batch manifest status=fail; release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided; distribution_package.status=not_provided; batch_integrity_status=pass; auto_improve_lane_status=blocked; machine_release_status=blocked",
+      "required_evidence": [
+        "Run make release-closeout-batch-manifest-promote with a bound distribution ZIP.",
+        "can_promote_result must stay false until this release gate is pass."
+      ],
+      "risk_owner": "",
+      "expires_at": "",
+      "acceptance_source": "",
+      "closure_action": "Run make release-closeout-batch-manifest-promote with a bound distribution ZIP.",
+      "rollback_trigger": "",
+      "lifecycle_status": "not_applicable",
+      "lifecycle_issues": [],
+      "seconds_until_expiry": null
+    }
+  ],
+  "learning_claim_blockers": [
+    {
+      "id": "auto_improve_readiness:promotion_blocked_by_goal_worktree_guard_failure",
+      "code": "promotion_blocked_by_goal_worktree_guard_failure",
+      "source": "auto_improve_readiness",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "severity": "blocker",
+      "gate_effect": "blocks_promotion",
+      "clean_lane_effect": "does_not_block_clean_lane",
+      "conditional_lane_effect": "operator_review_required",
+      "learning_lane_effect": "blocks_learning_claim",
+      "advisory_lifecycle_effect": "not_applicable",
+      "message": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=8",
+      "required_evidence": [
+        "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
+        "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
+        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal."
+      ],
+      "risk_owner": "",
+      "expires_at": "",
+      "acceptance_source": "",
+      "closure_action": "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
+      "rollback_trigger": "",
+      "lifecycle_status": "not_applicable",
+      "lifecycle_issues": [],
+      "seconds_until_expiry": null
+    },
+    {
+      "id": "auto_improve_readiness:promotion_blocked_by_release_batch_manifest_failure",
+      "code": "promotion_blocked_by_release_batch_manifest_failure",
+      "source": "auto_improve_readiness",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "severity": "blocker",
+      "gate_effect": "blocks_promotion",
+      "clean_lane_effect": "does_not_block_clean_lane",
+      "conditional_lane_effect": "operator_review_required",
+      "learning_lane_effect": "blocks_learning_claim",
+      "advisory_lifecycle_effect": "not_applicable",
+      "message": "release_closeout_batch_manifest release gate is not pass: release closeout batch manifest status=fail; release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided; distribution_package.status=not_provided; batch_integrity_status=pass; auto_improve_lane_status=blocked; machine_release_status=blocked",
+      "required_evidence": [
+        "Run make release-closeout-batch-manifest-promote with a bound distribution ZIP.",
+        "can_promote_result must stay false until this release gate is pass."
+      ],
+      "risk_owner": "",
+      "expires_at": "",
+      "acceptance_source": "",
+      "closure_action": "Run make release-closeout-batch-manifest-promote with a bound distribution ZIP.",
+      "rollback_trigger": "",
+      "lifecycle_status": "not_applicable",
+      "lifecycle_issues": [],
+      "seconds_until_expiry": null
+    }
+  ],
+  "advisory_backlog": [
+    {
+      "id": "external_report_reference_manifest:external_report_strict_unavailable",
+      "code": "external_report_strict_unavailable",
+      "source": "external_report_reference_manifest",
+      "source_path": "external-reports/report-reference-manifest.json",
+      "severity": "warn",
+      "gate_effect": "advisory",
+      "clean_lane_effect": "does_not_block_clean_lane",
+      "conditional_lane_effect": "operator_review_required",
+      "learning_lane_effect": "not_applicable",
+      "advisory_lifecycle_effect": "review_backlog",
+      "message": "strict external report release check is unavailable because no current distribution ZIP was provided in this non-sealed closeout",
+      "required_evidence": [
+        "Run make release-evidence-closeout-sealed before sealed release signoff."
+      ],
+      "risk_owner": "runtime-maintainer",
+      "expires_at": "2026-06-05T07:15:00Z",
+      "acceptance_source": "ops/scripts/release_closeout_summary.py",
+      "closure_action": "Rerun the sealed closeout lane with a current distribution ZIP before external review signoff.",
+      "rollback_trigger": "Treat missing strict external report provenance as a blocker in sealed release lanes.",
+      "lifecycle_status": "active",
+      "lifecycle_issues": [],
+      "seconds_until_expiry": 604800
+    }
+  ],
+  "provenance": {
+    "closeout_source": "ops/reports/release-closeout-summary.json",
+    "cohort_source": "ops/reports/release-evidence-cohort.json",
+    "lane_summary_source": "ops/reports/release-lane-summary.json",
+    "learning_delta_scoreboard_source": "ops/reports/learning-delta-scoreboard.json"
+  }
+}

@@ -1,0 +1,437 @@
+{
+  "$schema": "ops/schemas/raw-registry-preflight-reproducibility.schema.json",
+  "artifact_kind": "raw_registry_preflight_reproducibility",
+  "generated_at": "2026-05-29T07:00:57Z",
+  "producer": "ops.scripts.raw_registry_preflight",
+  "source_command": "python -m ops.scripts.raw_registry_preflight --vault . --out ops/reports/raw-registry-preflight-report.json --reproducibility-out ops/reports/raw-registry-preflight-reproducibility.json",
+  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
+  "source_tree_fingerprint": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+  "input_fingerprints": {
+    "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+    "schema": "5c023ce6db63a9ff45325de2ec06a3ea2288f03d4300b92821813fdf92f78412",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "799849c741ba3136988d846c98cf3ce3e36ef36d7d25803772652d502ffa008a",
+    "stored_preflight_report": "d45329049a8662e6ce2405caacc0015e576a4eddb063057bc3eb3a20e3e4533e",
+    "compare_fields": "ffb7202bd54e074b5a14f33b47b821d61253a4c58852e12e6ed99773bc2239a4",
+    "ignored_fields": "b033349b3b1191394de586fc9acc36568b3fc09a998e720ea9a798d838aafda3",
+    "live_preflight_report": "834cbd9c175a796c7cec6e672162e82334db5c1125f23258fed545f2d591ec0c"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-29T07:00:57Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "pass",
+  "diff_status": "match",
+  "stored_report": {
+    "path": "ops/reports/raw-registry-preflight-report.json",
+    "load_status": "ok",
+    "diagnostics": {
+      "path": "ops/reports/raw-registry-preflight-report.json",
+      "missing": false,
+      "decode_error": false,
+      "type_error": false,
+      "message": "",
+      "status": "ok"
+    },
+    "summary": {
+      "generated_at": "2026-05-29T07:00:57Z",
+      "source_tree_fingerprint": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+      "input_fingerprints": {
+        "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+        "schema": "27a2dbc3dbb66d6dc0ec6fead8aad5a81f79e21bc9cff2c9eabb7af84541c082",
+        "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+        "source_paths": "799849c741ba3136988d846c98cf3ce3e36ef36d7d25803772652d502ffa008a",
+        "raw_inventory": "6533eae0f3f4392385986aa91f1548bc6c9192689b5aab6f5d79c8cec979ed58",
+        "raw_registry_entry_pages": "2d26ad4285cbcbbfcc2a1cfe902ea1942acb1622e2d3a776578bf242b85d9b87",
+        "alias_policy_version": "f84a1152c3b12acd19d7baba4f383e0635d5a55e717f350f830f8b68bc1fd5cf",
+        "environment_fingerprint": "9b3f0cf3aa3c8c6ce255d926d8a710da0e619ac305beeaec7b7b27ce2a1f2cbe",
+        "metric_semantics": "0cdae93d083db401de4b476d0f212d1551c5620ac6d9b76e4a60809311db60c0",
+        "path_alias_resolution_mode": "0c0672a78f9a4cea3c7f3323a7e8b508c6072d8e56bf7ebab0fa8586b644bb7e"
+      },
+      "status": "pass",
+      "path_alias_resolution_mode": "canonical_storage_path_then_manual_exported_environment_aliases_then_unique_content_sha256",
+      "alias_policy_version": "raw_registry_alias_resolution_v1",
+      "environment_fingerprint": {
+        "algorithm": "sha256-json-v1",
+        "value": "7c6fa1b195093da32c57c74585201c5114d18b05695c77bddfd91c3f15d7a2ac",
+        "inputs": {
+          "alias_policy_version": "raw_registry_alias_resolution_v1",
+          "extraction_tool": "python_zipfile_with_infozip_c_locale_path_budget",
+          "filesystem_encoding": "utf-8",
+          "filesystem_errors": "surrogateescape",
+          "locale": "C.UTF-8",
+          "os_name": "posix",
+          "path_alias_resolution_mode": "canonical_storage_path_then_manual_exported_environment_aliases_then_unique_content_sha256",
+          "path_list_separator": ":",
+          "path_separator": "/",
+          "platform_system": "Linux",
+          "posix_escape_expanded_component_byte_limit": "255",
+          "preferred_encoding": "UTF-8"
+        }
+      },
+      "metric_semantics": {
+        "entry_count": {
+          "scope": "registry_entries",
+          "description": "Parsed raw registry entries after inventory enrichment."
+        },
+        "error_count": {
+          "scope": "diagnostics",
+          "description": "Number of preflight diagnostics emitted with fail severity."
+        },
+        "warning_count": {
+          "scope": "diagnostics",
+          "description": "Number of preflight diagnostics emitted with warn severity."
+        },
+        "path_alias_match_count": {
+          "scope": "entries_with_missing_canonical_storage_path",
+          "description": "Entries whose canonical storage_path was absent but a manual, exported, or deterministic environment alias existed on disk."
+        },
+        "content_hash_fallback_count": {
+          "scope": "entries_with_missing_canonical_storage_path_and_aliases",
+          "description": "Entries whose path locators were absent but exactly one raw inventory file matched the entry content_sha256."
+        }
+      },
+      "stats": {
+        "entry_count": 619,
+        "error_count": 0,
+        "warning_count": 0,
+        "path_alias_match_count": 0,
+        "content_hash_fallback_count": 0
+      },
+      "error_count": 0,
+      "warning_count": 0
+    }
+  },
+  "live_report": {
+    "summary": {
+      "generated_at": "2026-05-29T07:00:57Z",
+      "source_tree_fingerprint": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+      "input_fingerprints": {
+        "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+        "schema": "27a2dbc3dbb66d6dc0ec6fead8aad5a81f79e21bc9cff2c9eabb7af84541c082",
+        "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+        "source_paths": "799849c741ba3136988d846c98cf3ce3e36ef36d7d25803772652d502ffa008a",
+        "raw_inventory": "6533eae0f3f4392385986aa91f1548bc6c9192689b5aab6f5d79c8cec979ed58",
+        "raw_registry_entry_pages": "2d26ad4285cbcbbfcc2a1cfe902ea1942acb1622e2d3a776578bf242b85d9b87",
+        "alias_policy_version": "f84a1152c3b12acd19d7baba4f383e0635d5a55e717f350f830f8b68bc1fd5cf",
+        "environment_fingerprint": "9b3f0cf3aa3c8c6ce255d926d8a710da0e619ac305beeaec7b7b27ce2a1f2cbe",
+        "metric_semantics": "0cdae93d083db401de4b476d0f212d1551c5620ac6d9b76e4a60809311db60c0",
+        "path_alias_resolution_mode": "0c0672a78f9a4cea3c7f3323a7e8b508c6072d8e56bf7ebab0fa8586b644bb7e"
+      },
+      "status": "pass",
+      "path_alias_resolution_mode": "canonical_storage_path_then_manual_exported_environment_aliases_then_unique_content_sha256",
+      "alias_policy_version": "raw_registry_alias_resolution_v1",
+      "environment_fingerprint": {
+        "algorithm": "sha256-json-v1",
+        "value": "7c6fa1b195093da32c57c74585201c5114d18b05695c77bddfd91c3f15d7a2ac",
+        "inputs": {
+          "alias_policy_version": "raw_registry_alias_resolution_v1",
+          "extraction_tool": "python_zipfile_with_infozip_c_locale_path_budget",
+          "filesystem_encoding": "utf-8",
+          "filesystem_errors": "surrogateescape",
+          "locale": "C.UTF-8",
+          "os_name": "posix",
+          "path_alias_resolution_mode": "canonical_storage_path_then_manual_exported_environment_aliases_then_unique_content_sha256",
+          "path_list_separator": ":",
+          "path_separator": "/",
+          "platform_system": "Linux",
+          "posix_escape_expanded_component_byte_limit": "255",
+          "preferred_encoding": "UTF-8"
+        }
+      },
+      "metric_semantics": {
+        "entry_count": {
+          "scope": "registry_entries",
+          "description": "Parsed raw registry entries after inventory enrichment."
+        },
+        "error_count": {
+          "scope": "diagnostics",
+          "description": "Number of preflight diagnostics emitted with fail severity."
+        },
+        "warning_count": {
+          "scope": "diagnostics",
+          "description": "Number of preflight diagnostics emitted with warn severity."
+        },
+        "path_alias_match_count": {
+          "scope": "entries_with_missing_canonical_storage_path",
+          "description": "Entries whose canonical storage_path was absent but a manual, exported, or deterministic environment alias existed on disk."
+        },
+        "content_hash_fallback_count": {
+          "scope": "entries_with_missing_canonical_storage_path_and_aliases",
+          "description": "Entries whose path locators were absent but exactly one raw inventory file matched the entry content_sha256."
+        }
+      },
+      "stats": {
+        "entry_count": 619,
+        "error_count": 0,
+        "warning_count": 0,
+        "path_alias_match_count": 0,
+        "content_hash_fallback_count": 0
+      },
+      "error_count": 0,
+      "warning_count": 0
+    }
+  },
+  "compare_fields": [
+    "$schema",
+    "artifact_kind",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "path_alias_resolution_mode",
+    "alias_policy_version",
+    "environment_fingerprint",
+    "metric_semantics",
+    "status",
+    "unsupported_environment",
+    "stats.entry_count",
+    "stats.error_count",
+    "stats.warning_count",
+    "stats.path_alias_match_count",
+    "stats.content_hash_fallback_count"
+  ],
+  "ignored_fields": [
+    "generated_at",
+    "currentness.checked_at"
+  ],
+  "comparisons": [
+    {
+      "field": "$schema",
+      "status": "match",
+      "stored_value": "ops/schemas/raw-registry-preflight-report.schema.json",
+      "live_value": "ops/schemas/raw-registry-preflight-report.schema.json"
+    },
+    {
+      "field": "artifact_kind",
+      "status": "match",
+      "stored_value": "raw_registry_preflight_report",
+      "live_value": "raw_registry_preflight_report"
+    },
+    {
+      "field": "source_tree_fingerprint",
+      "status": "match",
+      "stored_value": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+      "live_value": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca"
+    },
+    {
+      "field": "input_fingerprints",
+      "status": "match",
+      "stored_value": {
+        "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+        "schema": "27a2dbc3dbb66d6dc0ec6fead8aad5a81f79e21bc9cff2c9eabb7af84541c082",
+        "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+        "source_paths": "799849c741ba3136988d846c98cf3ce3e36ef36d7d25803772652d502ffa008a",
+        "raw_inventory": "6533eae0f3f4392385986aa91f1548bc6c9192689b5aab6f5d79c8cec979ed58",
+        "raw_registry_entry_pages": "2d26ad4285cbcbbfcc2a1cfe902ea1942acb1622e2d3a776578bf242b85d9b87",
+        "alias_policy_version": "f84a1152c3b12acd19d7baba4f383e0635d5a55e717f350f830f8b68bc1fd5cf",
+        "environment_fingerprint": "9b3f0cf3aa3c8c6ce255d926d8a710da0e619ac305beeaec7b7b27ce2a1f2cbe",
+        "metric_semantics": "0cdae93d083db401de4b476d0f212d1551c5620ac6d9b76e4a60809311db60c0",
+        "path_alias_resolution_mode": "0c0672a78f9a4cea3c7f3323a7e8b508c6072d8e56bf7ebab0fa8586b644bb7e"
+      },
+      "live_value": {
+        "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+        "schema": "27a2dbc3dbb66d6dc0ec6fead8aad5a81f79e21bc9cff2c9eabb7af84541c082",
+        "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+        "source_paths": "799849c741ba3136988d846c98cf3ce3e36ef36d7d25803772652d502ffa008a",
+        "raw_inventory": "6533eae0f3f4392385986aa91f1548bc6c9192689b5aab6f5d79c8cec979ed58",
+        "raw_registry_entry_pages": "2d26ad4285cbcbbfcc2a1cfe902ea1942acb1622e2d3a776578bf242b85d9b87",
+        "alias_policy_version": "f84a1152c3b12acd19d7baba4f383e0635d5a55e717f350f830f8b68bc1fd5cf",
+        "environment_fingerprint": "9b3f0cf3aa3c8c6ce255d926d8a710da0e619ac305beeaec7b7b27ce2a1f2cbe",
+        "metric_semantics": "0cdae93d083db401de4b476d0f212d1551c5620ac6d9b76e4a60809311db60c0",
+        "path_alias_resolution_mode": "0c0672a78f9a4cea3c7f3323a7e8b508c6072d8e56bf7ebab0fa8586b644bb7e"
+      }
+    },
+    {
+      "field": "path_alias_resolution_mode",
+      "status": "match",
+      "stored_value": "canonical_storage_path_then_manual_exported_environment_aliases_then_unique_content_sha256",
+      "live_value": "canonical_storage_path_then_manual_exported_environment_aliases_then_unique_content_sha256"
+    },
+    {
+      "field": "alias_policy_version",
+      "status": "match",
+      "stored_value": "raw_registry_alias_resolution_v1",
+      "live_value": "raw_registry_alias_resolution_v1"
+    },
+    {
+      "field": "environment_fingerprint",
+      "status": "match",
+      "stored_value": {
+        "algorithm": "sha256-json-v1",
+        "value": "7c6fa1b195093da32c57c74585201c5114d18b05695c77bddfd91c3f15d7a2ac",
+        "inputs": {
+          "alias_policy_version": "raw_registry_alias_resolution_v1",
+          "extraction_tool": "python_zipfile_with_infozip_c_locale_path_budget",
+          "filesystem_encoding": "utf-8",
+          "filesystem_errors": "surrogateescape",
+          "locale": "C.UTF-8",
+          "os_name": "posix",
+          "path_alias_resolution_mode": "canonical_storage_path_then_manual_exported_environment_aliases_then_unique_content_sha256",
+          "path_list_separator": ":",
+          "path_separator": "/",
+          "platform_system": "Linux",
+          "posix_escape_expanded_component_byte_limit": "255",
+          "preferred_encoding": "UTF-8"
+        }
+      },
+      "live_value": {
+        "algorithm": "sha256-json-v1",
+        "value": "7c6fa1b195093da32c57c74585201c5114d18b05695c77bddfd91c3f15d7a2ac",
+        "inputs": {
+          "alias_policy_version": "raw_registry_alias_resolution_v1",
+          "extraction_tool": "python_zipfile_with_infozip_c_locale_path_budget",
+          "filesystem_encoding": "utf-8",
+          "filesystem_errors": "surrogateescape",
+          "locale": "C.UTF-8",
+          "os_name": "posix",
+          "path_alias_resolution_mode": "canonical_storage_path_then_manual_exported_environment_aliases_then_unique_content_sha256",
+          "path_list_separator": ":",
+          "path_separator": "/",
+          "platform_system": "Linux",
+          "posix_escape_expanded_component_byte_limit": "255",
+          "preferred_encoding": "UTF-8"
+        }
+      }
+    },
+    {
+      "field": "metric_semantics",
+      "status": "match",
+      "stored_value": {
+        "entry_count": {
+          "scope": "registry_entries",
+          "description": "Parsed raw registry entries after inventory enrichment."
+        },
+        "error_count": {
+          "scope": "diagnostics",
+          "description": "Number of preflight diagnostics emitted with fail severity."
+        },
+        "warning_count": {
+          "scope": "diagnostics",
+          "description": "Number of preflight diagnostics emitted with warn severity."
+        },
+        "path_alias_match_count": {
+          "scope": "entries_with_missing_canonical_storage_path",
+          "description": "Entries whose canonical storage_path was absent but a manual, exported, or deterministic environment alias existed on disk."
+        },
+        "content_hash_fallback_count": {
+          "scope": "entries_with_missing_canonical_storage_path_and_aliases",
+          "description": "Entries whose path locators were absent but exactly one raw inventory file matched the entry content_sha256."
+        }
+      },
+      "live_value": {
+        "entry_count": {
+          "scope": "registry_entries",
+          "description": "Parsed raw registry entries after inventory enrichment."
+        },
+        "error_count": {
+          "scope": "diagnostics",
+          "description": "Number of preflight diagnostics emitted with fail severity."
+        },
+        "warning_count": {
+          "scope": "diagnostics",
+          "description": "Number of preflight diagnostics emitted with warn severity."
+        },
+        "path_alias_match_count": {
+          "scope": "entries_with_missing_canonical_storage_path",
+          "description": "Entries whose canonical storage_path was absent but a manual, exported, or deterministic environment alias existed on disk."
+        },
+        "content_hash_fallback_count": {
+          "scope": "entries_with_missing_canonical_storage_path_and_aliases",
+          "description": "Entries whose path locators were absent but exactly one raw inventory file matched the entry content_sha256."
+        }
+      }
+    },
+    {
+      "field": "status",
+      "status": "match",
+      "stored_value": "pass",
+      "live_value": "pass"
+    },
+    {
+      "field": "unsupported_environment",
+      "status": "match",
+      "stored_value": false,
+      "live_value": false
+    },
+    {
+      "field": "stats.entry_count",
+      "status": "match",
+      "stored_value": 619,
+      "live_value": 619
+    },
+    {
+      "field": "stats.error_count",
+      "status": "match",
+      "stored_value": 0,
+      "live_value": 0
+    },
+    {
+      "field": "stats.warning_count",
+      "status": "match",
+      "stored_value": 0,
+      "live_value": 0
+    },
+    {
+      "field": "stats.path_alias_match_count",
+      "status": "match",
+      "stored_value": 0,
+      "live_value": 0
+    },
+    {
+      "field": "stats.content_hash_fallback_count",
+      "status": "match",
+      "stored_value": 0,
+      "live_value": 0
+    }
+  ],
+  "path_alias_resolution_mode": "canonical_storage_path_then_manual_exported_environment_aliases_then_unique_content_sha256",
+  "alias_policy_version": "raw_registry_alias_resolution_v1",
+  "environment_fingerprint": {
+    "algorithm": "sha256-json-v1",
+    "value": "7c6fa1b195093da32c57c74585201c5114d18b05695c77bddfd91c3f15d7a2ac",
+    "inputs": {
+      "alias_policy_version": "raw_registry_alias_resolution_v1",
+      "extraction_tool": "python_zipfile_with_infozip_c_locale_path_budget",
+      "filesystem_encoding": "utf-8",
+      "filesystem_errors": "surrogateescape",
+      "locale": "C.UTF-8",
+      "os_name": "posix",
+      "path_alias_resolution_mode": "canonical_storage_path_then_manual_exported_environment_aliases_then_unique_content_sha256",
+      "path_list_separator": ":",
+      "path_separator": "/",
+      "platform_system": "Linux",
+      "posix_escape_expanded_component_byte_limit": "255",
+      "preferred_encoding": "UTF-8"
+    }
+  },
+  "metric_semantics": {
+    "entry_count": {
+      "scope": "registry_entries",
+      "description": "Parsed raw registry entries after inventory enrichment."
+    },
+    "error_count": {
+      "scope": "diagnostics",
+      "description": "Number of preflight diagnostics emitted with fail severity."
+    },
+    "warning_count": {
+      "scope": "diagnostics",
+      "description": "Number of preflight diagnostics emitted with warn severity."
+    },
+    "path_alias_match_count": {
+      "scope": "entries_with_missing_canonical_storage_path",
+      "description": "Entries whose canonical storage_path was absent but a manual, exported, or deterministic environment alias existed on disk."
+    },
+    "content_hash_fallback_count": {
+      "scope": "entries_with_missing_canonical_storage_path_and_aliases",
+      "description": "Entries whose path locators were absent but exactly one raw inventory file matched the entry content_sha256."
+    }
+  }
+}

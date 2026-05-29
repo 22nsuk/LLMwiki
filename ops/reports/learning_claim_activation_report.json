@@ -1,0 +1,710 @@
+{
+  "$schema": "ops/schemas/learning-claim-activation-report.schema.json",
+  "artifact_kind": "learning_claim_activation_report",
+  "generated_at": "2026-05-29T05:03:36Z",
+  "producer": "ops.scripts.learning_claim_activation_report",
+  "source_command": "python -m ops.scripts.learning_claim_activation_report --vault .",
+  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
+  "source_tree_fingerprint": "c887a62d8b455fd73b297c05119f294e1925a22d9f5c715a84e838afc812e174",
+  "input_fingerprints": {
+    "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+    "schema": "d366a06d6c9fbade9f99a3a702f7e88409d8e793328122ab6b196c4d7d670305",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "74a1e9d3d7f210b892b0b3042df56091bcb57b946b02a3717698c3ea05fe8dd9",
+    "learning_claim_activation_inputs": "ae6c67615e53482a510c072e0cce9c0660b6edf19e54a1231083b853e6775999"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-29T05:03:36Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "pass",
+  "summary": {
+    "activation_status": "not_candidate",
+    "claim_level": "none",
+    "claim_wording_allowed": false,
+    "blocked_predicate_count": 15,
+    "anti_slop_preview_status": "attention",
+    "negative_learning_pattern_count": 6,
+    "gate_effect": "none"
+  },
+  "claim_candidate": {
+    "status": "not_candidate",
+    "candidate": false,
+    "current": {
+      "claim_level": "none",
+      "learning_likely": false,
+      "claims_learning_improved": false,
+      "learning_claim_allowed": false,
+      "bounded_learning_claim_allowed": false,
+      "confirmed_learning_improvement_allowed": false,
+      "claim_wording_allowed": false,
+      "claim_wording_policy_status": "blocked",
+      "learning_claim_evidence_complete": false
+    },
+    "required": {
+      "bounded_learning_likely": "learning_claim_allowed == true with full same-eval reason, strict-secondary, behavior-delta digest, placeholder-free external report, and approved unlock review",
+      "confirmed_learning_improvement": "confirmed evidence cohort, active evidence bundle, clean full/public/revalidation evidence, no learning blockers, and post-seal attestation authority"
+    },
+    "repair_target": "Repair the predicate source evidence, rerun the owning report, and keep claim_level=none until it passes.",
+    "evidence_digest": {
+      "path": "ops/reports/learning-delta-scoreboard.json",
+      "exists": true,
+      "sha256": "6e742a3fc03aaed910121d5775e9f1392248d9c37844c13189db1cfd98882e67",
+      "status": "present"
+    },
+    "post_seal_linkage": {
+      "path": "build/release/release-post-seal-attestation.json",
+      "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+      "post_seal_verified": true
+    }
+  },
+  "blocked_predicates": [
+    {
+      "id": "learning_claim_evidence_bundle_active",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.machine_policy_decision",
+      "source_path": "ops/reports/learning-claim-evidence-bundle.json",
+      "current": "bundle_status=revoked; fingerprint_match=match; revocation_status=revoked",
+      "required": "learning_claim_evidence_bundle.revocation_status == active",
+      "repair_target": "Repair the predicate source evidence, rerun the owning report, and keep claim_level=none until it passes.",
+      "summary": "Automatic approval is valid only for the current evidence bundle digest.",
+      "evidence_digest": {
+        "path": "ops/reports/learning-claim-evidence-bundle.json",
+        "exists": true,
+        "sha256": "c23b9035af1def520410060581e60d2ef7ab06f306f26545a26acdfb0d08ab62",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+        "linked": true
+      }
+    },
+    {
+      "id": "auto_improve_can_promote_result",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.machine_policy_decision",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "current": "can_promote_result=False",
+      "required": "auto_improve_readiness.can_promote_result == true",
+      "repair_target": "Clear release authority, sealed preflight, and promotion blockers before treating auto-improve learning as claimable.",
+      "summary": "Auto-improve result promotion gate is clean.",
+      "evidence_digest": {
+        "path": "ops/reports/auto-improve-readiness.json",
+        "exists": true,
+        "sha256": "7a9e1da83aa943916da32196e35fe8df0051a8210a1038e27d7aadb76a6650f5",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+        "linked": true
+      }
+    },
+    {
+      "id": "learning_readiness_likely",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.machine_policy_decision",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "current": "status=learning_uncertain; likely_to_learn=False",
+      "required": "learning_readiness.status == learning_likely and likely_to_learn == true",
+      "repair_target": "Repair the predicate source evidence, rerun the owning report, and keep claim_level=none until it passes.",
+      "summary": "Learning readiness is in the narrow machine-claimable state.",
+      "evidence_digest": {
+        "path": "ops/reports/auto-improve-readiness.json",
+        "exists": true,
+        "sha256": "7a9e1da83aa943916da32196e35fe8df0051a8210a1038e27d7aadb76a6650f5",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+        "linked": true
+      }
+    },
+    {
+      "id": "learning_readiness_no_blockers",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.machine_policy_decision",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "current": "learning_readiness.signals=recent_hold_moving_average,high_rework,defect_escape_proxy; learning_claim_blockers=learning_blocked_by_review_required",
+      "required": "learning_readiness.signals == [] and learning_claim_blockers == []",
+      "repair_target": "Repair the predicate source evidence, rerun the owning report, and keep claim_level=none until it passes.",
+      "summary": "Learning readiness exposes no blocking learning claim signals.",
+      "evidence_digest": {
+        "path": "ops/reports/auto-improve-readiness.json",
+        "exists": true,
+        "sha256": "7a9e1da83aa943916da32196e35fe8df0051a8210a1038e27d7aadb76a6650f5",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+        "linked": true
+      }
+    },
+    {
+      "id": "same_eval_run_count_minimum",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.machine_policy_decision",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "current": "same_eval_run_count=0",
+      "required": "learning_readiness.metrics.same_eval_run_count >= 2",
+      "repair_target": "Repair the predicate source evidence, rerun the owning report, and keep claim_level=none until it passes.",
+      "summary": "Same-eval evidence has enough repeated comparable runs.",
+      "evidence_digest": {
+        "path": "ops/reports/auto-improve-readiness.json",
+        "exists": true,
+        "sha256": "7a9e1da83aa943916da32196e35fe8df0051a8210a1038e27d7aadb76a6650f5",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+        "linked": true
+      }
+    },
+    {
+      "id": "same_eval_reason_coverage_full",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.machine_policy_decision",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "current": "same_eval_reason_code_coverage_ratio=0.0",
+      "required": "same_eval_reason_code_coverage_ratio >= 1.0",
+      "repair_target": "Repair the predicate source evidence, rerun the owning report, and keep claim_level=none until it passes.",
+      "summary": "Same-eval reason codes are complete.",
+      "evidence_digest": {
+        "path": "ops/reports/auto-improve-readiness.json",
+        "exists": true,
+        "sha256": "7a9e1da83aa943916da32196e35fe8df0051a8210a1038e27d7aadb76a6650f5",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+        "linked": true
+      }
+    },
+    {
+      "id": "strict_secondary_coverage_full",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.machine_policy_decision",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "current": "strict_secondary_improvement_coverage_ratio=0.0",
+      "required": "strict_secondary_improvement_coverage_ratio >= 1.0",
+      "repair_target": "Repair the predicate source evidence, rerun the owning report, and keep claim_level=none until it passes.",
+      "summary": "Strict-secondary improvement coverage is complete.",
+      "evidence_digest": {
+        "path": "ops/reports/auto-improve-readiness.json",
+        "exists": true,
+        "sha256": "7a9e1da83aa943916da32196e35fe8df0051a8210a1038e27d7aadb76a6650f5",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+        "linked": true
+      }
+    },
+    {
+      "id": "behavior_delta_digest_coverage_full",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.machine_policy_decision",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "current": "behavior_delta_digest_coverage_ratio=0.0",
+      "required": "behavior_delta_digest_coverage_ratio >= 1.0",
+      "repair_target": "Repair the predicate source evidence, rerun the owning report, and keep claim_level=none until it passes.",
+      "summary": "Behavior-delta digest coverage is complete.",
+      "evidence_digest": {
+        "path": "ops/reports/auto-improve-readiness.json",
+        "exists": true,
+        "sha256": "7a9e1da83aa943916da32196e35fe8df0051a8210a1038e27d7aadb76a6650f5",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+        "linked": true
+      }
+    },
+    {
+      "id": "rework_and_escape_budget_clean",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.machine_policy_decision",
+      "source_path": "ops/reports/auto-improve-readiness.json",
+      "current": "rework_count=60; defect_escape_pair_count=19",
+      "required": "rework_count <= 0 and defect_escape_pair_count <= 0",
+      "repair_target": "Repair the predicate source evidence, rerun the owning report, and keep claim_level=none until it passes.",
+      "summary": "Shadow learning risk budget is clean for automatic narrow claim unlock.",
+      "evidence_digest": {
+        "path": "ops/reports/auto-improve-readiness.json",
+        "exists": true,
+        "sha256": "7a9e1da83aa943916da32196e35fe8df0051a8210a1038e27d7aadb76a6650f5",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+        "linked": true
+      }
+    },
+    {
+      "id": "evidence_bundle_active",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.confirmed_policy",
+      "source_path": "ops/reports/learning-claim-evidence-bundle.json",
+      "current": "revocation_status=revoked",
+      "required": "learning_claim_evidence_bundle.revocation_status == active",
+      "repair_target": "Repair the predicate source evidence, rerun the owning report, and keep claim_level=none until it passes.",
+      "summary": "Confirmed claims require a non-stale, non-revoked evidence bundle.",
+      "evidence_digest": {
+        "path": "ops/reports/learning-claim-evidence-bundle.json",
+        "exists": true,
+        "sha256": "c23b9035af1def520410060581e60d2ef7ab06f306f26545a26acdfb0d08ab62",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+        "linked": true
+      }
+    },
+    {
+      "id": "confirmed_evidence_bundle_active",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.confirmed_policy",
+      "source_path": "ops/reports/learning-claim-evidence-bundle.json",
+      "current": "revocation_status=revoked",
+      "required": "learning_claim_evidence_bundle.revocation_status == active",
+      "repair_target": "Repair the predicate source evidence, rerun the owning report, and keep claim_level=none until it passes.",
+      "summary": "Confirmed evidence cohort must bind an active learning claim evidence bundle.",
+      "evidence_digest": {
+        "path": "ops/reports/learning-claim-evidence-bundle.json",
+        "exists": true,
+        "sha256": "c23b9035af1def520410060581e60d2ef7ab06f306f26545a26acdfb0d08ab62",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+        "linked": true
+      }
+    },
+    {
+      "id": "repeated_same_family_evidence",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.confirmed_policy",
+      "source_path": "ops/reports/learning-confirmed-evidence-cohort.json",
+      "current": "eligible_family_count=0; family_count=1; max_valid_run_count=2",
+      "required": "same proposal family valid before/after behavior-delta evidence count >= 3 and eligible family count >= 1",
+      "repair_target": "Repair the predicate source evidence, rerun the owning report, and keep claim_level=none until it passes.",
+      "summary": "Confirmed learning improvement requires repeated same-family before/after evidence.",
+      "evidence_digest": {
+        "path": "ops/reports/learning-confirmed-evidence-cohort.json",
+        "exists": true,
+        "sha256": "6b10fdf875f3c362ab62ce2a321cc841be31a3364dd27c048939799c595518f5",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+        "linked": true
+      }
+    },
+    {
+      "id": "public_check_pass",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.confirmed_policy",
+      "source_path": "ops/reports/public-check-summary.json",
+      "current": "status=missing",
+      "required": "public_check_summary.status == pass",
+      "repair_target": "Repair the predicate source evidence, rerun the owning report, and keep claim_level=none until it passes.",
+      "summary": "Public mirror check must pass before confirmed improvement opens.",
+      "evidence_digest": {
+        "path": "ops/reports/public-check-summary.json",
+        "exists": false,
+        "sha256": "",
+        "status": "missing"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+        "linked": true
+      }
+    },
+    {
+      "id": "learning_claim_blocker_absence",
+      "status": "fail",
+      "source": "learning_claim_unlock_review.confirmed_policy",
+      "source_path": "ops/reports/release-clean-blocker-ledger.json",
+      "current": "learning_claim_blocker_count=1",
+      "required": "release_clean_blocker_ledger.learning_claim_blockers == []",
+      "repair_target": "Resolve release-clean-blocker-ledger learning claim blockers or keep claim_level=none.",
+      "summary": "No accepted learning risk or learning-claim blocker may remain.",
+      "evidence_digest": {
+        "path": "ops/reports/release-clean-blocker-ledger.json",
+        "exists": true,
+        "sha256": "c0f6d5f68cd5e3689c98e7b04a577906d2720873419d9d1456f291d9a6e91dd2",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+        "linked": true
+      }
+    },
+    {
+      "id": "learning_claim_unlock_review_not_approved",
+      "status": "not_ready",
+      "source": "learning_delta_scoreboard.learning_claim_unlock_review",
+      "source_path": "ops/reports/learning-delta-scoreboard.json",
+      "current": "approved=False; status=not_ready",
+      "required": "learning_claim_unlock_review.approved == true",
+      "repair_target": "Approve or auto-approve the unlock review only after evidence bundle, readiness, and review items are current and clean.",
+      "summary": "typed same-eval coverage and placeholder/provenance evidence are not complete",
+      "evidence_digest": {
+        "path": "ops/reports/learning-delta-scoreboard.json",
+        "exists": true,
+        "sha256": "6e742a3fc03aaed910121d5775e9f1392248d9c37844c13189db1cfd98882e67",
+        "status": "present"
+      },
+      "post_seal_linkage": {
+        "path": "build/release/release-post-seal-attestation.json",
+        "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+        "linked": true
+      }
+    }
+  ],
+  "evidence_digests": [
+    {
+      "path": "ops/reports/auto-improve-readiness.json",
+      "exists": true,
+      "sha256": "7a9e1da83aa943916da32196e35fe8df0051a8210a1038e27d7aadb76a6650f5",
+      "status": "present"
+    },
+    {
+      "path": "ops/reports/learning-delta-scoreboard.json",
+      "exists": true,
+      "sha256": "6e742a3fc03aaed910121d5775e9f1392248d9c37844c13189db1cfd98882e67",
+      "status": "present"
+    },
+    {
+      "path": "ops/reports/learning-claim-unlock-review.json",
+      "exists": true,
+      "sha256": "7121d19e4073b25769a4f3973a868ac73512897615e39c5a0c4f4d4ae8585756",
+      "status": "present"
+    },
+    {
+      "path": "ops/reports/learning-claim-evidence-bundle.json",
+      "exists": true,
+      "sha256": "c23b9035af1def520410060581e60d2ef7ab06f306f26545a26acdfb0d08ab62",
+      "status": "present"
+    },
+    {
+      "path": "ops/reports/release-clean-blocker-ledger.json",
+      "exists": true,
+      "sha256": "c0f6d5f68cd5e3689c98e7b04a577906d2720873419d9d1456f291d9a6e91dd2",
+      "status": "present"
+    },
+    {
+      "path": "ops/reports/source-package-clean-extract.json",
+      "exists": true,
+      "sha256": "01a76c5cac79d647b882e65dfcbedd05b624b6f5b6645e3a69c0d5b08f394cc5",
+      "status": "present"
+    },
+    {
+      "path": "build/release/release-post-seal-attestation.json",
+      "exists": true,
+      "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+      "status": "present"
+    }
+  ],
+  "post_seal_linkage": {
+    "path": "build/release/release-post-seal-attestation.json",
+    "exists": true,
+    "sha256": "2d1da29bf30671d049de187158286fd9e01883ebe40b6f90f6fe6ea57cca7872",
+    "status": "present",
+    "attestation_status": "pass",
+    "claim_level": "none",
+    "learning_claim_evidence_bundle_sha256": "59a7fd98ecd327b718b01a5ad8309a50a0073eec55a962bf8cb02945e452615a",
+    "post_seal_verified": true
+  },
+  "anti_slop_preview_ledger": {
+    "mode": "preview",
+    "gate_effect": "none",
+    "status": "attention",
+    "scoreboard_anti_slop_status": "clean",
+    "scoreboard_anti_slop_score": 100,
+    "axes": [
+      {
+        "axis": "claim_hygiene",
+        "status": "pass",
+        "current": "claim_level=none; claim_wording_allowed=False",
+        "required": "No learning-improvement wording unless the claim model allows it.",
+        "repair_target": "Keep claim_level=none or complete the unlock and confirmed-claim predicates.",
+        "gate_effect": "none"
+      },
+      {
+        "axis": "evidence_density",
+        "status": "pass",
+        "current": "telemetry=not_applicable; same_eval_reason=not_applicable; strict_secondary=not_applicable; behavior_delta_digest=not_applicable",
+        "required": "Same-eval learning claims require full telemetry, reason, strict-secondary, and digest coverage.",
+        "repair_target": "Backfill missing telemetry or keep the claim closed.",
+        "gate_effect": "none"
+      },
+      {
+        "axis": "reproducibility",
+        "status": "warn",
+        "current": "source_package_clean_extract=pass; evidence_bundle_revocation=revoked",
+        "required": "Source package replay and active evidence bundle must remain reproducible.",
+        "repair_target": "Rerun release-source-package-check and learning-claim-evidence-bundle.",
+        "gate_effect": "none"
+      },
+      {
+        "axis": "scope_discipline",
+        "status": "pass",
+        "current": "runnable_proposal_count=1; can_execute_trial=True",
+        "required": "Auto-improve learning probes should remain narrow, with at most one runnable proposal.",
+        "repair_target": "Split or defer proposals until the active run has a single bounded target.",
+        "gate_effect": "none"
+      },
+      {
+        "axis": "context_efficiency",
+        "status": "warn",
+        "current": "no dedicated context-efficiency telemetry is bound to the learning claim lane",
+        "required": "Claim activation should expose context budget or synopsis reuse pressure before promotion authority uses it.",
+        "repair_target": "Add context budget telemetry or a session synopsis digest before making this axis gating.",
+        "gate_effect": "none"
+      },
+      {
+        "axis": "operator_override_pressure",
+        "status": "warn",
+        "current": "unlock_review_status=required; approved=False",
+        "required": "Manual override pressure should stay explicit and should not silently unlock claim wording.",
+        "repair_target": "Keep review_status required until machine policy and operator signoff are clean.",
+        "gate_effect": "none"
+      }
+    ]
+  },
+  "negative_learning_ledger": {
+    "mode": "advisory",
+    "gate_effect": "none",
+    "status": "attention",
+    "pattern_count": 6,
+    "patterns": [
+      {
+        "pattern_id": "discard_behavior_delta_before_after_evidence_missing",
+        "decisions": [
+          "DISCARD"
+        ],
+        "run_ids": [
+          "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+        ],
+        "occurrence_count": 1,
+        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+        "repair_target": "Repair the rejected confirmed-evidence run before using it as learning proof.",
+        "evidence_digests": [
+          {
+            "path": "ops/reports/learning-delta-scoreboard.json",
+            "exists": true,
+            "sha256": "6e742a3fc03aaed910121d5775e9f1392248d9c37844c13189db1cfd98882e67",
+            "status": "present"
+          }
+        ]
+      },
+      {
+        "pattern_id": "discard_behavior_delta_digest_added",
+        "decisions": [
+          "DISCARD"
+        ],
+        "run_ids": [
+          "run-20260507-auto-improve-iteration-persistence-typed-same-eval"
+        ],
+        "occurrence_count": 1,
+        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+        "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=behavior_delta_digest_added.",
+        "evidence_digests": [
+          {
+            "path": "runs/run-20260507-auto-improve-iteration-persistence-typed-same-eval/run-telemetry.json",
+            "exists": true,
+            "sha256": "9048eb29f9df2973099c992e7d5f5f920d21fbc05f258ce3625499e5dd26e7a6",
+            "status": "present"
+          }
+        ]
+      },
+      {
+        "pattern_id": "discard_changed_files_manifest_scope",
+        "decisions": [
+          "DISCARD"
+        ],
+        "run_ids": [
+          "active-report-self-improve-certificate-rerun6-run-01-auto-improve-iteration-persistence-runtime"
+        ],
+        "occurrence_count": 1,
+        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+        "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=changed_files_manifest_scope.",
+        "evidence_digests": [
+          {
+            "path": "runs/active-report-self-improve-certificate-rerun6-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "8690a3decb53389650c1672e479f27135608a6bf4d801ebc459309ea9df146c3",
+            "status": "present"
+          }
+        ]
+      },
+      {
+        "pattern_id": "discard_equal_score_secondary_eligibility",
+        "decisions": [
+          "DISCARD"
+        ],
+        "run_ids": [
+          "active-report-self-improve-certificate-rerun-run-02-auto-improve-iteration-persistence-runtime",
+          "active-report-self-improve-certificate-run-02-auto-improve-iteration-persistence-runtime",
+          "auto-improve-queue-rotation-runtime-20260525-run-01-auto-improve-queue-runtime",
+          "auto-improve-release-ready-20260526-run-08-run-01-auto-improve-iteration-persistence-runtime",
+          "auto-improve-trial-9-run-01-mechanism-run-validation-runtime",
+          "auto-improve-trial-run-01-mechanism-run-validation-runtime",
+          "external-report-reconcile-20260527-run-01-run-02-mutation-proposal-runtime",
+          "external-report-reconcile-20260527-run-03-run-01-auto-improve-readiness",
+          "external-report-reconcile-20260527-run-08-run-01-auto-improve-queue-runtime",
+          "external-report-reconcile-20260527-run-10-run-01-auto-improve-readiness-constants-runtime",
+          "service-state-split-20260528-run-01-run-01-auto-improve-iteration-persistence-runtime",
+          "service-state-split-20260528-run-12-run-01-auto-improve-iteration-persistence-runtime"
+        ],
+        "occurrence_count": 12,
+        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+        "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=equal_score_secondary_eligibility.",
+        "evidence_digests": [
+          {
+            "path": "runs/active-report-self-improve-certificate-rerun-run-02-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "374cc9e18168dcff5721cac02b333a4c200be8df4e5d71228cf7bf7c28e6c45c",
+            "status": "present"
+          },
+          {
+            "path": "runs/active-report-self-improve-certificate-run-02-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "dc0715c7b75c091c27e2acf9c84dafffc181174d695d05a06a7a8800d99f20e6",
+            "status": "present"
+          },
+          {
+            "path": "runs/auto-improve-queue-rotation-runtime-20260525-run-01-auto-improve-queue-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "26a8eda99b89d3a1fc9f1b2a89ca50a378d1e2a96686591896523c325a54d0a0",
+            "status": "present"
+          },
+          {
+            "path": "runs/auto-improve-release-ready-20260526-run-08-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "7e53d2e74782bae2582f6e04c07fbca95234bf814079d31fcc3b94080895d1af",
+            "status": "present"
+          },
+          {
+            "path": "runs/auto-improve-trial-9-run-01-mechanism-run-validation-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "5753ca3379aaf7a5e675955314463c3833838f007d711929de7b214f3803951e",
+            "status": "present"
+          },
+          {
+            "path": "runs/auto-improve-trial-run-01-mechanism-run-validation-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "2ce65cdfc6d706ab777e3bd78631a158a842c126a62d8d2b9ba0960cd521fa49",
+            "status": "present"
+          },
+          {
+            "path": "runs/external-report-reconcile-20260527-run-01-run-02-mutation-proposal-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "acf8673a4e58fa59af13e1476865e4b63fa7c2a5c4f1b6c72964c3d1cf0bc578",
+            "status": "present"
+          },
+          {
+            "path": "runs/external-report-reconcile-20260527-run-03-run-01-auto-improve-readiness/run-telemetry.json",
+            "exists": true,
+            "sha256": "0a556c3f03c5806d952deb4b6348cf89e279ad82286a5ccea2ce0998d928a2a8",
+            "status": "present"
+          },
+          {
+            "path": "runs/external-report-reconcile-20260527-run-08-run-01-auto-improve-queue-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "abe3ba3e1fcc2c69b698e2e38804b157efb6d859ee2fa20e630637e7ff8dd601",
+            "status": "present"
+          },
+          {
+            "path": "runs/external-report-reconcile-20260527-run-10-run-01-auto-improve-readiness-constants-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "d8c54b59a9b2abe0de3d81a40f38933876827696751997e8964e0f85e72b8679",
+            "status": "present"
+          },
+          {
+            "path": "runs/service-state-split-20260528-run-01-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "9ac42ec1d80ac575289279d1abfedae394526360829234bfe427b31fc92ecc96",
+            "status": "present"
+          },
+          {
+            "path": "runs/service-state-split-20260528-run-12-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "d374ffc5043d944c70a0ed081f1fe8c83a5de20ad3af9e1a48ba988974a16356",
+            "status": "present"
+          }
+        ]
+      },
+      {
+        "pattern_id": "discard_telemetry_discoverability_improved",
+        "decisions": [
+          "DISCARD"
+        ],
+        "run_ids": [
+          "run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp"
+        ],
+        "occurrence_count": 1,
+        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+        "repair_target": "Change the mechanism or evidence predicate before rerunning another DISCARD attempt with same_eval_reason_code=telemetry_discoverability_improved.",
+        "evidence_digests": [
+          {
+            "path": "runs/run-20260422-auto-improve-decision-record-fallback-retry3-linux-tmp/run-telemetry.json",
+            "exists": true,
+            "sha256": "370f77f245e56c0572e6542a94c5dbf3257f9d533d78da70f01507d83a8007d4",
+            "status": "present"
+          }
+        ]
+      },
+      {
+        "pattern_id": "hold_legacy_promotion_report",
+        "decisions": [
+          "HOLD"
+        ],
+        "run_ids": [
+          "active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime",
+          "auto-improve-trial-3-run-01-mutation-proposal-runtime"
+        ],
+        "occurrence_count": 2,
+        "forbidden_repeat": "Do not repeat this run shape until the repair target is completed.",
+        "repair_target": "Change the mechanism or evidence predicate before rerunning another HOLD attempt with same_eval_reason_code=legacy_promotion_report.",
+        "evidence_digests": [
+          {
+            "path": "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "b6d062ba640f790dab855801cc08e903db6f37c6d66b9756e235fab090b50252",
+            "status": "present"
+          },
+          {
+            "path": "runs/auto-improve-trial-3-run-01-mutation-proposal-runtime/run-telemetry.json",
+            "exists": true,
+            "sha256": "8878a9e39621f74ebdffcd32aa4a9957aa2570a6fbdd7cc05d0d2d7dfc5fcf29",
+            "status": "present"
+          }
+        ]
+      }
+    ]
+  }
+}
