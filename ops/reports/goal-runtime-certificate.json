@@ -1,22 +1,22 @@
 {
   "$schema": "ops/schemas/goal-runtime-certificate.schema.json",
   "artifact_kind": "goal_runtime_certificate",
-  "generated_at": "2026-05-29T06:54:01Z",
+  "generated_at": "2026-05-29T11:31:24Z",
   "producer": "ops.scripts.goal_runtime_certificate_report",
   "source_command": "python -m ops.scripts.goal_runtime_certificate_report --vault .",
-  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
-  "source_tree_fingerprint": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+  "source_revision": "70d3475af594c785811f943b3b7b92050443f5c3",
+  "source_tree_fingerprint": "2246d7c71e46d5ffc2c6d9f522c9db7261cfc6785a4a2c27de337608a19e1f5b",
   "input_fingerprints": {
     "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
     "schema": "a295be1f8891d18a6cf0ad0a441f6d4307649d78ee09edc13580d5692d8995a3",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "d586de57a76096c90d43203422e60a21d4550a88c30cf0d2259e1571aff65c9e",
     "auto_improve_session": "1ab2f5cf7818dd9164ffa641235e394731c7a19d7720232dfda58f0107390e23",
-    "goal_contract": "181e620875562c7628ad181af514c2ad418c44a1f8580104792dcbea7efa2231",
-    "goal_run_status": "6a94b3dbe27ed411deea1288c72e562d6b7043d0fd2e0f1854d8027b30633882",
-    "run_audit_log": "9c6ba7296ada7ff1018840375895b6be8f80a6da3dce06c8fa6fd60ba09b9068",
-    "run_resume_metadata": "5c74ed46426f5b05542f66ad13e09ee97a50b4ec886f7b0d2f06f626c03928aa",
-    "run_status_markdown": "d3c9fa15b4ccaafa5460153c1bf67ad82be5255e9b6a04a67d2015ddabd99cdb"
+    "goal_contract": "6f4bff923e59f64bde338567959cc47963342161106c8b3a670eed8205882ff0",
+    "goal_run_status": "c1d40a2f75e3777190bc5884f040fd394a0233698321c8bf88515169770c77b4",
+    "run_audit_log": "cd862984ec8dc1dafe2abf6ae4eb6942d81fcd6d8a3b122575c9f12bfea39f7a",
+    "run_resume_metadata": "bc020da7d9220d64316a9014fd93db0b10f59e36622fd4717c9f613611568fe4",
+    "run_status_markdown": "780eafef3d25acee05ccc00540e79dbf67e12fb1b9e6c46c745d2b89cedd6c32"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -24,14 +24,14 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-29T06:54:01Z"
+    "checked_at": "2026-05-29T11:31:24Z"
   },
   "vault": ".",
   "goal": {
     "contract_path": "runs/goal-auto-improve-trial/state/codex-goal-contract.json",
     "contract_id": "auto-improve-goal",
-    "contract_sha256_before": "b5c75f630db2fca1f6ada28d8129d67a87aefadd68109953d113a7d95200c237",
-    "contract_sha256_after": "b5c75f630db2fca1f6ada28d8129d67a87aefadd68109953d113a7d95200c237"
+    "contract_sha256_before": "054041922abf215208b7a6dc8a62ab3237609f6ee91af127a98dfb3303384d50",
+    "contract_sha256_after": "054041922abf215208b7a6dc8a62ab3237609f6ee91af127a98dfb3303384d50"
   },
   "certificate": {
     "target_runtime_mode": "self_improvement_loop",
@@ -46,7 +46,7 @@
     "run_id": "auto-improve-trial",
     "run_status": "blocked",
     "run_runtime_mode": "self_improvement_loop",
-    "started_at": "2026-05-29T06:54:00Z",
+    "started_at": "2026-05-29T11:16:35Z",
     "completed_at": ""
   },
   "run_artifacts": {
@@ -88,7 +88,7 @@
         "status": "pass"
       }
     ],
-    "audit_event_count": 1,
+    "audit_event_count": 4,
     "runner_command_audit_current": false
   },
   "session_evidence": {
@@ -151,7 +151,7 @@
       "evidence_id": "remediation_backlog",
       "path": "ops/reports/remediation-backlog.json",
       "status": "present",
-      "report_status": "pass"
+      "report_status": "attention"
     },
     {
       "evidence_id": "source_package_clean_extract",
@@ -169,7 +169,7 @@
       "evidence_id": "release_authority",
       "path": "ops/reports/release-closeout-summary.json",
       "status": "present",
-      "report_status": "pass"
+      "report_status": "fail"
     },
     {
       "evidence_id": "goal_worktree_guard",
@@ -196,7 +196,8 @@
     "primary_blocker_categories": [
       "runtime_run",
       "session_evidence",
-      "command_observability"
+      "command_observability",
+      "required_evidence"
     ],
     "certifiable": false
   },
@@ -219,7 +220,8 @@
     "goal run command audit was not written by goal runtime runner",
     "goal run command timeout is missing",
     "goal run command returncode is not zero",
-    "goal run command termination reason is not completed"
+    "goal run command termination reason is not completed",
+    "runtime certificate evidence is not clean: ops/reports/release-closeout-summary.json"
   ],
   "status": "attention"
 }

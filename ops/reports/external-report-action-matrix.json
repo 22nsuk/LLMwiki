@@ -1,10 +1,10 @@
 {
   "$schema": "ops/schemas/external-report-action-matrix.schema.json",
   "artifact_kind": "external_report_action_matrix",
-  "generated_at": "2026-05-29T11:23:35Z",
+  "generated_at": "2026-05-29T11:27:39Z",
   "producer": "ops.scripts.external_report_action_matrix",
   "source_command": "python -m ops.scripts.external_report_action_matrix --vault .",
-  "source_revision": "ca18e404b679e2b1fee0fc2f0179ec809b2ba28b",
+  "source_revision": "70d3475af594c785811f943b3b7b92050443f5c3",
   "source_tree_fingerprint": "2246d7c71e46d5ffc2c6d9f522c9db7261cfc6785a4a2c27de337608a19e1f5b",
   "input_fingerprints": {
     "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-29T11:23:35Z"
+    "checked_at": "2026-05-29T11:27:39Z"
   },
   "vault": ".",
   "status": "attention",
