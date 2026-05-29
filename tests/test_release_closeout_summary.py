@@ -40,6 +40,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 REPORT_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "release-closeout-summary.schema.json"
 ENVELOPE_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "artifact-envelope.schema.json"
 SIGNOFF_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "learning-readiness-signoff.schema.json"
+FIXED_POINT_POLICY_PATH = "ops/policies/release-closeout-fixed-point.json"
 SCHEMA_BY_KIND = {
     "bootstrap_preflight_report": "ops/schemas/bootstrap-preflight-report.schema.json",
     "release_smoke_report": "ops/schemas/release-smoke-report.schema.json",
@@ -69,6 +70,12 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
         self.vault.mkdir()
         seed_minimal_vault(self.vault)
         (self.vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
+        fixed_point_policy = self.vault / FIXED_POINT_POLICY_PATH
+        fixed_point_policy.parent.mkdir(parents=True, exist_ok=True)
+        fixed_point_policy.write_text(
+            (REPO_ROOT / FIXED_POINT_POLICY_PATH).read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
         self._normalize_release_surface_mtimes()
 
     def tearDown(self) -> None:
@@ -908,6 +915,56 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
         self.assertEqual(
             accepted["artifact_freshness_stable_contract_debt_advisory"]["advisory_lifecycle_effect"],
             "review_backlog",
+        )
+
+    def test_artifact_freshness_attention_ignores_non_release_owned_operational_drift(self) -> None:
+        self._write_happy_sources()
+        self._write_source_report(
+            "artifact_freshness",
+            {
+                "status": "attention",
+                "summary": {
+                    "schema_invalid_artifact_count": 0,
+                    "schema_unavailable_artifact_count": 0,
+                    "root_ephemeral_artifact_count": 0,
+                    "non_utf8_text_artifact_count": 0,
+                    "stale_artifact_count": 2,
+                    "mtime_sensitive_attention_artifact_count": 0,
+                    "mtime_sensitive_attention_issue_count": 0,
+                    "operational_attention_artifact_count": 2,
+                    "operational_attention_issue_count": 2,
+                    "stable_contract_debt_issue_count": 0,
+                },
+                "artifact_records": [
+                    {
+                        "path": "ops/reports/learning-readiness-signoff.json",
+                        "issues": ["source_tree_fingerprint_mismatch"],
+                    },
+                    {
+                        "path": "ops/reports/public-check-summary.json",
+                        "issues": ["source_tree_fingerprint_mismatch"],
+                    },
+                ],
+            },
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertTrue(report["clean_release_ready"])
+        self._assert_release_decision(
+            report,
+            state="clean_pass",
+            machine_release_allowed=True,
+            operator_release_allowed=True,
+            requires_accepted_risk_review=False,
+        )
+        self.assertEqual(report["summary"]["artifact_freshness_status"], "attention")
+        self.assertEqual(report["accepted_risk_count_by_scope"]["total"], 0)
+        self.assertEqual(report["summary"]["accepted_risk_instance_count"], 0)
+        self.assertEqual(report["summary"]["release_blocking_risk_family_count"], 0)
+        self.assertNotIn(
+            "artifact_freshness_attention",
+            {item["code"] for item in report["accepted_risks"]},
         )
 
     def test_structured_test_deselections_are_accepted_risks_until_expiry(self) -> None:

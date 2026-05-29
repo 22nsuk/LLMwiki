@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -66,6 +67,7 @@ from .release_risk_taxonomy_runtime import (
 from .release_status_v2 import decide_sealed_release_status, release_status_v2_payload
 
 DEFAULT_OUT = "ops/reports/release-closeout-summary.json"
+FIXED_POINT_POLICY_PATH = "ops/policies/release-closeout-fixed-point.json"
 LEARNING_SIGNOFF_PATH = "ops/reports/learning-readiness-signoff.json"
 LEARNING_DELTA_SCOREBOARD_PATH = "ops/reports/learning-delta-scoreboard.json"
 LEARNING_SIGNOFF_ARTIFACT_KIND = "learning_readiness_signoff"
@@ -1186,11 +1188,12 @@ def _evaluate_external_report_reference_manifest(
 
 
 def _evaluate_simple_source(
+    vault: Path,
     spec: SourceSpec,
     payload: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str] | None:
     if spec.name == "artifact_freshness":
-        return _evaluate_artifact_freshness_source(spec, payload)
+        return _evaluate_artifact_freshness_source(vault, spec, payload)
     specs = {
         "bootstrap_preflight": ({"pass"}, set(), "bootstrap_preflight_failed", "", ""),
         "source_package_clean_extract": (
@@ -1253,7 +1256,50 @@ def _artifact_freshness_stable_contract_debt_only(payload: dict[str, Any]) -> bo
     return int(summary.get("stable_contract_debt_issue_count", 0) or 0) > 0
 
 
+def _release_owned_artifact_freshness_paths(vault: Path) -> set[str]:
+    path = vault / FIXED_POINT_POLICY_PATH
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return set()
+    tracked = payload.get("tracked_artifacts")
+    if not isinstance(tracked, list):
+        return set()
+    return {
+        rel_path
+        for rel_path in tracked
+        if isinstance(rel_path, str) and rel_path != "ops/reports/artifact-freshness-report.json"
+    }
+
+
+def _release_owned_artifact_freshness_attention(vault: Path, payload: dict[str, Any]) -> bool:
+    records = payload.get("artifact_records")
+    if not isinstance(records, list):
+        return True
+    release_owned_paths = _release_owned_artifact_freshness_paths(vault)
+    if not release_owned_paths:
+        return True
+    for item in records:
+        if not isinstance(item, dict):
+            continue
+        rel_path = str(item.get("path", "")).strip()
+        if rel_path not in release_owned_paths:
+            continue
+        raw_issues = item.get("issues")
+        issues = [str(issue).strip() for issue in raw_issues] if isinstance(raw_issues, list) else []
+        if any(
+            issue == "source_tree_fingerprint_mismatch"
+            or issue == "source_tree_fingerprint_unknown"
+            or issue == "test_target_missing"
+            or issue.startswith("test_target_fingerprint_mismatch")
+            for issue in issues
+        ):
+            return True
+    return False
+
+
 def _evaluate_artifact_freshness_source(
+    vault: Path,
     spec: SourceSpec,
     payload: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
@@ -1275,6 +1321,8 @@ def _evaluate_artifact_freshness_source(
                     ),
                 )
             ], f"{spec.name} status={status}"
+        if not _release_owned_artifact_freshness_attention(vault, payload):
+            return [], [], f"{spec.name} status={status}; release_owned_attention=0"
         return [], [
             _issue(
                 source=spec.name,
@@ -1297,12 +1345,13 @@ def _evaluate_artifact_freshness_source(
 
 
 def _evaluate_source(
+    vault: Path,
     spec: SourceSpec,
     payload: dict[str, Any],
     *,
     learning_claim_context: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
-    simple_result = _evaluate_simple_source(spec, payload)
+    simple_result = _evaluate_simple_source(vault, spec, payload)
     if simple_result is not None:
         return simple_result
     if spec.name == "release_smoke":
@@ -1886,6 +1935,7 @@ def _collect_closeout_components(
         summary = f"{spec.name} load_status={load_status}"
         if not load_blockers:
             evaluated_blockers, evaluated_risks, summary = _evaluate_source(
+                vault,
                 spec,
                 payload,
                 learning_claim_context=learning_claim_context,

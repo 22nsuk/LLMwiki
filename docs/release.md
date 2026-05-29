@@ -210,7 +210,7 @@ Recommended closeout sequence:
    expensive runnable authority stage and is the owner of full-suite test
    evidence for the current fingerprint.
 3. Run `make release-auto-promotion-preseal`. Stop here if the clean cohort,
-   accepted-risk family, gate attention, source-tree coherence, or
+   clean-lane-blocking accepted-risk family, gate attention, source-tree coherence, or
    same-fingerprint evidence cohort fails. Do not move failure diagnosis into
    Stage 3. Preseal runs the safe cleanup lane before accepted-risk and
    gate-attention evidence is evaluated.
