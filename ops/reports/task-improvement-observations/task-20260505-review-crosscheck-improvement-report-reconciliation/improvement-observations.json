@@ -1,0 +1,96 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-07T02:38:30Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "020399c9d2ef990917394771d8d148cc005c6c68725d730863edae8834a92fe7",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "cf20325623a89730f06931872ec397b1ffce8f9092d90471fc5df401efd78e77",
+    "record_id": "93957bc4c064f80163ca46a7f72765059ac931d4eca919efdef11aff3a083994",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "5475a1b2ba47f88f1bd883e178a3760dc5f9121d7770752ffea304ce86026409"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:38:30Z"
+  },
+  "record_id": "task-20260505-review-crosscheck-improvement-report-reconciliation",
+  "captured_at": "2026-05-05T09:39:15Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Crosscheck review reconciliation now has actual distribution ZIP provenance, full-suite evidence regeneration, ZIP-member batch freshness verification, recursive tmp workspace hygiene, archived run telemetry discovery, full-suite release-batch evidence separation, a primary-target touch promotion guard, and a schema-backed learning delta scoreboard.",
+  "observations": [
+    {
+      "observation_id": "distribution_zip_finalizer_needs_actual_zip_input",
+      "surface": "external-report-reference-manifest and distribution packaging closeout",
+      "problem": "The manifest can compute current distribution ZIP SHA-256 and entry count from a ZIP path; this closeout supplied and regenerated the actual distribution ZIP.",
+      "why_it_matters": "Without a final ZIP path supplied at package time, current_distribution_zip can remain stale even when code-level provenance sealing is implemented.",
+      "automation_candidate": "Wire EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH into the final packaging/review archive handoff so the manifest is regenerated immediately after the ZIP is created.",
+      "suggested_followup": "Keep external-report-reference-manifest wired to EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH during final release packaging, and verify current_distribution_zip matches the packaged ZIP SHA-256 and entry count.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "full_suite_evidence_artifact_still_missing",
+      "surface": "test-execution-summary-full and test-execution-summary-shards",
+      "problem": "The review report's full-suite evidence gap was closed by regenerating the canonical full-suite summary and keeping it separate from report-contract summary evidence.",
+      "why_it_matters": "The checked-in targeted report-contract summary must not be interpreted as full release-builder evidence.",
+      "automation_candidate": "Add a shard-first full-suite evidence regeneration path that writes shard JSON, supports interrupted resume, and promotes a represents_full_suite=true aggregate only after all shards finish.",
+      "suggested_followup": "Keep ops/reports/test-execution-summary-full.json as a separate release-batch input; rerun the full-suite or shard aggregate regeneration before release signoff.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "zip_member_batch_freshness_guard",
+      "surface": "release-closeout-batch-manifest freshness verification",
+      "problem": "Filesystem mtimes can drift after a distribution ZIP is created, making checked-in source freshness verification disagree with the packaged source snapshot.",
+      "why_it_matters": "Release closeout evidence should verify the package that will be reviewed, not incidental workspace mtimes after packaging.",
+      "automation_candidate": "Use --zip-metadata and --zip-timestamp-timezone on release-closeout-batch-manifest promote and verify when a release ZIP exists.",
+      "suggested_followup": "Pass RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA during final packaging so source_evidence_freshness uses ZIP member timestamps.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "recursive_tmp_workspace_hygiene_guard",
+      "surface": "tmp-json-clean, operator-release-summary, release-closeout-batch-manifest-verify",
+      "problem": "Root-only tmp/*.json cleanup missed nested diagnostics and non-JSON temporary helper files.",
+      "why_it_matters": "A sealed release workspace can otherwise carry untracked scratch artifacts into operator review.",
+      "automation_candidate": "Make tmp cleanup and verify inspect the full tmp tree rather than only root JSON files.",
+      "suggested_followup": "Keep tmp-json-clean in closeout recipes before sealing checks; rename the target in a future compatibility window if the broader semantics need clearer UX.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "archived_run_telemetry_discovery_guard",
+      "surface": "routing provenance aggregate and auto-improve session rollups",
+      "problem": "Session-declared run IDs could point to run telemetry moved under runs/archive, leaving telemetry coverage at zero despite valid archived artifacts.",
+      "why_it_matters": "Learning readiness and loop-health diagnostics depend on discovering historical run telemetry consistently after archive compaction.",
+      "automation_candidate": "Resolve run artifacts through active runs and runs/archive candidates for telemetry, routing, executor, promotion, and fingerprint reports.",
+      "suggested_followup": "Use the archived telemetry regression test as the guard when changing run archive layout or session normalization.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "primary_target_touch_promotion_guard",
+      "surface": "system_mechanism promotion gate",
+      "problem": "A mechanism promotion could be supported by changed-files evidence that only touched tests, reports, or generated artifacts while leaving the primary mechanism target unchanged.",
+      "why_it_matters": "Promotion decisions should prove the scoped mechanism itself changed, not only its surrounding evidence.",
+      "automation_candidate": "Add a changed_files_manifest_primary_targets_touched blocker rule to the system_mechanism rule registry.",
+      "suggested_followup": "Keep generated/report-only fixes in maintenance lanes unless a scoped primary target mechanism change is present in the changed-files manifest.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "learning_delta_claim_guard",
+      "surface": "learning-delta-scoreboard and repeated same-eval evidence",
+      "problem": "Historical repeated same-eval runs had enough telemetry to audit, but lacked complete same-eval reason and behavior-delta digest coverage for a confirmed learning-improvement claim.",
+      "why_it_matters": "Release validation should not imply a learning improvement unless the repeated-run evidence has explicit reason, digest, telemetry, and placeholder-absence coverage.",
+      "automation_candidate": "Score repeated same-eval learning evidence with a schema-backed learning delta scoreboard before allowing improvement claims.",
+      "suggested_followup": "Use ops/reports/learning-delta-scoreboard.json to distinguish release evidence from learning-improvement claims; backfill or regenerate repeated same-eval runs only if an operator wants to make a confirmed learning claim.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260505-review-crosscheck-improvement-report-reconciliation"
+}

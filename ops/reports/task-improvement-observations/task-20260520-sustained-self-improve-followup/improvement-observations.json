@@ -1,0 +1,61 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-20T16:30:19Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "588652e4eafa8a4df37a7832c1e82ddd96670cc3f65eac752c9e26ec5708612e",
+  "input_fingerprints": {
+    "policy": "b358256710f25a43d8676c54c56c4e3a24f7c66c7b48792b920f01d4d103e947",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "1bd2ac2d021a7e2ff32e1732141ab12b6b72a3f11b4b0d7a5f70e00e9965c273",
+    "observations": "3463090159ea31b62da68631b665d8f4cc307bf55508790b6b417c030805e897",
+    "record_id": "153daeea25b53f0cb7ce8be4fb49d7eabe2c76f56466ddef7bcff2e922709ca6",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "98250def129493714cfc5ecdff0251487376fb43bc40cb0504c420ad7319db6b"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-20T16:30:19Z"
+  },
+  "record_id": "task-20260520-sustained-self-improve-followup",
+  "captured_at": "2026-05-20T12:53:03Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Capture follow-ups from the sustained auto-improve workflow review.",
+  "observations": [
+    {
+      "observation_id": "reviewer-feedback-queue",
+      "surface": "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py; ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py; ops/scripts/mechanism/mutation_proposal_runtime.py; ops/schemas/auto-improve-session.schema.json; ops/schemas/mutation-proposals.schema.json",
+      "problem": "Run failures were not captured as structured next-run decisions, so reviewer, validator, mutation, repo-health, or promotion-gate blockers could remain indirect calibration signals instead of explicit queue work.",
+      "why_it_matters": "True sustained self-improvement should first decide whether any failed run outcome is actionable next-run repair evidence; only carry it forward when bounded and otherwise let the queue choose other work.",
+      "automation_candidate": "Record next_run_decisions in the auto-improve session and let mutation-proposal generation convert open carry_forward decisions into priority next_run_failure_repair proposals before general discovery work.",
+      "suggested_followup": "Implemented generalized failure-to-next-run decision routing with tests for actionable carry-forward, retryable capacity closure, repair proposal emission, and closed-decision suppression.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "fixed-point-single-publish-lane",
+      "surface": "mk/mechanism.mk; mk/release.mk; ops/scripts/mechanism/goal_runtime_fixed_point_check.py",
+      "problem": "readiness, session synopsis, and remediation backlog still converge through repeated tracked report writes, so stale inputs and dirty report churn can mask the actual self-improvement signal.",
+      "why_it_matters": "A long unattended loop should separate run-local state from canonical publish state and should have a deterministic one-command fixed point rather than requiring operators to learn a retry order.",
+      "automation_candidate": "Split preview/final readiness inputs or add a bounded fixed-point reconcile command that writes run-local candidates until fingerprints stabilize, then publishes canonical reports once.",
+      "suggested_followup": "Automated by goal-runtime-local-evidence-converge and goal-runtime-publish-local-evidence: readiness, session synopsis, negative lessons, and remediation backlog converge under runs/goal-$(GOAL_RUN_ID)/state, pass local fixed-point check, and publish canonical reports once before final fixed-point/index/freshness checks.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "background-rerun-lock",
+      "surface": "mk/mechanism.mk; ops/scripts/mechanism/goal_runtime_runner.py; ops/scripts/mechanism/goal_runtime_lock.py; build/goal-runs/goal-runtime.lock.json",
+      "problem": "A previous auto-improve ladder process continued running with old 30-minute profile arguments and modified the same working tree while follow-up maintenance was underway.",
+      "why_it_matters": "Concurrent unattended runs can revert or race intentional operator edits, creating dirty-state failures that look like validation issues instead of process ownership conflicts.",
+      "automation_candidate": "Add a repository-wide goal ladder lock and stale PID inspection command that blocks new manual maintenance or new ladder starts while an active ladder process owns the workspace.",
+      "suggested_followup": "Automated by a workspace-wide goal runtime lock: runner acquisition blocks concurrent runs, long-run-preflight-clean and auto-improve-goal-preflight fail on active locks, stale locks are cleaned, and goal-runtime-lock-status/stop expose inspection plus explicit SIGTERM request targets.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260520-sustained-self-improve-followup"
+}

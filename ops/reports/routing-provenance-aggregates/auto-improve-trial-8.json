@@ -1,0 +1,179 @@
+{
+  "$schema": "ops/schemas/routing-provenance-aggregate.schema.json",
+  "artifact_kind": "routing_provenance_aggregate",
+  "generated_at": "2026-05-24T00:59:24Z",
+  "producer": "ops.scripts.observability_routing_provenance_runtime",
+  "source_command": "python -m ops.scripts.observability_routing_provenance_runtime --vault .",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "a7570a9e4dc2fedc989f82ca16a4032678d2609254766df7127a10d753470719",
+  "input_fingerprints": {
+    "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
+    "schema": "d1020425815581b2e5ba63d8e577aa169eeb759773d42063844263ef84a3e78f",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "36f310c0ad654af6f1f65eca52406861141b795abc783f73ee871ce73efb8a6f",
+    "source_session_report": "cd8c07b75d5ce1a4968bb08e52bc76a9d438b5a81e1c01650fb8bc8752b7bc05",
+    "run_ids": "4569ebd76d5907e1d7660f7bb6dea87cc8f66ed585e4f0b243d7c1e2aa46464b"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-24T00:59:24Z"
+  },
+  "session_id": "auto-improve-trial-8",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "source_session_report": "ops/reports/auto-improve-sessions/auto-improve-trial-8.json",
+  "summary": {
+    "run_count": 1,
+    "routing_report_count": 4,
+    "executor_report_count": 1,
+    "telemetry_report_count": 1,
+    "promotion_report_count": 1,
+    "artifact_fingerprint_count": 1
+  },
+  "audit_rollup": {
+    "routing": {
+      "report_count": 4,
+      "role_counts": {
+        "provenance-auditor": 1,
+        "reviewer": 1,
+        "validator": 1,
+        "worker": 1
+      },
+      "selected_rung_counts": {
+        "3": 4
+      },
+      "score_band_counts": {
+        "high": 4
+      },
+      "sandbox_mode_counts": {
+        "read-only": 1,
+        "workspace-write": 3
+      },
+      "model_counts": {
+        "gpt-5.5": 4
+      },
+      "reasoning_effort_counts": {
+        "xhigh": 4
+      },
+      "risk_flag_counts": {
+        "schema_change": 4
+      }
+    },
+    "executor": {
+      "report_count": 1,
+      "role_counts": {
+        "worker": 1
+      },
+      "status_counts": {
+        "pass": 1
+      },
+      "blocking_role_counts": {},
+      "returncode_counts": {
+        "0": 1
+      }
+    },
+    "telemetry": {
+      "report_count": 1,
+      "failure_taxonomy_counts": {
+        "mutation_failed": 1
+      },
+      "phase_totals_seconds": {
+        "scope_freeze": 0.018,
+        "routing": 0.857,
+        "scaffold": 0.512,
+        "experiment": 256.43
+      },
+      "phase_max_seconds": {
+        "scope_freeze": 0.018,
+        "routing": 0.857,
+        "scaffold": 0.512,
+        "experiment": 256.43
+      }
+    },
+    "coverage": {
+      "run_count": 1,
+      "runs_with_routing": 1,
+      "runs_with_executor": 1,
+      "runs_with_telemetry": 1,
+      "runs_with_promotion_report": 1,
+      "runs_with_artifact_fingerprint": 1
+    },
+    "loop_health": {
+      "attempt_count": 1,
+      "rework_count": 0,
+      "rollback_signal_count": 0,
+      "rollback_rehearsal_coverage_count": 0,
+      "defect_escape_count": 0,
+      "finalized_run_count": 0,
+      "executor_failure_count": 0,
+      "routing_report_parse_gap_count": 0,
+      "executor_report_parse_gap_count": 0,
+      "moving_averages": {
+        "hold": 1.0,
+        "discard": 0.0,
+        "rollback_signal": 0.0
+      },
+      "coverage_ratios": {
+        "routing": 1.0,
+        "executor": 1.0,
+        "telemetry": 1.0,
+        "promotion_report": 1.0,
+        "artifact_fingerprint": 1.0
+      },
+      "health_flags": [
+        "unfinalized_runs_present",
+        "recent_hold_present"
+      ]
+    }
+  },
+  "runs": [
+    {
+      "run_id": "auto-improve-trial-8-run-01-mutation-proposal-runtime",
+      "proposal_id": "recent_log_overlap_queue_blocked__mutation-proposal-runtime",
+      "source_candidate_id": "recent_log_overlap_queue_unblock__mutation-proposal-runtime",
+      "decision": "HOLD",
+      "outcome": "mutation_failed",
+      "primary_targets": [
+        "ops/scripts/mechanism/mutation_proposal_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/script-output-surfaces.json"
+      ],
+      "test_files": [
+        "tests/test_mutation_proposal.py",
+        "tests/test_report_generation_smoke.py"
+      ],
+      "risk_flags": [
+        "schema_change"
+      ],
+      "roles": [
+        "provenance-auditor",
+        "reviewer",
+        "validator",
+        "worker"
+      ],
+      "artifacts": {
+        "proposal_snapshot": "runs/auto-improve-trial-8-run-01-mutation-proposal-runtime/proposal-snapshot.json",
+        "scope_freeze": "runs/auto-improve-trial-8-run-01-mutation-proposal-runtime/scope-freeze.json",
+        "routing_reports": [
+          "runs/auto-improve-trial-8-run-01-mutation-proposal-runtime/subagent-routing.provenance-auditor.json",
+          "runs/auto-improve-trial-8-run-01-mutation-proposal-runtime/subagent-routing.reviewer.json",
+          "runs/auto-improve-trial-8-run-01-mutation-proposal-runtime/subagent-routing.validator.json",
+          "runs/auto-improve-trial-8-run-01-mutation-proposal-runtime/subagent-routing.worker.json"
+        ],
+        "executor_reports": [
+          "runs/auto-improve-trial-8-run-01-mutation-proposal-runtime/worker-executor-report.json"
+        ],
+        "run_telemetry": "runs/auto-improve-trial-8-run-01-mutation-proposal-runtime/run-telemetry.json",
+        "promotion_report": "runs/auto-improve-trial-8-run-01-mutation-proposal-runtime/promotion-report.json",
+        "run_artifact_fingerprint": "runs/auto-improve-trial-8-run-01-mutation-proposal-runtime/run-artifact-fingerprint.json"
+      }
+    }
+  ]
+}

@@ -1,0 +1,186 @@
+{
+  "$schema": "ops/schemas/routing-provenance-aggregate.schema.json",
+  "artifact_kind": "routing_provenance_aggregate",
+  "generated_at": "2026-05-20T22:30:51Z",
+  "producer": "ops.scripts.observability_routing_provenance_runtime",
+  "source_command": "python -m ops.scripts.observability_routing_provenance_runtime --vault .",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "4d4ddb351214ee0dda539f46a7326751806351c8127cc37a465afc015d8ba815",
+  "input_fingerprints": {
+    "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
+    "schema": "d1020425815581b2e5ba63d8e577aa169eeb759773d42063844263ef84a3e78f",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "36f310c0ad654af6f1f65eca52406861141b795abc783f73ee871ce73efb8a6f",
+    "source_session_report": "9d56eddf03c0fde9b168e9509ad839649da88aeab4e5fbe594960d24b662b943",
+    "run_ids": "cdbce8ac08559187dbf6853d68421b5c3d309a871b23bac7409f0f3ebadc3074"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-20T22:30:51Z"
+  },
+  "session_id": "active-report-self-improve-certificate-rerun3",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "source_session_report": "ops/reports/auto-improve-sessions/active-report-self-improve-certificate-rerun3.json",
+  "summary": {
+    "run_count": 1,
+    "routing_report_count": 4,
+    "executor_report_count": 4,
+    "telemetry_report_count": 1,
+    "promotion_report_count": 1,
+    "artifact_fingerprint_count": 1
+  },
+  "audit_rollup": {
+    "routing": {
+      "report_count": 4,
+      "role_counts": {
+        "provenance-auditor": 1,
+        "reviewer": 1,
+        "validator": 1,
+        "worker": 1
+      },
+      "selected_rung_counts": {
+        "3": 4
+      },
+      "score_band_counts": {
+        "extreme": 4
+      },
+      "sandbox_mode_counts": {
+        "read-only": 1,
+        "workspace-write": 3
+      },
+      "model_counts": {
+        "gpt-5.5": 4
+      },
+      "reasoning_effort_counts": {
+        "xhigh": 4
+      },
+      "risk_flag_counts": {
+        "schema_change": 4
+      }
+    },
+    "executor": {
+      "report_count": 4,
+      "role_counts": {
+        "provenance-auditor": 1,
+        "reviewer": 1,
+        "validator": 1,
+        "worker": 1
+      },
+      "status_counts": {
+        "pass": 4
+      },
+      "blocking_role_counts": {},
+      "returncode_counts": {
+        "0": 4
+      }
+    },
+    "telemetry": {
+      "report_count": 1,
+      "failure_taxonomy_counts": {
+        "repo_health_blocked": 1
+      },
+      "phase_totals_seconds": {
+        "scope_freeze": 0.019,
+        "routing": 0.654,
+        "scaffold": 0.51,
+        "experiment": 1683.055
+      },
+      "phase_max_seconds": {
+        "scope_freeze": 0.019,
+        "routing": 0.654,
+        "scaffold": 0.51,
+        "experiment": 1683.055
+      }
+    },
+    "coverage": {
+      "run_count": 1,
+      "runs_with_routing": 1,
+      "runs_with_executor": 1,
+      "runs_with_telemetry": 1,
+      "runs_with_promotion_report": 1,
+      "runs_with_artifact_fingerprint": 1
+    },
+    "loop_health": {
+      "attempt_count": 1,
+      "rework_count": 0,
+      "rollback_signal_count": 0,
+      "rollback_rehearsal_coverage_count": 0,
+      "defect_escape_count": 0,
+      "finalized_run_count": 0,
+      "executor_failure_count": 0,
+      "routing_report_parse_gap_count": 0,
+      "executor_report_parse_gap_count": 0,
+      "moving_averages": {
+        "hold": 0.0,
+        "discard": 0.0,
+        "rollback_signal": 0.0
+      },
+      "coverage_ratios": {
+        "routing": 1.0,
+        "executor": 1.0,
+        "telemetry": 1.0,
+        "promotion_report": 1.0,
+        "artifact_fingerprint": 1.0
+      },
+      "health_flags": [
+        "unfinalized_runs_present"
+      ]
+    }
+  },
+  "runs": [
+    {
+      "run_id": "active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime",
+      "proposal_id": "repeated_discard_runs__auto-improve-iteration-persistence-runtime",
+      "source_candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
+      "decision": "HOLD",
+      "outcome": "repo_health_blocked",
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/schemas/run-telemetry.schema.json",
+        "ops/script-output-surfaces.json",
+        "tests/fixtures/report_schema_samples.json"
+      ],
+      "test_files": [
+        "tests/test_auto_improve_iteration_runtime.py",
+        "tests/test_report_schema_sample_regeneration.py"
+      ],
+      "risk_flags": [
+        "schema_change"
+      ],
+      "roles": [
+        "provenance-auditor",
+        "reviewer",
+        "validator",
+        "worker"
+      ],
+      "artifacts": {
+        "proposal_snapshot": "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/proposal-snapshot.json",
+        "scope_freeze": "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/scope-freeze.json",
+        "routing_reports": [
+          "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.provenance-auditor.json",
+          "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.reviewer.json",
+          "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.validator.json",
+          "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.worker.json"
+        ],
+        "executor_reports": [
+          "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/provenance-auditor-executor-report.json",
+          "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/reviewer-executor-report.json",
+          "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/validator-executor-report.json",
+          "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/worker-executor-report.json"
+        ],
+        "run_telemetry": "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+        "promotion_report": "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json",
+        "run_artifact_fingerprint": "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/run-artifact-fingerprint.json"
+      }
+    }
+  ]
+}

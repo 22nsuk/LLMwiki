@@ -1,0 +1,133 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-22T15:17:22Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "3c0251dc1862c122088395f05c23ba23b96437b53b1f02ac70f0eeeeb83f989f",
+  "input_fingerprints": {
+    "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "1bd2ac2d021a7e2ff32e1732141ab12b6b72a3f11b4b0d7a5f70e00e9965c273",
+    "observations": "05dc1dc096e9160a04ed0fe4b905af116ef5f5c01764861c6f3fccb07d751957",
+    "record_id": "048a222bbf0dd0671028b2cb942bcf4b73f4881163364acf1902d44d92812b6b",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "5b13809e2d07408770e977ae879c6c5278e735de48070a5677c06b86b63e9288"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-22T15:17:22Z"
+  },
+  "record_id": "task-20260522-active-external-report-review",
+  "captured_at": "2026-05-22T07:05:08Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Active external reports were reviewed against current code. Closed or superseded reports were archived, the 2026-05-22 self-improvement report is archived, and explicit strategy actions now remain machine-visible through the action matrix instead of being hidden behind broad implemented action IDs.",
+  "observations": [
+    {
+      "observation_id": "active_external_report_manifest_drift",
+      "surface": "external-reports/report-reference-manifest.json, ops/reports/external-report-action-matrix.json, ops/scripts/release/external_report_reference_manifest.py, ops/scripts/release/external_report_action_matrix.py",
+      "problem": "A new top-level active report, external-reports/LLMwiki_lane_separation_revalidation_report_20260522.md, exists after the checked-in reference manifest was generated, so the checked-in manifest and action matrix omit it even though recomputation detects reference_manifest_alignment_status=drift.",
+      "why_it_matters": "Active external reports are operator-facing evidence. If manifest and action matrix artifacts can remain stale after a new root report lands, closeout can claim complete active report coverage while missing the newest P0/P1 recommendations.",
+      "automation_candidate": "Add a cheap active-report-lifecycle freshness check to closeout/static paths that compares root external-reports files against the manifest and action matrix without rewriting canonical artifacts, and route repair through make external-report-lifecycle-refresh.",
+      "suggested_followup": "Closed in this task. The reference manifest and action matrix are current for all root active external reports, tests/test_external_report_lifecycle_static.py guards checked-in manifest/matrix drift, and marker-wide report-contract/release checks now include that guard through the *-all lanes.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "release_lane_mutability_split_gap",
+      "surface": "mk/release.mk, mk/test.mk, README.md, ops/README.md, ops/scripts/release/release_workflow_order_guard.py",
+      "problem": "release evidence closeout previously combined canonical report writers, fixed-point convergence, tmp cleanup, and finality verification in one ambiguous target chain; the canonical mutating lane is now release-evidence-converge, with release-verify-current and release-sealed-verify as check-only lanes and release-evidence-closeout retained only as a compatibility alias.",
+      "why_it_matters": "A lane that both repairs currentness and asserts release authority makes dirty state, fixed-point repair, and sealed authority harder to reason about and keeps the operator-facing closeout vocabulary ambiguous.",
+      "automation_candidate": "Keep Makefile/static tests, execution-lane policy, workflow planner recommendations, order guard checks, and signoff defaults pinned to release-evidence-converge/current/sealed names.",
+      "suggested_followup": "Implemented release-evidence-converge, release-verify-current, and release-sealed-verify as canonical lanes; migrated planner/order-guard/signoff/docs/tests to the new names. Next remove the compatibility alias after external CI/release callers no longer depend on release-evidence-closeout.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "sealed_summary_vocabulary_demotion_gap",
+      "surface": "ops/scripts/release/release_closeout_summary.py, ops/schemas/release-closeout-summary.schema.json, release status v2 consumers, release lane/operator summaries",
+      "problem": "release-closeout-summary still emits top-level sealed_release_status and status_v2.status_axes.sealed_release_status for a pre-distribution/source closeout surface, while batch/operator sealed surfaces can simultaneously report sealed_clean_pass on a bound ZIP basis.",
+      "why_it_matters": "The same field name appears at different authority levels, so a clean source closeout with no distribution ZIP can look inconsistent with sealed batch/operator evidence even when both are individually correct.",
+      "automation_candidate": "Add pre_distribution_package_binding_status and source_closeout_distribution_binding_status as first-class schema fields, keep sealed_release_status as a deprecated compatibility alias for one migration window, and update consumers/tests to prefer the lower-authority names on summary surfaces.",
+      "suggested_followup": "Implemented pre_distribution_package_binding_status and source_closeout_distribution_binding_status as first-class closeout-summary fields and status_v2 axes; sealed_release_status remains only as a deprecated compatibility alias for the migration window.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "selector_marker_scope_parity_gap",
+      "surface": "mk/test.mk, ops/test-lane-registry.json, tests/test_makefile_static_gates.py, release_sealing/report_contract pytest lanes",
+      "problem": "test-release-sealing still runs an explicit 39-test file set while release_sealing marks 46 tests, and test-report-contract runs a 191-test core pack while the report_contract marker-wide set contains 411 tests.",
+      "why_it_matters": "The explicit selector packs may be valid core lanes, but names that read like marker-wide lanes make coverage expectations easy to overstate and hide drift unless core/all parity is machine-checked.",
+      "automation_candidate": "Rename or alias explicit packs to *-core, add marker-wide *-all targets, and add parity guards that require intentional registry entries for any marker-covered file excluded from the core pack.",
+      "suggested_followup": "Implemented explicit *-core targets and marker-wide *-all targets for report_contract and release_sealing, migrated CI/release-check entrypoints to the all lanes, and retained old names only as compatibility aliases.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "external_action_catalog_lane_coverage_gap",
+      "surface": "ops/scripts/release/external_report_lifecycle_runtime.py, tests/test_external_report_action_matrix.py, ops/reports/external-report-action-matrix.json",
+      "problem": "The active 2026-05-22 lane separation report maps only to broad existing action IDs; it does not create distinct matrix actions for lane mutability split, sealed vocabulary demotion, selector/marker parity, or active manifest freshness.",
+      "why_it_matters": "Without explicit action IDs, the matrix can show most actions as implemented while the newest report's actual P0 recommendations remain only in prose.",
+      "automation_candidate": "Extend ACTION_CATALOG with dedicated lane-separation, sealed-summary-vocabulary, selector-marker-parity, and active-report-manifest-freshness actions, backed by focused evidence predicates.",
+      "suggested_followup": "Implemented dedicated action IDs and tests for active manifest freshness, release lane mutability split, sealed summary vocabulary demotion, and selector/marker parity; continue using planned/partial statuses as the remaining implementation roadmap.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "self_improvement_strategy_matrix_gap",
+      "surface": "external-reports/llmwiki_self_improvement_review_report_20260522.md, ops/scripts/release/external_report_lifecycle_runtime.py, ops/reports/external-report-action-matrix.json, tests/test_external_report_action_matrix.py",
+      "problem": "The active self-improvement reports carried unresolved strategy themes such as artifact freshness observability, repo boundary hygiene, GitHub-native security automation, generated artifact tracking policy, public export negative assertions, supply-chain external verification, and collaboration governance, but the previous matrix could still show every action as implemented.",
+      "why_it_matters": "Archive decisions depend on the matrix. If unresolved strategy themes are not modeled as distinct actions, an active report can be archived merely because nearby lower-level evidence exists.",
+      "automation_candidate": "Extend the external report action catalog with explicit self-improvement strategy actions and status predicates that stay partially_automated until the canonical evidence proves the full recommendation.",
+      "suggested_followup": "Closed in this task. Added eight dedicated self-improvement strategy action IDs and then implemented the directly connected items for artifact freshness observability, public export negative assertions, GitHub-native security automation, collaboration governance, generated artifact tracking policy, and archived-run namespace cleanup. The active 2026-05-22 self-improvement report remains active with only the larger repo-boundary, maintainability-hotspot, and external supply-chain verification themes still partial.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "archived_run_namespace_candidate_still_open",
+      "surface": "ops/reports/generated-artifact-index.json, runs/5day-auto-improve-runtime-rerun8-30m_trial-run-01-mechanism-run-validation-runtime",
+      "problem": "After external-report lifecycle cleanup, generated-artifact-index still reports one non-external archive candidate: a run whose promotion-report history is archived but whose run directory remains in the top-level runs namespace.",
+      "why_it_matters": "Leaving unrelated archive candidates open can make future lifecycle closeout look incomplete even when the active external-report set is current.",
+      "automation_candidate": "Route archived run namespace cleanup through the existing archive-execution-manifest path or add a run-specific relocation guard that preserves aliases and rollback evidence.",
+      "suggested_followup": "Closed in this task through make archive-execution-manifest followed by archive-execution-manifest-apply with operator confirmation. The archived run directory moved under runs/archive/ and generated-artifact-index now reports archive_candidate_count=0.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "remaining_self_improvement_strategy_backlog",
+      "surface": "external-reports/llmwiki_self_improvement_review_report_20260522.md, ops/reports/external-report-action-matrix.json, ops/reports/remediation-backlog.json",
+      "problem": "After the directly connected fixes in this task, three active-report strategy themes remained partially automated: physical public/private repo boundary and history absence evidence, maintainability hotspot decomposition, and external supply-chain verification beyond local integrity checks.",
+      "why_it_matters": "These items were action-matrix attention items, but each required concrete repo-boundary, maintainability, or supply-chain evidence rather than prose-only acceptance.",
+      "automation_candidate": "Keep repo-boundary history absence, maintainability refactor backlog, and external supply-chain verification as explicit matrix predicates whose status can only pass from canonical evidence.",
+      "suggested_followup": "Closed in this task. public-check-summary now records materialized export split and private-history absence evidence; function-budget refactor proposals provide canonical hotspot decomposition backlog evidence; sigstore/dependency-review/provenance wiring is detected as external verification readiness without overclaiming a live external bundle. external-report-action-matrix now reports implemented_count=36 and partially_automated_count=0, and the active self-improvement report has been archived.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "native_goal_state_durable_authority_gap",
+      "surface": "ops/scripts/core/codex_goal_client.py, ops/scripts/mechanism/codex_goal_prompt.py, mk/mechanism.mk, ops/reports/codex-goal-contract.json, ops/reports/goal-run-status.json",
+      "problem": "Codex native goal state is useful for coordination but does not by itself preserve checkpoint evidence, resume commands, workspace locks, or promotion blockers across long-running repository work.",
+      "why_it_matters": "A long auto-improve or release-maintenance goal can look active in the assistant thread while durable repo evidence is stale, incomplete, or tied to a different contract digest.",
+      "automation_candidate": "Keep native goal state advisory and require file-backed goal contracts, goal-run-status, checkpoint/resume metadata, workspace lock evidence, and runtime certificate checks before completion or promotion claims.",
+      "suggested_followup": "Repo-side guard is automated: FileGoalBackend/run-local file contracts are process-persistent, fake backends require explicit allow_fake, update_goal revalidates the merged contract, and goal-runtime-run-admission now blocks promotion authority unless file-backed contract, goal-run-status, and runtime-certificate evidence agree on the verified contract digest. The native Codex thread goal remains advisory and cannot itself be made durable from repository code.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "validation_closeout_order_churn",
+      "surface": "mk/mechanism.mk, mk/artifact.mk, mk/public.mk, ops/scripts/mechanism/codex_goal_prompt.py, ops/reports/public-check-summary.json, ops/reports/generated-artifact-index.json",
+      "problem": "This task ran a full pytest pass before public-check-summary and generated-artifact convergence, then had to run another full pytest after those canonical writers changed checked-in report fingerprints.",
+      "why_it_matters": "The evidence was ultimately correct, but the ordering spent an avoidable extra full-suite pass and made closeout feel less deterministic. Public-check-summary is not just a check: it promotes a canonical report, so it belongs before the final full-suite evidence boundary.",
+      "automation_candidate": "Codify a validation DAG for goal closeout: run static checks, policy/public/check summary writers, report-schema/public/generated-artifact convergence, and other canonical writers first; then run one final full pytest; after that, allow only check-only or narrowly targeted schema/report-contract validation unless source files change again.",
+      "suggested_followup": "Closed in this task. The goal prompt and README closeout guidance classify generated-artifact convergence, public-check-summary, report schema samples, release smoke reuse, and artifact finalization as ordered closeout surfaces; tests/test_codex_goal_prompt.py asserts that this guidance remains present in the prompt, README.md, and ops/README.md.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "release_finality_resettle_churn",
+      "surface": "mk/release.mk, mk/artifact.mk, ops/reports/release-closeout-finality-attestation.json, ops/reports/release-closeout-fixed-point.json, ops/reports/external-report-action-matrix.json, tests/fixtures/report_schema_samples.json",
+      "problem": "During this task, individually refreshing report-schema samples, release-smoke, test-execution-summary, dashboard, closeout summary, and external-report-action-matrix repeatedly invalidated the finality digest map until release-closeout-fixed-point was rerun as the terminal writer.",
+      "why_it_matters": "The finality model is sound, but operators doing narrow report repairs can accidentally create several write-then-reseal cycles before discovering that finality must be terminal. That increases closeout latency and makes otherwise successful repairs look unstable.",
+      "automation_candidate": "Add a cheap resettle planner or focused Make wrapper that detects touched generated-report families, runs only the necessary post-writer generated-artifact convergence, then terminates with release-closeout-fixed-point and finality verify. Keep finality verify check-only and terminal.",
+      "suggested_followup": "Automated in this task. Added make release-finality-resettle as the focused wrapper for narrow generated-report/observation repairs, taught workflow-dependency-planner to recommend that lane for canonical report and improvement-observation changes, and added release-workflow-order-guard/static tests that require release-closeout-fixed-point before terminal release-closeout-finality-verify.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260522-active-external-report-review"
+}

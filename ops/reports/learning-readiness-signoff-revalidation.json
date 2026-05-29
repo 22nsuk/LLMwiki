@@ -1,19 +1,19 @@
 {
   "$schema": "ops/schemas/learning-readiness-signoff-revalidation.schema.json",
   "artifact_kind": "learning_readiness_signoff_revalidation",
-  "generated_at": "2026-05-29T07:15:00Z",
+  "generated_at": "2026-05-29T11:22:04Z",
   "producer": "ops.scripts.learning_readiness_signoff_revalidation",
   "source_command": "python -m ops.scripts.learning_readiness_signoff_revalidation --vault . --window-days 7",
-  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
-  "source_tree_fingerprint": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+  "source_revision": "ca18e404b679e2b1fee0fc2f0179ec809b2ba28b",
+  "source_tree_fingerprint": "2246d7c71e46d5ffc2c6d9f522c9db7261cfc6785a4a2c27de337608a19e1f5b",
   "input_fingerprints": {
     "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
     "schema": "8c536891a172cbe9ad11fa91c7851a82490e204151bd3076dc7ca35e9ad25720",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "ae6232da4b8ba4822534241810337e06c061896308ee2f5294dcbfbd0f6d70e8",
-    "auto_improve_readiness": "977f693b9e90d5e703db3121b3243cd5d3d86f42390228fbc1bcb51295261747",
+    "auto_improve_readiness": "1c5c7a52f63fc189343a57f8cab0f0018304815c2f749ce6ff2de11966341311",
     "learning_readiness_signoff": "15744d7c1c76037d17e569082d2716e7e34fb3e2d03b9c88c963604a184523ea",
-    "release_closeout_summary": "0360ee51b43dab2203c1797cb55d57b64cae301acf641b398de01cc34e9e56b5",
+    "release_closeout_summary": "82e718e856c56a9e0267b2468e551b968df43718d1e4c0172ed887e89de00cdc",
     "required_command": "37dc5b3c58acdb8873773bb36f1352af5f7cc9fcc23e0bffcd16727b59f15ce1",
     "required_environment": "1de70756b4dc6ba51342a117ebf94ebc3114606c630cb2f0525a1b333d697bf0",
     "window_days": "7902699be42c8a8e46fbbb4501726517e86b22c56a189f7625a6da49081b2451"
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-29T07:15:00Z"
+    "checked_at": "2026-05-29T11:22:04Z"
   },
   "vault": ".",
   "policy": {
@@ -41,8 +41,8 @@
     "accepted_by": "operator-requested-via-codex-20260526",
     "accepted_at": "2026-05-25T22:36:10Z",
     "expires_at": "2026-06-08T22:36:10Z",
-    "seconds_until_expiry": 919270,
-    "days_until_expiry": 10.6397,
+    "seconds_until_expiry": 904446,
+    "days_until_expiry": 10.4681,
     "risk_owner": "runtime-maintainer",
     "revalidation_condition": "Rerun make release-evidence-closeout and inspect learning readiness metrics before release.",
     "rollback_trigger": "Treat learning_blocked_by_review_required as active again if release evidence changes, learning telemetry regresses, or this signoff expires.",
@@ -51,29 +51,30 @@
   "closeout": {
     "path": "ops/reports/release-closeout-summary.json",
     "load_status": "ok",
-    "generated_at": "2026-05-29T07:15:00Z",
-    "checked_in_release_ready": true,
-    "release_readiness_state": "conditional_pass",
-    "release_authority_status": "conditional_pass",
-    "semantic_release_status": "conditional_pass",
-    "sealed_release_status": "unsealed_distribution_not_provided",
+    "generated_at": "2026-05-29T11:22:04Z",
+    "checked_in_release_ready": false,
+    "release_readiness_state": "blocked",
+    "release_authority_status": "blocked",
+    "semantic_release_status": "blocked",
+    "sealed_release_status": "unsealed_artifact_incomplete",
     "status_v2_blocker_reason_ids": [
       "release_authority_not_clean_pass",
       "machine_release_not_allowed",
       "sealed_release_not_clean_pass",
-      "distribution_package_not_materialized"
+      "distribution_package_not_materialized",
+      "artifact_inventory_not_current"
     ],
     "status_v2_used_legacy_fallback_fields": [],
     "machine_release_allowed": false,
-    "operator_release_allowed": true,
-    "requires_accepted_risk_review": true,
-    "status": "pass",
+    "operator_release_allowed": false,
+    "requires_accepted_risk_review": false,
+    "status": "fail",
     "accepted_learning_risk": false,
     "learning_blocker_active": false,
-    "source_tree_fingerprint": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
-    "producer_input_fingerprint": "d54356a4e2803974db31ec9f3688c5e441770434cae54561fc933c459106d845",
+    "source_tree_fingerprint": "2246d7c71e46d5ffc2c6d9f522c9db7261cfc6785a4a2c27de337608a19e1f5b",
+    "producer_input_fingerprint": "6b71c851a64016798f2c4d8442d2264a67860a4334863f108d033e9f818354c3",
     "currentness_status": "current",
-    "summary": "release_authority_status=conditional_pass; release_readiness_state=conditional_pass; machine_release_allowed=False; operator_release_allowed=True; requires_accepted_risk_review=True"
+    "summary": "release_authority_status=blocked; release_readiness_state=blocked; machine_release_allowed=False; operator_release_allowed=False; requires_accepted_risk_review=False"
   },
   "learning_readiness": {
     "path": "ops/reports/auto-improve-readiness.json",
@@ -152,18 +153,18 @@
   "revalidation": {
     "status": "not_due",
     "window_days": 7,
-    "window_ends_at": "2026-06-05T07:15:00Z",
+    "window_ends_at": "2026-06-05T11:22:04Z",
     "clean_closeout_required": false,
     "status_reason": "learning readiness signoff is active outside the revalidation window"
   },
   "release_effect": {
-    "clean_release_effect": "conditional_operator_accepted",
-    "release_readiness_state": "conditional_pass",
-    "release_authority_status": "conditional_pass",
+    "clean_release_effect": "blocks_clean_release",
+    "release_readiness_state": "blocked",
+    "release_authority_status": "blocked",
     "machine_release_allowed": false,
-    "operator_release_allowed": true,
-    "requires_accepted_risk_review": true,
-    "operator_summary": "learning revalidation=not_due; release_authority_status=conditional_pass; release_readiness_state=conditional_pass; machine_release_allowed=False; operator_release_allowed=True"
+    "operator_release_allowed": false,
+    "requires_accepted_risk_review": false,
+    "operator_summary": "learning revalidation=not_due; release_authority_status=blocked; release_readiness_state=blocked; machine_release_allowed=False; operator_release_allowed=False"
   },
   "required_actions": [],
   "decision_options": [

@@ -1,11 +1,11 @@
 {
   "$schema": "ops/schemas/release-smoke-report.schema.json",
   "artifact_kind": "release_smoke_report",
-  "generated_at": "2026-05-29T06:56:47Z",
+  "generated_at": "2026-05-29T11:20:18Z",
   "producer": "ops.scripts.release_smoke",
   "source_command": "python -m ops.scripts.release.release_smoke --vault . --profile full",
-  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
-  "source_tree_fingerprint": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+  "source_revision": "ca18e404b679e2b1fee0fc2f0179ec809b2ba28b",
+  "source_tree_fingerprint": "2246d7c71e46d5ffc2c6d9f522c9db7261cfc6785a4a2c27de337608a19e1f5b",
   "input_fingerprints": {
     "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
     "schema": "1dff9a809a13ac57a2b078a674351eb866ca42d24634902a2b1b4861a4ad82f4",
@@ -18,7 +18,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-29T06:56:47Z"
+    "checked_at": "2026-05-29T11:20:18Z"
   },
   "vault": ".",
   "policy": {
@@ -31,8 +31,8 @@
   "archive_file": {
     "path": "<tmp>/LLMwiki-release-smoke.zip",
     "exists": true,
-    "size_bytes": 2085069,
-    "sha256": "90941419160e051051a47df139b6e0e6bdf824f0f768fbafdc988e08bc32dd15"
+    "size_bytes": 2086830,
+    "sha256": "01833287796d15f04d98aa31283b315001950eae53bf2a84779d8a85ee74153e"
   },
   "archive_class": {
     "name": "release_smoke_zip",
@@ -169,7 +169,7 @@
       {
         "path": "ops/scripts/mechanism/post_mutation_generated_artifact_convergence_runtime.py",
         "archive_path": "LLMwiki/ops/scripts/mechanism/post_mutation_generated_artifact_convergence_runtime.py",
-        "size_bytes": 9221,
+        "size_bytes": 9447,
         "zip_path_bytes": 85,
         "zip_component_bytes": 55,
         "python_unicode_escape_filename_bytes": 55,
@@ -248,11 +248,11 @@
   "archive_reproducibility": {
     "status": "pass",
     "run_count": 2,
-    "first_archive_sha256": "90941419160e051051a47df139b6e0e6bdf824f0f768fbafdc988e08bc32dd15",
-    "second_archive_sha256": "90941419160e051051a47df139b6e0e6bdf824f0f768fbafdc988e08bc32dd15",
+    "first_archive_sha256": "01833287796d15f04d98aa31283b315001950eae53bf2a84779d8a85ee74153e",
+    "second_archive_sha256": "01833287796d15f04d98aa31283b315001950eae53bf2a84779d8a85ee74153e",
     "same_archive_sha256": true,
-    "first_source_manifest_digest": "9ee4fa11556f196efafeb2c02ced8527cb52758058038c8d2fe290ac8b351b75",
-    "second_source_manifest_digest": "9ee4fa11556f196efafeb2c02ced8527cb52758058038c8d2fe290ac8b351b75",
+    "first_source_manifest_digest": "ec77145ef4558075d9b2e06b4df88689bc50d6068c49c895c4b0daa3b9e4f355",
+    "second_source_manifest_digest": "ec77145ef4558075d9b2e06b4df88689bc50d6068c49c895c4b0daa3b9e4f355",
     "same_source_manifest_digest": true,
     "summary": "archive_reproducibility=pass; same_archive_sha256=true; same_source_manifest_digest=true"
   },
@@ -260,10 +260,10 @@
     "path": "release-archive-self-description.json",
     "archive_root_name": "LLMwiki",
     "archive_member_path": "LLMwiki/release-archive-self-description.json",
-    "sha256": "eaa05d6643edc651dd7b9123b7a84ff7f43d1e4a2e0f4209c40d95fd02718498",
+    "sha256": "23f0da4fdc21a239b91185630129de91883d6fcc927c69703185eb9452e6195f",
     "size_bytes": 4541,
     "profile": "full",
-    "source_manifest_digest": "67fb240d265926b67bc459afc6c43a9e7568270030a4d25506d8d58ec7618e6e",
+    "source_manifest_digest": "f4ddaaaa039178d4ee3825bc413f3c475c29396f89fa14ee2b861639e0462d36",
     "source_manifest_file_count": 807,
     "tmp_included": false,
     "external_reports_included": false,
@@ -291,7 +291,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 293,
+      "duration_ms": 278,
       "stdout_tail": "      \"path_list_separator\": \":\",\n      \"path_separator\": \"/\",\n      \"platform_system\": \"Linux\",\n      \"posix_escape_expanded_component_byte_limit\": \"255\",\n      \"preferred_encoding\": \"UTF-8\"\n    }\n  },\n  \"metric_semantics\": {\n    \"entry_count\": {\n      \"scope\": \"registry_entries\",\n      \"description\": \"Parsed raw registry entries after inventory enrichment.\"\n    },\n    \"error_count\": {\n      \"scope\": \"diagnostics\",\n      \"description\": \"Number of preflight diagnostics emitted with fail severity.\"\n    },\n    \"warning_count\": {\n      \"scope\": \"diagnostics\",\n      \"description\": \"Number of preflight diagnostics emitted with warn severity.\"\n    },\n    \"path_alias_match_count\": {\n      \"scope\": \"entries_with_missing_canonical_storage_path\",\n      \"description\": \"Entries whose canonical storage_path was absent but a manual, exported, or deterministic environment alias existed on disk.\"\n    },\n    \"content_hash_fallback_count\": {\n      \"scope\": \"entries_with_missing_canonical_storage_path_and_aliases\",\n      \"description\": \"Entries whose path locators were absent but exactly one raw inventory file matched the entry content_sha256.\"\n    }\n  },\n  \"unsupported_environment\": false,\n  \"errors\": [],\n  \"warnings\": [],\n  \"stats\": {\n    \"entry_count\": 0,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"path_alias_match_count\": 0,\n    \"content_hash_fallback_count\": 0\n  }\n}",
       "stderr_tail": ""
     },
@@ -303,7 +303,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 1327,
+      "duration_ms": 1253,
       "stdout_tail": "        \"branch_node_count\": 2\n      },\n      \"threshold\": {\n        \"function_lines\": 180,\n        \"parameter_count\": 12,\n        \"branch_node_count\": 12\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    },\n    {\n      \"type\": \"python_function_budget_candidate\",\n      \"page\": \"tests/test_run_mechanism_experiment.py\",\n      \"symbol\": \"RunMechanismExperimentTests.test_selected_raw_registry_preflight_supporting_target_refreshes_before_candidate_capture\",\n      \"line\": 1256,\n      \"profile\": \"tests\",\n      \"triggered_budgets\": [\n        \"function_lines\"\n      ],\n      \"value\": {\n        \"function_lines\": 221,\n        \"parameter_count\": 0,\n        \"branch_node_count\": 2\n      },\n      \"threshold\": {\n        \"function_lines\": 180,\n        \"parameter_count\": 12,\n        \"branch_node_count\": 12\n      },\n      \"suggested_action\": \"review_for_function_split_or_interface_object\"\n    }\n  ],\n  \"watchlist\": [],\n  \"stats\": {\n    \"page_count\": 0,\n    \"error_count\": 0,\n    \"warning_count\": 0,\n    \"review_candidate_count\": 32,\n    \"watchlist_count\": 0\n  }\n}",
       "stderr_tail": ""
     },
@@ -315,8 +315,8 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 249,
-      "stdout_tail": "{\n  \"$schema\": \"ops/schemas/eval-report.schema.json\",\n  \"artifact_kind\": \"wiki_eval_report\",\n  \"generated_at\": \"2026-05-29T06:56:47Z\",\n  \"producer\": \"ops.scripts.wiki_eval\",\n  \"source_command\": \"python -m ops.scripts.wiki_eval --release-archive-profile\",\n  \"source_revision\": \"source_package_without_git\",\n  \"source_tree_fingerprint\": \"5199d4e1967acca54a741b9db010c97ff9dec84537f446ced3e35789236d6212\",\n  \"input_fingerprints\": {\n    \"policy\": \"b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801\",\n    \"schema\": \"eb673b772e92a9116db0923f2adf43957a596e6c1f6e204c3f3ea5a4132386be\",\n    \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\",\n    \"source_paths\": \"afdbea8aa7e1a35341acfc99975f9339fb172fd16e59db3d3510ba2312416cf2\",\n    \"pages\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n  },\n  \"schema_version\": 1,\n  \"artifact_status\": \"current\",\n  \"retention_policy\": \"canonical_report\",\n  \"encoding\": \"utf-8\",\n  \"currentness\": {\n    \"status\": \"current\",\n    \"checked_at\": \"2026-05-29T06:56:47Z\"\n  },\n  \"vault\": \".\",\n  \"policy\": {\n    \"path\": \"ops/policies/wiki-maintainer-policy.yaml\",\n    \"version\": 4\n  },\n  \"status\": \"pass\",\n  \"max_score\": 0,\n  \"total_score\": 0,\n  \"pages\": []\n}\n",
+      "duration_ms": 240,
+      "stdout_tail": "{\n  \"$schema\": \"ops/schemas/eval-report.schema.json\",\n  \"artifact_kind\": \"wiki_eval_report\",\n  \"generated_at\": \"2026-05-29T11:20:18Z\",\n  \"producer\": \"ops.scripts.wiki_eval\",\n  \"source_command\": \"python -m ops.scripts.wiki_eval --release-archive-profile\",\n  \"source_revision\": \"source_package_without_git\",\n  \"source_tree_fingerprint\": \"77d52545b8a3c5056a82da3eb42d308256277cbafd323a87a1ff70a547618398\",\n  \"input_fingerprints\": {\n    \"policy\": \"b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801\",\n    \"schema\": \"eb673b772e92a9116db0923f2adf43957a596e6c1f6e204c3f3ea5a4132386be\",\n    \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\",\n    \"source_paths\": \"afdbea8aa7e1a35341acfc99975f9339fb172fd16e59db3d3510ba2312416cf2\",\n    \"pages\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n  },\n  \"schema_version\": 1,\n  \"artifact_status\": \"current\",\n  \"retention_policy\": \"canonical_report\",\n  \"encoding\": \"utf-8\",\n  \"currentness\": {\n    \"status\": \"current\",\n    \"checked_at\": \"2026-05-29T11:20:18Z\"\n  },\n  \"vault\": \".\",\n  \"policy\": {\n    \"path\": \"ops/policies/wiki-maintainer-policy.yaml\",\n    \"version\": 4\n  },\n  \"status\": \"pass\",\n  \"max_score\": 0,\n  \"total_score\": 0,\n  \"pages\": []\n}\n",
       "stderr_tail": ""
     },
     {
@@ -327,8 +327,8 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 252,
-      "stdout_tail": "{\n  \"$schema\": \"ops/schemas/wiki-stage2-eval-report.schema.json\",\n  \"artifact_kind\": \"wiki_stage2_eval_report\",\n  \"generated_at\": \"2026-05-29T06:56:47Z\",\n  \"producer\": \"ops.scripts.wiki_stage2_eval\",\n  \"source_command\": \"python -m ops.scripts.wiki_stage2_eval\",\n  \"source_revision\": \"source_package_without_git\",\n  \"source_tree_fingerprint\": \"5199d4e1967acca54a741b9db010c97ff9dec84537f446ced3e35789236d6212\",\n  \"input_fingerprints\": {\n    \"policy\": \"b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801\",\n    \"schema\": \"c7ae879eb421d6fb48c7611bee4a8ec26feda97076d07a13b6dab437c5ca7352\",\n    \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\",\n    \"source_paths\": \"55add41a6229fde0eb8076540857e2942987683391337acb9a4f07afd4a129d2\",\n    \"pages\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n  },\n  \"schema_version\": 1,\n  \"artifact_status\": \"current\",\n  \"retention_policy\": \"canonical_report\",\n  \"encoding\": \"utf-8\",\n  \"currentness\": {\n    \"status\": \"current\",\n    \"checked_at\": \"2026-05-29T06:56:47Z\"\n  },\n  \"vault\": \".\",\n  \"policy\": {\n    \"path\": \"ops/policies/wiki-maintainer-policy.yaml\",\n    \"version\": 4\n  },\n  \"status\": \"pass\",\n  \"max_score\": 0,\n  \"total_score\": 0,\n  \"pages\": []\n}\n",
+      "duration_ms": 239,
+      "stdout_tail": "{\n  \"$schema\": \"ops/schemas/wiki-stage2-eval-report.schema.json\",\n  \"artifact_kind\": \"wiki_stage2_eval_report\",\n  \"generated_at\": \"2026-05-29T11:20:18Z\",\n  \"producer\": \"ops.scripts.wiki_stage2_eval\",\n  \"source_command\": \"python -m ops.scripts.wiki_stage2_eval\",\n  \"source_revision\": \"source_package_without_git\",\n  \"source_tree_fingerprint\": \"77d52545b8a3c5056a82da3eb42d308256277cbafd323a87a1ff70a547618398\",\n  \"input_fingerprints\": {\n    \"policy\": \"b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801\",\n    \"schema\": \"c7ae879eb421d6fb48c7611bee4a8ec26feda97076d07a13b6dab437c5ca7352\",\n    \"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\",\n    \"source_paths\": \"55add41a6229fde0eb8076540857e2942987683391337acb9a4f07afd4a129d2\",\n    \"pages\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n  },\n  \"schema_version\": 1,\n  \"artifact_status\": \"current\",\n  \"retention_policy\": \"canonical_report\",\n  \"encoding\": \"utf-8\",\n  \"currentness\": {\n    \"status\": \"current\",\n    \"checked_at\": \"2026-05-29T11:20:18Z\"\n  },\n  \"vault\": \".\",\n  \"policy\": {\n    \"path\": \"ops/policies/wiki-maintainer-policy.yaml\",\n    \"version\": 4\n  },\n  \"status\": \"pass\",\n  \"max_score\": 0,\n  \"total_score\": 0,\n  \"pages\": []\n}\n",
       "stderr_tail": ""
     },
     {
@@ -339,7 +339,7 @@
       "timed_out": false,
       "timeout_seconds": 5400,
       "termination_reason": "completed",
-      "duration_ms": 292,
+      "duration_ms": 266,
       "stdout_tail": "    },\n    {\n      \"artifact\": \"planning-validation.json\",\n      \"schema\": \"ops/schemas/planning-validation.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"run-ledger.json\",\n      \"schema\": \"ops/schemas/run-ledger.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"promotion-report.json\",\n      \"schema\": \"ops/schemas/promotion-report.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    },\n    {\n      \"artifact\": \"improvement-observations.json\",\n      \"schema\": \"ops/schemas/improvement-observations.schema.json\",\n      \"pass\": true,\n      \"errors\": []\n    }\n  ],\n  \"cross_checks\": [\n    {\n      \"check\": \"run_id_alignment\",\n      \"pass\": true,\n      \"detail\": {\n        \"seed.yaml\": \"run-YYYYMMDD-slug\",\n        \"planning-validation.json\": \"run-YYYYMMDD-slug\",\n        \"run-ledger.json\": \"run-YYYYMMDD-slug\",\n        \"promotion-report.json\": \"run-YYYYMMDD-slug\"\n      }\n    }\n  ],\n  \"phase_checks\": []\n}",
       "stderr_tail": ""
     }

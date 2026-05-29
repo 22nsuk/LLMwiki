@@ -1,0 +1,51 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-07T02:38:28Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "020399c9d2ef990917394771d8d148cc005c6c68725d730863edae8834a92fe7",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "ec3ba30223b08df86af980e8fc0c09f6935419c63fbc54fe97b597fa4b27ccbf",
+    "record_id": "801c2fdd7027087685445da58e72f866be7faf5106ca4fd93e9c0b4b38c073e9",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "dbee68ad7d60b1f72819755a60404081bf94643558de7e3a60535773b100c967"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:38:28Z"
+  },
+  "record_id": "task-20260428-pytest-release-smoke-hardening",
+  "captured_at": "2026-04-28T05:10:00Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Pytest caller contract and release-smoke fast/full package validation now have static and generated-contract guards, while stored release-smoke commands no longer leak absolute interpreter or temp paths.",
+  "observations": [
+    {
+      "observation_id": "pytest_entrypoint_contract_static_guard",
+      "surface": "README.md, pytest.ini, tests/test_makefile_static_gates.py",
+      "problem": "The repo already expected python -m pytest style entrypoints, but that caller contract could drift in docs or config without a dedicated static guard tying README guidance to the deliberate omission of pytest.ini pythonpath injection.",
+      "why_it_matters": "Without a narrow static guard, future docs or config edits can make bare pytest look supported again and turn caller-contract mismatch into avoidable triage noise.",
+      "automation_candidate": "Pin the supported pytest entrypoint wording in README and assert pytest.ini still omits pythonpath so docs and config fail together if the contract changes.",
+      "suggested_followup": "Automated on 2026-04-28: static tests now pin the supported pytest entrypoints in README and verify pytest.ini does not inject pythonpath, keeping bare pytest outside the supported contract unless both docs and config are intentionally changed together.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "release_smoke_profile_tiering_and_command_hygiene",
+      "surface": "ops/scripts/release_smoke.py, ops/schemas/release-smoke-report.schema.json, Makefile, .github/workflows/ci.yml, tests/test_release_smoke.py, tests/test_generated_report_contracts.py",
+      "problem": "Release smoke only exposed a full profile and stored absolute interpreter/temp paths in command traces, leaving no lighter package-parity tier and leaking machine-specific execution details into the canonical stored report.",
+      "why_it_matters": "A lighter fast profile is useful for PR/package validation, and command traces in canonical artifacts should stay portable and reviewable instead of depending on one host path layout.",
+      "automation_candidate": "Add fast/full release-smoke profiles, wire the fast profile into the CI fast tier for full-vault jobs, and pin the stored full report to canonical python -m ... --vault . command strings.",
+      "suggested_followup": "Automated on 2026-04-28: release_smoke now supports fast and full profiles, CI fast tier runs release-smoke-fast for full-vault checkouts, and generated-report contracts pin the stored full release smoke report to sanitized command strings.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260428-pytest-release-smoke-hardening"
+}

@@ -1,25 +1,25 @@
 {
   "$schema": "ops/schemas/learning-claim-unlock-review.schema.json",
   "artifact_kind": "learning_claim_unlock_review",
-  "generated_at": "2026-05-29T05:03:34Z",
+  "generated_at": "2026-05-29T11:20:33Z",
   "producer": "ops.scripts.learning_claim_unlock_review",
   "source_command": "python -m ops.scripts.learning_claim_unlock_review --vault .",
-  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
-  "source_tree_fingerprint": "c887a62d8b455fd73b297c05119f294e1925a22d9f5c715a84e838afc812e174",
+  "source_revision": "ca18e404b679e2b1fee0fc2f0179ec809b2ba28b",
+  "source_tree_fingerprint": "2246d7c71e46d5ffc2c6d9f522c9db7261cfc6785a4a2c27de337608a19e1f5b",
   "input_fingerprints": {
     "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
     "schema": "cd80b9607a6fc5bc8ffc579e219a131f7e53ad5ccff551f08e409f55fb80b9c1",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "db527a1e01fd6fd29c2c0de9819fca008a799937b2b4cbe24989d2736553bdc1",
-    "auto_improve_readiness": "7a9e1da83aa943916da32196e35fe8df0051a8210a1038e27d7aadb76a6650f5",
-    "learning_claim_evidence_bundle": "c23b9035af1def520410060581e60d2ef7ab06f306f26545a26acdfb0d08ab62",
+    "auto_improve_readiness": "7894a36974639e9389b9850535f13def0d6ddd5b4c226894feb9bfebf481fc07",
+    "learning_claim_evidence_bundle": "e945e44044c74b20ae00930015ec5133a143bd039188ae33c829efe8f15f8046",
     "approved_by": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "auto_policy_path": "3f45ad5440c4c08a2eb1578032fc6a9cc18a7805617282c0ebf01507c224d3b4",
     "blocking_blocker_ids": "bbffdeb2708a75a1855d308c338d3e3ff6905eeac99482c36af5652e8a20f2e4",
     "blocking_signal_ids": "a09999b9d923eba3889607229711eb4cfcf0c798a41b5e83a1175d409da6deb1",
     "confirmed_policy_path": "7a5bf75deba862ce20f09c5bacfb73b21debca9abd9917002f104de90be9a510",
     "evidence_bundle_path": "1e20a8a0389b4be330c122401a83c74021f13d466bf7db3d29c3c391e2ee388d",
-    "machine_policy_decision": "20cd938a2ea64f612b3523bc9219130c6fc66cd09b394ea38437488c0b8898b2",
+    "machine_policy_decision": "92755f16e55dd291c7579aefe929261e7698f7e3e87dd26e1c1a20b587dd9d4c",
     "reviewed_at": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
   "schema_version": 1,
@@ -28,7 +28,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-29T05:03:34Z"
+    "checked_at": "2026-05-29T11:20:33Z"
   },
   "vault": ".",
   "policy": {
@@ -56,8 +56,8 @@
   "blocking_blocker_ids": [
     "learning_blocked_by_review_required"
   ],
-  "improvement_claim_status": "revoked",
-  "evidence_cohort_status": "revoked",
+  "improvement_claim_status": "not_ready",
+  "evidence_cohort_status": "not_ready",
   "learning_claim_blocker_status": "blocked",
   "claim_wording_allowed": false,
   "claim_wording_policy_status": "blocked",
@@ -65,40 +65,39 @@
     "enabled": true,
     "policy_path": "ops/policies/learning-claim-auto-unlock.json",
     "policy_version": 1,
-    "decision": "rejected",
-    "evidence_bundle_digest": "6326b0ac981595cb28a56c76d5a26593b39f795d678004e0898b368b2cf053e6",
+    "decision": "requires_human",
+    "evidence_bundle_digest": "85cccccc64e7e08318fce1b6249f666bc351e50c8dbdd5f82c02a91416745dc1",
     "bundle_path": "ops/reports/learning-claim-evidence-bundle.json",
-    "bundle_sha256": "6326b0ac981595cb28a56c76d5a26593b39f795d678004e0898b368b2cf053e6",
-    "current_bundle_sha256": "6326b0ac981595cb28a56c76d5a26593b39f795d678004e0898b368b2cf053e6",
-    "bundle_status": "revoked",
+    "bundle_sha256": "85cccccc64e7e08318fce1b6249f666bc351e50c8dbdd5f82c02a91416745dc1",
+    "current_bundle_sha256": "85cccccc64e7e08318fce1b6249f666bc351e50c8dbdd5f82c02a91416745dc1",
+    "bundle_status": "active",
     "bundle_fingerprint_match_status": "match",
-    "revocation_status": "revoked",
+    "revocation_status": "active",
     "claim_level": "none",
     "claim_scope": "bounded_learning_likely_auto_improve_readiness",
     "bounded_learning_claim_allowed": false,
     "confirmed_learning_improvement_allowed": false,
-    "improvement_claim_status": "revoked",
-    "confirmed_learning_improvement_status": "revoked",
-    "evidence_cohort_status": "revoked",
+    "improvement_claim_status": "not_ready",
+    "confirmed_learning_improvement_status": "not_ready",
+    "evidence_cohort_status": "not_ready",
     "learning_claim_blocker_status": "blocked",
     "claim_wording_allowed": false,
     "claim_wording_policy_status": "blocked",
     "confirmed_policy_path": "ops/policies/learning-claim-confirmed-improvement.json",
     "confirmed_policy_version": 1,
     "confirmed_evidence_cohort_path": "ops/reports/learning-confirmed-evidence-cohort.json",
-    "confirmed_evidence_cohort_sha256": "5cff9e287b2cbc61e23815d4bf8dcf82d01b4391101ff1c9c70a01e1dddf1e97",
-    "current_confirmed_evidence_cohort_sha256": "5cff9e287b2cbc61e23815d4bf8dcf82d01b4391101ff1c9c70a01e1dddf1e97",
-    "confirmed_evidence_cohort_status": "revoked",
+    "confirmed_evidence_cohort_sha256": "11bc045ba3e536dd3c2f593f9e41734daba24836dab9d4c3be0fd828386cbafa",
+    "current_confirmed_evidence_cohort_sha256": "11bc045ba3e536dd3c2f593f9e41734daba24836dab9d4c3be0fd828386cbafa",
+    "confirmed_evidence_cohort_status": "active",
     "confirmed_evidence_cohort_fingerprint_match_status": "match",
     "confirmed_evidence_summary": {
-      "evidence_cohort_status": "revoked",
-      "confirmed_evidence_status": "revoked",
+      "evidence_cohort_status": "not_ready",
+      "confirmed_evidence_status": "not_ready",
       "valid_run_count": 2,
       "min_required_run_count": 3,
       "eligible_family_count": 0,
       "selected_valid_run_ids": [],
       "blocking_predicate_ids": [
-        "confirmed_evidence_bundle_active",
         "repeated_same_family_evidence"
       ],
       "rejected_run_count": 3,
@@ -239,18 +238,18 @@
     "confirmed_predicate_results": [
       {
         "id": "evidence_bundle_active",
-        "status": "fail",
+        "status": "pass",
         "source_path": "ops/reports/learning-claim-evidence-bundle.json",
         "required_condition": "learning_claim_evidence_bundle.revocation_status == active",
-        "observed_value": "revocation_status=revoked",
+        "observed_value": "revocation_status=active",
         "summary": "Confirmed claims require a non-stale, non-revoked evidence bundle."
       },
       {
         "id": "confirmed_evidence_bundle_active",
-        "status": "fail",
+        "status": "pass",
         "source_path": "ops/reports/learning-claim-evidence-bundle.json",
         "required_condition": "learning_claim_evidence_bundle.revocation_status == active",
-        "observed_value": "revocation_status=revoked",
+        "observed_value": "revocation_status=active",
         "summary": "Confirmed evidence cohort must bind an active learning claim evidence bundle."
       },
       {
@@ -279,10 +278,10 @@
       },
       {
         "id": "public_check_pass",
-        "status": "fail",
+        "status": "pass",
         "source_path": "ops/reports/public-check-summary.json",
         "required_condition": "public_check_summary.status == pass",
-        "observed_value": "status=missing",
+        "observed_value": "status=pass",
         "summary": "Public mirror check must pass before confirmed improvement opens."
       },
       {
@@ -298,17 +297,17 @@
         "status": "fail",
         "source_path": "ops/reports/release-clean-blocker-ledger.json",
         "required_condition": "release_clean_blocker_ledger.learning_claim_blockers == []",
-        "observed_value": "learning_claim_blocker_count=1",
+        "observed_value": "learning_claim_blocker_count=2",
         "summary": "No accepted learning risk or learning-claim blocker may remain."
       }
     ],
     "predicate_results": [
       {
         "id": "learning_claim_evidence_bundle_active",
-        "status": "fail",
+        "status": "pass",
         "source_path": "ops/reports/learning-claim-evidence-bundle.json",
         "required_condition": "learning_claim_evidence_bundle.revocation_status == active",
-        "observed_value": "bundle_status=revoked; fingerprint_match=match; revocation_status=revoked",
+        "observed_value": "bundle_status=active; fingerprint_match=match; revocation_status=active",
         "summary": "Automatic approval is valid only for the current evidence bundle digest."
       },
       {

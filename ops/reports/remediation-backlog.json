@@ -1,24 +1,24 @@
 {
   "$schema": "ops/schemas/remediation-backlog.schema.json",
   "artifact_kind": "remediation_backlog",
-  "generated_at": "2026-05-29T05:03:37Z",
+  "generated_at": "2026-05-29T11:20:35Z",
   "producer": "ops.scripts.remediation_backlog",
   "source_command": "python -m ops.scripts.remediation_backlog --vault .",
-  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
-  "source_tree_fingerprint": "c887a62d8b455fd73b297c05119f294e1925a22d9f5c715a84e838afc812e174",
+  "source_revision": "ca18e404b679e2b1fee0fc2f0179ec809b2ba28b",
+  "source_tree_fingerprint": "2246d7c71e46d5ffc2c6d9f522c9db7261cfc6785a4a2c27de337608a19e1f5b",
   "input_fingerprints": {
     "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
     "schema": "858409ae0ffecac12c1193ab5813129bae0174a7fde861c952bc99f45c9f82ca",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "20228252037e9e82e8c9af47672cce08ed64b927c83f1443b01d2ad7ab7b3930",
-    "goal_runtime_certificate": "e646c4404ac2ef8b647a5b08c3b45222be8fa3aab464eb3741bdc5ba80c9f5d1",
-    "goal_worktree_guard": "fe44801375055f6a44cca80417f0d36536207d6fb219169f397d57cc9d378940",
-    "learning_claim_activation": "07404298f6b4a27395c758178cdbc7259f639c4fb66552716fdc97818faa094d",
-    "learning_readiness_signoff": "c8b8f7594634b66d561975ba5aa910cb58cb0f7582f99c557764adffdffc6798",
-    "mutation_proposals": "3a71e7d8eadbee9d34f41413db26769e3829337f5cf09bdc88f1542431ee6139",
+    "goal_runtime_certificate": "e66c3cf739e377156b84671574bedf6e2d0fb6839af9e856a7c54e97afdbf980",
+    "goal_worktree_guard": "1e7cb02e6361ec21a17f6d9bd8422e56b7fdbb610f6c09403b49f3e93f7a1777",
+    "learning_claim_activation": "5b7412806eb729ab9d9c5d05569d5b35b9d3654ea6643ed83118a3681791a576",
+    "learning_readiness_signoff": "15744d7c1c76037d17e569082d2716e7e34fb3e2d03b9c88c963604a184523ea",
+    "mutation_proposals": "5ac25c40fa5cd4d4bdfa330898fb056b435d49a4da1d2a0e2b693f3f49ea4502",
     "release_auto_promotion_ready_manifest": "missing",
-    "self_improvement_negative_lessons": "fba743d67bf963ea152fb1f6f182dc1c0450dbe26322634b16fa6395b59a9f7e",
-    "session_synopsis": "35ec2d46a1cbf9e1c912fed7381f0ff0b56af55d836783c8384ab7f746c0a45e",
+    "self_improvement_negative_lessons": "6ee1707a38fa960de0dbf300f22ae6f04b47914e8c72b0b6a64da703da338f61",
+    "session_synopsis": "a4c50aefae2fae9f07b1ccf03dd945bb38768f23c2c618952e9da9260770d398",
     "status_overrides": "c673eb33f62451ecfbe960669e3795fcd816f2e1cdaa69aeb5c211efd91416d0",
     "auto_improve_sessions": "a8f1c7c5ea811a1ce5f23e0558e657321a0e4810a1df6bbef3db8912d4be2e1c"
   },
@@ -28,40 +28,38 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-29T05:03:37Z"
+    "checked_at": "2026-05-29T11:20:35Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "status": "pass",
+  "status": "attention",
   "summary": {
     "backlog_item_count": 6,
     "repeated_blocker_count": 4,
     "active_blocker_count": 2,
-    "open_total_count": 0,
-    "open_promotion_count": 0,
+    "open_total_count": 1,
+    "open_promotion_count": 1,
     "open_repeat_count": 0,
     "promotion_policy": "do_not_retry_repeated_blockers_until_backlog_item_closed",
-    "next_action": "No remediation backlog items detected."
+    "next_action": "Close or explicitly defer promotion-blocking remediation backlog items before promotion."
   },
   "items": [
     {
-      "item_id": "active_blocker_promotion_blocked_by_goal_worktree_guard_failure",
-      "blocker_id": "promotion_blocked_by_goal_worktree_guard_failure",
+      "item_id": "active_blocker_promotion_blocked_by_artifact_contract_failure",
+      "blocker_id": "promotion_blocked_by_artifact_contract_failure",
       "source": "auto_improve_readiness.promotion_blockers",
       "item_type": "active_blocker",
-      "status": "deferred",
+      "status": "open",
       "severity": "blocks_promotion",
       "occurrence_count": 1,
       "evidence_paths": [
-        "ops/reports/auto-improve-readiness.json",
-        "ops/reports/goal-worktree-guard.json",
         "ops/reports/session-synopsis.json"
       ],
-      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness.",
-      "next_action": "Deferred as a duplicate promotion-backlog item: ops/reports/goal-worktree-guard.json remains the authoritative live gate and still blocks promotion while the worktree is dirty."
+      "repair_target": "Regenerate schema-invalid artifacts, then rerun make artifact-freshness and make auto-improve-readiness.",
+      "next_action": "Regenerate schema-invalid artifacts, then rerun make artifact-freshness and make auto-improve-readiness."
     },
     {
       "item_id": "active_blocker_promotion_blocked_by_release_batch_manifest_failure",

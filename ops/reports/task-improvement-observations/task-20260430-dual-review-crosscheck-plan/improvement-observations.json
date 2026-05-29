@@ -1,0 +1,87 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-07T02:38:29Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "020399c9d2ef990917394771d8d148cc005c6c68725d730863edae8834a92fe7",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "83493a8e19a145177ba40b4915b133aa038b69452b2d01846fa6c5433dff63db",
+    "record_id": "9b09c579bb6def0ee695c60203c2d144fe8c6dae3812d9627f5594eba859722c",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "767d17e8ff1bdc0dccd308fd5ebe6d1c9048ddb138d7b35160ce3f9233a8d3b9"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:38:29Z"
+  },
+  "record_id": "task-20260430-dual-review-crosscheck-plan",
+  "captured_at": "2026-04-29T17:08:20Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Follow-up automation and hygiene items discovered while cross-checking the 2026-04-30 dual integrated review report against current code.",
+  "observations": [
+    {
+      "observation_id": "learning_readiness_signoff_template_or_generator",
+      "surface": "ops/reports/learning-readiness-signoff.json, ops/schemas/learning-readiness-signoff.schema.json, Makefile",
+      "problem": "Release closeout can consume an operator signoff for learning_blocked_by_review_required, but the repository does not provide a template or generator target for creating the required canonical signoff artifact.",
+      "why_it_matters": "The current release blocker is intentionally review-gated, so relying on hand-authored JSON makes the highest-priority release path easy to mistype and hard to audit.",
+      "automation_candidate": "Add a learning-readiness signoff template or CLI generator that fills the canonical envelope, validates the schema, requires expiry/revalidation metadata, and refuses unsupported blocker ids.",
+      "suggested_followup": "Implemented ops.scripts.learning_readiness_signoff, a template artifact, schema validation tests, and README/ops README closeout guidance.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "release_evidence_cohort_manifest",
+      "surface": "Makefile, ops/scripts/release_closeout_summary.py, ops/reports/release-closeout-summary.json",
+      "problem": "Release closeout records component fingerprints, but the policy remains allowed_divergence_with_fingerprints and there is no single run/cohort manifest tying component evidence to one ordered release-evidence execution.",
+      "why_it_matters": "Without a first-class cohort id, release evidence can be current and schema-backed while still mixing artifacts generated from different source states.",
+      "automation_candidate": "Emit a release-evidence-closeout-run manifest that records the ordered target chain, component paths, source_tree_fingerprint set, generated_at bounds, and accepted cohort policy.",
+      "suggested_followup": "Implemented ops.scripts.release_evidence_cohort, release-evidence-cohort Make targets, schema validation tests, and strict/accepted-risk cohort modes.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "zip_aware_artifact_freshness_mtime_source",
+      "surface": "ops/scripts/artifact_freshness_runtime.py, ops/reports/artifact-freshness-report.json",
+      "problem": "Artifact freshness derives mtime from the extracted filesystem, so ZIP extraction or checkout behavior can change mtime-sensitive counts without changing artifact payloads.",
+      "why_it_matters": "Release/package verification should distinguish payload currentness from transport mtime drift; otherwise replay evidence can look worse just because it was extracted differently.",
+      "automation_candidate": "Add a ZIP metadata mtime source or embedded-currentness-first mode and report the mtime source used in the artifact freshness schema.",
+      "suggested_followup": "Implemented artifact freshness --mtime-source and --zip-metadata support with filesystem, zip_info, and embedded_currentness modes plus schema/test coverage.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "raw_registry_cross_env_digest_bundle",
+      "surface": ".github/workflows/ci.yml, ops/scripts/raw_registry_cross_environment_matrix.py, ops/reports/raw-registry-cross-environment-matrix.json",
+      "problem": "Windows and macOS matrix rows currently prove workflow declaration and uploaded per-profile artifacts, but closeout does not collect those uploaded artifact digests into one release evidence bundle.",
+      "why_it_matters": "Cross-environment registry portability should be backed by per-run artifact digests, not only by static CI workflow text and local Linux live comparison.",
+      "automation_candidate": "Add a collector report that records each platform artifact name, runner OS, generated_at, SHA-256, semantic comparison result, and missing-artifact diagnostics.",
+      "suggested_followup": "Implemented raw-registry-cross-environment-evidence-bundle.json generation, digest/schema tests, Makefile target, and CI artifact download/bundle/upload job.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "archive_execution_rollback_lifecycle",
+      "surface": "ops/scripts/archive_execution_manifest.py, ops/reports/archive-execution-manifest.json",
+      "problem": "Archive execution supports dry_run and applied modes with rollback path metadata, but it does not provide a rollback mode that replays an applied manifest safely.",
+      "why_it_matters": "Archive cleanup is operational state mutation; long-term hygiene needs reversible transactions rather than a one-way move plus advisory metadata.",
+      "automation_candidate": "Add apply and rollback lifecycle commands with before/after digests, idempotency checks, and explicit operator confirmation for both directions.",
+      "suggested_followup": "Implemented archive_execution_manifest rollback mode with confirmation, before/after digest evidence, idempotency checks, schema updates, and tests.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "clean_bootstrap_dependency_preflight",
+      "surface": "README.md, Makefile, requirements.txt, requirements-dev.txt",
+      "problem": "Bare system python3 in this environment lacks jsonschema, while repository Make targets rely on the project virtualenv or installed dependencies.",
+      "why_it_matters": "Clean ZIP/bootstrap reproducibility should fail with a guided setup path rather than a raw ModuleNotFoundError when dependencies have not been installed.",
+      "automation_candidate": "Add a lightweight bootstrap preflight or documented make target that verifies supported Python, required dependencies, and the official python -m pytest entrypoint before runtime commands.",
+      "suggested_followup": "Implemented ops.scripts.bootstrap_preflight, make bootstrap-preflight, tests, and README/ops README setup guidance.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260430-dual-review-crosscheck-plan"
+}

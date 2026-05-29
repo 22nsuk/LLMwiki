@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/release-lane-summary.schema.json",
   "artifact_kind": "release_lane_summary",
-  "generated_at": "2026-05-29T07:15:00Z",
+  "generated_at": "2026-05-29T11:22:04Z",
   "producer": "ops.scripts.release_lane_summary",
   "source_command": "python -m ops.scripts.release_lane_summary --vault . --out ops/reports/release-lane-summary.json",
-  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
-  "source_tree_fingerprint": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+  "source_revision": "ca18e404b679e2b1fee0fc2f0179ec809b2ba28b",
+  "source_tree_fingerprint": "2246d7c71e46d5ffc2c6d9f522c9db7261cfc6785a4a2c27de337608a19e1f5b",
   "input_fingerprints": {
     "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
     "schema": "0d52985f1a335ba2c86dcfcd891717a3c35fc67c6a4f95df49e73822041aa523",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "5a668436e26dc69fcda3118f183bfc9f386013ca6ec248a57e3588d07c2af268",
-    "learning_delta_scoreboard": "6e742a3fc03aaed910121d5775e9f1392248d9c37844c13189db1cfd98882e67",
-    "release_closeout_summary": "0360ee51b43dab2203c1797cb55d57b64cae301acf641b398de01cc34e9e56b5",
-    "release_evidence_cohort": "1cdc41a720c80583675ed8dd79303a73d296a4578c03721e388f4b693ba9c863",
-    "release_evidence_dashboard": "f9ec7bd2ce7411f9756aee0694382b702a2cc7748c0c26897bc23c4f8919acb0",
-    "current_source_tree_fingerprint": "20418dbc6730376f56ff2f374b4e0ee507eb8d3336f8ecce15e4386436d51edf"
+    "learning_delta_scoreboard": "c84c77b266a64d1778faa1d726038b187cc3f4cb20e2bb5dfcec41d3be36e2ba",
+    "release_closeout_summary": "82e718e856c56a9e0267b2468e551b968df43718d1e4c0172ed887e89de00cdc",
+    "release_evidence_cohort": "b11e00d8d9c4c0db431c4679b73dda972682e0ac3f4e07918b4e14edc01ddbcc",
+    "release_evidence_dashboard": "fe639ed2e12d885b4f511afe36944660d489b1ee629a96e4429693479a112530",
+    "current_source_tree_fingerprint": "dcb3e5879396dc7fbc0ec70e0400953c49c09c6bdd23fa96e57763325754d9b0"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -23,7 +23,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-29T07:15:00Z"
+    "checked_at": "2026-05-29T11:22:04Z"
   },
   "vault": ".",
   "policy": {
@@ -32,24 +32,24 @@
   },
   "status": "attention",
   "lane_summary": {
-    "cohort_status": "pass",
+    "cohort_status": "attention",
     "clean_lane_status": "fail",
-    "conditional_lane_status": "pass",
+    "conditional_lane_status": "fail",
     "auto_improve_lane_status": "blocked",
     "learning_lane_status": "blocked",
     "machine_release_status": "blocked",
-    "operator_release_status": "allowed",
-    "release_authority_status": "conditional_pass",
-    "sealed_release_status": "unsealed_distribution_not_provided",
+    "operator_release_status": "blocked",
+    "release_authority_status": "blocked",
+    "sealed_release_status": "unsealed_artifact_incomplete",
     "learning_claim_guard_status": "pass",
     "learning_claim_allowed": false,
     "claims_learning_improved": false,
     "accepted_risk_family_count": 2,
     "accepted_risk_instance_count": 2,
     "accepted_risk_count": 2,
-    "gate_attention_count": 3,
+    "gate_attention_count": 1,
     "clean_lane_blocking_family_count": 1,
-    "learning_claim_blocking_family_count": 2,
+    "learning_claim_blocking_family_count": 4,
     "advisory_lifecycle_family_count": 1
   },
   "provenance": {

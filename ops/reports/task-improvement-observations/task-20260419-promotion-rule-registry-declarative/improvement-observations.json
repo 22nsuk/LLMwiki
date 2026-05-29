@@ -1,0 +1,42 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-07T02:38:26Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "020399c9d2ef990917394771d8d148cc005c6c68725d730863edae8834a92fe7",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "b348dc45e8d99123595f5d2b83d694da5eae6a99191fa945d5dcae43f4bae5c5",
+    "record_id": "96df0635948c9d9435ca7f30240fb57cf12d00663ca8e0f0034229f637edd045",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "1dacce6f431a521591c1f9ddbcb4476f82cb794aa5862a836640aa4cca4895cc"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:38:26Z"
+  },
+  "record_id": "task-20260419-promotion-rule-registry-declarative",
+  "captured_at": "2026-04-19T15:14:29Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Follow-up queue captured while moving system_mechanism promotion rule metadata into policy/schema-backed configuration.",
+  "observations": [
+    {
+      "observation_id": "page_class_rule_metadata_gap",
+      "surface": "ops/scripts/promotion_gate_page_runtime.py, ops/policies/wiki-maintainer-policy.yaml, ops/schemas/wiki-maintainer-policy.schema.json, tests/test_policy_runtime.py",
+      "problem": "The system_mechanism promotion rule registry now has schema-backed rule metadata, but page_class promotion rules still carry reducer and summary semantics only in Python.",
+      "why_it_matters": "Keeping one promotion path declarative and the other code-only makes future promotion rule audits asymmetric and can hide drift in page-class gate behavior.",
+      "automation_candidate": "Extend promotion_policy.rule_metadata to page_class rules after the system_mechanism contract has settled, reusing the same RuleMetadata and summary-template flow.",
+      "suggested_followup": "Automated on 2026-04-20 KST by adding page_class rule metadata, schema/loader validation, metadata-driven page rule evaluators, and focused page promotion regression coverage while preserving the current report schema and decisions.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260419-promotion-rule-registry-declarative"
+}

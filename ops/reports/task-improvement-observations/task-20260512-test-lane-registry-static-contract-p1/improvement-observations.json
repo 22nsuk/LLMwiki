@@ -1,0 +1,42 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-12T09:10:53Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "d61780b7b24979586ec6068d553ebed99f00010229ef718dda4110d40eaccd56",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "b7bbe54970950f7cbea5bac0d3c5b2ce576354c68e14b09adc8d675f16770916",
+    "record_id": "33c1ed22c90abba8011abc17bfdd61b1ec682f13d5acc96b5ad895cfa614c3e6",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "aecf183a43d345a04fdaf3e9ceb1df03dcdac3d440abc346eb6305889e6d3248"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-12T09:10:53Z"
+  },
+  "record_id": "task-20260512-test-lane-registry-static-contract-p1",
+  "captured_at": "2026-05-12T09:10:53Z",
+  "scope": "repo_maintenance_task",
+  "summary": "P1 test-lane registry authority now blocks persistent marker/Makefile/CI matrix drift, and follow-up validation confirmed the updated registry/Makefile/docs contract through targeted, broader touched-surface, and full-suite runs. The closeout path now refreshes script-output-surfaces before finalization, and artifact-finalization explicitly checks script-output-surfaces currentness so adjacent generated-artifact writer drift is detected before the final full-suite pass.",
+  "observations": [
+    {
+      "observation_id": "test_lane_registry_authority_not_yet_end_to_end",
+      "surface": "ops/test-lane-registry.json, Makefile report-contract targets, tests/test_ci_workflow_static.py, tests/test_release_workflow_static.py",
+      "problem": "The lane registry now blocks marker, Makefile lane-expression, and CI matrix drift for persistent lanes, but report-contract execution still depends on hand-curated selector packs and workflow static tests remain only partially semantic. Registry authority does not yet drive all derived packs or all workflow assertions end-to-end.",
+      "why_it_matters": "Partial authority leaves a second drift path: lane taxonomy can stay consistent while curated selectors or substring-based workflow checks quietly diverge from the intended execution contract.",
+      "automation_candidate": "Extend the registry schema from persistent lane metadata into derived pack and workflow-step contracts, then validate or generate report-contract selectors and workflow lane assertions from the same registry-backed source.",
+      "suggested_followup": "Keep registry-derived semantic validation for lane taxonomy and execution wiring, and continue maintaining post-change regression bundles so adjacent generated-artifact writers remain covered whenever new generated registries or closeout artifacts are introduced.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260512-test-lane-registry-static-contract-p1"
+}

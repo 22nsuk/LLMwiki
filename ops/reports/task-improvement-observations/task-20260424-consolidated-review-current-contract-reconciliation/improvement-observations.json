@@ -1,0 +1,42 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-09T19:30:16Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "8377cfc6277abde94fc0ed2032ab2bbbfec5472172669a707bcd9093178d25e1",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "f9819e5d11cccb12605d5da5e2b0f4b5d90911920a2f6035331210eaa859ae6c",
+    "record_id": "7b01809eb3f4865f0421cb3f50d4c8d76ddadb7c1cb1da0ea05f39940a76045f",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "550679f5d15d176a3aefe6807898341dc6b69f147eed8c721bdfd82420e2abd1"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-09T19:30:16Z"
+  },
+  "record_id": "task-20260424-consolidated-review-current-contract-reconciliation",
+  "captured_at": "2026-04-24T00:00:00Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Follow-up noted while reconciling the consolidated reviewer-validator report with current runtime semantics, readiness attention summaries, and the repo-local Python workspace contract.",
+  "observations": [
+    {
+      "observation_id": "generated_report_regeneration_discipline",
+      "surface": "ops/scripts/mechanism_review_runtime.py, ops/scripts/mutation_proposal_runtime.py, ops/scripts/auto_improve_readiness_runtime.py, ops/reports/mechanism-review-candidates.json, ops/reports/mutation-proposals.json, ops/reports/auto-improve-readiness.json, external-reports/llm_wiki_vnext_consolidated_reviewer_validator_report_20260424.md",
+      "problem": "Runtime and regression tests now separate empty/non-ready states with top-level attention semantics and readiness upstream summaries, but checked-in generated report snapshots can still retain pre-change pass-era values until a manual refresh step is run.",
+      "why_it_matters": "When stored snapshots lag behind runtime semantics, reviewers can reopen already-fixed issues, documentation has to explain snapshot versus code behavior manually, and public maintenance work becomes noisier than necessary.",
+      "automation_candidate": "Add a deterministic post-contract-change regeneration/parity step for canonical generated reports so status-semantic changes either refresh the stored artifacts or fail a narrow consistency check.",
+      "suggested_followup": "Automated on 2026-05-10 KST: `make canonical-parity-guard` now runs script-output-surfaces, generated-artifact-index, archive-execution-manifest, artifact-freshness, fixed-point finalization, tmp cleanup, and a final post-check dry-run with `--fail-on-refresh-required` so checked-in canonical reports cannot keep pre-change semantics after the normal refresh chain. `make check-finalized` is now the documented full-vault closeout default.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260424-consolidated-review-current-contract-reconciliation"
+}

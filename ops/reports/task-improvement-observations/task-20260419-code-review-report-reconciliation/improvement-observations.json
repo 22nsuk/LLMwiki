@@ -1,0 +1,60 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-07T02:38:25Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "020399c9d2ef990917394771d8d148cc005c6c68725d730863edae8834a92fe7",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "12d14d169869b9e83ef3526a3316633c49038aaf62e1d3ca7392947029ba2ab0",
+    "record_id": "6cbf065a992f3445658b95796244ee13a5eeca022fb333793e3a814f1faa6a1d",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "58f6ea68bf4e167c263959a5eaa57b84dffc48acbe9ccfb87ca01d656a3e5bfb"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:38:25Z"
+  },
+  "record_id": "task-20260419-code-review-report-reconciliation",
+  "captured_at": "2026-04-19T04:31:51Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Follow-up automation and hygiene gaps found while reconciling llm_wiki_vnext_detailed_code_review_report_ko_20260419.md against the current repository state.",
+  "observations": [
+    {
+      "observation_id": "external_report_markdown_audit_gap",
+      "surface": "ops/scripts/wiki_doc_audit_runtime.py, tests/test_wiki_doc_audit_runtime.py, wiki/*, system/*",
+      "problem": "external_report_reference_issues only discovers .pdf and .docx files under external-reports even though current corpus Source trace sections reference external-reports/위키_콘텐츠_종합_검토_보고서.md.",
+      "why_it_matters": "A markdown external report can become a hidden corpus source dependency outside the raw registry/source-of-truth contract while lint and eval still pass if the local file happens to exist.",
+      "automation_candidate": "Make external report extensions policy-backed or include .md by default, then add corpus/documentation regression tests that require corpus source traces to use raw-backed source-of-truth paths or explicit reviewed exemptions.",
+      "suggested_followup": "The external report audit now reads policy-backed extensions and the live policy includes .md alongside .pdf and .docx. Keep future external report formats behind doc_audit.external_report_extensions and decide separately whether markdown external reports should be promoted into raw registry entries or allowed only as documentation-surface references.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "package_metadata_manifest_exclusion_gap",
+      "surface": ".gitignore, ops/scripts/wiki_manifest.py, ops/scripts/public_surface_policy.py, tests/test_release_smoke.py",
+      "problem": "An editable install leaves llm_wiki_vnext.egg-info/ in the repo root, and wiki_manifest currently includes that generated package metadata in manifest inventory.",
+      "why_it_matters": "Release smoke and manifest comparison can normalize a locally contaminated inventory, making generated build metadata look like intentional source surface.",
+      "automation_candidate": "Exclude *.egg-info/, build/, and dist/ from manifest and release archive inventory, mirror the policy in .gitignore/public surface tests, and add a release-smoke regression fixture.",
+      "suggested_followup": "Manifest and release archive inventory now exclude *.egg-info/, build/, and dist/, and root hygiene docs plus .gitignore mirror that generated-artifact boundary. Keep future packaging metadata treated like .venv, tmp, cache, and coverage artifacts.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "strict_warning_budget_gate_gap",
+      "surface": "Makefile, ops/scripts/raw_registry_preflight.py, ops/scripts/wiki_lint.py, ops/policies/wiki-maintainer-policy.yaml",
+      "problem": "Current full-vault gates can return success while raw_registry_preflight and wiki_lint still emit warning debt, so release/readiness language depends on an implicit operator interpretation of warnings.",
+      "why_it_matters": "The repository can be technically passing while accumulating unregistered raw files, raw markdown metadata debt, or pending frontmatter migration debt that should be visible as a stricter readiness tier.",
+      "automation_candidate": "Add an optional strict gate or warning-budget target that fails on selected warning types or nonzero warning counts without changing the normal development loop.",
+      "suggested_followup": "Automated via ops/scripts/warning_budget.py, ops/schemas/warning-budget-report.schema.json, policy strict_warning_budget.release_clean, make warning-budget, make check-strict, and make release-clean. Keep the zero-budget set focused on warning debt that must block strict release readiness.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260419-code-review-report-reconciliation"
+}

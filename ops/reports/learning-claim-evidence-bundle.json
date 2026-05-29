@@ -1,17 +1,17 @@
 {
   "$schema": "ops/schemas/learning-claim-evidence-bundle.schema.json",
   "artifact_kind": "learning_claim_evidence_bundle",
-  "generated_at": "2026-05-29T05:03:33Z",
+  "generated_at": "2026-05-29T11:20:32Z",
   "producer": "ops.scripts.learning_claim_evidence_bundle",
   "source_command": "python -m ops.scripts.learning_claim_evidence_bundle --vault .",
-  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
-  "source_tree_fingerprint": "c887a62d8b455fd73b297c05119f294e1925a22d9f5c715a84e838afc812e174",
+  "source_revision": "ca18e404b679e2b1fee0fc2f0179ec809b2ba28b",
+  "source_tree_fingerprint": "2246d7c71e46d5ffc2c6d9f522c9db7261cfc6785a4a2c27de337608a19e1f5b",
   "input_fingerprints": {
     "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
     "schema": "5d96654b43ee21ca9e073bff4bfa78778f690771c9df676370d5d5ab2c88c14e",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "4b6f470a493ee5ac4b314dd43973bf2d4d389337aeef5ac48886f4b21b3e8f5c",
-    "learning_claim_evidence_bundle_inputs": "270041654a299804ccacb78d534ebe141230b9b736e79daf91d95d32121e0c2d"
+    "learning_claim_evidence_bundle_inputs": "378d1fe254aa92cfb701de2b3e5d228b86431afdd9b8cf56cdb1998c48e22a87"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -19,21 +19,21 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-29T05:03:33Z"
+    "checked_at": "2026-05-29T11:20:32Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "status": "fail",
+  "status": "pass",
   "summary": {
-    "bundle_sha256": "6326b0ac981595cb28a56c76d5a26593b39f795d678004e0898b368b2cf053e6",
-    "revocation_status": "revoked",
+    "bundle_sha256": "85cccccc64e7e08318fce1b6249f666bc351e50c8dbdd5f82c02a91416745dc1",
+    "revocation_status": "active",
     "bundle_item_count": 7,
-    "missing_required_count": 1,
+    "missing_required_count": 0,
     "stale_evidence_count": 0,
-    "revoked_evidence_count": 1,
+    "revoked_evidence_count": 0,
     "telemetry_run_count": 0,
     "telemetry_missing_count": 0,
     "behavior_delta_digest_missing_count": 0,
@@ -46,7 +46,7 @@
     "behavior_delta_artifact_missing_count": 0,
     "behavior_delta_artifact_mismatch_count": 0,
     "behavior_delta_artifact_readback_status": "pass",
-    "legacy_reconstruction_sha256": "8ae2d220b818a0005acbc7cc3a9eab17ae5392d4e99ff05b319d5fc5dbf34e38",
+    "legacy_reconstruction_sha256": "eb9599d1c5e6a9306bdaeda6bedee3f037999680573b1a8cab32d6a3f1841b16",
     "legacy_reconstruction_status": "pass",
     "legacy_reconstruction_blocked_run_count": 0,
     "legacy_reconstruction_operator_summary": [
@@ -190,13 +190,13 @@
         }
       }
     ],
-    "external_manifest_sha256": "87a35395cc32b34463a58bc7b6500dba27576bf4481fbdd07f36a73e5cb91c8f",
+    "external_manifest_sha256": "07d3e676df0a717bc3d10b289584adeacb4672af4657d618cf80f335317617f8",
     "run_set_digest": "61074a1059b98d4948d7085790da219fafd88f32aee6d8cce00187139e1ad00e"
   },
   "bundle_identity": {
     "digest_algorithm": "sha256",
     "bundle_payload_version": 1,
-    "evidence_bundle_digest": "6326b0ac981595cb28a56c76d5a26593b39f795d678004e0898b368b2cf053e6"
+    "evidence_bundle_digest": "85cccccc64e7e08318fce1b6249f666bc351e50c8dbdd5f82c02a91416745dc1"
   },
   "evidence_items": [
     {
@@ -205,7 +205,7 @@
       "role": "blocking",
       "required": true,
       "exists": true,
-      "sha256": "7a9e1da83aa943916da32196e35fe8df0051a8210a1038e27d7aadb76a6650f5",
+      "sha256": "7894a36974639e9389b9850535f13def0d6ddd5b4c226894feb9bfebf481fc07",
       "status": "present",
       "revocation_effect": "none"
     },
@@ -215,7 +215,7 @@
       "role": "blocking",
       "required": true,
       "exists": true,
-      "sha256": "0f72574e878cc49a95c068aab7131aded1328da36d2ddc2d789219841387499b",
+      "sha256": "54634908d60cafdf5c7a4cd013dd9449fce8570a472202df5d0840d7ec7a7a80",
       "status": "present",
       "revocation_effect": "none"
     },
@@ -225,7 +225,7 @@
       "role": "blocking",
       "required": true,
       "exists": true,
-      "sha256": "3a71e7d8eadbee9d34f41413db26769e3829337f5cf09bdc88f1542431ee6139",
+      "sha256": "5ac25c40fa5cd4d4bdfa330898fb056b435d49a4da1d2a0e2b693f3f49ea4502",
       "status": "present",
       "revocation_effect": "none"
     },
@@ -235,7 +235,7 @@
       "role": "blocking",
       "required": true,
       "exists": true,
-      "sha256": "bc74ea9c5c70d5569836b104473ca87ed928435ee0838608c809d20c5ee9f05e",
+      "sha256": "d51d4b112a7cd490e5eddbeee34a35f84e7ab9919bd57b0872509ecc3d0dc20f",
       "status": "present",
       "revocation_effect": "none"
     },
@@ -244,10 +244,10 @@
       "path": "ops/reports/public-check-summary.json",
       "role": "blocking",
       "required": true,
-      "exists": false,
-      "sha256": "",
-      "status": "missing",
-      "revocation_effect": "revoked"
+      "exists": true,
+      "sha256": "3611eef09279a5e0cee488540bf900a3e78bee6c8932bf6efeb8eb158e04a431",
+      "status": "present",
+      "revocation_effect": "none"
     },
     {
       "id": "learning_confirmed_legacy_reconstruction",
@@ -255,7 +255,7 @@
       "role": "blocking",
       "required": true,
       "exists": true,
-      "sha256": "8ae2d220b818a0005acbc7cc3a9eab17ae5392d4e99ff05b319d5fc5dbf34e38",
+      "sha256": "eb9599d1c5e6a9306bdaeda6bedee3f037999680573b1a8cab32d6a3f1841b16",
       "status": "present",
       "revocation_effect": "none"
     },
@@ -265,7 +265,7 @@
       "role": "blocking",
       "required": true,
       "exists": true,
-      "sha256": "87a35395cc32b34463a58bc7b6500dba27576bf4481fbdd07f36a73e5cb91c8f",
+      "sha256": "07d3e676df0a717bc3d10b289584adeacb4672af4657d618cf80f335317617f8",
       "status": "present",
       "revocation_effect": "none"
     }
@@ -678,13 +678,9 @@
     "source": "run_telemetry.behavior_delta -> behavior_delta_digest"
   },
   "revocation": {
-    "status": "revoked",
-    "reasons": [
-      "required evidence item missing: public_check_summary"
-    ],
+    "status": "active",
+    "reasons": [],
     "stale_item_ids": [],
-    "revoked_item_ids": [
-      "public_check_summary"
-    ]
+    "revoked_item_ids": []
   }
 }

@@ -1,0 +1,157 @@
+{
+  "$schema": "ops/schemas/auto-improve-session.schema.json",
+  "session_id": "auto-improve-release-ready-20260526-run-01",
+  "generated_at": "2026-05-25T19:32:36Z",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "complete",
+  "budget": {
+    "max_proposals": 1,
+    "max_minutes": 360,
+    "max_consecutive_failures": 1
+  },
+  "executor": {
+    "name": "codex_exec"
+  },
+  "attempted_proposal_ids": [],
+  "quarantined_proposal_ids": [],
+  "run_ids": [],
+  "iterations": [],
+  "next_run_decisions": [],
+  "learning_summary": {
+    "attempt_count": 0,
+    "rework_count": 0,
+    "rollback_signal_count": 0,
+    "defect_escape_pair_count": 0,
+    "session_context_status": "no_iterations",
+    "evidence_gaps": [
+      "session.iterations is empty",
+      "session.run_ids is empty",
+      "no attempt records could be reconstructed from session iterations"
+    ]
+  },
+  "loop_state": {
+    "consecutive_failures": 0,
+    "last_outcome": "",
+    "last_decision": "",
+    "last_run_id": "",
+    "last_blocking_reason": "",
+    "blocking_reason_counts": {
+      "discard_behavior_delta_artifact_digest_mismatch": 2
+    },
+    "repeated_blocker_stop": true,
+    "repeated_blocker_reason": "discard_behavior_delta_artifact_digest_mismatch",
+    "remediation_backlog_path": "ops/reports/remediation-backlog.json",
+    "updated_at": "2026-05-25T19:32:33Z"
+  },
+  "queue_snapshot": [
+    "repeated_discard_runs__auto-improve-iteration-persistence-runtime",
+    "repeated_discard_runs__mechanism-run-validation-runtime"
+  ],
+  "stop_reason": "repeated_blocker_backlog_required",
+  "path": "ops/reports/auto-improve-sessions/auto-improve-release-ready-20260526-run-01.json",
+  "goal_contract": {
+    "path": "runs/goal-auto-improve-release-ready-20260526-run-01/state/codex-goal-contract.json",
+    "requested_path": "runs/goal-auto-improve-release-ready-20260526-run-01/state/codex-goal-contract.json",
+    "contract_sha256": "e2232edf4644f0e35fda23f0b6c37f2558183b60067561d1b3b0f38ed5a04c48",
+    "contract_id": "auto-improve-goal",
+    "status": "active",
+    "runtime_mode": "self_improvement_loop",
+    "max_wall_clock_seconds": 21600,
+    "max_unattended_seconds": 21600,
+    "max_proposals": 1,
+    "max_consecutive_failures": 1,
+    "can_promote_result": false,
+    "promotion_blockers": [
+      "promotion_blocked_by_remediation_backlog_open"
+    ]
+  },
+  "metadata": {
+    "pre_run_selected_proposal": {
+      "proposal_id": "repeated_discard_runs__auto-improve-iteration-persistence-runtime",
+      "family": "contract_regression_signals",
+      "failure_mode": "repeated_discard_runs",
+      "blocked_by": [],
+      "repeat_backlog_repair": false
+    },
+    "properties": [
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/auto-improve-session.schema.json\", \"artifact_kind\": \"auto_improve_session\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-25T19:32:36Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-25T19:32:36Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"policy\": \"a82d0816042f08c27069cf0ba6d2e33d7e66ad763770b82bbc1919d26f735696\", \"policy_version\": \"4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a\", \"schema\": \"390af862820c69f4bffafd025fd06d92971d4c8095213d1a498dec10ea3f1410\", \"session_id\": \"536f8da67777f93c903fb56e82846e0459c4b84d461ba6a26772d6200ca325b3\", \"source_paths\": \"86ecfbf38e05b9fb125f2abe700b55d8b72dc9cff37492c1d9ba0fc393d52c67\", \"status\": \"eebbf6457e46a7f63acdf9b97390f790ba443d60cfa44b607da7e5c40aa1cc1d\"}, \"producer\": \"ops.scripts.auto_improve_runtime\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.auto_improve_runtime\", \"source_revision\": \"91b570c2e692213650cf6b509661a142a20671bd\", \"source_tree_fingerprint\": \"450311764cff5fec9b61a52a624dc499b2bdb7a265c1771fd46fc29af82e1f95\"}"
+      }
+    ]
+  },
+  "learning_mode": {
+    "allow_learning_uncertain": false,
+    "bounded_trial": false
+  },
+  "pre_run_readiness": {
+    "report": "ops/reports/auto-improve-readiness.json",
+    "generated_at": "2026-05-25T19:32:36Z",
+    "execution_status": "pass",
+    "learning_status": "learning_likely",
+    "learning_gate_effect": "active",
+    "runnable_proposal_count": 2,
+    "session_reports_considered": 44
+  },
+  "rollups": {
+    "iterations": {
+      "count": 0,
+      "outcome_counts": {},
+      "decision_counts": {},
+      "status_counts": {},
+      "quarantined_proposal_count": 0
+    },
+    "routing": {
+      "report_count": 0,
+      "role_counts": {},
+      "selected_rung_counts": {},
+      "score_band_counts": {},
+      "sandbox_mode_counts": {},
+      "model_counts": {},
+      "reasoning_effort_counts": {},
+      "risk_flag_counts": {}
+    },
+    "executor": {
+      "report_count": 0,
+      "role_counts": {},
+      "status_counts": {},
+      "blocking_role_counts": {},
+      "returncode_counts": {}
+    },
+    "telemetry": {
+      "report_count": 0,
+      "failure_taxonomy_counts": {},
+      "phase_totals_seconds": {},
+      "phase_max_seconds": {}
+    },
+    "outcome_metrics": {
+      "attempt_count": 0,
+      "recent_window": 20,
+      "recent_attempt_count": 0,
+      "rework_count": 0,
+      "rollback_signal_count": 0,
+      "rollback_rehearsal_coverage_count": 0,
+      "moving_averages": {
+        "hold": 0.0,
+        "discard": 0.0,
+        "rollback_signal": 0.0
+      },
+      "operator_effort_proxy": {
+        "phase_totals_seconds": {},
+        "executor_report_count": 0,
+        "reviewer_dispatch_count": 0,
+        "validator_dispatch_count": 0,
+        "auditor_dispatch_count": 0,
+        "hold_count": 0
+      },
+      "rework_keys": [],
+      "defect_escape_proxy": {
+        "count": 0,
+        "pairs": []
+      }
+    }
+  }
+}

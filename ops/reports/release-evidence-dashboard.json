@@ -1,23 +1,23 @@
 {
   "$schema": "ops/schemas/release-evidence-dashboard.schema.json",
   "artifact_kind": "release_evidence_dashboard",
-  "generated_at": "2026-05-29T07:15:00Z",
+  "generated_at": "2026-05-29T11:22:04Z",
   "producer": "ops.scripts.release_evidence_dashboard",
   "source_command": "python -m ops.scripts.release_evidence_dashboard --vault . --out ops/reports/release-evidence-dashboard.json",
-  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
-  "source_tree_fingerprint": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+  "source_revision": "ca18e404b679e2b1fee0fc2f0179ec809b2ba28b",
+  "source_tree_fingerprint": "2246d7c71e46d5ffc2c6d9f522c9db7261cfc6785a4a2c27de337608a19e1f5b",
   "input_fingerprints": {
     "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
     "schema": "3d201c44c8525de4f9e7af11e9bcba6a5572a46b2f246bc43324bf377c45ab56",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "18f76158e2e67f455f9d4c37d4e4c616f626108fca7783f737f25aa58a658504",
-    "artifact_freshness": "633847d623eddd3973d0bea6d3052b4c8346890b3054d446de2f98d5dc391d1a",
-    "learning_delta_scoreboard": "6e742a3fc03aaed910121d5775e9f1392248d9c37844c13189db1cfd98882e67",
-    "learning_readiness_signoff_revalidation": "2dc122c053b87a451985d0cd77c88acd6eec02c77825f2b5043a6cbbb0ee254d",
-    "release_closeout_fixed_point": "0f0b2f82e854395dafe2d29a429e4c3e1431ef54867c902b5092a4122f62d796",
+    "source_paths": "866f83dca1abf31973e5351c416140c5e117221c7331137b9632b063a09db81a",
+    "artifact_freshness": "8462bb210ee8a46fe7946d0f0ac6fdcb132e194a38fe636f88bc5d36505eb9c8",
+    "learning_delta_scoreboard": "c84c77b266a64d1778faa1d726038b187cc3f4cb20e2bb5dfcec41d3be36e2ba",
+    "learning_readiness_signoff_revalidation": "290f960738dc671fb4f1ddc14e341230ea467a33923f8ee86409750ed48ecb19",
+    "release_closeout_fixed_point": "ef69f024985914f2ec4db30847bb246729d5492fc31773687a2b2cfc3c54de75",
     "release_closeout_fixed_point_cost_trend": "missing",
-    "release_closeout_summary": "0360ee51b43dab2203c1797cb55d57b64cae301acf641b398de01cc34e9e56b5",
-    "current_source_tree_fingerprint": "20418dbc6730376f56ff2f374b4e0ee507eb8d3336f8ecce15e4386436d51edf"
+    "release_closeout_summary": "82e718e856c56a9e0267b2468e551b968df43718d1e4c0172ed887e89de00cdc",
+    "current_source_tree_fingerprint": "dcb3e5879396dc7fbc0ec70e0400953c49c09c6bdd23fa96e57763325754d9b0"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -25,38 +25,39 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-29T07:15:00Z"
+    "checked_at": "2026-05-29T11:22:04Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "status": "attention",
-  "source_tree_fingerprint_current": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+  "status": "fail",
+  "source_tree_fingerprint_current": "2246d7c71e46d5ffc2c6d9f522c9db7261cfc6785a4a2c27de337608a19e1f5b",
   "inputs": {
     "release_closeout_summary": {
       "path": "ops/reports/release-closeout-summary.json",
       "load_status": "ok",
-      "status": "pass",
-      "release_readiness_state": "conditional_pass",
-      "release_authority_status": "conditional_pass",
-      "semantic_release_status": "conditional_pass",
-      "sealed_release_status": "unsealed_distribution_not_provided",
+      "status": "fail",
+      "release_readiness_state": "blocked",
+      "release_authority_status": "blocked",
+      "semantic_release_status": "blocked",
+      "sealed_release_status": "unsealed_artifact_incomplete",
       "status_v2_blocker_reason_ids": [
         "release_authority_not_clean_pass",
         "machine_release_not_allowed",
         "sealed_release_not_clean_pass",
-        "distribution_package_not_materialized"
+        "distribution_package_not_materialized",
+        "artifact_inventory_not_current"
       ],
       "status_v2_used_legacy_fallback_fields": [],
       "machine_release_allowed": false,
-      "operator_release_allowed": true,
-      "requires_accepted_risk_review": true,
+      "operator_release_allowed": false,
+      "requires_accepted_risk_review": false,
       "live_make_check_status": "pass",
       "live_make_check_ready": true,
       "live_make_check_blocking": false,
-      "summary": "release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided; machine_release_allowed=False; operator_release_allowed=True; requires_accepted_risk_review=True; live_make_check_status=pass"
+      "summary": "release_authority_status=blocked; sealed_release_status=unsealed_artifact_incomplete; machine_release_allowed=False; operator_release_allowed=False; requires_accepted_risk_review=False; live_make_check_status=pass"
     },
     "release_closeout_fixed_point": {
       "path": "ops/reports/release-closeout-fixed-point.json",
@@ -76,9 +77,9 @@
     },
     "artifact_freshness": {
       "load_status": "ok",
-      "status": "attention",
-      "stable_debt_count": 27,
-      "schema_invalid_artifact_count": 0
+      "status": "fail",
+      "stable_debt_count": 29,
+      "schema_invalid_artifact_count": 2
     },
     "learning_delta_scoreboard": {
       "path": "ops/reports/learning-delta-scoreboard.json",
@@ -89,26 +90,22 @@
       "learning_likely": false,
       "bounded_learning_claim_allowed": false,
       "confirmed_learning_improvement_allowed": false,
-      "improvement_claim_status": "revoked",
-      "confirmed_learning_improvement_status": "revoked",
-      "evidence_cohort_status": "revoked",
+      "improvement_claim_status": "not_ready",
+      "confirmed_learning_improvement_status": "not_ready",
+      "evidence_cohort_status": "not_ready",
       "learning_claim_blocker_status": "blocked",
       "confirmed_blocking_predicate_ids": [
-        "evidence_bundle_active",
-        "confirmed_evidence_bundle_active",
         "repeated_same_family_evidence",
-        "public_check_pass",
         "learning_claim_blocker_absence"
       ],
       "confirmed_evidence_summary": {
-        "evidence_cohort_status": "revoked",
-        "confirmed_evidence_status": "revoked",
+        "evidence_cohort_status": "not_ready",
+        "confirmed_evidence_status": "not_ready",
         "valid_run_count": 2,
         "min_required_run_count": 3,
         "eligible_family_count": 0,
         "selected_valid_run_ids": [],
         "blocking_predicate_ids": [
-          "confirmed_evidence_bundle_active",
           "repeated_same_family_evidence"
         ],
         "rejected_run_count": 3,
@@ -249,18 +246,18 @@
       "confirmed_predicate_results": [
         {
           "id": "evidence_bundle_active",
-          "status": "fail",
+          "status": "pass",
           "source_path": "ops/reports/learning-claim-evidence-bundle.json",
           "required_condition": "learning_claim_evidence_bundle.revocation_status == active",
-          "observed_value": "revocation_status=revoked",
+          "observed_value": "revocation_status=active",
           "summary": "Confirmed claims require a non-stale, non-revoked evidence bundle."
         },
         {
           "id": "confirmed_evidence_bundle_active",
-          "status": "fail",
+          "status": "pass",
           "source_path": "ops/reports/learning-claim-evidence-bundle.json",
           "required_condition": "learning_claim_evidence_bundle.revocation_status == active",
-          "observed_value": "revocation_status=revoked",
+          "observed_value": "revocation_status=active",
           "summary": "Confirmed evidence cohort must bind an active learning claim evidence bundle."
         },
         {
@@ -289,10 +286,10 @@
         },
         {
           "id": "public_check_pass",
-          "status": "fail",
+          "status": "pass",
           "source_path": "ops/reports/public-check-summary.json",
           "required_condition": "public_check_summary.status == pass",
-          "observed_value": "status=missing",
+          "observed_value": "status=pass",
           "summary": "Public mirror check must pass before confirmed improvement opens."
         },
         {
@@ -308,7 +305,7 @@
           "status": "fail",
           "source_path": "ops/reports/release-clean-blocker-ledger.json",
           "required_condition": "release_clean_blocker_ledger.learning_claim_blockers == []",
-          "observed_value": "learning_claim_blocker_count=1",
+          "observed_value": "learning_claim_blocker_count=2",
           "summary": "No accepted learning risk or learning-claim blocker may remain."
         }
       ],
@@ -362,9 +359,9 @@
             "stage": "persistence",
             "status": "blocked",
             "evidence": [
-              "evidence_cohort_status=revoked",
+              "evidence_cohort_status=not_ready",
               "learning_claim_blocker_status=blocked",
-              "blocking_predicate_ids=evidence_bundle_active,confirmed_evidence_bundle_active,repeated_same_family_evidence,public_check_pass,learning_claim_blocker_absence"
+              "blocking_predicate_ids=repeated_same_family_evidence,learning_claim_blocker_absence"
             ],
             "summary": "Persistence requires the confirmed evidence cohort to auto-confirm without blocking predicates."
           },
@@ -372,8 +369,8 @@
             "stage": "production_learning",
             "status": "blocked",
             "evidence": [
-              "improvement_claim_status=revoked",
-              "evidence_cohort_status=revoked",
+              "improvement_claim_status=not_ready",
+              "evidence_cohort_status=not_ready",
               "bundle_status=not_evaluated",
               "claim_level=none"
             ],
@@ -381,12 +378,12 @@
           }
         ],
         "highest_supported_stage": "regression_safe",
-        "improvement_claim_status": "revoked",
-        "evidence_cohort_status": "revoked",
+        "improvement_claim_status": "not_ready",
+        "evidence_cohort_status": "not_ready",
         "learning_claim_blocker_status": "blocked",
         "claim_wording_allowed": false,
         "claim_wording_policy_status": "blocked",
-        "summary": "highest_supported_stage=regression_safe; improvement_claim_status=revoked; evidence_cohort_status=revoked; learning_claim_blocker_status=blocked; claim_wording_allowed=false"
+        "summary": "highest_supported_stage=regression_safe; improvement_claim_status=not_ready; evidence_cohort_status=not_ready; learning_claim_blocker_status=blocked; claim_wording_allowed=false"
       },
       "learning_claim_unlock_review_source": "ops/reports/learning-claim-unlock-review.json",
       "same_eval_run_count": 0,
@@ -420,16 +417,16 @@
       "converged": true,
       "iteration_count": 5,
       "command_run_count": 56,
-      "total_duration_ms": 78845,
+      "total_duration_ms": 78627,
       "writer_costs": [
         {
           "name": "goal-worktree-guard",
           "target": "auto-improve-readiness-worktree-guard",
           "run_count": 1,
           "selected_iteration_count": 1,
-          "total_duration_ms": 257,
-          "average_duration_ms": 257,
-          "max_duration_ms": 257,
+          "total_duration_ms": 270,
+          "average_duration_ms": 270,
+          "max_duration_ms": 270,
           "skipped_after_first_iteration_count": 4
         },
         {
@@ -437,9 +434,9 @@
           "target": "generated-artifact-index-body",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 3128,
-          "average_duration_ms": 626,
-          "max_duration_ms": 653,
+          "total_duration_ms": 3112,
+          "average_duration_ms": 622,
+          "max_duration_ms": 661,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -447,9 +444,9 @@
           "target": "artifact-freshness",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 55925,
-          "average_duration_ms": 11185,
-          "max_duration_ms": 11412,
+          "total_duration_ms": 55476,
+          "average_duration_ms": 11095,
+          "max_duration_ms": 11295,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -457,9 +454,9 @@
           "target": "auto-improve-readiness-report-body",
           "run_count": 3,
           "selected_iteration_count": 3,
-          "total_duration_ms": 1441,
-          "average_duration_ms": 480,
-          "max_duration_ms": 487,
+          "total_duration_ms": 1464,
+          "average_duration_ms": 488,
+          "max_duration_ms": 490,
           "skipped_after_first_iteration_count": 2
         },
         {
@@ -467,9 +464,9 @@
           "target": "release-closeout-summary-report",
           "run_count": 4,
           "selected_iteration_count": 4,
-          "total_duration_ms": 2172,
-          "average_duration_ms": 543,
-          "max_duration_ms": 549,
+          "total_duration_ms": 2157,
+          "average_duration_ms": 539,
+          "max_duration_ms": 543,
           "skipped_after_first_iteration_count": 1
         },
         {
@@ -477,9 +474,9 @@
           "target": "learning-readiness-signoff-revalidation",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 1337,
-          "average_duration_ms": 267,
-          "max_duration_ms": 275,
+          "total_duration_ms": 1362,
+          "average_duration_ms": 272,
+          "max_duration_ms": 279,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -487,9 +484,9 @@
           "target": "release-evidence-cohort",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2210,
-          "average_duration_ms": 442,
-          "max_duration_ms": 457,
+          "total_duration_ms": 2201,
+          "average_duration_ms": 440,
+          "max_duration_ms": 442,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -497,9 +494,9 @@
           "target": "release-evidence-dashboard-report",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 2471,
-          "average_duration_ms": 494,
-          "max_duration_ms": 499,
+          "total_duration_ms": 2484,
+          "average_duration_ms": 497,
+          "max_duration_ms": 500,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -507,9 +504,9 @@
           "target": "release-lane-summary",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 1694,
-          "average_duration_ms": 339,
-          "max_duration_ms": 352,
+          "total_duration_ms": 1725,
+          "average_duration_ms": 345,
+          "max_duration_ms": 361,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -517,9 +514,9 @@
           "target": "release-clean-blocker-ledger",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 1909,
-          "average_duration_ms": 382,
-          "max_duration_ms": 394,
+          "total_duration_ms": 1913,
+          "average_duration_ms": 383,
+          "max_duration_ms": 387,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -527,9 +524,9 @@
           "target": "release-closeout-batch-manifest-promote",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 4005,
-          "average_duration_ms": 801,
-          "max_duration_ms": 823,
+          "total_duration_ms": 4167,
+          "average_duration_ms": 833,
+          "max_duration_ms": 920,
           "skipped_after_first_iteration_count": 0
         },
         {
@@ -537,9 +534,9 @@
           "target": "release-evidence-closeout-self-check",
           "run_count": 5,
           "selected_iteration_count": 5,
-          "total_duration_ms": 1317,
-          "average_duration_ms": 263,
-          "max_duration_ms": 275,
+          "total_duration_ms": 1289,
+          "average_duration_ms": 258,
+          "max_duration_ms": 261,
           "skipped_after_first_iteration_count": 0
         }
       ],
@@ -555,7 +552,7 @@
         "post_first_iteration_selected_count": 0,
         "post_first_iteration_run_count": 0,
         "skipped_post_first_iteration_selection_count": 12,
-        "total_duration_ms": 979,
+        "total_duration_ms": 1007,
         "skip_policy_effective": true,
         "summary": "expensive prerequisites were selected only in iteration 1"
       },
@@ -567,9 +564,9 @@
       },
       "evidence_basis": {
         "fixed_point_report_path": "ops/reports/release-closeout-fixed-point.json",
-        "fixed_point_report_digest": "0f0b2f82e854395dafe2d29a429e4c3e1431ef54867c902b5092a4122f62d796",
-        "current_fixed_point_report_digest": "0f0b2f82e854395dafe2d29a429e4c3e1431ef54867c902b5092a4122f62d796",
-        "fixed_point_generated_at": "2026-05-29T06:54:47Z",
+        "fixed_point_report_digest": "ef69f024985914f2ec4db30847bb246729d5492fc31773687a2b2cfc3c54de75",
+        "current_fixed_point_report_digest": "ef69f024985914f2ec4db30847bb246729d5492fc31773687a2b2cfc3c54de75",
+        "fixed_point_generated_at": "2026-05-29T11:20:36Z",
         "cost_trend_path": "ops/reports/release-closeout-fixed-point-cost-trend.json",
         "cost_trend_load_status": "missing",
         "cost_trend_digest": "",
@@ -578,18 +575,17 @@
         "sampled_fixed_point_report_digest": "",
         "basis_relation_to_current_fixed_point": "cost_trend_unavailable"
       },
-      "summary": "12 writers ran 56 commands across 5 iterations; total_duration_ms=78845; expensive_prerequisite_skip_effective=True"
+      "summary": "12 writers ran 56 commands across 5 iterations; total_duration_ms=78627; expensive_prerequisite_skip_effective=True"
     }
   },
   "confirmed_evidence_summary": {
-    "evidence_cohort_status": "revoked",
-    "confirmed_evidence_status": "revoked",
+    "evidence_cohort_status": "not_ready",
+    "confirmed_evidence_status": "not_ready",
     "valid_run_count": 2,
     "min_required_run_count": 3,
     "eligible_family_count": 0,
     "selected_valid_run_ids": [],
     "blocking_predicate_ids": [
-      "confirmed_evidence_bundle_active",
       "repeated_same_family_evidence"
     ],
     "rejected_run_count": 3,
@@ -729,52 +725,48 @@
   },
   "accepted_risk_delta": {
     "status": "unchanged",
-    "previous_report_generated_at": "2026-05-29T07:15:00Z",
+    "previous_report_generated_at": "2026-05-29T11:22:04Z",
     "added_count": 0,
     "removed_count": 0,
     "unchanged_count": 2,
     "added": [],
     "removed": [],
     "unchanged": [
-      "artifact_freshness::artifact_freshness_attention",
-      "external_report_reference_manifest::external_report_strict_unavailable"
+      "external_report_reference_manifest::external_report_strict_unavailable",
+      "source_tree_coherence::source_tree_coherence_attention"
     ],
     "summary": "accepted_risk_delta status=unchanged; added=0; removed=0; unchanged=2"
   },
   "summary": {
     "gate_count": 16,
-    "authoritative_gate_count": 13,
-    "checked_in_fail_count": 0,
-    "live_rerun_fail_count": 0,
-    "live_rerun_not_run_count": 0,
+    "authoritative_gate_count": 9,
+    "checked_in_fail_count": 3,
+    "live_rerun_fail_count": 3,
+    "live_rerun_not_run_count": 3,
     "accepted_risk_count": 2,
-    "gate_attention_count": 3,
+    "gate_attention_count": 1,
     "required_input_fail_count": 0,
     "learning_claim_guard_status": "pass",
     "learning_claim_allowed": false,
     "learning_likely": false,
     "bounded_learning_claim_allowed": false,
     "confirmed_learning_improvement_allowed": false,
-    "improvement_claim_status": "revoked",
-    "confirmed_learning_improvement_status": "revoked",
-    "evidence_cohort_status": "revoked",
+    "improvement_claim_status": "not_ready",
+    "confirmed_learning_improvement_status": "not_ready",
+    "evidence_cohort_status": "not_ready",
     "learning_claim_blocker_status": "blocked",
     "confirmed_blocking_predicate_ids": [
-      "evidence_bundle_active",
-      "confirmed_evidence_bundle_active",
       "repeated_same_family_evidence",
-      "public_check_pass",
       "learning_claim_blocker_absence"
     ],
     "confirmed_evidence_summary": {
-      "evidence_cohort_status": "revoked",
-      "confirmed_evidence_status": "revoked",
+      "evidence_cohort_status": "not_ready",
+      "confirmed_evidence_status": "not_ready",
       "valid_run_count": 2,
       "min_required_run_count": 3,
       "eligible_family_count": 0,
       "selected_valid_run_ids": [],
       "blocking_predicate_ids": [
-        "confirmed_evidence_bundle_active",
         "repeated_same_family_evidence"
       ],
       "rejected_run_count": 3,
@@ -962,9 +954,9 @@
           "stage": "persistence",
           "status": "blocked",
           "evidence": [
-            "evidence_cohort_status=revoked",
+            "evidence_cohort_status=not_ready",
             "learning_claim_blocker_status=blocked",
-            "blocking_predicate_ids=evidence_bundle_active,confirmed_evidence_bundle_active,repeated_same_family_evidence,public_check_pass,learning_claim_blocker_absence"
+            "blocking_predicate_ids=repeated_same_family_evidence,learning_claim_blocker_absence"
           ],
           "summary": "Persistence requires the confirmed evidence cohort to auto-confirm without blocking predicates."
         },
@@ -972,8 +964,8 @@
           "stage": "production_learning",
           "status": "blocked",
           "evidence": [
-            "improvement_claim_status=revoked",
-            "evidence_cohort_status=revoked",
+            "improvement_claim_status=not_ready",
+            "evidence_cohort_status=not_ready",
             "bundle_status=not_evaluated",
             "claim_level=none"
           ],
@@ -981,12 +973,12 @@
         }
       ],
       "highest_supported_stage": "regression_safe",
-      "improvement_claim_status": "revoked",
-      "evidence_cohort_status": "revoked",
+      "improvement_claim_status": "not_ready",
+      "evidence_cohort_status": "not_ready",
       "learning_claim_blocker_status": "blocked",
       "claim_wording_allowed": false,
       "claim_wording_policy_status": "blocked",
-      "summary": "highest_supported_stage=regression_safe; improvement_claim_status=revoked; evidence_cohort_status=revoked; learning_claim_blocker_status=blocked; claim_wording_allowed=false"
+      "summary": "highest_supported_stage=regression_safe; improvement_claim_status=not_ready; evidence_cohort_status=not_ready; learning_claim_blocker_status=blocked; claim_wording_allowed=false"
     },
     "same_eval_reason_coverage_status": "not_applicable",
     "strict_secondary_improvement_coverage_status": "not_applicable",
@@ -997,10 +989,10 @@
     {
       "gate_id": "release_closeout_decision",
       "source_path": "ops/reports/release-closeout-summary.json",
-      "checked_in_state": "attention",
+      "checked_in_state": "fail",
       "live_rerun_state": {
-        "status": "attention",
-        "reason": "release closeout requires accepted-risk operator review before release"
+        "status": "fail",
+        "reason": "release_authority_status=blocked; sealed_release_status=unsealed_artifact_incomplete; machine_release_allowed=False; operator_release_allowed=False; requires_accepted_risk_review=False; live_make_check_status=pass"
       },
       "authoritative_for_release": false,
       "accepted_risk": {
@@ -1009,17 +1001,17 @@
       },
       "owner": "runtime-maintainer",
       "expiry": "",
-      "next_action": "Review accepted_risks before operator release signoff.",
+      "next_action": "Resolve release closeout blockers before release.",
       "required_evidence": [
-        "Review accepted_risks before operator release signoff."
+        "Resolve release closeout blockers before release."
       ],
       "claims": [
         {
-          "claim": "release closeout authoritative decision is release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided",
+          "claim": "release closeout authoritative decision is release_authority_status=blocked; sealed_release_status=unsealed_artifact_incomplete",
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "release closeout machine/operator decision is machine_release_allowed=False, operator_release_allowed=True, requires_accepted_risk_review=True",
+          "claim": "release closeout machine/operator decision is machine_release_allowed=False, operator_release_allowed=False, requires_accepted_risk_review=False",
           "provenance_label": "checked_in_json_confirmed"
         }
       ]
@@ -1085,10 +1077,10 @@
       "source_path": "ops/reports/source-package-clean-extract.json",
       "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "pass",
-        "reason": "checked-in component matches current source tree"
+        "status": "not_run",
+        "reason": "component fingerprint differs from current source tree"
       },
-      "authoritative_for_release": true,
+      "authoritative_for_release": false,
       "accepted_risk": {
         "count": 0,
         "codes": []
@@ -1103,8 +1095,8 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "source_package_clean_extract fingerprint/currentness diagnostic state is pass",
-          "provenance_label": "fingerprint_equivalent_to_checked_in"
+          "claim": "source_package_clean_extract fingerprint/currentness diagnostic state is not_run",
+          "provenance_label": "diagnostic_workspace_only"
         }
       ]
     },
@@ -1113,10 +1105,10 @@
       "source_path": "external-reports/report-reference-manifest.json",
       "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "pass",
-        "reason": "checked-in component matches current source tree"
+        "status": "not_run",
+        "reason": "component fingerprint differs from current source tree"
       },
-      "authoritative_for_release": true,
+      "authoritative_for_release": false,
       "accepted_risk": {
         "count": 1,
         "codes": [
@@ -1124,7 +1116,7 @@
         ]
       },
       "owner": "runtime-maintainer",
-      "expiry": "2026-06-05T07:15:00Z",
+      "expiry": "2026-06-05T11:22:04Z",
       "next_action": "Rerun the sealed closeout lane with a current distribution ZIP before external review signoff.",
       "required_evidence": [],
       "claims": [
@@ -1133,8 +1125,8 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "external_report_reference_manifest fingerprint/currentness diagnostic state is pass",
-          "provenance_label": "fingerprint_equivalent_to_checked_in"
+          "claim": "external_report_reference_manifest fingerprint/currentness diagnostic state is not_run",
+          "provenance_label": "diagnostic_workspace_only"
         }
       ]
     },
@@ -1171,10 +1163,10 @@
       "source_path": "ops/reports/test-execution-summary-full.json",
       "checked_in_state": "pass",
       "live_rerun_state": {
-        "status": "pass",
-        "reason": "checked-in component matches current source tree"
+        "status": "not_run",
+        "reason": "component fingerprint differs from current source tree"
       },
-      "authoritative_for_release": true,
+      "authoritative_for_release": false,
       "accepted_risk": {
         "count": 0,
         "codes": []
@@ -1189,8 +1181,8 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "live_make_check fingerprint/currentness diagnostic state is pass",
-          "provenance_label": "fingerprint_equivalent_to_checked_in"
+          "claim": "live_make_check fingerprint/currentness diagnostic state is not_run",
+          "provenance_label": "diagnostic_workspace_only"
         }
       ]
     },
@@ -1225,29 +1217,29 @@
     {
       "gate_id": "artifact_freshness",
       "source_path": "ops/reports/artifact-freshness-report.json",
-      "checked_in_state": "pass",
+      "checked_in_state": "fail",
       "live_rerun_state": {
-        "status": "pass",
-        "reason": "checked-in component matches current source tree"
+        "status": "fail",
+        "reason": "checked-in component matches current source tree but is not ready"
       },
-      "authoritative_for_release": true,
+      "authoritative_for_release": false,
       "accepted_risk": {
-        "count": 1,
-        "codes": [
-          "artifact_freshness_attention"
-        ]
+        "count": 0,
+        "codes": []
       },
       "owner": "runtime-maintainer",
-      "expiry": "2026-06-05T07:15:00Z",
-      "next_action": "Rerun artifact-freshness before the next release closeout.",
-      "required_evidence": [],
+      "expiry": "",
+      "next_action": "Regenerate ops/reports/artifact-freshness-report.json with a passing status.",
+      "required_evidence": [
+        "Regenerate ops/reports/artifact-freshness-report.json with a passing status."
+      ],
       "claims": [
         {
-          "claim": "artifact_freshness checked-in release evidence state is pass",
+          "claim": "artifact_freshness checked-in release evidence state is fail",
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "artifact_freshness fingerprint/currentness diagnostic state is pass",
+          "claim": "artifact_freshness fingerprint/currentness diagnostic state is fail",
           "provenance_label": "fingerprint_equivalent_to_checked_in"
         }
       ]
@@ -1283,10 +1275,10 @@
     {
       "gate_id": "auto_improve_readiness",
       "source_path": "ops/reports/auto-improve-readiness.json",
-      "checked_in_state": "attention",
+      "checked_in_state": "fail",
       "live_rerun_state": {
-        "status": "attention",
-        "reason": "checked-in component is source-clean but has non-source lane blockers"
+        "status": "fail",
+        "reason": "checked-in component matches current source tree but is not ready"
       },
       "authoritative_for_release": false,
       "accepted_risk": {
@@ -1299,18 +1291,23 @@
       "required_evidence": [
         "Run make release-closeout-batch-manifest-promote with a bound distribution ZIP.",
         "can_promote_result must stay false until this release gate is pass.",
+        "Run make artifact-freshness-check and confirm status=pass.",
+        "Regenerate schema-invalid canonical artifacts before promoting an auto-improve result.",
         "Run make auto-improve-goal-preflight and confirm goal worktree guard status=pass.",
         "Use Git checkout mode for unattended mutation; ZIP/source extract mode is replay-only.",
-        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal."
+        "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal.",
+        "Run make remediation-backlog and confirm open_promotion_count=0.",
+        "Close or explicitly defer blocks_promotion backlog items before promotion.",
+        "can_promote_result must stay false while remediation backlog items are open."
       ],
       "claims": [
         {
-          "claim": "auto_improve_readiness checked-in release evidence state is attention",
+          "claim": "auto_improve_readiness checked-in release evidence state is fail",
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "auto_improve_readiness fingerprint/currentness diagnostic state is attention",
-          "provenance_label": "diagnostic_workspace_only"
+          "claim": "auto_improve_readiness fingerprint/currentness diagnostic state is fail",
+          "provenance_label": "fingerprint_equivalent_to_checked_in"
         }
       ]
     },
@@ -1402,7 +1399,7 @@
         ]
       },
       "owner": "runtime-maintainer",
-      "expiry": "2026-06-05T07:15:00Z",
+      "expiry": "2026-06-05T11:22:04Z",
       "next_action": "Review advisory accepted-risk lifecycle before operator signoff.",
       "required_evidence": [
         "Rerun the sealed closeout lane with a current distribution ZIP before external review signoff.",
@@ -1446,7 +1443,7 @@
           "provenance_label": "checked_in_json_confirmed"
         },
         {
-          "claim": "confirmed learning predicates are evidence_bundle_active=fail, confirmed_evidence_bundle_active=fail, repeated_same_family_evidence=fail, behavior_delta_artifact_digest_readback=pass, full_suite_pass=pass, public_check_pass=fail, rollback_revalidation_clean=pass, learning_claim_blocker_absence=fail; blocking=evidence_bundle_active,confirmed_evidence_bundle_active,repeated_same_family_evidence,public_check_pass,learning_claim_blocker_absence",
+          "claim": "confirmed learning predicates are evidence_bundle_active=pass, confirmed_evidence_bundle_active=pass, repeated_same_family_evidence=fail, behavior_delta_artifact_digest_readback=pass, full_suite_pass=pass, public_check_pass=pass, rollback_revalidation_clean=pass, learning_claim_blocker_absence=fail; blocking=repeated_same_family_evidence,learning_claim_blocker_absence",
           "provenance_label": "checked_in_json_confirmed"
         },
         {

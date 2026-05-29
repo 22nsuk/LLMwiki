@@ -1,19 +1,19 @@
 {
   "$schema": "ops/schemas/learning-confirmed-evidence-cohort.schema.json",
   "artifact_kind": "learning_confirmed_evidence_cohort",
-  "generated_at": "2026-05-29T05:03:34Z",
+  "generated_at": "2026-05-29T11:20:32Z",
   "producer": "ops.scripts.learning_confirmed_evidence_cohort",
   "source_command": "python -m ops.scripts.learning_confirmed_evidence_cohort --vault .",
-  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
-  "source_tree_fingerprint": "c887a62d8b455fd73b297c05119f294e1925a22d9f5c715a84e838afc812e174",
+  "source_revision": "ca18e404b679e2b1fee0fc2f0179ec809b2ba28b",
+  "source_tree_fingerprint": "2246d7c71e46d5ffc2c6d9f522c9db7261cfc6785a4a2c27de337608a19e1f5b",
   "input_fingerprints": {
     "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
     "schema": "8c3178155a66500faa6980395a127016ff8d3dc12163d13c5091b32fde54d9af",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "6cd4a4626d7c9a397d586aeb4565d561a0ec8c63c30cacf4fda45a33840d99e4",
     "confirmed_policy": "5e86b887186269f50558391f58a47354a3db210845541c2d30f0f41855937f52",
-    "learning_claim_evidence_bundle": "c23b9035af1def520410060581e60d2ef7ab06f306f26545a26acdfb0d08ab62",
-    "mutation_proposals": "3a71e7d8eadbee9d34f41413db26769e3829337f5cf09bdc88f1542431ee6139",
+    "learning_claim_evidence_bundle": "e945e44044c74b20ae00930015ec5133a143bd039188ae33c829efe8f15f8046",
+    "mutation_proposals": "5ac25c40fa5cd4d4bdfa330898fb056b435d49a4da1d2a0e2b693f3f49ea4502",
     "confirmed_behavior_delta": "866c23c77e1d89cbbe219e248132fcb868e865fcd8d504b5211ec26080ed21bc",
     "confirmed_run_artifacts": "7b96f3ab7badff70c3f7cf73531f46bf5fe5e02435d5b4af69676a80b0b4acda",
     "confirmed_run_telemetry": "c4fbecfd888e6a596a58c578d9c4ac9c1c851bd5df6da13e5bb9859a9a918dab"
@@ -24,19 +24,19 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-29T05:03:34Z"
+    "checked_at": "2026-05-29T11:20:32Z"
   },
   "vault": ".",
   "policy": {
     "path": "ops/policies/wiki-maintainer-policy.yaml",
     "version": 4
   },
-  "status": "fail",
+  "status": "pass",
   "summary": {
-    "cohort_sha256": "5cff9e287b2cbc61e23815d4bf8dcf82d01b4391101ff1c9c70a01e1dddf1e97",
-    "confirmed_evidence_status": "revoked",
+    "cohort_sha256": "11bc045ba3e536dd3c2f593f9e41734daba24836dab9d4c3be0fd828386cbafa",
+    "confirmed_evidence_status": "not_ready",
     "confirmed_learning_improvement_allowed": false,
-    "evidence_bundle_status": "revoked",
+    "evidence_bundle_status": "active",
     "run_count": 5,
     "valid_run_count": 2,
     "selected_valid_run_ids": [],
@@ -181,21 +181,20 @@
     "min_required_run_count": 3,
     "min_family_consistency_count": 1,
     "blocking_predicate_ids": [
-      "confirmed_evidence_bundle_active",
       "repeated_same_family_evidence"
     ]
   },
   "cohort_identity": {
     "digest_algorithm": "sha256",
     "cohort_payload_version": 1,
-    "cohort_digest": "5cff9e287b2cbc61e23815d4bf8dcf82d01b4391101ff1c9c70a01e1dddf1e97"
+    "cohort_digest": "11bc045ba3e536dd3c2f593f9e41734daba24836dab9d4c3be0fd828386cbafa"
   },
   "source_bundle": {
     "path": "ops/reports/learning-claim-evidence-bundle.json",
-    "bundle_sha256": "6326b0ac981595cb28a56c76d5a26593b39f795d678004e0898b368b2cf053e6",
-    "current_bundle_sha256": "6326b0ac981595cb28a56c76d5a26593b39f795d678004e0898b368b2cf053e6",
-    "bundle_status": "revoked",
-    "revocation_status": "revoked",
+    "bundle_sha256": "85cccccc64e7e08318fce1b6249f666bc351e50c8dbdd5f82c02a91416745dc1",
+    "current_bundle_sha256": "85cccccc64e7e08318fce1b6249f666bc351e50c8dbdd5f82c02a91416745dc1",
+    "bundle_status": "active",
+    "revocation_status": "active",
     "fingerprint_match_status": "match"
   },
   "run_evidence": [
@@ -532,10 +531,10 @@
   "predicate_results": [
     {
       "id": "confirmed_evidence_bundle_active",
-      "status": "fail",
+      "status": "pass",
       "source_path": "ops/reports/learning-claim-evidence-bundle.json",
       "required_condition": "learning_claim_evidence_bundle.revocation_status == active",
-      "observed_value": "revocation_status=revoked",
+      "observed_value": "revocation_status=active",
       "summary": "Confirmed evidence cohort must bind an active learning claim evidence bundle."
     },
     {
@@ -556,9 +555,7 @@
     }
   ],
   "revocation": {
-    "status": "revoked",
-    "reasons": [
-      "required evidence item missing: public_check_summary"
-    ]
+    "status": "active",
+    "reasons": []
   }
 }

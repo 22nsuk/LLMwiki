@@ -1,10 +1,10 @@
 {
   "$schema": "ops/schemas/release-risk-taxonomy-matrix.schema.json",
   "artifact_kind": "release_risk_taxonomy_matrix",
-  "generated_at": "2026-05-29T11:06:21Z",
+  "generated_at": "2026-05-29T11:23:36Z",
   "producer": "ops.scripts.release_risk_taxonomy_matrix",
   "source_command": "python -m ops.scripts.release_risk_taxonomy_matrix --vault . --out ops/reports/release-risk-taxonomy-matrix.json --markdown-out ops/reports/release-risk-taxonomy-matrix.md",
-  "source_revision": "7909c761ded6db5c8ec53ba85e7359322bc199dc",
+  "source_revision": "ca18e404b679e2b1fee0fc2f0179ec809b2ba28b",
   "source_tree_fingerprint": "2246d7c71e46d5ffc2c6d9f522c9db7261cfc6785a4a2c27de337608a19e1f5b",
   "input_fingerprints": {
     "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
@@ -19,7 +19,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-29T11:06:21Z"
+    "checked_at": "2026-05-29T11:23:36Z"
   },
   "vault": ".",
   "policy": {

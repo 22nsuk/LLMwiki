@@ -1,31 +1,31 @@
 {
   "$schema": "ops/schemas/auto-improve-readiness-report.schema.json",
   "artifact_kind": "auto_improve_readiness_report",
-  "generated_at": "2026-05-29T07:15:00Z",
+  "generated_at": "2026-05-29T11:22:04Z",
   "producer": "ops.scripts.auto_improve_readiness_runtime",
   "source_command": "python -m ops.scripts.mechanism.auto_improve_readiness --vault . --policy-path ops/policies/wiki-maintainer-policy.yaml",
-  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
-  "source_tree_fingerprint": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+  "source_revision": "ca18e404b679e2b1fee0fc2f0179ec809b2ba28b",
+  "source_tree_fingerprint": "2246d7c71e46d5ffc2c6d9f522c9db7261cfc6785a4a2c27de337608a19e1f5b",
   "input_fingerprints": {
     "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
     "schema": "0106c308175e70bc849ac444c783807d1d878510ceaeb2933a386ddd0b2131f7",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
-    "source_paths": "17a7c1ba5e84287afac123a81c5330085ab439b3f479df084eba69d14058864e",
-    "artifact_freshness_report": "633847d623eddd3973d0bea6d3052b4c8346890b3054d446de2f98d5dc391d1a",
-    "goal_worktree_guard_report": "d7ea7f7818e9e0b6c11546ca860a51f13e98fad3748fbcbffa2c7c858cf1b4d6",
-    "learning_confirmed_legacy_reconstruction_report": "8ae2d220b818a0005acbc7cc3a9eab17ae5392d4e99ff05b319d5fc5dbf34e38",
+    "source_paths": "f55401a6904daaa5ae97766634e6bf74eddfd02301deb747dccd3615c4953b51",
+    "artifact_freshness_report": "8462bb210ee8a46fe7946d0f0ac6fdcb132e194a38fe636f88bc5d36505eb9c8",
+    "goal_worktree_guard_report": "03866fc6ca15196e8eeae19806c697e35e1ffccb17b5e2acad8e52242d3b3ec8",
+    "learning_confirmed_legacy_reconstruction_report": "eb9599d1c5e6a9306bdaeda6bedee3f037999680573b1a8cab32d6a3f1841b16",
     "learning_readiness_signoff_report": "15744d7c1c76037d17e569082d2716e7e34fb3e2d03b9c88c963604a184523ea",
-    "mechanism_review_report": "0f72574e878cc49a95c068aab7131aded1328da36d2ddc2d789219841387499b",
-    "mutation_proposal_report": "3a71e7d8eadbee9d34f41413db26769e3829337f5cf09bdc88f1542431ee6139",
-    "outcome_metrics_report": "bc74ea9c5c70d5569836b104473ca87ed928435ee0838608c809d20c5ee9f05e",
+    "mechanism_review_report": "54634908d60cafdf5c7a4cd013dd9449fce8570a472202df5d0840d7ec7a7a80",
+    "mutation_proposal_report": "5ac25c40fa5cd4d4bdfa330898fb056b435d49a4da1d2a0e2b693f3f49ea4502",
+    "outcome_metrics_report": "d51d4b112a7cd490e5eddbeee34a35f84e7ab9919bd57b0872509ecc3d0dc20f",
     "release_authority_preflight_report": "d90f65d282aeedcf5eaac519981d2afab5663a5e6765de9d1d01a3c5aa967bf3",
-    "release_closeout_batch_manifest_report": "280365cbf20cd2f75d72ea2b82e4808cdd498c40e6fa408965a620863fd2de4a",
-    "release_closeout_finality_attestation_report": "cbf366d89d9473c646cb3c98641548e5248a98b4669e40b26b153ebc155ee347",
+    "release_closeout_batch_manifest_report": "d25f3133219677c742177c60ea5eadfa2e8f636abf4573197260f408887e2cc2",
+    "release_closeout_finality_attestation_report": "7108671e4528114c6d19888c59543e277f0656e910c9edfb45cea292657cbf3d",
     "release_closeout_post_check_finalizer_report": "missing",
-    "release_closeout_summary_report": "dd217b2f2e80b1160e449a0c4dc7436e8eb09b2a64f6627dedc2ece7db5108db",
-    "release_evidence_cohort_report": "7568fb3ea57cdbcc29cd23a31c1ecd682816ade2cd48b1f33ab15133ff08763e",
-    "remediation_backlog_report": "692074cf312b9efb345aeca6b4291f27617fb48a40f9649c3cacd66d1a059873",
-    "selected_contract_summary_report": "8e9985beaeea06ceaedad8a71bd9fca317135f7b2973a77f1d2207ad299836b4",
+    "release_closeout_summary_report": "930a76908ea4b9def44dc698d5c655519ebcc5a34d5b6c638c880357f974a441",
+    "release_evidence_cohort_report": "cf1f316078e5b9a7155f939687950efeee2afda01d8f475668a236817a92f74b",
+    "remediation_backlog_report": "ffa19c5e698adeb1ea4f2ec3d473e8019dcbf6eb82053d2aeef7bb4ededcea21",
+    "selected_contract_summary_report": "8b6c15a1b9022a0bc3a1fdaed2714be634a66402e5b011b3461a20158e54c4f0",
     "source_package_clean_extract_report": "e365df55934207c561d26e66a37d8d9b62939530a73d9f7f64b57e2171616796",
     "release_authority_preflight_report_candidates": "a37963c5742076e139acc15031f847940156e7842af8a567b15f458507c4cda2"
   },
@@ -35,7 +35,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-29T07:15:00Z"
+    "checked_at": "2026-05-29T11:22:04Z"
   },
   "vault": ".",
   "policy": {
@@ -156,7 +156,7 @@
       "accepted_risk": false,
       "gate_effect": "blocks_promotion",
       "source_status": "fail",
-      "reason": "release_closeout_batch_manifest release gate is not pass: release closeout batch manifest status=fail; release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided; distribution_package.status=not_provided; batch_integrity_status=pass; auto_improve_lane_status=blocked; machine_release_status=blocked",
+      "reason": "release_closeout_batch_manifest release gate is not pass: release closeout batch manifest status=fail; release_authority_status=blocked; sealed_release_status=unsealed_distribution_not_provided; distribution_package.status=not_provided; batch_integrity_status=pass; auto_improve_lane_status=blocked; machine_release_status=blocked",
       "signal_ids": [
         "release_authority_not_clean_pass",
         "machine_release_not_allowed",
@@ -170,6 +170,24 @@
       "recommended_next_step": "Seal the release batch manifest, then rerun make auto-improve-readiness."
     },
     {
+      "id": "promotion_blocked_by_artifact_contract_failure",
+      "scope": "artifact_contract",
+      "status": "open",
+      "severity": "blocker",
+      "accepted_risk": false,
+      "gate_effect": "blocks_promotion",
+      "source_status": "fail",
+      "reason": "artifact freshness schema validation failed for 2 canonical artifact(s): ops/reports/test-execution-summary-full-shards/full-suite-shard-1.json, ops/reports/test-execution-summary-full.json",
+      "signal_ids": [
+        "artifact_freshness_schema_invalid"
+      ],
+      "required_evidence": [
+        "Run make artifact-freshness-check and confirm status=pass.",
+        "Regenerate schema-invalid canonical artifacts before promoting an auto-improve result."
+      ],
+      "recommended_next_step": "Regenerate schema-invalid artifacts, then rerun make artifact-freshness and make auto-improve-readiness."
+    },
+    {
       "id": "promotion_blocked_by_goal_worktree_guard_failure",
       "scope": "worktree_guard",
       "status": "open",
@@ -177,7 +195,7 @@
       "accepted_risk": false,
       "gate_effect": "blocks_promotion",
       "source_status": "attention",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=8",
+      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=37",
       "signal_ids": [
         "git_worktree_dirty"
       ],
@@ -187,6 +205,25 @@
         "can_promote_result must stay false while the worktree guard is missing, dirty, replay-only, or fatal."
       ],
       "recommended_next_step": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
+    },
+    {
+      "id": "promotion_blocked_by_remediation_backlog_open",
+      "scope": "remediation_backlog",
+      "status": "open",
+      "severity": "blocker",
+      "accepted_risk": false,
+      "gate_effect": "blocks_promotion",
+      "source_status": "attention",
+      "reason": "remediation backlog is not clear for promotion: remediation backlog status=attention; open_total_count=1; open_promotion_count=1; open_repeat_count=0; blocking_item_count=1",
+      "signal_ids": [
+        "promotion_blocked_by_artifact_contract_failure"
+      ],
+      "required_evidence": [
+        "Run make remediation-backlog and confirm open_promotion_count=0.",
+        "Close or explicitly defer blocks_promotion backlog items before promotion.",
+        "can_promote_result must stay false while remediation backlog items are open."
+      ],
+      "recommended_next_step": "Close or explicitly defer remediation backlog items, rerun make remediation-backlog, then rerun make auto-improve-readiness."
     }
   ],
   "clean_release_blockers": [],
@@ -213,7 +250,7 @@
       "status": "available",
       "gate_effect": "none",
       "source_report": "ops/reports/routing-provenance-aggregates/release-auto-promotion-20260528-run-01.json",
-      "source_generated_at": "2026-05-29T05:03:23Z",
+      "source_generated_at": "2026-05-29T11:16:50Z",
       "session_id": "release-auto-promotion-20260528-run-01",
       "summary": "attempts=1, finalized=0, rework=0, rollback_signals=0, defect_escape=0, telemetry_coverage=1.00, executor_failures=1 | alerts: executor failures present, unfinalized runs present, recent HOLD trend",
       "health_flags": [
@@ -248,10 +285,25 @@
     },
     "artifact_freshness_summary": {
       "path": "ops/reports/artifact-freshness-report.json",
-      "status": "attention",
-      "schema_invalid_artifact_count": 0,
-      "stable_contract_debt_issue_count": 27,
-      "schema_invalid_artifacts": []
+      "status": "fail",
+      "schema_invalid_artifact_count": 2,
+      "stable_contract_debt_issue_count": 29,
+      "schema_invalid_artifacts": [
+        {
+          "path": "ops/reports/test-execution-summary-full-shards/full-suite-shard-1.json",
+          "errors": [
+            "$: missing required property 'semantic_command'",
+            "$: missing required property 'toolchain_fingerprint'"
+          ]
+        },
+        {
+          "path": "ops/reports/test-execution-summary-full.json",
+          "errors": [
+            "$: missing required property 'semantic_command'",
+            "$: missing required property 'toolchain_fingerprint'"
+          ]
+        }
+      ]
     },
     "selected_contract_summary": {
       "path": "ops/reports/test-execution-summary.json",
@@ -279,12 +331,13 @@
       "status": "pass",
       "source_status": "pass",
       "release_blocking": false,
-      "summary": "release closeout summary status=pass; machine_release_allowed=false; clean_release_ready=false; release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided (overridden by finality_attested_pass)",
+      "summary": "release closeout summary status=fail; machine_release_allowed=false; clean_release_ready=false; release_authority_status=blocked; sealed_release_status=unsealed_artifact_incomplete (overridden by finality_attested_pass)",
       "signal_ids": [
         "release_authority_not_clean_pass",
         "machine_release_not_allowed",
         "sealed_release_not_clean_pass",
-        "distribution_package_not_materialized"
+        "distribution_package_not_materialized",
+        "artifact_inventory_not_current"
       ]
     },
     "release_closeout_batch_manifest_summary": {
@@ -294,7 +347,7 @@
       "status": "fail",
       "source_status": "fail",
       "release_blocking": true,
-      "summary": "release closeout batch manifest status=fail; release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided; distribution_package.status=not_provided; batch_integrity_status=pass; auto_improve_lane_status=blocked; machine_release_status=blocked",
+      "summary": "release closeout batch manifest status=fail; release_authority_status=blocked; sealed_release_status=unsealed_distribution_not_provided; distribution_package.status=not_provided; batch_integrity_status=pass; auto_improve_lane_status=blocked; machine_release_status=blocked",
       "signal_ids": [
         "release_authority_not_clean_pass",
         "machine_release_not_allowed",
@@ -318,8 +371,9 @@
       "status": "pass",
       "source_status": "pass",
       "release_blocking": false,
-      "summary": "release evidence cohort status=pass; strict_same_fingerprint=true; component_fingerprint_count=1; clean_lane_contract_status=fail (overridden by finality_attested_pass)",
+      "summary": "release evidence cohort status=attention; strict_same_fingerprint=false; component_fingerprint_count=2; clean_lane_contract_status=fail (overridden by finality_attested_pass)",
       "signal_ids": [
+        "release_lineage_not_strict_same_fingerprint",
         "release_evidence_clean_lane_contract_not_pass"
       ]
     },
@@ -358,28 +412,30 @@
       "can_execute_goal_runtime": true,
       "can_promote_result": false,
       "zip_mode_replay_only": false,
-      "dirty_entry_count": 8,
+      "dirty_entry_count": 37,
       "fatal_blockers": [],
       "promotion_blockers": [
         "git_worktree_dirty"
       ],
-      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=8"
+      "summary": "goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=37"
     },
     "remediation_backlog_summary": {
       "path": "ops/reports/remediation-backlog.json",
       "expected_artifact_kind": "remediation_backlog",
       "artifact_kind": "remediation_backlog",
-      "status": "pass",
-      "source_status": "pass",
-      "release_blocking": false,
-      "open_total_count": 0,
-      "open_promotion_count": 0,
+      "status": "fail",
+      "source_status": "attention",
+      "release_blocking": true,
+      "open_total_count": 1,
+      "open_promotion_count": 1,
       "open_repeat_count": 0,
-      "active_blocker_count": 0,
-      "blocking_item_count": 0,
-      "signal_ids": [],
+      "active_blocker_count": 1,
+      "blocking_item_count": 1,
+      "signal_ids": [
+        "promotion_blocked_by_artifact_contract_failure"
+      ],
       "currentness_status": "current",
-      "summary": "remediation backlog status=pass; open_total_count=0; open_promotion_count=0; open_repeat_count=0; blocking_item_count=0"
+      "summary": "remediation backlog status=attention; open_total_count=1; open_promotion_count=1; open_repeat_count=0; blocking_item_count=1"
     },
     "learning_signoff_summary": {
       "path": "ops/reports/learning-readiness-signoff.json",

@@ -1,0 +1,348 @@
+{
+  "$schema": "ops/schemas/auto-improve-session.schema.json",
+  "session_id": "active-report-self-improve-certificate-rerun2",
+  "generated_at": "2026-05-20T21:15:04Z",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "running",
+  "budget": {
+    "max_proposals": 6,
+    "max_minutes": 720,
+    "max_consecutive_failures": 6
+  },
+  "executor": {
+    "name": "codex_exec"
+  },
+  "attempted_proposal_ids": [
+    "next_run_failure_repair__auto-improve-iteration-persistence-runtime__discarded",
+    "next_run_failure_repair__auto-improve-iteration-persistence-runtime__review-blocked"
+  ],
+  "quarantined_proposal_ids": [
+    "next_run_failure_repair__auto-improve-iteration-persistence-runtime__discarded",
+    "next_run_failure_repair__auto-improve-iteration-persistence-runtime__review-blocked"
+  ],
+  "run_ids": [
+    "active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime",
+    "active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime"
+  ],
+  "iterations": [
+    {
+      "index": 1,
+      "proposal_id": "next_run_failure_repair__auto-improve-iteration-persistence-runtime__discarded",
+      "source_candidate_id": "next-run-decision:active-report-self-improve-certificate-rerun-run-02-auto-improve-iteration-persistence-runtime:65f80b2a5f77c683",
+      "run_id": "active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime",
+      "status": "blocked",
+      "decision": "HOLD",
+      "outcome": "review_blocked",
+      "failure_taxonomy": "review_blocked",
+      "proposal_snapshot": "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/proposal-snapshot.json",
+      "scope_freeze": "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/scope-freeze.json",
+      "routing_reports": [
+        "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.worker.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.reviewer.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.validator.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.provenance-auditor.json"
+      ],
+      "executor_reports": [
+        "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/worker-executor-report.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/reviewer-executor-report.json"
+      ],
+      "run_telemetry": "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+      "promotion_report": "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json",
+      "quarantined": true,
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ]
+    },
+    {
+      "index": 2,
+      "proposal_id": "next_run_failure_repair__auto-improve-iteration-persistence-runtime__review-blocked",
+      "source_candidate_id": "next-run-decision:active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime:196827b2ae275ce9",
+      "run_id": "active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime",
+      "status": "blocked",
+      "decision": "HOLD",
+      "outcome": "mutation_failed",
+      "failure_taxonomy": "mutation_failed",
+      "proposal_snapshot": "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime/proposal-snapshot.json",
+      "scope_freeze": "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime/scope-freeze.json",
+      "routing_reports": [
+        "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime/subagent-routing.worker.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime/subagent-routing.reviewer.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime/subagent-routing.validator.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime/subagent-routing.provenance-auditor.json"
+      ],
+      "executor_reports": [
+        "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime/worker-executor-report.json"
+      ],
+      "run_telemetry": "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+      "promotion_report": "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime/promotion-report.json",
+      "quarantined": true,
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ]
+    }
+  ],
+  "next_run_decisions": [
+    {
+      "decision_id": "next-run-decision:active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime:196827b2ae275ce9",
+      "observed_at": "2026-05-20T21:33:29Z",
+      "session_id": "active-report-self-improve-certificate-rerun2",
+      "iteration": 1,
+      "source_run_id": "active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime",
+      "proposal_id": "next_run_failure_repair__auto-improve-iteration-persistence-runtime__discarded",
+      "source_candidate_id": "next-run-decision:active-report-self-improve-certificate-rerun-run-02-auto-improve-iteration-persistence-runtime:65f80b2a5f77c683",
+      "target_proposal_id": "next_run_failure_repair__auto-improve-iteration-persistence-runtime__review-blocked",
+      "proposal_family": "next_run_failure_repair",
+      "proposal_tier": "supporting",
+      "failure_taxonomy": "review_blocked",
+      "blocking_role": "reviewer",
+      "decision": "carry_forward",
+      "next_run_action": "repair_failure",
+      "status": "open",
+      "reason": "Failure is actionable and target-bounded, so it should become the next repair candidate.",
+      "quarantined_source_proposal": true,
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/schemas/run-telemetry.schema.json",
+        "ops/script-output-surfaces.json",
+        "tests/fixtures/report_schema_samples.json"
+      ],
+      "must_change_tests": [
+        "tests/test_auto_improve_iteration_runtime.py",
+        "tests/test_report_schema_sample_regeneration.py"
+      ],
+      "evidence_paths": [
+        "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/scope-freeze.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.worker.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.reviewer.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.validator.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.provenance-auditor.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/worker-executor-report.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime/reviewer-executor-report.json"
+      ]
+    },
+    {
+      "decision_id": "next-run-decision:active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime:a5a1f6bfeb7dc3c0",
+      "observed_at": "2026-05-20T21:38:11Z",
+      "session_id": "active-report-self-improve-certificate-rerun2",
+      "iteration": 2,
+      "source_run_id": "active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime",
+      "proposal_id": "next_run_failure_repair__auto-improve-iteration-persistence-runtime__review-blocked",
+      "source_candidate_id": "next-run-decision:active-report-self-improve-certificate-rerun2-run-01-auto-improve-iteration-persistence-runtime:196827b2ae275ce9",
+      "target_proposal_id": "next_run_failure_repair__auto-improve-iteration-persistence-runtime__mutation-failed",
+      "proposal_family": "next_run_failure_repair",
+      "proposal_tier": "supporting",
+      "failure_taxonomy": "mutation_failed",
+      "blocking_role": "worker",
+      "decision": "carry_forward",
+      "next_run_action": "repair_failure",
+      "status": "open",
+      "reason": "Failure is actionable and target-bounded, so it should become the next repair candidate.",
+      "quarantined_source_proposal": true,
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/schemas/run-telemetry.schema.json",
+        "ops/script-output-surfaces.json",
+        "tests/fixtures/report_schema_samples.json"
+      ],
+      "must_change_tests": [
+        "tests/test_auto_improve_iteration_runtime.py",
+        "tests/test_report_schema_sample_regeneration.py"
+      ],
+      "evidence_paths": [
+        "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime/scope-freeze.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime/subagent-routing.worker.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime/subagent-routing.reviewer.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime/subagent-routing.validator.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime/subagent-routing.provenance-auditor.json",
+        "runs/active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime/worker-executor-report.json"
+      ]
+    }
+  ],
+  "learning_summary": {
+    "attempt_count": 2,
+    "rework_count": 0,
+    "rollback_signal_count": 0,
+    "defect_escape_pair_count": 0,
+    "session_context_status": "session_context_available",
+    "evidence_gaps": []
+  },
+  "loop_state": {
+    "consecutive_failures": 2,
+    "last_outcome": "mutation_failed",
+    "last_decision": "",
+    "last_run_id": "active-report-self-improve-certificate-rerun2-run-02-auto-improve-iteration-persistence-runtime",
+    "last_blocking_reason": "mutation_failed",
+    "blocking_reason_counts": {
+      "review_blocked": 1,
+      "mutation_failed": 1
+    },
+    "repeated_blocker_stop": false,
+    "repeated_blocker_reason": "",
+    "remediation_backlog_path": "ops/reports/remediation-backlog.json",
+    "updated_at": "2026-05-20T21:38:11Z"
+  },
+  "queue_snapshot": [
+    "next_run_failure_repair__auto-improve-iteration-persistence-runtime__review-blocked",
+    "repeated_discard_runs__auto-improve-iteration-persistence-runtime"
+  ],
+  "stop_reason": "running",
+  "path": "ops/reports/auto-improve-sessions/active-report-self-improve-certificate-rerun2.json",
+  "goal_contract": {
+    "path": "runs/goal-active-report-self-improve-certificate-rerun2/state/codex-goal-contract.json",
+    "requested_path": "runs/goal-active-report-self-improve-certificate-rerun2/state/codex-goal-contract.json",
+    "contract_sha256": "f6421b8bc083927cf37cc0ee0f6adcb9e0fde6bba8f46c4c004f83c8f31c037c",
+    "contract_id": "auto-improve-goal",
+    "status": "active",
+    "runtime_mode": "self_improvement_loop",
+    "max_wall_clock_seconds": 43200,
+    "max_unattended_seconds": 43200,
+    "max_proposals": 6,
+    "max_consecutive_failures": 6,
+    "can_promote_result": false,
+    "promotion_blockers": [
+      "learning_blocked_by_review_required",
+      "promotion_blocked_by_remediation_backlog_open"
+    ]
+  },
+  "learning_mode": {
+    "allow_learning_uncertain": true,
+    "bounded_trial": true
+  },
+  "pre_run_readiness": {
+    "report": "ops/reports/auto-improve-readiness.json",
+    "generated_at": "2026-05-20T21:15:06Z",
+    "execution_status": "pass",
+    "learning_status": "learning_uncertain",
+    "learning_gate_effect": "review_required",
+    "runnable_proposal_count": 2,
+    "session_reports_considered": 20
+  },
+  "rollups": {
+    "iterations": {
+      "count": 2,
+      "outcome_counts": {
+        "review_blocked": 1,
+        "mutation_failed": 1
+      },
+      "decision_counts": {
+        "HOLD": 2
+      },
+      "status_counts": {
+        "blocked": 2
+      },
+      "quarantined_proposal_count": 2
+    },
+    "routing": {
+      "report_count": 8,
+      "role_counts": {
+        "provenance-auditor": 2,
+        "reviewer": 2,
+        "validator": 2,
+        "worker": 2
+      },
+      "selected_rung_counts": {
+        "3": 8
+      },
+      "score_band_counts": {
+        "extreme": 8
+      },
+      "sandbox_mode_counts": {
+        "read-only": 2,
+        "workspace-write": 6
+      },
+      "model_counts": {
+        "gpt-5.5": 8
+      },
+      "reasoning_effort_counts": {
+        "xhigh": 8
+      },
+      "risk_flag_counts": {
+        "schema_change": 8
+      }
+    },
+    "executor": {
+      "report_count": 3,
+      "role_counts": {
+        "reviewer": 1,
+        "worker": 2
+      },
+      "status_counts": {
+        "fail": 1,
+        "pass": 2
+      },
+      "blocking_role_counts": {
+        "reviewer": 1
+      },
+      "returncode_counts": {
+        "0": 3
+      }
+    },
+    "telemetry": {
+      "report_count": 2,
+      "failure_taxonomy_counts": {
+        "review_blocked": 1,
+        "mutation_failed": 1
+      },
+      "phase_totals_seconds": {
+        "scope_freeze": 0.039,
+        "routing": 1.325,
+        "scaffold": 1.026,
+        "experiment": 1450.506
+      },
+      "phase_max_seconds": {
+        "scope_freeze": 0.02,
+        "routing": 0.667,
+        "scaffold": 0.515,
+        "experiment": 1156.628
+      }
+    },
+    "outcome_metrics": {
+      "attempt_count": 2,
+      "recent_window": 20,
+      "recent_attempt_count": 2,
+      "rework_count": 0,
+      "rollback_signal_count": 0,
+      "rollback_rehearsal_coverage_count": 0,
+      "moving_averages": {
+        "hold": 1.0,
+        "discard": 0.0,
+        "rollback_signal": 0.0
+      },
+      "operator_effort_proxy": {
+        "phase_totals_seconds": {
+          "scope_freeze": 0.039,
+          "routing": 1.325,
+          "scaffold": 1.026,
+          "experiment": 1450.506
+        },
+        "executor_report_count": 3,
+        "reviewer_dispatch_count": 1,
+        "validator_dispatch_count": 0,
+        "auditor_dispatch_count": 0,
+        "hold_count": 2
+      },
+      "rework_keys": [],
+      "defect_escape_proxy": {
+        "count": 0,
+        "pairs": []
+      }
+    }
+  },
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/auto-improve-session.schema.json\", \"artifact_kind\": \"auto_improve_session\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-20T21:15:04Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-20T21:15:04Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"policy\": \"db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24\", \"policy_version\": \"4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a\", \"schema\": \"31f7f1d869ca7a7168722bdbfab78970e7fc5f217c90e33fbf905695a53183c7\", \"session_id\": \"848d2028c8ab659bfcce15d24be8419bac986677172a3bfc97f6a062a0e58c56\", \"source_paths\": \"d622ebc3823fcd16f179073fe74fd7de8c03ef7d25a175a4ae06c43e09dc35cf\", \"status\": \"c071cf5f5ed6f884cc70155b6f05f755fd46a302d05e4261b7e92ce878bbfed8\"}, \"producer\": \"ops.scripts.auto_improve_runtime\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.auto_improve_runtime\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"7aaa5fc6d7ae0c6e8ab35d408894febb03679bd73ea8a27d94b3942e77ce3348\"}"
+      }
+    ]
+  }
+}

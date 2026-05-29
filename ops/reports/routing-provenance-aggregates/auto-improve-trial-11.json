@@ -1,0 +1,99 @@
+{
+  "$schema": "ops/schemas/routing-provenance-aggregate.schema.json",
+  "artifact_kind": "routing_provenance_aggregate",
+  "generated_at": "2026-05-24T16:10:45Z",
+  "producer": "ops.scripts.observability_routing_provenance_runtime",
+  "source_command": "python -m ops.scripts.observability_routing_provenance_runtime --vault .",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "0bb830648e5e9ea31e27bef574206ba4646b392904c3f0cc8d2a8c84e729b91d",
+  "input_fingerprints": {
+    "policy": "02269a331e13c6e556b0482ef1cf242e68047df29679f0181a82f6ed5e9a50e9",
+    "schema": "d1020425815581b2e5ba63d8e577aa169eeb759773d42063844263ef84a3e78f",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "36f310c0ad654af6f1f65eca52406861141b795abc783f73ee871ce73efb8a6f",
+    "source_session_report": "f8fc2b1080b2b6fcef3c50be5890abaff09f80a2dc79e853b73e9d2d169feb49",
+    "run_ids": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-24T16:10:45Z"
+  },
+  "session_id": "auto-improve-trial-11",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "source_session_report": "ops/reports/auto-improve-sessions/auto-improve-trial-11.json",
+  "summary": {
+    "run_count": 0,
+    "routing_report_count": 0,
+    "executor_report_count": 0,
+    "telemetry_report_count": 0,
+    "promotion_report_count": 0,
+    "artifact_fingerprint_count": 0
+  },
+  "audit_rollup": {
+    "routing": {
+      "report_count": 0,
+      "role_counts": {},
+      "selected_rung_counts": {},
+      "score_band_counts": {},
+      "sandbox_mode_counts": {},
+      "model_counts": {},
+      "reasoning_effort_counts": {},
+      "risk_flag_counts": {}
+    },
+    "executor": {
+      "report_count": 0,
+      "role_counts": {},
+      "status_counts": {},
+      "blocking_role_counts": {},
+      "returncode_counts": {}
+    },
+    "telemetry": {
+      "report_count": 0,
+      "failure_taxonomy_counts": {},
+      "phase_totals_seconds": {},
+      "phase_max_seconds": {}
+    },
+    "coverage": {
+      "run_count": 0,
+      "runs_with_routing": 0,
+      "runs_with_executor": 0,
+      "runs_with_telemetry": 0,
+      "runs_with_promotion_report": 0,
+      "runs_with_artifact_fingerprint": 0
+    },
+    "loop_health": {
+      "attempt_count": 0,
+      "rework_count": 0,
+      "rollback_signal_count": 0,
+      "rollback_rehearsal_coverage_count": 0,
+      "defect_escape_count": 0,
+      "finalized_run_count": 0,
+      "executor_failure_count": 0,
+      "routing_report_parse_gap_count": 0,
+      "executor_report_parse_gap_count": 0,
+      "moving_averages": {
+        "hold": 0.0,
+        "discard": 0.0,
+        "rollback_signal": 0.0
+      },
+      "coverage_ratios": {
+        "routing": 0.0,
+        "executor": 0.0,
+        "telemetry": 0.0,
+        "promotion_report": 0.0,
+        "artifact_fingerprint": 0.0
+      },
+      "health_flags": [
+        "missing_telemetry_coverage"
+      ]
+    }
+  },
+  "runs": []
+}

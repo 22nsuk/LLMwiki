@@ -1,0 +1,214 @@
+{
+  "$schema": "ops/schemas/test-execution-summary.schema.json",
+  "artifact_kind": "test_execution_summary",
+  "generated_at": "2026-05-29T07:13:45Z",
+  "producer": "ops.scripts.test_execution_summary",
+  "source_command": "python -m ops.scripts.test_execution_summary --vault . --suite full-shard-1 --collect-nodeids -- .venv/bin/python -m pytest --junit-xml build/release-payloads/test-execution-summary-full.junit.xml -p xdist.plugin -n auto --dist=loadfile",
+  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
+  "source_tree_fingerprint": "33b4cc3238209df17f150e3332a90244a400cbd963497323fb04e7f469b376ca",
+  "input_fingerprints": {
+    "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+    "schema": "9723184baf2c03d63eb746bd49cfab746f2a29e2b29f05ee97b2a3a802dae4bf",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "df18d8f8ac78891360eae51be2e2c4805bfe7a2184692e80484cbb53a7672db8",
+    "deselected_tests": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "deselection_lifecycle": "c3da35e13feee87e79d890780c65cc4a3ae5cd64636da7d2a03d639055a44a42",
+    "evidence_artifact_consistency": "69f1fcd867680ed241f2f4f4a6d8d3c3657d7902ad719792924e1a483d5c65fb",
+    "evidence_artifacts": "435d928624b05987ec6083f3b9a192606b2817eacf55ca044310cc2d95189f07",
+    "nodeid_outcome_consistency": "cf172e69a988f635718c9a5d1ade17c88b4fb852076ad7f14fdfc13cd4d9746b",
+    "suite": "205588069f5c1a564e866d1a14270117417fcded950f99b3c22d61ea96b2568e",
+    "suite_coverage": "3bb5e7571f5a9efa71bb9fff3b6da343e7d855b4a6a2af4f9c9eb7fe5c449cf1",
+    "wrapped_command": "bad6d79bff3e442b7176a419f6b5280c16aa8fa5adf1d1d63f3c4a78461b4d97"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-29T07:13:45Z"
+  },
+  "vault": ".",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "suite": "full-shard-1",
+  "suite_scope": "full_suite",
+  "represents_full_suite": true,
+  "not_full_suite_reason": "",
+  "full_suite_evidence": {
+    "status": "represented",
+    "required_command": "python -m pytest",
+    "release_builder_environment": ".venv clean release-builder",
+    "reason": "this execution has no pytest selectors and is treated as full-suite evidence"
+  },
+  "status": "pass",
+  "command": ".venv/bin/python -m pytest --junit-xml build/release-payloads/test-execution-summary-full.junit.xml -p xdist.plugin -n auto --dist=loadfile",
+  "returncode": 0,
+  "timed_out": false,
+  "timeout_seconds": 5400,
+  "termination_reason": "completed",
+  "duration_ms": 314429,
+  "counts": {
+    "passed": 1746,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "xfailed": 0,
+    "xpassed": 0,
+    "warnings": 0
+  },
+  "execution_environment": {
+    "python_version": "3.14.3",
+    "pytest_version": "8.4.2",
+    "plugin_autoload_policy": {
+      "env_var": "PYTEST_DISABLE_PLUGIN_AUTOLOAD",
+      "value": "1",
+      "autoload_disabled": true,
+      "policy": "disabled"
+    },
+    "interpreter_path_class": "repo_virtualenv",
+    "toolchain_contract": {
+      "status": "pass",
+      "python_supported": true,
+      "pytest_supported": true,
+      "supported_python_major_minor": [
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14"
+      ],
+      "minimum_pytest_major": 8,
+      "release_evidence_effect": "eligible",
+      "reason": "toolchain is eligible for release evidence"
+    }
+  },
+  "test_target_fingerprints": [],
+  "deselected_tests": [],
+  "deselection_lifecycle": {
+    "status": "pass",
+    "checked_at": "2026-05-29T07:13:45Z",
+    "actual_deselected_count": 0,
+    "max_allowed_deselected_count": 0,
+    "over_budget": false,
+    "expired_count": 0,
+    "release_blocking_count": 0,
+    "missing_lifecycle_count": 0,
+    "duplicate_policy_entry_count": 0,
+    "unused_policy_entry_count": 0,
+    "risk_owner": "",
+    "expires_at": "",
+    "count_increase_gate_effect": "",
+    "expiry_gate_effect": "",
+    "next_action": "none",
+    "blockers": []
+  },
+  "pytest_marker_deselected_count": 0,
+  "policy_deselected_count": 0,
+  "pytest_collect_nodeid_digest": {
+    "status": "collected",
+    "command": ".venv/bin/python -m pytest -o addopts= --collect-only -q --capture=no",
+    "nodeid_count": 1746,
+    "sha256": "19fae3a88e25e2e7f74f13a967ebc4742c818095e29979eb9e2d729032c1457c",
+    "reason": ""
+  },
+  "nodeid_outcome_consistency": {
+    "status": "pass",
+    "nodeid_count": 1746,
+    "outcome_count": 1746,
+    "counted_outcomes": {
+      "passed": 1746,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0
+    },
+    "delta": 0,
+    "reason": "collected nodeid count matches passed + skipped + xfailed/xpassed outcomes"
+  },
+  "evidence_artifacts": [
+    {
+      "kind": "execution_log",
+      "path": "build/release-payloads/test-execution-summary-full.log",
+      "exists": true,
+      "size_bytes": 2215,
+      "sha256": "b2e2d65492d217585489311c1588fccbaf8e0957298fa058ef2f039bfaaf3f3b",
+      "source": "captured_pytest_stdout_stderr"
+    },
+    {
+      "kind": "junit_xml",
+      "path": "build/release-payloads/test-execution-summary-full.junit.xml",
+      "exists": true,
+      "size_bytes": 297758,
+      "sha256": "f218290d99fde24a9931cced6b7c55f14c02f3137b4e24569f07968ce2749b19",
+      "source": "pytest_junit_xml",
+      "consistency_status": "pass",
+      "observed_count": 1746,
+      "expected_count": 1746,
+      "consistency_reason": "junit testcase count matches pytest summary"
+    },
+    {
+      "kind": "failed_nodeids",
+      "path": "build/release-payloads/test-execution-summary-full.failed-nodeids.txt",
+      "exists": true,
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "pytest_failed_and_error_nodeids",
+      "consistency_status": "pass",
+      "observed_count": 0,
+      "expected_count": 0,
+      "consistency_reason": "failed/error nodeid artifact count matches pytest summary"
+    }
+  ],
+  "evidence_artifact_consistency": {
+    "status": "pass",
+    "checked_artifact_count": 2,
+    "checks": [
+      {
+        "kind": "junit_xml",
+        "path": "build/release-payloads/test-execution-summary-full.junit.xml",
+        "status": "pass",
+        "expected_count": 1746,
+        "observed_count": 1746
+      },
+      {
+        "kind": "failed_nodeids",
+        "path": "build/release-payloads/test-execution-summary-full.failed-nodeids.txt",
+        "status": "pass",
+        "expected_count": 0,
+        "observed_count": 0
+      }
+    ],
+    "blockers": []
+  },
+  "stdout_tail": "bringing up nodes...\nbringing up nodes...\n\n........................................................................ [  4%]\n........................................................................ [  8%]\n........................................................................ [ 12%]\n........................................................................ [ 16%]\n........................................................................ [ 20%]\n........................................................................ [ 24%]\n........................................................................ [ 28%]\n........................................................................ [ 32%]\n........................................................................ [ 37%]\n........................................................................ [ 41%]\n........................................................................ [ 45%]\n........................................................................ [ 49%]\n........................................................................ [ 53%]\n........................................................................ [ 57%]\n........................................................................ [ 61%]\n........................................................................ [ 65%]\n........................................................................ [ 70%]\n........................................................................ [ 74%]\n........................................................................ [ 78%]\n........................................................................ [ 82%]\n........................................................................ [ 86%]\n........................................................................ [ 90%]\n........................................................................ [ 94%]\n........................................................................ [ 98%]\n..................                                                       [100%]\n- generated xml file: build/release-payloads/test-execution-summary-full.junit.xml -\n1746 passed in 314.20s (0:05:14)\n",
+  "stderr_tail": "",
+  "release_contract_diagnosis": [
+    {
+      "name": "pytest_contract_summary",
+      "status": "clean_pass",
+      "lane": "clean",
+      "command": ".venv/bin/python -m pytest --junit-xml build/release-payloads/test-execution-summary-full.junit.xml -p xdist.plugin -n auto --dist=loadfile",
+      "duration_seconds": 314.43,
+      "checked_at": "2026-05-29T07:13:45Z",
+      "blocker_conditions": [],
+      "accepted_risk_family": null,
+      "risk_acceptance_ref": null,
+      "reason": ""
+    },
+    {
+      "name": "static_checks",
+      "status": "not_run",
+      "lane": "blocked",
+      "command": "make static",
+      "duration_seconds": null,
+      "checked_at": null,
+      "blocker_conditions": [
+        "external_static_evidence_not_captured_by_summary"
+      ],
+      "accepted_risk_family": null,
+      "risk_acceptance_ref": null,
+      "reason": "not executed inside this pytest summary; use release-builder evidence before treating static checks as covered"
+    }
+  ]
+}

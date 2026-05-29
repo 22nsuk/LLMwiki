@@ -1,21 +1,21 @@
 {
   "$schema": "ops/schemas/session-synopsis.schema.json",
   "artifact_kind": "session_synopsis",
-  "generated_at": "2026-05-29T05:03:36Z",
+  "generated_at": "2026-05-29T11:20:34Z",
   "producer": "ops.scripts.session_synopsis",
   "source_command": "python -m ops.scripts.session_synopsis --vault .",
-  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
-  "source_tree_fingerprint": "c887a62d8b455fd73b297c05119f294e1925a22d9f5c715a84e838afc812e174",
+  "source_revision": "ca18e404b679e2b1fee0fc2f0179ec809b2ba28b",
+  "source_tree_fingerprint": "2246d7c71e46d5ffc2c6d9f522c9db7261cfc6785a4a2c27de337608a19e1f5b",
   "input_fingerprints": {
     "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
     "schema": "f7dd295621a34a54cb5018604760de77e8685c6f0e0dc086056a7362e25a7519",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "414f51561ec421e66b3b61df1ef5878b26b46b9c86fc47a5152d49084914377d",
-    "auto_improve_readiness": "7a9e1da83aa943916da32196e35fe8df0051a8210a1038e27d7aadb76a6650f5",
+    "auto_improve_readiness": "7894a36974639e9389b9850535f13def0d6ddd5b4c226894feb9bfebf481fc07",
     "goal_run_status": "missing",
-    "learning_claim_activation": "07404298f6b4a27395c758178cdbc7259f639c4fb66552716fdc97818faa094d",
-    "learning_delta_scoreboard": "6e742a3fc03aaed910121d5775e9f1392248d9c37844c13189db1cfd98882e67",
-    "source_package_clean_extract": "01a76c5cac79d647b882e65dfcbedd05b624b6f5b6645e3a69c0d5b08f394cc5",
+    "learning_claim_activation": "5b7412806eb729ab9d9c5d05569d5b35b9d3654ea6643ed83118a3681791a576",
+    "learning_delta_scoreboard": "c84c77b266a64d1778faa1d726038b187cc3f4cb20e2bb5dfcec41d3be36e2ba",
+    "source_package_clean_extract": "e365df55934207c561d26e66a37d8d9b62939530a73d9f7f64b57e2171616796",
     "task_observations": "5ee6fc130d9ca93cc1189b0816c3aca7b2fe351a203f126ba6f09522decfd6ea"
   },
   "schema_version": 1,
@@ -24,7 +24,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-29T05:03:36Z"
+    "checked_at": "2026-05-29T11:20:34Z"
   },
   "vault": ".",
   "policy": {
@@ -52,15 +52,15 @@
       "id": "promotion_blocked_by_release_batch_manifest_failure",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
-      "reason": "release_closeout_batch_manifest release gate is not pass: release closeout batch manifest status=fail; release_authority_status=conditional_pass; sealed_release_status=sealed_conditional_pass; distribution_package.status=materialized; batch_integrity_status=pass; auto_improve_lane_status=blocked; machine_release_status=blocked",
+      "reason": "release_closeout_batch_manifest release gate is not pass: release closeout batch manifest status=fail; release_authority_status=conditional_pass; sealed_release_status=unsealed_distribution_not_provided; distribution_package.status=not_provided; batch_integrity_status=pass; auto_improve_lane_status=blocked; machine_release_status=blocked",
       "repair_target": "Seal the release batch manifest, then rerun make auto-improve-readiness."
     },
     {
-      "id": "promotion_blocked_by_goal_worktree_guard_failure",
+      "id": "promotion_blocked_by_artifact_contract_failure",
       "source": "auto_improve_readiness.promotion_blockers",
       "status": "open",
-      "reason": "goal worktree guard is not promotable: goal worktree guard status=attention; requested_mode=git; detected_mode=git_worktree; can_execute_goal_runtime=true; can_promote_result=false; dirty_entry_count=7",
-      "repair_target": "Refresh goal worktree guard evidence, clean the Git worktree if needed, then rerun make auto-improve-readiness."
+      "reason": "artifact freshness schema validation failed for 2 canonical artifact(s): ops/reports/test-execution-summary-full-shards/full-suite-shard-1.json, ops/reports/test-execution-summary-full.json",
+      "repair_target": "Regenerate schema-invalid artifacts, then rerun make artifact-freshness and make auto-improve-readiness."
     }
   ],
   "last_success_patterns": [

@@ -1,0 +1,106 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-14T13:56:38Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "d8d603e2f66b9dc0582a48eb1382cfa8bfcdde01684f3f6e07b5892ce3dedb3d",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "1bd2ac2d021a7e2ff32e1732141ab12b6b72a3f11b4b0d7a5f70e00e9965c273",
+    "observations": "b3205d52e1c5511856291f1de95574c6687a725bdc921111cd0a1b721d03960b",
+    "record_id": "d883934236d4aac10c5b90817688228f09069fbb69c554d798a6b8c3f6ecfd62",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "72343bcba6e7239a50a8cb731372cf555c5382e6de55f2169b593b730cf914c6"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-14T13:56:38Z"
+  },
+  "record_id": "task-20260513-current-code-external-report-plan",
+  "captured_at": "2026-05-13T13:42:31Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Current-code and active external-report planning review closed the external-report archive decision and recorded or automated CLI-surface, source-package lane, structural-budget, and report-provenance follow-ups.",
+  "observations": [
+    {
+      "observation_id": "active_external_report_manifest_drift",
+      "surface": "external-reports/archive/llmwiki_two_integrated_reviews_crosscheck_improvement_report_20260513.md, external-reports/report-reference-manifest.json, ops/reports/external-report-action-matrix.json, ops/reports/generated-artifact-index.json",
+      "problem": "The 2026-05-13 crosscheck improvement report was initially present as a root active external report while generated-artifact-index classified it as an archive candidate covered by the broader 2026-05-11 active report.",
+      "why_it_matters": "Long-term improvement planning can drift from machine-readable release evidence if active external reports are not folded into the reference/action lifecycle before closeout.",
+      "automation_candidate": "Automated by adding reference manifest alignment to external-report-action-matrix, adding checked-in lifecycle static tests, applying the generated archive execution manifest for the 2026-05-13 report, and refreshing the strict reference manifest, action matrix, generated artifact index, and artifact freshness report.",
+      "suggested_followup": "Closed in this task. The active external report root now contains only report-reference-manifest after archiving the covered 2026-05-11 and 2026-05-13 reports; generated-artifact-index reports archive_candidate_count=0, report-reference-manifest has active_reference_set_status=current after the settle pass, and make external-report-reference-manifest-settle is now wired into release-evidence-closeout and external-report-lifecycle-refresh so active/archive moves converge to a checked-in current manifest before downstream action-matrix evidence. Future root external report additions fail static lifecycle coverage when the checked-in manifest or action matrix omits the active report set.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "python313_cli_surface_matrix_gap",
+      "surface": ".github/workflows/ci.yml, ops/scripts/__init__.py, tests/test_import_fallback_contract.py, pyproject.toml project.scripts, mk/*.mk flat python -m calls",
+      "problem": "The current test contract checks flat alias --help only with the active interpreter, while CI covers Python 3.12 and 3.14 but not Python 3.13 even though the external report documented a Python 3.13 flat alias failure mode.",
+      "why_it_matters": "A supported minor-version execution surface can regress silently when Makefile targets continue to rely on flat ops.scripts aliases and the cross-version matrix skips the affected interpreter.",
+      "automation_candidate": "Partially automated by adding Python 3.13 to the CI matrix and adding a CLI surface inventory test for project scripts, Makefile flat module calls, and direct fallback entrypoints.",
+      "suggested_followup": "Closed for CI coverage and local inventory. A future hardening slice can replace proxy flat aliases with wrapper files or canonical module paths if Python 3.13 CI exposes runpy/loader incompatibility.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "structural_complexity_profile_path_drift",
+      "surface": "ops/scripts/eval/structural_complexity_budget_runtime.py, ops/reports/structural-complexity-budget.json, tests/test_structural_complexity_budget_runtime.py",
+      "problem": "The default structural complexity profiles still include pre-subpackage flat ops/scripts paths such as ops/scripts/auto_improve_readiness_runtime.py, so the current report records zero metrics for moved modules and can miss the actual release/learning builder hot spots.",
+      "why_it_matters": "The long-term refactor plan depends on structural budget evidence; stale monitored paths make the budget look stale or noisy just when it should guide builder decomposition priorities.",
+      "automation_candidate": "Automated by refreshing DEFAULT_TARGET_PROFILES to canonical subpackage paths, adding a default-target existence regression test, and regenerating structural/function budget evidence.",
+      "suggested_followup": "Closed in this task. Future refactor slices can now rely on structural-complexity-budget to measure current canonical files before choosing builder decomposition targets.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "source_package_artifact_finalization_lane_guard",
+      "surface": "ops/policies/execution-lanes.json, mk/test.mk, ops/scripts/core/execution_lane_guard.py, tests/test_execution_lane_guard.py, tests/test_makefile_static_gates.py",
+      "problem": "The execution-lane policy already described test-artifact-finalization as unsafe in source-package extracts, but the Make target did not run the guard directly, so source package users could still see missing generated-artifact failures instead of a lane-boundary explanation.",
+      "why_it_matters": "Source packages intentionally exclude ops/reports and other full-vault generated evidence; a direct full-vault-only target should fail fast with the source-package alternatives rather than looking like a packaging defect.",
+      "automation_candidate": "Automated by adding a test-artifact-finalization-lane-guard Make target, narrowing policy semantics to block only source_package_extract for artifact-finalization, and extending execution_lane_guard with blocked_lanes support so public/partial CI remains allowed.",
+      "suggested_followup": "Closed for direct test-artifact-finalization execution. Future lane-boundary additions should prefer blocked_lanes when the problem is source-package misuse rather than an absolute full-vault requirement.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "report_envelope_source_path_alias_residue",
+      "surface": "build_canonical_report_envelope source_paths across moved ops/scripts subpackages",
+      "problem": "Several report builders still declare pre-subpackage flat ops/scripts source paths even though the actual files now live under mechanism/core/eval/release/supply_chain subpackages; before this task the canonical report envelope accepted source_paths but did not fingerprint them.",
+      "why_it_matters": "Release and freshness evidence should fingerprint the actual owning files. Flat alias compatibility is useful for CLI imports, but source provenance needs a central source-path fingerprint so path drift changes producer inputs.",
+      "automation_candidate": "Automated by adding source_paths to canonical report envelope input_fingerprints, resolving unique flat ops/scripts/<module>.py aliases to their canonical subpackage files before hashing, and adding a regression test for alias equivalence and content-change sensitivity.",
+      "suggested_followup": "Closed for provenance safety in this task. A future cleanup can canonicalize remaining literal source_paths in individual builders or add diagnostics for ambiguous aliases, but shared envelope fingerprints now bind reports to the actual current source files.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "supply_chain_report_envelope_gap",
+      "surface": "ops/reports/security-advisories.json, ops/reports/supply-chain-artifact-model.json, ops/reports/in-toto-statement.json, ops/reports/sigstore-bundle-verification.json, ops/reports/supply-chain-benchmark.json",
+      "problem": "Artifact finalization found canonical supply-chain reports that had generated_at and schemas but no canonical artifact envelope metadata, leaving freshness/currentness unable to prove the report graph was fully sealed.",
+      "why_it_matters": "Dependency reproducibility and SBOM/provenance evidence should be replayable from the same source and dependency fingerprints; envelope gaps make release evidence look current while omitting producer, input fingerprint, and currentness proof.",
+      "automation_candidate": "Automated by embedding canonical artifact envelopes in the supply-chain advisory/model/in-toto/sigstore/benchmark generators, extending their schemas to allow the embedded envelope metadata, and regenerating supply-chain artifacts plus freshness evidence.",
+      "suggested_followup": "Closed in this task. artifact-freshness now reports missing_artifact_envelope_count=0 and supply-chain reproducibility evidence is sealed by source_tree_fingerprint plus dependency_fingerprint.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "full_suite_expected_node_count_stale_after_sealed_closeout",
+      "surface": "mk/test.mk, tests/test_makefile_static_gates.py, README.md, ops/README.md, ops/reports/test-execution-summary-full.json",
+      "problem": "The sealed release lane refreshed selector-free full-suite evidence with 1212 passing node ids, but the release guard still expected the older 1141 collect-only node count.",
+      "why_it_matters": "A stale full-suite count stops sealed release closeout after valid full-suite evidence has already passed, while also making future operators question whether the guard is enforcing current evidence or an old fixture.",
+      "automation_candidate": "Automated by updating TEST_EXECUTION_SUMMARY_FULL_EXPECTED_NODE_COUNT and the static/documentation contracts to the freshly generated 1212-node full-suite evidence.",
+      "suggested_followup": "Closed in this task. Future test additions or removals should continue to update the expected node count only after a refreshed selector-free full-suite run has passed and promoted ops/reports/test-execution-summary-full.json.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "sealed_check_tmp_json_post_seal_dirty_state",
+      "surface": "mk/release.mk, tests/test_makefile_static_gates.py, README.md, ops/README.md, build/release/release-closeout-sealed-rehearsal-check.json",
+      "problem": "The full sealed closeout target finished by writing the sealed rehearsal check to tmp/release-closeout-sealed-rehearsal-check.json after operator-release-summary and post-seal attestation had already observed a clean tmp JSON state.",
+      "why_it_matters": "A release can appear sealed at target exit while a follow-up operator summary immediately degrades to sealed_release_status=blocked_tmp_json, making post-seal verification non-idempotent.",
+      "automation_candidate": "Automated by making the full sealed target write its final rehearsal check to a build/release sidecar while preserving the standalone sealed-check tmp output for diagnostics.",
+      "suggested_followup": "Closed in this task. Full sealed closeout now leaves the final rehearsal check at build/release/release-closeout-sealed-rehearsal-check.json and does not dirty tmp JSON hygiene after post-seal operator evidence.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260513-current-code-external-report-plan"
+}

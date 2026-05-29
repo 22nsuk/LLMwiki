@@ -1,0 +1,61 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-29T03:38:12Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
+  "source_tree_fingerprint": "528166cd8ab8df4e7ba4e9aae9d80c6577cd13839a52986652f11d13f9217043",
+  "input_fingerprints": {
+    "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "dd8dcfb9ffb2bd0b886f468d6cff1ca5850de2718721ded19b4685598b6ecc91",
+    "observations": "38885c9df10cb72f25d8ec673c58bf56aee5c88d0b7a24e5e0761faf9eac4a67",
+    "record_id": "4406d760c82cdf1075876c1242d9a33dc3bdb33849551619466f90f6c7a31164",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "ca09a46d6663404cc622f0855d46cde6eaf5f7b972d2ca46332c2bdd063463cf"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-29T03:38:12Z"
+  },
+  "record_id": "task-20260529-active-external-report-current-code-reconciliation",
+  "captured_at": "2026-05-29T03:38:12Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Record follow-up hygiene from 2026-05-29 active external-report/current-code reconciliation.",
+  "observations": [
+    {
+      "observation_id": "active_report_manifest_matrix_regression_20260529",
+      "surface": "external-reports/report-reference-manifest.json, ops/reports/external-report-action-matrix.json, tests/test_external_report_lifecycle_static.py, external-reports/llmwiki_full_vault_review_report_revised_20260529.md",
+      "problem": "The root external-reports directory now has two active reports, but the checked-in reference manifest and action matrix still cover only external-reports/llmwiki_project_review_improvement_report_20260526.md; the static lifecycle test fails on the missing 2026-05-29 revised report.",
+      "why_it_matters": "Active reports are the operator-facing review intake. A stale manifest/matrix can claim active coverage while omitting the newest P0/P1 recommendations and can make archive or release closeout decisions look more complete than they are.",
+      "automation_candidate": "Run external-report-lifecycle-refresh immediately after adding a root external report, and keep tests/test_external_report_lifecycle_static.py in the report-contract/static lane so drift is caught before closeout language is written.",
+      "suggested_followup": "Closed: external-report-reference-manifest and external-report-action-matrix now cover both active root reports, reference_manifest_alignment_status is current, and tests/test_external_report_lifecycle_static.py passes.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "head_aligned_evidence_refresh_backlog",
+      "surface": "ops/reports/public-check-summary.json, ops/reports/test-execution-summary.json, ops/reports/test-execution-summary-full.json, ops/reports/artifact-freshness-report.json, ops/reports/release-closeout-summary.json, ops/reports/release-evidence-dashboard.json",
+      "problem": "Current-code checks still distinguish self-declared current reports from HEAD-aligned evidence: public-check-summary is missing, test summary current checks fail, artifact freshness check reports 42 stale artifacts, and regenerated release closeout/dashboard remain conditional or attention rather than clean release authority.",
+      "why_it_matters": "The active reports' main warning is still live: generated evidence can look current inside its envelope while the release/promotion decision cannot safely treat it as current for HEAD bc8cfca0c1a07f21837f0f00e5947699b8c7e115.",
+      "automation_candidate": "Use a focused currentness converge chain that refreshes public-check-summary, full/report-contract test summaries, artifact freshness, release closeout, dashboard, auto-improve readiness, and finality in a fixed order before release or promotion claims.",
+      "suggested_followup": "Treat this as the first implementation lane after report intake: run the existing release-evidence-converge or an equivalent focused subset, then require public/full test current-checks and artifact-freshness-check to pass before saying clean release or learning evidence is current.",
+      "status": "planned"
+    },
+    {
+      "observation_id": "strict_preview_and_command_identity_backlog",
+      "surface": "tmp/strict-preview-audit.json, tools/strict_preview_audit.py, ops/scripts/test/test_execution_summary.py, tests/test_artifact_freshness_debt_runtime.py, tests/test_next_run_repair_queue_runtime.py",
+      "problem": "Strict preview currently reports 29 findings (24 Ruff, 5 mypy), and test-execution summary reuse still compares the displayed command string exactly, so path-equivalent Python invocations can become future currentness noise after stale cohorts are refreshed.",
+      "why_it_matters": "The strict-preview debt is small enough to close quickly, while command identity literalism is the next likely false-negative once source tree fingerprints are aligned.",
+      "automation_candidate": "First run the fixable Ruff import/annotation cleanup and targeted mypy repairs; then split test summary command identity into semantic command, toolchain fingerprint, and diagnostic executable path fields.",
+      "suggested_followup": "Close strict-preview to zero in a small patch, verify strict-preview-audit, then design command identity normalization behind tests before making it part of release currentness semantics.",
+      "status": "planned"
+    }
+  ],
+  "task_id": "task-20260529-active-external-report-current-code-reconciliation"
+}

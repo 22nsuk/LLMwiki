@@ -1,0 +1,60 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-09T19:28:38Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "a3ce45534f240dfd27983aff38c96cc8ad04bf4c9424ac0e64c54694ea616df3",
+  "input_fingerprints": {
+    "policy": "ebc1bcb948ab54d95dc99bbaed08fbd75b5756dc943c94aa3e2db6321170488f",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "14f924769e186479a1d4741190ac5da6345746573ce7799752e7bd8574044305",
+    "record_id": "ecb665d9c8283cdbf215831b6c5c501a131e80f2f0d8dd0d08b9cd5bce0b4d6d",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "51e961b44c5c13867ce3ac70ee85dd2aed6bfb33152da6586e61f77049d1b392"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-09T19:28:38Z"
+  },
+  "record_id": "task-20260421-raw-intake-batch-review",
+  "captured_at": "2026-04-21T15:50:00Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Review of the 2026-04-21 raw intake batch found that registry completeness passed, but route quality, source-note content quality, and source-to-synthesis absorption decisions need separate review gates.",
+  "observations": [
+    {
+      "observation_id": "raw_intake_route_classifier_review_gate",
+      "surface": "tmp/batch_ingest_unregistered_raw.py, wiki/query--raw-intake-roundup-2026-04-21.md, system/system-raw-registry/wiki/*-intake-2026-04-21*.md, ops/raw-registry.json",
+      "problem": "The one-off batch router assigned some raw files to misleading clusters because it used broad substring matches over raw paths, titles, and source URLs. URL query strings such as utm_campaign and broad Korean terms such as 보안 or 유가 can trigger unrelated AI/security/energy routes.",
+      "why_it_matters": "Raw registry preflight can prove that every raw file is registered, but it does not prove that source-only pages are attached to the right cluster, related pages, or future synthesis route.",
+      "automation_candidate": "Promote raw intake triage into an ops-owned review artifact that separates candidate detection, route proposals, low-confidence flags, and final registry writes. The route classifier should strip URL query strings, avoid broad substring matches, and require review for low-confidence clusters.",
+      "suggested_followup": "Automated on 2026-05-10 KST: `ops/scripts/raw_intake_route_proposal.py` now emits a deterministic schema-backed route proposal report with route assignment, confidence, reasons, and review status, strips URL query-string noise from routing evidence, and blocks absorption closeout unless every entry is reviewed or approved. `make raw-intake-route-proposal` and `make raw-intake-absorption-closeout` pin the workflow before candidate source/registry writes.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "raw_intake_source_content_quality_gate",
+      "surface": "tmp/batch_ingest_unregistered_raw.py, wiki/source--*-intake-w-*-2026-04-21.md, tmp/raw-intake-source-content-audit-2026-04-22*.json, tmp/raw-intake-source-content-refresh-2026-04-22.json",
+      "problem": "The one-off raw intake source-note generator could satisfy registry and graph completeness while leaving thin source-only notes: some pages used media captions, site navigation, or very short first paragraphs as article/report lead content, and one PDF source remained metadata-only because no PDF text extraction was part of the pass.",
+      "why_it_matters": "A source page that exists but carries only weak lead material feels empty during corpus use, even if raw registry preflight, orphan checks, and source trace checks all pass.",
+      "automation_candidate": "Add a deterministic source-note content audit to the batch ingest path. It should measure source-derived character count, skip media/UI boilerplate when selecting lead paragraphs, flag metadata-only PDF sources separately, and produce a review report before source pages are written.",
+      "suggested_followup": "Automated on 2026-05-10 KST: `ops/scripts/raw_intake_source_quality.py` now provides a deterministic cleaned lead extractor, removes frontmatter/headings/media/UI boilerplate before measuring source-derived content, separates low-content source-only review attention from hard failures, and exposes `make raw-intake-source-quality` as the batch gate.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "raw_intake_absorption_decision_gate",
+      "surface": "wiki/source--*-intake-w-*-2026-04-21.md, wiki/query--raw-intake-roundup-2026-04-21.md, wiki/query--raw-intake-absorption-decisions-2026-04-22.md, wiki/synthesis--*-2026-04-22.md, runs/run-20260422-raw-intake-registration-and-promotion/absorption/raw-intake-absorption-matrix-2026-04-22.json, runs/run-20260422-raw-intake-registration-and-promotion/promotion/raw-intake-promotion-profiles-2026-04-22.json, system/system-raw-registry/wiki/*-intake-2026-04-21*.md",
+      "problem": "The current batch now has a manual matrix and manual promotion pass, but the batch workflow still does not enforce that every newly registered source receives an absorption action before closeout.",
+      "why_it_matters": "A raw batch can look closed because every file has a source page and registry entry while still leaving the maintainer without a reviewable decision trail for source merge, synthesis refresh, concept promotion, or new family creation.",
+      "automation_candidate": "Add a source-to-synthesis absorption decision report for batch intake. For each raw source, record the proposed action, target page or proposed new family, evidence reason, confidence, and reviewer status before updating registry stable routes beyond the roundup query.",
+      "suggested_followup": "Automated on 2026-05-10 KST: `raw_intake_route_proposal` absorption closeout mode now requires every batch entry to have a reviewed/approved action and constrains actions to the closeout vocabulary such as update_existing_source, refresh_existing_synthesis, create_new_synthesis_family, keep_source_only_seed, or discard_from_active_routes. `make raw-intake-absorption-closeout` reports blockers before batch closeout.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260421-raw-intake-batch-review"
+}

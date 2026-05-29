@@ -1,0 +1,42 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-07T02:38:28Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "020399c9d2ef990917394771d8d148cc005c6c68725d730863edae8834a92fe7",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "b4d2e039c5c778155cf2c63154864f043e509e6ab04364f0784dd3ead0541425",
+    "record_id": "05c446d5ba175391370e25b2e29b71c77ced85f2405727a7d4409015b086bb1d",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "1ef8e2224480ae9fa4b2b26206cf98c153a9a5378dcefdc7ac42bbb60596bc62"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:38:28Z"
+  },
+  "record_id": "task-20260428-learning-evidence-hardening",
+  "captured_at": "2026-04-28T05:00:00Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Loop-health telemetry evidence is surfaced in readiness, pinned by cross-artifact parity, and separated from execution readiness as a named release blocker when unresolved.",
+  "observations": [
+    {
+      "observation_id": "learning_readiness_evidence_ledger_guard",
+      "surface": "ops/scripts/auto_improve_readiness_runtime.py, ops/schemas/auto-improve-readiness-report.schema.json, ops/scripts/mechanism_review_runtime.py, ops/scripts/outcome_metrics.py, ops/reports/auto-improve-readiness.json, ops/reports/routing-provenance-aggregates/*.json, tests/test_generated_report_contracts.py",
+      "problem": "Learning readiness now surfaces loop-health telemetry coverage explicitly, but it still needed a narrow parity guard ensuring mechanism-review session calibration, outcome metrics session rollups, and routing-provenance loop-health evidence stay aligned in the generated readiness baseline.",
+      "why_it_matters": "Without a focused ledger guard, future upstream shape changes can silently degrade the proposal-to-run-to-outcome-to-readiness evidence chain until a later audit notices that readiness lost or misreported learning evidence.",
+      "automation_candidate": "Add a targeted generated-baseline parity check that verifies learning_readiness metrics and signals stay synchronized with diagnostics.loop_health_summary, mechanism review session calibration, and outcome metrics session evidence.",
+      "suggested_followup": "Automated on 2026-04-28: generated-report contracts now pin readiness learning metrics and warning signals against the checked-in mechanism review report, outcome metrics report, and routing provenance aggregate. Updated on 2026-04-29: unresolved learning readiness is now a separate schema-backed `release_blockers[]` entry with a named `learning_blocked_by_*` id, `accepted_risk` flag, required evidence, and generated-report parity coverage.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260428-learning-evidence-hardening"
+}

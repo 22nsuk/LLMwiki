@@ -1,0 +1,79 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-21T17:49:25Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "e87210163d5661241576ab225b9a05e7286084eb4bf5aad231abbef7132b41b8",
+  "input_fingerprints": {
+    "policy": "db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "1bd2ac2d021a7e2ff32e1732141ab12b6b72a3f11b4b0d7a5f70e00e9965c273",
+    "observations": "6a376efd658b6fbcb69ba1ebc014c625e8a03639b4a64441b312e7eca58736b7",
+    "record_id": "11ea8a9f1babfeb9767032fb19786e149c7c2313ca3bddf28454f4548c1d626a",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "48b29a16290d5ca420061573a08a54cb8ff8d1f299f82e5548988274b2a832f6"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-21T17:49:25Z"
+  },
+  "record_id": "task-20260520-goal-5day-runtime-set-goal",
+  "captured_at": "2026-05-19T20:09:52Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Goal contract has been reset to the single self-improvement loop certificate model; branch/runtime reconciliation is closed for bounded execution, while promotion remains blocked by learning review, worktree, and remediation backlog evidence.",
+  "observations": [
+    {
+      "observation_id": "goal_runtime_reconciliation_preflight_target",
+      "surface": "goal runtime contract, worktree guard, auto-improve readiness, branch-only safety guard files",
+      "problem": "The external report shows that the current workspace is a dirty main checkout with zip-derived/local runtime state, while the canonical goal branch adds fixed-point, transient cleanup, clean fixture regeneration, and workflow helper guard files that are absent here.",
+      "why_it_matters": "A 5-day goal runtime launched from this state could produce plausible-looking artifacts without the branch safety checks that prove the artifacts agree, stale transients are cleaned, fixture regeneration is not contaminated, and promotion remains blocked while evidence is dirty.",
+      "automation_candidate": "Add a narrow reconciliation target that checks out or verifies the canonical goal branch, asserts the branch-only guard file set exists, refreshes goal worktree guard and readiness, and refuses long-run execution until the fixed-point, cleanup, and fixture guards pass.",
+      "suggested_followup": "Updated in this task: local main now uses the single goal-runtime-certificate flow, checked-in goal/readiness snapshots are refreshed, goal-runtime fixed-point and cleanup guards pass, and promotion remains blocked until learning review, worktree, and remediation backlog evidence are clean.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "goal_runtime_python_backend_resolution",
+      "surface": "Makefile goal runtime targets and local Python interpreter selection",
+      "problem": "The repo default python executable lacks jsonschema/PyYAML in this workspace, while .venv/bin/python has the required dependencies and successfully runs the goal client tests.",
+      "why_it_matters": "Goal preflight and set_goal operations can fail before producing evidence if an operator uses the ambient python instead of the repo dependency environment.",
+      "automation_candidate": "Teach the goal runtime preflight or Make defaults to prefer the repo venv when present, or emit a targeted dependency diagnostic before invoking schema-backed goal scripts.",
+      "suggested_followup": "Automated by Make's venv-first PYTHON default plus goal-runtime-python-preflight, which writes a tmp bootstrap preflight report and prints the selected interpreter/dependency status before long-run start.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "auto_improve_readiness_refresh_generated_core_local_manifest_churn",
+      "surface": "make auto-improve-readiness, refresh-generated-core, ops/manifest.json, goal worktree guard",
+      "problem": "The full auto-improve-readiness target refreshes core generated artifacts before the readiness body, and in a full-vault checkout this rewrites ops/manifest.json plus runtime reports before the embedded worktree guard runs.",
+      "why_it_matters": "The target can create its own dirty worktree evidence and then report promotion blocked by git_worktree_dirty even when the operator started from a clean checkout; committing the refreshed manifest can also risk carrying local-only inventory into a public-safe surface.",
+      "automation_candidate": "Split auto-improve-readiness into a preflight-safe mode that writes refresh-generated-core outputs to tmp or runs the worktree guard before tracked refreshes, then only promotes canonical reports after public/private boundary checks pass.",
+      "suggested_followup": "Automated by removing refresh-generated-core from the default auto-improve-readiness target, keeping tracked core refresh in the explicit auto-improve-readiness-report lane, and adding a static regression that the default readiness target cannot self-introduce ops/manifest.json dirty evidence before its own worktree guard.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "artifact_finalization_full_pytest_churn",
+      "surface": "mk/test.mk full-suite aliases, artifact_finalization lane, canonical generated report currentness",
+      "problem": "Selector-free pytest and make test-all still execute artifact_finalization checks without first refreshing canonical generated reports; a source edit can change release source_tree_fingerprint or script AST inventory, making the first full test fail on expected stale report evidence rather than product behavior.",
+      "why_it_matters": "The self-improvement loop wastes cycles in a predictable edit-refresh-rerun pattern, and expensive full pytest runs become a currentness repair mechanism instead of a stable validation step.",
+      "automation_candidate": "Route developer full-suite aliases through a non-finalization full test expression, and reserve artifact_finalization for explicit post-refresh targets such as report-contract-closeout, test-artifact-finalization, or release-evidence-closeout.",
+      "suggested_followup": "Automated in this task: test-all/check-all now route through PYTEST_DEVELOPER_FULL_MARK_EXPR=not artifact_finalization, the developer_full pack is recorded in the lane registry, and the Codex goal prompt plus docs/tests name the generated artifact convergence order before artifact finalization.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "release-ready-generated-artifact-noop-guard",
+      "surface": "mk/release.mk release-converge-all-surfaces; mk/artifact.mk generated-artifact-converge; tmp/generated-artifact-converge-summary.json; ops/reports/generated-artifact-index.json; ops/reports/artifact-freshness-report.json",
+      "problem": "release-source-ready still needs generated-artifact-converge both before and after report-producing/public-check phases, and operators need a machine-readable way to distinguish semantic evidence changes from raw/envelope churn.",
+      "why_it_matters": "Removing the final converge would risk stale report evidence, while unconditional regeneration makes operators read logs to distinguish required convergence from no-op churn.",
+      "automation_candidate": "Add a fingerprint-aware generated-artifact convergence summary that reports pre/post semantic digests and only considers conditional skip after tests prove public-check-produced reports still force the final converge when needed.",
+      "suggested_followup": "Automated by adding tmp-only generated-artifact-converge before/after summaries with per-target semantic and raw digests, changed/noop classification, and changed path lists. Keep the protective converge order; any future skip optimization should be gated by these diagnostics.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260520-goal-5day-runtime-set-goal"
+}

@@ -1,0 +1,132 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-07T02:44:16Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "4e8c46ecda488149b4d86fe0afd9910cd4fcce0a8915d81612919cb59e1db88a",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "bde08f1e67d0b1d6aa7fd95452f5225a832a0b25383aed3a481d91c780b173f5",
+    "record_id": "fd3d9c21cfd5afc9bdd7060687234da7e2091b2d451a09b4ee1ea8f5a91c3bbf",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "5f23b193dad1ec04e154bf4bad82da723ee2436d805a7ef788b297600680bc08"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:44:16Z"
+  },
+  "record_id": "task-20260506-two-integrated-reviews-current-code-plan",
+  "captured_at": "2026-05-06T15:18:55Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Current-code crosscheck of llmwiki_two_integrated_reviews_actual_crosscheck_report_20260506 identified residual distribution sealing, external-report current ZIP binding, full-suite nodeid digest, and release workflow authority follow-ups without duplicating profile-matrix or typed-learning telemetry automation already recorded.",
+  "observations": [
+    {
+      "observation_id": "distribution_not_provided_sealed_clean_pass",
+      "surface": "release closeout batch manifest, schema, Makefile release-evidence-closeout",
+      "problem": "The checked-in batch manifest reports sealed_clean_pass while distribution_package.status remains not_provided, so artifact sealing can still be read as clean even when no distribution ZIP is bound.",
+      "why_it_matters": "This preserves the core distribution-closure ambiguity identified by the crosscheck report: local evidence can look portable before source package identity and path/content parity are sealed.",
+      "automation_candidate": "Make release claim mode require a materialized distribution package or emit not_sealed/unknown, and update tests that currently expect sealed_clean_pass with no distribution ZIP.",
+      "suggested_followup": "Automated on 2026-05-06: release-closeout-batch-manifest now reports unsealed_distribution_not_provided/invalid/drift unless distribution_package is materialized with path and content parity; operator-release-summary independently rejects sealed batch status without a materialized distribution package. Follow-up automated on 2026-05-07: Make now exposes release-distribution-zip plus release-evidence-closeout-sealed, staging the source package under build/release and passing it to batch manifest promote/verify as both distribution ZIP and ZIP metadata.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "external_report_manifest_current_zip_required",
+      "surface": "external report reference manifest and review closeout target",
+      "problem": "The script can compute current_distribution_zip from a ZIP path, but the Make target leaves it optional and the checked-in manifest still has an unspecified current distribution; the current root also has one more active Markdown report than the manifest references.",
+      "why_it_matters": "External review provenance remains stale unless the final packaging or review handoff always regenerates the manifest after the actual ZIP and active report set are known.",
+      "automation_candidate": "Add a strict review/release mode that requires --current-distribution-zip-path, records basis/current mismatch, and fails if root external report references drift from the current file set.",
+      "suggested_followup": "Automated on 2026-05-06: external-report-reference-manifest now has advisory and strict_review_release modes; strict mode requires --current-distribution-zip-path, distribution_provenance exposes basis/current ZIP match status and mismatch fields, and active_reference_set records prior/current root report count drift.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "full_suite_selector_free_nodeid_digest",
+      "surface": "test execution summary full-suite evidence",
+      "problem": "Full-suite evidence exists and passes, but collect-nodeids skips selector-free pytest commands, leaving the full-suite nodeid digest empty.",
+      "why_it_matters": "A 944-passed artifact is much harder to audit or replay without a collected nodeid set, even when the suite count matches the current tests.",
+      "automation_candidate": "Collect all test nodeids for selector-free full-suite commands with pytest --collect-only -q, then assert consistency between collected count and pass/skip/xfail totals.",
+      "suggested_followup": "Automated on 2026-05-07: test_execution_summary collect-nodeids now runs pytest --collect-only -q even for selector-free full-suite commands, records nodeid_outcome_consistency, and the full-suite Make target captures JUnit XML plus execution-log digests.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "release_workflow_live_authority_handoff",
+      "surface": "GitHub release workflow and release evidence artifacts",
+      "problem": "The publish job still reads checked-in release-closeout-summary.json after a fresh checkout instead of consuming a live verified gate artifact from the verify job.",
+      "why_it_matters": "CI can run a clean gate in one job but publish based on repository JSON state in another job, weakening the truth ladder between live gate output and published artifacts.",
+      "automation_candidate": "Upload the live release closeout, batch manifest, and evidence bundle from verify-clean-release and make publish consume those artifacts and their digests.",
+      "suggested_followup": "Automated on 2026-05-07: release.yml verify-clean-release now uploads separate verified-source-zip, verified-evidence-bundle, and verified-release-attestation artifacts; publish downloads those live artifacts and verifies SHA/provenance bindings with release_live_artifact_attestation instead of reading checked-in closeout JSON. Follow-up automated on 2026-05-07: review-archive in the verify job now writes tmp/live-review-archive-report.json and uploads that live report with tmp/live-source.zip instead of uploading the checked-in review-archive report.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "learning_typed_same_eval_backfill_remaining",
+      "surface": "learning delta scoreboard and same-eval run telemetry",
+      "problem": "Legacy same-eval run telemetry was incomplete for the proposal family until the remaining runs were evidence-backed backfilled or replaced.",
+      "why_it_matters": "Learning claims must stay closed until the same-eval family has machine-checkable typed reason, strict secondary improvement, and behavior delta digest evidence rather than only telemetry presence.",
+      "automation_candidate": "Run a new same-eval mechanism experiment or perform evidence-backed legacy backfill that populates the three typed telemetry fields from concrete baseline/candidate artifacts without inferring unsupported claims.",
+      "suggested_followup": "Automated on 2026-05-07: retry/retry3/timeout legacy telemetry now carries typed same_eval_reason_code, strict_secondary_improvement_present, secondary_improvement_axes, and behavior_delta_digest from actual artifacts; retry2 was archived because behavior-delta and changed-files evidence were absent and is superseded by run-20260507-auto-improve-existing-telemetry-inline-same-eval-replacement. learning_delta_scoreboard now reports 5/5 full coverage while learning_claim_allowed remains false pending explicit unlock review.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "audit_pack_optional_payload_materialization_window",
+      "surface": "release audit pack optional JUnit/log payload handling",
+      "problem": "The batch manifest now records optional JUnit/log payload policy and digests, but the closeout recipe cleans tmp before the final batch manifest and audit-pack materialization, so optional payload entries can be listed while their tmp files are unavailable.",
+      "why_it_matters": "JSON digests remain authoritative, but an operator who opts into portable raw pytest payloads needs a stable preservation window or staging location that survives closeout tmp cleanup.",
+      "automation_candidate": "Stage optional JUnit/log payloads under a non-authoritative audit payload directory or move the optional audit-pack materialization before tmp cleanup while keeping checked-in JSON as authority.",
+      "suggested_followup": "Automated on 2026-05-07: full-suite JUnit/log payload defaults now use RELEASE_AUDIT_PAYLOAD_STAGING_DIR=build/release-payloads so final tmp cleanup does not force listed_unavailable; release-audit-pack exposes RELEASE_AUDIT_PACK_INCLUDE_OPTIONAL_PAYLOADS=1 for operators who explicitly want those raw payloads in the portable bundle.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "artifact_freshness_exact_count_brittleness",
+      "surface": "tests/test_generated_report_contracts.py artifact freshness canonical report assertions",
+      "problem": "The artifact freshness finalization test pinned exact artifact_count and run_log_placeholder_count values, so adding or archiving any run-local artifact required editing unrelated numeric expectations.",
+      "why_it_matters": "Release contract tests should catch semantic drift in debt axes, not make every legitimate artifact inventory change look like a hand-maintained counter update.",
+      "automation_candidate": "Derive expected artifact and run-log placeholder counts from the checked-in manifest/report sections and keep exact assertions only for semantic zero-debt axes.",
+      "suggested_followup": "Automated on 2026-05-07: the generated report contract now derives artifact_count, json_artifact_count, and run_log_placeholder_count from artifact_records and run_log_placeholders while preserving strict zero-debt assertions for envelope/schema/currentness debt.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "closeout_observability_inventory_refresh_gap",
+      "surface": "release-evidence-closeout recipe, make-target-inventory, workflow-dependency-planner",
+      "problem": "Adding release-distribution-zip and release-evidence-closeout-sealed updated the Makefile surface, but the sealed closeout recipe refreshed generated index and freshness without first refreshing make-target inventory or workflow dependency planner reports.",
+      "why_it_matters": "The release batch can be clean while advisory observability reports still describe an older target graph, making follow-up planning and public export audits lag behind the actual runtime contract.",
+      "automation_candidate": "Include make-target-inventory and workflow-dependency-planner in the final closeout refresh before generated-artifact-index and artifact-freshness, and assert that ordering in Makefile static contract tests.",
+      "suggested_followup": "Automated on 2026-05-07: release-evidence-closeout now refreshes make-target-inventory and workflow-dependency-planner immediately before the final generated-artifact-index/archive/freshness pass; tests assert the order so new target-surface changes are represented in final observability artifacts.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "release_sealing_lane_fixture_mtime_race",
+      "surface": "tests/test_release_sealing_lane.py filesystem-mtime source freshness fixture",
+      "problem": "The tmp batch-manifest check fixture used live filesystem mtimes for freshly seeded source files, so second-precision generated_at comparisons could fail even when no source content changed.",
+      "why_it_matters": "Release sealing tests should validate real content and freshness behavior rather than depend on scheduler timing between fixture writes and manifest generation.",
+      "automation_candidate": "Freeze fixture source mtimes or use explicit ZIP metadata in tmp manifest check tests so source freshness is deterministic.",
+      "suggested_followup": "Automated on 2026-05-07: release_sealing_lane now freezes seeded fixture file mtimes to a fixed past timestamp before building/checking the tmp batch manifest, preserving the digest-mismatch test while removing the mtime race.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "mutation_proposal_signal_run_id_overbreadth",
+      "surface": "mechanism-review-candidates and mutation-proposals for repeated same-eval/discard pressure",
+      "problem": "The active mutation proposal had narrowed to repeated_discard_runs, but inherited the full eval-stagnation run window, mixing same-eval-only runs into the next single failure-mode experiment evidence set.",
+      "why_it_matters": "A proposal labeled as DISCARD-only can still drive rework if its run evidence asks the next operator to reason over the broader same-eval/discard family instead of one terminal outcome path.",
+      "automation_candidate": "Emit signal-specific run ID groups from mechanism review and have mutation proposal selection use the group matching the selected failure_mode.",
+      "suggested_followup": "Automated on 2026-05-07: mechanism eval-stagnation candidates now expose signal_run_ids for repeated_discard_runs and repeated_same_eval_after_promote, and mutation proposals select metrics/run_ids from the chosen failure_mode so the active proposal is a DISCARD-only 2-run evidence slice.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "schema_contract_change_sample_fixture_refresh",
+      "surface": "tests/fixtures/report_schema_samples.json and report schema sample regeneration",
+      "problem": "Adding the mechanism-review candidate signal_run_ids contract changed schema-derived sample fingerprints, leaving the frozen OpenVEX sample fixture stale until regeneration.",
+      "why_it_matters": "Release closeout can spend a full-suite cycle discovering a deterministic fixture drift that is directly implied by a schema contract edit.",
+      "automation_candidate": "After schema contract changes, run the schema sample regeneration helper before release closeout or add a narrower pre-closeout smoke for frozen sample drift.",
+      "suggested_followup": "Automated on 2026-05-07: report_schema_samples.json was regenerated after adding signal_run_ids so report schema sample regeneration tests match the current schema fingerprint set.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260506-two-integrated-reviews-current-code-plan"
+}

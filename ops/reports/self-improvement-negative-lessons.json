@@ -1,18 +1,18 @@
 {
   "$schema": "ops/schemas/self-improvement-negative-lessons.schema.json",
   "artifact_kind": "self_improvement_negative_lessons",
-  "generated_at": "2026-05-29T05:03:36Z",
+  "generated_at": "2026-05-29T11:20:35Z",
   "producer": "ops.scripts.self_improvement_negative_lessons",
   "source_command": "python -m ops.scripts.self_improvement_negative_lessons --vault .",
-  "source_revision": "bc8cfca0c1a07f21837f0f00e5947699b8c7e115",
-  "source_tree_fingerprint": "c887a62d8b455fd73b297c05119f294e1925a22d9f5c715a84e838afc812e174",
+  "source_revision": "ca18e404b679e2b1fee0fc2f0179ec809b2ba28b",
+  "source_tree_fingerprint": "2246d7c71e46d5ffc2c6d9f522c9db7261cfc6785a4a2c27de337608a19e1f5b",
   "input_fingerprints": {
     "policy": "b6eae7cc71e5de8c6e8e013799dfb9310d0586b7725f17e39af7ee56966ab801",
     "schema": "47b79b46ef1a89257481eb0fa0b41f96e2765bb833dd8fe9b2f718d71cf470e2",
     "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
     "source_paths": "9fe8501d398c6284f8e9ddf9f8c96a69a2bc6011cc5fd323fac4e544e5df700d",
-    "learning_claim_activation": "07404298f6b4a27395c758178cdbc7259f639c4fb66552716fdc97818faa094d",
-    "session_synopsis": "35ec2d46a1cbf9e1c912fed7381f0ff0b56af55d836783c8384ab7f746c0a45e"
+    "learning_claim_activation": "5b7412806eb729ab9d9c5d05569d5b35b9d3654ea6643ed83118a3681791a576",
+    "session_synopsis": "a4c50aefae2fae9f07b1ccf03dd945bb38768f23c2c618952e9da9260770d398"
   },
   "schema_version": 1,
   "artifact_status": "current",
@@ -20,7 +20,7 @@
   "encoding": "utf-8",
   "currentness": {
     "status": "current",
-    "checked_at": "2026-05-29T05:03:36Z"
+    "checked_at": "2026-05-29T11:20:35Z"
   },
   "vault": ".",
   "policy": {
@@ -53,7 +53,7 @@
         {
           "path": "ops/reports/learning-delta-scoreboard.json",
           "exists": true,
-          "sha256": "6e742a3fc03aaed910121d5775e9f1392248d9c37844c13189db1cfd98882e67",
+          "sha256": "c84c77b266a64d1778faa1d726038b187cc3f4cb20e2bb5dfcec41d3be36e2ba",
           "status": "present"
         }
       ],

@@ -1,0 +1,280 @@
+{
+  "$schema": "ops/schemas/auto-improve-session.schema.json",
+  "session_id": "active-report-self-improve-certificate-rerun3",
+  "generated_at": "2026-05-20T21:45:20Z",
+  "policy": {
+    "path": "ops/policies/wiki-maintainer-policy.yaml",
+    "version": 4
+  },
+  "status": "running",
+  "budget": {
+    "max_proposals": 6,
+    "max_minutes": 720,
+    "max_consecutive_failures": 6
+  },
+  "executor": {
+    "name": "codex_exec"
+  },
+  "attempted_proposal_ids": [
+    "repeated_discard_runs__auto-improve-iteration-persistence-runtime"
+  ],
+  "quarantined_proposal_ids": [
+    "repeated_discard_runs__auto-improve-iteration-persistence-runtime"
+  ],
+  "run_ids": [
+    "active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime"
+  ],
+  "iterations": [
+    {
+      "index": 1,
+      "proposal_id": "repeated_discard_runs__auto-improve-iteration-persistence-runtime",
+      "source_candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
+      "run_id": "active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime",
+      "status": "blocked",
+      "decision": "SKIPPED",
+      "outcome": "repo_health_blocked",
+      "failure_taxonomy": "repo_health_blocked",
+      "proposal_snapshot": "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/proposal-snapshot.json",
+      "scope_freeze": "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/scope-freeze.json",
+      "routing_reports": [
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.worker.json",
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.reviewer.json",
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.validator.json",
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.provenance-auditor.json"
+      ],
+      "executor_reports": [
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/worker-executor-report.json",
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/reviewer-executor-report.json",
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/validator-executor-report.json",
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/provenance-auditor-executor-report.json"
+      ],
+      "run_telemetry": "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+      "promotion_report": "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json",
+      "quarantined": true,
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ]
+    }
+  ],
+  "next_run_decisions": [
+    {
+      "decision_id": "next-run-decision:active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime:322d469224bfc46d",
+      "observed_at": "2026-05-20T22:12:04Z",
+      "session_id": "active-report-self-improve-certificate-rerun3",
+      "iteration": 1,
+      "source_run_id": "active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime",
+      "proposal_id": "repeated_discard_runs__auto-improve-iteration-persistence-runtime",
+      "source_candidate_id": "mechanism_eval_stagnation_candidate__auto-improve-iteration-persistence-runtime",
+      "target_proposal_id": "next_run_failure_repair__auto-improve-iteration-persistence-runtime__repo-health-blocked",
+      "proposal_family": "contract_regression_signals",
+      "proposal_tier": "supporting",
+      "failure_taxonomy": "repo_health_blocked",
+      "blocking_role": "repo_health",
+      "decision": "carry_forward",
+      "next_run_action": "repair_failure",
+      "status": "open",
+      "reason": "Failure is actionable and target-bounded, so it should become the next repair candidate.",
+      "quarantined_source_proposal": true,
+      "primary_targets": [
+        "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py"
+      ],
+      "supporting_targets": [
+        "ops/schemas/run-telemetry.schema.json",
+        "ops/script-output-surfaces.json",
+        "tests/fixtures/report_schema_samples.json"
+      ],
+      "must_change_tests": [
+        "tests/test_auto_improve_iteration_runtime.py",
+        "tests/test_report_schema_sample_regeneration.py"
+      ],
+      "evidence_paths": [
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/run-telemetry.json",
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/scope-freeze.json",
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.worker.json",
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.reviewer.json",
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.validator.json",
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/subagent-routing.provenance-auditor.json",
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/worker-executor-report.json",
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/reviewer-executor-report.json",
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/validator-executor-report.json",
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/provenance-auditor-executor-report.json",
+        "runs/active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime/promotion-report.json"
+      ]
+    }
+  ],
+  "learning_summary": {
+    "attempt_count": 1,
+    "rework_count": 0,
+    "rollback_signal_count": 0,
+    "defect_escape_pair_count": 0,
+    "session_context_status": "session_context_available",
+    "evidence_gaps": []
+  },
+  "loop_state": {
+    "consecutive_failures": 1,
+    "last_outcome": "repo_health_blocked",
+    "last_decision": "SKIPPED",
+    "last_run_id": "active-report-self-improve-certificate-rerun3-run-01-auto-improve-iteration-persistence-runtime",
+    "last_blocking_reason": "repo_health_blocked",
+    "blocking_reason_counts": {
+      "repo_health_blocked": 1
+    },
+    "repeated_blocker_stop": false,
+    "repeated_blocker_reason": "",
+    "remediation_backlog_path": "ops/reports/remediation-backlog.json",
+    "updated_at": "2026-05-20T22:12:04Z"
+  },
+  "queue_snapshot": [
+    "repeated_discard_runs__auto-improve-iteration-persistence-runtime"
+  ],
+  "stop_reason": "running",
+  "path": "ops/reports/auto-improve-sessions/active-report-self-improve-certificate-rerun3.json",
+  "goal_contract": {
+    "path": "runs/goal-active-report-self-improve-certificate-rerun3/state/codex-goal-contract.json",
+    "requested_path": "runs/goal-active-report-self-improve-certificate-rerun3/state/codex-goal-contract.json",
+    "contract_sha256": "9785392bf0f0775bd1c455fa1a68fd34f4b5211bea1fab41b7ea5eb1ff947f6c",
+    "contract_id": "auto-improve-goal",
+    "status": "active",
+    "runtime_mode": "self_improvement_loop",
+    "max_wall_clock_seconds": 43200,
+    "max_unattended_seconds": 43200,
+    "max_proposals": 6,
+    "max_consecutive_failures": 6,
+    "can_promote_result": false,
+    "promotion_blockers": [
+      "learning_blocked_by_review_required",
+      "promotion_blocked_by_selected_contract_failure",
+      "promotion_blocked_by_artifact_contract_failure",
+      "promotion_blocked_by_remediation_backlog_open"
+    ]
+  },
+  "learning_mode": {
+    "allow_learning_uncertain": true,
+    "bounded_trial": true
+  },
+  "pre_run_readiness": {
+    "report": "ops/reports/auto-improve-readiness.json",
+    "generated_at": "2026-05-20T21:45:21Z",
+    "execution_status": "pass",
+    "learning_status": "learning_uncertain",
+    "learning_gate_effect": "review_required",
+    "runnable_proposal_count": 1,
+    "session_reports_considered": 20
+  },
+  "rollups": {
+    "iterations": {
+      "count": 1,
+      "outcome_counts": {
+        "repo_health_blocked": 1
+      },
+      "decision_counts": {
+        "SKIPPED": 1
+      },
+      "status_counts": {
+        "blocked": 1
+      },
+      "quarantined_proposal_count": 1
+    },
+    "routing": {
+      "report_count": 4,
+      "role_counts": {
+        "provenance-auditor": 1,
+        "reviewer": 1,
+        "validator": 1,
+        "worker": 1
+      },
+      "selected_rung_counts": {
+        "3": 4
+      },
+      "score_band_counts": {
+        "extreme": 4
+      },
+      "sandbox_mode_counts": {
+        "read-only": 1,
+        "workspace-write": 3
+      },
+      "model_counts": {
+        "gpt-5.5": 4
+      },
+      "reasoning_effort_counts": {
+        "xhigh": 4
+      },
+      "risk_flag_counts": {
+        "schema_change": 4
+      }
+    },
+    "executor": {
+      "report_count": 4,
+      "role_counts": {
+        "provenance-auditor": 1,
+        "reviewer": 1,
+        "validator": 1,
+        "worker": 1
+      },
+      "status_counts": {
+        "pass": 4
+      },
+      "blocking_role_counts": {},
+      "returncode_counts": {
+        "0": 4
+      }
+    },
+    "telemetry": {
+      "report_count": 1,
+      "failure_taxonomy_counts": {
+        "repo_health_blocked": 1
+      },
+      "phase_totals_seconds": {
+        "scope_freeze": 0.019,
+        "routing": 0.654,
+        "scaffold": 0.51,
+        "experiment": 1683.055
+      },
+      "phase_max_seconds": {
+        "scope_freeze": 0.019,
+        "routing": 0.654,
+        "scaffold": 0.51,
+        "experiment": 1683.055
+      }
+    },
+    "outcome_metrics": {
+      "attempt_count": 1,
+      "recent_window": 20,
+      "recent_attempt_count": 1,
+      "rework_count": 0,
+      "rollback_signal_count": 0,
+      "rollback_rehearsal_coverage_count": 0,
+      "moving_averages": {
+        "hold": 0.0,
+        "discard": 0.0,
+        "rollback_signal": 0.0
+      },
+      "operator_effort_proxy": {
+        "phase_totals_seconds": {
+          "scope_freeze": 0.019,
+          "routing": 0.654,
+          "scaffold": 0.51,
+          "experiment": 1683.055
+        },
+        "executor_report_count": 4,
+        "reviewer_dispatch_count": 1,
+        "validator_dispatch_count": 1,
+        "auditor_dispatch_count": 1,
+        "hold_count": 0
+      },
+      "rework_keys": [],
+      "defect_escape_proxy": {
+        "count": 0,
+        "pairs": []
+      }
+    }
+  },
+  "metadata": {
+    "properties": [
+      {
+        "name": "urn:openai:artifact-envelope",
+        "value": "{\"$schema\": \"ops/schemas/auto-improve-session.schema.json\", \"artifact_kind\": \"auto_improve_session\", \"artifact_status\": \"current\", \"currentness\": {\"checked_at\": \"2026-05-20T21:45:20Z\", \"status\": \"current\"}, \"encoding\": \"utf-8\", \"generated_at\": \"2026-05-20T21:45:20Z\", \"input_fingerprints\": {\"artifact_envelope_schema\": \"87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de\", \"policy\": \"db4a14398a7f56012e4809c9641e5272afd043bf7bd0f600e794266123b0ec24\", \"policy_version\": \"4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a\", \"schema\": \"31f7f1d869ca7a7168722bdbfab78970e7fc5f217c90e33fbf905695a53183c7\", \"session_id\": \"2bceafa0a096b0cb2ac2b748e88b831ba4db13687fe1aad7801fde0aec5e7e73\", \"source_paths\": \"d622ebc3823fcd16f179073fe74fd7de8c03ef7d25a175a4ae06c43e09dc35cf\", \"status\": \"c071cf5f5ed6f884cc70155b6f05f755fd46a302d05e4261b7e92ce878bbfed8\"}, \"producer\": \"ops.scripts.auto_improve_runtime\", \"retention_policy\": \"canonical_report\", \"schema_version\": 1, \"source_command\": \"python -m ops.scripts.auto_improve_runtime\", \"source_revision\": \"unknown\", \"source_tree_fingerprint\": \"c20d00371744bf6b80e3c435af26b8fcbe8367bb59d1c0a00e8c52e0b1c4f17f\"}"
+      }
+    ]
+  }
+}

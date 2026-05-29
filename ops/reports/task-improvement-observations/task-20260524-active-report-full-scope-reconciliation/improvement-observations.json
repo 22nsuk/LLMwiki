@@ -1,0 +1,43 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-24T14:07:05Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "0bb830648e5e9ea31e27bef574206ba4646b392904c3f0cc8d2a8c84e729b91d",
+  "input_fingerprints": {
+    "policy": "02269a331e13c6e556b0482ef1cf242e68047df29679f0181a82f6ed5e9a50e9",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "source_paths": "fce4e48949e144173c990c7e6f9bd38426efabcac2e5bc84641c2030d59c5e04",
+    "observations": "634d1e19dd0b40e48ed60e51493a39e6b0ab69226b015f91e7e388c6691fd4d3",
+    "record_id": "c179900f9dc1e6b590be8a6a65223b9dd2fe7739b58e222518dfc225fd544006",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "2c8619be15cf130a52c495a33bac58d533eef4fb70b8942123febf6b86c3874a"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-24T14:07:05Z"
+  },
+  "record_id": "task-20260524-active-report-full-scope-reconciliation",
+  "captured_at": "2026-05-24T14:07:05Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Record follow-up hygiene from active external-report reconciliation and no-allowlist strict preview expansion.",
+  "observations": [
+    {
+      "observation_id": "strict_preview_full_scope_burndown",
+      "surface": "mk/static.mk, tools/strict_preview_audit.py, ops/reports/lint-uplift-plan.json, ops/reports/type-uplift-plan.json",
+      "problem": "Strict preview now audits the full public Python scope instead of a narrow allowlist, but the current full-scope preview still reports lint and strict mypy findings, so making that preview blocking immediately would break the normal static lane.",
+      "why_it_matters": "The no-allowlist direction is correct for long-term coverage, but promotion safety depends on separating full-scope diagnosis from blocking gates until the remaining findings are burned down or explicitly retired.",
+      "automation_candidate": "Use the strict lint/type uplift reports as the standing inventory for incremental cleanup, then promote strict-preview-audit from diagnostic to blocking only after it is clean on the full scope.",
+      "suggested_followup": "Planned follow-up: burn down the full-scope strict preview findings tracked by ops/reports/lint-uplift-plan.json and ops/reports/type-uplift-plan.json; keep the target full-scope and avoid reintroducing allowlists.",
+      "status": "planned"
+    }
+  ],
+  "task_id": "task-20260524-active-report-full-scope-reconciliation"
+}

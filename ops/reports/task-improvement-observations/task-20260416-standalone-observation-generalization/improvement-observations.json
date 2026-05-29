@@ -1,0 +1,96 @@
+{
+  "$schema": "ops/schemas/improvement-observations.schema.json",
+  "artifact_kind": "task_improvement_observations",
+  "generated_at": "2026-05-07T02:38:25Z",
+  "producer": "ops.scripts.improvement_observations_runtime",
+  "source_command": "python -m ops.scripts.improvement_observations",
+  "source_revision": "unknown",
+  "source_tree_fingerprint": "020399c9d2ef990917394771d8d148cc005c6c68725d730863edae8834a92fe7",
+  "input_fingerprints": {
+    "policy": "0ea507a6c856f415081476dad6bc1b650390c534db7dc9ffdd30bf4b634bf107",
+    "schema": "64ed45196e483c3a69c2c7251b2f4f9096641a2eb152b41d994d9cc9f3b8f4be",
+    "artifact_envelope_schema": "87fcb7b91ffc04e8180c1c3e51e309cde186ecf23f91f7974a541d0b580976de",
+    "observations": "21832bde12f045ba94628ca2d82e560488b0a31fee58b79b447f87eed9a29e4b",
+    "record_id": "f41e0a671945af49e61535034be29199a4dbf6a56107ef48148179ba1b7a7d31",
+    "scope": "d74b3c7030f6530f266d0e9a2fb49990c08cd9a554419ae7efbeaa97bb6ff805",
+    "summary": "a4864b4dcebe96f311d9524344683ac1f2a1554e5d905676428816ff2630c194"
+  },
+  "schema_version": 1,
+  "artifact_status": "current",
+  "retention_policy": "canonical_report",
+  "encoding": "utf-8",
+  "currentness": {
+    "status": "current",
+    "checked_at": "2026-05-07T02:38:25Z"
+  },
+  "record_id": "task-20260416-standalone-observation-generalization",
+  "captured_at": "2026-04-16T00:00:00Z",
+  "scope": "repo_maintenance_task",
+  "summary": "Runtime decomposition and observation-capture generalization follow-ups discovered while enabling improvement-observations for standalone maintenance tasks.",
+  "observations": [
+    {
+      "observation_id": "standalone_observation_capture_gap",
+      "surface": "ops/scripts/improvement_observations_runtime.py, ops/templates/improvement-observations.json, README.md, ops/README.md, AGENTS.md",
+      "problem": "Observation capture originally existed only inside mechanism-run scaffold, so standalone maintenance work could finish without leaving reusable follow-up artifacts.",
+      "why_it_matters": "Automation candidates discovered during repo maintenance are easy to lose if the contract only exists for run-local scaffolds.",
+      "automation_candidate": "Use one shared schema/runtime for both run-scoped and standalone task-scoped improvement observations.",
+      "suggested_followup": "Keep routing all future observation scaffolds through the shared improvement_observations runtime/CLI instead of reintroducing run-local special cases.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "run_telemetry_schema_gap",
+      "surface": "ops/scripts/experiment_telemetry_runtime.py, ops/scripts/mechanism_run_ledger_runtime.py, tests/test_report_schemas.py",
+      "problem": "run-telemetry.json previously had no schema-backed contract or frozen schema coverage, so telemetry field drift could happen silently.",
+      "why_it_matters": "Session calibration and downstream review logic can silently drift when telemetry fields change shape.",
+      "automation_candidate": "Add ops/schemas/run-telemetry.schema.json and validate telemetry writes in the runtime path.",
+      "suggested_followup": "Keep the frozen sample fixture and runtime write-path tests in sync whenever telemetry fields are added or tightened.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "hold_nonempty_manifest_contract_gap",
+      "surface": "ops/scripts/mechanism_run_workspace_runtime.py, tests/test_run_mechanism_experiment.py, tests/test_run_mechanism_experiment_steps.py, README.md, ops/README.md",
+      "problem": "The HOLD path is not strongly specified when candidate changes exist and promotion stays pending.",
+      "why_it_matters": "Workspace apply/discard behavior could drift for signoff-pending runs that produce a non-empty changed-files manifest.",
+      "automation_candidate": "Default HOLD to no-apply/no-finalize in the workspace wrapper and keep non-empty HOLD regression coverage for both step and wrapper paths.",
+      "suggested_followup": "Keep HOLD behavior locked to PROMOTE-only apply semantics, and extend the regression if new promotion decisions or explicit opt-in apply flags are introduced later.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "apply_allowlist_hard_barrier_gap",
+      "surface": "ops/scripts/filesystem_runtime.py, ops/scripts/promotion_gate_mechanism_runtime.py, ops/scripts/proposal_scope_runtime.py, tests/test_promotion_gate_equal_score.py, tests/test_run_mechanism_experiment.py, tests/test_report_schemas.py",
+      "problem": "allowed_apply_roots existed as policy intent and promotion evidence, but the live apply path lacked a shared hard validator and scope-freeze did not materialize the write allowlist for audit.",
+      "why_it_matters": "A misreported promotion decision or new write path could bypass the intended repo mutation boundary if the allowlist only lived in policy text and soft checks.",
+      "automation_candidate": "Reuse one manifest apply-guard validator across promotion gate and live apply, and freeze allowed_apply_roots into scope-freeze with schema-backed coverage.",
+      "suggested_followup": "The shared manifest apply guard now backs both promotion validation and live apply, including post-resolve containment checks plus symlink-segment rejection for live/workspace paths. Keep future apply paths wired through that same guard and preserve direct regression coverage if new mutable surfaces are introduced.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "determinism_sweep_core_generator_gap",
+      "surface": "ops/scripts/runtime_context.py, ops/scripts/mechanism_run_capture_runtime.py, ops/scripts/wiki_eval.py, ops/scripts/wiki_stage2_eval.py, ops/scripts/wiki_lint.py, ops/scripts/wiki_eval_coverage_runtime.py, ops/scripts/mechanism_assess.py, ops/scripts/planning_gate_validate_runtime.py, ops/scripts/wiki_lint_registry_runtime.py",
+      "problem": "The runtime decomposition introduced deterministic session context in wrapper, ledger, promotion, and review artifacts, but the core eval/lint/assessment/planning generators still stamp wall-clock generated_at values directly and the raw-registry backlog age rule still reads date.today() without a RuntimeContext helper.",
+      "why_it_matters": "Mechanism baseline and candidate evidence can still drift across replays even when run-local orchestration is otherwise deterministic, and date-based review candidates remain sensitive to the host clock.",
+      "automation_candidate": "Thread RuntimeContext through the remaining core generators, add a RuntimeContext.today() helper for day-based rules, and freeze generated_at plus backlog-age behavior with focused regression tests.",
+      "suggested_followup": "Keep new report generators on the same RuntimeContext contract, and add frozen-clock regression coverage whenever an artifact emits generated_at or uses day-level policy logic.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "observability_artifact_contract_gap",
+      "surface": "ops/scripts/observability_artifacts_runtime.py, ops/schemas/run-artifact-fingerprint.schema.json, ops/schemas/promotion-decision-trends.schema.json, ops/schemas/routing-provenance-aggregate.schema.json, tests/test_observability_artifacts_runtime.py, tests/test_report_schemas.py, README.md, ops/README.md",
+      "problem": "Run artifact fingerprints, promotion decision trend rollups, and session-level routing/provenance aggregates were useful audit surfaces but were not yet schema-backed writer artifacts.",
+      "why_it_matters": "Replay, promotion governance, and subagent routing audits become brittle when operators have to infer artifact integrity or session provenance from scattered files.",
+      "automation_candidate": "Generate schema-backed run fingerprint, promotion trend, and routing/provenance aggregate reports at run/session closeout.",
+      "suggested_followup": "Updated on 2026-04-23 KST by decomposing the observability artifact runtime into family modules and extending `routing-provenance-aggregate` with a schema-backed `audit_rollup.loop_health` summary that reuses session outcome metrics plus routing/executor/telemetry coverage. Updated again on 2026-04-23 KST by reusing the latest routing provenance aggregate in `auto-improve-readiness` as read-only `diagnostics.loop_health_summary` input with `gate_effect: none`, so missing aggregates surface as diagnostic absence instead of blocking readiness. Keep future observability artifacts behind explicit schemas, frozen sample coverage, and writer-path tests before making them downstream automation inputs.",
+      "status": "automated"
+    },
+    {
+      "observation_id": "subagent_routing_polish_contract_gap",
+      "surface": "ops/scripts/auto_improve_runtime.py, ops/scripts/executor_runtime.py, ops/scripts/observability_artifacts_runtime.py, ops/schemas/routing-provenance-aggregate.schema.json, tests/test_auto_improve_runtime.py, tests/test_executor_runtime.py, tests/test_observability_artifacts_runtime.py, README.md, ops/README.md, .codex/agents/README.md",
+      "problem": "Subagent routing had per-run selector/executor evidence, but executor allowlist enforcement, executor CLI boundary smoke, and session audit-rollup parity were not all pinned by tests.",
+      "why_it_matters": "A self-improvement session can become hard to audit if the session report names one executor while the runtime uses another, or if routing provenance requires manually joining many artifacts to verify role/rung/model outcomes.",
+      "automation_candidate": "Fail closed on unsupported executors, add codex_exec CLI smoke coverage, and include routing/executor/telemetry audit_rollup snapshots in the routing provenance aggregate.",
+      "suggested_followup": "Updated on 2026-04-23 KST by keeping routing/executor/telemetry parity pinned through the session report rollup builders and adding `audit_rollup.loop_health` so operators can audit retry/rework/rollback signals without joining separate reports. Keep future executor adapters behind the same allowed_executors contract and add CLI smoke plus audit_rollup parity tests before enabling them in auto-improve sessions.",
+      "status": "automated"
+    }
+  ],
+  "task_id": "task-20260416-standalone-observation-generalization"
+}
