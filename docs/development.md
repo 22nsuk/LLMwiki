@@ -12,14 +12,19 @@ make bootstrap-preflight
 
 `make help` prints the compact operator index for setup, source checks,
 report-contract, public mirror, mechanism, and release entrypoints.
-`make dev-install` creates `.venv`, installs development requirements, and
-installs the package in editable mode. `make bootstrap-preflight` records a
+`make dev-install` creates `.venv`, installs the authoritative dev dependency
+set from `pyproject.toml` (`.[dev]`), and installs the package in editable
+mode. `requirements-dev.txt` remains a compatibility/provenance snapshot of the
+same dev set and should stay aligned with `pyproject.toml`. `make bootstrap-preflight` records a
 schema-backed environment report when dependency or interpreter drift needs to
 be diagnosed.
 
 `uv.lock` is the canonical dependency lockfile. When dependency inputs change,
 refresh the lock intentionally; in review or check-only contexts, use
 `uv lock --check` to verify the lockfile is current without rewriting it.
+Operator-facing lock freshness must mirror that check result directly: a failing
+`uv lock --check` is a failing lock freshness state, not a pass with local
+interpretation.
 
 ## Supported Test Entrypoints
 

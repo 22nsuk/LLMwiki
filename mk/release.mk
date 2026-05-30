@@ -159,6 +159,9 @@ REMEDIATION_BACKLOG_CANDIDATE_OUT ?= tmp/remediation-backlog.candidate.json
 
 .PHONY: release-run-ready release-run-ready-check release-sealed-run-ready release-sealed-run-ready-plan release-sealed-run-ready-check release-auto-promotion-goal-run-id-guard release-auto-promotion-preflight release-auto-promotion-preflight-prerequisites release-auto-promotion-preflight-check release-auto-promotion-safe-cleanup release-auto-promotion-preseal release-auto-promotion-preseal-check release-auto-promotion-ready release-auto-promotion-ready-plan release-auto-promotion-ready-invalidate release-auto-promotion-operator-summary release-auto-promotion-ready-check release-preflight-current release-test-current release-public-current release-package-current release-source-package-smoke release-source-package-clean-extract release-seal-current release-evidence-converge release-evidence-converge-lane-guard release-evidence-converge-phase-1 release-evidence-converge-phase-2 release-evidence-converge-phase-3 release-finality-resettle release-verify-current release-sealed-verify release-evidence-closeout release-evidence-closeout-lane-guard release-distribution-zip release-distribution-zip-lane-guard release-source-package-check release-evidence-closeout-sealed release-evidence-closeout-sealed-core-sidecars release-evidence-closeout-sealed-sidecars release-sealed-post-seal-attestation release-evidence-closeout-sealed-check release-evidence-closeout-sealed-dry-run release-evidence-closeout-sealed-dry-run-check release-authority-sealed-preflight release-evidence-refresh-fast release-builder-full release-builder-full-lane-guard release-smoke release-smoke-lane-guard release-smoke-full release-smoke-full-reuse release-smoke-full-current-check release-smoke-fast release-smoke-fast-current-check release-smoke-fast-refresh-check release-closeout-summary release-closeout-summary-report release-closeout-summary-conditional release-clean-lane-evidence-review release-evidence-cohort release-evidence-cohort-preseal-refresh release-evidence-cohort-check learning-readiness-signoff learning-readiness-signoff-refresh learning-readiness-signoff-check learning-readiness-signoff-revalidation learning-readiness-signoff-revalidation-check release-evidence-dashboard release-evidence-dashboard-report release-lane-summary release-clean-blocker-ledger operator-release-summary learning-readiness-signoff-template learning-confirmed-legacy-reconstruction learning-claim-evidence-bundle learning-confirmed-evidence-cohort learning-claim-unlock-review learning-delta-scoreboard learning-claim-activation-report session-synopsis self-improvement-negative-lessons remediation-backlog review-archive external-report-reference-manifest external-report-reference-manifest-strict external-report-reference-manifest-release-check external-report-reference-manifest-settle external-report-action-matrix external-report-lifecycle-refresh release-worktree-clean-check release-converge-preflight release-converge-post release-converge release-converge-all-surfaces head-aligned-evidence-converge release-source-ready-snapshot release-source-ready-prepare release-source-ready-commit release-source-ready-post-verify release-source-ready-status release-source-ready release-check-preflight-converge release-check-core release-check-post-check release-check-post-converge release-check release-check-all-surfaces release-check-finalized release-conditional release-clean release-provenance-clean release-sbom-clean release-closeout-fixed-point release-closeout-post-check-finalizer-dry-run release-closeout-post-check-finalizer-ci-artifact release-closeout-fixed-point-cost-trend release-closeout-finality-attestation release-closeout-finality-verify release-closeout-batch-manifest-promote release-closeout-batch-manifest-replay-verify release-closeout-batch-manifest-verify release-audit-pack release-post-seal-attestation release-evidence-closeout-self-check
 .PHONY: release-authority-inventory
+.PHONY: release-package-current-check release-package-current-or-refresh
+.PHONY: release-source-package-smoke-current-check release-source-package-smoke-current-or-refresh
+.PHONY: release-source-package-clean-extract-current-check release-source-package-clean-extract-current-or-refresh
 
 release-authority-inventory:
 	$(PYTHON) -m ops.scripts.release_authority_inventory --vault "$(VAULT)" --out "$(RELEASE_AUTHORITY_INVENTORY_OUT)"
@@ -359,18 +362,48 @@ release-test-current:
 	$(MAKE) test-execution-summary-full-current-or-refresh
 
 release-public-current:
-	$(MAKE) public-check-summary-check
+	$(MAKE) public-check-summary-current-or-refresh
 
 release-package-current:
-	$(MAKE) release-distribution-zip RELEASE_DISTRIBUTION_ZIP_OUT="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"
+	$(MAKE) release-package-current-or-refresh
+
+release-package-current-check:
+	$(PYTHON) -m ops.scripts.release_smoke --vault "$(VAULT)" --profile fast --archive-out "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" --out "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)" --reuse-if-current --reuse-only --reuse-from "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)"
+
+release-package-current-or-refresh:
+	@if $(MAKE) release-package-current-check; then \
+		echo "release distribution zip evidence is current; reused $(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)"; \
+	else \
+		$(MAKE) release-distribution-zip RELEASE_DISTRIBUTION_ZIP_OUT="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"; \
+	fi
 
 release-source-package-smoke:
-	rm -rf "$(SOURCE_PACKAGE_SMOKE_ROOT)"
-	$(PYTHON) -m ops.scripts.source_package_smoke --vault "$(VAULT)" --source-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" --extract-parent "$(SOURCE_PACKAGE_SMOKE_EXTRACT_PARENT)" --source-python "$(SOURCE_PACKAGE_SMOKE_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --out "$(SOURCE_PACKAGE_SMOKE_OUT)"
+	$(MAKE) release-source-package-smoke-current-or-refresh
+
+release-source-package-smoke-current-check:
+	$(PYTHON) -m ops.scripts.source_package_smoke --vault "$(VAULT)" --source-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" --extract-parent "$(SOURCE_PACKAGE_SMOKE_EXTRACT_PARENT)" --source-python "$(SOURCE_PACKAGE_SMOKE_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --out "$(SOURCE_PACKAGE_SMOKE_OUT)" --reuse-if-current --reuse-only --reuse-from "$(SOURCE_PACKAGE_SMOKE_OUT)"
+
+release-source-package-smoke-current-or-refresh:
+	@if $(MAKE) release-source-package-smoke-current-check; then \
+		echo "source package smoke evidence is current; reused $(SOURCE_PACKAGE_SMOKE_OUT)"; \
+	else \
+		rm -rf "$(SOURCE_PACKAGE_SMOKE_ROOT)"; \
+		$(PYTHON) -m ops.scripts.source_package_smoke --vault "$(VAULT)" --source-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" --extract-parent "$(SOURCE_PACKAGE_SMOKE_EXTRACT_PARENT)" --source-python "$(SOURCE_PACKAGE_SMOKE_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --out "$(SOURCE_PACKAGE_SMOKE_OUT)"; \
+	fi
 
 release-source-package-clean-extract:
-	rm -rf "$(SOURCE_PACKAGE_CLEAN_EXTRACT_ROOT)"
-	$(PYTHON) -m ops.scripts.source_package_clean_extract --vault "$(VAULT)" --source-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" --extract-parent "$(SOURCE_PACKAGE_CLEAN_EXTRACT_EXTRACT_PARENT)" --source-python "$(SOURCE_PACKAGE_SMOKE_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --test-summary-out "$(SOURCE_PACKAGE_CLEAN_EXTRACT_TEST_SUMMARY_OUT)" --deselection-policy "$(SOURCE_PACKAGE_CLEAN_EXTRACT_DESELECTION_POLICY)" --pytest-mark-expr "$(SOURCE_PACKAGE_CLEAN_EXTRACT_PYTEST_MARK_EXPR)" --tests "$(SOURCE_PACKAGE_CLEAN_EXTRACT_TESTS)" --deselects "$(SOURCE_PACKAGE_CLEAN_EXTRACT_DESELECTS)" --pytest-flags="$(SOURCE_PACKAGE_CLEAN_EXTRACT_PYTEST_FLAGS)" --zip-smoke-report "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)" --out "$(SOURCE_PACKAGE_CLEAN_EXTRACT_OUT)"
+	$(MAKE) release-source-package-clean-extract-current-or-refresh
+
+release-source-package-clean-extract-current-check:
+	$(PYTHON) -m ops.scripts.source_package_clean_extract --vault "$(VAULT)" --source-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" --extract-parent "$(SOURCE_PACKAGE_CLEAN_EXTRACT_EXTRACT_PARENT)" --source-python "$(SOURCE_PACKAGE_SMOKE_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --test-summary-out "$(SOURCE_PACKAGE_CLEAN_EXTRACT_TEST_SUMMARY_OUT)" --deselection-policy "$(SOURCE_PACKAGE_CLEAN_EXTRACT_DESELECTION_POLICY)" --pytest-mark-expr "$(SOURCE_PACKAGE_CLEAN_EXTRACT_PYTEST_MARK_EXPR)" --tests "$(SOURCE_PACKAGE_CLEAN_EXTRACT_TESTS)" --deselects "$(SOURCE_PACKAGE_CLEAN_EXTRACT_DESELECTS)" --pytest-flags="$(SOURCE_PACKAGE_CLEAN_EXTRACT_PYTEST_FLAGS)" --zip-smoke-report "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)" --out "$(SOURCE_PACKAGE_CLEAN_EXTRACT_OUT)" --reuse-if-current --reuse-only --reuse-from "$(SOURCE_PACKAGE_CLEAN_EXTRACT_OUT)"
+
+release-source-package-clean-extract-current-or-refresh:
+	@if $(MAKE) release-source-package-clean-extract-current-check; then \
+		echo "source package clean extract evidence is current; reused $(SOURCE_PACKAGE_CLEAN_EXTRACT_OUT)"; \
+	else \
+		rm -rf "$(SOURCE_PACKAGE_CLEAN_EXTRACT_ROOT)"; \
+		$(PYTHON) -m ops.scripts.source_package_clean_extract --vault "$(VAULT)" --source-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)" --extract-parent "$(SOURCE_PACKAGE_CLEAN_EXTRACT_EXTRACT_PARENT)" --source-python "$(SOURCE_PACKAGE_SMOKE_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --test-summary-out "$(SOURCE_PACKAGE_CLEAN_EXTRACT_TEST_SUMMARY_OUT)" --deselection-policy "$(SOURCE_PACKAGE_CLEAN_EXTRACT_DESELECTION_POLICY)" --pytest-mark-expr "$(SOURCE_PACKAGE_CLEAN_EXTRACT_PYTEST_MARK_EXPR)" --tests "$(SOURCE_PACKAGE_CLEAN_EXTRACT_TESTS)" --deselects "$(SOURCE_PACKAGE_CLEAN_EXTRACT_DESELECTS)" --pytest-flags="$(SOURCE_PACKAGE_CLEAN_EXTRACT_PYTEST_FLAGS)" --zip-smoke-report "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)" --out "$(SOURCE_PACKAGE_CLEAN_EXTRACT_OUT)"; \
+	fi
 
 release-seal-current:
 	$(MAKE) release-evidence-closeout-sealed-sidecars
@@ -384,9 +417,9 @@ release-distribution-zip-lane-guard:
 	$(PYTHON) -m ops.scripts.execution_lane_guard --vault "$(VAULT)" --policy "$(EXECUTION_LANE_POLICY)" --target release-distribution-zip
 
 release-source-package-check:
-	$(MAKE) release-package-current
-	$(MAKE) release-source-package-smoke
-	$(MAKE) release-source-package-clean-extract
+	$(MAKE) release-package-current-or-refresh
+	$(MAKE) release-source-package-smoke-current-or-refresh
+	$(MAKE) release-source-package-clean-extract-current-or-refresh
 
 release-evidence-closeout-sealed:
 	$(MAKE) release-worktree-clean-check

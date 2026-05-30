@@ -200,6 +200,21 @@ class ReleaseEvidenceCohortTests(unittest.TestCase):
         self.assertEqual(report["cohort"]["divergence_diagnostics"]["components"], [])
         self.assertEqual(report["issues"], [])
         self.assertEqual(report["cohort_risks"], [])
+        self.assertTrue(
+            all(item["source_revision_matches_head"] for item in report["components"])
+        )
+        self.assertTrue(
+            all(item["source_tree_fingerprint_matches"] for item in report["components"])
+        )
+        self.assertTrue(
+            all(item["domain_current_check_passes"] for item in report["components"])
+        )
+        self.assertTrue(
+            all(item["operator_facing_classification"] == "current" for item in report["components"])
+        )
+        self.assertTrue(
+            all(item["classification_reason"] == "head_aligned_current" for item in report["components"])
+        )
         self.assertEqual(
             [step["target"] for step in report["ordered_chain"]],
             [
@@ -216,6 +231,51 @@ class ReleaseEvidenceCohortTests(unittest.TestCase):
         )
         self.assertEqual(validate_with_schema(report, load_schema(REPORT_SCHEMA_PATH)), [])
         self.assertEqual(validate_with_schema(report, load_schema(ENVELOPE_SCHEMA_PATH)), [])
+
+    def test_fingerprint_mismatch_classifies_component_as_reusable_current(self) -> None:
+        self._write_happy_sources()
+        self._write_source_report(
+            "generated_index",
+            source_tree_fingerprint="old-fingerprint",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        generated_index = next(item for item in report["components"] if item["name"] == "generated_index")
+        self.assertTrue(generated_index["source_revision_matches_head"])
+        self.assertFalse(generated_index["source_tree_fingerprint_matches"])
+        self.assertTrue(generated_index["domain_current_check_passes"])
+        self.assertEqual(generated_index["operator_facing_classification"], "reusable_current")
+        self.assertEqual(
+            generated_index["classification_reason"],
+            "domain_reusable_without_head_alignment",
+        )
+
+    def test_modified_after_generated_at_classifies_component_as_head_stale(self) -> None:
+        self._write_happy_sources()
+        self._touch_release_surface_file(
+            "ops/reports/generated-artifact-index.json",
+            "2026-04-29T08:00:01Z",
+        )
+
+        report = build_report(
+            self.vault,
+            context=fixed_context(),
+            provenance_mode=FILESYSTEM_MTIME,
+        )
+
+        generated_index = next(item for item in report["components"] if item["name"] == "generated_index")
+        self.assertTrue(generated_index["source_revision_matches_head"])
+        self.assertTrue(generated_index["source_tree_fingerprint_matches"])
+        self.assertFalse(generated_index["domain_current_check_passes"])
+        self.assertEqual(
+            generated_index["operator_facing_classification"],
+            "artifact_current_but_head_stale",
+        )
+        self.assertEqual(
+            generated_index["classification_reason"],
+            "domain_current_check_failed",
+        )
 
     def test_cohort_carries_test_summary_forensic_artifact_digests(self) -> None:
         self._write_happy_sources()

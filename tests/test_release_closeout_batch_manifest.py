@@ -188,6 +188,8 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
                 "ready": True,
                 "schema_invalid_artifact_count": 0,
                 "stable_contract_debt_issue_count": 0,
+                "gate_effect": "none",
+                "display_effect": "none",
                 "blocking": False,
             },
             "summary": {"accepted_risk_family_count": 0},

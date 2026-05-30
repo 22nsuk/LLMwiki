@@ -161,6 +161,85 @@ def _closeout_authority_axes(vault: Path, closeout_summary: str) -> dict[str, An
     }
 
 
+def _share_of_total(duration_ms: int, total_duration_ms: int) -> float:
+    if total_duration_ms <= 0:
+        return 0.0
+    return round(duration_ms / total_duration_ms, 6)
+
+
+def _step_group(name: str) -> str:
+    mapping = {
+        "release-test-current": "test",
+        "release-public-current": "public",
+        "release-smoke-full-reuse": "smoke",
+        "release-source-package-check": "source_package",
+    }
+    return mapping.get(name, "other")
+
+
+def _step_duration_summary(steps: list[dict[str, Any]]) -> dict[str, Any]:
+    normalized_steps = [
+        {
+            "name": str(step.get("name", "unknown")).strip() or "unknown",
+            "status": str(step.get("status", "unknown")).strip() or "unknown",
+            "duration_ms": max(0, int(step.get("duration_ms", 0) or 0)),
+        }
+        for step in steps
+    ]
+    total_duration_ms = sum(step["duration_ms"] for step in normalized_steps)
+    ordered_steps = sorted(
+        normalized_steps,
+        key=lambda item: (-item["duration_ms"], item["name"]),
+    )
+    slowest = ordered_steps[0] if ordered_steps else {"name": "", "status": "not_run", "duration_ms": 0}
+    grouped: dict[str, list[dict[str, Any]]] = {
+        "test": [],
+        "public": [],
+        "smoke": [],
+        "source_package": [],
+        "other": [],
+    }
+    for step in normalized_steps:
+        grouped[_step_group(step["name"])].append(step)
+
+    def group_summary(items: list[dict[str, Any]]) -> dict[str, Any]:
+        ordered = sorted(items, key=lambda item: (-item["duration_ms"], item["name"]))
+        total = sum(item["duration_ms"] for item in items)
+        slowest_name = ordered[0]["name"] if ordered else ""
+        return {
+            "matched_step_count": len(items),
+            "total_duration_ms": total,
+            "slowest_step_name": slowest_name,
+            "share_of_total": _share_of_total(total, total_duration_ms),
+        }
+
+    return {
+        "total_duration_ms": total_duration_ms,
+        "step_count": len(normalized_steps),
+        "passed_step_count": sum(1 for step in normalized_steps if step["status"] == "pass"),
+        "failed_step_count": sum(1 for step in normalized_steps if step["status"] == "fail"),
+        "slowest_step": {
+            "name": slowest["name"],
+            "status": slowest["status"],
+            "duration_ms": slowest["duration_ms"],
+            "share_of_total": _share_of_total(slowest["duration_ms"], total_duration_ms),
+        },
+        "steps_by_duration_desc": [
+            {
+                "name": step["name"],
+                "status": step["status"],
+                "duration_ms": step["duration_ms"],
+                "share_of_total": _share_of_total(step["duration_ms"], total_duration_ms),
+            }
+            for step in ordered_steps
+        ],
+        "comparison_groups": {
+            key: group_summary(grouped[key])
+            for key in ("test", "public", "smoke", "source_package")
+        },
+    }
+
+
 def build_manifest(
     vault: Path,
     *,
@@ -226,6 +305,7 @@ def build_manifest(
         "remote_sync": remote,
         "ignored_tracked_file_count": ignored_count,
         "steps": step_rows,
+        "step_duration_summary": _step_duration_summary(step_rows),
         "distribution_zip": zip_identity,
         "source_package_smoke": smoke,
         "failures": _unique_failures(failures),

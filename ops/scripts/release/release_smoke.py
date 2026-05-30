@@ -1268,6 +1268,8 @@ def release_smoke_reuse_diagnostics(
         "source_command": payload.get("source_command") == _source_command(profile),
         "profile": payload.get("profile") == profile,
         "status": payload.get("status") == "pass",
+        "archive_file": isinstance(payload.get("archive_file"), dict)
+        and payload["archive_file"].get("exists") is True,
         "currentness": isinstance(payload.get("currentness"), dict)
         and payload["currentness"].get("status") == "current",
         "source_tree_fingerprint": payload.get("source_tree_fingerprint") == expected.get("source_tree_fingerprint"),

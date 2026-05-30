@@ -25,6 +25,7 @@ from ops.scripts.core.release_currentness_state_runtime import (
 )
 from ops.scripts.core.release_risk_state_runtime import release_risk_identity
 from ops.scripts.gate_effect_vocabulary import (
+    GATE_EFFECT_NONE,
     GATE_EFFECT_ADVISORY,
     GATE_EFFECT_BLOCKS_EXECUTION,
     GATE_EFFECT_BLOCKS_PROMOTION,
@@ -422,6 +423,7 @@ def _component(inputs: ComponentInput) -> dict[str, Any]:
 
 
 def _artifact_freshness_gate(
+    vault: Path,
     components: list[dict[str, Any]],
     source_payloads: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
@@ -432,7 +434,28 @@ def _artifact_freshness_gate(
     schema_invalid_count = int(summary.get("schema_invalid_artifact_count", 0) or 0)
     stable_debt_count = int(summary.get("stable_contract_debt_issue_count", 0) or 0)
     status = str(payload.get("status", component.get("source_status", "unknown"))).strip() or "unknown"
-    ready = bool(component.get("ready")) and status == "pass" and schema_invalid_count == 0
+    release_owned_attention = _release_owned_artifact_freshness_attention(vault, payload)
+    if status == "pass":
+        gate_effect = GATE_EFFECT_ADVISORY if schema_invalid_count > 0 else GATE_EFFECT_NONE
+    elif status == "attention":
+        if _artifact_freshness_stable_contract_debt_only(payload):
+            gate_effect = GATE_EFFECT_ADVISORY
+        elif release_owned_attention:
+            gate_effect = GATE_EFFECT_ADVISORY
+        else:
+            gate_effect = GATE_EFFECT_NONE
+    else:
+        gate_effect = GATE_EFFECT_BLOCKS_PROMOTION
+
+    if gate_effect == GATE_EFFECT_NONE:
+        display_effect = "none"
+    elif gate_effect == GATE_EFFECT_ADVISORY:
+        display_effect = "advisory"
+    else:
+        display_effect = "blocking"
+
+    blocking = display_effect == "blocking"
+    ready = bool(component.get("ready")) and not blocking
     return {
         "path": "ops/reports/artifact-freshness-report.json",
         "load_status": str(component.get("load_status", "missing")).strip() or "missing",
@@ -440,7 +463,9 @@ def _artifact_freshness_gate(
         "ready": ready,
         "schema_invalid_artifact_count": schema_invalid_count,
         "stable_contract_debt_issue_count": stable_debt_count,
-        "blocking": not ready,
+        "gate_effect": gate_effect,
+        "display_effect": display_effect,
+        "blocking": blocking,
     }
 
 
@@ -1995,6 +2020,7 @@ def _closeout_gates(
         coherence_blockers=coherence_blockers,
         coherence_risks=coherence_risks,
         artifact_freshness_gate=_artifact_freshness_gate(
+            vault,
             collection.components,
             collection.source_payloads,
         ),

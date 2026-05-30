@@ -818,6 +818,8 @@
         "ready",
         "schema_invalid_artifact_count",
         "stable_contract_debt_issue_count",
+        "gate_effect",
+        "display_effect",
         "blocking"
       ],
       "properties": {
@@ -843,6 +845,17 @@
         "stable_contract_debt_issue_count": {
           "type": "integer",
           "minimum": 0
+        },
+        "gate_effect": {
+          "$ref": "https://llmwiki/schemas/gate-effect-vocabulary#/$defs/gate_effect"
+        },
+        "display_effect": {
+          "type": "string",
+          "enum": [
+            "none",
+            "advisory",
+            "blocking"
+          ]
         },
         "blocking": {
           "type": "boolean"

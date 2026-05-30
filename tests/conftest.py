@@ -4,12 +4,14 @@ import sys
 from pathlib import Path
 
 import pytest
+from hypothesis import HealthCheck, settings
 
 BARE_PYTEST_GUIDANCE = (
     "plain `pytest` is not a supported entrypoint for this repository. "
     "Use `make test`, `make check`, `make public-check`, or `.venv/bin/python -m pytest ...` instead; "
     "the supported entrypoints preserve repo import semantics and the documented pytest plugin policy."
 )
+HYPOTHESIS_PROFILE = "llmwiki"
 
 
 def _is_bare_pytest_invocation(argv0: str) -> bool:
@@ -20,6 +22,14 @@ def pytest_configure(config: pytest.Config) -> None:
     del config
     if _is_bare_pytest_invocation(sys.argv[0]):
         raise pytest.UsageError(BARE_PYTEST_GUIDANCE)
+    settings.register_profile(
+        HYPOTHESIS_PROFILE,
+        max_examples=100,
+        deadline=None,
+        derandomize=True,
+        suppress_health_check=(HealthCheck.function_scoped_fixture,),
+    )
+    settings.load_profile(HYPOTHESIS_PROFILE)
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:

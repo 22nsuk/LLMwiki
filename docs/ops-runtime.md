@@ -43,9 +43,16 @@ promote to the durable path.
 General rule:
 
 - canonical evidence is written to local-only `ops/reports/` or `ops/operator/`
-  paths and should not be tracked as public source;
+  paths and should not be tracked as public source; if stale evidence is kept
+  for investigation, archive or mark it non-canonical instead of leaving it in
+  the active authority set;
 - check-only or advisory scratch output lives under `tmp/`;
 - release packages, source-package extracts, and audit packs live under `build/`.
+
+Operator-facing `current` or reusable-evidence decisions should come from the
+objective lane checks that bind HEAD, source fingerprint, and domain-specific
+currentness. Self-declared current fields are diagnostic metadata, not
+authority by themselves.
 
 ## Compatibility Surface
 

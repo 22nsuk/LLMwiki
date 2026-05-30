@@ -19,7 +19,11 @@ from ops.scripts.artifact_io_runtime import (
     load_optional_json_object_with_diagnostics,
     write_schema_backed_report,
 )
-from ops.scripts.core.release_currentness_state_runtime import currentness_field
+from ops.scripts.core.release_currentness_state_runtime import (
+    CURRENTNESS_DOMAIN_MODE_REUSABLE,
+    currentness_classification_record,
+    currentness_field,
+)
 from ops.scripts.gate_effect_vocabulary import (
     GATE_EFFECT_ADVISORY,
     GATE_EFFECT_BLOCKS_PROMOTION,
@@ -29,6 +33,7 @@ from ops.scripts.output_runtime import display_path
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.runtime_context import RuntimeContext
 from ops.scripts.schema_constants_runtime import RELEASE_EVIDENCE_COHORT_SCHEMA_PATH
+from ops.scripts.source_revision_runtime import resolve_source_revision
 from ops.scripts.source_tree_fingerprint_runtime import (
     DEFAULT_SOURCE_TREE_CHANGE_PATH_LIMIT,
     producer_input_fingerprint,
@@ -272,6 +277,8 @@ def _component_from_payload(
     provenance_mode: str,
     report_mtime: str,
     modified_after_generated_at: bool,
+    head_revision: str,
+    current_source_tree_fingerprint: str,
 ) -> dict[str, Any]:
     payload = canonical_artifact_payload(payload)
     generated_at = str(payload.get("generated_at", "")).strip()
@@ -283,6 +290,19 @@ def _component_from_payload(
     evidence_artifacts = payload.get("evidence_artifacts")
     if not isinstance(evidence_artifacts, list):
         evidence_artifacts = []
+    source_revision = str(payload.get("source_revision", "")).strip()
+    currentness_status = currentness_field(payload, "status") or "unknown"
+    currentness_checked_at = currentness_field(payload, "checked_at")
+    currentness_record = currentness_classification_record(
+        report_path=spec.path,
+        self_declared_status=currentness_status,
+        source_revision=source_revision,
+        head_revision=head_revision,
+        source_tree_fingerprint=str(payload.get("source_tree_fingerprint", "")).strip(),
+        current_source_tree_fingerprint=current_source_tree_fingerprint,
+        domain_current_check_passes=not modified_after_generated_at,
+        domain_mode=CURRENTNESS_DOMAIN_MODE_REUSABLE,
+    )
     raw_clean_lane_blocking_count = payload.get("clean_lane_blocking_risk_family_count")
     if raw_clean_lane_blocking_count is None:
         raw_clean_lane_blocking_count = len(accepted_risks) if isinstance(accepted_risks, list) else 0
@@ -294,11 +314,19 @@ def _component_from_payload(
         "load_status": load_status,
         "source_status": str(payload.get("status", "")).strip() or "unknown",
         "generated_at": generated_at,
+        "source_revision": source_revision,
         "source_tree_fingerprint": str(payload.get("source_tree_fingerprint", "")).strip(),
         "producer_input_fingerprint": producer_input_fingerprint(payload),
         "artifact_status": str(payload.get("artifact_status", "")).strip() or "unknown",
-        "currentness_status": currentness_field(payload, "status") or "unknown",
-        "currentness_checked_at": currentness_field(payload, "checked_at"),
+        "currentness_status": currentness_status,
+        "currentness_checked_at": currentness_checked_at,
+        "source_revision_matches_head": currentness_record["source_revision_matches_head"],
+        "source_tree_fingerprint_matches": currentness_record["source_tree_fingerprint_matches"],
+        "domain_current_check_passes": currentness_record["domain_current_check_passes"],
+        "operator_facing_classification": currentness_record[
+            "operator_facing_classification"
+        ],
+        "classification_reason": currentness_record["classification_reason"],
         "provenance_mode": provenance_mode,
         "report_mtime_source": provenance_mode,
         "report_mtime": report_mtime,
@@ -337,11 +365,17 @@ def _empty_component(
         "load_status": load_status,
         "source_status": "unknown",
         "generated_at": "",
+        "source_revision": "",
         "source_tree_fingerprint": "",
         "producer_input_fingerprint": "",
         "artifact_status": "unknown",
         "currentness_status": "unknown",
         "currentness_checked_at": "",
+        "source_revision_matches_head": False,
+        "source_tree_fingerprint_matches": False,
+        "domain_current_check_passes": False,
+        "operator_facing_classification": "artifact_current_but_head_stale",
+        "classification_reason": "source_tree_fingerprint_mismatch",
         "provenance_mode": "",
         "report_mtime_source": "",
         "report_mtime": "",
@@ -382,6 +416,8 @@ def _load_component(
     *,
     provenance_mode: str,
     zip_mtimes: dict[str, dt.datetime],
+    head_revision: str,
+    current_source_tree_fingerprint: str,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     path = vault / spec.path
     payload, diagnostics = load_optional_json_object_with_diagnostics(path)
@@ -428,6 +464,8 @@ def _load_component(
                 provenance_mode=provenance_mode,
                 report_mtime=report_mtime,
                 modified_after_generated_at=modified_after_generated_at,
+                head_revision=head_revision,
+                current_source_tree_fingerprint=current_source_tree_fingerprint,
             ),
             currentness_issues,
         )
@@ -456,6 +494,8 @@ def _load_component(
                 provenance_mode=provenance_mode,
                 report_mtime=report_mtime,
                 modified_after_generated_at=modified_after_generated_at,
+                head_revision=head_revision,
+                current_source_tree_fingerprint=current_source_tree_fingerprint,
             ),
             kind_issues,
         )
@@ -481,6 +521,8 @@ def _load_component(
             provenance_mode=provenance_mode,
             report_mtime=report_mtime,
             modified_after_generated_at=modified_after_generated_at,
+            head_revision=head_revision,
+            current_source_tree_fingerprint=current_source_tree_fingerprint,
         ),
         component_issues,
     )
@@ -774,6 +816,7 @@ def build_report(
     runtime_context = context or RuntimeContext.from_policy(policy)
     generated_at = runtime_context.isoformat_z()
     current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
+    head_revision = resolve_source_revision(vault).revision
     zip_metadata_path = None
     if zip_metadata:
         zip_metadata_path = Path(zip_metadata)
@@ -790,6 +833,8 @@ def build_report(
             spec,
             provenance_mode=provenance_mode,
             zip_mtimes=zip_mtimes,
+            head_revision=head_revision,
+            current_source_tree_fingerprint=current_source_tree_fingerprint,
         )
         components.append(component)
         component_issues.extend(issues)

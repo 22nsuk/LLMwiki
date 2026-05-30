@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
+import io
 import json
 import tempfile
 import unittest
@@ -16,6 +18,8 @@ from ops.scripts.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.source_package_clean_extract import (
     SourcePackageCleanExtractRequest,
     build_report,
+    main,
+    reusable_report_diagnostics,
     write_report,
 )
 
@@ -251,6 +255,197 @@ class SourcePackageCleanExtractTests(unittest.TestCase):
         self.assertEqual(report["extract"]["archive_root_source"], "explicit_extract_root")
         self.assertFalse(report["zip_smoke_report"]["archive_budget_pass"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_reuse_diagnostics_accept_only_current_passing_matching_inputs(self) -> None:
+        extract_parent = self.vault / "tmp" / "source-package-check" / "extract"
+        source_zip = self._write_source_zip("LLMwiki")
+        self._write_zip_smoke()
+
+        def fake_run(
+            command: list[str],
+            *,
+            cwd: Path,
+            timeout_seconds: int,
+            heartbeat_interval_seconds: int | None = None,
+            heartbeat_callback: Callable[[CommandHeartbeat], None] | None = None,
+        ) -> TimedProcessResult:
+            if "ops.scripts.script_output_surfaces" in command:
+                out_path = cwd / command[command.index("--out") + 1]
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                out_path.write_text("{}", encoding="utf-8")
+            if "ops.scripts.test_execution_summary" in command:
+                out_path = cwd / command[command.index("--out") + 1]
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                out_path.write_text(
+                    json.dumps(
+                        {
+                            "status": "pass",
+                            "deselection_lifecycle": {
+                                "status": "pass",
+                                "actual_deselected_count": 0,
+                                "max_allowed_deselected_count": 0,
+                                "over_budget": False,
+                                "expires_at": "",
+                                "next_action": "none",
+                            },
+                        },
+                        sort_keys=True,
+                    ),
+                    encoding="utf-8",
+                )
+            return TimedProcessResult(
+                args=command,
+                returncode=0,
+                stdout="ok",
+                stderr="",
+                timed_out=False,
+                timeout_seconds=timeout_seconds,
+                termination_reason="",
+                heartbeat_interval_seconds=heartbeat_interval_seconds or 0,
+                observation_mode="process_heartbeat",
+            )
+
+        with patch("ops.scripts.source_package_clean_extract.run_with_timeout", fake_run):
+            report = build_report(
+                SourcePackageCleanExtractRequest(
+                    vault=self.vault,
+                    source_zip=source_zip,
+                    extract_parent=extract_parent,
+                    source_python="/usr/bin/python3",
+                    ruff_targets="ops/scripts tests",
+                    mypy_targets="ops/scripts",
+                    test_summary_out="tmp/source-package-pytest-summary.json",
+                    deselection_policy="ops/policies/report-contract-deselections.json",
+                    pytest_mark_expr="not release_sealing",
+                    tests="tests",
+                    deselects="",
+                    pytest_flags="-q",
+                    zip_smoke_report="tmp/release-distribution-zip-smoke.json",
+                    context=fixed_context(),
+                )
+            )
+        destination = write_report(self.vault, report)
+        request = SourcePackageCleanExtractRequest(
+            vault=self.vault,
+            source_zip=source_zip,
+            extract_parent=extract_parent,
+            source_python="/usr/bin/python3",
+            ruff_targets="ops/scripts tests",
+            mypy_targets="ops/scripts",
+            test_summary_out="tmp/source-package-pytest-summary.json",
+            deselection_policy="ops/policies/report-contract-deselections.json",
+            pytest_mark_expr="not release_sealing",
+            tests="tests",
+            deselects="",
+            pytest_flags="-q",
+            zip_smoke_report="tmp/release-distribution-zip-smoke.json",
+            context=fixed_context(),
+        )
+        diagnostics = reusable_report_diagnostics(request, destination)
+        self.assertTrue(diagnostics["reusable"])
+
+        source_zip.write_bytes(b"changed")
+        stale = reusable_report_diagnostics(request, destination)
+        self.assertFalse(stale["reusable"])
+        self.assertIn("source_zip_sha256", stale["reason"])
+
+    def test_cli_reuse_only_fails_fast_when_clean_extract_is_stale(self) -> None:
+        extract_parent = self.vault / "tmp" / "source-package-check" / "extract"
+        source_zip = self._write_source_zip("LLMwiki")
+        self._write_zip_smoke()
+
+        def fake_run(
+            command: list[str],
+            *,
+            cwd: Path,
+            timeout_seconds: int,
+            heartbeat_interval_seconds: int | None = None,
+            heartbeat_callback: Callable[[CommandHeartbeat], None] | None = None,
+        ) -> TimedProcessResult:
+            if "ops.scripts.script_output_surfaces" in command:
+                out_path = cwd / command[command.index("--out") + 1]
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                out_path.write_text("{}", encoding="utf-8")
+            if "ops.scripts.test_execution_summary" in command:
+                out_path = cwd / command[command.index("--out") + 1]
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                out_path.write_text(
+                    json.dumps({"status": "pass", "deselection_lifecycle": {"status": "pass"}}, sort_keys=True),
+                    encoding="utf-8",
+                )
+            return TimedProcessResult(
+                args=command,
+                returncode=0,
+                stdout="ok",
+                stderr="",
+                timed_out=False,
+                timeout_seconds=timeout_seconds,
+                termination_reason="",
+                heartbeat_interval_seconds=heartbeat_interval_seconds or 0,
+                observation_mode="process_heartbeat",
+            )
+
+        with patch("ops.scripts.source_package_clean_extract.run_with_timeout", fake_run):
+            report = build_report(
+                SourcePackageCleanExtractRequest(
+                    vault=self.vault,
+                    source_zip=source_zip,
+                    extract_parent=extract_parent,
+                    source_python="/usr/bin/python3",
+                    ruff_targets="ops/scripts tests",
+                    mypy_targets="ops/scripts",
+                    test_summary_out="tmp/source-package-pytest-summary.json",
+                    deselection_policy="ops/policies/report-contract-deselections.json",
+                    pytest_mark_expr="not release_sealing",
+                    tests="tests",
+                    deselects="",
+                    pytest_flags="-q",
+                    zip_smoke_report="tmp/release-distribution-zip-smoke.json",
+                    context=fixed_context(),
+                )
+            )
+        out_path = self.vault / "ops" / "reports" / "source-package-clean-extract.json"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        source_zip.write_bytes(b"changed")
+
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            rc = main(
+                [
+                    "--vault",
+                    str(self.vault),
+                    "--source-zip",
+                    str(source_zip),
+                    "--extract-parent",
+                    str(extract_parent),
+                    "--source-python",
+                    "/usr/bin/python3",
+                    "--ruff-targets",
+                    "ops/scripts tests",
+                    "--mypy-targets",
+                    "ops/scripts",
+                    "--test-summary-out",
+                    "tmp/source-package-pytest-summary.json",
+                    "--deselection-policy",
+                    "ops/policies/report-contract-deselections.json",
+                    "--pytest-mark-expr",
+                    "not release_sealing",
+                    "--tests",
+                    "tests",
+                    "--pytest-flags=-q",
+                    "--zip-smoke-report",
+                    "tmp/release-distribution-zip-smoke.json",
+                    "--out",
+                    "tmp/source-package-clean-extract-check.json",
+                    "--reuse-if-current",
+                    "--reuse-only",
+                    "--reuse-from",
+                    "ops/reports/source-package-clean-extract.json",
+                ]
+            )
+        self.assertEqual(rc, 1)
+        self.assertFalse((self.vault / "tmp" / "source-package-clean-extract-check.json").exists())
 
 
 if __name__ == "__main__":

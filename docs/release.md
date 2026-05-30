@@ -18,10 +18,12 @@ surface comparison; this document owns release evidence and staged authority.
 - `make release-check`: check-only release gate for the current tree.
 - `make release-check-all-surfaces`: release check plus public policy and public export checks.
 - `make release-run-ready`: one command to verify the current committed tree,
-  emit canonical report-contract and full-suite test summaries, run public check,
-  refresh/reuse current full release-smoke evidence, run package build and
-  source-package smoke, then write the runnable release-run manifest. It removes
-  any older auto-promotion-ready manifest before refreshing runnable authority.
+  emit canonical report-contract and full-suite test summaries, refresh/reuse
+  current public-check evidence,
+  refresh/reuse current full release-smoke evidence, refresh/reuse current
+  source ZIP, source-package smoke, and clean-extract replay evidence, then
+  write the runnable release-run manifest. It removes any older
+  auto-promotion-ready manifest before refreshing runnable authority.
 - `make release-run-ready-check`: revalidate the existing manifest against the
   current HEAD, source fingerprint, source ZIP, and source-package smoke report.
 - `make release-sealed-run-ready-plan`: inspect runnable authority evidence and
@@ -33,8 +35,10 @@ surface comparison; this document owns release evidence and staged authority.
   attestation, run the sealed rehearsal check, and write the sealed-run
   manifest. It requires current passing runnable evidence and does not rerun the
   runnable stage. The operator summary is generated for Stage 3 reuse, but it is
-  not part of the sealed-run authority sidecar set. It also removes any older
-  auto-promotion-ready manifest before refreshing sealed authority.
+  not part of the sealed-run authority sidecar set. Archived or preserved stale
+  sidecars must also stay out of that active authority set and remain explicit
+  non-authoritative evidence only. It also removes any older auto-promotion-ready
+  manifest before refreshing sealed authority.
 - `make release-sealed-run-ready-check`: revalidate existing sealed evidence
   without rerunning tests or rebuilding the package.
 - `make release-auto-promotion-ready-plan`: inspect preflight, runnable,
@@ -176,6 +180,10 @@ authorization is the gate. Legacy values such as `active`, `review_required`,
 `shadow`, and `accepted_risk` are compatibility inputs only and must not be
 emitted by new reports.
 
+Currentness is also objective. Reuse or operator-facing `current` should come
+from the live HEAD/source-fingerprint/domain checks owned by the relevant lane,
+not from a report's self-declared `current` field alone.
+
 ## Auto-Promotion Closeout Runbook
 
 Use this runbook when the goal is to prove unattended release promotion for the
@@ -243,6 +251,12 @@ compatibility alias for old readers only; `status=pass` without
 `release_authority_status=clean_pass` and `machine_release_allowed=true`
 means `conditional_pass` with machine release blocked.
 
+Source closeout and sealed-run evidence are separate authority axes. A source
+closeout that remains unsealed or otherwise diagnostic does not, by itself,
+invalidate a current sealed-run verdict for the bound source ZIP. Consumers
+should show both authorities as-is instead of collapsing them into a synthetic
+"inconsistent state" warning.
+
 If a lower stage fails, fix the owning lower-stage evidence first. Stage 3 should
 not compensate for stale run-ready evidence, stale sealed evidence, mixed
 fingerprints, accepted risk, gate attention, or learning blockers.
@@ -251,13 +265,19 @@ fingerprints, accepted risk, gate attention, or learning blockers.
 
 - `build/release/release-run-manifest.json` is runnable-only authority. It binds
   the current HEAD, source fingerprint, source ZIP, source-package smoke report,
-  and executed steps. Remote branch sync is recorded as diagnostic context, but
+  and executed steps. Its `step_duration_summary` records total runtime,
+  slowest step, and grouped duration comparisons for test/public/smoke/
+  source-package lanes. Each step row also records `summary_mode=reused|executed`.
+  Composite steps are conservative: if any subwork executes, the top-level step
+  is recorded as `executed`. Remote branch sync is recorded as diagnostic context, but
   it is not a run-ready blocker because this stage answers whether the current
   local commit is runnable.
 - `build/release/release-sealed-run-manifest.json` is sealed package authority.
   It binds the run manifest, source ZIP digest, post-seal attestation, and
   sealed rehearsal check. Batch/external sidecar legacy statuses are not treated
-  as auto-promotion verdicts.
+  as auto-promotion verdicts. Preserved stale sidecars belong in archived or
+  otherwise non-authoritative evidence surfaces, not in the active sealed
+  authority set.
 - `build/release/operator-release-summary.json` is generated during sealed-run
   readiness for Stage 3 reuse. It remains diagnostic input and is not included in
   `release-sealed-run-manifest.json` as sealed package authority.
@@ -291,11 +311,15 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   evidence fails fast; explicit refresh targets rerun tests. `release-run-ready`
   emits the canonical full-suite summary while it runs the test stage, so
   preseal and auto-promotion checks should reuse that evidence by currentness
-  check instead of rerunning the full suite. `release-check` does not rerun the
-  unit subset after this full-suite evidence is current.
+  check instead of rerunning the full suite. Self-declared currentness is only a
+  diagnostic hint; HEAD/source-fingerprint/domain-currentness checks are the
+  authority. `release-check` does not rerun the unit subset after this full-suite
+  evidence is current.
 - `ops/reports/public-check-summary.json` proves the exported public tree contract.
-  `public-check-all-check` reuses this report only when the same
-  `source_tree_fingerprint` still matches.
+  `public-check-summary-current-check`, `public-check-all-check`, and
+  `release-run-ready` reuse this report only when the same
+  `source_tree_fingerprint` still matches; stale evidence reruns the full public
+  export check lane.
 - `ops/reports/release-closeout-finality-attestation.json` is diagnostic only;
   release authority is the staged `release-run`, `release-sealed-run`, and
   `release-auto-promotion-ready` manifests under `build/release/`.

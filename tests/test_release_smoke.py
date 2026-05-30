@@ -667,6 +667,20 @@ class ReleaseSmokeTest(unittest.TestCase):
             self.assertTrue(diagnostics["reusable"])
             self.assertEqual(diagnostics["reason"], "current_passing_release_smoke_report")
 
+            report["archive_file"]["exists"] = False
+            destination.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+            missing_archive_diagnostics = release_smoke_reuse_diagnostics(
+                vault,
+                destination,
+                profile=FULL_PROFILE,
+                resolved_policy_path=policy_path,
+                context=context,
+            )
+            self.assertFalse(missing_archive_diagnostics["reusable"])
+            self.assertIn("archive_file", missing_archive_diagnostics["reason"])
+
+            destination.write_text(json.dumps(report | {"archive_file": {**report["archive_file"], "exists": True}}, ensure_ascii=False, indent=2), encoding="utf-8")
+
             (vault / "README.md").write_text("changed\n", encoding="utf-8")
             stale_diagnostics = release_smoke_reuse_diagnostics(
                 vault,

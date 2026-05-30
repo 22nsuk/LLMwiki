@@ -47,6 +47,30 @@ def _tail(text: str, *, limit: int = 4000) -> str:
     return text if len(text) <= limit else text[-limit:]
 
 
+def _summary_mode(name: str, *, stdout_tail: str, stderr_tail: str) -> str:
+    combined = f"{stdout_tail}\n{stderr_tail}"
+    if name == "release-public-current":
+        return (
+            "reused"
+            if "public check summary is current; reused" in combined
+            else "executed"
+        )
+    if name == "release-smoke-full-reuse":
+        return (
+            "reused"
+            if '"summary_mode": "reused"' in combined or "reused_from=" in combined
+            else "executed"
+        )
+    if name == "release-source-package-check":
+        required_signals = (
+            "release distribution zip evidence is current; reused",
+            "source package smoke evidence is current; reused",
+            "source package clean extract evidence is current; reused",
+        )
+        return "reused" if all(signal in combined for signal in required_signals) else "executed"
+    return "executed"
+
+
 def _command_step(
     *,
     vault: Path,
@@ -60,16 +84,19 @@ def _command_step(
     result = run_with_timeout(command, cwd=vault, timeout_seconds=timeout_seconds)
     after = release_source_tree_fingerprint(vault)
     status = "pass" if result.returncode == 0 and not result.timed_out and after == expected_fingerprint else "fail"
+    stdout_tail = sanitize_report_text(vault, _tail(result.stdout))
+    stderr_tail = sanitize_report_text(vault, _tail(result.stderr))
     return {
         "name": name,
         "status": status,
+        "summary_mode": _summary_mode(name, stdout_tail=stdout_tail, stderr_tail=stderr_tail),
         "command": [sanitize_report_text(vault, item) for item in command],
         "returncode": result.returncode,
         "duration_ms": int(round((time.monotonic() - started) * 1000)),
         "source_tree_fingerprint_before": before,
         "source_tree_fingerprint_after": after,
-        "stdout_tail": sanitize_report_text(vault, _tail(result.stdout)),
-        "stderr_tail": sanitize_report_text(vault, _tail(result.stderr)),
+        "stdout_tail": stdout_tail,
+        "stderr_tail": stderr_tail,
     }
 
 
@@ -88,6 +115,7 @@ def _synthetic_preflight(vault: Path, expected_fingerprint: str) -> dict[str, An
     return {
         "name": "release-preflight-current",
         "status": status,
+        "summary_mode": "executed",
         "command": [],
         "returncode": 0 if status == "pass" else 1,
         "duration_ms": 0,

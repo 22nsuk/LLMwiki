@@ -17,6 +17,7 @@ from .artifact_freshness_runtime import build_canonical_report_envelope
 from .artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
     load_optional_json_object_with_diagnostics,
+    read_json_object,
     write_schema_backed_report,
 )
 from .command_runtime import CommandHeartbeat, run_with_timeout
@@ -27,6 +28,9 @@ from .policy_runtime import (
     report_path,
 )
 from .runtime_context import RuntimeContext
+from .schema_runtime import load_schema, validate_with_schema
+from .source_revision_runtime import resolve_source_revision
+from .source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 DEFAULT_OUT = "ops/reports/source-package-clean-extract.json"
 PRODUCER = "ops.scripts.source_package_clean_extract"
@@ -644,6 +648,108 @@ def write_report(vault: Path, report: dict[str, Any], out_path: str | None = Non
     )
 
 
+def reusable_report_diagnostics(
+    request: SourcePackageCleanExtractRequest,
+    path_value: str | Path,
+) -> dict[str, Any]:
+    path = resolve_vault_path(request.vault, path_value)
+    diagnostics: dict[str, Any] = {
+        "reusable": False,
+        "path": display_path(request.vault, path),
+        "reason": "",
+    }
+    if not path.is_file():
+        diagnostics["reason"] = "report_missing"
+        return diagnostics
+    try:
+        payload = read_json_object(path, context=display_path(request.vault, path))
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        diagnostics["reason"] = f"report_unreadable:{type(exc).__name__}"
+        return diagnostics
+    schema_errors = validate_with_schema(payload, load_schema(request.vault / SCHEMA_PATH))
+    if schema_errors:
+        diagnostics["reason"] = f"schema_invalid:{schema_errors[0]}"
+        return diagnostics
+    build_context = _build_context(request)
+    paths = _extract_paths(request, build_context.policy)
+    source_zip_exists = paths.source_zip.is_file()
+    source_zip_digest = _sha256_file(paths.source_zip) if source_zip_exists else ""
+    expected_input_fingerprints = _canonical_envelope(
+        request,
+        build_context,
+        paths,
+        _CleanExtractExecution(
+            source_zip_exists=source_zip_exists,
+            source_zip_digest=source_zip_digest,
+            extract_status="pass",
+            extract_summary="expected",
+            command_results=[],
+            test_summary_path=paths.extract_root / request.test_summary_out,
+            test_summary={},
+            test_summary_load_status="ok",
+            deselection_budget={
+                "status": "pass",
+                "load_status": "ok",
+                "actual_deselected_count": 0,
+                "max_allowed_deselected_count": 0,
+                "over_budget": False,
+                "expires_at": "",
+                "next_action": "none",
+            },
+            zip_smoke=_zip_smoke_status(request.vault, request.zip_smoke_report),
+            command_status="pass",
+            script_output_surfaces_status="pass",
+            source_package_reproducibility_status="pass",
+            heartbeat_observability={
+                "status": "pass",
+                "command_count": 0,
+                "heartbeat_enabled_command_count": 0,
+                "heartbeat_event_count": 0,
+                "max_heartbeat_count": 0,
+                "max_quiet_seconds": 0,
+                "quiet_command_names": [],
+                "unobserved_command_names": [],
+                "next_action": "none",
+            },
+            status="pass",
+        ),
+    )["input_fingerprints"]
+    checks = {
+        "artifact_kind": payload.get("artifact_kind") == "source_package_clean_extract",
+        "producer": payload.get("producer") == PRODUCER,
+        "status": payload.get("status") == "pass",
+        "currentness": isinstance(payload.get("currentness"), dict)
+        and payload["currentness"].get("status") == "current",
+        "source_revision": payload.get("source_revision") == resolve_source_revision(request.vault).revision,
+        "source_tree_fingerprint": payload.get("source_tree_fingerprint") == release_source_tree_fingerprint(request.vault),
+        "input_fingerprints": payload.get("input_fingerprints") == expected_input_fingerprints,
+        "source_zip_exists": isinstance(payload.get("source_zip"), dict)
+        and payload["source_zip"].get("exists") is True,
+        "source_zip_sha256": isinstance(payload.get("source_zip"), dict)
+        and payload["source_zip"].get("sha256") == source_zip_digest,
+        "test_source_package_status": payload.get("test_source_package_status") == "pass",
+        "deselection_budget_status": isinstance(payload.get("deselection_budget_status"), dict)
+        and payload["deselection_budget_status"].get("status") == "pass",
+        "source_package_reproducibility_status": payload.get("source_package_reproducibility_status") == "pass",
+        "zip_smoke_report_status": isinstance(payload.get("zip_smoke_report"), dict)
+        and payload["zip_smoke_report"].get("status") == "pass",
+    }
+    failed = [name for name, passed in checks.items() if not passed]
+    if failed:
+        diagnostics["reason"] = f"not_current:{','.join(failed)}"
+        diagnostics["checks"] = checks
+        return diagnostics
+    diagnostics.update(
+        {
+            "reusable": True,
+            "reason": "current_passing_source_package_clean_extract",
+            "generated_at": str(payload.get("generated_at", "")),
+            "source_tree_fingerprint": str(payload.get("source_tree_fingerprint", "")),
+        }
+    )
+    return diagnostics
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run and record clean-extract source package checks.")
     parser.add_argument("--vault", default=".")
@@ -669,6 +775,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--pytest-flags", default="")
     parser.add_argument("--zip-smoke-report", required=True)
     parser.add_argument("--timeout-seconds", type=int, default=DEFAULT_TIMEOUT_SECONDS)
+    parser.add_argument("--reuse-if-current", action="store_true")
+    parser.add_argument("--reuse-from")
+    parser.add_argument(
+        "--reuse-only",
+        action="store_true",
+        help="With --reuse-if-current, fail instead of rerunning when clean-extract evidence is stale.",
+    )
     parser.add_argument(
         "--heartbeat-interval-seconds",
         type=int,
@@ -682,8 +795,8 @@ def main(argv: list[str] | None = None) -> int:
     if bool(args.extract_root) == bool(args.extract_parent):
         raise SystemExit("exactly one of --extract-root or --extract-parent is required")
     vault = Path(args.vault).resolve()
-    report = build_report(
-        vault,
+    request = SourcePackageCleanExtractRequest(
+        vault=vault,
         source_zip=resolve_vault_path(vault, args.source_zip),
         extract_root=resolve_vault_path(vault, args.extract_root) if args.extract_root else None,
         extract_parent=resolve_vault_path(vault, args.extract_parent) if args.extract_parent else None,
@@ -701,6 +814,15 @@ def main(argv: list[str] | None = None) -> int:
         heartbeat_interval_seconds=args.heartbeat_interval_seconds,
         policy_path=args.policy_path,
     )
+    if args.reuse_if_current:
+        diagnostics = reusable_report_diagnostics(request, args.reuse_from or args.out)
+        if diagnostics["reusable"]:
+            print(json.dumps({"summary_mode": "reused", **diagnostics}, ensure_ascii=False, indent=2))
+            return 0
+        print(json.dumps({"summary_mode": "executed", "reuse_diagnostics": diagnostics}, ensure_ascii=False, indent=2))
+        if args.reuse_only:
+            return 1
+    report = build_report(request)
     path = write_report(vault, report, args.out)
     print(display_path(vault, path))
     return 0 if report["status"] == "pass" else 1

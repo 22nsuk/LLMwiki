@@ -44,6 +44,8 @@ package and schema.
 - Keep public export reproducible without private corpus state.
 - Keep generated artifact promotion explicit: candidate under `tmp/`, validated durable report under policy-approved output.
 - Keep compatibility aliases only as migration surfaces; new docs should teach current package paths.
+- Keep authority axes explicit; do not collapse source-closeout, sealed-run, and diagnostic evidence into one synthetic status.
+- Keep operator-facing currentness computed from live HEAD/fingerprint/domain checks, not from self-declared current fields alone.
 
 ## Entry Documents
 

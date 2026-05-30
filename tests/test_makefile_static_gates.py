@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 import sys
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -1409,23 +1410,44 @@ class MakefileStaticGateTests(unittest.TestCase):
             "SOURCE_PACKAGE_CLEAN_EXTRACT_ROOT",
             "tmp/source-package-clean-extract",
         )
+        self.assertIn("release-package-current-check", _target_block(text, ".PHONY"))
+        self.assertIn("release-package-current-or-refresh", _target_block(text, ".PHONY"))
+        self.assertIn("release-source-package-smoke-current-check", _target_block(text, ".PHONY"))
+        self.assertIn("release-source-package-smoke-current-or-refresh", _target_block(text, ".PHONY"))
         self.assertIn("release-source-package-clean-extract", _target_block(text, ".PHONY"))
+        self.assertIn("release-source-package-clean-extract-current-check", _target_block(text, ".PHONY"))
+        self.assertIn("release-source-package-clean-extract-current-or-refresh", _target_block(text, ".PHONY"))
+        self.assertIn("--reuse-if-current", _target_block(text, "release-package-current-check"))
+        self.assertIn(
+            '$(MAKE) release-package-current-check',
+            _target_block(text, "release-package-current-or-refresh"),
+        )
+        self.assertIn(
+            '$(MAKE) release-distribution-zip RELEASE_DISTRIBUTION_ZIP_OUT="$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
+            _target_block(text, "release-package-current-or-refresh"),
+        )
         _assert_recipe_contains_tokens(
             self,
             text,
-            "release-source-package-smoke",
+            "release-source-package-smoke-current-check",
             (
                 "ops.scripts.source_package_smoke",
                 '--source-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
                 '--extract-parent "$(SOURCE_PACKAGE_SMOKE_EXTRACT_PARENT)"',
                 '--source-python "$(SOURCE_PACKAGE_SMOKE_PYTHON)"',
                 '--out "$(SOURCE_PACKAGE_SMOKE_OUT)"',
+                "--reuse-if-current",
+                "--reuse-only",
             ),
+        )
+        self.assertIn(
+            '$(MAKE) release-source-package-smoke-current-check',
+            _target_block(text, "release-source-package-smoke-current-or-refresh"),
         )
         _assert_recipe_contains_tokens(
             self,
             text,
-            "release-source-package-clean-extract",
+            "release-source-package-clean-extract-current-check",
             (
                 "ops.scripts.source_package_clean_extract",
                 '--source-zip "$(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP)"',
@@ -1435,17 +1457,23 @@ class MakefileStaticGateTests(unittest.TestCase):
                 '--pytest-flags="$(SOURCE_PACKAGE_CLEAN_EXTRACT_PYTEST_FLAGS)"',
                 '--zip-smoke-report "$(RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT)"',
                 '--out "$(SOURCE_PACKAGE_CLEAN_EXTRACT_OUT)"',
+                "--reuse-if-current",
+                "--reuse-only",
             ),
+        )
+        self.assertIn(
+            '$(MAKE) release-source-package-clean-extract-current-check',
+            _target_block(text, "release-source-package-clean-extract-current-or-refresh"),
         )
         self.assertEqual(pack_selectors(registry, "source_package"), ("release-source-package-smoke",))
         self.assertEqual(
             pack_summary_suite(registry, "source_package")["summary_target"],
             "build/source-package-smoke/source-package-smoke.json",
         )
-        self.assertIn("$(MAKE) release-package-current", _target_block(text, "release-source-package-check"))
-        self.assertIn("$(MAKE) release-source-package-smoke", _target_block(text, "release-source-package-check"))
+        self.assertIn("$(MAKE) release-package-current-or-refresh", _target_block(text, "release-source-package-check"))
+        self.assertIn("$(MAKE) release-source-package-smoke-current-or-refresh", _target_block(text, "release-source-package-check"))
         self.assertIn(
-            "$(MAKE) release-source-package-clean-extract",
+            "$(MAKE) release-source-package-clean-extract-current-or-refresh",
             _target_block(text, "release-source-package-check"),
         )
 
@@ -1690,6 +1718,11 @@ class MakefileStaticGateTests(unittest.TestCase):
                 "$(MAKE) test-execution-summary-report-contract",
                 "$(MAKE) test-execution-summary-full-current-or-refresh",
             ],
+        )
+        release_public_current_lines = _recipe_lines(text, "release-public-current")
+        self.assertEqual(
+            release_public_current_lines,
+            ["$(MAKE) public-check-summary-current-or-refresh"],
         )
         release_test_current_block = _target_block(text, "release-test-current")
         self.assertNotIn("$(PYTHON) -m pytest $(PYTEST_SERIAL_FLAGS)", release_test_current_block)
@@ -3452,8 +3485,22 @@ class MakefileStaticGateTests(unittest.TestCase):
         text = _makefile_text()
 
         block = _target_block(text, "dev-install")
-        self.assertIn('uv pip install --python "$(VENV_PYTHON)" -e .', block)
-        self.assertIn('"$(VENV_PYTHON)" -m pip install -e .', block)
+        self.assertIn('uv pip install --python "$(VENV_PYTHON)" -e ".[dev]"', block)
+        self.assertIn('"$(VENV_PYTHON)" -m pip install -e ".[dev]"', block)
+
+    def test_requirements_dev_matches_pyproject_dev_snapshot(self) -> None:
+        pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        dev_requirements = pyproject["project"]["optional-dependencies"]["dev"]
+        requirements_dev = (REPO_ROOT / "requirements-dev.txt").read_text(encoding="utf-8").splitlines()
+
+        filtered_lines = [
+            line.strip()
+            for line in requirements_dev
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+
+        self.assertEqual(filtered_lines[0], "-r requirements.txt")
+        self.assertEqual(filtered_lines[1:], dev_requirements)
 
     def test_bootstrap_preflight_target_writes_canonical_report_with_project_python(
         self,
@@ -4433,6 +4480,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         summary_block = _target_block(text, "public-check-summary")
         summary_check_block = _target_block(text, "public-check-summary-check")
         summary_current_check_block = _target_block(text, "public-check-summary-current-check")
+        summary_current_or_refresh_block = _target_block(text, "public-check-summary-current-or-refresh")
         sync_check_block = _target_block(text, "sync-public-policy-check")
         _assert_assignment_exists(
             self, text, "PUBLIC_CHECK_SUMMARY_REUSE_FROM", "$(PUBLIC_CHECK_SUMMARY_OUT)"
@@ -4456,6 +4504,8 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("--reuse-only", summary_current_check_block)
         self.assertIn('--reuse-from "$(PUBLIC_CHECK_SUMMARY_REUSE_FROM)"', summary_current_check_block)
         self.assertNotIn("ops.scripts.canonical_artifact_promote", summary_current_check_block)
+        self.assertIn("$(MAKE) public-check-summary-current-check", summary_current_or_refresh_block)
+        self.assertIn("$(MAKE) public-check-summary", summary_current_or_refresh_block)
         self.assertIn("--check", sync_check_block)
         self.assertIn('--gitignore "$(PUBLIC_GITIGNORE_TEMPLATE)"', sync_check_block)
         public_targets = (

@@ -568,11 +568,17 @@
         "load_status",
         "source_status",
         "generated_at",
+        "source_revision",
         "source_tree_fingerprint",
         "producer_input_fingerprint",
         "artifact_status",
         "currentness_status",
         "currentness_checked_at",
+        "source_revision_matches_head",
+        "source_tree_fingerprint_matches",
+        "domain_current_check_passes",
+        "operator_facing_classification",
+        "classification_reason",
         "provenance_mode",
         "report_mtime_source",
         "report_mtime",
@@ -621,6 +627,9 @@
         "generated_at": {
           "type": "string"
         },
+        "source_revision": {
+          "type": "string"
+        },
         "source_tree_fingerprint": {
           "type": "string"
         },
@@ -637,6 +646,35 @@
         },
         "currentness_checked_at": {
           "type": "string"
+        },
+        "source_revision_matches_head": {
+          "type": "boolean"
+        },
+        "source_tree_fingerprint_matches": {
+          "type": "boolean"
+        },
+        "domain_current_check_passes": {
+          "type": "boolean"
+        },
+        "operator_facing_classification": {
+          "type": "string",
+          "enum": [
+            "current",
+            "artifact_current_but_head_stale",
+            "reusable_current",
+            "release_authoritative_current"
+          ]
+        },
+        "classification_reason": {
+          "type": "string",
+          "enum": [
+            "head_aligned_current",
+            "source_tree_fingerprint_mismatch",
+            "source_revision_mismatch",
+            "domain_current_check_failed",
+            "domain_reusable_without_head_alignment",
+            "release_authoritative_without_head_alignment"
+          ]
         },
         "provenance_mode": {
           "type": "string",

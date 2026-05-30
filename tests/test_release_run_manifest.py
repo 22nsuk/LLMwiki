@@ -104,6 +104,7 @@ class ReleaseRunManifestTests(unittest.TestCase):
                     {
                         "name": "release-test-current",
                         "status": "pass",
+                        "summary_mode": "executed",
                         "command": ["make", "release-test-current"],
                         "returncode": 0,
                         "duration_ms": 1,
@@ -121,6 +122,10 @@ class ReleaseRunManifestTests(unittest.TestCase):
         self.assertEqual(manifest["schema_version"], 4)
         self.assertIn("release_authority_status", manifest)
         self.assertIn("machine_release_allowed", manifest)
+        self.assertIn("step_duration_summary", manifest)
+        self.assertEqual(manifest["step_duration_summary"]["total_duration_ms"], 1)
+        self.assertEqual(manifest["step_duration_summary"]["slowest_step"]["name"], "release-test-current")
+        self.assertEqual(manifest["steps"][0]["summary_mode"], "executed")
         self.assertNotIn("sealed", manifest)
         self.assertNotIn("ops_reports_reference", manifest)
         self.assertNotIn("payload_status", json.dumps(manifest, ensure_ascii=False))
@@ -142,6 +147,7 @@ class ReleaseRunManifestTests(unittest.TestCase):
                     {
                         "name": "release-public-current",
                         "status": "fail",
+                        "summary_mode": "executed",
                         "command": ["make", "release-public-current"],
                         "returncode": 1,
                         "duration_ms": 1,
@@ -154,6 +160,75 @@ class ReleaseRunManifestTests(unittest.TestCase):
 
         self.assertEqual(manifest["status"], "fail")
         self.assertIn("step_failed:release-public-current", manifest["failures"])
+        self.assertEqual(manifest["step_duration_summary"]["failed_step_count"], 1)
+        self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+
+    def test_manifest_summarizes_step_duration_comparison_groups(self) -> None:
+        self._write_run_inputs()
+
+        with self._patch_clean_repo("fp-current"):
+            manifest = build_manifest(
+                self.vault,
+                expected_source_tree_fingerprint="fp-current",
+                steps=[
+                    {
+                        "name": "release-test-current",
+                        "status": "pass",
+                        "summary_mode": "executed",
+                        "command": ["make", "release-test-current"],
+                        "returncode": 0,
+                        "duration_ms": 100,
+                        "source_tree_fingerprint_before": "fp-current",
+                        "source_tree_fingerprint_after": "fp-current",
+                    },
+                    {
+                        "name": "release-public-current",
+                        "status": "pass",
+                        "summary_mode": "reused",
+                        "command": ["make", "release-public-current"],
+                        "returncode": 0,
+                        "duration_ms": 300,
+                        "source_tree_fingerprint_before": "fp-current",
+                        "source_tree_fingerprint_after": "fp-current",
+                    },
+                    {
+                        "name": "release-smoke-full-reuse",
+                        "status": "pass",
+                        "summary_mode": "reused",
+                        "command": ["make", "release-smoke-full-reuse"],
+                        "returncode": 0,
+                        "duration_ms": 50,
+                        "source_tree_fingerprint_before": "fp-current",
+                        "source_tree_fingerprint_after": "fp-current",
+                    },
+                    {
+                        "name": "release-source-package-check",
+                        "status": "pass",
+                        "summary_mode": "executed",
+                        "command": ["make", "release-source-package-check"],
+                        "returncode": 0,
+                        "duration_ms": 450,
+                        "source_tree_fingerprint_before": "fp-current",
+                        "source_tree_fingerprint_after": "fp-current",
+                    },
+                ],
+                context=fixed_context(),
+            )
+
+        summary = manifest["step_duration_summary"]
+        self.assertEqual(summary["total_duration_ms"], 900)
+        self.assertEqual(summary["step_count"], 4)
+        self.assertEqual(summary["passed_step_count"], 4)
+        self.assertEqual(summary["failed_step_count"], 0)
+        self.assertEqual(summary["slowest_step"]["name"], "release-source-package-check")
+        self.assertEqual(summary["steps_by_duration_desc"][0]["name"], "release-source-package-check")
+        self.assertEqual(summary["comparison_groups"]["public"]["total_duration_ms"], 300)
+        self.assertEqual(summary["comparison_groups"]["source_package"]["total_duration_ms"], 450)
+        self.assertEqual(summary["comparison_groups"]["source_package"]["slowest_step_name"], "release-source-package-check")
+        self.assertGreater(
+            summary["comparison_groups"]["source_package"]["share_of_total"],
+            summary["comparison_groups"]["public"]["share_of_total"],
+        )
         self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
 
     def test_distribution_zip_path_can_be_read_from_manifest_for_release_reuse(self) -> None:

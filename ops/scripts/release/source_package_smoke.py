@@ -16,22 +16,28 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
+        load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
     from ops.scripts.command_runtime import run_with_timeout
     from ops.scripts.output_runtime import display_path, sanitize_report_text
     from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.schema_runtime import load_schema, validate_with_schema
+    from ops.scripts.source_revision_runtime import resolve_source_revision
     from ops.scripts.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
 else:
     from ops.scripts.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
+        load_optional_json_object_with_diagnostics,
         write_schema_backed_report,
     )
     from ops.scripts.command_runtime import run_with_timeout
     from ops.scripts.output_runtime import display_path, sanitize_report_text
     from ops.scripts.runtime_context import RuntimeContext
+    from ops.scripts.schema_runtime import load_schema, validate_with_schema
+    from ops.scripts.source_revision_runtime import resolve_source_revision
     from ops.scripts.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
     )
@@ -44,6 +50,10 @@ SCHEMA_PATH = "ops/schemas/source-package-smoke.schema.json"
 PRODUCER = "ops.scripts.source_package_smoke"
 SOURCE_COMMAND = "python -m ops.scripts.source_package_smoke --vault ."
 ARCHIVE_SELF_DESCRIPTION_PATH = "release-archive-self-description.json"
+
+
+def _sha256_text(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def _sha256_file(path: Path) -> str:
@@ -163,6 +173,7 @@ def build_report(
     generated_at = runtime_context.isoformat_z()
     source_zip_path = _resolve(vault, source_zip)
     extract_parent_path = _resolve(vault, extract_parent)
+    source_revision = resolve_source_revision(vault).revision
     failures: list[str] = []
     commands: list[dict[str, Any]] = []
     extract_root = extract_parent_path / "LLMwiki"
@@ -190,22 +201,30 @@ def build_report(
             if result["status"] != "pass":
                 failures.append(f"command_failed:{name}")
     status = "pass" if not failures else "fail"
+    source_zip_identity = _file_identity(vault, source_zip_path)
     return {
         "$schema": SCHEMA_PATH,
         "artifact_kind": "source_package_smoke",
         "generated_at": generated_at,
         "producer": PRODUCER,
         "source_command": SOURCE_COMMAND,
-        "source_revision": "",
+        "source_revision": source_revision,
         "source_tree_fingerprint": release_source_tree_fingerprint(vault),
-        "input_fingerprints": {"source_zip": _file_identity(vault, source_zip_path)["sha256"]},
+        "input_fingerprints": {
+            "source_zip": source_zip_identity["sha256"],
+            "extract_parent": _sha256_text(display_path(vault, extract_parent_path)),
+            "source_python": _sha256_text(source_python),
+            "ruff_targets": _sha256_text(ruff_targets),
+            "mypy_targets": _sha256_text(mypy_targets),
+            "timeout_seconds": _sha256_text(str(timeout_seconds)),
+        },
         "schema_version": 1,
         "artifact_status": "current",
         "retention_policy": "release_sidecar_evidence",
         "encoding": "utf-8",
         "currentness": {"status": "current", "checked_at": generated_at},
         "status": status,
-        "source_zip": _file_identity(vault, source_zip_path),
+        "source_zip": source_zip_identity,
         "extract": {
             "parent": display_path(vault, extract_parent_path),
             "root": display_path(vault, extract_root),
@@ -230,6 +249,84 @@ def write_report(vault: Path, report: dict[str, Any], out_path: str | None) -> P
     )
 
 
+def reusable_report_diagnostics(
+    vault: Path,
+    path_value: str | Path,
+    *,
+    source_zip: str,
+    extract_parent: str,
+    source_python: str,
+    ruff_targets: str,
+    mypy_targets: str,
+    timeout_seconds: int,
+) -> dict[str, Any]:
+    path = _resolve(vault, path_value)
+    diagnostics: dict[str, Any] = {
+        "reusable": False,
+        "path": display_path(vault, path),
+        "reason": "",
+    }
+    payload, load_diagnostics = load_optional_json_object_with_diagnostics(path)
+    if load_diagnostics.get("status") != "ok":
+        diagnostics["reason"] = f"report_unavailable:{load_diagnostics.get('status', 'unknown')}"
+        return diagnostics
+    schema_errors = validate_with_schema(payload, load_schema(vault / SCHEMA_PATH))
+    if schema_errors:
+        diagnostics["reason"] = f"schema_invalid:{schema_errors[0]}"
+        return diagnostics
+    source_zip_path = _resolve(vault, source_zip)
+    current_source_revision = resolve_source_revision(vault).revision
+    current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
+    current_source_zip = _file_identity(vault, source_zip_path)
+    extract_parent_path = _resolve(vault, extract_parent)
+    expected_input_fingerprints = {
+        "source_zip": current_source_zip["sha256"],
+        "extract_parent": _sha256_text(display_path(vault, extract_parent_path)),
+        "source_python": _sha256_text(source_python),
+        "ruff_targets": _sha256_text(ruff_targets),
+        "mypy_targets": _sha256_text(mypy_targets),
+        "timeout_seconds": _sha256_text(str(timeout_seconds)),
+    }
+    checks = {
+        "artifact_kind": payload.get("artifact_kind") == "source_package_smoke",
+        "producer": payload.get("producer") == PRODUCER,
+        "status": payload.get("status") == "pass",
+        "currentness": isinstance(payload.get("currentness"), dict)
+        and payload["currentness"].get("status") == "current",
+        "source_revision": payload.get("source_revision") == current_source_revision,
+        "source_tree_fingerprint": payload.get("source_tree_fingerprint") == current_source_tree_fingerprint,
+        "source_zip_exists": isinstance(payload.get("source_zip"), dict)
+        and payload["source_zip"].get("exists") is True,
+        "source_zip_sha256": isinstance(payload.get("source_zip"), dict)
+        and payload["source_zip"].get("sha256") == current_source_zip["sha256"],
+        "input_fingerprints": payload.get("input_fingerprints") == expected_input_fingerprints,
+        "extract_parent": isinstance(payload.get("extract"), dict)
+        and payload["extract"].get("parent") == display_path(vault, extract_parent_path),
+        "source_command": payload.get("source_command") == SOURCE_COMMAND,
+    }
+    failed = [name for name, passed in checks.items() if not passed]
+    if failed:
+        diagnostics["reason"] = f"not_current:{','.join(failed)}"
+        diagnostics["checks"] = checks
+        diagnostics["semantic_inputs"] = {
+            "source_python": source_python,
+            "ruff_targets": ruff_targets,
+            "mypy_targets": mypy_targets,
+            "timeout_seconds": int(timeout_seconds),
+            "extract_parent": display_path(vault, extract_parent_path),
+        }
+        return diagnostics
+    diagnostics.update(
+        {
+            "reusable": True,
+            "reason": "current_passing_source_package_smoke",
+            "generated_at": str(payload.get("generated_at", "")),
+            "source_tree_fingerprint": str(payload.get("source_tree_fingerprint", "")),
+        }
+    )
+    return diagnostics
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Smoke-test a clean release source package extract.")
     parser.add_argument("--vault", default=".")
@@ -240,12 +337,36 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--mypy-targets", default="ops/scripts")
     parser.add_argument("--timeout-seconds", type=int, default=5400)
     parser.add_argument("--out", default=DEFAULT_OUT)
+    parser.add_argument("--reuse-if-current", action="store_true")
+    parser.add_argument("--reuse-from")
+    parser.add_argument(
+        "--reuse-only",
+        action="store_true",
+        help="With --reuse-if-current, fail instead of rerunning when source-package smoke evidence is stale.",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
+    if args.reuse_if_current:
+        diagnostics = reusable_report_diagnostics(
+            vault,
+            args.reuse_from or args.out,
+            source_zip=args.source_zip,
+            extract_parent=args.extract_parent,
+            source_python=args.source_python,
+            ruff_targets=args.ruff_targets,
+            mypy_targets=args.mypy_targets,
+            timeout_seconds=args.timeout_seconds,
+        )
+        if diagnostics["reusable"]:
+            print(json.dumps({"summary_mode": "reused", **diagnostics}, ensure_ascii=False, indent=2))
+            return 0
+        print(json.dumps({"summary_mode": "executed", "reuse_diagnostics": diagnostics}, ensure_ascii=False, indent=2))
+        if args.reuse_only:
+            return 1
     report = build_report(
         vault,
         source_zip=args.source_zip,

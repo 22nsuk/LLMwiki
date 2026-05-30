@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from hypothesis import given
+import hypothesis.strategies as st
 from ops.scripts.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.policy_runtime import load_policy, report_path
 from ops.scripts.release_closeout_summary import (
@@ -16,6 +18,7 @@ from ops.scripts.release_closeout_summary import (
     PROVENANCE_PROFILE,
     SBOM_PROFILE,
     SOURCE_SPECS,
+    _artifact_freshness_gate,
     _closeout_render_inputs,
     _load_closeout_sources,
     _prepare_closeout_state,
@@ -61,6 +64,124 @@ def fixed_context() -> RuntimeContext:
         display_timezone=dt.UTC,
         clock=lambda: dt.datetime(2026, 4, 29, 9, 0, tzinfo=dt.UTC),
     )
+
+
+def _freshness_components(*, ready: bool = True, source_status: str = "pass") -> list[dict[str, Any]]:
+    return [
+        {
+            "name": "artifact_freshness",
+            "load_status": "ok",
+            "ready": ready,
+            "source_status": source_status,
+        }
+    ]
+
+
+def _freshness_payload(
+    *,
+    status: str,
+    summary: dict[str, int] | None = None,
+    artifact_records: list[dict[str, Any]] | None = None,
+) -> dict[str, dict[str, Any]]:
+    payload: dict[str, Any] = {"status": status}
+    if summary is not None:
+        payload["summary"] = summary
+    if artifact_records is not None:
+        payload["artifact_records"] = artifact_records
+    return {"artifact_freshness": payload}
+
+
+@given(
+    schema_invalid_count=st.integers(min_value=0, max_value=5),
+    stable_contract_debt_issue_count=st.integers(min_value=0, max_value=5),
+)
+def test_property_3_clean_pass_implies_not_blocking(
+    schema_invalid_count: int,
+    stable_contract_debt_issue_count: int,
+) -> None:
+    """Feature: release-evidence-sync, Property 3: clean_pass implies not blocking"""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        seed_minimal_vault(vault)
+        fixed_point_policy = vault / FIXED_POINT_POLICY_PATH
+        fixed_point_policy.parent.mkdir(parents=True, exist_ok=True)
+        fixed_point_policy.write_text(
+            (REPO_ROOT / FIXED_POINT_POLICY_PATH).read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        gate = _artifact_freshness_gate(
+            vault,
+            _freshness_components(ready=True, source_status="pass"),
+            _freshness_payload(
+                status="pass",
+                summary={
+                    "schema_invalid_artifact_count": schema_invalid_count,
+                    "stable_contract_debt_issue_count": stable_contract_debt_issue_count,
+                },
+            ),
+        )
+
+        if schema_invalid_count == 0:
+            assert gate["display_effect"] == "none"
+            assert gate["blocking"] is False
+        else:
+            assert gate["display_effect"] == "advisory"
+            assert gate["blocking"] is False
+
+
+@given(
+    stable_contract_debt_issue_count=st.integers(min_value=1, max_value=5),
+    use_release_owned_attention=st.booleans(),
+)
+def test_property_4_release_owned_only_attention_is_advisory(
+    stable_contract_debt_issue_count: int,
+    use_release_owned_attention: bool,
+) -> None:
+    """Feature: release-evidence-sync, Property 4: release-owned-only attention is advisory"""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        seed_minimal_vault(vault)
+        fixed_point_policy = vault / FIXED_POINT_POLICY_PATH
+        fixed_point_policy.parent.mkdir(parents=True, exist_ok=True)
+        fixed_point_policy.write_text(
+            (REPO_ROOT / FIXED_POINT_POLICY_PATH).read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        summary = {
+            "schema_invalid_artifact_count": 0,
+            "schema_unavailable_artifact_count": 0,
+            "root_ephemeral_artifact_count": 0,
+            "non_utf8_text_artifact_count": 0,
+            "stale_artifact_count": 0 if not use_release_owned_attention else 1,
+            "mtime_sensitive_attention_artifact_count": 0,
+            "mtime_sensitive_attention_issue_count": 0,
+            "operational_attention_artifact_count": 0 if not use_release_owned_attention else 1,
+            "operational_attention_issue_count": 0 if not use_release_owned_attention else 1,
+            "stable_contract_debt_issue_count": stable_contract_debt_issue_count if not use_release_owned_attention else 0,
+        }
+        artifact_records = None
+        if use_release_owned_attention:
+            artifact_records = [
+                {
+                    "path": "ops/reports/auto-improve-readiness.json",
+                    "issues": ["source_tree_fingerprint_mismatch"],
+                }
+            ]
+        gate = _artifact_freshness_gate(
+            vault,
+            _freshness_components(ready=False, source_status="attention"),
+            _freshness_payload(
+                status="attention",
+                summary=summary,
+                artifact_records=artifact_records,
+            ),
+        )
+
+        assert gate["gate_effect"] == "advisory"
+        assert gate["display_effect"] == "advisory"
+        assert gate["blocking"] is False
 
 
 class ReleaseCloseoutSummaryTests(unittest.TestCase):
@@ -916,6 +1037,11 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
             accepted["artifact_freshness_stable_contract_debt_advisory"]["advisory_lifecycle_effect"],
             "review_backlog",
         )
+        gate = report["artifact_freshness_gate"]
+        self.assertEqual(gate["gate_effect"], "advisory")
+        self.assertEqual(gate["display_effect"], "advisory")
+        self.assertFalse(gate["blocking"])
+        self.assertTrue(gate["ready"])
 
     def test_artifact_freshness_attention_ignores_non_release_owned_operational_drift(self) -> None:
         self._write_happy_sources()
@@ -966,6 +1092,57 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
             "artifact_freshness_attention",
             {item["code"] for item in report["accepted_risks"]},
         )
+        gate = report["artifact_freshness_gate"]
+        self.assertEqual(gate["gate_effect"], "none")
+        self.assertEqual(gate["display_effect"], "none")
+        self.assertFalse(gate["blocking"])
+        self.assertTrue(gate["ready"])
+
+    def test_release_owned_artifact_freshness_attention_is_gate_advisory(self) -> None:
+        self._write_happy_sources()
+        self._write_source_report(
+            "artifact_freshness",
+            {
+                "status": "attention",
+                "summary": {
+                    "schema_invalid_artifact_count": 0,
+                    "schema_unavailable_artifact_count": 0,
+                    "root_ephemeral_artifact_count": 0,
+                    "non_utf8_text_artifact_count": 0,
+                    "stale_artifact_count": 1,
+                    "mtime_sensitive_attention_artifact_count": 0,
+                    "mtime_sensitive_attention_issue_count": 0,
+                    "operational_attention_artifact_count": 1,
+                    "operational_attention_issue_count": 1,
+                    "stable_contract_debt_issue_count": 0,
+                },
+                "artifact_records": [
+                    {
+                        "path": "ops/reports/auto-improve-readiness.json",
+                        "issues": ["source_tree_fingerprint_mismatch"],
+                    }
+                ],
+            },
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertTrue(report["checked_in_release_ready"])
+        self.assertFalse(report["clean_release_ready"])
+        self._assert_release_decision(
+            report,
+            state="conditional_pass",
+            machine_release_allowed=False,
+            operator_release_allowed=True,
+            requires_accepted_risk_review=True,
+        )
+        gate = report["artifact_freshness_gate"]
+        self.assertEqual(gate["gate_effect"], "advisory")
+        self.assertEqual(gate["display_effect"], "advisory")
+        self.assertFalse(gate["blocking"])
+        self.assertTrue(gate["ready"])
+        accepted = {item["code"] for item in report["accepted_risks"]}
+        self.assertIn("artifact_freshness_attention", accepted)
 
     def test_structured_test_deselections_are_accepted_risks_until_expiry(self) -> None:
         self._write_happy_sources()
@@ -1667,6 +1844,8 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
         self.assertEqual(destination.resolve(), (self.vault / "ops" / "reports" / "release-closeout-summary.json").resolve())
         persisted = json.loads(destination.read_text(encoding="utf-8"))
         self.assertTrue(persisted["checked_in_release_ready"])
+        self.assertEqual(persisted["artifact_freshness_gate"]["gate_effect"], "none")
+        self.assertEqual(persisted["artifact_freshness_gate"]["display_effect"], "none")
         self.assertEqual(persisted["release_readiness_state"], "clean_pass")
         self.assertTrue(persisted["machine_release_allowed"])
 

@@ -72,6 +72,15 @@ specific report digest into the package or sidecar set. Source-package smoke
 runs in a release-archive profile because a clean source ZIP intentionally does
 not include private corpus surfaces.
 
+`build/release/` may contain both active authority artifacts and diagnostic or
+archived evidence. Only the staged manifests and the current sidecar set they
+bind are authority. Preserved stale sidecars should be archived or explicitly
+marked non-authoritative instead of remaining in the active sealed lane.
+
+Likewise, reports intentionally excluded from a canonical or authoritative set
+should be marked non-canonical rather than left beside active authority inputs
+without explanation.
+
 ## Artifact-Only Surfaces
 
 These paths are evidence or scratch surfaces, not hand-maintained source:

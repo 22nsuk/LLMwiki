@@ -33,8 +33,8 @@ starter bundle:
 
 권장 사용:
 1. 먼저 `make dev-install`로 `.venv` 기반 개발 환경을 만든다.
-  - `uv`가 있으면 이 target이 `.venv`를 생성/갱신하고 dependency와 editable install `-e .`를 함께 설치한다.
-  - `uv`가 없어도 `python3 -m venv .venv`, `.venv/bin/python -m pip install -r requirements-dev.txt`, `.venv/bin/python -m pip install -e .` fallback으로 같은 경로를 맞춘다.
+  - `uv`가 있으면 이 target이 `.venv`를 생성/갱신하고 authoritative dev dependency set(`pyproject.toml`의 `.[dev]`)과 editable install을 함께 설치한다.
+  - `uv`가 없어도 `python3 -m venv .venv`, `.venv/bin/python -m pip install -e ".[dev]"` fallback으로 같은 경로를 맞춘다.
 2. `runs/<run-id>/` 디렉터리를 만든다.
 3. 목적에 맞는 starter bundle을 복사한다.
    - planning / handoff면 `ops/templates/`
