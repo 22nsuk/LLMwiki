@@ -8,7 +8,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
@@ -50,6 +50,12 @@ SOURCE_COMMAND = "python -m ops.scripts.release_run_manifest --vault ."
 DEFAULT_DISTRIBUTION_ZIP = "build/release/LLMwiki-source.zip"
 DEFAULT_SOURCE_PACKAGE_SMOKE = "build/source-package-smoke/source-package-smoke.json"
 DEFAULT_CLOSEOUT_SUMMARY = "ops/reports/release-closeout-summary.json"
+
+
+class _StepDurationRow(TypedDict):
+    name: str
+    status: str
+    duration_ms: int
 
 
 def _run_git(vault: Path, *args: str) -> str:
@@ -178,7 +184,7 @@ def _step_group(name: str) -> str:
 
 
 def _step_duration_summary(steps: list[dict[str, Any]]) -> dict[str, Any]:
-    normalized_steps = [
+    normalized_steps: list[_StepDurationRow] = [
         {
             "name": str(step.get("name", "unknown")).strip() or "unknown",
             "status": str(step.get("status", "unknown")).strip() or "unknown",
@@ -191,8 +197,12 @@ def _step_duration_summary(steps: list[dict[str, Any]]) -> dict[str, Any]:
         normalized_steps,
         key=lambda item: (-item["duration_ms"], item["name"]),
     )
-    slowest = ordered_steps[0] if ordered_steps else {"name": "", "status": "not_run", "duration_ms": 0}
-    grouped: dict[str, list[dict[str, Any]]] = {
+    slowest: _StepDurationRow = (
+        ordered_steps[0]
+        if ordered_steps
+        else {"name": "", "status": "not_run", "duration_ms": 0}
+    )
+    grouped: dict[str, list[_StepDurationRow]] = {
         "test": [],
         "public": [],
         "smoke": [],
@@ -202,7 +212,7 @@ def _step_duration_summary(steps: list[dict[str, Any]]) -> dict[str, Any]:
     for step in normalized_steps:
         grouped[_step_group(step["name"])].append(step)
 
-    def group_summary(items: list[dict[str, Any]]) -> dict[str, Any]:
+    def group_summary(items: list[_StepDurationRow]) -> dict[str, Any]:
         ordered = sorted(items, key=lambda item: (-item["duration_ms"], item["name"]))
         total = sum(item["duration_ms"] for item in items)
         slowest_name = ordered[0]["name"] if ordered else ""
