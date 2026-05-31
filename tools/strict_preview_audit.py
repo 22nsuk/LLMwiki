@@ -94,6 +94,7 @@ def build_report(
     ruff_select: str,
     mypy_flags: Sequence[str],
     python_executable: str,
+    ruff_cache_dir: str | None = None,
     command_runner: CommandRunner = run_command,
 ) -> dict[str, Any]:
     resolved_vault = vault.resolve()
@@ -106,8 +107,10 @@ def build_report(
         "--select",
         ruff_select,
         "--statistics",
-        *target_list,
     ]
+    if ruff_cache_dir:
+        ruff_command.extend(["--cache-dir", ruff_cache_dir])
+    ruff_command.extend(target_list)
     mypy_command = [
         python_executable,
         "-m",
@@ -149,6 +152,7 @@ def build_report(
         "status": status,
         "targets": target_list,
         "ruff_select": ruff_select,
+        "ruff_cache_dir": ruff_cache_dir or "",
         "mypy_flags": list(mypy_flags),
         "ruff": ruff,
         "mypy": mypy,
@@ -173,6 +177,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--out", default=DEFAULT_OUT)
     parser.add_argument("--targets", default=DEFAULT_TARGETS)
     parser.add_argument("--ruff-select", default=DEFAULT_RUFF_SELECT)
+    parser.add_argument("--ruff-cache-dir", default=None)
     parser.add_argument(
         "--mypy-flags",
         default=" ".join(DEFAULT_MYPY_FLAGS),
@@ -194,6 +199,7 @@ def main(
         vault,
         targets=parse_targets(args.targets),
         ruff_select=str(args.ruff_select),
+        ruff_cache_dir=args.ruff_cache_dir,
         mypy_flags=shlex.split(str(args.mypy_flags)),
         python_executable=str(args.python),
         command_runner=command_runner,

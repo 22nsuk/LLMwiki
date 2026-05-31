@@ -31,6 +31,7 @@ class RuffStrictPreviewTests(unittest.TestCase):
 
         self.assertEqual(args.targets, "ops/scripts tests tools")
         self.assertEqual(args.select, "B,SIM,UP,I")
+        self.assertIsNone(args.cache_dir)
         self.assertFalse(hasattr(args, "allowlist"))
 
     def test_legacy_allowlist_argument_is_rejected(self) -> None:
@@ -40,6 +41,17 @@ class RuffStrictPreviewTests(unittest.TestCase):
     def test_build_ruff_command_requires_targets(self) -> None:
         with self.assertRaises(ValueError):
             RUFF_STRICT_PREVIEW.build_ruff_command("B,SIM,UP,I", [])
+
+    def test_build_ruff_command_accepts_cache_dir(self) -> None:
+        command = RUFF_STRICT_PREVIEW.build_ruff_command(
+            "B,SIM,UP,I",
+            ["ops/scripts"],
+            cache_dir="tmp/tool-cache/ruff/wsl",
+        )
+
+        self.assertIn("--cache-dir", command)
+        self.assertIn("tmp/tool-cache/ruff/wsl", command)
+        self.assertEqual(command[-1], "ops/scripts")
 
 
 if __name__ == "__main__":  # pragma: no cover

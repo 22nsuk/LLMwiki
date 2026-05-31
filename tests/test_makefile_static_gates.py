@@ -953,6 +953,8 @@ class MakefileStaticGateTests(unittest.TestCase):
         for target in (
             "make dev-install",
             "make static",
+            "make local-cache-clean",
+            "make uv-cache-prune",
             "make strict-preview-audit",
             "make report-contracts-core",
             "make external-report-lifecycle-refresh",
@@ -1039,14 +1041,47 @@ class MakefileStaticGateTests(unittest.TestCase):
 
         self.assertIn("RUFF_TARGETS ?= ops/scripts tests tools", text)
         self.assertIn("MYPY_TARGETS ?= ops/scripts", text)
+        self.assertIn("TOOL_CACHE_ROOT ?= tmp/tool-cache", text)
+        self.assertIn("TOOL_CACHE_PLATFORM ?=", text)
+        self.assertIn("RUFF_CACHE_DIR ?= $(TOOL_CACHE_ROOT)/ruff/$(TOOL_CACHE_PLATFORM)", text)
+        self.assertIn("MYPY_CACHE_DIR ?= $(TOOL_CACHE_ROOT)/mypy/$(TOOL_CACHE_PLATFORM)", text)
         self.assertIn("static: uv-lock-check ruff typecheck", text)
         self.assertIn("$(UV) lock --check", _target_block(text, "uv-lock-check"))
         self.assertIn(
-            "$(PYTHON) -m ruff check $(RUFF_TARGETS)", _target_block(text, "ruff")
+            "$(PYTHON) -m ruff check $(RUFF_CACHE_FLAGS) $(RUFF_TARGETS)",
+            _target_block(text, "ruff"),
         )
         self.assertIn(
-            "$(PYTHON) -m mypy $(MYPY_TARGETS)", _target_block(text, "typecheck")
+            "$(PYTHON) -m mypy $(MYPY_CACHE_FLAGS) $(MYPY_TARGETS)",
+            _target_block(text, "typecheck"),
         )
+
+    def test_local_cache_clean_removes_only_regenerable_repo_caches(self) -> None:
+        text = _makefile_text()
+        block = _target_block(text, "local-cache-clean")
+
+        self.assertIn("local-cache-clean", _target_block(text, ".PHONY"))
+        self.assertIn(
+            "LOCAL_CACHE_CLEAN_PATHS ?= .pytest_cache .hypothesis .ruff_cache .mypy_cache $(TOOL_CACHE_ROOT)",
+            text,
+        )
+        self.assertIn("LOCAL_CACHE_CLEAN_FIND_ROOTS ?= ops tests tools", text)
+        self.assertIn("rm -rf $(LOCAL_CACHE_CLEAN_PATHS)", block)
+        self.assertIn("find $(LOCAL_CACHE_CLEAN_FIND_ROOTS) -type d -name __pycache__", block)
+        self.assertIn("find $(LOCAL_CACHE_CLEAN_FIND_ROOTS) -type f", block)
+        self.assertNotIn(".venv", block)
+        self.assertNotIn("ops/reports", block)
+        self.assertNotIn("build/release", block)
+
+    def test_uv_cache_prune_keeps_global_uv_cleanup_explicit_and_non_destructive(self) -> None:
+        text = _makefile_text()
+        block = _target_block(text, "uv-cache-prune")
+
+        self.assertIn("uv-cache-prune", _target_block(text, ".PHONY"))
+        self.assertIn("UV_CACHE_PRUNE_FLAGS ?=", text)
+        self.assertIn("$(UV) cache prune $(UV_CACHE_PRUNE_FLAGS)", block)
+        self.assertNotIn("cache clean", block)
+        self.assertNotIn("--force", block)
 
     def test_pytest_entrypoints_disable_third_party_plugin_autoload(self) -> None:
         text = _makefile_text()
@@ -1153,7 +1188,8 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertNotIn('"$(PYTHON)"', text)
         self.assertIn("PUBLIC_PYTHON ?= $(if $(wildcard $(firstword $(PYTHON)))", text)
         self.assertIn(
-            "$(PYTHON) -m ruff check $(RUFF_TARGETS)", _target_block(text, "ruff")
+            "$(PYTHON) -m ruff check $(RUFF_CACHE_FLAGS) $(RUFF_TARGETS)",
+            _target_block(text, "ruff"),
         )
 
     def test_repo_virtualenv_is_canonical_make_default(self) -> None:
@@ -4518,7 +4554,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("RUFF_STRICT_PREVIEW_RULES ?= B,SIM,UP,I", text)
         self.assertIn("RUFF_STRICT_PREVIEW_TARGETS ?= $(STRICT_PREVIEW_AUDIT_TARGETS)", text)
         self.assertIn(
-            '$(PYTHON) tools/ruff_strict_preview.py --vault "$(VAULT)" --targets "$(RUFF_STRICT_PREVIEW_TARGETS)" --select "$(RUFF_STRICT_PREVIEW_RULES)"',
+            '$(PYTHON) tools/ruff_strict_preview.py --vault "$(VAULT)" --targets "$(RUFF_STRICT_PREVIEW_TARGETS)" --select "$(RUFF_STRICT_PREVIEW_RULES)" --cache-dir "$(RUFF_CACHE_DIR)"',
             _target_block(text, "ruff-strict-preview"),
         )
 
@@ -4531,7 +4567,8 @@ class MakefileStaticGateTests(unittest.TestCase):
         self.assertIn("tools/strict_preview_audit.py", block)
         self.assertIn('--targets "$(STRICT_PREVIEW_AUDIT_TARGETS)"', block)
         self.assertIn('--ruff-select "$(RUFF_STRICT_PREVIEW_RULES)"', block)
-        self.assertIn('--mypy-flags "$(MYPY_STRICT_PREVIEW_FLAGS)"', block)
+        self.assertIn('--ruff-cache-dir "$(RUFF_CACHE_DIR)"', block)
+        self.assertIn('--mypy-flags "$(MYPY_CACHE_FLAGS) $(MYPY_STRICT_PREVIEW_FLAGS)"', block)
         self.assertNotIn("--fail-on-attention", block)
 
     def test_mypy_strict_preview_target_uses_full_scope_targets(self) -> None:
@@ -4546,7 +4583,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "$(PYTHON) -m mypy --config-file pyproject.toml $(MYPY_STRICT_PREVIEW_FLAGS) $(MYPY_STRICT_PREVIEW_TARGETS)",
+            "$(PYTHON) -m mypy --config-file pyproject.toml $(MYPY_CACHE_FLAGS) $(MYPY_STRICT_PREVIEW_FLAGS) $(MYPY_STRICT_PREVIEW_TARGETS)",
             _target_block(text, "mypy-strict-preview"),
         )
 

@@ -148,6 +148,19 @@ Pytest subprocess probes disable cacheprovider and Make exports
 `PYTHONDONTWRITEBYTECODE=1` to keep xdist workers and child collection checks
 from writing shared repo-local cache artifacts. The broad `PYTEST_FLAGS`
 default also includes `-p no:cacheprovider`.
+For WSL-first local work, `make static` and strict-preview Make targets keep
+Ruff and mypy caches under `tmp/tool-cache/<platform>`; WSL resolves that
+platform namespace to `wsl`, so it does not reuse root `.ruff_cache` or
+`.mypy_cache` metadata that may have been produced from Windows paths.
+Use `make local-cache-clean` to remove only ignored, regenerable local caches:
+`.pytest_cache`, `.hypothesis`, root Ruff/mypy caches, `tmp/tool-cache`, and
+source `__pycache__` / `*.pyc` / `*.pyo` under `ops`, `tests`, and `tools`.
+The target intentionally leaves `.venv`, global uv caches, `ops/reports`,
+`build/release`, `runs`, and corpus/private surfaces alone.
+When the global uv cache itself is too large, use `make uv-cache-prune`; it
+runs `uv cache prune` without `--force`, removing only unreachable uv cache
+objects. Do not use `uv cache clean` as routine hygiene because it clears all uv
+entries and can force broad re-downloads or Python/toolchain rehydration.
 The shared Hypothesis profile defaults to 30 derandomized examples with the
 example database disabled; set `LLMWIKI_HYPOTHESIS_MAX_EXAMPLES=100` for an
 audit-strength property sweep.

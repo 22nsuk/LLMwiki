@@ -17,10 +17,19 @@ def parse_targets(value: str) -> list[str]:
     return targets
 
 
-def build_ruff_command(select: str, targets: list[str]) -> list[str]:
+def build_ruff_command(
+    select: str,
+    targets: list[str],
+    *,
+    cache_dir: str | None = None,
+) -> list[str]:
     if not targets:
         raise ValueError("strict Ruff preview target list must contain at least one target")
-    return [sys.executable, "-m", "ruff", "check", "--select", select, *targets]
+    command = [sys.executable, "-m", "ruff", "check", "--select", select]
+    if cache_dir:
+        command.extend(["--cache-dir", cache_dir])
+    command.extend(targets)
+    return command
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -28,6 +37,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--vault", default=".")
     parser.add_argument("--targets", default=DEFAULT_TARGETS)
     parser.add_argument("--select", default=DEFAULT_SELECT)
+    parser.add_argument("--cache-dir", default=None)
     return parser.parse_args(argv)
 
 
@@ -35,7 +45,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
     targets = parse_targets(str(args.targets))
-    completed = subprocess.run(build_ruff_command(args.select, targets), cwd=vault, check=False)
+    completed = subprocess.run(
+        build_ruff_command(args.select, targets, cache_dir=args.cache_dir),
+        cwd=vault,
+        check=False,
+    )
     return completed.returncode
 
 

@@ -66,6 +66,7 @@ class StrictPreviewAuditTests(unittest.TestCase):
                 Path(temp_dir),
                 targets=["ops/scripts", "tests", "tools"],
                 ruff_select="B,SIM,UP,I",
+                ruff_cache_dir="tmp/tool-cache/ruff/wsl",
                 mypy_flags=["--check-untyped-defs"],
                 python_executable="python",
                 command_runner=runner,
@@ -74,6 +75,9 @@ class StrictPreviewAuditTests(unittest.TestCase):
         self.assertEqual(report["status"], "attention")
         self.assertEqual(report["summary"]["total_error_count"], 3)
         self.assertEqual(report["targets"], ["ops/scripts", "tests", "tools"])
+        self.assertEqual(report["ruff_cache_dir"], "tmp/tool-cache/ruff/wsl")
+        self.assertIn("--cache-dir", calls[0])
+        self.assertIn("tmp/tool-cache/ruff/wsl", calls[0])
         self.assertIn("--statistics", calls[0])
         self.assertIn("--check-untyped-defs", calls[1])
 
